@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Select, Button, Checkbox, Space, Radio, InputNumber, message, Switch, Typography } from 'antd';
+import { Select, Button, Checkbox, Space, Radio, InputNumber, Switch, Typography } from 'antd';
+import { showMessage } from '../utils/messageUtil'; // Import the utility
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -163,11 +164,11 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
                             // Close the modal first (don't show success message yet)
                             onCancel();
 
-                            // Show success message after a small delay to ensure modal is gone
+                            // Show message after modal is closed
                             setTimeout(() => {
                                 if (!successMessageShownRef.current) {
                                     successMessageShownRef.current = true;
-                                    message.success('Refresh options updated successfully');
+                                    showMessage('success', 'Refresh options updated successfully');
                                 }
                             }, 300);
                         }
@@ -179,7 +180,7 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
                         setTimeout(() => {
                             if (!successMessageShownRef.current) {
                                 successMessageShownRef.current = true;
-                                message.success('Refresh options updated successfully');
+                                showMessage('success', 'Refresh options updated successfully');
                             }
                         }, 300);
                     }
@@ -188,7 +189,7 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
         } catch (error) {
             // Show error message if something went wrong and component is still mounted
             if (isMountedRef.current) {
-                message.error(`Failed to save refresh options: ${error.message}`);
+                showMessage('error', `Failed to save refresh options: ${error.message}`);
                 console.error('Save error:', error);
             }
         } finally {
