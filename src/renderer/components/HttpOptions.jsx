@@ -4,6 +4,7 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
 import TOTPOptions from './TOTPOptions';
+import { showMessage } from '../utils/messageUtil';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -108,7 +109,7 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
             // Get current form values
             const values = form.getFieldsValue();
             if (!values.sourcePath) {
-                message.error('Please enter a URL');
+                showMessage('error', 'Please enter a URL');
                 return;
             }
 
@@ -191,7 +192,7 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
                 onTestResponse(response);
             }
         } catch (error) {
-            message.error(`Failed to test request: ${error.message}`);
+            showMessage('error', `Failed to test request: ${error.message}`);
         } finally {
             setTesting(false);
         }

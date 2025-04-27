@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Button, Tag, Typography, Space, Modal, Popconfirm, message } from 'antd';
+import { Table, Button, Tag, Typography, Space, Modal, Popconfirm } from 'antd';
 import {
     ReloadOutlined,
     DeleteOutlined,
@@ -8,6 +8,7 @@ import {
 } from '@ant-design/icons';
 import RefreshOptions from './RefreshOptions';
 import ContentViewer from './ContentViewer';
+import { showMessage } from '../utils/messageUtil';
 
 const { Text } = Typography;
 
@@ -163,14 +164,14 @@ const SourceTable = ({
                     }, 300);
                 }
             } else {
-                message.error('Failed to update refresh options');
+                showMessage('error', 'Failed to update refresh options');
                 setRefreshingSourceId(null);
             }
 
             return success;
         } catch (error) {
             console.error('Error saving refresh options:', error);
-            message.error(`Error: ${error.message}`);
+            showMessage('error', `Error: ${error.message}`);
             setRefreshingSourceId(null);
             return false;
         }
@@ -191,19 +192,18 @@ const SourceTable = ({
             const success = await onRemoveSource(sourceId);
 
             if (success) {
-                // Show warning message instead of success
-                message.warning(
+                showMessage('warning',
                     `${sourceType} source ${sourceTag} has been removed. Any browser extension rules using this source will be affected.`,
-                    5 // Show for 5 seconds to ensure user sees the warning
+                    5 // Duration in seconds
                 );
             } else {
-                message.error(`Failed to remove source ${sourceTag}`);
+                showMessage('error', `Failed to remove source ${sourceTag}`);
             }
 
             return success;
         } catch (error) {
             console.error('Error removing source:', error);
-            message.error(`Error removing source: ${error.message}`);
+            showMessage('error', `Error removing source: ${error.message}`);
             return false;
         } finally {
             // Clear removing state
@@ -392,7 +392,7 @@ const SourceTable = ({
             <Table
                 dataSource={sources}
                 columns={columns}
-                rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`} // Use a compound key that includes both ID and type
+                rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
                 pagination={false}
                 locale={{ emptyText }}
                 size="small"
