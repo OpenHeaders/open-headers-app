@@ -47,11 +47,62 @@ const SourceTable = ({
         }
     };
 
+    // Calculate and return refresh status text for a source
+    const getRefreshStatusText = (source) => {
+        if (!source || source.sourceType !== 'http' ||
+            !source.refreshOptions ||
+            (!source.refreshOptions.enabled && !source.refreshOptions.interval > 0)) {
+            return 'Auto-refresh disabled';
+        }
+
+        // Check if we have a cached time in refreshTimes
+        if (refreshTimes[source.sourceId]) {
+            return refreshTimes[source.sourceId];
+        }
+
+        // Check if we have a valid nextRefresh time
+        const now = Date.now();
+        if (source.refreshOptions.nextRefresh && source.refreshOptions.nextRefresh > now) {
+            const remaining = source.refreshOptions.nextRefresh - now;
+            return `Refreshes in ${formatTimeRemaining(remaining)}`;
+        }
+
+        // Fall back to displaying the interval
+        return `Auto-refresh: ${source.refreshOptions.interval}m`;
+    };
+
+    // Initialize refresh times when sources change
+    useEffect(() => {
+        const now = Date.now();
+        const initialRefreshTimes = {};
+
+        sources.forEach(source => {
+            if (source.sourceType === 'http' &&
+                source.refreshOptions &&
+                (source.refreshOptions.enabled || source.refreshOptions.interval > 0) &&
+                source.refreshOptions.nextRefresh) {
+
+                const remaining = Math.max(0, source.refreshOptions.nextRefresh - now);
+
+                if (remaining > 0) {
+                    // Format the remaining time for initial display
+                    initialRefreshTimes[source.sourceId] = `Refreshes in ${formatTimeRemaining(remaining)}`;
+                    console.log(`Set initial refresh time for source ${source.sourceId}: ${initialRefreshTimes[source.sourceId]}`);
+                }
+            }
+        });
+
+        if (Object.keys(initialRefreshTimes).length > 0) {
+            setRefreshTimes(prev => ({...prev, ...initialRefreshTimes}));
+        }
+    }, [sources]);
+
     // Update countdown timers for auto-refreshing sources
     useEffect(() => {
         const timer = setInterval(() => {
             const now = Date.now();
             const newRefreshTimes = {};
+            let needsUpdate = false;
 
             sources.forEach(source => {
                 if (source.sourceType === 'http' &&
@@ -67,6 +118,7 @@ const SourceTable = ({
                         // it's probably stuck and needs a manual refresh
                         if (remaining < -30000) { // 30 seconds
                             newRefreshTimes[source.sourceId] = 'Refresh needed';
+                            needsUpdate = true;
 
                             // Trigger a refresh if it's not already refreshing
                             if (!refreshingSourceId) {
@@ -77,19 +129,27 @@ const SourceTable = ({
                             }
                         } else {
                             newRefreshTimes[source.sourceId] = 'Refreshing now...';
+                            needsUpdate = true;
                         }
                     } else {
                         // Format the remaining time
-                        newRefreshTimes[source.sourceId] = `Refreshes in ${formatTimeRemaining(remaining)}`;
+                        const timeText = `Refreshes in ${formatTimeRemaining(remaining)}`;
+                        if (refreshTimes[source.sourceId] !== timeText) {
+                            newRefreshTimes[source.sourceId] = timeText;
+                            needsUpdate = true;
+                        }
                     }
                 }
             });
 
-            setRefreshTimes(newRefreshTimes);
+            // Only update state if there are changes
+            if (needsUpdate) {
+                setRefreshTimes(prev => ({...prev, ...newRefreshTimes}));
+            }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [sources, refreshingSourceId, onRefreshSource]);
+    }, [sources, refreshingSourceId, onRefreshSource, refreshTimes]);
 
     // Handle edit refresh options
     const handleEditRefresh = useCallback((source) => {
@@ -302,9 +362,7 @@ const SourceTable = ({
                     {record.sourceType === 'http' && (
                         <>
                             <div className={`refresh-status ${(record.refreshOptions?.enabled || record.refreshOptions?.interval > 0) ? 'active' : ''}`}>
-                                {(record.refreshOptions?.enabled || record.refreshOptions?.interval > 0)
-                                    ? refreshTimes[record.sourceId] || `Auto-refresh: ${record.refreshOptions.interval}m`
-                                    : 'Auto-refresh disabled'}
+                                {getRefreshStatusText(record)}
                             </div>
                             <Space size="small">
                                 <Button

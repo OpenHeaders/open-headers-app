@@ -70,10 +70,30 @@ export function SourceProvider({ children }) {
                     Object.keys(additionalData).forEach(key => {
                         if (key === 'refreshOptions' && source.refreshOptions) {
                             // Special handling for refreshOptions to ensure we preserve existing values
-                            updatedSource.refreshOptions = {
-                                ...source.refreshOptions,
-                                ...additionalData.refreshOptions
-                            };
+
+                            // IMPORTANT: Don't update nextRefresh if we're preserving timing
+                            const preservingTiming = source.refreshOptions.preserveTiming === true &&
+                                source.refreshOptions.nextRefresh &&
+                                source.refreshOptions.nextRefresh > Date.now();
+
+                            if (preservingTiming) {
+                                // Only merge other refresh options but keep nextRefresh
+                                const currentNextRefresh = source.refreshOptions.nextRefresh;
+                                updatedSource.refreshOptions = {
+                                    ...source.refreshOptions,
+                                    ...additionalData.refreshOptions,
+                                    // Restore the original nextRefresh time
+                                    nextRefresh: currentNextRefresh
+                                };
+
+                                debugLog(`Preserved nextRefresh time for source ${sourceId}: ${new Date(currentNextRefresh).toISOString()}`);
+                            } else {
+                                // Normal merge of all refresh options
+                                updatedSource.refreshOptions = {
+                                    ...source.refreshOptions,
+                                    ...additionalData.refreshOptions
+                                };
+                            }
                         } else if (key === 'originalJson') {
                             // Handle originalJson updates
                             updatedSource.originalJson = additionalData.originalJson;
@@ -84,9 +104,15 @@ export function SourceProvider({ children }) {
                     });
 
                     // For HTTP sources with auto-refresh, update timestamps if not already provided
+                    // and we're not preserving timing
+                    const preservingTiming = source.refreshOptions?.preserveTiming === true &&
+                        source.refreshOptions?.nextRefresh &&
+                        source.refreshOptions.nextRefresh > Date.now();
+
                     if (source.sourceType === 'http' &&
                         (source.refreshOptions?.enabled || source.refreshOptions?.interval > 0) &&
-                        !additionalData.refreshOptions) {
+                        !additionalData.refreshOptions &&
+                        !preservingTiming) {
 
                         const now = Date.now();
                         updatedSource.refreshOptions = {
@@ -436,14 +462,39 @@ export function SourceProvider({ children }) {
                     const refreshInterval = sourceData.refreshOptions?.interval || 0;
 
                     if (isRefreshEnabled && refreshInterval > 0) {
+                        // Create base refresh options
+                        const refreshOptions = {
+                            ...sourceData.refreshOptions,
+                            interval: refreshInterval,
+                            enabled: true
+                        };
+
+                        // Check if we should preserve existing timing (from imports)
+                        const now = Date.now();
+                        const hasValidTimingData =
+                            sourceData.refreshOptions?.preserveTiming === true &&
+                            sourceData.refreshOptions?.nextRefresh &&
+                            sourceData.refreshOptions?.nextRefresh > now;
+
+                        // Skip immediate refresh if we're preserving timing
+                        const skipImmediateRefresh = hasValidTimingData;
+
+                        // Log detailed information about timing preservation
+                        debugLog(`Setting up refresh for source ${sourceId}: interval=${refreshInterval}m, ` +
+                            `skipImmediateRefresh=${skipImmediateRefresh}, ` +
+                            `preserveTiming=${hasValidTimingData}, ` +
+                            `nextRefresh=${sourceData.refreshOptions?.nextRefresh ?
+                                new Date(sourceData.refreshOptions.nextRefresh).toISOString() : 'none'}`);
+
+                        // Setup refresh schedule
                         http.setupRefresh(
                             sourceId,
                             sourceData.sourcePath,
                             sourceData.sourceMethod,
                             sourceData.requestOptions,
                             {
-                                ...sourceData.refreshOptions,
-                                interval: refreshInterval,
+                                ...refreshOptions,
+                                skipImmediateRefresh: skipImmediateRefresh
                             },
                             sourceData.jsonFilter,
                             updateSourceContent
@@ -700,19 +751,46 @@ export function SourceProvider({ children }) {
     const exportSources = async (filePath) => {
         try {
             // Prepare data for export (normalize and remove internal fields)
-            const exportableSources = sources.map(source => ({
-                sourceType: source.sourceType,
-                sourcePath: source.sourcePath,
-                sourceTag: source.sourceTag || '',
-                sourceMethod: source.sourceMethod || '',
-                requestOptions: source.requestOptions || {},
-                refreshOptions: {
-                    enabled: source.refreshOptions?.enabled || false,
-                    interval: source.refreshOptions?.interval || 0,
-                    type: source.refreshOptions?.type || 'preset'
-                },
-                jsonFilter: source.jsonFilter || { enabled: false, path: '' }
-            }));
+            const exportableSources = sources.map(source => {
+                const exportedSource = {
+                    sourceType: source.sourceType,
+                    sourcePath: source.sourcePath,
+                    sourceTag: source.sourceTag || '',
+                    sourceMethod: source.sourceMethod || '',
+                    requestOptions: source.requestOptions || {},
+                    jsonFilter: source.jsonFilter || { enabled: false, path: '' }
+                };
+
+                // For HTTP sources, include COMPLETE refresh options
+                if (source.sourceType === 'http') {
+                    const now = Date.now();
+                    const refreshOptions = source.refreshOptions || {};
+
+                    // Log what we're exporting
+                    if (refreshOptions.nextRefresh && refreshOptions.nextRefresh > now) {
+                        const timeRemaining = Math.round((refreshOptions.nextRefresh - now) / 60000);
+                        debugLog(`Exporting HTTP source with ${timeRemaining}min remaining until next refresh`);
+                    }
+
+                    // Include ALL refresh settings (especially timing data)
+                    exportedSource.refreshOptions = {
+                        enabled: refreshOptions.enabled || false,
+                        interval: refreshOptions.interval || 0,
+                        type: refreshOptions.type || 'preset',
+                        lastRefresh: refreshOptions.lastRefresh || null,
+                        nextRefresh: refreshOptions.nextRefresh || null
+                    };
+                } else {
+                    // Basic settings for non-HTTP sources
+                    exportedSource.refreshOptions = {
+                        enabled: false,
+                        interval: 0,
+                        type: 'preset'
+                    };
+                }
+
+                return exportedSource;
+            });
 
             // Convert to JSON
             const jsonData = JSON.stringify(exportableSources, null, 2);
@@ -729,7 +807,7 @@ export function SourceProvider({ children }) {
         }
     };
 
-    // Import sources - COMPLETELY REVISED to ensure proper ID handling
+    // Import sources
     const importSources = async (filePath) => {
         try {
             debugLog(`Starting import from file: ${filePath}`);
@@ -754,6 +832,35 @@ export function SourceProvider({ children }) {
 
                 // Process sources one at a time to ensure proper state updates
                 for (const sourceData of sourcesToImport) {
+                    // Process refresh options for HTTP sources with timing information
+                    if (sourceData.sourceType === 'http' &&
+                        sourceData.refreshOptions &&
+                        sourceData.refreshOptions.enabled) {
+
+                        const now = Date.now();
+                        const nextRefresh = sourceData.refreshOptions.nextRefresh;
+                        const lastRefresh = sourceData.refreshOptions.lastRefresh;
+
+                        // Check if we have valid timing data (both last and next refresh times)
+                        const hasValidTimingData = nextRefresh && lastRefresh && nextRefresh > now;
+
+                        if (hasValidTimingData) {
+                            // Calculate time remaining in minutes
+                            const timeRemaining = Math.round((nextRefresh - now) / 60000);
+
+                            debugLog(`Importing HTTP source with ${timeRemaining}min remaining until next refresh`);
+
+                            // Explicitly set flag to skip immediate refresh
+                            sourceData.refreshOptions.preserveTiming = true;
+                        } else {
+                            debugLog(`Importing HTTP source with invalid or expired timing - will use fresh timing`);
+
+                            // Reset timing if invalid
+                            delete sourceData.refreshOptions.lastRefresh;
+                            delete sourceData.refreshOptions.nextRefresh;
+                        }
+                    }
+
                     // Prepare a clean version of the source data
                     const cleanSourceData = {
                         sourceType: sourceData.sourceType,
@@ -761,8 +868,9 @@ export function SourceProvider({ children }) {
                         sourceTag: sourceData.sourceTag || '',
                         sourceMethod: sourceData.sourceMethod || '',
                         requestOptions: sourceData.requestOptions || {},
-                        refreshOptions: sourceData.refreshOptions || { enabled: false, interval: 0 },
-                        jsonFilter: sourceData.jsonFilter || { enabled: false, path: '' }
+                        jsonFilter: sourceData.jsonFilter || { enabled: false, path: '' },
+                        // Include complete refresh options
+                        refreshOptions: sourceData.refreshOptions || { enabled: false, interval: 0 }
                     };
 
                     // Add the source and track success
