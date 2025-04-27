@@ -238,8 +238,10 @@ export function useHttp() {
 
         console.log(`Source ${sourceId} skipImmediateRefresh: ${skipImmediateRefresh}`);
 
-        // Check for invalid or expired nextRefresh time
-        if (!nextRefresh || nextRefresh <= now) {
+        // Check if we have a valid nextRefresh time
+        const hasValidNextRefresh = nextRefresh && nextRefresh > now;
+
+        if (!hasValidNextRefresh) {
             if (skipImmediateRefresh) {
                 // If we should skip the immediate refresh, schedule for future
                 nextRefresh = now + intervalMs;
@@ -249,6 +251,11 @@ export function useHttp() {
                 nextRefresh = now;
                 console.log(`Source ${sourceId} needs immediate refresh - scheduling now`);
             }
+        } else {
+            // We have a valid future time for nextRefresh
+            console.log(`Source ${sourceId} has valid nextRefresh time: ${new Date(nextRefresh).toISOString()}`);
+            const timeUntilNextRefresh = Math.round((nextRefresh - now) / 1000);
+            console.log(`Source ${sourceId} will refresh in ${timeUntilNextRefresh} seconds (${Math.round(timeUntilNextRefresh/60)} minutes)`);
         }
 
         const timeUntilRefresh = Math.max(0, nextRefresh - now);
