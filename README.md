@@ -7,7 +7,6 @@ A companion application for the Open Headers browser extension that manages dyna
 ## Features
 
 - 🔄 **Multiple Source Types**: Retrieve values from HTTP requests, environment variables, and local files
-- 🔌 **WebSocket Server**: Real-time communication with the browser extension
 - 🔍 **JSON Path Filtering**: Extract specific values from JSON responses
 - ⏱️ **Auto-Refresh**: Schedule periodic updates for HTTP sources
 - 🛡️ **TOTP Authentication**: Generate time-based one-time passwords for secure API access
@@ -17,8 +16,6 @@ A companion application for the Open Headers browser extension that manages dyna
 - 📱 **Dock Icon Control**: Show or hide app icon in macOS dock
 - 🚀 **Auto-start**: Launch automatically at system startup
 - 🙈 **Hidden Startup**: Option to start minimized to the tray
-- 🔤 **Headless Mode**: Run without UI in server environments
-- 🔁 **Connection Retry**: Automatic retry for transient network issues
 - 💻 **Modern UI**: Clean, minimalist design with Ant Design components
 
 ## Installation
@@ -52,7 +49,7 @@ A companion application for the Open Headers browser extension that manages dyna
 
 ### Configuration Settings
 
-Access app settings by clicking the **Settings** button in the top-right corner:
+Access app settings by clicking the menu button in the top-right corner:
 
 #### Startup Options
 - **Launch at login**: Start the app automatically when your system boots
@@ -65,7 +62,7 @@ Access app settings by clicking the **Settings** button in the top-right corner:
 ### Adding a File Source
 
 1. From the dashboard, select "File" as the source type
-2. Click "Browse File" to select a local file
+2. Click "Browse" to select a local file
 3. Add an optional tag for easy identification
 4. Click "Add Source"
 
@@ -94,7 +91,7 @@ For HTTP sources that return JSON:
 
 1. Enable the "JSON Filter" option
 2. Enter a JSON path using dot notation (e.g., `root.data.access_token`)
-3. Use the "Test Path" button to verify your filter works correctly
+3. Use the "Test Request" button to verify your filter works correctly
 
 ### Using TOTP Authentication
 
@@ -112,43 +109,41 @@ The application will automatically generate and insert the current TOTP code whe
 Easily save and share your source configurations:
 
 #### Exporting Sources
-1. Click the **Export** button in the top-right corner
-2. Choose a location to save the JSON file
-3. All source configurations will be saved to the file
+1. Click the menu button in the top-right corner
+2. Select "Export Sources"
+3. Choose a location to save the JSON file
+4. All source configurations will be saved to the file
 
 #### Importing Sources
-1. Click the **Import** button in the top-right corner
-2. Select a previously exported JSON file
-3. The sources will be loaded and added to your existing sources
-
-### Headless Mode
-
-Run Open Headers without a UI, perfect for server environments:
-
-```bash
-# Basic headless mode
-./open-headers-app --headless
-
-# With a specific config file
-./open-headers-app --headless --config /path/to/open-headers_config.json
-```
+1. Click the menu button in the top-right corner
+2. Select "Import Sources"
+3. Select a previously exported JSON file
+4. The sources will be loaded and added to your existing sources
 
 ### Minimizing to Tray
 
 - When the application window is closed, it will minimize to the system tray rather than quitting
 - Click the tray icon to restore the window
-- Right-click the tray icon for additional options (Show Application, Exit)
+- Right-click the tray icon for additional options (Show Open Headers, Hide Open Headers, Quit)
 
 ## Connecting to the Browser Extension
 
 1. Install the [Open Headers browser extension](https://github.com/OpenHeaders/open-headers-browser-extension)
 2. Launch the Sources application
-3. The extension will automatically connect via WebSocket (port 59210)
+3. The extension will automatically connect to the application
 4. In the extension popup, your dynamic sources will appear as options when creating headers
 
 ## Documentation
 
 For more detailed information, see:
-- [DEVELOPER.md](docs/DEVELOPER.md) - Technical documentation for developers
-- [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Guidelines for contributing to the project
-- [PRIVACY.md](docs/PRIVACY.md) - Privacy policy
+- [DEVELOPER.md](./docs/DEVELOPER.md) - Technical documentation for developers
+- [CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Guidelines for contributing to the project
+- [PRIVACY.md](./docs/PRIVACY.md) - Privacy policy
+
+## Contributing
+
+Contributions are welcome! Please refer to [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
