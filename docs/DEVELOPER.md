@@ -10,29 +10,17 @@ The application consists of these main components:
 
 - **Main Process**: The Electron main process that manages the application lifecycle and core services
 - **Renderer Process**: React-based UI using Ant Design components
-- **WebSocket Server**: Broadcasts source updates to connected clients
-- **Source Services**:
-  - File Service: Monitors file system changes
-  - Environment Service: Accesses environment variables
-  - HTTP Service: Makes HTTP requests and processes responses
-- **Tray Service**: Manages the system tray/status bar icon
-- **Settings Controller**: Manages application settings and appearance
+- **Preload Script**: Securely bridges the main and renderer processes with context isolation
+- **React Contexts**: Manages global state for sources and settings
+- **Custom Hooks**: Encapsulates business logic for file, HTTP, and environment operations
 
-### Modules
+### Key Files
 
-| Module | Description |
+| File | Description |
 |--------|-------------|
-| `main.js` | Application entry point and window management |
-| `source-service.js` | Core service managing all source types |
-| `file-service.js` | Handles file system monitoring |
-| `env-service.js` | Manages environment variable access |
-| `http-service.js` | Makes HTTP requests and processes responses |
-| `tray-service.js` | Manages system tray/status bar integration |
-| `ws-controller.js` | Manages the WebSocket server |
-| `source-controller.js` | Handles IPC between renderer and main processes |
-| `settings-controller.js` | Manages application settings and preferences |
-| `source-repository.js` | Persistent storage for source configurations |
-| `source.js` | Data model for sources |
+| `main.js` | Application entry point and Electron main process |
+| `preload.js` | Secure bridge between renderer and main process |
+| `index.jsx` | React entry point for renderer process |
 | `App.jsx` | Main React application component |
 | `SourceContext.jsx` | React context for managing sources state |
 | `SettingsContext.jsx` | React context for application settings |
@@ -44,7 +32,7 @@ The application consists of these main components:
 
 | Component | Description |
 |--------|-------------|
-| `App.jsx` | Main application layout and routing |
+| `App.jsx` | Main application layout and navigation |
 | `SourceForm.jsx` | Form for adding and editing sources |
 | `SourceTable.jsx` | Table displaying all configured sources |
 | `HttpOptions.jsx` | Configuration options for HTTP sources |
@@ -54,15 +42,16 @@ The application consists of these main components:
 | `SettingsModal.jsx` | Application settings dialog |
 | `RefreshOptions.jsx` | Auto-refresh configuration for HTTP sources |
 | `TrayMenu.jsx` | System tray integration component |
+| `JsonViewer.jsx` | JSON visualization and filtering preview |
 
 ### Data Flow
 
 1. User configures sources in the React UI
 2. React components dispatch actions to context providers
-3. Context providers use IPC to communicate with main process
+3. Context providers use IPC to communicate with main process via the preload bridge
 4. Main process services process the requests
-5. Updates flow back through IPC to the React UI
-6. WebSocket server broadcasts source updates to connected browser extensions
+5. Updates flow back through IPC to React contexts
+6. React components re-render based on updated context values
 
 ## Development
 
@@ -85,7 +74,7 @@ The application consists of these main components:
    npm install
    ```
 
-3. Start the development version:
+3. Start the development version with React hot-reload:
    ```bash
    npm run dev:react
    ```
@@ -94,59 +83,46 @@ The application consists of these main components:
 
 ```
 open-headers-app/
-├── src/
-│   ├── contexts/          # React contexts
-│   │   ├── SourceContext.jsx
-│   │   └── SettingsContext.jsx
-│   ├── components/        # React components
-│   │   ├── SourceForm.jsx
-│   │   ├── SourceTable.jsx
-│   │   ├── HttpOptions.jsx
-│   │   ├── JsonFilter.jsx
-│   │   ├── TOTPOptions.jsx
-│   │   ├── ContentViewer.jsx
-│   │   ├── SettingsModal.jsx
-│   │   └── RefreshOptions.jsx
-│   ├── hooks/             # Custom React hooks
-│   │   ├── useFileSystem.jsx
-│   │   ├── useHttp.jsx
-│   │   └── useEnv.jsx
-│   ├── config/            # Application configuration
-│   │   └── app-config.js  # App settings
-│   ├── controllers/       # Electron main process controllers
-│   │   ├── source-controller.js 
-│   │   ├── settings-controller.js
-│   │   └── ws-controller.js
-│   ├── models/            # Data models
-│   │   └── source.js      # Source data model
-│   ├── repositories/      # Data persistence
-│   │   └── source-repository.js
-│   ├── services/          # Core services
-│   │   ├── source-service.js
-│   │   ├── file-service.js
-│   │   ├── env-service.js
-│   │   ├── http-service.js
-│   │   └── tray-service.js
-│   ├── utils/             # Utility functions
-│   │   └── node-utils.js  # Node.js specific utilities
-│   ├── ui/                # Legacy UI (for reference)
-│   ├── preload/           # Electron preload scripts
-│   │   └── preload.js
-│   ├── main.js            # Electron main process entry point
-│   └── renderer/          # React renderer process
-│       ├── App.jsx        # Main React application
-│       ├── App.less       # Ant Design styles
-│       ├── index.jsx      # React entry point
-│       └── index.html     # HTML template
-├── build/                 # Build resources
-│   ├── icon.png           # Application icon
-│   ├── icon.ico           # Windows icon
-│   └── icon.icns          # macOS icon
-├── webpack.config.js      # Webpack configuration
-└── docs/                  # Documentation
-    ├── DEVELOPER.md       # This file
-    ├── CONTRIBUTING.md    # Contribution guidelines
-    └── PRIVACY.md         # Privacy policy
+├── build/                # Build resources (icons, etc.)
+│   ├── icon.png          # Application icon
+│   ├── icon.ico          # Windows icon
+│   └── icon.icns         # macOS icon
+├── docs/                 # Documentation
+│   ├── DEVELOPER.md      # This file
+│   ├── CONTRIBUTING.md   # Contribution guidelines
+│   └── PRIVACY.md        # Privacy policy
+├── src/                  # Source code
+│   ├── main.js           # Electron main process
+│   ├── preload.js        # Electron preload script
+│   ├── ui/               # Legacy UI assets (for reference)
+│   └── renderer/         # React renderer process
+│       ├── App.jsx       # Main React application
+│       ├── App.less      # Application styles
+│       ├── index.jsx     # React entry point
+│       ├── index.html    # HTML template
+│       ├── contexts/     # React contexts
+│       │   ├── SourceContext.jsx
+│       │   └── SettingsContext.jsx
+│       ├── components/   # React components
+│       │   ├── ContentViewer.jsx
+│       │   ├── HttpOptions.jsx
+│       │   ├── JsonFilter.jsx
+│       │   ├── JsonViewer.jsx
+│       │   ├── RefreshOptions.jsx
+│       │   ├── SettingsModal.jsx
+│       │   ├── SourceForm.jsx
+│       │   ├── SourceTable.jsx
+│       │   ├── TOTPOptions.jsx
+│       │   └── TrayMenu.jsx
+│       ├── hooks/        # Custom React hooks
+│       │   ├── useEnv.jsx
+│       │   ├── useFileSystem.jsx
+│       │   └── useHttp.jsx
+│       └── images/       # Application images
+│           ├── icon32.png
+│           └── icon128.png
+├── webpack.config.js     # Webpack configuration
+└── package.json          # Project configuration
 ```
 
 ## Ant Design Integration
@@ -176,6 +152,30 @@ The Ant Design theme is customized in webpack.config.js to provide an Apple-insp
 }
 ```
 
+The theme is applied through the `ConfigProvider` component in `index.jsx`:
+
+```jsx
+<ConfigProvider
+  theme={{
+    token: {
+      colorPrimary: '#0071e3',
+      colorSuccess: '#34c759',
+      colorWarning: '#ff9f0a',
+      colorError: '#ff3b30',
+      colorInfo: '#0071e3',
+      borderRadius: 6,
+      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif',
+    },
+  }}
+>
+  <SettingsProvider>
+    <SourceProvider>
+      <App />
+    </SourceProvider>
+  </SettingsProvider>
+</ConfigProvider>
+```
+
 ### Component Structure
 
 The UI is composed of reusable components:
@@ -197,7 +197,7 @@ The application uses React's Context API and custom hooks to manage state:
 
 ### Settings and Preferences
 
-Application settings are managed through the React SettingsContext and Electron settings-controller.js:
+Application settings are managed through the React SettingsContext:
 
 1. **Storage**: Settings are saved to a JSON file in the app's user data directory
 2. **UI Integration**: Settings dialog built with Ant Design's Modal and Form components
@@ -216,9 +216,9 @@ Settings data structure:
 
 ### System Tray Integration
 
-The system tray (status bar icon) is managed by tray-service.js and exposed to React:
+The system tray (status bar icon) is managed through the Electron main process and exposed to React via the TrayMenu component:
 
-1. **React Integration**: TrayMenu component registers event listeners via IPC
+1. **React Integration**: TrayMenu component registers event listeners via the preload bridge
 2. **Platform Adaptations**: Different behavior for macOS, Windows, and Linux
 3. **Context Menu**: Created dynamically based on current application state
 4. **Icon Management**: Adaptive icon loading for different environments
@@ -231,6 +231,11 @@ Time-based One-Time Password (TOTP) authentication implemented with TOTPOptions 
 2. **Time Sync**: Ability to adjust time offset for misaligned clocks
 3. **Live Countdown**: Visual timer showing seconds until code rotation
 4. **Template Variables**: `_TOTP_CODE` used in HTTP requests to insert codes dynamically
+
+Implementation details:
+- TOTP generation is handled in the preload script using WebCrypto API
+- The component provides real-time validation and preview
+- Time synchronization helps when client and server clocks are misaligned
 
 ### Dynamic HTTP Sources with JSON Filtering
 
@@ -246,7 +251,7 @@ HTTP sources with JSON path filtering are implemented using:
 The SourceContext provider is the central state management solution:
 
 1. **CRUD Operations**: Exposes methods for creating, reading, updating, and deleting sources
-2. **IPC Bridge**: Communicates with Electron main process
+2. **IPC Bridge**: Communicates with Electron main process via the preload script
 3. **Caching**: Maintains local state to improve UI responsiveness
 4. **Validation**: Ensures data integrity before persistence
 5. **Real-time Updates**: Ensures UI reflects the current state of sources
@@ -278,11 +283,6 @@ The SourceContext provider is the central state management solution:
    - Enable/disable "Show Dock icon" (macOS) and verify appearance
    - Enable/disable "Show Status Bar icon" and verify tray appearance
 
-5. Test headless mode:
-   ```bash
-   npm start -- --headless --config ./test-sources.json
-   ```
-
 ### Test Endpoints
 
 For testing HTTP sources, use services like:
@@ -299,6 +299,11 @@ This project uses Webpack to bundle React components and other assets:
 2. **Less Compilation**: Processing Ant Design styles
 3. **Asset Management**: Copying static assets to distribution folder
 4. **Code Optimization**: Minification for production builds
+
+The webpack configuration handles three main targets:
+- Main process (Electron main)
+- Preload script (Electron preload)
+- Renderer process (React application)
 
 ### Production Build Scripts
 
@@ -352,46 +357,6 @@ The `package.json` includes extensive configuration for electron-builder:
       ]
     }
   }
-}
-```
-
-## Communication Protocol
-
-The application communicates with the browser extension using WebSocket on port 59210.
-
-### Message Format
-
-Source updates are broadcast in this format:
-
-```json
-{
-  "type": "sourcesUpdated",
-  "sources": [
-    {
-      "sourceId": 1,
-      "sourceType": "http",
-      "sourcePath": "https://api.example.com/token",
-      "sourceTag": "API Token",
-      "sourceMethod": "GET",
-      "sourceContent": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "refreshOptions": {
-        "interval": 5,
-        "lastRefresh": 1649152734000,
-        "nextRefresh": 1649153034000
-      }
-    }
-  ]
-}
-```
-
-### Initial Connection
-
-When a client connects, the server sends an initial state message:
-
-```json
-{
-  "type": "sourcesInitial",
-  "sources": [/* Array of all current sources */]
 }
 ```
 
