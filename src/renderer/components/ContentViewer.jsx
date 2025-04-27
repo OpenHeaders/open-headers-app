@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton, message } from 'antd';
+import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton } from 'antd';
 import { FileTextOutlined, ReloadOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
+import { showMessage } from '../utils/messageUtil'; // Import the utility
 
 const { Text } = Typography;
 
@@ -74,7 +75,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             // Otherwise wait for the new content to arrive
         } catch (error) {
             console.error('ContentViewer: Error during refresh:', error);
-            message.error(`Failed to refresh content: ${error.message}`);
+            showMessage('error', `Failed to refresh content: ${error.message}`);
             refreshingRef.current = false;
             setLoading(false);
         }
@@ -151,10 +152,10 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
         navigator.clipboard.writeText(text)
             .then(() => {
                 // Show success message
-                message.success('Copied to clipboard');
+                showMessage('success', 'Copied to clipboard');
             })
             .catch(err => {
-                message.error('Failed to copy content');
+                showMessage('error', 'Failed to copy content');
                 console.error('Failed to copy content:', err);
             })
             .finally(() => {

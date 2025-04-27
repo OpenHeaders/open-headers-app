@@ -1,13 +1,19 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import { ConfigProvider } from 'antd';
-import App from './App';
+import { createRoot } from 'react-dom/client';
+import { ConfigProvider, theme, App } from 'antd';
+import AppComponent from './App';
 import { SourceProvider } from './contexts/SourceContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { MessageProvider } from './utils/MessageProvider';
+import { MessageInitializer } from './utils/messageUtil';
 import './App.less';
 
-// Render the React application
-ReactDOM.render(
+// Create a root for React 18
+const container = document.getElementById('root');
+const root = createRoot(container);
+
+// Render the React application with React 18 API and Ant Design App wrapper
+root.render(
     <ConfigProvider
         theme={{
             token: {
@@ -19,13 +25,28 @@ ReactDOM.render(
                 borderRadius: 6,
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif',
             },
+            algorithm: theme.defaultAlgorithm,
         }}
     >
-        <SettingsProvider>
-            <SourceProvider>
-                <App />
-            </SourceProvider>
-        </SettingsProvider>
-    </ConfigProvider>,
-    document.getElementById('root')
+        <App
+            message={{ maxCount: 5 }}
+            notification={{
+                top: 70,
+                duration: 3,
+                maxCount: 5,
+                placement: 'topRight'
+            }}
+        >
+            <MessageProvider>
+                {/* This initializer sets up the message API for use outside React components */}
+                <MessageInitializer />
+
+                <SettingsProvider>
+                    <SourceProvider>
+                        <AppComponent />
+                    </SourceProvider>
+                </SettingsProvider>
+            </MessageProvider>
+        </App>
+    </ConfigProvider>
 );

@@ -1,5 +1,8 @@
 // App.less - Main application styles
-@import '~antd/dist/antd.less';
+// Ant Design 5 no longer uses a single Less import, we need to use the new structure
+
+// Import Ant Design styles
+@import 'antd/dist/reset.css';
 
 // Layout styles
 .app-container {
@@ -291,7 +294,7 @@ code {
 
   &:hover,
   &:focus {
-    border-color: @primary-color;
+    border-color: #0071e3;
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { message } from 'antd';
+import { showMessage } from '../utils/messageUtil'; // Import the utility
 
 // Create context
 const SettingsContext = createContext();
@@ -36,7 +36,7 @@ export function SettingsProvider({ children }) {
             } catch (error) {
                 console.error('Error loading settings:', error);
                 if (isMounted.current) {
-                    message.error('Failed to load settings, using defaults');
+                    showMessage('error', 'Failed to load settings, using defaults');
                     setLoading(false);
                 }
             }
@@ -71,14 +71,14 @@ export function SettingsProvider({ children }) {
                 return true;
             } else {
                 if (isMounted.current) {
-                    message.error(`Failed to save settings: ${result.message}`);
+                    showMessage('error', `Failed to save settings: ${result.message}`);
                 }
                 return false;
             }
         } catch (error) {
             console.error('Error saving settings:', error);
             if (isMounted.current) {
-                message.error(`Error saving settings: ${error.message}`);
+                showMessage('error', `Error saving settings: ${error.message}`);
             }
             return false;
         } finally {

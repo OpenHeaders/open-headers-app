@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Form, Select, Input, Button, message, Row, Col, Divider, Tabs } from 'antd';
+import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useFileSystem } from '../hooks/useFileSystem';
 import HttpOptions from './HttpOptions';
+import { showMessage } from '../utils/messageUtil'; // Import the utility
 
 const { Option } = Select;
 
@@ -35,7 +36,7 @@ const SourceForm = ({ onAddSource }) => {
                 form.setFieldsValue({ sourcePath: selectedPath });
             }
         } catch (error) {
-            message.error(`Failed to select file: ${error.message}`);
+            showMessage('error', `Failed to select file: ${error.message}`);
         }
     };
 
@@ -124,7 +125,7 @@ const SourceForm = ({ onAddSource }) => {
                 setTestResponse(null);
             }
         } catch (error) {
-            message.error(`Failed to add source: ${error.message}`);
+            showMessage('error', `Failed to add source: ${error.message}`);
         } finally {
             setSubmitting(false);
         }
