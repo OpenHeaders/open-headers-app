@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Space, Dropdown, message } from 'antd';
+import { Layout, Typography, Button, Space, Dropdown } from 'antd';
 import {
     SettingOutlined,
     ExportOutlined,
@@ -13,11 +13,12 @@ import SettingsModal from './components/SettingsModal';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
+import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
 
-const App = () => {
+const AppComponent = () => {
     const {
         sources,
         addSource,
@@ -64,7 +65,7 @@ const App = () => {
         if (success) {
             console.log('Source added successfully');
             console.log('Current sources after add:', sources);
-            message.success('Source added successfully');
+            showMessage('success', 'Source added successfully');
         } else {
             console.log('Failed to add source');
         }
@@ -73,7 +74,7 @@ const App = () => {
     // Handle export
     const handleExport = async () => {
         if (sources.length === 0) {
-            message.warning('No sources to export');
+            showMessage('warning', 'No sources to export');
             return;
         }
 
@@ -99,10 +100,10 @@ const App = () => {
             // Export sources
             const success = await exportSources(filePath);
             if (success) {
-                message.success(`Successfully exported ${sources.length} source(s)`);
+                showMessage('success', `Successfully exported ${sources.length} source(s)`);
             }
         } catch (error) {
-            message.error(`Error exporting sources: ${error.message}`);
+            showMessage('error', `Error exporting sources: ${error.message}`);
         } finally {
             setLoading(prev => ({ ...prev, export: false }));
         }
@@ -123,13 +124,15 @@ const App = () => {
 
             // Import sources
             const result = await importSources(filePath);
+
             if (result.success) {
-                message.success(`Successfully imported ${result.count} source(s)`);
+                showMessage('success', `Successfully imported ${result.count} source(s)`);
             } else {
-                message.warning(result.message || 'No sources were imported');
+                showMessage('warning', result.message || 'No sources were imported');
             }
         } catch (error) {
-            message.error(`Error importing sources: ${error.message}`);
+            console.error('Error importing sources:', error);
+            showMessage('error', `Error importing sources: ${error.message}`);
         } finally {
             setLoading(prev => ({ ...prev, import: false }));
         }
@@ -148,7 +151,7 @@ const App = () => {
         const success = await saveSettings(newSettings);
         if (success) {
             setSettingsVisible(false);
-            message.success('Settings saved successfully');
+            showMessage('success', 'Settings saved successfully');
         }
     };
 
@@ -178,6 +181,7 @@ const App = () => {
     ];
 
     return (
+        // IMPORTANT: Removed the App wrapper here since it's already in index.jsx
         <Layout className="app-container">
             <Header className="app-header">
                 <div className="logo-title">
@@ -217,4 +221,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default AppComponent;

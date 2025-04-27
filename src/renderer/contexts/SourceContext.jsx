@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { message } from 'antd';
+import { App } from 'antd';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useHttp } from '../hooks/useHttp';
 import { useEnv } from '../hooks/useEnv';
+import { createRoot } from 'react-dom/client';
+import { showMessage } from '../utils/messageUtil'; // Import the utility function
 
 // Create context
 const SourceContext = createContext();
@@ -16,6 +18,9 @@ const debugLog = (message, data = null) => {
         console.log(`[${timestamp}] SourceContext: ${message}`);
     }
 };
+
+// IMPORTANT: Remove this function as it's causing the conflict
+// The original showMessage function is removed, and we'll use the imported one instead
 
 export function SourceProvider({ children }) {
     const [sources, setSources] = useState([]);
@@ -286,7 +291,7 @@ export function SourceProvider({ children }) {
             } catch (error) {
                 console.error('Error loading sources:', error);
                 if (isMounted.current) {
-                    message.error('Failed to load sources');
+                    showMessage('error', 'Failed to load sources');
                     setInitialized(true);
                 }
             } finally {
@@ -354,7 +359,7 @@ export function SourceProvider({ children }) {
             );
 
             if (isDuplicate) {
-                message.error(`Source already exists: ${sourceData.sourceType.toUpperCase()} ${sourceData.sourcePath}`);
+                showMessage('error', `Source already exists: ${sourceData.sourceType.toUpperCase()} ${sourceData.sourcePath}`);
                 return false;
             }
 
@@ -464,7 +469,7 @@ export function SourceProvider({ children }) {
         } catch (error) {
             console.error('Error adding source:', error);
             if (isMounted.current) {
-                message.error(`Failed to add source: ${error.message}`);
+                showMessage('error', `Failed to add source: ${error.message}`);
             }
             return false;
         }
@@ -476,6 +481,7 @@ export function SourceProvider({ children }) {
             const source = sources.find(s => s.sourceId === sourceId);
             if (!source) {
                 debugLog(`Attempted to remove nonexistent source ${sourceId}`);
+                // Don't show a message here - let the SourceTable handle it
                 return false;
             }
 
@@ -499,11 +505,13 @@ export function SourceProvider({ children }) {
                 http.cancelRefresh(sourceId);
             }
 
+            // We've removed this message call to prevent duplicates
+            // The message will be shown by SourceTable.jsx instead
             return true;
         } catch (error) {
             console.error('Error removing source:', error);
             if (isMounted.current) {
-                message.error(`Failed to remove source: ${error.message}`);
+                showMessage('error', `Failed to remove source: ${error.message}`);
             }
             return false;
         }
@@ -575,7 +583,7 @@ export function SourceProvider({ children }) {
         } catch (error) {
             console.error('Error refreshing source:', error);
             if (isMounted.current) {
-                message.error(`Failed to refresh source: ${error.message}`);
+                showMessage('error', `Failed to refresh source: ${error.message}`);
             }
             return false;
         }
@@ -682,7 +690,7 @@ export function SourceProvider({ children }) {
         } catch (error) {
             console.error('Error updating refresh options:', error);
             if (isMounted.current) {
-                message.error(`Failed to update refresh options: ${error.message}`);
+                showMessage('error', `Failed to update refresh options: ${error.message}`);
             }
             return false;
         }
@@ -715,7 +723,7 @@ export function SourceProvider({ children }) {
         } catch (error) {
             console.error('Error exporting sources:', error);
             if (isMounted.current) {
-                message.error(`Failed to export sources: ${error.message}`);
+                showMessage('error', `Failed to export sources: ${error.message}`);
             }
             return false;
         }

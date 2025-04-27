@@ -29,6 +29,11 @@ const mainConfig = {
             }
         ]
     },
+    resolve: {
+        fallback: {
+            "fsevents": false
+        }
+    },
     optimization: {
         minimizer: [
             new TerserPlugin({
@@ -61,6 +66,11 @@ const preloadConfig = {
                 }
             }
         ]
+    },
+    resolve: {
+        fallback: {
+            "fsevents": false
+        }
     },
     optimization: {
         minimizer: [
@@ -103,8 +113,9 @@ const rendererConfig = {
                         options: {
                             lessOptions: {
                                 javascriptEnabled: true,
+                                math: 'always',
                                 modifyVars: {
-                                    // Apple-inspired theme variables
+                                    // Apple-inspired theme variables for Ant Design v5
                                     '@primary-color': '#0071e3',
                                     '@link-color': '#0071e3',
                                     '@success-color': '#34c759',
@@ -132,7 +143,10 @@ const rendererConfig = {
         ]
     },
     resolve: {
-        extensions: ['.js', '.jsx']
+        extensions: ['.js', '.jsx'],
+        fallback: {
+            "fsevents": false
+        }
     },
     plugins: [
         new CopyPlugin({
