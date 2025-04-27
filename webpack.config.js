@@ -4,9 +4,9 @@ const CopyPlugin = require('copy-webpack-plugin');
 
 // Main process config
 const mainConfig = {
-    mode: 'production',
+    mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'electron-main',
-    entry: './main.js',
+    entry: './src/main.js',
     output: {
         path: path.resolve(__dirname, 'dist-webpack'),
         filename: 'main.js'
@@ -30,42 +30,22 @@ const mainConfig = {
         ]
     },
     optimization: {
-        minimize: true,
         minimizer: [
             new TerserPlugin({
-                terserOptions: {
-                    compress: {
-                        drop_console: false, // Keep console logs
-                        drop_debugger: true
-                    },
-                    mangle: true,
-                    output: {
-                        comments: false
-                    }
-                },
-                extractComments: false
+                extractComments: false,
             })
         ]
     },
-    plugins: [
-        new CopyPlugin({
-            patterns: [
-                { from: 'src/ui', to: 'src/ui' },
-                { from: 'src/config', to: 'src/config' },
-                { from: 'package.json', to: 'package.json' },
-                { from: 'build', to: 'build' }
-            ],
-        }),
-    ],
+    devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
 
 // Preload script config
 const preloadConfig = {
-    mode: 'production',
+    mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'electron-preload',
-    entry: './src/preload/preload.js',
+    entry: './src/preload.js',
     output: {
-        path: path.resolve(__dirname, 'dist-webpack/src/preload'),
+        path: path.resolve(__dirname, 'dist-webpack'),
         filename: 'preload.js'
     },
     module: {
@@ -83,144 +63,100 @@ const preloadConfig = {
         ]
     },
     optimization: {
-        minimize: true,
         minimizer: [
             new TerserPlugin({
-                terserOptions: {
-                    compress: {
-                        drop_console: false,
-                        drop_debugger: true
-                    },
-                    mangle: true,
-                    output: {
-                        comments: false
-                    }
-                },
-                extractComments: false
+                extractComments: false,
             })
         ]
-    }
+    },
+    devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
 
-// Renderer process config
+// Renderer process config (React)
 const rendererConfig = {
-    mode: 'production',
+    mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'web',
-    entry: {
-        renderer: './src/ui/renderer.js',
-        'source-form-controller': './src/ui/source-form-controller.js',
-        'source-table-controller': './src/ui/source-table-controller.js',
-        utils: './src/ui/utils.js'
-    },
+    entry: './src/renderer/index.jsx',
     output: {
-        path: path.resolve(__dirname, 'dist-webpack/src/ui'),
-        filename: '[name].js'
+        path: path.resolve(__dirname, 'dist-webpack'),
+        filename: 'bundle.js'
     },
     module: {
         rules: [
             {
-                test: /\.js$/,
+                test: /\.(js|jsx)$/,
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env']
+                        presets: ['@babel/preset-env', '@babel/preset-react']
                     }
                 }
-            }
-        ]
-    },
-    optimization: {
-        minimize: true,
-        minimizer: [
-            new TerserPlugin({
-                terserOptions: {
-                    compress: {
-                        drop_console: false,
-                        drop_debugger: true
-                    },
-                    mangle: true,
-                    output: {
-                        comments: false
-                    }
-                },
-                extractComments: false
-            })
-        ]
-    }
-};
-
-// Service/Controller modules config
-const modulesConfig = {
-    mode: 'production',
-    target: 'electron-main',
-    entry: {
-        'source-service': './src/services/source-service.js',
-        'file-service': './src/services/file-service.js',
-        'env-service': './src/services/env-service.js',
-        'http-service': './src/services/http-service.js',
-        'tray-service': './src/services/tray-service.js', // Added for tray functionality
-        'source-controller': './src/controllers/source-controller.js',
-        'settings-controller': './src/controllers/settings-controller.js', // Added for settings management
-        'ws-controller': './src/controllers/ws-controller.js',
-        'source-repository': './src/repositories/source-repository.js',
-        'source': './src/models/source.js',
-        'app-config': './src/config/app-config.js'
-    },
-    output: {
-        path: path.resolve(__dirname, 'dist-webpack/src'),
-        filename: (pathData) => {
-            const name = pathData.chunk.name;
-            if (name === 'source') {
-                return 'models/source.js';
-            } else if (name === 'source-repository') {
-                return 'repositories/source-repository.js';
-            } else if (name.endsWith('-controller')) {
-                return `controllers/${name}.js`;
-            } else if (name.endsWith('-service')) {
-                return `services/${name}.js`;
-            } else if (name === 'app-config') {
-                return 'config/app-config.js';
-            }
-            return name;
-        },
-        library: {
-            type: 'commonjs2'
-        }
-    },
-    module: {
-        rules: [
+            },
             {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                    options: {
-                        presets: ['@babel/preset-env']
+                test: /\.less$/,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                    {
+                        loader: 'less-loader',
+                        options: {
+                            lessOptions: {
+                                javascriptEnabled: true,
+                                modifyVars: {
+                                    // Apple-inspired theme variables
+                                    '@primary-color': '#0071e3',
+                                    '@link-color': '#0071e3',
+                                    '@success-color': '#34c759',
+                                    '@warning-color': '#ff9f0a',
+                                    '@error-color': '#ff3b30',
+                                    '@font-size-base': '14px',
+                                    '@heading-color': '#1d1d1f',
+                                    '@text-color': '#1d1d1f',
+                                    '@text-color-secondary': '#86868b',
+                                    '@disabled-color': '#d2d2d7',
+                                    '@border-radius-base': '6px',
+                                    '@border-color-base': '#d2d2d7',
+                                    '@box-shadow-base': '0 1px 2px rgba(0, 0, 0, 0.08)',
+                                    '@font-family': '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif'
+                                }
+                            }
+                        }
                     }
-                }
+                ]
+            },
+            {
+                test: /\.css$/,
+                use: ['style-loader', 'css-loader']
             }
         ]
     },
+    resolve: {
+        extensions: ['.js', '.jsx']
+    },
+    plugins: [
+        new CopyPlugin({
+            patterns: [
+                {
+                    from: path.resolve(__dirname, 'src/renderer/index.html'),
+                    to: path.resolve(__dirname, 'dist-webpack/renderer/index.html')
+                },
+                {
+                    from: path.resolve(__dirname, 'src/renderer/images'),
+                    to: path.resolve(__dirname, 'dist-webpack/renderer/images'),
+                    noErrorOnMissing: true
+                }
+            ]
+        })
+    ],
     optimization: {
-        minimize: true,
         minimizer: [
             new TerserPlugin({
-                terserOptions: {
-                    compress: {
-                        drop_console: false, // Keep console logs
-                        drop_debugger: true
-                    },
-                    mangle: true,
-                    output: {
-                        comments: false
-                    }
-                },
-                extractComments: false
+                extractComments: false,
             })
         ]
     },
-    externals: ['electron', 'ws', 'chokidar', 'path', 'fs', 'http', 'https', 'events', 'querystring']
+    devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
 
-module.exports = [mainConfig, preloadConfig, rendererConfig, modulesConfig];
+module.exports = [mainConfig, preloadConfig, rendererConfig];
