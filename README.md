@@ -2,7 +2,7 @@
 
 ![Open Headers Logo](./src/ui/images/icon128.png)
 
-A companion application for the Open Headers Chrome extension that manages dynamic sources from files, environment variables, and HTTP endpoints.
+A companion application for the Open Headers browser extension that manages dynamic sources from files, environment variables, and HTTP endpoints.
 
 ## Features
 
@@ -19,6 +19,7 @@ A companion application for the Open Headers Chrome extension that manages dynam
 - 🙈 **Hidden Startup**: Option to start minimized to the tray
 - 🔤 **Headless Mode**: Run without UI in server environments
 - 🔁 **Connection Retry**: Automatic retry for transient network issues
+- 💻 **Modern UI**: Clean, minimalist design with Ant Design components
 
 ## Installation
 
@@ -147,4 +148,7 @@ Run Open Headers without a UI, perfect for server environments:
 
 ## Documentation
 
-For more detailed information, see [DEVELOPER.md](DEVELOPER.md).
+For more detailed information, see:
+- [DEVELOPER.md](docs/DEVELOPER.md) - Technical documentation for developers
+- [CONTRIBUTING.md](docs/CONTRIBUTING.md) - Guidelines for contributing to the project
+- [PRIVACY.md](docs/PRIVACY.md) - Privacy policy

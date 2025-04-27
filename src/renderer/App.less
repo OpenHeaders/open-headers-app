@@ -1,0 +1,337 @@
+// App.less - Main application styles
+@import '~antd/dist/antd.less';
+
+// Layout styles
+.app-container {
+  min-height: 100vh;
+}
+
+// Header styles
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  .logo-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+
+    .app-logo {
+      height: 32px;
+      margin-right: 16px;
+    }
+
+    h3 {
+      color: #1d1d1f;
+      margin: 0;
+    }
+  }
+}
+
+// Main content styles
+.app-content {
+  padding: 24px;
+  background: #f5f5f7;
+}
+
+// Card styles
+.ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+
+  &-head {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  &-head-title {
+    font-weight: 500;
+  }
+}
+
+// Source form styles
+.source-form-card {
+  margin-bottom: 24px;
+
+  .ant-form-item {
+    margin-bottom: 12px;
+  }
+
+  .ant-card-head {
+    min-height: 40px;
+    padding: 0 12px;
+
+    .ant-card-head-title {
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    .ant-card-extra {
+      padding: 8px 0;
+    }
+  }
+
+  .ant-card-body {
+    padding: 12px;
+  }
+
+  // Remove excess spacing between form items
+  .ant-form-item-label {
+    padding-bottom: 4px;
+
+    > label {
+      font-size: 13px;
+      height: 20px;
+    }
+  }
+
+  .ant-divider {
+    margin: 8px 0;
+  }
+}
+
+// HTTP options styles
+.http-options {
+  .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
+    border-radius: 6px 6px 0 0;
+  }
+
+  .ant-tabs-content {
+    padding: 16px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+  }
+}
+
+// HTTP options compact styling
+.http-options-compact {
+  .ant-tabs-nav {
+    margin-bottom: 8px;
+  }
+
+  .ant-tabs-tab {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .ant-tabs-content {
+    background: #fafafa;
+    padding: 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 0 0 6px 6px;
+  }
+
+  .ant-card {
+    .ant-card-head {
+      min-height: 32px;
+      padding: 0 12px;
+      font-size: 13px;
+
+      .ant-card-head-title {
+        padding: 6px 0;
+      }
+
+      .ant-card-extra {
+        padding: 4px 0;
+      }
+    }
+
+    .ant-card-body {
+      padding: 8px;
+    }
+  }
+
+  .ant-form-item-label {
+    padding-bottom: 2px;
+
+    > label {
+      font-size: 12px;
+      height: 18px;
+    }
+  }
+
+  pre {
+    font-size: 11px;
+  }
+}
+
+// Table styles
+.source-table {
+  .ant-table {
+    border-radius: 8px;
+    overflow: hidden;
+
+    .ant-table-thead > tr > th {
+      background: #f5f5f7;
+      font-weight: 500;
+      color: #1d1d1f;
+    }
+
+    .ant-table-tbody > tr > td {
+      border-bottom: 1px solid #f0f0f0;
+    }
+  }
+}
+
+// Source table compact styling
+.ant-table.ant-table-small {
+  font-size: 12px;
+
+  .ant-table-thead > tr > th {
+    padding: 8px;
+  }
+
+  .ant-table-tbody > tr > td {
+    padding: 6px 8px;
+  }
+
+  .refresh-status {
+    font-size: 11px;
+    padding: 2px 6px;
+    min-width: 120px;
+  }
+}
+
+// Source content cell styles
+.source-content-cell {
+  max-height: 80px;
+  overflow: hidden;
+  background: #fafafa;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+// Refresh status styles
+.refresh-status {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.65);
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  min-width: 180px;
+
+  &.active {
+    background: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+  }
+
+  &.error {
+    background: #fff2f0;
+    color: #ff4d4f;
+    border: 1px solid #ffccc7;
+  }
+}
+
+// Code styles
+pre,
+code {
+  font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+// Toast notification styles
+.ant-message-notice-content {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 12px 16px;
+}
+
+// Modal styles
+.ant-modal-content {
+  border-radius: 8px;
+  overflow: hidden;
+
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .ant-modal-footer {
+    border-top: 1px solid #f0f0f0;
+  }
+}
+
+// Make modals more compact
+.ant-modal-small {
+  .ant-modal-header {
+    padding: 10px 16px;
+  }
+
+  .ant-modal-body {
+    padding: 12px 16px;
+  }
+
+  .ant-modal-footer {
+    padding: 8px 16px;
+  }
+}
+
+// Form field styles
+.ant-input,
+.ant-select-selector,
+.ant-textarea {
+  border-radius: 6px;
+
+  &:hover,
+  &:focus {
+    border-color: @primary-color;
+  }
+}
+
+.ant-input-affix-wrapper {
+  border-radius: 6px;
+}
+
+// Override Ant Design's default focus styles
+*:focus-visible {
+  outline: 2px solid #0071e3 !important;
+  outline-offset: 2px !important;
+}
+
+// Animations for page transitions
+.fade-enter {
+  opacity: 0;
+}
+
+.fade-enter-active {
+  opacity: 1;
+  transition: opacity 300ms;
+}
+
+.fade-exit {
+  opacity: 1;
+}
+
+.fade-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+.content-viewer-modal {
+  .ant-modal-body {
+    padding: 16px;
+  }
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

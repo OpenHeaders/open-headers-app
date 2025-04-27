@@ -1,0 +1,125 @@
+import React, { useEffect, useRef } from 'react';
+import { Button, Space, Card, Typography } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+
+const { Text } = Typography;
+
+/**
+ * JsonViewer component for displaying JSON data with filtering info
+ */
+const JsonViewer = ({ source, onRefresh }) => {
+    // Get filtered and original data
+    const filteredContent = source.sourceContent || '';
+    const originalJson = source.originalJson || '';
+    const jsonFilterPath = source.jsonFilter?.path || '';
+
+    // Use refs to track previous values for comparison
+    const prevSourceIdRef = useRef(null);
+    const prevContentRef = useRef(null);
+    const prevOriginalJsonRef = useRef(null);
+
+    // Log only when component mounts or when important data changes
+    useEffect(() => {
+        const sourceId = source.sourceId;
+
+        // Only log if this is the first render or if source data has changed
+        if (
+            prevSourceIdRef.current !== sourceId ||
+            prevContentRef.current !== filteredContent ||
+            prevOriginalJsonRef.current !== originalJson
+        ) {
+            console.log("JsonViewer updated for source:", {
+                id: sourceId,
+                filteredContent: filteredContent ? filteredContent.substring(0, 50) + '...' : 'none',
+                originalJson: originalJson ? originalJson.substring(0, 50) + '...' : 'none',
+                jsonFilterPath
+            });
+
+            // Update refs with current values
+            prevSourceIdRef.current = sourceId;
+            prevContentRef.current = filteredContent;
+            prevOriginalJsonRef.current = originalJson;
+        }
+    }, [source.sourceId, filteredContent, originalJson, jsonFilterPath]);
+
+    // Format JSON for display
+    const formatJson = (jsonString) => {
+        try {
+            if (typeof jsonString !== 'string' || !jsonString.trim()) {
+                return 'No JSON content available';
+            }
+
+            // Try to parse and stringify to format
+            if (jsonString.trim().startsWith('{') || jsonString.trim().startsWith('[')) {
+                const parsed = JSON.parse(jsonString);
+                return JSON.stringify(parsed, null, 2);
+            }
+
+            // Return as-is if not valid JSON
+            return jsonString;
+        } catch (error) {
+            console.error('Error formatting JSON:', error);
+            return jsonString || 'Invalid JSON';
+        }
+    };
+
+    return (
+        <div>
+            <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ marginBottom: 16 }}>
+                    <Space>
+                        <Button
+                            onClick={onRefresh}
+                            icon={<ReloadOutlined />}
+                        >
+                            Refresh JSON
+                        </Button>
+
+                        <Text type="secondary">
+                            JSON Filter Path: <code>{jsonFilterPath || 'none'}</code>
+                        </Text>
+                    </Space>
+                </div>
+
+                <Card
+                    title="Filtered Content"
+                    size="small"
+                    style={{ marginBottom: 16 }}
+                >
+                    <pre style={{
+                        maxHeight: 200,
+                        overflow: 'auto',
+                        margin: 0,
+                        background: '#f5f5f7',
+                        padding: 8,
+                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
+                        fontSize: 12,
+                        borderRadius: 6
+                    }}>
+                        {filteredContent}
+                    </pre>
+                </Card>
+
+                <Card
+                    title="Original JSON Response"
+                    size="small"
+                >
+                    <pre style={{
+                        maxHeight: 300,
+                        overflow: 'auto',
+                        margin: 0,
+                        background: '#f5f5f7',
+                        padding: 8,
+                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
+                        fontSize: 12,
+                        borderRadius: 6
+                    }}>
+                        {formatJson(originalJson)}
+                    </pre>
+                </Card>
+            </Space>
+        </div>
+    );
+};
+
+export default JsonViewer;
