@@ -59,23 +59,23 @@ We expect all contributors to follow our Code of Conduct. Please be respectful a
 
 ```
 open-headers-app/
-├── src/
-│   ├── contexts/          # React contexts
-│   ├── components/        # React components
-│   ├── hooks/             # Custom React hooks
-│   ├── config/            # Application configuration
-│   ├── controllers/       # Electron main process controllers
-│   ├── models/            # Data models
-│   ├── repositories/      # Data persistence
-│   ├── services/          # Core services
-│   ├── utils/             # Utility functions
-│   ├── ui/                # Legacy UI (for reference)
-│   ├── preload/           # Electron preload scripts
-│   ├── main.js            # Electron main process entry point
-│   └── renderer/          # React renderer process
-├── build/                 # Build resources
-├── webpack.config.js      # Webpack configuration
-└── docs/                  # Documentation
+├── build/                # Build resources (icons, etc.)
+├── docs/                 # Documentation
+├── src/                  # Source code
+│   ├── main.js           # Electron main process
+│   ├── preload.js        # Electron preload script 
+│   ├── ui/               # Legacy UI assets (for reference)
+│   └── renderer/         # React renderer process
+│       ├── App.jsx       # Main React application
+│       ├── App.less      # Application styles
+│       ├── index.jsx     # React entry point
+│       ├── index.html    # HTML template
+│       ├── contexts/     # React contexts
+│       ├── components/   # React components
+│       ├── hooks/        # Custom React hooks
+│       └── images/       # Application images
+├── webpack.config.js     # Webpack configuration
+└── package.json          # Project configuration
 ```
 
 ## Branching Strategy
@@ -201,7 +201,6 @@ All contributions should be tested across supported platforms:
 ### Testing Focus Areas
 
 - **UI Rendering**: Verify components render correctly across platforms
-- **WebSocket Server**: Test connection with browser extension
 - **File Watching**: Verify file monitoring works correctly
 - **Settings**: Confirm settings persist between sessions
 - **Performance**: Check for any platform-specific performance issues
