@@ -44,6 +44,11 @@
 .app-content {
   padding: 24px;
   background: #f5f5f7;
+
+  .content-container {
+    padding-bottom: 40px; // Add extra padding at the bottom for scrolling
+    min-height: calc(100vh - 112px); // 100vh - (header height + padding)
+  }
 }
 
 // Card styles
@@ -64,6 +69,8 @@
 // Source form styles
 .source-form-card {
   margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
 
   .ant-form-item {
     margin-bottom: 12px;
@@ -99,6 +106,37 @@
 
   .ant-divider {
     margin: 8px 0;
+  }
+}
+
+// Sticky source form header - only for the add button header
+.source-form-sticky-header {
+  position: fixed;
+  top: 64px; // Same as app-header height
+  left: 0;
+  right: 0;
+  z-index: 9;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.3s, transform 0.3s;
+  padding: 0 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .sticky-header-content {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .title {
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(0, 0, 0, 0.85);
+    }
   }
 }
 
