@@ -25,6 +25,7 @@ const AppComponent = () => {
         removeSource,
         refreshSource,
         updateRefreshOptions,
+        updateSource,
         exportSources,
         importSources
     } = useSources();
@@ -206,7 +207,7 @@ const AppComponent = () => {
                         sources={sources}
                         onRemoveSource={removeSource}
                         onRefreshSource={refreshSource}
-                        onUpdateRefreshOptions={updateRefreshOptions}
+                        onUpdateSource={updateSource}
                     />
                 </div>
             </Content>

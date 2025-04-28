@@ -491,7 +491,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                         loading={loading}
                         disabled={loading}
                     >
-                        {loading ? 'Refreshing...' : 'Refresh now'}
+                        {loading ? 'Refreshing...' : 'Refresh Content'}
                     </Button>
                 ),
                 <Button key="close" onClick={onClose}>
