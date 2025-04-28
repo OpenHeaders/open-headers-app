@@ -17,6 +17,7 @@ const SourceForm = ({ onAddSource }) => {
     const [testResponse, setTestResponse] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [isSticky, setIsSticky] = useState(false);
+    const [testResponseHeaders, setTestResponseHeaders] = useState(null);
 
     const formCardRef = useRef(null);
     const fileSystem = useFileSystem();
@@ -111,6 +112,16 @@ const SourceForm = ({ onAddSource }) => {
                 if (testResponse) {
                     try {
                         const parsedResponse = JSON.parse(testResponse);
+
+                        // Include headers if they were extracted from the test response
+                        if (testResponseHeaders) {
+                            sourceData.headers = testResponseHeaders;
+                            console.log('Setting headers from test response:', testResponseHeaders);
+                        } else if (parsedResponse.headers) {
+                            sourceData.headers = parsedResponse.headers;
+                            console.log('Setting headers from parsed response:', parsedResponse.headers);
+                        }
+
                         if (parsedResponse.body) {
                             // For filtered responses, handle differently
                             if (parsedResponse.filteredWith && sourceData.jsonFilter?.enabled) {
@@ -126,12 +137,21 @@ const SourceForm = ({ onAddSource }) => {
                                 console.log('Setting initial originalJson from test response:',
                                     parsedResponse.body.substring(0, 50) + '...');
                             }
+
+                            // Include headers if they exist in the response
+                            if (parsedResponse.headers) {
+                                sourceData.headers = parsedResponse.headers;
+                                console.log('Setting headers from test response:', parsedResponse.headers);
+                            }
                         }
                     } catch (error) {
                         console.error("Error parsing test response:", error);
                         // Use raw response if parsing fails
                         sourceData.initialContent = testResponse;
                         sourceData.originalJson = testResponse;
+
+                        // Try to include raw response for potential header extraction
+                        sourceData.rawResponse = testResponse;
                     }
                 }
 
@@ -162,6 +182,17 @@ const SourceForm = ({ onAddSource }) => {
     // Handle HTTP test response
     const handleTestResponse = (response) => {
         setTestResponse(response);
+
+        // Try to extract headers from the response
+        try {
+            const parsedResponse = JSON.parse(response);
+            if (parsedResponse.headers) {
+                console.log('Extracted headers from test response:', parsedResponse.headers);
+                setTestResponseHeaders(parsedResponse.headers);
+            }
+        } catch (e) {
+            console.error('Error parsing test response headers:', e);
+        }
     };
 
     // Render different form fields based on source type

@@ -179,9 +179,11 @@ export function useHttp() {
                 throw new Error('Invalid response format');
             }
 
-            // Extract body
+            // Extract body and headers
             const bodyContent = response.body || '';
+            const headers = response.headers || {};
             console.log("Body content (original):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
+            console.log("Headers received:", headers);
 
             // Apply JSON filter if enabled
             let finalContent = bodyContent;
@@ -193,7 +195,9 @@ export function useHttp() {
 
             return {
                 content: finalContent,
-                originalJson: bodyContent
+                originalJson: bodyContent,
+                headers: headers, // Include headers
+                rawResponse: responseJson // Include the raw response
             };
         } catch (error) {
             console.error("HTTP request error:", error);
@@ -202,10 +206,22 @@ export function useHttp() {
     }, [parseJSON, applyJsonFilter]);
 
     /**
-     * Set up auto-refresh for HTTP sources - This is the updated version of the function in useHttp.jsx
+     * Cancel a refresh timer
      */
+    const cancelRefresh = useCallback((sourceId) => {
+        const timer = refreshTimers.current.get(sourceId);
+        if (timer) {
+            clearTimeout(timer);
+            clearInterval(timer);
+            refreshTimers.current.delete(sourceId);
+            console.log(`Cancelled refresh timer for source ${sourceId}`);
+            return true;
+        }
+        return false;
+    }, []);
+
     /**
-     * Set up auto-refresh for HTTP sources - This is the updated version of the function in useHttp.jsx
+     * Set up auto-refresh for HTTP sources
      */
     const setupRefresh = useCallback((
         sourceId,
@@ -267,7 +283,7 @@ export function useHttp() {
             try {
                 console.log(`Executing refresh for source ${sourceId}`);
                 // Perform refresh
-                const { content, originalJson } = await request(
+                const { content, originalJson, headers } = await request(
                     sourceId,
                     url,
                     method,
@@ -283,6 +299,7 @@ export function useHttp() {
 
                     onUpdate(sourceId, content, {
                         originalJson,
+                        headers, // Pass headers to onUpdate
                         refreshOptions: {
                             ...refreshOptions,
                             lastRefresh: updatedTimestamp,
@@ -295,7 +312,7 @@ export function useHttp() {
                 const regularTimer = setInterval(async () => {
                     try {
                         console.log(`Executing scheduled refresh for source ${sourceId}`);
-                        const { content, originalJson } = await request(
+                        const { content, originalJson, headers } = await request(
                             sourceId,
                             url,
                             method,
@@ -310,6 +327,7 @@ export function useHttp() {
 
                             onUpdate(sourceId, content, {
                                 originalJson,
+                                headers, // Pass headers to onUpdate
                                 refreshOptions: {
                                     ...refreshOptions,
                                     lastRefresh: updatedTimestamp,
@@ -350,21 +368,6 @@ export function useHttp() {
 
         return () => cancelRefresh(sourceId);
     }, [request, cancelRefresh]);
-
-    /**
-     * Cancel a refresh timer
-     */
-    const cancelRefresh = useCallback((sourceId) => {
-        const timer = refreshTimers.current.get(sourceId);
-        if (timer) {
-            clearTimeout(timer);
-            clearInterval(timer);
-            refreshTimers.current.delete(sourceId);
-            console.log(`Cancelled refresh timer for source ${sourceId}`);
-            return true;
-        }
-        return false;
-    }, []);
 
     /**
      * Test HTTP request (used for UI testing)
@@ -421,7 +424,9 @@ export function useHttp() {
             }
 
             const bodyContent = response.body || '';
+            const headers = response.headers || {};
             console.log("Body content (test):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
+            console.log("Headers received (test):", headers);
 
             // If no JSON filter, return raw response
             if (!jsonFilter || !jsonFilter.enabled || !jsonFilter.path) {
@@ -440,12 +445,13 @@ export function useHttp() {
                 const filteredContent = applyJsonFilter(bodyContent, jsonFilter);
                 console.log("Filtered test content:", filteredContent);
 
-                // Create new response with filtered content and original body
+                // Create new response with filtered content, original body, and headers
                 const filteredResponse = {
                     ...response,
                     body: filteredContent,
                     filteredWith: jsonFilter.path,
-                    originalBody: bodyContent // Add originalBody to preserve it for display
+                    originalBody: bodyContent, // Add originalBody to preserve it for display
+                    headers: headers // Preserve headers
                 };
 
                 return JSON.stringify(filteredResponse, null, 2);
