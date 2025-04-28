@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton } from 'antd';
 import { FileTextOutlined, ReloadOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
-import { showMessage } from '../utils/messageUtil'; // Import the utility
+import { showMessage } from '../utils/messageUtil';
 
 const { Text } = Typography;
 
 /**
  * ContentViewer component for displaying source content in a modal
- * Includes special handling for HTTP JSON responses
+ * Refactored for compact UI design
  */
 const ContentViewer = ({ source, open, onClose, onRefresh }) => {
     const [activeTab, setActiveTab] = useState('content');
@@ -179,7 +179,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                 <div>
                     <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         {hasJsonFilter && (
-                            <Text type="secondary">
+                            <Text type="secondary" style={{ fontSize: 11 }}>
                                 JSON Filter Path: <code>{source?.jsonFilter?.path || 'none'}</code>
                             </Text>
                         )}
@@ -314,6 +314,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                     onChange={setActiveTab}
                     items={items}
                     type="card"
+                    size="small"
                 />
             ) : (
                 <Card size="small">
@@ -333,7 +334,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                         <ContentSkeleton />
                     ) : (
                         <pre style={{
-                            maxHeight: 400,
+                            maxHeight: 300,
                             overflow: 'auto',
                             margin: 0,
                             background: '#f5f5f7',
