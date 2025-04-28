@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tabs, Form, Input, Select, Button, Card, Space, message, Radio, InputNumber, Switch, Row, Col } from 'antd';
+import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
@@ -27,7 +27,135 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
     // Custom hooks
     const http = useHttp();
 
-    // Handle content type change
+    // Helper function to get status text based on status code
+    const getStatusText = (statusCode) => {
+        const statusTexts = {
+            // 1xx - Informational
+            100: 'Continue',
+            101: 'Switching Protocols',
+            102: 'Processing',
+            103: 'Early Hints',
+
+            // 2xx - Success
+            200: 'OK',
+            201: 'Created',
+            202: 'Accepted',
+            203: 'Non-Authoritative Information',
+            204: 'No Content',
+            205: 'Reset Content',
+            206: 'Partial Content',
+            207: 'Multi-Status',
+            208: 'Already Reported',
+            226: 'IM Used',
+
+            // 3xx - Redirection
+            300: 'Multiple Choices',
+            301: 'Moved Permanently',
+            302: 'Found',
+            303: 'See Other',
+            304: 'Not Modified',
+            305: 'Use Proxy',
+            307: 'Temporary Redirect',
+            308: 'Permanent Redirect',
+
+            // 4xx - Client Errors
+            400: 'Bad Request',
+            401: 'Unauthorized',
+            402: 'Payment Required',
+            403: 'Forbidden',
+            404: 'Not Found',
+            405: 'Method Not Allowed',
+            406: 'Not Acceptable',
+            407: 'Proxy Authentication Required',
+            408: 'Request Timeout',
+            409: 'Conflict',
+            410: 'Gone',
+            411: 'Length Required',
+            412: 'Precondition Failed',
+            413: 'Payload Too Large',
+            414: 'URI Too Long',
+            415: 'Unsupported Media Type',
+            416: 'Range Not Satisfiable',
+            417: 'Expectation Failed',
+            418: "I'm a teapot",
+            421: 'Misdirected Request',
+            422: 'Unprocessable Entity',
+            423: 'Locked',
+            424: 'Failed Dependency',
+            425: 'Too Early',
+            426: 'Upgrade Required',
+            428: 'Precondition Required',
+            429: 'Too Many Requests',
+            431: 'Request Header Fields Too Large',
+            451: 'Unavailable For Legal Reasons',
+
+            // 5xx - Server Errors
+            500: 'Internal Server Error',
+            501: 'Not Implemented',
+            502: 'Bad Gateway',
+            503: 'Service Unavailable',
+            504: 'Gateway Timeout',
+            505: 'HTTP Version Not Supported',
+            506: 'Variant Also Negotiates',
+            507: 'Insufficient Storage',
+            508: 'Loop Detected',
+            510: 'Not Extended',
+            511: 'Network Authentication Required'
+        };
+
+        return statusTexts[statusCode] || 'Unknown Status';
+    };
+
+    // Helper function to format content based on content type
+    const formatContentByType = (content, headers) => {
+        if (!content) return "No content";
+
+        try {
+            // Check content type from headers
+            const contentType = headers && headers['content-type'] ?
+                headers['content-type'].toLowerCase() : '';
+
+            // Format JSON
+            if ((contentType.includes('application/json') || contentType.includes('json')) ||
+                (typeof content === 'string' && (content.trim().startsWith('{') || content.trim().startsWith('[')))) {
+                try {
+                    const jsonObject = typeof content === 'string' ? JSON.parse(content) : content;
+                    return (
+                        <div className="formatted-json">
+                            {JSON.stringify(jsonObject, null, 2)}
+                        </div>
+                    );
+                } catch (e) {
+                    // If JSON parsing fails, display as plain text
+                    return content;
+                }
+            }
+
+            // Format HTML with syntax highlighting
+            if (contentType.includes('html')) {
+                return (
+                    <div className="formatted-html">
+                        {content}
+                    </div>
+                );
+            }
+
+            // Format XML with syntax highlighting
+            if (contentType.includes('xml')) {
+                return (
+                    <div className="formatted-xml">
+                        {content}
+                    </div>
+                );
+            }
+
+            // Plain text or other types
+            return content;
+        } catch (error) {
+            return content;
+        }
+    };
+
     const handleContentTypeChange = (value) => {
         setContentType(value);
         form.setFieldsValue({
@@ -101,6 +229,23 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
                 enabled
             }
         });
+    };
+
+    // Format response for display - New Professional format
+    const formatResponseForDisplay = (responseJson) => {
+        try {
+            const response = JSON.parse(responseJson);
+
+            // Now the response object is available for tabbed display
+            // It will be used by the new tabbed interface
+            return response;
+        } catch (error) {
+            return {
+                statusCode: 0,
+                error: "Failed to parse response",
+                body: responseJson || "No content"
+            };
+        }
     };
 
     // Handle test request
@@ -195,40 +340,6 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
             showMessage('error', `Failed to test request: ${error.message}`);
         } finally {
             setTesting(false);
-        }
-    };
-
-    // Format response for display
-    const formatResponseForDisplay = (responseJson) => {
-        try {
-            const response = JSON.parse(responseJson);
-
-            let formattedResponse = `Status Code: ${response.statusCode}\n\n`;
-
-            if (response.filteredWith) {
-                formattedResponse += `[Filtered with path: ${response.filteredWith}]\n\n`;
-            }
-
-            if (response.body) {
-                try {
-                    const jsonBody = typeof response.body === 'string' && response.body.trim().startsWith('{') ?
-                        JSON.parse(response.body) : response.body;
-
-                    if (typeof jsonBody === 'object' && jsonBody !== null) {
-                        formattedResponse += JSON.stringify(jsonBody, null, 2);
-                    } else {
-                        formattedResponse += response.body;
-                    }
-                } catch (e) {
-                    formattedResponse += response.body;
-                }
-            } else {
-                formattedResponse += "Empty response body";
-            }
-
-            return formattedResponse;
-        } catch (error) {
-            return responseJson || "No content";
         }
     };
 
@@ -533,25 +644,102 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
                     ]}
                 />
 
-                {/* Test Response */}
+                {/* Test Response - Compact Professional UI */}
                 {testResponseVisible && (
                     <Card
-                        title="Response Preview"
+                        title={
+                            <div className="response-card-header">
+                                <span>Response Preview</span>
+                                {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
+                                    <span className="status-display">
+                                        Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
+                                            {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
+                                        </span>
+                                    </span>
+                                )}
+                            </div>
+                        }
                         size="small"
                         style={{ marginTop: 8 }}
+                        className="response-preview-card response-preview-compact"
                     >
-                        <pre style={{
-                            maxHeight: 150,
-                            overflow: 'auto',
-                            background: '#fafafa',
-                            padding: 8,
-                            fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
-                            fontSize: 12,
-                            borderRadius: 6,
-                            border: '1px solid #f0f0f0'
-                        }}>
-                            {testResponseContent}
-                        </pre>
+                        {typeof testResponseContent === 'object' ? (
+                            <Tabs
+                                defaultActiveKey="body"
+                                size="small"
+                                items={[
+                                    {
+                                        key: 'body',
+                                        label: 'Body',
+                                        children: (
+                                            <pre className="response-body">
+                                                {(() => {
+                                                    try {
+                                                        // Check if it's filterable JSON
+                                                        if (testResponseContent.filteredWith) {
+                                                            return (
+                                                                <div>
+                                                                    <div className="filter-info">
+                                                                        [Filtered with path: {testResponseContent.filteredWith}]
+                                                                    </div>
+                                                                    {formatContentByType(testResponseContent.body, testResponseContent.headers)}
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        // Standard body formatting
+                                                        return formatContentByType(testResponseContent.body, testResponseContent.headers);
+                                                    } catch (e) {
+                                                        return testResponseContent.body || "No body content";
+                                                    }
+                                                })()}
+                                            </pre>
+                                        )
+                                    },
+                                    {
+                                        key: 'headers',
+                                        label: 'Headers',
+                                        children: (
+                                            <div className="response-headers">
+                                                {testResponseContent.headers ? (
+                                                    <table className="headers-table">
+                                                        <thead>
+                                                        <tr>
+                                                            <th>Name</th>
+                                                            <th>Value</th>
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        {Object.entries(testResponseContent.headers).map(([key, value]) => (
+                                                            <tr key={key}>
+                                                                <td>{key}</td>
+                                                                <td>{value}</td>
+                                                            </tr>
+                                                        ))}
+                                                        </tbody>
+                                                    </table>
+                                                ) : (
+                                                    <div className="no-headers">No headers available</div>
+                                                )}
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        key: 'raw',
+                                        label: 'Raw',
+                                        children: (
+                                            <pre className="response-raw">
+                                                {JSON.stringify(testResponseContent, null, 2)}
+                                            </pre>
+                                        )
+                                    }
+                                ]}
+                            />
+                        ) : (
+                            <pre className="response-error">
+                                {testResponseContent}
+                            </pre>
+                        )}
                     </Card>
                 )}
             </div>
@@ -710,125 +898,207 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
                     <Option value="PUT">PUT</Option>
                     <Option value="PATCH">PATCH</Option>
                     <Option value="DELETE">DELETE</Option>
-                </Select>
-            </Form.Item>
+                    <Option value="GET">GET</Option>
+                <Option value="POST">POST</Option>
+                <Option value="PUT">PUT</Option>
+                <Option value="PATCH">PATCH</Option>
+                <Option value="DELETE">DELETE</Option>
+            </Select>
+        </Form.Item>
 
-            <Tabs defaultActiveKey="queryParams" type="card" items={tabItems} />
+    <Tabs defaultActiveKey="queryParams" type="card" items={tabItems} />
 
-            {/* TOTP Options */}
-            <TOTPOptions form={form} />
+    {/* TOTP Options */}
+    <TOTPOptions form={form} />
 
-            {/* JSON Filter */}
-            <JsonFilter
-                enabled={jsonFilterEnabled}
-                onChange={handleJsonFilterToggle}
+    {/* JSON Filter */}
+    <JsonFilter
+        enabled={jsonFilterEnabled}
+        onChange={handleJsonFilterToggle}
+    />
+
+    {/* Auto-Refresh Options */}
+    <Card
+        title="Auto-Refresh Options"
+        size="small"
+        style={{ marginTop: 16, marginBottom: 16 }}
+    >
+        <Form.Item
+            name={['refreshOptions', 'enabled']}
+            label="Auto-Refresh"
+            valuePropName="checked"
+            initialValue={false}
+        >
+            <Switch
+                onChange={handleRefreshToggle}
+                checked={refreshEnabled}
+                checkedChildren="Enabled"
+                unCheckedChildren="Disabled"
             />
+        </Form.Item>
 
-            {/* Auto-Refresh Options */}
-            <Card
-                title="Auto-Refresh Options"
-                size="small"
-                style={{ marginTop: 16, marginBottom: 16 }}
-            >
+        {refreshEnabled && (
+            <>
                 <Form.Item
-                    name={['refreshOptions', 'enabled']}
-                    label="Auto-Refresh"
-                    valuePropName="checked"
-                    initialValue={false}
+                    name={['refreshOptions', 'type']}
+                    initialValue="preset"
                 >
-                    <Switch
-                        onChange={handleRefreshToggle}
-                        checked={refreshEnabled}
-                        checkedChildren="Enabled"
-                        unCheckedChildren="Disabled"
-                    />
+                    <Radio.Group
+                        onChange={handleRefreshTypeChange}
+                        value={refreshType}
+                    >
+                        <Radio value="preset">Use preset interval</Radio>
+                        <Radio value="custom">Custom interval</Radio>
+                    </Radio.Group>
                 </Form.Item>
 
-                {refreshEnabled && (
-                    <>
-                        <Form.Item
-                            name={['refreshOptions', 'type']}
-                            initialValue="preset"
-                        >
-                            <Radio.Group
-                                onChange={handleRefreshTypeChange}
-                                value={refreshType}
-                            >
-                                <Radio value="preset">Use preset interval</Radio>
-                                <Radio value="custom">Custom interval</Radio>
-                            </Radio.Group>
-                        </Form.Item>
-
-                        {refreshType === 'preset' ? (
-                            <Form.Item
-                                name={['refreshOptions', 'interval']}
-                                label="Refresh Interval"
-                                initialValue={15}
-                            >
-                                <Select onChange={handlePresetIntervalChange}>
-                                    <Option value={1}>Every 1 minute</Option>
-                                    <Option value={5}>Every 5 minutes</Option>
-                                    <Option value={15}>Every 15 minutes</Option>
-                                    <Option value={30}>Every 30 minutes</Option>
-                                    <Option value={60}>Every hour</Option>
-                                    <Option value={120}>Every 2 hours</Option>
-                                    <Option value={360}>Every 6 hours</Option>
-                                    <Option value={720}>Every 12 hours</Option>
-                                    <Option value={1440}>Every 24 hours</Option>
-                                </Select>
-                            </Form.Item>
-                        ) : (
-                            <Form.Item
-                                name={['refreshOptions', 'interval']}
-                                label="Custom Interval (minutes)"
-                                initialValue={15}
-                                help="Enter a custom refresh interval in minutes"
-                            >
-                                <InputNumber
-                                    min={1}
-                                    max={10080} // 7 days in minutes
-                                    value={customInterval}
-                                    onChange={handleCustomIntervalChange}
-                                    style={{ width: '100%' }}
-                                />
-                            </Form.Item>
-                        )}
-                    </>
+                {refreshType === 'preset' ? (
+                    <Form.Item
+                        name={['refreshOptions', 'interval']}
+                        label="Refresh Interval"
+                        initialValue={15}
+                    >
+                        <Select onChange={handlePresetIntervalChange}>
+                            <Option value={1}>Every 1 minute</Option>
+                            <Option value={5}>Every 5 minutes</Option>
+                            <Option value={15}>Every 15 minutes</Option>
+                            <Option value={30}>Every 30 minutes</Option>
+                            <Option value={60}>Every hour</Option>
+                            <Option value={120}>Every 2 hours</Option>
+                            <Option value={360}>Every 6 hours</Option>
+                            <Option value={720}>Every 12 hours</Option>
+                            <Option value={1440}>Every 24 hours</Option>
+                        </Select>
+                    </Form.Item>
+                ) : (
+                    <Form.Item
+                        name={['refreshOptions', 'interval']}
+                        label="Custom Interval (minutes)"
+                        initialValue={15}
+                        help="Enter a custom refresh interval in minutes"
+                    >
+                        <InputNumber
+                            min={1}
+                            max={10080} // 7 days in minutes
+                            value={customInterval}
+                            onChange={handleCustomIntervalChange}
+                            style={{ width: '100%' }}
+                        />
+                    </Form.Item>
                 )}
-            </Card>
+            </>
+        )}
+    </Card>
 
-            {/* Test Button */}
-            <Button
-                type="primary"
-                onClick={handleTestRequest}
-                loading={testing}
-            >
-                Test Request
-            </Button>
+    {/* Test Button */}
+    <Button
+        type="primary"
+        onClick={handleTestRequest}
+        loading={testing}
+    >
+        Test Request
+    </Button>
 
-            {/* Test Response */}
-            {testResponseVisible && (
-                <Card
-                    title="Response Preview"
+    {/* Test Response - Professional UI */}
+    {testResponseVisible && (
+        <Card
+            title={
+                <div className="response-card-header">
+                    <span>Response Preview</span>
+                    {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
+                        <span className="status-display">
+                                        Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
+                                            {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
+                                        </span>
+                                    </span>
+                    )}
+                </div>
+            }
+            size="small"
+            style={{ marginTop: 16 }}
+            className="response-preview-card"
+        >
+            {typeof testResponseContent === 'object' ? (
+                <Tabs
+                    defaultActiveKey="body"
                     size="small"
-                    style={{ marginTop: 16 }}
-                >
-                    <pre style={{
-                        maxHeight: 220,
-                        overflow: 'auto',
-                        background: '#fafafa',
-                        padding: 8,
-                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
-                        fontSize: 12,
-                        borderRadius: 6,
-                        border: '1px solid #f0f0f0'
-                    }}>
-                        {testResponseContent}
-                    </pre>
-                </Card>
+                    items={[
+                        {
+                            key: 'body',
+                            label: 'Body',
+                            children: (
+                                <pre className="response-body">
+                                            {(() => {
+                                                try {
+                                                    // Check if it's filterable JSON
+                                                    if (testResponseContent.filteredWith) {
+                                                        return (
+                                                            <div>
+                                                                <div className="filter-info">
+                                                                    [Filtered with path: {testResponseContent.filteredWith}]
+                                                                </div>
+                                                                {formatContentByType(testResponseContent.body, testResponseContent.headers)}
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    // Standard body formatting
+                                                    return formatContentByType(testResponseContent.body, testResponseContent.headers);
+                                                } catch (e) {
+                                                    return testResponseContent.body || "No body content";
+                                                }
+                                            })()}
+                                        </pre>
+                            )
+                        },
+                        {
+                            key: 'headers',
+                            label: 'Headers',
+                            children: (
+                                <div className="response-headers">
+                                    {testResponseContent.headers ? (
+                                        <table className="headers-table">
+                                            <thead>
+                                            <tr>
+                                                <th>Name</th>
+                                                <th>Value</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {Object.entries(testResponseContent.headers).map(([key, value]) => (
+                                                <tr key={key}>
+                                                    <td>{key}</td>
+                                                    <td>{value}</td>
+                                                </tr>
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="no-headers">No headers available</div>
+                                    )}
+                                </div>
+                            )
+                        },
+                        {
+                            key: 'raw',
+                            label: 'Raw',
+                            children: (
+                                <pre className="response-raw">
+                                            {JSON.stringify(testResponseContent, null, 2)}
+                                        </pre>
+                            )
+                        }
+                    ]}
+                />
+            ) : (
+                <pre className="response-error">
+                            {testResponseContent}
+                        </pre>
             )}
-        </div>
-    );
+        </Card>
+    )}
+</div>
+);
 };
 
 export default HttpOptions;

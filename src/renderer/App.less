@@ -207,6 +207,142 @@
   }
 }
 
+// HTTP response preview styles
+.response-preview-card {
+  .response-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .status-display {
+      font-weight: normal;
+      font-size: 13px;
+      margin-left: 10px;
+      white-space: nowrap;
+    }
+
+    .status-code {
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+      white-space: nowrap;
+
+      &.status-1xx {
+        background-color: #e6f7ff;
+        color: #1890ff;
+      }
+
+      &.status-2xx {
+        background-color: #f6ffed;
+        color: #52c41a;
+      }
+
+      &.status-3xx {
+        background-color: #fff7e6;
+        color: #fa8c16;
+      }
+
+      &.status-4xx {
+        background-color: #fff2f0;
+        color: #ff4d4f;
+      }
+
+      &.status-5xx {
+        background-color: #fff1f0;
+        color: #ff4d4f;
+      }
+    }
+  }
+
+  .ant-tabs-nav {
+    margin-bottom: 8px;
+  }
+
+  .response-body, .response-raw {
+    max-height: 250px;
+    overflow: auto;
+    margin: 0;
+    background: #fafafa;
+    padding: 12px;
+    font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
+    border-radius: 6px;
+    border: 1px solid #f0f0f0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .response-headers {
+    .headers-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 8px;
+
+      th, td {
+        padding: 6px 8px;
+        text-align: left;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      th {
+        background-color: #fafafa;
+        font-weight: 500;
+      }
+
+      tr:hover td {
+        background-color: #f5f5f5;
+      }
+
+      td:first-child {
+        font-weight: 500;
+        width: 40%;
+      }
+    }
+
+    .no-headers {
+      color: #999999;
+      font-style: italic;
+      padding: 12px;
+      text-align: center;
+    }
+  }
+
+  .filter-info {
+    color: #722ed1;
+    margin-bottom: 8px;
+    font-style: italic;
+    font-size: 11px;
+  }
+
+  .formatted-json {
+    white-space: pre-wrap;
+  }
+
+  .formatted-html, .formatted-xml {
+    white-space: pre-wrap;
+    line-height: 1.5;
+  }
+}
+
+// Compact version adjustments
+.response-preview-compact {
+  .response-body, .response-raw {
+    max-height: 160px;
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .headers-table {
+    th, td {
+      padding: 4px 6px;
+      font-size: 11px;
+    }
+  }
+}
+
 // Table styles
 .source-table {
   .ant-table {
