@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useFileSystem } from '../hooks/useFileSystem';
@@ -9,6 +9,7 @@ const { Option } = Select;
 
 /**
  * SourceForm component for adding new sources with compact layout
+ * Only the form header with the Add Source button is sticky
  */
 const SourceForm = ({ onAddSource }) => {
     const [form] = Form.useForm();
@@ -16,8 +17,36 @@ const SourceForm = ({ onAddSource }) => {
     const [filePath, setFilePath] = useState('');
     const [testResponse, setTestResponse] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [isSticky, setIsSticky] = useState(false);
 
+    const formCardRef = useRef(null);
     const fileSystem = useFileSystem();
+
+    // Setup scroll event listener to detect when to make header sticky
+    useEffect(() => {
+        const handleScroll = () => {
+            if (!formCardRef.current) return;
+
+            const formCardTop = formCardRef.current.getBoundingClientRect().top;
+            const headerHeight = 64; // App header height
+
+            // Header should become sticky when the form card reaches the app header
+            if (formCardTop <= headerHeight && !isSticky) {
+                setIsSticky(true);
+            } else if (formCardTop > headerHeight && isSticky) {
+                setIsSticky(false);
+            }
+        };
+
+        window.addEventListener('scroll', handleScroll);
+
+        // Run once to check initial position
+        handleScroll();
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, [isSticky]);
 
     // Handle source type change
     const handleSourceTypeChange = (value) => {
@@ -175,83 +204,113 @@ const SourceForm = ({ onAddSource }) => {
         }
     };
 
+    // Render the sticky header separately when in sticky mode
+    const renderStickyHeader = () => {
+        if (!isSticky) return null;
+
+        return (
+            <div className="source-form-sticky-header">
+                <div className="sticky-header-content">
+                    <div className="title">Add Source</div>
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        icon={<PlusOutlined />}
+                        onClick={() => form.submit()}
+                        loading={submitting}
+                        size="small"
+                    >
+                        Add Source
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
     return (
-        <Card
-            title="Add Source"
-            className="source-form-card"
-            size="small"
-            extra={
-                <Button
-                    type="primary"
-                    htmlType="submit"
-                    icon={<PlusOutlined />}
-                    onClick={() => form.submit()}
-                    loading={submitting}
+        <>
+            {/* Sticky header that shows when scrolled */}
+            {renderStickyHeader()}
+
+            {/* Main form card */}
+            <Card
+                title="Add Source"
+                className="source-form-card"
+                size="small"
+                ref={formCardRef}
+                extra={
+                    <Button
+                        type="primary"
+                        htmlType="submit"
+                        icon={<PlusOutlined />}
+                        onClick={() => form.submit()}
+                        loading={submitting}
+                        size="small"
+                    >
+                        Add Source
+                    </Button>
+                }
+            >
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onFinish={handleSubmit}
+                    initialValues={{ sourceType: 'file' }}
                     size="small"
                 >
-                    Add Source
-                </Button>
-            }
-        >
-            <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleSubmit}
-                initialValues={{ sourceType: 'file' }}
-                size="small"
-            >
-                {/* Common source fields in a compact row */}
-                <Row gutter={16}>
-                    <Col span={4}>
-                        <Form.Item
-                            label="Source Type"
-                            name="sourceType"
-                            rules={[{ required: true }]}
-                        >
-                            <Select onChange={handleSourceTypeChange} size="small">
-                                <Option value="file">File</Option>
-                                <Option value="env">Environment Variable</Option>
-                                <Option value="http">HTTP Request</Option>
-                            </Select>
-                        </Form.Item>
-                    </Col>
-                    <Col span={14}>
-                        <Form.Item
-                            label={sourceType === 'file' ? 'File Path' : (sourceType === 'env' ? 'Variable Name' : 'URL')}
-                            name="sourcePath"
-                            rules={[{ required: true, message: `Please enter ${sourceType === 'file' ? 'a file path' : (sourceType === 'env' ? 'a variable name' : 'a URL')}` }]}
-                        >
-                            {renderSourcePathField()}
-                        </Form.Item>
-                    </Col>
-                    <Col span={6}>
-                        <Form.Item
-                            label="Tag (optional)"
-                            name="sourceTag"
-                        >
-                            <Input placeholder="Enter a tag" size="small" />
-                        </Form.Item>
-                    </Col>
-                </Row>
+                    {/* Common source fields in a compact row */}
+                    <Row gutter={16}>
+                        <Col span={4}>
+                            <Form.Item
+                                label="Source Type"
+                                name="sourceType"
+                                rules={[{ required: true }]}
+                            >
+                                <Select onChange={handleSourceTypeChange} size="small">
+                                    <Option value="file">File</Option>
+                                    <Option value="env">Environment Variable</Option>
+                                    <Option value="http">HTTP Request</Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={14}>
+                            <Form.Item
+                                label={sourceType === 'file' ? 'File Path' : (sourceType === 'env' ? 'Variable Name' : 'URL')}
+                                name="sourcePath"
+                                rules={[{ required: true, message: `Please enter ${sourceType === 'file' ? 'a file path' : (sourceType === 'env' ? 'a variable name' : 'a URL')}` }]}
+                            >
+                                {renderSourcePathField()}
+                            </Form.Item>
+                        </Col>
+                        <Col span={6}>
+                            <Form.Item
+                                label="Tag (optional)"
+                                name="sourceTag"
+                            >
+                                <Input placeholder="Enter a tag" size="small" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
 
-                {/* HTTP-specific options */}
-                {sourceType === 'http' && (
-                    <>
-                        <Divider style={{ margin: '12px 0' }} />
-                        <Form.Item
-                            label="HTTP Options"
-                            name="httpOptions"
-                        >
-                            <HttpOptions
-                                form={form}
-                                onTestResponse={handleTestResponse}
-                                compact={true}
-                            />
-                        </Form.Item>
-                    </>
-                )}
-            </Form>
-        </Card>
+                    {/* HTTP-specific options */}
+                    {sourceType === 'http' && (
+                        <>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <Form.Item
+                                label="HTTP Options"
+                                name="httpOptions"
+                            >
+                                <HttpOptions
+                                    form={form}
+                                    onTestResponse={handleTestResponse}
+                                    compact={true}
+                                />
+                            </Form.Item>
+                        </>
+                    )}
+                </Form>
+            </Card>
+        </>
     );
 };
 
