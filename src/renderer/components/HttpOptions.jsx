@@ -10,9 +10,9 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 /**
- * HTTP Options component for configuring HTTP requests
+ * HttpOptions component for configuring HTTP requests with compact layout
  */
-const HttpOptions = ({ form, onTestResponse, compact = false }) => {
+const HttpOptions = ({ form, onTestResponse }) => {
     // Component state
     const [contentType, setContentType] = useState('application/json');
     const [testResponseVisible, setTestResponseVisible] = useState(false);
@@ -231,13 +231,10 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
         });
     };
 
-    // Format response for display - New Professional format
+    // Format response for display - Professional format
     const formatResponseForDisplay = (responseJson) => {
         try {
             const response = JSON.parse(responseJson);
-
-            // Now the response object is available for tabbed display
-            // It will be used by the new tabbed interface
             return response;
         } catch (error) {
             return {
@@ -343,691 +340,334 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
         }
     };
 
-    // Render component with compact layout
-    if (compact) {
-        return (
-            <div className="http-options-compact">
-                <Row gutter={16}>
-                    <Col span={4}>
-                        <Form.Item
-                            name="sourceMethod"
-                            label="HTTP Method"
-                            initialValue="GET"
-                        >
-                            <Select style={{ width: '100%' }} size="small">
-                                <Option value="GET">GET</Option>
-                                <Option value="POST">POST</Option>
-                                <Option value="PUT">PUT</Option>
-                                <Option value="PATCH">PATCH</Option>
-                                <Option value="DELETE">DELETE</Option>
-                            </Select>
-                        </Form.Item>
-                    </Col>
-                    <Col span={20}>
-                        <Button
-                            type="primary"
-                            onClick={handleTestRequest}
-                            loading={testing}
-                            size="small"
-                            style={{ marginTop: 24 }}
-                        >
-                            Test Request
-                        </Button>
-                    </Col>
-                </Row>
-
-                {/* Tabs for different options */}
-                <Tabs
-                    defaultActiveKey="queryParams"
-                    type="card"
-                    size="small"
-                    style={{ marginBottom: 10 }}
-                    items={[
-                        {
-                            key: 'queryParams',
-                            label: 'Query Params',
-                            children: (
-                                <Form.List name={['requestOptions', 'queryParams']}>
-                                    {(fields, { add, remove }) => (
-                                        <>
-                                            {fields.map(({ key, name, ...restField }) => (
-                                                <Space
-                                                    key={key}
-                                                    style={{ display: 'flex', marginBottom: 8 }}
-                                                    align="baseline"
-                                                    size="small"
-                                                >
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'key']}
-                                                        rules={[{ required: true, message: 'Missing key' }]}
-                                                        style={{ marginBottom: 0 }}
-                                                    >
-                                                        <Input placeholder="Parameter name" size="small" />
-                                                    </Form.Item>
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'value']}
-                                                        style={{ marginBottom: 0 }}
-                                                    >
-                                                        <Input placeholder="Value" size="small" />
-                                                    </Form.Item>
-                                                    <MinusCircleOutlined
-                                                        onClick={() => remove(name)}
-                                                        style={{ color: '#ff4d4f' }}
-                                                    />
-                                                </Space>
-                                            ))}
-                                            <Form.Item style={{ marginBottom: 0 }}>
-                                                <Button
-                                                    type="dashed"
-                                                    onClick={() => add()}
-                                                    block
-                                                    icon={<PlusOutlined />}
-                                                    size="small"
-                                                >
-                                                    Add Query Parameter
-                                                </Button>
-                                            </Form.Item>
-                                        </>
-                                    )}
-                                </Form.List>
-                            )
-                        },
-                        {
-                            key: 'headers',
-                            label: 'Headers',
-                            children: (
-                                <Form.List name={['requestOptions', 'headers']}>
-                                    {(fields, { add, remove }) => (
-                                        <>
-                                            {fields.map(({ key, name, ...restField }) => (
-                                                <Space
-                                                    key={key}
-                                                    style={{ display: 'flex', marginBottom: 8 }}
-                                                    align="baseline"
-                                                    size="small"
-                                                >
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'key']}
-                                                        rules={[{ required: true, message: 'Missing key' }]}
-                                                        style={{ marginBottom: 0 }}
-                                                    >
-                                                        <Input placeholder="Header name" size="small" />
-                                                    </Form.Item>
-                                                    <Form.Item
-                                                        {...restField}
-                                                        name={[name, 'value']}
-                                                        style={{ marginBottom: 0 }}
-                                                    >
-                                                        <Input placeholder="Value" size="small" />
-                                                    </Form.Item>
-                                                    <MinusCircleOutlined
-                                                        onClick={() => remove(name)}
-                                                        style={{ color: '#ff4d4f' }}
-                                                    />
-                                                </Space>
-                                            ))}
-                                            <Form.Item style={{ marginBottom: 0 }}>
-                                                <Button
-                                                    type="dashed"
-                                                    onClick={() => add()}
-                                                    block
-                                                    icon={<PlusOutlined />}
-                                                    size="small"
-                                                >
-                                                    Add Header
-                                                </Button>
-                                            </Form.Item>
-                                        </>
-                                    )}
-                                </Form.List>
-                            )
-                        },
-                        {
-                            key: 'body',
-                            label: 'Body',
-                            children: (
-                                <Row gutter={16}>
-                                    <Col span={6}>
-                                        <Form.Item
-                                            name={['requestOptions', 'contentType']}
-                                            label="Content Type"
-                                            initialValue="application/json"
-                                        >
-                                            <Select onChange={handleContentTypeChange} size="small">
-                                                <Option value="application/json">JSON</Option>
-                                                <Option value="application/x-www-form-urlencoded">Form URL Encoded</Option>
-                                            </Select>
-                                        </Form.Item>
-                                    </Col>
-                                    <Col span={18}>
-                                        <Form.Item
-                                            name={['requestOptions', 'body']}
-                                            label={contentType === 'application/json' ? 'JSON Body' : 'Form URL Encoded Body'}
-                                        >
-                                            <TextArea
-                                                rows={3}
-                                                placeholder={contentType === 'application/json'
-                                                    ? 'Enter JSON body'
-                                                    : 'key1:value1\nkey2:value2\n...'}
-                                                size="small"
-                                            />
-                                        </Form.Item>
-                                    </Col>
-                                </Row>
-                            )
-                        },
-                        {
-                            key: 'options',
-                            label: 'Options',
-                            children: (
-                                <Row gutter={16}>
-                                    <Col span={12}>
-                                        {/* JSON Filter */}
-                                        <Card size="small" title="JSON Filter"
-                                              extra={
-                                                  <Form.Item
-                                                      name={['jsonFilter', 'enabled']}
-                                                      valuePropName="checked"
-                                                      initialValue={false}
-                                                      noStyle
-                                                  >
-                                                      <Switch
-                                                          size="small"
-                                                          checkedChildren="On"
-                                                          unCheckedChildren="Off"
-                                                          onChange={handleJsonFilterToggle}
-                                                      />
-                                                  </Form.Item>
-                                              }
-                                              style={{ marginBottom: 8 }}
-                                        >
-                                            {jsonFilterEnabled && (
-                                                <Form.Item
-                                                    name={['jsonFilter', 'path']}
-                                                    label="JSON Path"
-                                                    rules={[{ required: true, message: 'Required' }]}
-                                                >
-                                                    <Input
-                                                        placeholder="e.g., root.data.items[0].name"
-                                                        size="small"
-                                                    />
-                                                </Form.Item>
-                                            )}
-                                        </Card>
-
-                                        {/* TOTP Options */}
-                                        <TOTPOptions form={form} compact={true} />
-                                    </Col>
-                                    <Col span={12}>
-                                        {/* Auto-Refresh */}
-                                        <Card
-                                            size="small"
-                                            title="Auto-Refresh"
-                                            extra={
-                                                <Form.Item
-                                                    name={['refreshOptions', 'enabled']}
-                                                    valuePropName="checked"
-                                                    initialValue={false}
-                                                    noStyle
-                                                >
-                                                    <Switch
-                                                        size="small"
-                                                        checkedChildren="On"
-                                                        unCheckedChildren="Off"
-                                                        onChange={handleRefreshToggle}
-                                                    />
-                                                </Form.Item>
-                                            }
-                                        >
-                                            {refreshEnabled && (
-                                                <Row gutter={[8, 8]}>
-                                                    <Col span={24}>
-                                                        <Form.Item
-                                                            name={['refreshOptions', 'type']}
-                                                            initialValue="preset"
-                                                            style={{ marginBottom: 8 }}
-                                                        >
-                                                            <Radio.Group
-                                                                onChange={handleRefreshTypeChange}
-                                                                value={refreshType}
-                                                                size="small"
-                                                            >
-                                                                <Radio value="preset">Preset</Radio>
-                                                                <Radio value="custom">Custom</Radio>
-                                                            </Radio.Group>
-                                                        </Form.Item>
-                                                    </Col>
-                                                    <Col span={24}>
-                                                        {refreshType === 'preset' ? (
-                                                            <Form.Item
-                                                                name={['refreshOptions', 'interval']}
-                                                                initialValue={15}
-                                                                style={{ marginBottom: 0 }}
-                                                            >
-                                                                <Select onChange={handlePresetIntervalChange} size="small">
-                                                                    <Option value={1}>Every 1 minute</Option>
-                                                                    <Option value={5}>Every 5 minutes</Option>
-                                                                    <Option value={15}>Every 15 minutes</Option>
-                                                                    <Option value={30}>Every 30 minutes</Option>
-                                                                    <Option value={60}>Every hour</Option>
-                                                                    <Option value={120}>Every 2 hours</Option>
-                                                                </Select>
-                                                            </Form.Item>
-                                                        ) : (
-                                                            <Form.Item
-                                                                name={['refreshOptions', 'interval']}
-                                                                initialValue={15}
-                                                                style={{ marginBottom: 0 }}
-                                                            >
-                                                                <InputNumber
-                                                                    min={1}
-                                                                    max={10080}
-                                                                    value={customInterval}
-                                                                    onChange={handleCustomIntervalChange}
-                                                                    addonAfter="minutes"
-                                                                    size="small"
-                                                                    style={{ width: '100%' }}
-                                                                />
-                                                            </Form.Item>
-                                                        )}
-                                                    </Col>
-                                                </Row>
-                                            )}
-                                        </Card>
-                                    </Col>
-                                </Row>
-                            )
-                        }
-                    ]}
-                />
-
-                {/* Test Response - Compact Professional UI */}
-                {testResponseVisible && (
-                    <Card
-                        title={
-                            <div className="response-card-header">
-                                <span>Response Preview</span>
-                                {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
-                                    <span className="status-display">
-                                        Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
-                                            {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
-                                        </span>
-                                    </span>
-                                )}
-                            </div>
-                        }
-                        size="small"
-                        style={{ marginTop: 8 }}
-                        className="response-preview-card response-preview-compact"
-                    >
-                        {typeof testResponseContent === 'object' ? (
-                            <Tabs
-                                defaultActiveKey="body"
-                                size="small"
-                                items={[
-                                    {
-                                        key: 'body',
-                                        label: 'Body',
-                                        children: (
-                                            <pre className="response-body">
-                                                {(() => {
-                                                    try {
-                                                        // Check if it's filterable JSON
-                                                        if (testResponseContent.filteredWith) {
-                                                            return (
-                                                                <div>
-                                                                    <div className="filter-info">
-                                                                        [Filtered with path: {testResponseContent.filteredWith}]
-                                                                    </div>
-                                                                    {formatContentByType(testResponseContent.body, testResponseContent.headers)}
-                                                                </div>
-                                                            );
-                                                        }
-
-                                                        // Standard body formatting
-                                                        return formatContentByType(testResponseContent.body, testResponseContent.headers);
-                                                    } catch (e) {
-                                                        return testResponseContent.body || "No body content";
-                                                    }
-                                                })()}
-                                            </pre>
-                                        )
-                                    },
-                                    {
-                                        key: 'headers',
-                                        label: 'Headers',
-                                        children: (
-                                            <div className="response-headers">
-                                                {testResponseContent.headers ? (
-                                                    <table className="headers-table">
-                                                        <thead>
-                                                        <tr>
-                                                            <th>Name</th>
-                                                            <th>Value</th>
-                                                        </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                        {Object.entries(testResponseContent.headers).map(([key, value]) => (
-                                                            <tr key={key}>
-                                                                <td>{key}</td>
-                                                                <td>{value}</td>
-                                                            </tr>
-                                                        ))}
-                                                        </tbody>
-                                                    </table>
-                                                ) : (
-                                                    <div className="no-headers">No headers available</div>
-                                                )}
-                                            </div>
-                                        )
-                                    },
-                                    {
-                                        key: 'raw',
-                                        label: 'Raw',
-                                        children: (
-                                            <pre className="response-raw">
-                                                {JSON.stringify(testResponseContent, null, 2)}
-                                            </pre>
-                                        )
-                                    }
-                                ]}
-                            />
-                        ) : (
-                            <pre className="response-error">
-                                {testResponseContent}
-                            </pre>
-                        )}
-                    </Card>
-                )}
-            </div>
-        );
-    }
-
-    // Original non-compact layout (for backwards compatibility)
-    // Define tabs items
-    const tabItems = [
-        {
-            key: 'queryParams',
-            label: 'Query Params',
-            children: (
-                <Form.List name={['requestOptions', 'queryParams']}>
-                    {(fields, { add, remove }) => (
-                        <>
-                            {fields.map(({ key, name, ...restField }) => (
-                                <Space
-                                    key={key}
-                                    style={{ display: 'flex', marginBottom: 8 }}
-                                    align="baseline"
-                                >
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, 'key']}
-                                        rules={[{ required: true, message: 'Missing key' }]}
-                                    >
-                                        <Input placeholder="Parameter name" />
-                                    </Form.Item>
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, 'value']}
-                                    >
-                                        <Input placeholder="Value" />
-                                    </Form.Item>
-                                    <MinusCircleOutlined
-                                        onClick={() => remove(name)}
-                                        style={{ color: '#ff4d4f' }}
-                                    />
-                                </Space>
-                            ))}
-                            <Form.Item>
-                                <Button
-                                    type="dashed"
-                                    onClick={() => add()}
-                                    block
-                                    icon={<PlusOutlined />}
-                                >
-                                    Add Query Parameter
-                                </Button>
-                            </Form.Item>
-                        </>
-                    )}
-                </Form.List>
-            )
-        },
-        {
-            key: 'headers',
-            label: 'Headers',
-            children: (
-                <Form.List name={['requestOptions', 'headers']}>
-                    {(fields, { add, remove }) => (
-                        <>
-                            {fields.map(({ key, name, ...restField }) => (
-                                <Space
-                                    key={key}
-                                    style={{ display: 'flex', marginBottom: 8 }}
-                                    align="baseline"
-                                >
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, 'key']}
-                                        rules={[{ required: true, message: 'Missing key' }]}
-                                    >
-                                        <Input placeholder="Header name" />
-                                    </Form.Item>
-                                    <Form.Item
-                                        {...restField}
-                                        name={[name, 'value']}
-                                    >
-                                        <Input placeholder="Value" />
-                                    </Form.Item>
-                                    <MinusCircleOutlined
-                                        onClick={() => remove(name)}
-                                        style={{ color: '#ff4d4f' }}
-                                    />
-                                </Space>
-                            ))}
-                            <Form.Item>
-                                <Button
-                                    type="dashed"
-                                    onClick={() => add()}
-                                    block
-                                    icon={<PlusOutlined />}
-                                >
-                                    Add Header
-                                </Button>
-                            </Form.Item>
-                        </>
-                    )}
-                </Form.List>
-            )
-        },
-        {
-            key: 'body',
-            label: 'Body',
-            children: (
-                <>
-                    <Form.Item
-                        name={['requestOptions', 'contentType']}
-                        label="Content Type"
-                        initialValue="application/json"
-                    >
-                        <Select onChange={handleContentTypeChange}>
-                            <Option value="application/json">JSON</Option>
-                            <Option value="application/x-www-form-urlencoded">Form URL Encoded</Option>
-                        </Select>
-                    </Form.Item>
-
-                    {contentType === 'application/json' ? (
-                        <Form.Item
-                            name={['requestOptions', 'body']}
-                            label="JSON Body"
-                        >
-                            <TextArea
-                                rows={6}
-                                placeholder="Enter JSON body"
-                            />
-                        </Form.Item>
-                    ) : (
-                        <Form.Item
-                            name={['requestOptions', 'body']}
-                            label="Form URL Encoded Body"
-                        >
-                            <TextArea
-                                rows={6}
-                                placeholder="key1:value1&#10;key2:value2&#10;...&#10;Keys and values are separated by :&#10;Rows are separated by new lines"
-                            />
-                        </Form.Item>
-                    )}
-                </>
-            )
-        }
-    ];
-
     return (
         <div className="http-options">
-            <Form.Item
-                name="sourceMethod"
-                label="HTTP Method"
-                initialValue="GET"
-            >
-                <Select style={{ width: 120 }}>
-                    <Option value="GET">GET</Option>
-                    <Option value="POST">POST</Option>
-                    <Option value="PUT">PUT</Option>
-                    <Option value="PATCH">PATCH</Option>
-                    <Option value="DELETE">DELETE</Option>
-                    <Option value="GET">GET</Option>
-                <Option value="POST">POST</Option>
-                <Option value="PUT">PUT</Option>
-                <Option value="PATCH">PATCH</Option>
-                <Option value="DELETE">DELETE</Option>
-            </Select>
-        </Form.Item>
-
-    <Tabs defaultActiveKey="queryParams" type="card" items={tabItems} />
-
-    {/* TOTP Options */}
-    <TOTPOptions form={form} />
-
-    {/* JSON Filter */}
-    <JsonFilter
-        enabled={jsonFilterEnabled}
-        onChange={handleJsonFilterToggle}
-    />
-
-    {/* Auto-Refresh Options */}
-    <Card
-        title="Auto-Refresh Options"
-        size="small"
-        style={{ marginTop: 16, marginBottom: 16 }}
-    >
-        <Form.Item
-            name={['refreshOptions', 'enabled']}
-            label="Auto-Refresh"
-            valuePropName="checked"
-            initialValue={false}
-        >
-            <Switch
-                onChange={handleRefreshToggle}
-                checked={refreshEnabled}
-                checkedChildren="Enabled"
-                unCheckedChildren="Disabled"
-            />
-        </Form.Item>
-
-        {refreshEnabled && (
-            <>
-                <Form.Item
-                    name={['refreshOptions', 'type']}
-                    initialValue="preset"
-                >
-                    <Radio.Group
-                        onChange={handleRefreshTypeChange}
-                        value={refreshType}
-                    >
-                        <Radio value="preset">Use preset interval</Radio>
-                        <Radio value="custom">Custom interval</Radio>
-                    </Radio.Group>
-                </Form.Item>
-
-                {refreshType === 'preset' ? (
+            <Row gutter={16}>
+                <Col span={4}>
                     <Form.Item
-                        name={['refreshOptions', 'interval']}
-                        label="Refresh Interval"
-                        initialValue={15}
+                        name="sourceMethod"
+                        label="HTTP Method"
+                        initialValue="GET"
                     >
-                        <Select onChange={handlePresetIntervalChange}>
-                            <Option value={1}>Every 1 minute</Option>
-                            <Option value={5}>Every 5 minutes</Option>
-                            <Option value={15}>Every 15 minutes</Option>
-                            <Option value={30}>Every 30 minutes</Option>
-                            <Option value={60}>Every hour</Option>
-                            <Option value={120}>Every 2 hours</Option>
-                            <Option value={360}>Every 6 hours</Option>
-                            <Option value={720}>Every 12 hours</Option>
-                            <Option value={1440}>Every 24 hours</Option>
+                        <Select style={{ width: '100%' }} size="small">
+                            <Option value="GET">GET</Option>
+                            <Option value="POST">POST</Option>
+                            <Option value="PUT">PUT</Option>
+                            <Option value="PATCH">PATCH</Option>
+                            <Option value="DELETE">DELETE</Option>
                         </Select>
                     </Form.Item>
-                ) : (
-                    <Form.Item
-                        name={['refreshOptions', 'interval']}
-                        label="Custom Interval (minutes)"
-                        initialValue={15}
-                        help="Enter a custom refresh interval in minutes"
+                </Col>
+                <Col span={20}>
+                    <Button
+                        type="primary"
+                        onClick={handleTestRequest}
+                        loading={testing}
+                        size="small"
+                        style={{ marginTop: 24 }}
                     >
-                        <InputNumber
-                            min={1}
-                            max={10080} // 7 days in minutes
-                            value={customInterval}
-                            onChange={handleCustomIntervalChange}
-                            style={{ width: '100%' }}
-                        />
-                    </Form.Item>
-                )}
-            </>
-        )}
-    </Card>
+                        Test Request
+                    </Button>
+                </Col>
+            </Row>
 
-    {/* Test Button */}
-    <Button
-        type="primary"
-        onClick={handleTestRequest}
-        loading={testing}
-    >
-        Test Request
-    </Button>
+            {/* Tabs for different options */}
+            <Tabs
+                defaultActiveKey="queryParams"
+                type="card"
+                size="small"
+                style={{ marginBottom: 10 }}
+                items={[
+                    {
+                        key: 'queryParams',
+                        label: 'Query Params',
+                        children: (
+                            <Form.List name={['requestOptions', 'queryParams']}>
+                                {(fields, { add, remove }) => (
+                                    <>
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space
+                                                key={key}
+                                                style={{ display: 'flex', marginBottom: 8 }}
+                                                align="baseline"
+                                                size="small"
+                                            >
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'key']}
+                                                    rules={[{ required: true, message: 'Missing key' }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Parameter name" size="small" />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'value']}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Value" size="small" />
+                                                </Form.Item>
+                                                <MinusCircleOutlined
+                                                    onClick={() => remove(name)}
+                                                    style={{ color: '#ff4d4f' }}
+                                                />
+                                            </Space>
+                                        ))}
+                                        <Form.Item style={{ marginBottom: 0 }}>
+                                            <Button
+                                                type="dashed"
+                                                onClick={() => add()}
+                                                block
+                                                icon={<PlusOutlined />}
+                                                size="small"
+                                            >
+                                                Add Query Parameter
+                                            </Button>
+                                        </Form.Item>
+                                    </>
+                                )}
+                            </Form.List>
+                        )
+                    },
+                    {
+                        key: 'headers',
+                        label: 'Headers',
+                        children: (
+                            <Form.List name={['requestOptions', 'headers']}>
+                                {(fields, { add, remove }) => (
+                                    <>
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space
+                                                key={key}
+                                                style={{ display: 'flex', marginBottom: 8 }}
+                                                align="baseline"
+                                                size="small"
+                                            >
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'key']}
+                                                    rules={[{ required: true, message: 'Missing key' }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Header name" size="small" />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'value']}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Value" size="small" />
+                                                </Form.Item>
+                                                <MinusCircleOutlined
+                                                    onClick={() => remove(name)}
+                                                    style={{ color: '#ff4d4f' }}
+                                                />
+                                            </Space>
+                                        ))}
+                                        <Form.Item style={{ marginBottom: 0 }}>
+                                            <Button
+                                                type="dashed"
+                                                onClick={() => add()}
+                                                block
+                                                icon={<PlusOutlined />}
+                                                size="small"
+                                            >
+                                                Add Header
+                                            </Button>
+                                        </Form.Item>
+                                    </>
+                                )}
+                            </Form.List>
+                        )
+                    },
+                    {
+                        key: 'body',
+                        label: 'Body',
+                        children: (
+                            <Row gutter={16}>
+                                <Col span={6}>
+                                    <Form.Item
+                                        name={['requestOptions', 'contentType']}
+                                        label="Content Type"
+                                        initialValue="application/json"
+                                    >
+                                        <Select onChange={handleContentTypeChange} size="small">
+                                            <Option value="application/json">JSON</Option>
+                                            <Option value="application/x-www-form-urlencoded">Form URL Encoded</Option>
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                                <Col span={18}>
+                                    <Form.Item
+                                        name={['requestOptions', 'body']}
+                                        label={contentType === 'application/json' ? 'JSON Body' : 'Form URL Encoded Body'}
+                                    >
+                                        <TextArea
+                                            rows={3}
+                                            placeholder={contentType === 'application/json'
+                                                ? 'Enter JSON body'
+                                                : 'key1:value1\nkey2:value2\n...'}
+                                            size="small"
+                                        />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                        )
+                    },
+                    {
+                        key: 'options',
+                        label: 'Options',
+                        children: (
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    {/* JSON Filter */}
+                                    <Card size="small" title="JSON Filter"
+                                          extra={
+                                              <Form.Item
+                                                  name={['jsonFilter', 'enabled']}
+                                                  valuePropName="checked"
+                                                  initialValue={false}
+                                                  noStyle
+                                              >
+                                                  <Switch
+                                                      size="small"
+                                                      checkedChildren="On"
+                                                      unCheckedChildren="Off"
+                                                      onChange={handleJsonFilterToggle}
+                                                  />
+                                              </Form.Item>
+                                          }
+                                          style={{ marginBottom: 8 }}
+                                    >
+                                        {jsonFilterEnabled && (
+                                            <Form.Item
+                                                name={['jsonFilter', 'path']}
+                                                label="JSON Path"
+                                                rules={[{ required: true, message: 'Required' }]}
+                                            >
+                                                <Input
+                                                    placeholder="e.g., root.data.items[0].name"
+                                                    size="small"
+                                                />
+                                            </Form.Item>
+                                        )}
+                                    </Card>
 
-    {/* Test Response - Professional UI */}
-    {testResponseVisible && (
-        <Card
-            title={
-                <div className="response-card-header">
-                    <span>Response Preview</span>
-                    {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
-                        <span className="status-display">
-                                        Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
-                                            {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
-                                        </span>
+                                    {/* TOTP Options */}
+                                    <TOTPOptions form={form} />
+                                </Col>
+                                <Col span={12}>
+                                    {/* Auto-Refresh */}
+                                    <Card
+                                        size="small"
+                                        title="Auto-Refresh"
+                                        extra={
+                                            <Form.Item
+                                                name={['refreshOptions', 'enabled']}
+                                                valuePropName="checked"
+                                                initialValue={false}
+                                                noStyle
+                                            >
+                                                <Switch
+                                                    size="small"
+                                                    checkedChildren="On"
+                                                    unCheckedChildren="Off"
+                                                    onChange={handleRefreshToggle}
+                                                />
+                                            </Form.Item>
+                                        }
+                                    >
+                                        {refreshEnabled && (
+                                            <Row gutter={[8, 8]}>
+                                                <Col span={24}>
+                                                    <Form.Item
+                                                        name={['refreshOptions', 'type']}
+                                                        initialValue="preset"
+                                                        style={{ marginBottom: 8 }}
+                                                    >
+                                                        <Radio.Group
+                                                            onChange={handleRefreshTypeChange}
+                                                            value={refreshType}
+                                                            size="small"
+                                                        >
+                                                            <Radio value="preset">Preset</Radio>
+                                                            <Radio value="custom">Custom</Radio>
+                                                        </Radio.Group>
+                                                    </Form.Item>
+                                                </Col>
+                                                <Col span={24}>
+                                                    {refreshType === 'preset' ? (
+                                                        <Form.Item
+                                                            name={['refreshOptions', 'interval']}
+                                                            initialValue={15}
+                                                            style={{ marginBottom: 0 }}
+                                                        >
+                                                            <Select onChange={handlePresetIntervalChange} size="small">
+                                                                <Option value={1}>Every 1 minute</Option>
+                                                                <Option value={5}>Every 5 minutes</Option>
+                                                                <Option value={15}>Every 15 minutes</Option>
+                                                                <Option value={30}>Every 30 minutes</Option>
+                                                                <Option value={60}>Every hour</Option>
+                                                                <Option value={120}>Every 2 hours</Option>
+                                                            </Select>
+                                                        </Form.Item>
+                                                    ) : (
+                                                        <Form.Item
+                                                            name={['refreshOptions', 'interval']}
+                                                            initialValue={15}
+                                                            style={{ marginBottom: 0 }}
+                                                        >
+                                                            <InputNumber
+                                                                min={1}
+                                                                max={10080}
+                                                                value={customInterval}
+                                                                onChange={handleCustomIntervalChange}
+                                                                addonAfter="minutes"
+                                                                size="small"
+                                                                style={{ width: '100%' }}
+                                                            />
+                                                        </Form.Item>
+                                                    )}
+                                                </Col>
+                                            </Row>
+                                        )}
+                                    </Card>
+                                </Col>
+                            </Row>
+                        )
+                    }
+                ]}
+            />
+
+            {/* Test Response - Compact Professional UI */}
+            {testResponseVisible && (
+                <Card
+                    title={
+                        <div className="response-card-header">
+                            <span>Response Preview</span>
+                            {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
+                                <span className="status-display">
+                                    Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
+                                        {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
                                     </span>
-                    )}
-                </div>
-            }
-            size="small"
-            style={{ marginTop: 16 }}
-            className="response-preview-card"
-        >
-            {typeof testResponseContent === 'object' ? (
-                <Tabs
-                    defaultActiveKey="body"
+                                </span>
+                            )}
+                        </div>
+                    }
                     size="small"
-                    items={[
-                        {
-                            key: 'body',
-                            label: 'Body',
-                            children: (
-                                <pre className="response-body">
+                    style={{ marginTop: 8 }}
+                    className="response-preview-card"
+                >
+                    {typeof testResponseContent === 'object' ? (
+                        <Tabs
+                            defaultActiveKey="body"
+                            size="small"
+                            items={[
+                                {
+                                    key: 'body',
+                                    label: 'Body',
+                                    children: (
+                                        <pre className="response-body">
                                             {(() => {
                                                 try {
                                                     // Check if it's filterable JSON
@@ -1049,56 +689,56 @@ const HttpOptions = ({ form, onTestResponse, compact = false }) => {
                                                 }
                                             })()}
                                         </pre>
-                            )
-                        },
-                        {
-                            key: 'headers',
-                            label: 'Headers',
-                            children: (
-                                <div className="response-headers">
-                                    {testResponseContent.headers ? (
-                                        <table className="headers-table">
-                                            <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Value</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            {Object.entries(testResponseContent.headers).map(([key, value]) => (
-                                                <tr key={key}>
-                                                    <td>{key}</td>
-                                                    <td>{value}</td>
-                                                </tr>
-                                            ))}
-                                            </tbody>
-                                        </table>
-                                    ) : (
-                                        <div className="no-headers">No headers available</div>
-                                    )}
-                                </div>
-                            )
-                        },
-                        {
-                            key: 'raw',
-                            label: 'Raw',
-                            children: (
-                                <pre className="response-raw">
+                                    )
+                                },
+                                {
+                                    key: 'headers',
+                                    label: 'Headers',
+                                    children: (
+                                        <div className="response-headers">
+                                            {testResponseContent.headers ? (
+                                                <table className="headers-table">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>Name</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {Object.entries(testResponseContent.headers).map(([key, value]) => (
+                                                        <tr key={key}>
+                                                            <td>{key}</td>
+                                                            <td>{value}</td>
+                                                        </tr>
+                                                    ))}
+                                                    </tbody>
+                                                </table>
+                                            ) : (
+                                                <div className="no-headers">No headers available</div>
+                                            )}
+                                        </div>
+                                    )
+                                },
+                                {
+                                    key: 'raw',
+                                    label: 'Raw',
+                                    children: (
+                                        <pre className="response-raw">
                                             {JSON.stringify(testResponseContent, null, 2)}
                                         </pre>
-                            )
-                        }
-                    ]}
-                />
-            ) : (
-                <pre className="response-error">
+                                    )
+                                }
+                            ]}
+                        />
+                    ) : (
+                        <pre className="response-error">
                             {testResponseContent}
                         </pre>
+                    )}
+                </Card>
             )}
-        </Card>
-    )}
-</div>
-);
+        </div>
+    );
 };
 
 export default HttpOptions;

@@ -1,5 +1,4 @@
-// App.less - Main application styles
-// Ant Design 5 no longer uses a single Less import, we need to use the new structure
+// App.less - Main application styles - Refactored for compact UI only
 
 // Import Ant Design styles
 @import 'antd/dist/reset.css';
@@ -140,23 +139,8 @@
   }
 }
 
-// HTTP options styles
+// HTTP options styles - compact only
 .http-options {
-  .ant-tabs-card > .ant-tabs-nav .ant-tabs-tab {
-    border-radius: 6px 6px 0 0;
-  }
-
-  .ant-tabs-content {
-    padding: 16px;
-    background: #fafafa;
-    border: 1px solid #f0f0f0;
-    border-top: none;
-    border-radius: 0 0 6px 6px;
-  }
-}
-
-// HTTP options compact styling
-.http-options-compact {
   .ant-tabs-nav {
     margin-bottom: 8px;
   }
@@ -261,13 +245,13 @@
   }
 
   .response-body, .response-raw {
-    max-height: 250px;
+    max-height: 160px;
+    padding: 8px;
+    font-size: 11px;
     overflow: auto;
     margin: 0;
     background: #fafafa;
-    padding: 12px;
     font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
-    font-size: 12px;
     border-radius: 6px;
     border: 1px solid #f0f0f0;
     white-space: pre-wrap;
@@ -278,11 +262,11 @@
     .headers-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 11px;
       margin-bottom: 8px;
 
       th, td {
-        padding: 6px 8px;
+        padding: 4px 6px;
         text-align: left;
         border-bottom: 1px solid #f0f0f0;
       }
@@ -324,22 +308,6 @@
   .formatted-html, .formatted-xml {
     white-space: pre-wrap;
     line-height: 1.5;
-  }
-}
-
-// Compact version adjustments
-.response-preview-compact {
-  .response-body, .response-raw {
-    max-height: 160px;
-    padding: 8px;
-    font-size: 11px;
-  }
-
-  .headers-table {
-    th, td {
-      padding: 4px 6px;
-      font-size: 11px;
-    }
   }
 }
 
