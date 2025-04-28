@@ -199,14 +199,16 @@ const AppComponent = () => {
             </Header>
 
             <Content className="app-content">
-                <SourceForm onAddSource={handleAddSource} />
+                <div className="content-container">
+                    <SourceForm onAddSource={handleAddSource} />
 
-                <SourceTable
-                    sources={sources}
-                    onRemoveSource={removeSource}
-                    onRefreshSource={refreshSource}
-                    onUpdateRefreshOptions={updateRefreshOptions}
-                />
+                    <SourceTable
+                        sources={sources}
+                        onRemoveSource={removeSource}
+                        onRefreshSource={refreshSource}
+                        onUpdateRefreshOptions={updateRefreshOptions}
+                    />
+                </div>
             </Content>
 
             <SettingsModal
