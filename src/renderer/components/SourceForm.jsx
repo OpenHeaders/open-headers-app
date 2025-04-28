@@ -18,9 +18,18 @@ const SourceForm = ({ onAddSource }) => {
     const [submitting, setSubmitting] = useState(false);
     const [isSticky, setIsSticky] = useState(false);
     const [testResponseHeaders, setTestResponseHeaders] = useState(null);
+    const [totpEnabled, setTotpEnabled] = useState(false);
+    const [totpSecret, setTotpSecret] = useState('');
 
     const formCardRef = useRef(null);
     const fileSystem = useFileSystem();
+
+    // Handle TOTP changes from HttpOptions
+    const handleTotpChange = (enabled, secret) => {
+        setTotpEnabled(enabled);
+        setTotpSecret(secret);
+        console.log("SourceForm updated TOTP state:", enabled, secret);
+    };
 
     // Setup scroll event listener to detect when to make header sticky
     useEffect(() => {
@@ -75,6 +84,13 @@ const SourceForm = ({ onAddSource }) => {
             setSubmitting(true);
             console.log("Form submitted with values:", values);
 
+            // Check if JSON filter is enabled but missing a path
+            if (values.jsonFilter?.enabled && !values.jsonFilter?.path) {
+                showMessage('error', 'JSON filter is enabled but no path is specified. Please enter a JSON path.');
+                setSubmitting(false);
+                return;
+            }
+
             // Prepare source data
             const sourceData = {
                 sourceType: values.sourceType,
@@ -107,6 +123,12 @@ const SourceForm = ({ onAddSource }) => {
 
                 sourceData.jsonFilter = values.jsonFilter || { enabled: false, path: '' };
                 sourceData.refreshOptions = values.refreshOptions || { interval: 0 };
+
+                // Add TOTP if enabled
+                if (totpEnabled && totpSecret) {
+                    sourceData.requestOptions.totpSecret = totpSecret;
+                    console.log("Adding TOTP secret to request options");
+                }
 
                 // If we have test response, extract content and original JSON
                 if (testResponse) {
@@ -171,6 +193,8 @@ const SourceForm = ({ onAddSource }) => {
                 form.resetFields();
                 setFilePath('');
                 setTestResponse(null);
+                setTotpEnabled(false);
+                setTotpSecret('');
             }
         } catch (error) {
             showMessage('error', `Failed to add source: ${error.message}`);
@@ -279,7 +303,13 @@ const SourceForm = ({ onAddSource }) => {
                     form={form}
                     layout="vertical"
                     onFinish={handleSubmit}
-                    initialValues={{ sourceType: 'file' }}
+                    initialValues={{
+                        sourceType: 'file',
+                        sourceMethod: 'GET',
+                        requestOptions: {
+                            contentType: 'application/json'
+                        }
+                    }}
                     size="small"
                 >
                     {/* Common source fields in a compact row */}
@@ -327,6 +357,7 @@ const SourceForm = ({ onAddSource }) => {
                                 <HttpOptions
                                     form={form}
                                     onTestResponse={handleTestResponse}
+                                    onTotpChange={handleTotpChange}
                                 />
                             </Form.Item>
                         </>

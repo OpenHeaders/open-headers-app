@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Form, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
 
 const { Text } = Typography;
 
 /**
  * TOTPOptions component with time synchronization
- * Compact version only - backward compatibility removed
+ * Simplified version that avoids Form conflicts
  */
-const TOTPOptions = ({ form }) => {
+const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChange }) => {
     // Component state
-    const [enabled, setEnabled] = useState(false);
-    const [secret, setSecret] = useState('');
+    const [enabled, setEnabled] = useState(initialEnabled);
+    const [secret, setSecret] = useState(initialSecret);
     const [code, setCode] = useState('------');
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [previewVisible, setPreviewVisible] = useState(false);
@@ -18,6 +18,31 @@ const TOTPOptions = ({ form }) => {
     const [error, setError] = useState(null);
     const [timeOffset, setTimeOffset] = useState(0); // Time offset in seconds
     const [showOffsetAdjustment, setShowOffsetAdjustment] = useState(false);
+
+    // Use a ref to track initialization
+    const initialized = useRef(false);
+
+    // Initialize from props
+    useEffect(() => {
+        if (initialized.current) return;
+
+        console.log("TOTP component initializing with props:", { initialEnabled, initialSecret });
+
+        // Set initial state from props
+        setEnabled(initialEnabled);
+        if (initialSecret) {
+            setSecret(initialSecret);
+        }
+
+        initialized.current = true;
+    }, [initialEnabled, initialSecret]);
+
+    // Notify parent of changes
+    useEffect(() => {
+        if (onChange) {
+            onChange(enabled, secret);
+        }
+    }, [enabled, secret, onChange]);
 
     // Generate TOTP code with time offset
     const generateTOTP = useCallback(async () => {
@@ -84,24 +109,28 @@ const TOTPOptions = ({ form }) => {
 
     // Handle TOTP toggle
     const handleToggle = (checked) => {
+        console.log("TOTP toggle changed to:", checked);
         setEnabled(checked);
         setPreviewVisible(false);
         setError(null);
+
+        // If disabling, clear the secret
+        if (!checked) {
+            setSecret('');
+        }
     };
 
     // Handle secret change
     const handleSecretChange = (e) => {
-        setSecret(e.target.value);
+        const newSecret = e.target.value;
+        setSecret(newSecret);
         setPreviewVisible(false);
         setError(null);
     };
 
     // Test TOTP button handler
     const handleTestTOTP = async () => {
-        const value = form.getFieldValue('totpSecret') || '';
-        setSecret(value);
-
-        if (!value) {
+        if (!secret) {
             setError('Please enter a secret key');
             setCode('NO SECRET');
             return;
@@ -192,36 +221,28 @@ const TOTPOptions = ({ form }) => {
         <Card
             title="TOTP Authentication"
             size="small"
-            style={{ marginBottom: 8 }}
+            style={{ marginBottom: 16 }}
             extra={
-                <Form.Item
-                    name="enableTOTP"
-                    valuePropName="checked"
-                    initialValue={false}
-                    noStyle
-                >
-                    <Switch
-                        size="small"
-                        checkedChildren="On"
-                        unCheckedChildren="Off"
-                        onChange={handleToggle}
-                    />
-                </Form.Item>
+                <Switch
+                    size="small"
+                    checkedChildren="On"
+                    unCheckedChildren="Off"
+                    onChange={handleToggle}
+                    checked={enabled}
+                />
             }
         >
             {enabled && (
                 <>
-                    <Form.Item
-                        name="totpSecret"
-                        label="TOTP Secret"
-                        help={error ? <Text type="danger" style={{ fontSize: 11 }}>{error}</Text> : null}
-                        rules={[{ required: true, message: 'Required' }]}
-                    >
+                    <div style={{ marginBottom: 16 }}>
+                        <Text strong>TOTP Secret</Text>
                         <Input
                             placeholder="Enter TOTP secret key"
                             onChange={handleSecretChange}
+                            value={secret}
                             status={error ? "error" : ""}
                             size="small"
+                            style={{ marginTop: 4 }}
                             addonAfter={
                                 <Button
                                     type="link"
@@ -234,7 +255,8 @@ const TOTPOptions = ({ form }) => {
                                 </Button>
                             }
                         />
-                    </Form.Item>
+                        {error && <Text type="danger" style={{ fontSize: 11 }}>{error}</Text>}
+                    </div>
 
                     {renderSecretTips()}
 
