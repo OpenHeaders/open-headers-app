@@ -1,4 +1,5 @@
 // We're changing our approach to use the hook pattern
+import React, { useEffect } from 'react';
 import { useAppMessage } from './MessageProvider';
 
 // These functions will be used outside of React components
@@ -13,8 +14,12 @@ let globalShowMessage = (type, content, duration) => {
  * This should be called once in a component that has access to the MessageProvider
  */
 export const initializeMessageApi = (showMessage) => {
-    globalShowMessage = showMessage;
-    console.log('[messageUtil] Message API initialized');
+    if (typeof showMessage === 'function') {
+        globalShowMessage = showMessage;
+        console.log('[messageUtil] Message API initialized');
+    } else {
+        console.error('[messageUtil] Failed to initialize Message API: showMessage is not a function');
+    }
 };
 
 /**
@@ -25,7 +30,15 @@ export const MessageInitializer = () => {
     const { showMessage } = useAppMessage();
 
     // Initialize the global message functions
-    initializeMessageApi(showMessage);
+    useEffect(() => {
+        initializeMessageApi(showMessage);
+        return () => {
+            // Reset to default implementation when component unmounts
+            globalShowMessage = (type, content, duration) => {
+                console.log(`[messageUtil] Message API reset: ${type} - ${content}`);
+            };
+        };
+    }, [showMessage]);
 
     // This component doesn't render anything
     return null;
@@ -33,6 +46,11 @@ export const MessageInitializer = () => {
 
 // Exported functions that can be used anywhere in the application
 export const showMessage = (type, content, duration = 3) => {
+    if (typeof globalShowMessage !== 'function') {
+        console.error('[messageUtil] Message API not properly initialized');
+        console.log(`[messageUtil] Would show message: ${type} - ${content}`);
+        return;
+    }
     globalShowMessage(type, content, duration);
 };
 

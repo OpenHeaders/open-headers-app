@@ -82,28 +82,46 @@ export function SourceProvider({ children }) {
                         if (key === 'refreshOptions' && source.refreshOptions) {
                             // Special handling for refreshOptions to ensure we preserve existing values
 
-                            // IMPORTANT: Don't update nextRefresh if we're preserving timing
-                            const preservingTiming = source.refreshOptions.preserveTiming === true &&
-                                source.refreshOptions.nextRefresh &&
-                                source.refreshOptions.nextRefresh > Date.now();
+                            // IMPROVED: More sophisticated check for refresh timing preservation
+                            // Check if we need to preserve the existing timing
+                            const preserveTiming = (
+                                // If source explicitly says to preserve timing
+                                (source.refreshOptions.preserveTiming === true &&
+                                    source.refreshOptions.nextRefresh &&
+                                    source.refreshOptions.nextRefresh > Date.now()) ||
+                                // OR if we're updating from a non-refresh operation and timing exists
+                                (!additionalData.refreshOptions.lastRefresh &&
+                                    source.refreshOptions.nextRefresh &&
+                                    source.refreshOptions.nextRefresh > Date.now())
+                            );
 
-                            if (preservingTiming) {
+                            if (preserveTiming) {
                                 // Only merge other refresh options but keep nextRefresh
                                 const currentNextRefresh = source.refreshOptions.nextRefresh;
+                                const currentLastRefresh = source.refreshOptions.lastRefresh;
+
                                 updatedSource.refreshOptions = {
                                     ...source.refreshOptions,
                                     ...additionalData.refreshOptions,
-                                    // Restore the original nextRefresh time
-                                    nextRefresh: currentNextRefresh
+                                    // Restore the original refresh times
+                                    nextRefresh: currentNextRefresh,
+                                    lastRefresh: currentLastRefresh,
+                                    // Keep the preserveTiming flag
+                                    preserveTiming: true
                                 };
 
-                                debugLog(`Preserved nextRefresh time for source ${sourceId}: ${new Date(currentNextRefresh).toISOString()}`);
+                                debugLog(`Preserved refresh timing for source ${sourceId}: next=${new Date(currentNextRefresh).toISOString()}, last=${new Date(currentLastRefresh).toISOString()}`);
                             } else {
                                 // Normal merge of all refresh options
                                 updatedSource.refreshOptions = {
                                     ...source.refreshOptions,
                                     ...additionalData.refreshOptions
                                 };
+
+                                // Log the new refresh times
+                                if (additionalData.refreshOptions.nextRefresh) {
+                                    debugLog(`Updated refresh timing for source ${sourceId}: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
+                                }
                             }
                         } else if (key === 'originalJson') {
                             // Handle originalJson updates
@@ -623,14 +641,221 @@ export function SourceProvider({ children }) {
         }
     };
 
-    // Refresh a source
-    const refreshSource = async (sourceId) => {
+    // Update source
+    const updateSource = async (sourceData) => {
         try {
+            const sourceId = sourceData.sourceId;
             const source = sources.find(s => s.sourceId === sourceId);
+
             if (!source) {
-                debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
+                debugLog(`Source ${sourceId} not found when updating`);
                 return false;
             }
+
+            debugLog(`Updating source ${sourceId}`, {
+                type: sourceData.sourceType,
+                path: sourceData.sourcePath
+            });
+
+            // Check if source has TOTP data
+            if (sourceData.requestOptions?.totpSecret) {
+                console.log(`Source ${sourceId} has TOTP secret that will be preserved`);
+            }
+
+            // FIXED: Create a normalized jsonFilter object with proper boolean typing
+            const normalizedJsonFilter = {
+                enabled: Boolean(sourceData.jsonFilter?.enabled),
+                path: sourceData.jsonFilter?.enabled ? (sourceData.jsonFilter.path || '') : ''
+            };
+
+            // Debug log the normalized JSON filter
+            console.log(`Normalizing JSON filter for source ${sourceId}:`,
+                JSON.stringify(normalizedJsonFilter));
+
+            // IMPORTANT NEW PART: Return a promise that resolves with the updated source
+            return new Promise((resolve) => {
+                // Update state
+                if (isMounted.current) {
+                    setSources(prev => {
+                        const updatedSources = prev.map(s => {
+                            if (s.sourceId === sourceId) {
+                                // Create an updated source with normalized jsonFilter
+                                const updatedSource = {
+                                    ...s,
+                                    ...sourceData,
+                                    // For HTTP sources, ensure we preserve content until a refresh happens
+                                    sourceContent: s.sourceContent,
+                                    // Use our normalized jsonFilter object
+                                    jsonFilter: normalizedJsonFilter
+                                };
+
+                                // IMPORTANT: Make sure TOTP settings are preserved
+                                if (sourceData.requestOptions && sourceData.requestOptions.totpSecret) {
+                                    // Ensure the totpSecret is properly retained
+                                    if (!updatedSource.requestOptions) {
+                                        updatedSource.requestOptions = {};
+                                    }
+                                    updatedSource.requestOptions.totpSecret = sourceData.requestOptions.totpSecret;
+                                    console.log(`Preserved TOTP secret for source ${sourceId}`);
+                                } else if (s.requestOptions && s.requestOptions.totpSecret &&
+                                    !sourceData.requestOptions?.hasOwnProperty('totpSecret')) {
+                                    // If source had TOTP before and the update doesn't explicitly remove it, preserve it
+                                    if (!updatedSource.requestOptions) {
+                                        updatedSource.requestOptions = {};
+                                    }
+                                    updatedSource.requestOptions.totpSecret = s.requestOptions.totpSecret;
+                                    console.log(`Kept existing TOTP secret for source ${sourceId}`);
+                                }
+
+                                // IMPORTANT: Check if we need to preserve refresh timing
+                                if (sourceData.refreshOptions && sourceData.refreshOptions.preserveTiming === true) {
+                                    console.log(`Preserving refresh timing for source ${sourceId}`);
+
+                                    // Make sure we preserve the nextRefresh time if it exists in both source data and original source
+                                    if (sourceData.refreshOptions.nextRefresh &&
+                                        sourceData.refreshOptions.nextRefresh > Date.now()) {
+
+                                        // Use the timing from the sourceData (which was preserved in the caller)
+                                        updatedSource.refreshOptions = {
+                                            ...updatedSource.refreshOptions,
+                                            nextRefresh: sourceData.refreshOptions.nextRefresh,
+                                            lastRefresh: sourceData.refreshOptions.lastRefresh || s.refreshOptions?.lastRefresh,
+                                            preserveTiming: true
+                                        };
+
+                                        console.log(`Using preserved nextRefresh time: ${new Date(updatedSource.refreshOptions.nextRefresh).toISOString()}`);
+                                    } else if (s.refreshOptions && s.refreshOptions.nextRefresh &&
+                                        s.refreshOptions.nextRefresh > Date.now()) {
+
+                                        // Fallback: use timing from original source
+                                        updatedSource.refreshOptions = {
+                                            ...updatedSource.refreshOptions,
+                                            nextRefresh: s.refreshOptions.nextRefresh,
+                                            lastRefresh: s.refreshOptions.lastRefresh,
+                                            preserveTiming: true
+                                        };
+
+                                        console.log(`Using original source nextRefresh time: ${new Date(s.refreshOptions.nextRefresh).toISOString()}`);
+                                    }
+                                }
+
+                                // Debug log to verify jsonFilter state
+                                console.log(`Updated source ${sourceId} jsonFilter:`,
+                                    JSON.stringify(updatedSource.jsonFilter));
+
+                                // Also log the refresh timing
+                                if (updatedSource.refreshOptions && updatedSource.refreshOptions.nextRefresh) {
+                                    console.log(`Source ${sourceId} next refresh at: ${new Date(updatedSource.refreshOptions.nextRefresh).toISOString()}`);
+                                }
+
+                                // Resolve with this specific updated source
+                                setTimeout(() => resolve(updatedSource), 0);
+
+                                return updatedSource;
+                            }
+                            return s;
+                        });
+
+                        return updatedSources;
+                    });
+
+                    needsSave.current = true;
+                } else {
+                    resolve(null);
+                }
+            }).then(updatedSource => {
+                // If this is an HTTP source, update refresh schedules if needed
+                if (sourceData.sourceType === 'http') {
+                    // Cancel existing refresh
+                    http.cancelRefresh(sourceId);
+
+                    // Set up refresh if enabled
+                    const isEnabled = sourceData.refreshOptions?.enabled === true;
+                    const refreshInterval = parseInt(sourceData.refreshOptions?.interval || 0, 10);
+
+                    if (isEnabled && refreshInterval > 0) {
+                        // Check if we're preserving timing
+                        const preserveTiming = sourceData.refreshOptions?.preserveTiming === true;
+                        const skipImmediateRefresh = preserveTiming;
+
+                        // Use our normalized jsonFilter for the refresh schedule
+                        debugLog(`Setting up refresh schedule for updated source ${sourceId} with jsonFilter: ${
+                            JSON.stringify(normalizedJsonFilter)}`);
+
+                        // Create refresh options, preserving the nextRefresh time if available
+                        const refreshOptionsForSetup = {
+                            ...sourceData.refreshOptions,
+                            skipImmediateRefresh: skipImmediateRefresh
+                        };
+
+                        if (preserveTiming && updatedSource && updatedSource.refreshOptions &&
+                            updatedSource.refreshOptions.nextRefresh) {
+                            console.log(`Using preserved timing for refresh setup: next refresh at ${
+                                new Date(updatedSource.refreshOptions.nextRefresh).toISOString()}`);
+                        } else {
+                            console.log(`Not preserving timing for refresh setup - will use fresh timing`);
+                        }
+
+                        http.setupRefresh(
+                            sourceId,
+                            sourceData.sourcePath,
+                            sourceData.sourceMethod,
+                            sourceData.requestOptions,
+                            refreshOptionsForSetup,
+                            normalizedJsonFilter, // Pass the normalized jsonFilter
+                            updateSourceContent
+                        );
+                    }
+                }
+
+                return updatedSource;
+            });
+        } catch (error) {
+            console.error('Error updating source:', error);
+            if (isMounted.current) {
+                showMessage('error', `Failed to update source: ${error.message}`);
+            }
+            return null;
+        }
+    };
+
+    // Refresh a source
+    // Complete updated refreshSource function
+    const refreshSource = async (sourceId, updatedSource = null) => {
+        try {
+            // Use the provided updatedSource if available, otherwise get from current state
+            let source;
+
+            if (updatedSource && updatedSource.sourceId === sourceId) {
+                // Use the provided source directly - this avoids race conditions
+                source = updatedSource;
+                console.log(`Using provided source for refresh of source ${sourceId} with jsonFilter:`,
+                    JSON.stringify(updatedSource.jsonFilter));
+            } else {
+                // Get fresh copy from current state as a fallback
+                const currentSource = [...sources].find(s => s.sourceId === sourceId);
+
+                if (!currentSource) {
+                    debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
+                    return false;
+                }
+
+                // Create a deep clone to avoid reference issues
+                source = JSON.parse(JSON.stringify(currentSource));
+            }
+
+            // Debug logging to identify the issue
+            console.log(`DEBUG: Current source jsonFilter before refresh:`,
+                source.jsonFilter ? JSON.stringify(source.jsonFilter) : 'undefined');
+
+            // FIXED: Create a normalized jsonFilter object with proper boolean typing
+            const normalizedJsonFilter = {
+                enabled: Boolean(source.jsonFilter?.enabled),
+                path: source.jsonFilter?.enabled ? (source.jsonFilter.path || '') : ''
+            };
+
+            console.log(`Refreshing source ${sourceId} with normalized jsonFilter:`,
+                JSON.stringify(normalizedJsonFilter));
 
             debugLog(`Refreshing source ${sourceId}`);
 
@@ -666,17 +891,27 @@ export function SourceProvider({ children }) {
             }
             else if (source.sourceType === 'http') {
                 try {
-                    const { content, originalJson } = await http.request(
+                    // Log the JSON filter state that will actually be used
+                    console.log(`Refreshing HTTP source ${sourceId} with jsonFilter:`,
+                        normalizedJsonFilter.enabled ?
+                            `enabled=${normalizedJsonFilter.enabled}, path=${normalizedJsonFilter.path}` :
+                            'disabled');
+
+                    // Make the request with the properly formatted jsonFilter
+                    const { content, originalJson, headers } = await http.request(
                         sourceId,
                         source.sourcePath,
                         source.sourceMethod,
                         source.requestOptions,
-                        source.jsonFilter
+                        normalizedJsonFilter  // Pass the properly structured jsonFilter
                     );
 
                     if (isMounted.current) {
                         debugLog(`HTTP refresh completed for source ${sourceId}`);
-                        updateSourceContent(sourceId, content, { originalJson });
+                        updateSourceContent(sourceId, content, {
+                            originalJson,
+                            headers
+                        });
                     }
                 } catch (error) {
                     if (isMounted.current) {
@@ -756,6 +991,15 @@ export function SourceProvider({ children }) {
             // Handle refresh schedule setup or cancellation
             if (isEnabled && refreshInterval > 0) {
                 debugLog(`Setting up refresh schedule for source ${sourceId}`);
+
+                // Set up the refresh schedule with the current time
+                const now = Date.now();
+                const nextRefresh = now + (refreshInterval * 60 * 1000);
+
+                // Update the refreshOptions with the new timing info
+                refreshOptions.lastRefresh = now;
+                refreshOptions.nextRefresh = nextRefresh;
+
                 http.setupRefresh(
                     sourceId,
                     source.sourcePath,
@@ -765,11 +1009,31 @@ export function SourceProvider({ children }) {
                         interval: refreshInterval,
                         enabled: true,
                         type: refreshOptions.type || 'preset',
-                        skipImmediateRefresh: skipImmediateRefresh // Pass this flag to setupRefresh
+                        skipImmediateRefresh: skipImmediateRefresh,
+                        lastRefresh: now,
+                        nextRefresh: nextRefresh
                     },
                     source.jsonFilter,
                     updateSourceContent
                 );
+
+                // Force an update to the UI by updating the source with the new timing
+                if (isMountedRef.current) {
+                    setSources(prev => prev.map(s => {
+                        if (s.sourceId === sourceId) {
+                            return {
+                                ...s,
+                                refreshOptions: {
+                                    ...s.refreshOptions,
+                                    ...refreshOptions,
+                                    lastRefresh: now,
+                                    nextRefresh: nextRefresh
+                                }
+                            };
+                        }
+                        return s;
+                    }));
+                }
             } else {
                 debugLog(`Cancelling refresh schedule for source ${sourceId}`);
                 http.cancelRefresh(sourceId);
@@ -844,6 +1108,18 @@ export function SourceProvider({ children }) {
                     // Include headers if available
                     if (source.headers) {
                         exportedSource.headers = source.headers;
+                    }
+
+                    // Include TOTP secret if available
+                    if (source.requestOptions && source.requestOptions.totpSecret) {
+                        // Make sure requestOptions exists
+                        if (!exportedSource.requestOptions) {
+                            exportedSource.requestOptions = {};
+                        }
+
+                        // Copy the TOTP secret to the exported source
+                        exportedSource.requestOptions.totpSecret = source.requestOptions.totpSecret;
+                        console.log(`Including TOTP secret in export for source ${source.sourceId}`);
                     }
                 } else {
                     // Basic settings for non-HTTP sources
@@ -948,6 +1224,18 @@ export function SourceProvider({ children }) {
                         cleanSourceData.headers = sourceData.headers;
                     }
 
+                    // IMPORTANT: Preserve TOTP secret if available
+                    if (sourceData.requestOptions && sourceData.requestOptions.totpSecret) {
+                        // Make sure requestOptions exists
+                        if (!cleanSourceData.requestOptions) {
+                            cleanSourceData.requestOptions = {};
+                        }
+
+                        // Copy the TOTP secret to the clean source data
+                        cleanSourceData.requestOptions.totpSecret = sourceData.requestOptions.totpSecret;
+                        console.log(`Preserving TOTP secret during import for source with path ${sourceData.sourcePath}`);
+                    }
+
                     // Add the source and track success
                     const success = await addSource(cleanSourceData);
 
@@ -1005,6 +1293,7 @@ export function SourceProvider({ children }) {
         removeSource,
         refreshSource,
         updateRefreshOptions,
+        updateSource,
         exportSources,
         importSources,
         forceSave

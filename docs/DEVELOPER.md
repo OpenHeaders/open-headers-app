@@ -2,9 +2,9 @@
 
 This document contains technical information for developers who want to contribute to the Open Headers Dynamic Sources application.
 
-## Architecture
+## 🏗️ Architecture
 
-### Components
+### 🧩 Components
 
 The application consists of these main components:
 
@@ -14,7 +14,7 @@ The application consists of these main components:
 - **React Contexts**: Manages global state for sources and settings
 - **Custom Hooks**: Encapsulates business logic for file, HTTP, and environment operations
 
-### Key Files
+### 📄 Key Files
 
 | File | Description |
 |--------|-------------|
@@ -28,7 +28,7 @@ The application consists of these main components:
 | `useHttp.jsx` | Custom hook for HTTP operations |
 | `useEnv.jsx` | Custom hook for environment variables |
 
-### React Components
+### 🧪 React Components
 
 | Component | Description |
 |--------|-------------|
@@ -36,6 +36,7 @@ The application consists of these main components:
 | `SourceForm.jsx` | Form for adding and editing sources |
 | `SourceTable.jsx` | Table displaying all configured sources |
 | `HttpOptions.jsx` | Configuration options for HTTP sources |
+| `EditSourceModal.jsx` | Modal for editing HTTP sources after creation |
 | `JsonFilter.jsx` | JSON path filtering options for HTTP sources |
 | `TOTPOptions.jsx` | TOTP authentication configuration |
 | `ContentViewer.jsx` | Modal for viewing source content |
@@ -44,7 +45,7 @@ The application consists of these main components:
 | `TrayMenu.jsx` | System tray integration component |
 | `JsonViewer.jsx` | JSON visualization and filtering preview |
 
-### Data Flow
+### 🔄 Data Flow
 
 1. User configures sources in the React UI
 2. React components dispatch actions to context providers
@@ -53,15 +54,15 @@ The application consists of these main components:
 5. Updates flow back through IPC to React contexts
 6. React components re-render based on updated context values
 
-## Development
+## 💻 Development
 
-### Prerequisites
+### 📋 Prerequisites
 
 - [Node.js](https://nodejs.org/) 14.0 or higher
 - [npm](https://www.npmjs.com/) 6.0 or higher
 - [Electron](https://www.electronjs.org/) development environment
 
-### Setup
+### 🚀 Setup
 
 1. Clone the repository:
    ```bash
@@ -79,7 +80,7 @@ The application consists of these main components:
    npm run dev:react
    ```
 
-### Project Structure
+### 📁 Project Structure
 
 ```
 open-headers-app/
@@ -105,6 +106,7 @@ open-headers-app/
 │       │   └── SettingsContext.jsx
 │       ├── components/   # React components
 │       │   ├── ContentViewer.jsx
+│       │   ├── EditSourceModal.jsx
 │       │   ├── HttpOptions.jsx
 │       │   ├── JsonFilter.jsx
 │       │   ├── JsonViewer.jsx
@@ -125,11 +127,11 @@ open-headers-app/
 └── package.json          # Project configuration
 ```
 
-## Ant Design Integration
+## 🎨 Ant Design Integration
 
 The application UI is built using [Ant Design](https://ant.design/), a React UI library with a clean, professional aesthetic. Key aspects of the implementation include:
 
-### Theme Customization
+### 🎭 Theme Customization
 
 The Ant Design theme is customized in webpack.config.js to provide an Apple-inspired look and feel:
 
@@ -176,7 +178,7 @@ The theme is applied through the `ConfigProvider` component in `index.jsx`:
 </ConfigProvider>
 ```
 
-### Component Structure
+### 🧱 Component Structure
 
 The UI is composed of reusable components:
 
@@ -185,7 +187,7 @@ The UI is composed of reusable components:
 3. **Data Display Components**: Using Ant Design's Table, Card, etc.
 4. **Feedback Components**: Using Ant Design's Modal, message, etc.
 
-### React Hooks and Context API
+### 🪝 React Hooks and Context API
 
 The application uses React's Context API and custom hooks to manage state:
 
@@ -193,9 +195,9 @@ The application uses React's Context API and custom hooks to manage state:
 2. **SettingsContext**: Manages application settings
 3. **Custom Hooks**: Encapsulate complex behavior for file operations, HTTP requests, etc.
 
-## Feature Implementation Details
+## 🔋 Feature Implementation Details
 
-### Settings and Preferences
+### ⚙️ Settings and Preferences
 
 Application settings are managed through the React SettingsContext:
 
@@ -214,7 +216,7 @@ Settings data structure:
 }
 ```
 
-### System Tray Integration
+### 🔔 System Tray Integration
 
 The system tray (status bar icon) is managed through the Electron main process and exposed to React via the TrayMenu component:
 
@@ -223,7 +225,7 @@ The system tray (status bar icon) is managed through the Electron main process a
 3. **Context Menu**: Created dynamically based on current application state
 4. **Icon Management**: Adaptive icon loading for different environments
 
-### TOTP Authentication
+### 🔐 TOTP Authentication
 
 Time-based One-Time Password (TOTP) authentication implemented with TOTPOptions component:
 
@@ -237,7 +239,25 @@ Implementation details:
 - The component provides real-time validation and preview
 - Time synchronization helps when client and server clocks are misaligned
 
-### Dynamic HTTP Sources with JSON Filtering
+### 🌐 HTTP Source Editing
+
+The application allows for comprehensive editing of HTTP sources after creation:
+
+1. **EditSourceModal Component**: Provides a complete interface for editing all HTTP source properties
+2. **State Persistence**: Form values are preserved when toggling features on/off
+3. **TOTP Integration**: Full support for adding/editing TOTP authentication settings
+4. **JSON Filtering**: Can enable/disable and modify JSON filtering rules
+5. **Request Parameters**: Comprehensive editing of headers, query parameters, and body content
+6. **Refresh Options**: Configure or modify auto-refresh scheduling
+7. **Immediate Refresh**: Option to refresh the source immediately after saving changes
+
+Implementation details:
+- Custom form state persistence logic maintains values even when fields are conditionally rendered
+- TOTP settings are properly stored and retrieved using imperative handling via refs
+- Synchronization between form state and component state ensures consistent updates
+- Careful timing management for refresh operations ensures UI feedback is accurate and responsive
+
+### 🔍 Dynamic HTTP Sources with JSON Filtering
 
 HTTP sources with JSON path filtering are implemented using:
 
@@ -246,7 +266,7 @@ HTTP sources with JSON path filtering are implemented using:
 3. **Preview System**: Tests filters and displays results in real-time
 4. **Error Handling**: Graceful error handling with user feedback
 
-### React Context for Source Management
+### 🧠 React Context for Source Management
 
 The SourceContext provider is the central state management solution:
 
@@ -256,9 +276,9 @@ The SourceContext provider is the central state management solution:
 4. **Validation**: Ensures data integrity before persistence
 5. **Real-time Updates**: Ensures UI reflects the current state of sources
 
-## Testing
+## 🧪 Testing
 
-### Manual Testing
+### 🔄 Manual Testing
 
 1. Run the application in development mode:
    ```bash
@@ -283,15 +303,15 @@ The SourceContext provider is the central state management solution:
    - Enable/disable "Show Dock icon" (macOS) and verify appearance
    - Enable/disable "Show Status Bar icon" and verify tray appearance
 
-### Test Endpoints
+### 🌐 Test Endpoints
 
 For testing HTTP sources, use services like:
 - [httpbin.org](https://httpbin.org/json) - Returns test JSON
 - [jsonplaceholder.typicode.com](https://jsonplaceholder.typicode.com/posts) - Fake API for testing
 
-## Building for Distribution
+## 📦 Building for Distribution
 
-### Webpack and React Build Process
+### 🔄 Webpack and React Build Process
 
 This project uses Webpack to bundle React components and other assets:
 
@@ -305,7 +325,7 @@ The webpack configuration handles three main targets:
 - Preload script (Electron preload)
 - Renderer process (React application)
 
-### Production Build Scripts
+### 📋 Production Build Scripts
 
 Available npm scripts for building:
 
@@ -331,7 +351,7 @@ npm run dist:linux  # Linux
 npm run dist:all
 ```
 
-### Electron Builder Configuration
+### 🏗️ Electron Builder Configuration
 
 The `package.json` includes extensive configuration for electron-builder:
 
@@ -360,6 +380,6 @@ The `package.json` includes extensive configuration for electron-builder:
 }
 ```
 
-## Contributing
+## 👥 Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.

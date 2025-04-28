@@ -3,10 +3,10 @@ import { Table, Button, Tag, Typography, Space, Modal, Popconfirm } from 'antd';
 import {
     ReloadOutlined,
     DeleteOutlined,
-    SettingOutlined,
+    EditOutlined,
     EyeOutlined
 } from '@ant-design/icons';
-import RefreshOptions from './RefreshOptions';
+import EditSourceModal from './EditSourceModal';
 import ContentViewer from './ContentViewer';
 import { showMessage } from '../utils/messageUtil';
 
@@ -19,11 +19,11 @@ const SourceTable = ({
                          sources,
                          onRemoveSource,
                          onRefreshSource,
-                         onUpdateRefreshOptions
+                         onUpdateSource
                      }) => {
     // Component state
     const [refreshTimes, setRefreshTimes] = useState({});
-    const [refreshModalVisible, setRefreshModalVisible] = useState(false);
+    const [editModalVisible, setEditModalVisible] = useState(false);
     const [contentViewerVisible, setContentViewerVisible] = useState(false);
     const [selectedSourceId, setSelectedSourceId] = useState(null);
     const [refreshingSourceId, setRefreshingSourceId] = useState(null);
@@ -73,29 +73,38 @@ const SourceTable = ({
 
     // Initialize refresh times when sources change
     useEffect(() => {
-        const now = Date.now();
-        const initialRefreshTimes = {};
+        const timer = setInterval(() => {
+            const now = Date.now();
+            const newRefreshTimes = {};
+            let needsUpdate = false;
 
-        sources.forEach(source => {
-            if (source.sourceType === 'http' &&
-                source.refreshOptions &&
-                (source.refreshOptions.enabled || source.refreshOptions.interval > 0) &&
-                source.refreshOptions.nextRefresh) {
+            sources.forEach(source => {
+                if (source.sourceType === 'http' &&
+                    source.refreshOptions &&
+                    (source.refreshOptions.enabled || source.refreshOptions.interval > 0) &&
+                    source.refreshOptions.nextRefresh) {
 
-                const remaining = Math.max(0, source.refreshOptions.nextRefresh - now);
+                    // IMPORTANT: Always recalculate from source every interval
+                    // This ensures we're always showing the most current timing
+                    const remaining = Math.max(0, source.refreshOptions.nextRefresh - now);
+                    const timeText = remaining > 0
+                        ? `Refreshes in ${formatTimeRemaining(remaining)}`
+                        : 'Refreshing...';
 
-                if (remaining > 0) {
-                    // Format the remaining time for initial display
-                    initialRefreshTimes[source.sourceId] = `Refreshes in ${formatTimeRemaining(remaining)}`;
-                    console.log(`Set initial refresh time for source ${source.sourceId}: ${initialRefreshTimes[source.sourceId]}`);
+                    // Always update the displayed time - don't check if it's changed
+                    newRefreshTimes[source.sourceId] = timeText;
+                    needsUpdate = true;
                 }
-            }
-        });
+            });
 
-        if (Object.keys(initialRefreshTimes).length > 0) {
-            setRefreshTimes(prev => ({...prev, ...initialRefreshTimes}));
-        }
-    }, [sources]);
+            // Only update state if there are changes
+            if (needsUpdate) {
+                setRefreshTimes(newRefreshTimes); // Replace entire object instead of merging
+            }
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [sources, refreshingSourceId, onRefreshSource]);
 
     // Update countdown timers for auto-refreshing sources
     useEffect(() => {
@@ -151,11 +160,11 @@ const SourceTable = ({
         return () => clearInterval(timer);
     }, [sources, refreshingSourceId, onRefreshSource, refreshTimes]);
 
-    // Handle edit refresh options
-    const handleEditRefresh = useCallback((source) => {
+    // Handle edit source
+    const handleEditSource = useCallback((source) => {
         // Only store the ID so we always pull latest data from sources array
         setSelectedSourceId(source.sourceId);
-        setRefreshModalVisible(true);
+        setEditModalVisible(true);
     }, []);
 
     // Handle view content
@@ -166,20 +175,17 @@ const SourceTable = ({
     }, []);
 
     // Handle refresh source with update to modal if open
-    const handleRefreshSource = async (sourceId) => {
+    const handleRefreshSource = async (sourceId, updatedSource = null) => {
         try {
             console.log('SourceTable: Starting refresh for source', sourceId);
 
             // Set refreshing state
             setRefreshingSourceId(sourceId);
 
-            // Call the parent refresh handler
-            const success = await onRefreshSource(sourceId);
+            // Call the parent refresh handler with the updated source if provided
+            const success = await onRefreshSource(sourceId, updatedSource);
 
             console.log('SourceTable: Refresh completed with success =', success);
-
-            // We don't need to explicitly update selectedSource here
-            // since it's dynamically derived from sources and selectedSourceId
 
             return success;
         } catch (error) {
@@ -193,47 +199,78 @@ const SourceTable = ({
         }
     };
 
-    // Handle save refresh options
-    const handleSaveRefreshOptions = async (sourceId, refreshOptions) => {
+    // Handle save edited source
+    const handleSaveSource = async (sourceData) => {
         try {
             // Set loading state to give visual feedback
-            setRefreshingSourceId(sourceId);
+            setRefreshingSourceId(sourceData.sourceId);
 
-            // Call parent handler to update refresh options
-            const success = await onUpdateRefreshOptions(sourceId, refreshOptions);
+            // Extract refreshNow flag and remove it from the data sent to parent
+            const shouldRefreshNow = sourceData.refreshNow === true;
+            const dataToSave = { ...sourceData };
+            delete dataToSave.refreshNow;
 
-            if (success) {
-                // Keep modal open with loading state if we're doing an immediate refresh
-                const shouldRefreshNow = refreshOptions.refreshNow === true;
+            // IMPORTANT: Preserve existing refresh timing if not refreshing immediately
+            if (!shouldRefreshNow) {
+                // Find the current source to get its existing refresh schedule
+                const currentSource = sources.find(s => s.sourceId === sourceData.sourceId);
+                if (currentSource && currentSource.refreshOptions &&
+                    currentSource.refreshOptions.nextRefresh &&
+                    currentSource.refreshOptions.nextRefresh > Date.now()) {
 
-                if (shouldRefreshNow) {
-                    // The modal will be closed by the RefreshOptions component
-                    // after the refresh completes (and it will show the success message)
-                    return success;
-                } else {
-                    // If no immediate refresh, add a small delay then close
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    setRefreshModalVisible(false);
+                    // Explicitly preserve the nextRefresh timestamp
+                    if (!dataToSave.refreshOptions) {
+                        dataToSave.refreshOptions = {};
+                    }
 
-                    // Clean up after animation completes
-                    setTimeout(() => {
-                        setSelectedSourceId(null);
-                        setRefreshingSourceId(null);
+                    dataToSave.refreshOptions.preserveTiming = true;
+                    dataToSave.refreshOptions.nextRefresh = currentSource.refreshOptions.nextRefresh;
+                    dataToSave.refreshOptions.lastRefresh = currentSource.refreshOptions.lastRefresh;
 
-                        // Note: We no longer show a success message here as RefreshOptions will handle it
-                    }, 300);
+                    console.log(`Preserving refresh timing for source ${sourceData.sourceId}: next refresh at ${new Date(currentSource.refreshOptions.nextRefresh).toISOString()}`);
                 }
-            } else {
-                showMessage('error', 'Failed to update refresh options');
-                setRefreshingSourceId(null);
             }
 
-            return success;
+            // Show loading state for a reasonable duration
+            console.log("Saving source data...");
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Call parent handler to update the source and get the updated source
+            const updatedSource = await onUpdateSource(dataToSave);
+
+            if (updatedSource) {
+                // If immediate refresh is requested, trigger it and wait for it to complete
+                // before closing the modal
+                if (shouldRefreshNow) {
+                    console.log("Waiting for refresh to complete before closing modal...");
+
+                    // Execute the refresh and wait for it to complete
+                    await handleRefreshSource(sourceData.sourceId, updatedSource);
+
+                    // Add a small delay to ensure the UI has fully updated with new timing
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+
+                // Now close the modal after everything is complete
+                setEditModalVisible(false);
+
+                // Success message after modal is closed
+                setTimeout(() => {
+                    showMessage('success', 'Source updated successfully');
+                }, 100);
+
+                return true;
+            } else {
+                showMessage('error', 'Failed to update source');
+                return false;
+            }
         } catch (error) {
-            console.error('Error saving refresh options:', error);
+            console.error('Error saving source:', error);
             showMessage('error', `Error: ${error.message}`);
-            setRefreshingSourceId(null);
             return false;
+        } finally {
+            // Clear refreshing state
+            setRefreshingSourceId(null);
         }
     };
 
@@ -274,7 +311,7 @@ const SourceTable = ({
     // Close modals
     const handleCloseModal = useCallback(() => {
         // Hide modals first
-        setRefreshModalVisible(false);
+        setEditModalVisible(false);
         setContentViewerVisible(false);
 
         // Then clear selected source ID after animation completes
@@ -376,10 +413,10 @@ const SourceTable = ({
                                 <Button
                                     type="link"
                                     size="small"
-                                    onClick={() => handleEditRefresh(record)}
+                                    onClick={() => handleEditSource(record)}
                                     style={{ padding: '0 4px', fontSize: '12px' }}
                                 >
-                                    <SettingOutlined /> Refresh
+                                    <EditOutlined /> Edit
                                 </Button>
                                 <Popconfirm
                                     title="Remove this source?"
@@ -458,25 +495,17 @@ const SourceTable = ({
                 scroll={{ x: 'max-content' }}
             />
 
-            {/* Refresh Options Modal - only render when visible and source is set */}
-            {refreshModalVisible && selectedSource && (
-                <Modal
-                    title="Edit Auto-Refresh Options"
-                    open={refreshModalVisible}
+
+            {/* Edit Source Modal - only render when visible and source is set */}
+            {editModalVisible && selectedSource && (
+                <EditSourceModal
+                    key={`edit-source-${selectedSource.sourceId}`}
+                    source={selectedSource}
+                    open={editModalVisible}
                     onCancel={handleCloseModal}
-                    footer={null}
-                    destroyOnClose={true}
-                    maskClosable={false}
-                    className="ant-modal-small"
-                    width={500}
-                >
-                    <RefreshOptions
-                        key={`refresh-options-${selectedSource.sourceId}`}
-                        source={selectedSource}
-                        onSave={handleSaveRefreshOptions}
-                        onCancel={handleCloseModal}
-                    />
-                </Modal>
+                    onSave={handleSaveSource}
+                    refreshingSourceId={refreshingSourceId} // Pass refreshingSourceId to the modal
+                />
             )}
 
             {/* Content Viewer Modal */}
