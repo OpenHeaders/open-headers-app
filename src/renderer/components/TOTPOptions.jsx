@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Form, Input, Switch, Typography, Button, Space, message, Slider, Row, Col } from 'antd';
+import { Card, Form, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
 
 const { Text } = Typography;
 
 /**
  * TOTPOptions component with time synchronization
+ * Compact version only - backward compatibility removed
  */
-const TOTPOptions = ({ form, compact = false }) => {
+const TOTPOptions = ({ form }) => {
     // Component state
     const [enabled, setEnabled] = useState(false);
     const [secret, setSecret] = useState('');
@@ -125,8 +126,8 @@ const TOTPOptions = ({ form, compact = false }) => {
 
     // Helper for tips on TOTP secret format
     const renderSecretTips = () => (
-        <div style={{ marginTop: compact ? 4 : 8, marginBottom: compact ? 4 : 8 }}>
-            <Text type="secondary" style={{ fontSize: compact ? 11 : 12 }}>
+        <div style={{ marginTop: 4, marginBottom: 4 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>
                 <strong>Tips:</strong> Enter the secret key exactly as provided by the service.
             </Text>
         </div>
@@ -138,15 +139,15 @@ const TOTPOptions = ({ form, compact = false }) => {
             <Button
                 type="link"
                 onClick={toggleOffsetAdjustment}
-                size={compact ? "small" : "middle"}
-                style={{ padding: compact ? '0 4px' : '', fontSize: compact ? 11 : 12 }}
+                size="small"
+                style={{ padding: '0 4px', fontSize: 11 }}
             >
                 {showOffsetAdjustment ? "Hide Time Sync" : "Time Sync"}
             </Button>
 
             {showOffsetAdjustment && (
                 <div style={{ marginTop: 8 }}>
-                    <Text type="secondary" style={{ fontSize: compact ? 11 : 12 }}>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
                         Adjust if codes don't match other apps: ({timeOffset}s)
                     </Text>
                     <Slider
@@ -187,100 +188,11 @@ const TOTPOptions = ({ form, compact = false }) => {
         </div>
     );
 
-    // Render in compact mode
-    if (compact) {
-        return (
-            <Card
-                title="TOTP Authentication"
-                size="small"
-                style={{ marginBottom: 8 }}
-                extra={
-                    <Form.Item
-                        name="enableTOTP"
-                        valuePropName="checked"
-                        initialValue={false}
-                        noStyle
-                    >
-                        <Switch
-                            size="small"
-                            checkedChildren="On"
-                            unCheckedChildren="Off"
-                            onChange={handleToggle}
-                        />
-                    </Form.Item>
-                }
-            >
-                {enabled && (
-                    <>
-                        <Form.Item
-                            name="totpSecret"
-                            label="TOTP Secret"
-                            help={error ? <Text type="danger" style={{ fontSize: 11 }}>{error}</Text> : null}
-                            rules={[{ required: true, message: 'Required' }]}
-                        >
-                            <Input
-                                placeholder="Enter TOTP secret key"
-                                onChange={handleSecretChange}
-                                status={error ? "error" : ""}
-                                size="small"
-                                addonAfter={
-                                    <Button
-                                        type="link"
-                                        size="small"
-                                        onClick={handleTestTOTP}
-                                        style={{ padding: '0 4px' }}
-                                        loading={testing}
-                                    >
-                                        Test
-                                    </Button>
-                                }
-                            />
-                        </Form.Item>
-
-                        {renderSecretTips()}
-
-                        {previewVisible && (
-                            <div style={{
-                                background: '#f5f5f7',
-                                padding: 8,
-                                borderRadius: 6,
-                                marginBottom: 8
-                            }}>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                }}>
-                                    <Text style={{
-                                        fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                        fontSize: '1rem',
-                                        fontWeight: 'bold',
-                                        color: code === 'ERROR' ? '#ff4d4f' : 'inherit'
-                                    }}>
-                                        {code}
-                                    </Text>
-                                    {code !== 'ERROR' && <Text type="secondary" style={{ fontSize: '12px' }}>({timeRemaining}s)</Text>}
-                                </div>
-                            </div>
-                        )}
-
-                        {renderTimeSync()}
-
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                            Use <code>_TOTP_CODE</code> in any URL, header, or body field
-                        </Text>
-                    </>
-                )}
-            </Card>
-        );
-    }
-
-    // Regular non-compact version
     return (
         <Card
             title="TOTP Authentication"
             size="small"
-            style={{ marginTop: 16, marginBottom: 16 }}
+            style={{ marginBottom: 8 }}
             extra={
                 <Form.Item
                     name="enableTOTP"
@@ -289,8 +201,9 @@ const TOTPOptions = ({ form, compact = false }) => {
                     noStyle
                 >
                     <Switch
-                        checkedChildren="Enabled"
-                        unCheckedChildren="Disabled"
+                        size="small"
+                        checkedChildren="On"
+                        unCheckedChildren="Off"
                         onChange={handleToggle}
                     />
                 </Form.Item>
@@ -301,18 +214,20 @@ const TOTPOptions = ({ form, compact = false }) => {
                     <Form.Item
                         name="totpSecret"
                         label="TOTP Secret"
-                        help={error ? <Text type="danger">{error}</Text> : null}
-                        rules={[{ required: true, message: 'Please enter a TOTP secret key' }]}
+                        help={error ? <Text type="danger" style={{ fontSize: 11 }}>{error}</Text> : null}
+                        rules={[{ required: true, message: 'Required' }]}
                     >
                         <Input
-                            placeholder="Enter TOTP secret key (base32 encoded)"
+                            placeholder="Enter TOTP secret key"
                             onChange={handleSecretChange}
                             status={error ? "error" : ""}
+                            size="small"
                             addonAfter={
                                 <Button
                                     type="link"
                                     size="small"
                                     onClick={handleTestTOTP}
+                                    style={{ padding: '0 4px' }}
                                     loading={testing}
                                 >
                                     Test
@@ -326,35 +241,32 @@ const TOTPOptions = ({ form, compact = false }) => {
                     {previewVisible && (
                         <div style={{
                             background: '#f5f5f7',
-                            padding: 12,
+                            padding: 8,
                             borderRadius: 6,
-                            marginBottom: 12
+                            marginBottom: 8
                         }}>
-                            <Space direction="vertical" style={{ width: '100%' }}>
-                                <div style={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
+                            <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <Text style={{
+                                    fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
+                                    fontSize: '1rem',
+                                    fontWeight: 'bold',
+                                    color: code === 'ERROR' ? '#ff4d4f' : 'inherit'
                                 }}>
-                                    <Text style={{
-                                        fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                        fontSize: '1.2rem',
-                                        fontWeight: 'bold',
-                                        color: code === 'ERROR' ? '#ff4d4f' : 'inherit'
-                                    }}>
-                                        {code}
-                                    </Text>
-                                    {code !== 'ERROR' && <Text type="secondary">({timeRemaining}s)</Text>}
-                                </div>
-                            </Space>
+                                    {code}
+                                </Text>
+                                {code !== 'ERROR' && <Text type="secondary" style={{ fontSize: '12px' }}>({timeRemaining}s)</Text>}
+                            </div>
                         </div>
                     )}
 
                     {renderTimeSync()}
 
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        Use <code>_TOTP_CODE</code> in any URL, header, or body field to insert the generated code.
-                        You can also specify custom parameters: <code>_TOTP_CODE(secret,period,digits)</code>
+                    <Text type="secondary" style={{ fontSize: 11 }}>
+                        Use <code>_TOTP_CODE</code> in any URL, header, or body field
                     </Text>
                 </>
             )}
