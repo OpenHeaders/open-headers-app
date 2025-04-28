@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useFileSystem } from '../hooks/useFileSystem';
 import HttpOptions from './HttpOptions';
-import { showMessage } from '../utils/messageUtil'; // Import the utility
+import { showMessage } from '../utils/messageUtil';
 
 const { Option } = Select;
 
 /**
- * SourceForm component for adding new sources with compact layout
- * Only the form header with the Add Source button is sticky
+ * SourceForm component for adding new sources with compact layout only
  */
 const SourceForm = ({ onAddSource }) => {
     const [form] = Form.useForm();
@@ -69,7 +68,7 @@ const SourceForm = ({ onAddSource }) => {
         }
     };
 
-    // Handle form submission
+    // Handle form submission with loading state
     const handleSubmit = async (values) => {
         try {
             setSubmitting(true);
@@ -204,6 +203,20 @@ const SourceForm = ({ onAddSource }) => {
         }
     };
 
+    // Render the add button with appropriate icon based on submitting state
+    const renderAddButton = () => (
+        <Button
+            type="primary"
+            htmlType="submit"
+            icon={submitting ? <LoadingOutlined /> : <PlusOutlined />}
+            onClick={() => form.submit()}
+            loading={submitting}
+            size="small"
+        >
+            {submitting ? 'Adding...' : 'Add Source'}
+        </Button>
+    );
+
     // Render the sticky header separately when in sticky mode
     const renderStickyHeader = () => {
         if (!isSticky) return null;
@@ -212,16 +225,7 @@ const SourceForm = ({ onAddSource }) => {
             <div className="source-form-sticky-header">
                 <div className="sticky-header-content">
                     <div className="title">Add Source</div>
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        icon={<PlusOutlined />}
-                        onClick={() => form.submit()}
-                        loading={submitting}
-                        size="small"
-                    >
-                        Add Source
-                    </Button>
+                    {renderAddButton()}
                 </div>
             </div>
         );
@@ -238,18 +242,7 @@ const SourceForm = ({ onAddSource }) => {
                 className="source-form-card"
                 size="small"
                 ref={formCardRef}
-                extra={
-                    <Button
-                        type="primary"
-                        htmlType="submit"
-                        icon={<PlusOutlined />}
-                        onClick={() => form.submit()}
-                        loading={submitting}
-                        size="small"
-                    >
-                        Add Source
-                    </Button>
-                }
+                extra={renderAddButton()}
             >
                 <Form
                     form={form}
@@ -303,7 +296,6 @@ const SourceForm = ({ onAddSource }) => {
                                 <HttpOptions
                                     form={form}
                                     onTestResponse={handleTestResponse}
-                                    compact={true}
                                 />
                             </Form.Item>
                         </>
