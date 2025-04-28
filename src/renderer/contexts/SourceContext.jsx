@@ -51,6 +51,17 @@ export function SourceProvider({ children }) {
         debugLog(`Updating content for source ${sourceId}`);
         needsSave.current = true;
 
+        // Log additional data if present
+        if (Object.keys(additionalData).length > 0) {
+            console.log(`Additional data for source ${sourceId}:`,
+                Object.keys(additionalData).map(key => key).join(', '));
+        }
+
+        // If headers are included, log them
+        if (additionalData.headers) {
+            console.log(`Headers for source ${sourceId}:`, additionalData.headers);
+        }
+
         setSources(prev => {
             // Check if source exists
             const sourceExists = prev.some(s => s.sourceId === sourceId);
@@ -97,6 +108,15 @@ export function SourceProvider({ children }) {
                         } else if (key === 'originalJson') {
                             // Handle originalJson updates
                             updatedSource.originalJson = additionalData.originalJson;
+                            console.log(`Updated originalJson for source ${sourceId}`);
+                        } else if (key === 'headers') {
+                            // Handle headers updates
+                            updatedSource.headers = additionalData.headers;
+                            console.log(`Updated headers for source ${sourceId}:`, additionalData.headers);
+                        } else if (key === 'rawResponse') {
+                            // Store the raw response
+                            updatedSource.rawResponse = additionalData.rawResponse;
+                            console.log(`Updated rawResponse for source ${sourceId}`);
                         } else {
                             // Handle any other properties
                             updatedSource[key] = additionalData[key];
@@ -433,14 +453,25 @@ export function SourceProvider({ children }) {
             }
             else if (sourceData.sourceType === 'http') {
                 try {
+                    // For HTTP sources with auto-refresh, set up refresh and immediate request if needed
+                    const isEnabled = sourceData.refreshOptions?.enabled || false;
+                    const interval = sourceData.refreshOptions?.interval || 0;
+
                     // For HTTP sources, optionally use initial content from test
                     if (sourceData.initialContent) {
                         initialContent = sourceData.initialContent;
 
-                        // Make sure originalJson is also set if available
+                        // Make sure originalJson and headers are also set if available
                         if (sourceData.originalJson) {
                             if (isMounted.current) {
-                                updateSourceContent(sourceId, initialContent, { originalJson: sourceData.originalJson });
+                                const updateData = { originalJson: sourceData.originalJson };
+
+                                // If headers are provided, include them
+                                if (sourceData.headers) {
+                                    updateData.headers = sourceData.headers;
+                                }
+
+                                updateSourceContent(sourceId, initialContent, updateData);
                             }
                             return true;
                         }
@@ -448,14 +479,42 @@ export function SourceProvider({ children }) {
 
                     // Otherwise make a fresh HTTP request
                     debugLog(`Making HTTP request for source ${sourceId}`);
-                    const { content, originalJson } = await http.request(
-                        sourceId,
-                        sourceData.sourcePath,
-                        sourceData.sourceMethod,
-                        sourceData.requestOptions,
-                        sourceData.jsonFilter
-                    );
-                    initialContent = content;
+                    try {
+                        const result = await http.request(
+                            sourceId,
+                            sourceData.sourcePath,
+                            sourceData.sourceMethod,
+                            sourceData.requestOptions,
+                            sourceData.jsonFilter
+                        );
+
+                        // Destructure with all possible properties
+                        const { content, originalJson, headers, rawResponse } = result;
+                        initialContent = content;
+
+                        // Update with all available data
+                        if (isMounted.current) {
+                            debugLog(`Updating source ${sourceId} with HTTP response`);
+                            const updateData = {
+                                originalJson,
+                                headers, // Include headers
+                                rawResponse // Include raw response
+                            };
+
+                            // Log what we're storing
+                            console.log(`Storing headers for source ${sourceId}:`, headers);
+                            console.log(`Storing originalJson for source ${sourceId}:`,
+                                originalJson ? originalJson.substring(0, 50) + '...' : 'undefined');
+
+                            updateSourceContent(sourceId, initialContent, updateData);
+                        }
+                    } catch (error) {
+                        console.error(`Error making HTTP request for source ${sourceId}:`, error);
+                        initialContent = `Error: ${error.message}`;
+                        if (isMounted.current) {
+                            updateSourceContent(sourceId, initialContent);
+                        }
+                    }
 
                     // Set up refresh if enabled and interval > 0
                     const isRefreshEnabled = sourceData.refreshOptions?.enabled === true;
@@ -501,14 +560,10 @@ export function SourceProvider({ children }) {
                         );
                     }
 
-                    // Update with original JSON
-                    if (isMounted.current) {
-                        debugLog(`Updating source ${sourceId} with HTTP response`);
-                        updateSourceContent(sourceId, initialContent, { originalJson });
-                    }
                     return true;
                 } catch (error) {
                     initialContent = `Error: ${error.message}`;
+                    console.error(`Error setting up HTTP source ${sourceId}:`, error);
                 }
             }
 
@@ -780,6 +835,16 @@ export function SourceProvider({ children }) {
                         lastRefresh: refreshOptions.lastRefresh || null,
                         nextRefresh: refreshOptions.nextRefresh || null
                     };
+
+                    // Include originalJson if available (for filtering capability)
+                    if (source.originalJson) {
+                        exportedSource.originalJson = source.originalJson;
+                    }
+
+                    // Include headers if available
+                    if (source.headers) {
+                        exportedSource.headers = source.headers;
+                    }
                 } else {
                     // Basic settings for non-HTTP sources
                     exportedSource.refreshOptions = {
@@ -872,6 +937,16 @@ export function SourceProvider({ children }) {
                         // Include complete refresh options
                         refreshOptions: sourceData.refreshOptions || { enabled: false, interval: 0 }
                     };
+
+                    // Preserve originalJson if available
+                    if (sourceData.originalJson) {
+                        cleanSourceData.originalJson = sourceData.originalJson;
+                    }
+
+                    // Preserve headers if available
+                    if (sourceData.headers) {
+                        cleanSourceData.headers = sourceData.headers;
+                    }
 
                     // Add the source and track success
                     const success = await addSource(cleanSourceData);
