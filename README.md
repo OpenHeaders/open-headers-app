@@ -29,11 +29,13 @@ A companion application for the Open Headers browser extension that manages dyna
 
 ### Additional Features
 
-| Test HTTP Request with options | HTTP Request preview response filtered | View Source content after adding |
+*Click on any screenshot to view full size*
+
+| Test HTTP Request | HTTP Response Preview | View Source Content |
 |:---:|:---:|:---:|
 | [![](./docs/screenshots/1-test-request-with-options.png)](./docs/screenshots/1-test-request-with-options.png) | [![](./docs/screenshots/2-response-preview-filtered.png)](./docs/screenshots/2-response-preview-filtered.png) | [![](./docs/screenshots/3-view-source-content-after-adding.png)](./docs/screenshots/3-view-source-content-after-adding.png) |
 
-| Edit HTTP Source after adding | Application settings: startup and display | Import sources validation |
+| Edit HTTP Source | App Settings: startup/display | Import Sources Validation |
 |:---:|:---:|:---:|
 | [![](./docs/screenshots/4-edit-http-source-after-adding.png)](./docs/screenshots/4-edit-http-source-after-adding.png) | [![](./docs/screenshots/5-settings-startup-display.png)](./docs/screenshots/5-settings-startup-display.png) | [![](./docs/screenshots/6-import-sources-validation.png)](./docs/screenshots/6-import-sources-validation.png) |
 
