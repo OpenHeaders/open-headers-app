@@ -13,6 +13,7 @@ import SettingsModal from './components/SettingsModal';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
+import { WebSocketProvider } from './contexts/WebSocketContext'; // Import WebSocketProvider
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
@@ -182,45 +183,47 @@ const AppComponent = () => {
     ];
 
     return (
-        // IMPORTANT: Removed the App wrapper here since it's already in index.jsx
-        <Layout className="app-container">
-            <Header className="app-header">
-                <div className="logo-title">
-                    <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
-                    <Title level={3}>Open Headers - Dynamic Sources</Title>
-                </div>
+        // Wrap the entire application with WebSocketProvider
+        <WebSocketProvider>
+            <Layout className="app-container">
+                <Header className="app-header">
+                    <div className="logo-title">
+                        <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
+                        <Title level={3}>Open Headers - Dynamic Sources</Title>
+                    </div>
 
-                <Space>
-                    <Dropdown menu={{ items: actionsMenuItems }} trigger={['click']}>
-                        <Button icon={<MenuOutlined />}>
-                            Menu <DownOutlined />
-                        </Button>
-                    </Dropdown>
-                </Space>
-            </Header>
+                    <Space>
+                        <Dropdown menu={{ items: actionsMenuItems }} trigger={['click']}>
+                            <Button icon={<MenuOutlined />}>
+                                Menu <DownOutlined />
+                            </Button>
+                        </Dropdown>
+                    </Space>
+                </Header>
 
-            <Content className="app-content">
-                <div className="content-container">
-                    <SourceForm onAddSource={handleAddSource} />
+                <Content className="app-content">
+                    <div className="content-container">
+                        <SourceForm onAddSource={handleAddSource} />
 
-                    <SourceTable
-                        sources={sources}
-                        onRemoveSource={removeSource}
-                        onRefreshSource={refreshSource}
-                        onUpdateSource={updateSource}
-                    />
-                </div>
-            </Content>
+                        <SourceTable
+                            sources={sources}
+                            onRemoveSource={removeSource}
+                            onRefreshSource={refreshSource}
+                            onUpdateSource={updateSource}
+                        />
+                    </div>
+                </Content>
 
-            <SettingsModal
-                open={settingsVisible}
-                settings={settings}
-                onCancel={handleSettingsCancel}
-                onSave={handleSettingsSave}
-            />
+                <SettingsModal
+                    open={settingsVisible}
+                    settings={settings}
+                    onCancel={handleSettingsCancel}
+                    onSave={handleSettingsSave}
+                />
 
-            <TrayMenu />
-        </Layout>
+                <TrayMenu />
+            </Layout>
+        </WebSocketProvider>
     );
 };
 
