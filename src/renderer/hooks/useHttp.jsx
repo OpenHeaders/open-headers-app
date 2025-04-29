@@ -132,7 +132,7 @@ export function useHttp() {
     }, [parseJSON]);
 
     /**
-     * Make HTTP request
+     * Make HTTP request - Clean refactored version
      */
     const request = useCallback(async (
         sourceId,
@@ -142,8 +142,7 @@ export function useHttp() {
         jsonFilter = { enabled: false, path: '' }
     ) => {
         try {
-            // CRITICAL FIX: Create a completely new normalized jsonFilter object
-            // Only include the path if enabled is strictly true
+            // Create a normalized jsonFilter object
             const normalizedJsonFilter = {
                 enabled: jsonFilter?.enabled === true,
                 path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
@@ -157,47 +156,36 @@ export function useHttp() {
                     ...requestOptions,
                     headers: requestOptions.headers ? "headers present" : "no headers",
                     queryParams: requestOptions.queryParams ? "params present" : "no params",
-                    // Don't log the TOTP secret, just note if it's present
                     totpSecret: requestOptions.totpSecret ? "present" : "not present"
                 },
                 jsonFilter: JSON.stringify(normalizedJsonFilter)
             });
 
-            // Log jsonFilter state with clear distinction
+            // Log jsonFilter state
             if (normalizedJsonFilter.enabled) {
                 console.log(`JSON filter will be applied for source ${sourceId}: path=${normalizedJsonFilter.path}`);
             } else {
                 console.log(`No JSON filter will be applied for source ${sourceId}`);
             }
 
-            // Ensure headers are properly formatted
+            // Format options
             const formattedOptions = {
                 ...requestOptions,
                 headers: {},
                 queryParams: {}
             };
 
-            // IMPORTANT: Check for TOTP secret and generate TOTP code if needed
+            // Handle TOTP if present
             let totpCode = null;
             if (requestOptions.totpSecret) {
                 console.log(`Source ${sourceId} has TOTP secret, generating TOTP code`);
 
                 try {
-                    // Normalize secret for better compatibility
                     const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
-
-                    // Generate TOTP code
-                    totpCode = await window.generateTOTP(
-                        normalizedSecret,
-                        30, // period
-                        6,  // digits
-                        0   // time offset
-                    );
+                    totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
 
                     if (totpCode && totpCode !== 'ERROR') {
                         console.log(`Generated TOTP code for source ${sourceId}: ${totpCode}`);
-
-                        // Check if URL contains TOTP placeholder
                         if (url.includes('_TOTP_CODE')) {
                             url = url.replace(/_TOTP_CODE/g, totpCode);
                             console.log(`TOTP code substituted in URL for source ${sourceId}`);
@@ -216,28 +204,21 @@ export function useHttp() {
                 requestOptions.headers.forEach(header => {
                     if (header && header.key) {
                         let headerValue = header.value || '';
-
-                        // Replace _TOTP_CODE placeholder with actual code if available
                         if (totpCode && headerValue.includes('_TOTP_CODE')) {
                             headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
                             console.log(`TOTP code substituted in header "${header.key}" for source ${sourceId}`);
                         }
-
                         formattedOptions.headers[header.key] = headerValue;
                         console.log(`Added header: ${header.key} = ${formattedOptions.headers[header.key]}`);
                     }
                 });
             } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                // Headers are already in object format
                 Object.entries(requestOptions.headers).forEach(([key, value]) => {
                     let headerValue = value || '';
-
-                    // Replace _TOTP_CODE placeholder with actual code if available
                     if (totpCode && headerValue.includes('_TOTP_CODE')) {
                         headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
                         console.log(`TOTP code substituted in header "${key}" for source ${sourceId}`);
                     }
-
                     formattedOptions.headers[key] = headerValue;
                 });
                 console.log("Headers already in object format:", formattedOptions.headers);
@@ -248,27 +229,20 @@ export function useHttp() {
                 requestOptions.queryParams.forEach(param => {
                     if (param && param.key) {
                         let paramValue = param.value || '';
-
-                        // Replace _TOTP_CODE placeholder with actual code if available
                         if (totpCode && paramValue.includes('_TOTP_CODE')) {
                             paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
                             console.log(`TOTP code substituted in query param "${param.key}" for source ${sourceId}`);
                         }
-
                         formattedOptions.queryParams[param.key] = paramValue;
                     }
                 });
             } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                // Query params are already in object format
                 Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
                     let paramValue = value || '';
-
-                    // Replace _TOTP_CODE placeholder with actual code if available
                     if (totpCode && paramValue.includes('_TOTP_CODE')) {
                         paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
                         console.log(`TOTP code substituted in query param "${key}" for source ${sourceId}`);
                     }
-
                     formattedOptions.queryParams[key] = paramValue;
                 });
             }
@@ -276,7 +250,6 @@ export function useHttp() {
             // Process body for TOTP code substitution if available
             if (requestOptions.body && totpCode) {
                 let bodyContent = requestOptions.body;
-
                 if (typeof bodyContent === 'string' && bodyContent.includes('_TOTP_CODE')) {
                     bodyContent = bodyContent.replace(/_TOTP_CODE/g, totpCode);
                     formattedOptions.body = bodyContent;
@@ -326,7 +299,7 @@ export function useHttp() {
                 finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
                 console.log("Filtered content:", finalContent ? finalContent.substring(0, 200) + "..." : "empty");
             } else {
-                // Log exactly why we're not filtering
+                // Log why we're not filtering
                 if (!normalizedJsonFilter.enabled) {
                     console.log(`JSON filtering disabled: normalizedJsonFilter.enabled is false`);
                 } else if (!normalizedJsonFilter.path) {
@@ -339,14 +312,195 @@ export function useHttp() {
                 console.log("Using original content without filtering");
             }
 
+            // Use originalResponse instead of originalJson
             return {
                 content: finalContent,
-                originalJson: bodyContent,
+                originalResponse: bodyContent,
                 headers: headers,
                 rawResponse: responseJson
             };
         } catch (error) {
             console.error("HTTP request error:", error);
+            throw error;
+        }
+    }, [parseJSON, applyJsonFilter]);
+
+    /**
+     * Test HTTP request (used for UI testing)
+     */
+    const testRequest = useCallback(async (url, method, requestOptions, jsonFilter) => {
+        try {
+            console.log("Testing HTTP request:", {
+                url,
+                method,
+                requestOptions: {
+                    ...requestOptions,
+                    headers: requestOptions.headers ? "headers present" : "no headers",
+                    queryParams: Object.keys(requestOptions.queryParams || {}).length > 0 ? "params present" : "no params",
+                    totpSecret: requestOptions.totpSecret ? "present" : "not present"
+                },
+                jsonFilter
+            });
+
+            // Format options
+            const formattedOptions = {
+                ...requestOptions,
+                headers: {},
+                queryParams: {}
+            };
+
+            // Handle TOTP if present
+            let totpCode = null;
+            if (requestOptions.totpSecret) {
+                console.log("TOTP secret found in test request, generating TOTP code");
+
+                try {
+                    const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
+                    totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
+
+                    if (totpCode && totpCode !== 'ERROR') {
+                        console.log(`Generated TOTP code for test request: ${totpCode}`);
+                        if (url.includes('_TOTP_CODE')) {
+                            url = url.replace(/_TOTP_CODE/g, totpCode);
+                            console.log(`TOTP code substituted in test URL`);
+                        }
+                    } else {
+                        console.error(`Failed to generate TOTP code for test request`);
+                    }
+                } catch (totpError) {
+                    console.error(`Error generating TOTP code for test: ${totpError.message}`);
+                }
+            }
+
+            // Process headers from array format to object
+            if (Array.isArray(requestOptions.headers)) {
+                console.log("Processing headers for test request:", requestOptions.headers);
+                requestOptions.headers.forEach(header => {
+                    if (header && header.key) {
+                        let headerValue = header.value || '';
+                        if (totpCode && headerValue.includes('_TOTP_CODE')) {
+                            headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
+                            console.log(`TOTP code substituted in test header "${header.key}"`);
+                        }
+                        formattedOptions.headers[header.key] = headerValue;
+                        console.log(`Added test header: ${header.key} = ${formattedOptions.headers[header.key]}`);
+                    }
+                });
+            } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
+                Object.entries(requestOptions.headers).forEach(([key, value]) => {
+                    let headerValue = value || '';
+                    if (totpCode && headerValue.includes('_TOTP_CODE')) {
+                        headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
+                        console.log(`TOTP code substituted in test header "${key}"`);
+                    }
+                    formattedOptions.headers[key] = headerValue;
+                });
+                console.log("Test headers already in object format:", formattedOptions.headers);
+            }
+
+            // Process query params properly
+            if (requestOptions.queryParams) {
+                if (Array.isArray(requestOptions.queryParams)) {
+                    console.log("Processing query params array for test request:", requestOptions.queryParams);
+                    requestOptions.queryParams.forEach(param => {
+                        if (param && param.key) {
+                            let paramValue = param.value || '';
+                            if (totpCode && paramValue.includes('_TOTP_CODE')) {
+                                paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
+                                console.log(`TOTP code substituted in test query param "${param.key}"`);
+                            }
+                            formattedOptions.queryParams[param.key] = paramValue;
+                            console.log(`Added test query param: ${param.key} = ${paramValue}`);
+                        }
+                    });
+                } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
+                    console.log("Processing query params object for test request:", requestOptions.queryParams);
+                    Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
+                        let paramValue = value || '';
+                        if (totpCode && paramValue.includes('_TOTP_CODE')) {
+                            paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
+                            console.log(`TOTP code substituted in test query param "${key}"`);
+                        }
+                        formattedOptions.queryParams[key] = paramValue;
+                        console.log(`Added test query param: ${key} = ${paramValue}`);
+                    });
+                }
+            }
+
+            // Process body for TOTP code substitution if available
+            if (requestOptions.body && totpCode) {
+                let bodyContent = requestOptions.body;
+                if (typeof bodyContent === 'string' && bodyContent.includes('_TOTP_CODE')) {
+                    bodyContent = bodyContent.replace(/_TOTP_CODE/g, totpCode);
+                    formattedOptions.body = bodyContent;
+                    console.log(`TOTP code substituted in test request body`);
+                } else {
+                    formattedOptions.body = requestOptions.body;
+                }
+            } else {
+                formattedOptions.body = requestOptions.body;
+            }
+
+            // Copy other request options
+            formattedOptions.contentType = requestOptions.contentType || 'application/json';
+
+            // Make sure we don't include the TOTP secret in the actual request
+            delete formattedOptions.totpSecret;
+
+            console.log("Formatted test request options:", {
+                ...formattedOptions,
+                headers: Object.keys(formattedOptions.headers).length > 0 ? "headers present" : "no headers",
+                queryParams: Object.keys(formattedOptions.queryParams).length > 0 ? "params present" : "no params",
+                body: formattedOptions.body ? "body present" : "no body"
+            });
+
+            const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
+            console.log("Test response:", responseJson.substring(0, 200) + "...");
+
+            // Parse response to get body
+            const response = parseJSON(responseJson);
+            if (!response) {
+                return responseJson;
+            }
+
+            const bodyContent = response.body || '';
+            const headers = response.headers || {};
+            console.log("Body content (test):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
+            console.log("Headers received (test):", headers);
+
+            // If no JSON filter is enabled, return raw response
+            if (!jsonFilter || jsonFilter.enabled !== true || !jsonFilter.path) {
+                console.log("No JSON filter applied to test request");
+                return responseJson;
+            }
+
+            // Apply filter if enabled
+            try {
+                console.log("Applying JSON filter to test response");
+
+                if (!bodyContent) {
+                    return responseJson;
+                }
+
+                const filteredContent = applyJsonFilter(bodyContent, jsonFilter);
+                console.log("Filtered test content:", filteredContent);
+
+                // Create new response with filtered content, original body, and headers
+                const filteredResponse = {
+                    ...response,
+                    body: filteredContent,
+                    filteredWith: jsonFilter.path,
+                    originalBody: bodyContent,
+                    headers: headers
+                };
+
+                return JSON.stringify(filteredResponse, null, 2);
+            } catch (error) {
+                console.error("Error filtering test response:", error);
+                return responseJson;
+            }
+        } catch (error) {
+            console.error("Test request error:", error);
             throw error;
         }
     }, [parseJSON, applyJsonFilter]);
@@ -522,216 +676,6 @@ export function useHttp() {
 
         return () => cancelRefresh(sourceId);
     }, [request, cancelRefresh]);
-
-    /**
-     * Test HTTP request (used for UI testing)
-     */
-    /**
-     * Test HTTP request (used for UI testing)
-     */
-    const testRequest = useCallback(async (url, method, requestOptions, jsonFilter) => {
-        try {
-            console.log("Testing HTTP request:", {
-                url,
-                method,
-                requestOptions: {
-                    ...requestOptions,
-                    headers: requestOptions.headers ? "headers present" : "no headers",
-                    queryParams: Object.keys(requestOptions.queryParams || {}).length > 0 ? "params present" : "no params",
-                    totpSecret: requestOptions.totpSecret ? "present" : "not present"
-                },
-                jsonFilter
-            });
-
-            // Ensure headers and query params are properly formatted
-            const formattedOptions = {
-                ...requestOptions,
-                headers: {},
-                queryParams: {}
-            };
-
-            // Handle TOTP if present
-            let totpCode = null;
-            if (requestOptions.totpSecret) {
-                console.log("TOTP secret found in test request, generating TOTP code");
-
-                try {
-                    // Normalize secret for better compatibility
-                    const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
-
-                    // Generate TOTP code
-                    totpCode = await window.generateTOTP(
-                        normalizedSecret,
-                        30, // period
-                        6,  // digits
-                        0   // time offset
-                    );
-
-                    if (totpCode && totpCode !== 'ERROR') {
-                        console.log(`Generated TOTP code for test request: ${totpCode}`);
-
-                        // Check if URL contains TOTP placeholder
-                        if (url.includes('_TOTP_CODE')) {
-                            url = url.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test URL`);
-                        }
-                    } else {
-                        console.error(`Failed to generate TOTP code for test request`);
-                    }
-                } catch (totpError) {
-                    console.error(`Error generating TOTP code for test: ${totpError.message}`);
-                }
-            }
-
-            // Process headers from array format to object
-            if (Array.isArray(requestOptions.headers)) {
-                console.log("Processing headers for test request:", requestOptions.headers);
-                requestOptions.headers.forEach(header => {
-                    if (header && header.key) {
-                        let headerValue = header.value || '';
-
-                        // Replace _TOTP_CODE placeholder with actual code if available
-                        if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                            headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test header "${header.key}"`);
-                        }
-
-                        formattedOptions.headers[header.key] = headerValue;
-                        console.log(`Added test header: ${header.key} = ${formattedOptions.headers[header.key]}`);
-                    }
-                });
-            } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                // Headers are already in object format
-                Object.entries(requestOptions.headers).forEach(([key, value]) => {
-                    let headerValue = value || '';
-
-                    // Replace _TOTP_CODE placeholder with actual code if available
-                    if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                        headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                        console.log(`TOTP code substituted in test header "${key}"`);
-                    }
-
-                    formattedOptions.headers[key] = headerValue;
-                });
-                console.log("Test headers already in object format:", formattedOptions.headers);
-            }
-
-            // FIXED: Process query params properly
-            // Try both object and array formats for queryParams
-            if (requestOptions.queryParams) {
-                if (Array.isArray(requestOptions.queryParams)) {
-                    // Process array format
-                    console.log("Processing query params array for test request:", requestOptions.queryParams);
-                    requestOptions.queryParams.forEach(param => {
-                        if (param && param.key) {
-                            let paramValue = param.value || '';
-
-                            // Replace _TOTP_CODE placeholder with actual code if available
-                            if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                                paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                                console.log(`TOTP code substituted in test query param "${param.key}"`);
-                            }
-
-                            formattedOptions.queryParams[param.key] = paramValue;
-                            console.log(`Added test query param: ${param.key} = ${paramValue}`);
-                        }
-                    });
-                } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                    // Process object format
-                    console.log("Processing query params object for test request:", requestOptions.queryParams);
-                    Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
-                        let paramValue = value || '';
-
-                        // Replace _TOTP_CODE placeholder with actual code if available
-                        if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                            paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test query param "${key}"`);
-                        }
-
-                        formattedOptions.queryParams[key] = paramValue;
-                        console.log(`Added test query param: ${key} = ${paramValue}`);
-                    });
-                }
-            }
-
-            // Process body for TOTP code substitution if available
-            if (requestOptions.body && totpCode) {
-                let bodyContent = requestOptions.body;
-
-                if (typeof bodyContent === 'string' && bodyContent.includes('_TOTP_CODE')) {
-                    bodyContent = bodyContent.replace(/_TOTP_CODE/g, totpCode);
-                    formattedOptions.body = bodyContent;
-                    console.log(`TOTP code substituted in test request body`);
-                } else {
-                    formattedOptions.body = requestOptions.body;
-                }
-            } else {
-                formattedOptions.body = requestOptions.body;
-            }
-
-            // Copy other request options
-            formattedOptions.contentType = requestOptions.contentType || 'application/json';
-
-            // Make sure we don't include the TOTP secret in the actual request
-            delete formattedOptions.totpSecret;
-
-            console.log("Formatted test request options:", {
-                ...formattedOptions,
-                headers: Object.keys(formattedOptions.headers).length > 0 ? "headers present" : "no headers",
-                queryParams: Object.keys(formattedOptions.queryParams).length > 0 ? "params present" : "no params",
-                body: formattedOptions.body ? "body present" : "no body"
-            });
-
-            const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
-            console.log("Test response:", responseJson.substring(0, 200) + "...");
-
-            // Parse response to get body
-            const response = parseJSON(responseJson);
-            if (!response) {
-                return responseJson;
-            }
-
-            const bodyContent = response.body || '';
-            const headers = response.headers || {};
-            console.log("Body content (test):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
-            console.log("Headers received (test):", headers);
-
-            // If no JSON filter is enabled, return raw response
-            if (!jsonFilter || jsonFilter.enabled !== true || !jsonFilter.path) {
-                console.log("No JSON filter applied to test request");
-                return responseJson;
-            }
-
-            // Apply filter if enabled
-            try {
-                console.log("Applying JSON filter to test response");
-
-                if (!bodyContent) {
-                    return responseJson;
-                }
-
-                const filteredContent = applyJsonFilter(bodyContent, jsonFilter);
-                console.log("Filtered test content:", filteredContent);
-
-                // Create new response with filtered content, original body, and headers
-                const filteredResponse = {
-                    ...response,
-                    body: filteredContent,
-                    filteredWith: jsonFilter.path,
-                    originalBody: bodyContent, // Add originalBody to preserve it for display
-                    headers: headers // Preserve headers
-                };
-
-                return JSON.stringify(filteredResponse, null, 2);
-            } catch (error) {
-                console.error("Error filtering test response:", error);
-                return responseJson;
-            }
-        } catch (error) {
-            console.error("Test request error:", error);
-            throw error;
-        }
-    }, [parseJSON, applyJsonFilter]);
 
     return {
         request,
