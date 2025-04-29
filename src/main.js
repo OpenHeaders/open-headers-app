@@ -496,6 +496,45 @@ function setupIPC() {
         if (mainWindow) mainWindow.webContents.send('quitApp');
         app.quit();
     });
+
+    ipcMain.handle('getAppVersion', () => {
+        return app.getVersion();
+    });
+
+    ipcMain.handle('openExternal', async (_, url) => {
+        try {
+            // Validate URL to prevent security issues
+            const validUrl = new URL(url);
+            // Only allow https links to trusted domains
+            if (validUrl.protocol !== 'https:') {
+                console.warn(`Blocked attempt to open non-HTTPS URL: ${url}`);
+                return { success: false, error: 'Only HTTPS URLs are allowed' };
+            }
+
+            // Allow GitHub, Chrome Web Store, Microsoft Edge Add-ons, and Mozilla Add-ons
+            const allowedDomains = [
+                'github.com',
+                'chromewebstore.google.com',
+                'microsoftedge.microsoft.com',
+                'addons.mozilla.org'
+            ];
+
+            const isAllowed = allowedDomains.some(domain =>
+                validUrl.hostname === domain || validUrl.hostname.endsWith(`.${domain}`)
+            );
+
+            if (!isAllowed) {
+                console.warn(`Blocked attempt to open URL to untrusted domain: ${validUrl.hostname}`);
+                return { success: false, error: 'Only trusted domains are allowed' };
+            }
+
+            await shell.openExternal(url);
+            return { success: true };
+        } catch (error) {
+            console.error('Error opening external URL:', error);
+            return { success: false, error: error.message };
+        }
+    });
 }
 
 // IPC Handlers
