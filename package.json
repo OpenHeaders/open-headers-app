@@ -1,6 +1,6 @@
 {
   "name": "open-headers-app",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -14,8 +14,8 @@
     "dist": "npm run webpack && electron-builder",
     "dist:win": "npm run webpack && electron-builder --win",
     "dist:mac": "npm run webpack && electron-builder --mac",
-    "dist:linux": "npm run webpack && electron-builder --linux",
-    "dist:all": "npm run webpack && electron-builder -mwl"
+    "dist:linux": "npm run webpack && electron-builder --linux --x64 --arm64",
+    "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64"
   },
   "build": {
     "appId": "io.openheaders",
