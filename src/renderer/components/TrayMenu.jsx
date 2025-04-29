@@ -6,7 +6,6 @@ const TrayMenu = () => {
         // Create safe handler functions that check if the API exists
         const handleShowApp = () => {
             console.log('App shown');
-            message.info('Application window shown');
         };
 
         const handleHideApp = () => {
