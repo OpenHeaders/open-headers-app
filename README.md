@@ -18,6 +18,26 @@ A companion application for the Open Headers browser extension that manages dyna
 - 🚀 **Auto-start**: Launch automatically at system startup
 - 🙈 **Hidden Startup**: Option to start minimized to the tray
 - 💻 **Modern UI**: Clean, minimalist design with Ant Design components
+- 🔡 **HTTP Header Case Preservation**: Headers maintain their original capitalization for improved standards compliance
+- 📦 **Rich Response Support**: Properly handle any type of HTTP response content beyond just JSON
+
+## 📸 Screenshots
+
+### Application Overview
+
+<img src="./docs/screenshots/0-main-preview.png" width="700" alt="Open Headers Application">
+
+### Additional Features
+
+*Click on any screenshot to view full size*
+
+| Test HTTP Request | HTTP Response Preview | View Source Content |
+|:---:|:---:|:---:|
+| [![](./docs/screenshots/1-test-request-with-options.png)](./docs/screenshots/1-test-request-with-options.png) | [![](./docs/screenshots/2-response-preview-filtered.png)](./docs/screenshots/2-response-preview-filtered.png) | [![](./docs/screenshots/3-view-source-content-after-adding.png)](./docs/screenshots/3-view-source-content-after-adding.png) |
+
+| Edit HTTP Source | App Settings: startup/display | Import Sources Validation |
+|:---:|:---:|:---:|
+| [![](./docs/screenshots/4-edit-http-source-after-adding.png)](./docs/screenshots/4-edit-http-source-after-adding.png) | [![](./docs/screenshots/5-settings-startup-display.png)](./docs/screenshots/5-settings-startup-display.png) | [![](./docs/screenshots/6-import-sources-validation.png)](./docs/screenshots/6-import-sources-validation.png) |
 
 ## 📥 Installation
 
@@ -147,8 +167,12 @@ Easily save and share your source configurations:
 
 ## 🔄 Connecting to the Browser Extension
 
-1. Install the [Open Headers browser extension](https://github.com/OpenHeaders/open-headers-browser-extension)
-2. Launch the Sources application
+1. Install the Open Headers browser extension:
+   - 🌐 **[Google Chrome](https://chromewebstore.google.com/detail/ablaikadpbfblkmhpmbbnbbfjoibeejb?utm_source=item-share-cb)**
+   - 🔷 **[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/open-headers/gnbibobkkddlflknjkgcmokdlpddegpo)**
+   - 🦊 **[Mozilla Firefox](https://addons.mozilla.org/en-US/firefox/addon/open-headers/)**
+   - **🐙 Build it yourself from [Github](https://github.com/OpenHeaders/open-headers-browser-extension)**
+2. Launch the Dynamic Sources application
 3. The extension will automatically connect to the application
 4. In the extension popup, your dynamic sources will appear as options when creating headers
 
