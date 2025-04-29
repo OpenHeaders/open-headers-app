@@ -19,6 +19,31 @@ let isQuitting = false;
 // instead of /Application Support/Open Headers
 app.setName('Open Headers');
 
+// Handle dock visibility early for macOS
+if (process.platform === 'darwin') {
+    console.log('Checking early dock visibility settings');
+    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+    try {
+        if (fs.existsSync(settingsPath)) {
+            const settingsData = fs.readFileSync(settingsPath, 'utf8');
+            const settings = JSON.parse(settingsData);
+
+            // Set dock visibility based on settings
+            if (settings.showDockIcon === false) {
+                console.log('Hiding dock icon at startup based on settings');
+                app.dock.hide();
+            } else if (settings.showDockIcon === true && !app.dock.isVisible()) {
+                console.log('Showing dock icon at startup based on settings');
+                app.dock.show();
+            }
+        }
+    } catch (err) {
+        console.error('Error applying early dock visibility settings:', err);
+        // Default to showing dock icon on error
+    }
+}
+
 // Create the browser window
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -53,14 +78,36 @@ function createWindow() {
         try {
             if (fs.existsSync(settingsPath)) {
                 const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-                if (!settings.hideOnLaunch) {
+
+                // Check if this is likely an auto-launch scenario
+                const isAutoLaunch = process.argv.includes('--hidden') ||
+                    app.getLoginItemSettings().wasOpenedAtLogin ||
+                    app.getLoginItemSettings().wasOpenedAsHidden;
+
+                console.log('App launch details:', {
+                    hideOnLaunch: settings.hideOnLaunch,
+                    isAutoLaunch: isAutoLaunch,
+                    argv: process.argv,
+                    loginItemSettings: app.getLoginItemSettings()
+                });
+
+                // Only hide window if both hideOnLaunch is enabled AND this is an auto-launch
+                const shouldHideWindow = settings.hideOnLaunch && isAutoLaunch;
+
+                if (!shouldHideWindow) {
+                    console.log('Showing window on startup (manual launch detected)');
                     mainWindow.show();
+                    mainWindow.focus();
+                } else {
+                    console.log('Hiding window on startup (auto-launch with hide setting enabled)');
                 }
             } else {
+                // No settings file exists, show by default
                 mainWindow.show();
             }
         } catch (err) {
             console.error('Error loading settings:', err);
+            // Show window on error as fallback
             mainWindow.show();
         }
     });
@@ -240,20 +287,17 @@ function createTray() {
         // Set the context menu
         tray.setContextMenu(contextMenu);
 
-        // On macOS, add click handler to show
+        // MODIFIED: On macOS, only show context menu on click
         if (process.platform === 'darwin') {
-            tray.on('click', () => {
-                if (mainWindow && !mainWindow.isVisible()) {
-                    mainWindow.show();
-                    mainWindow.focus();
-                    mainWindow.webContents.send('showApp');
-                }
-            });
+            // Just let the default behavior show the context menu
+            // No direct click handler to show the window
+            console.log('macOS tray setup: clicking will only show the menu');
         } else {
             // For Windows and Linux, show app on double-click
             tray.on('double-click', () => {
-                if (mainWindow && !mainWindow.isVisible()) {
-                    mainWindow.show();
+                if (mainWindow) {
+                    if (mainWindow.isMinimized()) mainWindow.restore();
+                    if (!mainWindow.isVisible()) mainWindow.show();
                     mainWindow.focus();
                     mainWindow.webContents.send('showApp');
                 }
@@ -295,30 +339,52 @@ function createTray() {
     }
 }
 
-// Update tray based on settings changes
 function updateTray(settings) {
     if (!settings) return;
 
-    console.log('Updating tray with settings:', settings.showStatusBarIcon);
+    console.log('Updating tray with settings:', settings.showStatusBarIcon, 'and dock:', settings.showDockIcon);
 
+    // PART 1: Handle status bar icon (tray)
+    // -----------------------------------------
     // If tray exists but should be hidden, destroy it
     if (tray && !settings.showStatusBarIcon) {
         tray.destroy();
         tray = null;
-        return;
+        console.log('Status bar icon destroyed');
     }
 
     // If tray doesn't exist but should be shown, create it
     if (!tray && settings.showStatusBarIcon) {
         createTray();
+        console.log('Status bar icon created');
     }
+
+    // PART 2: Handle dock icon on macOS (separate from tray handling)
+    // --------------------------------------------------------------
+    // Store whether the window was visible before updating dock
+    const wasWindowVisible = mainWindow && mainWindow.isVisible();
 
     // Update dock visibility on macOS
     if (process.platform === 'darwin') {
         if (settings.showDockIcon && !app.dock.isVisible()) {
+            console.log('Showing dock icon');
             app.dock.show();
         } else if (!settings.showDockIcon && app.dock.isVisible()) {
+            console.log('Hiding dock icon');
             app.dock.hide();
+
+            // Critical fix: Ensure window stays visible after hiding dock icon
+            if (mainWindow && wasWindowVisible) {
+                // Small delay to let the dock hide operation complete
+                setTimeout(() => {
+                    if (mainWindow) {
+                        // Show and focus the window to bring it to front
+                        mainWindow.show();
+                        mainWindow.focus();
+                        console.log('Restoring window visibility after hiding dock icon');
+                    }
+                }, 100);
+            }
         }
     }
 }
@@ -334,8 +400,25 @@ app.whenReady().then(() => {
 
     setupIPC();
 
+    // Handle macOS dock icon clicks
     app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+        // If there are no windows, create a new one
+        if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+        }
+        // If window exists but is hidden or minimized, show and focus it
+        else if (mainWindow) {
+            if (mainWindow.isMinimized()) {
+                mainWindow.restore();
+            }
+            if (!mainWindow.isVisible()) {
+                mainWindow.show();
+            }
+            mainWindow.focus();
+            // Notify the renderer process
+            mainWindow.webContents.send('showApp');
+            console.log('Window restored after dock icon click');
+        }
     });
 });
 
@@ -648,13 +731,16 @@ async function handleSetAutoLaunch(_, enable) {
     try {
         const autoLauncher = new AutoLaunch({
             name: 'Open Headers',
-            path: app.getPath('exe')
+            path: app.getPath('exe'),
+            args: ['--hidden']  // Add this flag to indicate auto-launch
         });
 
         if (enable) {
             await autoLauncher.enable();
+            console.log('Auto launch enabled with --hidden flag');
         } else {
             await autoLauncher.disable();
+            console.log('Auto launch disabled');
         }
 
         return { success: true };
