@@ -18,6 +18,50 @@ A companion application for the Open Headers browser extension that manages dyna
 - 🚀 **Auto-start**: Launch automatically at system startup
 - 🙈 **Hidden Startup**: Option to start minimized to the tray
 - 💻 **Modern UI**: Clean, minimalist design with Ant Design components
+- 🔡 **HTTP Header Case Preservation**: Headers maintain their original capitalization for improved standards compliance
+- 📦 **Rich Response Support**: Properly handle any type of HTTP response content beyond just JSON
+
+## 📸 Screenshots
+
+### Application Overview
+
+<img src="./docs/screenshots/0-main-preview.png" width="700" alt="Open Headers Application">
+
+### Additional Features
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;">
+  <a href="./docs/screenshots/1-test-request-with-options.png" title="Click to view full size">
+    <img src="./docs/screenshots/1-test-request-with-options.png" width="250" alt="Test HTTP Request with options">
+    <div><strong>Test HTTP Request with options</strong></div>
+  </a>
+
+  <a href="./docs/screenshots/2-response-preview-filtered.png" title="Click to view full size">
+    <img src="./docs/screenshots/2-response-preview-filtered.png" width="250" alt="Test Response preview filtered">
+    <div><strong>HTTP Request preview response filtered</strong></div>
+  </a>
+
+  <a href="./docs/screenshots/3-view-source-content-after-adding.png" title="Click to view full size">
+    <img src="./docs/screenshots/3-view-source-content-after-adding.png" width="250" alt="View Source content after adding">
+    <div><strong>View Source content after adding</strong></div>
+  </a>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+  <a href="./docs/screenshots/4-edit-http-source-after-adding.png" title="Click to view full size">
+    <img src="./docs/screenshots/4-edit-http-source-after-adding.png" width="250" alt="Edit HTTP Source after adding">
+    <div><strong>Edit HTTP Source after adding</strong></div>
+  </a>
+
+  <a href="./docs/screenshots/5-settings-startup-display.png" title="Click to view full size">
+    <img src="./docs/screenshots/5-settings-startup-display.png" width="250" alt="Application settings: startup and display">
+    <div><strong>Application settings: startup and display</strong></div>
+  </a>
+
+  <a href="./docs/screenshots/6-import-sources-validation.png" title="Click to view full size">
+    <img src="./docs/screenshots/6-import-sources-validation.png" width="250" alt="Import sources validation">
+    <div><strong>Import sources validation</strong></div>
+  </a>
+</div>
 
 ## 📥 Installation
 
@@ -147,8 +191,12 @@ Easily save and share your source configurations:
 
 ## 🔄 Connecting to the Browser Extension
 
-1. Install the [Open Headers browser extension](https://github.com/OpenHeaders/open-headers-browser-extension)
-2. Launch the Sources application
+1. Install the Open Headers browser extension:
+   - 🌐 **[Google Chrome](https://chromewebstore.google.com/detail/ablaikadpbfblkmhpmbbnbbfjoibeejb?utm_source=item-share-cb)**
+   - 🔷 **[Microsoft Edge](https://microsoftedge.microsoft.com/addons/detail/open-headers/gnbibobkkddlflknjkgcmokdlpddegpo)**
+   - 🦊 **[Mozilla Firefox](https://addons.mozilla.org/en-US/firefox/addon/open-headers/)**
+   - **🐙 Build it yourself from [Github](https://github.com/OpenHeaders/open-headers-browser-extension)**
+2. Launch the Dynamic Sources application
 3. The extension will automatically connect to the application
 4. In the extension popup, your dynamic sources will appear as options when creating headers
 
