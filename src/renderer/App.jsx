@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Space, Dropdown } from 'antd';
+import { Layout, Typography, Button, Space, Dropdown, Tag } from 'antd';
 import {
     SettingOutlined,
     ExportOutlined,
     ImportOutlined,
     DownOutlined,
-    MenuOutlined
+    MenuOutlined,
+    QuestionCircleOutlined
 } from '@ant-design/icons';
 import SourceForm from './components/SourceForm';
 import SourceTable from './components/SourceTable';
 import SettingsModal from './components/SettingsModal';
+import AboutModal from './components/AboutModal';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
@@ -17,7 +19,7 @@ import { WebSocketProvider } from './contexts/WebSocketContext'; // Import WebSo
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const AppComponent = () => {
     const {
@@ -34,10 +36,29 @@ const AppComponent = () => {
     const { settings, saveSettings } = useSettings();
 
     const [settingsVisible, setSettingsVisible] = useState(false);
+    const [aboutModalVisible, setAboutModalVisible] = useState(false);
     const [loading, setLoading] = useState({
         export: false,
         import: false
     });
+    const [appVersion, setAppVersion] = useState('');
+
+    // Get application version on component mount
+    useEffect(() => {
+        // Try to get the app version from the electron API
+        const getAppVersion = async () => {
+            try {
+                if (window.electronAPI && window.electronAPI.getAppVersion) {
+                    const version = await window.electronAPI.getAppVersion();
+                    setAppVersion(version);
+                }
+            } catch (error) {
+                console.error('Failed to get app version:', error);
+            }
+        };
+
+        getAppVersion();
+    }, []);
 
     // Handle file change events
     useEffect(() => {
@@ -149,6 +170,15 @@ const AppComponent = () => {
         setSettingsVisible(false);
     };
 
+    // Handle about modal
+    const handleOpenAbout = () => {
+        setAboutModalVisible(true);
+    };
+
+    const handleAboutCancel = () => {
+        setAboutModalVisible(false);
+    };
+
     const handleSettingsSave = async (newSettings) => {
         const success = await saveSettings(newSettings);
         if (success) {
@@ -179,6 +209,12 @@ const AppComponent = () => {
             icon: <SettingOutlined />,
             label: 'Settings',
             onClick: handleOpenSettings
+        },
+        {
+            key: 'about',
+            icon: <QuestionCircleOutlined />,
+            label: 'About',
+            onClick: handleOpenAbout
         }
     ];
 
@@ -189,7 +225,12 @@ const AppComponent = () => {
                 <Header className="app-header">
                     <div className="logo-title">
                         <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
-                        <Title level={3}>Open Headers - Dynamic Sources</Title>
+                        <div className="title-version">
+                            <Title level={3}>Open Headers - Dynamic Sources</Title>
+                            {appVersion && (
+                                <Tag color="default" className="version-tag">v{appVersion}</Tag>
+                            )}
+                        </div>
                     </div>
 
                     <Space>
@@ -219,6 +260,12 @@ const AppComponent = () => {
                     settings={settings}
                     onCancel={handleSettingsCancel}
                     onSave={handleSettingsSave}
+                />
+
+                <AboutModal
+                    open={aboutModalVisible}
+                    onClose={handleAboutCancel}
+                    appVersion={appVersion}
                 />
 
                 <TrayMenu />
