@@ -4,6 +4,7 @@ import { ConfigProvider, theme, App } from 'antd';
 import AppComponent from './App';
 import { SourceProvider } from './contexts/SourceContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
 import { MessageProvider } from './utils/MessageProvider';
 import { MessageInitializer } from './utils/messageUtil';
 import './App.less';
@@ -43,6 +44,7 @@ root.render(
 
                 <SettingsProvider>
                     <SourceProvider>
+                        {/* Note: WebSocketProvider is now inside App.jsx */}
                         <AppComponent />
                     </SourceProvider>
                 </SettingsProvider>
