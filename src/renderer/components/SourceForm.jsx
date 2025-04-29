@@ -130,7 +130,7 @@ const SourceForm = ({ onAddSource }) => {
                     console.log("Adding TOTP secret to request options");
                 }
 
-                // If we have test response, extract content and original JSON
+                // If we have test response, extract content and original response
                 if (testResponse) {
                     try {
                         const parsedResponse = JSON.parse(testResponse);
@@ -148,15 +148,18 @@ const SourceForm = ({ onAddSource }) => {
                             // For filtered responses, handle differently
                             if (parsedResponse.filteredWith && sourceData.jsonFilter?.enabled) {
                                 sourceData.initialContent = parsedResponse.body; // This is already filtered
-                                sourceData.originalJson = parsedResponse.originalBody || parsedResponse.body; // Use original if available
-                                console.log('Setting filtered content and original JSON:',
+
+                                // Use originalBody for the original response
+                                sourceData.originalResponse = parsedResponse.originalBody || parsedResponse.body;
+
+                                console.log('Setting filtered content and original response:',
                                     'filtered:', sourceData.initialContent.substring(0, 50) + '...',
-                                    'original:', sourceData.originalJson.substring(0, 50) + '...');
+                                    'original:', sourceData.originalResponse.substring(0, 50) + '...');
                             } else {
                                 // For non-filtered responses
                                 sourceData.initialContent = parsedResponse.body;
-                                sourceData.originalJson = parsedResponse.body;
-                                console.log('Setting initial originalJson from test response:',
+                                sourceData.originalResponse = parsedResponse.body;
+                                console.log('Setting initial originalResponse from test response:',
                                     parsedResponse.body.substring(0, 50) + '...');
                             }
 
@@ -170,7 +173,7 @@ const SourceForm = ({ onAddSource }) => {
                         console.error("Error parsing test response:", error);
                         // Use raw response if parsing fails
                         sourceData.initialContent = testResponse;
-                        sourceData.originalJson = testResponse;
+                        sourceData.originalResponse = testResponse;
 
                         // Try to include raw response for potential header extraction
                         sourceData.rawResponse = testResponse;

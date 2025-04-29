@@ -546,10 +546,21 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 });
 
                 res.on('end', () => {
+                    // Create headers object from the raw headers to preserve case
+                    const preservedHeaders = {};
+                    const rawHeaders = res.rawHeaders;
+
+                    // rawHeaders is an array with alternating key, value pairs
+                    for (let i = 0; i < rawHeaders.length; i += 2) {
+                        const headerName = rawHeaders[i];
+                        const headerValue = rawHeaders[i + 1];
+                        preservedHeaders[headerName] = headerValue;
+                    }
+
                     // Format response
                     const response = {
                         statusCode: res.statusCode,
-                        headers: res.headers,
+                        headers: preservedHeaders,
                         body: data
                     };
 
