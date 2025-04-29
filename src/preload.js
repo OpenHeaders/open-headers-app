@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     watchFile: (sourceId, filePath) => ipcRenderer.invoke('watchFile', sourceId, filePath),
     unwatchFile: (filePath) => ipcRenderer.invoke('unwatchFile', filePath),
 
+    openExternal: (url) => ipcRenderer.invoke('openExternal', url),
+
+    // Added: App version
+    getAppVersion: () => ipcRenderer.invoke('getAppVersion'),
+
     updateWebSocketSources: (sources) => {
         ipcRenderer.send('updateWebSocketSources', sources);
     },
