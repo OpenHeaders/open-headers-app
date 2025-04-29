@@ -1,6 +1,6 @@
 {
   "name": "open-headers-app",
-  "version": "1.9.0",
+  "version": "2.0.0",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -105,7 +105,8 @@
     "chokidar": "^3.5.3",
     "electron-is-dev": "^2.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",

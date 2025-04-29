@@ -7,6 +7,7 @@ const https = require('https');
 const querystring = require('querystring');
 const chokidar = require('chokidar');
 const AutoLaunch = require('auto-launch');
+const webSocketService = require('./services/ws-service');
 
 // Globals
 let mainWindow;
@@ -326,6 +327,11 @@ function updateTray(settings) {
 app.whenReady().then(() => {
     createWindow();
     createTray();
+
+    // Initialize WebSocket service
+    const wsPort = 59210;
+    webSocketService.initialize(wsPort);
+
     setupIPC();
 
     app.on('activate', () => {
@@ -348,6 +354,9 @@ app.on('before-quit', () => {
     for (const watcher of fileWatchers.values()) {
         watcher.close();
     }
+
+    // Close WebSocket server
+    webSocketService.close();
 });
 
 // Set up IPC communication channels
@@ -359,6 +368,10 @@ function setupIPC() {
     ipcMain.handle('writeFile', handleWriteFile);
     ipcMain.handle('watchFile', handleWatchFile);
     ipcMain.handle('unwatchFile', handleUnwatchFile);
+
+    ipcMain.on('updateWebSocketSources', (event, sources) => {
+        webSocketService.updateSources(sources);
+    });
 
     // Environment variable operations
     ipcMain.handle('getEnvVariable', handleGetEnvVariable);
