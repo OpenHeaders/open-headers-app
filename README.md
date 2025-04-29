@@ -29,39 +29,13 @@ A companion application for the Open Headers browser extension that manages dyna
 
 ### Additional Features
 
-<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px;">
-  <a href="./docs/screenshots/1-test-request-with-options.png" title="Click to view full size">
-    <img src="./docs/screenshots/1-test-request-with-options.png" width="250" alt="Test HTTP Request with options">
-    <div><strong>Test HTTP Request with options</strong></div>
-  </a>
+| Test HTTP Request with options | HTTP Request preview response filtered | View Source content after adding |
+|:---:|:---:|:---:|
+| [![](./docs/screenshots/1-test-request-with-options.png)](./docs/screenshots/1-test-request-with-options.png) | [![](./docs/screenshots/2-response-preview-filtered.png)](./docs/screenshots/2-response-preview-filtered.png) | [![](./docs/screenshots/3-view-source-content-after-adding.png)](./docs/screenshots/3-view-source-content-after-adding.png) |
 
-  <a href="./docs/screenshots/2-response-preview-filtered.png" title="Click to view full size">
-    <img src="./docs/screenshots/2-response-preview-filtered.png" width="250" alt="Test Response preview filtered">
-    <div><strong>HTTP Request preview response filtered</strong></div>
-  </a>
-
-  <a href="./docs/screenshots/3-view-source-content-after-adding.png" title="Click to view full size">
-    <img src="./docs/screenshots/3-view-source-content-after-adding.png" width="250" alt="View Source content after adding">
-    <div><strong>View Source content after adding</strong></div>
-  </a>
-</div>
-
-<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
-  <a href="./docs/screenshots/4-edit-http-source-after-adding.png" title="Click to view full size">
-    <img src="./docs/screenshots/4-edit-http-source-after-adding.png" width="250" alt="Edit HTTP Source after adding">
-    <div><strong>Edit HTTP Source after adding</strong></div>
-  </a>
-
-  <a href="./docs/screenshots/5-settings-startup-display.png" title="Click to view full size">
-    <img src="./docs/screenshots/5-settings-startup-display.png" width="250" alt="Application settings: startup and display">
-    <div><strong>Application settings: startup and display</strong></div>
-  </a>
-
-  <a href="./docs/screenshots/6-import-sources-validation.png" title="Click to view full size">
-    <img src="./docs/screenshots/6-import-sources-validation.png" width="250" alt="Import sources validation">
-    <div><strong>Import sources validation</strong></div>
-  </a>
-</div>
+| Edit HTTP Source after adding | Application settings: startup and display | Import sources validation |
+|:---:|:---:|:---:|
+| [![](./docs/screenshots/4-edit-http-source-after-adding.png)](./docs/screenshots/4-edit-http-source-after-adding.png) | [![](./docs/screenshots/5-settings-startup-display.png)](./docs/screenshots/5-settings-startup-display.png) | [![](./docs/screenshots/6-import-sources-validation.png)](./docs/screenshots/6-import-sources-validation.png) |
 
 ## 📥 Installation
 
