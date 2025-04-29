@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { App } from 'antd';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useHttp } from '../hooks/useHttp';
 import { useEnv } from '../hooks/useEnv';
-import { createRoot } from 'react-dom/client';
 import { showMessage } from '../utils/messageUtil'; // Import the utility function
 
 // Create context
@@ -82,7 +80,6 @@ export function SourceProvider({ children }) {
                         if (key === 'refreshOptions' && source.refreshOptions) {
                             // Special handling for refreshOptions to ensure we preserve existing values
 
-                            // IMPROVED: More sophisticated check for refresh timing preservation
                             // Check if we need to preserve the existing timing
                             const preserveTiming = (
                                 // If source explicitly says to preserve timing
@@ -123,19 +120,23 @@ export function SourceProvider({ children }) {
                                     debugLog(`Updated refresh timing for source ${sourceId}: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
                                 }
                             }
-                        } else if (key === 'originalJson') {
-                            // Handle originalJson updates
-                            updatedSource.originalJson = additionalData.originalJson;
-                            console.log(`Updated originalJson for source ${sourceId}`);
-                        } else if (key === 'headers') {
+                        }
+                        else if (key === 'originalResponse') {
+                            // Handle originalResponse updates
+                            updatedSource.originalResponse = additionalData.originalResponse;
+                            console.log(`Updated originalResponse for source ${sourceId}`);
+                        }
+                        else if (key === 'headers') {
                             // Handle headers updates
                             updatedSource.headers = additionalData.headers;
                             console.log(`Updated headers for source ${sourceId}:`, additionalData.headers);
-                        } else if (key === 'rawResponse') {
+                        }
+                        else if (key === 'rawResponse') {
                             // Store the raw response
                             updatedSource.rawResponse = additionalData.rawResponse;
                             console.log(`Updated rawResponse for source ${sourceId}`);
-                        } else {
+                        }
+                        else {
                             // Handle any other properties
                             updatedSource[key] = additionalData[key];
                         }
@@ -479,10 +480,10 @@ export function SourceProvider({ children }) {
                     if (sourceData.initialContent) {
                         initialContent = sourceData.initialContent;
 
-                        // Make sure originalJson and headers are also set if available
-                        if (sourceData.originalJson) {
+                        // Make sure originalResponse and headers are also set if available
+                        if (sourceData.originalResponse) {
                             if (isMounted.current) {
-                                const updateData = { originalJson: sourceData.originalJson };
+                                const updateData = { originalResponse: sourceData.originalResponse };
 
                                 // If headers are provided, include them
                                 if (sourceData.headers) {
@@ -507,22 +508,22 @@ export function SourceProvider({ children }) {
                         );
 
                         // Destructure with all possible properties
-                        const { content, originalJson, headers, rawResponse } = result;
+                        const { content, originalResponse, headers, rawResponse } = result;
                         initialContent = content;
 
                         // Update with all available data
                         if (isMounted.current) {
                             debugLog(`Updating source ${sourceId} with HTTP response`);
                             const updateData = {
-                                originalJson,
-                                headers, // Include headers
-                                rawResponse // Include raw response
+                                originalResponse,
+                                headers,
+                                rawResponse
                             };
 
                             // Log what we're storing
                             console.log(`Storing headers for source ${sourceId}:`, headers);
-                            console.log(`Storing originalJson for source ${sourceId}:`,
-                                originalJson ? originalJson.substring(0, 50) + '...' : 'undefined');
+                            console.log(`Storing originalResponse for source ${sourceId}:`,
+                                updateData.originalResponse ? updateData.originalResponse.substring(0, 50) + '...' : 'undefined');
 
                             updateSourceContent(sourceId, initialContent, updateData);
                         }
@@ -1100,9 +1101,9 @@ export function SourceProvider({ children }) {
                         nextRefresh: refreshOptions.nextRefresh || null
                     };
 
-                    // Include originalJson if available (for filtering capability)
-                    if (source.originalJson) {
-                        exportedSource.originalJson = source.originalJson;
+                    // Include originalResponse if available
+                    if (source.originalResponse) {
+                        exportedSource.originalResponse = source.originalResponse;
                     }
 
                     // Include headers if available

@@ -29,7 +29,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             console.log('ContentViewer: Source data received:', {
                 id: source.sourceId,
                 content: source.sourceContent?.substring(0, 30),
-                originalJson: source.originalJson?.substring(0, 30)
+                originalResponse: source.originalResponse?.substring(0, 30)
             });
 
             // Check if the source has headers directly
@@ -44,11 +44,12 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             if (
                 (!internalContent || !internalOriginalJson) ||
                 (source.sourceContent !== 'Refreshing...' &&
-                    (source.sourceContent !== internalContent || source.originalJson !== internalOriginalJson))
+                    (source.sourceContent !== internalContent ||
+                        source.originalResponse !== internalOriginalJson))
             ) {
                 console.log('ContentViewer: Updating internal content');
                 setInternalContent(source.sourceContent);
-                setInternalOriginalJson(source.originalJson);
+                setInternalOriginalJson(source.originalResponse);
 
                 // Try to extract headers from source
                 extractHeaders(source);
@@ -61,7 +62,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                 }
             }
         }
-    }, [source?.sourceId, source?.sourceContent, source?.originalJson, source?.headers, internalContent, internalOriginalJson]);
+    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalJson]);
 
     // Extract headers from source or originalJson - Improved version
     const extractHeaders = (source) => {
@@ -89,24 +90,24 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             }
         }
 
-        // Try to parse headers from originalJson if it's a string
-        if (source?.originalJson && typeof source.originalJson === 'string') {
+        // Try to parse headers from originalResponse if it's a string
+        if (source?.originalResponse && typeof source.originalResponse === 'string') {
             try {
                 // First try parsing as JSON
-                const parsedJson = JSON.parse(source.originalJson);
+                const parsedJson = JSON.parse(source.originalResponse);
                 if (parsedJson.headers) {
-                    console.log("Extracted headers from parsed originalJson:", parsedJson.headers);
+                    console.log("Extracted headers from parsed originalResponse:", parsedJson.headers);
                     setResponseHeaders(parsedJson.headers);
                     return;
                 }
             } catch (e) {
-                console.log("originalJson is not valid JSON, will try alternate approach");
+                console.log("originalResponse is not valid JSON, will try alternate approach");
             }
 
             // Try to extract headers using a more lenient regex approach
             try {
                 const headerPattern = /"headers":\s*(\{[^}]+\})/;
-                const match = source.originalJson.match(headerPattern);
+                const match = source.originalResponse.match(headerPattern);
 
                 if (match && match[1]) {
                     try {
@@ -125,7 +126,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                         console.log("Failed to parse headers from regex match:", err);
                     }
                 } else {
-                    console.log("No headers pattern found in originalJson");
+                    console.log("No headers pattern found in originalResponse");
                 }
             } catch (regexErr) {
                 console.log("Regex extraction approach failed:", regexErr);
@@ -186,8 +187,8 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
 
         // Check if we can extract content-type from the response
         if (source?.sourceContent?.includes('<!doctype html>') ||
-            source?.originalJson?.includes('<!doctype html>')) {
-            fallbackHeaders['content-type'] = 'text/html';
+            source?.originalResponse?.includes('<!doctype html>')) {
+            fallbackHeaders['Content-Type'] = 'text/html';
         }
 
         if (Object.keys(fallbackHeaders).length > 0) {
@@ -270,20 +271,25 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
     const formatJson = (jsonString) => {
         try {
             if (typeof jsonString !== 'string' || !jsonString.trim()) {
-                return 'No JSON content available';
+                return 'No response content available';
             }
 
             // Try to parse and stringify to format
             if (jsonString.trim().startsWith('{') || jsonString.trim().startsWith('[')) {
-                const parsed = JSON.parse(jsonString);
-                return JSON.stringify(parsed, null, 2);
+                try {
+                    const parsed = JSON.parse(jsonString);
+                    return JSON.stringify(parsed, null, 2);
+                } catch (e) {
+                    // If parsing fails, return as-is
+                    return jsonString;
+                }
             }
 
-            // Return as-is if not valid JSON
+            // Return as-is if not valid JSON (could be HTML, etc.)
             return jsonString;
         } catch (error) {
-            console.error('Error formatting JSON:', error);
-            return jsonString || 'Invalid JSON';
+            console.error('Error formatting content:', error);
+            return jsonString || 'Invalid content';
         }
     };
 
@@ -396,7 +402,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
     // Add original JSON tab for HTTP sources with JSON data
     if (isHttpSource && hasOriginalJson) {
         items.push({
-            key: 'originalJson',
+            key: 'originalResponse',
             label: 'Response',
             children: (
                 <div>
