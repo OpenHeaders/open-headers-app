@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton, Table } from 'antd';
-import { FileTextOutlined, ReloadOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
+import { FileTextOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
 import { showMessage } from '../utils/messageUtil';
 
 const { Text } = Typography;
 
 /**
  * ContentViewer component for displaying source content in a modal
- * With improved headers extraction and display
+ * With improved headers extraction and display and no refresh option
  */
-const ContentViewer = ({ source, open, onClose, onRefresh }) => {
+const ContentViewer = ({ source, open, onClose }) => {
     const [activeTab, setActiveTab] = useState('content');
-    const [loading, setLoading] = useState(false);
     const [copyingContent, setCopyingContent] = useState(false);
     const [copyingJson, setCopyingJson] = useState(false);
 
@@ -19,9 +18,6 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
     const [internalContent, setInternalContent] = useState(null);
     const [internalOriginalJson, setInternalOriginalJson] = useState(null);
     const [responseHeaders, setResponseHeaders] = useState(null);
-
-    // Keep track of whether we're currently refreshing
-    const refreshingRef = useRef(false);
 
     // Initialize or update internal content when source changes
     useEffect(() => {
@@ -37,30 +33,18 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                 console.log('ContentViewer: Found headers in source:', source.headers);
             }
 
-            // Only update internal content when:
-            // 1. It's not already set
-            // 2. The content is not the intermediate "Refreshing..." message
-            // 3. We're not currently in a refresh operation (or the refresh is completing)
-            if (
-                (!internalContent || !internalOriginalJson) ||
-                (source.sourceContent !== 'Refreshing...' &&
-                    (source.sourceContent !== internalContent ||
-                        source.originalResponse !== internalOriginalJson))
-            ) {
+            // Only update internal content when it changes
+            if (source.sourceContent !== internalContent) {
                 console.log('ContentViewer: Updating internal content');
                 setInternalContent(source.sourceContent);
-                setInternalOriginalJson(source.originalResponse);
-
-                // Try to extract headers from source
-                extractHeaders(source);
-
-                // If we were refreshing and got new content, clear the loading state
-                if (refreshingRef.current && source.sourceContent !== 'Refreshing...') {
-                    console.log('ContentViewer: Refresh completed with new content');
-                    refreshingRef.current = false;
-                    setLoading(false);
-                }
             }
+
+            if (source.originalResponse !== internalOriginalJson) {
+                setInternalOriginalJson(source.originalResponse);
+            }
+
+            // Try to extract headers from source
+            extractHeaders(source);
         }
     }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalJson]);
 
@@ -202,33 +186,6 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
         setResponseHeaders(null);
     };
 
-    // Handle refresh click with custom logic
-    const handleRefresh = async () => {
-        if (!onRefresh || !source) return;
-
-        console.log('ContentViewer: Initiating refresh for source', source.sourceId);
-        setLoading(true);
-        refreshingRef.current = true;
-
-        try {
-            // Perform the refresh
-            const success = await onRefresh(source.sourceId);
-
-            // If refresh failed, clear loading state
-            if (!success) {
-                console.log('ContentViewer: Refresh failed, clearing loading state');
-                refreshingRef.current = false;
-                setLoading(false);
-            }
-            // Otherwise wait for the new content to arrive
-        } catch (error) {
-            console.error('ContentViewer: Error during refresh:', error);
-            showMessage('error', `Failed to refresh content: ${error.message}`);
-            refreshingRef.current = false;
-            setLoading(false);
-        }
-    };
-
     // Check if this is an HTTP source with JSON content
     const isHttpSource = source?.sourceType === 'http';
     const hasJsonFilter = source?.jsonFilter?.enabled && source?.jsonFilter?.path;
@@ -368,32 +325,27 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => handleCopy(internalContent || '', 'content')}
-                            disabled={loading}
                             type={copyingContent ? "success" : "default"}
                         >
                             {copyingContent ? 'Copied!' : 'Copy'}
                         </Button>
                     </div>
 
-                    {loading ? (
-                        <ContentSkeleton />
-                    ) : (
-                        <pre style={{
-                            maxHeight: 300,
-                            overflow: 'auto',
-                            margin: 0,
-                            background: '#f5f5f7',
-                            padding: 12,
-                            fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
-                            fontSize: 12,
-                            borderRadius: 6,
-                            border: '1px solid #f0f0f0',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word'
-                        }}>
-                            {formatContent(internalContent)}
-                        </pre>
-                    )}
+                    <pre style={{
+                        maxHeight: 300,
+                        overflow: 'auto',
+                        margin: 0,
+                        background: '#f5f5f7',
+                        padding: 12,
+                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #f0f0f0',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                    }}>
+                        {formatContent(internalContent)}
+                    </pre>
                 </div>
             )
         }
@@ -411,32 +363,27 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                             size="small"
                             icon={copyingJson ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => handleCopy(internalOriginalJson || '', 'json')}
-                            disabled={loading}
                             type={copyingJson ? "success" : "default"}
                         >
                             {copyingJson ? 'Copied!' : 'Copy'}
                         </Button>
                     </div>
 
-                    {loading ? (
-                        <ContentSkeleton />
-                    ) : (
-                        <pre style={{
-                            maxHeight: 300,
-                            overflow: 'auto',
-                            margin: 0,
-                            background: '#f5f5f7',
-                            padding: 12,
-                            fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
-                            fontSize: 12,
-                            borderRadius: 6,
-                            border: '1px solid #f0f0f0',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word'
-                        }}>
-                            {formatJson(internalOriginalJson)}
-                        </pre>
-                    )}
+                    <pre style={{
+                        maxHeight: 300,
+                        overflow: 'auto',
+                        margin: 0,
+                        background: '#f5f5f7',
+                        padding: 12,
+                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #f0f0f0',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                    }}>
+                        {formatJson(internalOriginalJson)}
+                    </pre>
                 </div>
             )
         });
@@ -449,9 +396,7 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             label: 'Headers',
             children: (
                 <div className="response-headers">
-                    {loading ? (
-                        <ContentSkeleton />
-                    ) : responseHeaders && Object.keys(responseHeaders).length > 0 ? (
+                    {responseHeaders && Object.keys(responseHeaders).length > 0 ? (
                         <Table
                             columns={headersColumns}
                             dataSource={getHeadersData()}
@@ -489,21 +434,10 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
             width={700}
             destroyOnClose={false}
             footer={[
-                isHttpSource && (
-                    <Button
-                        key="refresh"
-                        onClick={handleRefresh}
-                        icon={<ReloadOutlined />}
-                        loading={loading}
-                        disabled={loading}
-                    >
-                        {loading ? 'Refreshing...' : 'Refresh Content'}
-                    </Button>
-                ),
                 <Button key="close" onClick={onClose}>
                     Close
                 </Button>
-            ].filter(Boolean)}
+            ]}
         >
             <Card size="small" style={{ marginBottom: 16 }}>
                 <div style={{ marginBottom: 8 }}>
@@ -544,7 +478,6 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => handleCopy(internalContent || '', 'content')}
-                            disabled={loading}
                             type={copyingContent ? "success" : "default"}
                             style={{ marginLeft: 'auto' }}
                         >
@@ -552,25 +485,21 @@ const ContentViewer = ({ source, open, onClose, onRefresh }) => {
                         </Button>
                     </div>
 
-                    {loading ? (
-                        <ContentSkeleton />
-                    ) : (
-                        <pre style={{
-                            maxHeight: 300,
-                            overflow: 'auto',
-                            margin: 0,
-                            background: '#f5f5f7',
-                            padding: 12,
-                            fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
-                            fontSize: 12,
-                            borderRadius: 6,
-                            border: '1px solid #f0f0f0',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word'
-                        }}>
-                            {formatContent(internalContent)}
-                        </pre>
-                    )}
+                    <pre style={{
+                        maxHeight: 300,
+                        overflow: 'auto',
+                        margin: 0,
+                        background: '#f5f5f7',
+                        padding: 12,
+                        fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
+                        fontSize: 12,
+                        borderRadius: 6,
+                        border: '1px solid #f0f0f0',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word'
+                    }}>
+                        {formatContent(internalContent)}
+                    </pre>
                 </Card>
             )}
         </Modal>

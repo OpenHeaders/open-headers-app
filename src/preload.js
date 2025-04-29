@@ -11,6 +11,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     watchFile: (sourceId, filePath) => ipcRenderer.invoke('watchFile', sourceId, filePath),
     unwatchFile: (filePath) => ipcRenderer.invoke('unwatchFile', filePath),
 
+    updateWebSocketSources: (sources) => {
+        ipcRenderer.send('updateWebSocketSources', sources);
+    },
+
     // File change events
     onFileChanged: (callback) => {
         const subscription = (_, sourceId, content) => callback(sourceId, content);

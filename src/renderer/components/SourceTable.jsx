@@ -513,7 +513,6 @@ const SourceTable = ({
                 source={selectedSource}
                 open={contentViewerVisible}
                 onClose={handleCloseModal}
-                onRefresh={handleRefreshSource}
             />
         </>
     );
