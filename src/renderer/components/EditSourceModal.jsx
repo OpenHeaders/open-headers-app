@@ -260,7 +260,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 // Set saving state
                 setSaving(true);
 
-                // FIXED: Always create a clean and normalized jsonFilter object
+                // Always create a clean and normalized jsonFilter object
                 const normalizedJsonFilter = {
                     enabled: Boolean(jsonFilter?.enabled),
                     path: jsonFilter?.enabled === true ? (jsonFilter.path || '') : ''
@@ -270,7 +270,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 console.log(`Normalized JSON filter for source ${source.sourceId}:`,
                     JSON.stringify(normalizedJsonFilter));
 
-                // Get TOTP values - CRITICAL FIX: collect from multiple sources
+                // Get TOTP values - collect from multiple sources
                 // First check form values
                 let isTotpEnabled = values.enableTOTP === true;
                 let totpSecretValue = values.totpSecret || '';
@@ -303,7 +303,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     secret: totpSecretValue ? "exists" : "none"
                 });
 
-                // Prepare source data for update
+                // Prepare source data for update - preserve originalResponse if available
                 const sourceData = {
                     sourceId: source.sourceId,
                     sourceType: source.sourceType,
@@ -318,13 +318,18 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                         body: values.requestOptions?.body || source.requestOptions?.body || null,
                         contentType: values.requestOptions?.contentType || source.requestOptions?.contentType || 'application/json'
                     },
-                    // FIXED: Use our normalized jsonFilter object
+                    // Use normalized jsonFilter object
                     jsonFilter: normalizedJsonFilter,
                     refreshOptions: values.refreshOptions || { enabled: false, interval: 0 },
                     refreshNow: refreshNow
                 };
 
-                // IMPORTANT FIX: Explicitly add TOTP values to requestOptions if enabled
+                // Preserve the original response if it exists
+                if (source.originalResponse) {
+                    sourceData.originalResponse = source.originalResponse;
+                }
+
+                // Explicitly add TOTP values to requestOptions if enabled
                 if (isTotpEnabled && totpSecretValue) {
                     sourceData.requestOptions.totpSecret = totpSecretValue;
                     console.log("Added TOTP secret to requestOptions for saving");
@@ -350,7 +355,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                             return;
                         }
 
-                        // FIXED: Normalize the jsonFilter from the component
+                        // Normalize the jsonFilter from the component
                         sourceData.jsonFilter = {
                             enabled: Boolean(jsonFilterState.enabled),
                             path: jsonFilterState.enabled === true ? (jsonFilterState.path || '') : ''
