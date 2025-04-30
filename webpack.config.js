@@ -32,7 +32,15 @@ const mainConfig = {
     resolve: {
         fallback: {
             "fsevents": false
+        },
+        alias: {
+            // Force all fsevents to be disabled
+            'fsevents': false,
+            'chokidar': path.resolve(__dirname, 'node_modules/chokidar')
         }
+    },
+    externals: {
+        'fsevents': 'empty'
     },
     optimization: {
         minimizer: [
@@ -70,7 +78,14 @@ const preloadConfig = {
     resolve: {
         fallback: {
             "fsevents": false
+        },
+        alias: {
+            // Force all fsevents to be disabled
+            'fsevents': false
         }
+    },
+    externals: {
+        'fsevents': 'empty'
     },
     optimization: {
         minimizer: [
@@ -146,7 +161,14 @@ const rendererConfig = {
         extensions: ['.js', '.jsx'],
         fallback: {
             "fsevents": false
+        },
+        alias: {
+            // Force all fsevents to be disabled
+            'fsevents': false
         }
+    },
+    externals: {
+        'fsevents': 'empty'
     },
     plugins: [
         new CopyPlugin({

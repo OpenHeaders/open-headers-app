@@ -20,6 +20,9 @@ A companion application for the Open Headers browser extension that manages dyna
 - 💻 **Modern UI**: Clean, minimalist design with Ant Design components
 - 🔡 **HTTP Header Case Preservation**: Headers maintain their original capitalization for improved standards compliance
 - 📦 **Rich Response Support**: Properly handle any type of HTTP response content beyond just JSON
+- 🦊 **Firefox Support**: Added secure WebSocket (WSS) support for Firefox extension
+- 📂 **Cross-Platform File Watching**: Improved file monitoring support across macOS, Windows, and Linux
+- 📦 **Debian Package Support**: Added native Debian package (.deb) distribution for Linux systems
 
 ## 📸 Screenshots
 
@@ -51,7 +54,7 @@ A companion application for the Open Headers browser extension that manages dyna
 2. Install the application:
    - **macOS**: Open the DMG file and drag the app to your Applications folder
    - **Windows**: Run the installer executable
-   - **Linux**: Extract the AppImage and make it executable
+   - **Linux**: Install the Debian package (.deb) or extract the AppImage and make it executable
 
 ### 🛠️ Building from Source
 
@@ -87,7 +90,7 @@ Access app settings by clicking the menu button in the top-right corner:
 3. Add an optional tag for easy identification
 4. Click "Add Source"
 
-The file content will be continuously monitored for changes.
+The file content will be continuously monitored for changes on all platforms.
 
 ### 🔧 Adding an Environment Variable Source
 
