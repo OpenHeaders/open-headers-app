@@ -31,16 +31,17 @@ export function useFileSystem() {
     }, []);
 
     /**
-     * Watch a file for changes
+     * Watch a file for changes - using polling for cross-platform consistency
      */
     const watchFile = useCallback(async (sourceId, filePath) => {
         try {
-            // Read initial content
+            // Read initial content - this also sets up the watcher with polling in main process
             const initialContent = await window.electronAPI.watchFile(sourceId, filePath);
 
             // Store in active watchers
             activeWatchers.current.set(sourceId, filePath);
 
+            console.log(`Set up file watcher (with polling) for source ${sourceId}: ${filePath}`);
             return initialContent;
         } catch (error) {
             throw new Error(`Error watching file: ${error.message}`);
@@ -55,6 +56,7 @@ export function useFileSystem() {
             if (activeWatchers.current.has(sourceId)) {
                 await window.electronAPI.unwatchFile(filePath);
                 activeWatchers.current.delete(sourceId);
+                console.log(`Stopped watching file: ${filePath}`);
                 return true;
             }
             return false;

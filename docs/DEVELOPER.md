@@ -13,6 +13,7 @@ The application consists of these main components:
 - **Preload Script**: Securely bridges the main and renderer processes with context isolation
 - **React Contexts**: Manages global state for sources and settings
 - **Custom Hooks**: Encapsulates business logic for file, HTTP, and environment operations
+- **WebSocket Service**: Provides both WS and WSS connections for browser extension communication
 
 ### 📄 Key Files
 
@@ -24,9 +25,11 @@ The application consists of these main components:
 | `App.jsx` | Main React application component |
 | `SourceContext.jsx` | React context for managing sources state |
 | `SettingsContext.jsx` | React context for application settings |
+| `WebSocketContext.jsx` | React context for WebSocket communication |
 | `useFileSystem.jsx` | Custom hook for file operations |
 | `useHttp.jsx` | Custom hook for HTTP operations |
 | `useEnv.jsx` | Custom hook for environment variables |
+| `ws-service.js` | WebSocket service for browser extension communication (WS and WSS) |
 
 ### 🧪 React Components
 
@@ -44,6 +47,7 @@ The application consists of these main components:
 | `RefreshOptions.jsx` | Auto-refresh configuration for HTTP sources |
 | `TrayMenu.jsx` | System tray integration component |
 | `JsonViewer.jsx` | JSON visualization and filtering preview |
+| `AboutModal.jsx` | Information about the app and extension links |
 
 ### 🔄 Data Flow
 
@@ -95,6 +99,8 @@ open-headers-app/
 ├── src/                  # Source code
 │   ├── main.js           # Electron main process
 │   ├── preload.js        # Electron preload script
+│   ├── services/         # Backend services
+│   │   └── ws-service.js # WebSocket service (WS & WSS)
 │   ├── ui/               # Legacy UI assets (for reference)
 │   └── renderer/         # React renderer process
 │       ├── App.jsx       # Main React application
@@ -103,7 +109,8 @@ open-headers-app/
 │       ├── index.html    # HTML template
 │       ├── contexts/     # React contexts
 │       │   ├── SourceContext.jsx
-│       │   └── SettingsContext.jsx
+│       │   ├── SettingsContext.jsx
+│       │   └── WebSocketContext.jsx
 │       ├── components/   # React components
 │       │   ├── ContentViewer.jsx
 │       │   ├── EditSourceModal.jsx
@@ -115,11 +122,15 @@ open-headers-app/
 │       │   ├── SourceForm.jsx
 │       │   ├── SourceTable.jsx
 │       │   ├── TOTPOptions.jsx
-│       │   └── TrayMenu.jsx
+│       │   ├── TrayMenu.jsx
+│       │   └── AboutModal.jsx
 │       ├── hooks/        # Custom React hooks
 │       │   ├── useEnv.jsx
 │       │   ├── useFileSystem.jsx
 │       │   └── useHttp.jsx
+│       ├── utils/        # Utility functions
+│       │   ├── messageUtil.jsx
+│       │   └── MessageProvider.jsx
 │       └── images/       # Application images
 │           ├── icon32.png
 │           └── icon128.png
@@ -193,7 +204,8 @@ The application uses React's Context API and custom hooks to manage state:
 
 1. **SourceContext**: Manages the state of all sources, including CRUD operations
 2. **SettingsContext**: Manages application settings
-3. **Custom Hooks**: Encapsulate complex behavior for file operations, HTTP requests, etc.
+3. **WebSocketContext**: Manages WebSocket communication with browser extension
+4. **Custom Hooks**: Encapsulate complex behavior for file operations, HTTP requests, etc.
 
 ## 🔋 Feature Implementation Details
 
@@ -224,6 +236,35 @@ The system tray (status bar icon) is managed through the Electron main process a
 2. **Platform Adaptations**: Different behavior for macOS, Windows, and Linux
 3. **Context Menu**: Created dynamically based on current application state
 4. **Icon Management**: Adaptive icon loading for different environments
+
+### 🌐 WebSocket Service for Browser Extension
+
+The WebSocket service provides communication with the browser extension:
+
+1. **Dual Protocol Support**: WS (WebSocket) for Chrome/Edge on port 59210 and WSS (WebSocket Secure) for Firefox on port 59211
+2. **Self-Signed Certificates**: Generated automatically for WSS connection
+3. **Security Measures**: Binds to localhost only, certificate verification page
+4. **Real-time Updates**: Broadcasts source changes to connected extensions
+
+Implementation details:
+- Main process manages WebSocket servers
+- SSL certificates are generated on first run
+- All communication is limited to localhost
+- Browser extension can connect to either WS or WSS endpoint
+
+### 📁 Cross-Platform File Watching
+
+File watching is implemented using chokidar with consistent behavior across all platforms:
+
+1. **Consistent Polling**: Uses polling strategy for all platforms (macOS, Windows, Linux)
+2. **Fallback Mechanism**: If chokidar fails, falls back to basic interval-based polling
+3. **Resource Management**: Proper cleanup of watchers when application exits
+4. **Event Propagation**: File change events flow through IPC to React components
+
+Implementation details:
+- Chokidar initialized with `usePolling: true` for cross-platform consistency
+- Watch options include `stabilityThreshold` to handle rapid changes
+- Fallback polling uses basic interval mechanism if native watching fails
 
 ### 🔐 TOTP Authentication
 
@@ -309,6 +350,15 @@ For testing HTTP sources, use services like:
 - [httpbin.org](https://httpbin.org/json) - Returns test JSON
 - [jsonplaceholder.typicode.com](https://jsonplaceholder.typicode.com/posts) - Fake API for testing
 
+### 🦊 Firefox Extension Testing
+
+For testing with Firefox extension:
+1. Launch the application, which will start both WS and WSS servers
+2. Install the Firefox extension
+3. The extension will automatically connect via WSS (port 59211)
+4. Verify in the extension that dynamic sources are available
+5. Test adding and using dynamic sources in header rules
+
 ## 📦 Building for Distribution
 
 ### 🔄 Webpack and React Build Process
@@ -342,44 +392,4 @@ npm run build
 # Bundle and create installers for current platform
 npm run dist
 
-# Platform-specific builds
-npm run dist:win    # Windows
-npm run dist:mac    # macOS
-npm run dist:linux  # Linux
-
-# Build for all platforms
-npm run dist:all
-```
-
-### 🏗️ Electron Builder Configuration
-
-The `package.json` includes extensive configuration for electron-builder:
-
-```json
-"build": {
-  "appId": "io.openheaders",
-  "productName": "Open Headers",
-  "directories": {
-    "buildResources": "build",
-    "output": "dist"
-  },
-  "files": [
-    "dist-webpack/**/*"
-  ],
-  "mac": {
-    "category": "public.app-category.utilities",
-    "icon": "build/icon.icns",
-    "target": {
-      "target": "dmg",
-      "arch": [
-        "x64",
-        "arm64"
-      ]
-    }
-  }
-}
-```
-
-## 👥 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
+# Platform-specific buil
