@@ -6,7 +6,8 @@ import {
     ImportOutlined,
     DownOutlined,
     MenuOutlined,
-    QuestionCircleOutlined
+    QuestionCircleOutlined,
+    DownloadOutlined
 } from '@ant-design/icons';
 import SourceForm from './components/SourceForm';
 import SourceTable from './components/SourceTable';
@@ -15,7 +16,8 @@ import AboutModal from './components/AboutModal';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
-import { WebSocketProvider } from './contexts/WebSocketContext'; // Import WebSocketProvider
+import { WebSocketProvider } from './contexts/WebSocketContext';
+import UpdateNotification from './components/UpdateNotification';
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
@@ -205,6 +207,12 @@ const AppComponent = () => {
             type: 'divider'
         },
         {
+            key: 'check-updates',
+            icon: <DownloadOutlined />,
+            label: 'Check for Updates',
+            onClick: () => window.electronAPI.checkForUpdates()
+        },
+        {
             key: 'settings',
             icon: <SettingOutlined />,
             label: 'Settings',
@@ -269,6 +277,7 @@ const AppComponent = () => {
                 />
 
                 <TrayMenu />
+                <UpdateNotification />
             </Layout>
         </WebSocketProvider>
     );
