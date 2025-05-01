@@ -342,7 +342,7 @@ The SourceContext provider is the central state management solution:
    - Enable/disable "Launch at login" and verify behavior on restart
    - Enable/disable "Hide window on startup" and verify behavior
    - Enable/disable "Show Dock icon" (macOS) and verify appearance
-   - Enable/disable "Show Status Bar icon" and verify tray appearance
+   - Enable/disable "Show tray icon" and verify tray appearance
 
 ### 🌐 Test Endpoints
 
