@@ -12,6 +12,7 @@ const webSocketService = require('./services/ws-service');
 // Globals
 let mainWindow;
 const fileWatchers = new Map();
+const { autoUpdater } = require('electron-updater');
 let tray = null;
 let isQuitting = false;
 
@@ -40,6 +41,42 @@ function logToFile(message) {
     } catch (err) {
         // Silent fail if logging fails
     }
+}
+
+function setupAutoUpdater() {
+    // Configure logging
+    autoUpdater.logger = require('electron-log');
+    autoUpdater.logger.transports.file.level = 'info';
+
+    // Check for updates silently at startup
+    autoUpdater.checkForUpdatesAndNotify();
+
+    // Set a timer to check periodically (e.g., every hour)
+    setInterval(() => {
+        autoUpdater.checkForUpdatesAndNotify();
+    }, 60 * 60 * 1000); // 1 hour
+
+    // Listen for update events
+    autoUpdater.on('update-available', (info) => {
+        console.log('Update available:', info);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-available', info);
+        }
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+        console.log('Update downloaded:', info);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-downloaded', info);
+        }
+    });
+
+    autoUpdater.on('error', (err) => {
+        console.error('AutoUpdater error:', err);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-error', err.message);
+        }
+    });
 }
 
 // Enhanced auto-launch detection function
@@ -479,6 +516,9 @@ app.whenReady().then(() => {
 
     setupIPC();
 
+    // Set up auto-updater
+    setupAutoUpdater();
+
     // Handle macOS dock icon clicks
     app.on('activate', () => {
         // If there are no windows, create a new one
@@ -539,6 +579,15 @@ function setupIPC() {
             initializeWebSocket();
         }
         webSocketService.updateSources(sources);
+    });
+
+    // Add update-related IPC handlers
+    ipcMain.on('check-for-updates', () => {
+        autoUpdater.checkForUpdates();
+    });
+
+    ipcMain.on('restart-and-install', () => {
+        autoUpdater.quitAndInstall();
     });
 
     // Environment variable operations
