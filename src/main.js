@@ -389,14 +389,25 @@ function updateTray(settings) {
     }
 }
 
+function initializeWebSocket() {
+    console.log('Initializing WebSocket service with both WS and WSS support...');
+
+    // Initialize with both WS and WSS support
+    webSocketService.initialize({
+        wsPort: 59210,   // Regular WebSocket port
+        wssPort: 59211   // Secure WebSocket port for Firefox
+    });
+
+    console.log('WebSocket services initialized on ports 59210 (WS) and 59211 (WSS)');
+}
+
 // App is ready
 app.whenReady().then(() => {
     createWindow();
     createTray();
 
     // Initialize WebSocket service
-    const wsPort = 59210;
-    webSocketService.initialize(wsPort);
+    initializeWebSocket();
 
     setupIPC();
 
@@ -438,8 +449,10 @@ app.on('before-quit', () => {
         watcher.close();
     }
 
-    // Close WebSocket server
-    webSocketService.close();
+    // Close WebSocket server if initialized
+    if (webSocketService) {
+        webSocketService.close();
+    }
 });
 
 // Set up IPC communication channels
@@ -453,6 +466,10 @@ function setupIPC() {
     ipcMain.handle('unwatchFile', handleUnwatchFile);
 
     ipcMain.on('updateWebSocketSources', (event, sources) => {
+        // Initialize WebSocket if needed (lazy loading)
+        if (!webSocketService) {
+            initializeWebSocket();
+        }
         webSocketService.updateSources(sources);
     });
 
@@ -681,25 +698,29 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 });
 
                 res.on('end', () => {
-                    // Create headers object from the raw headers to preserve case
-                    const preservedHeaders = {};
-                    const rawHeaders = res.rawHeaders;
+                    try {
+                        // Create headers object from the raw headers to preserve case
+                        const preservedHeaders = {};
+                        const rawHeaders = res.rawHeaders;
 
-                    // rawHeaders is an array with alternating key, value pairs
-                    for (let i = 0; i < rawHeaders.length; i += 2) {
-                        const headerName = rawHeaders[i];
-                        const headerValue = rawHeaders[i + 1];
-                        preservedHeaders[headerName] = headerValue;
+                        // rawHeaders is an array with alternating key, value pairs
+                        for (let i = 0; i < rawHeaders.length; i += 2) {
+                            const headerName = rawHeaders[i];
+                            const headerValue = rawHeaders[i + 1];
+                            preservedHeaders[headerName] = headerValue;
+                        }
+
+                        // Format response
+                        const response = {
+                            statusCode: res.statusCode,
+                            headers: preservedHeaders,
+                            body: data
+                        };
+
+                        resolve(JSON.stringify(response));
+                    } catch (err) {
+                        reject(new Error(`Failed to process response: ${err.message}`));
                     }
-
-                    // Format response
-                    const response = {
-                        statusCode: res.statusCode,
-                        headers: preservedHeaders,
-                        body: data
-                    };
-
-                    resolve(JSON.stringify(response));
                 });
             });
 
