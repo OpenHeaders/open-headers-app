@@ -20,6 +20,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.send('updateWebSocketSources', sources);
     },
 
+    // Update functionality
+    checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+    restartAndInstall: () => ipcRenderer.send('restart-and-install'),
+
+    // Update events
+    onUpdateAvailable: (callback) => {
+        const subscription = (_, info) => callback(info);
+        ipcRenderer.on('update-available', subscription);
+        return () => ipcRenderer.removeListener('update-available', subscription);
+    },
+
+    onUpdateDownloaded: (callback) => {
+        const subscription = (_, info) => callback(info);
+        ipcRenderer.on('update-downloaded', subscription);
+        return () => ipcRenderer.removeListener('update-downloaded', subscription);
+    },
+
+    onUpdateError: (callback) => {
+        const subscription = (_, message) => callback(message);
+        ipcRenderer.on('update-error', subscription);
+        return () => ipcRenderer.removeListener('update-error', subscription);
+    },
+
     // File change events
     onFileChanged: (callback) => {
         const subscription = (_, sourceId, content) => callback(sourceId, content);

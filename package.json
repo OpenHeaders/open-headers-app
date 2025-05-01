@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.3.3",
+  "version": "2.4.0",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -18,7 +18,11 @@
     "dist:linux:deb": "npm run webpack && electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "npm run webpack && electron-builder --linux --x64 --config.linux.target=deb",
     "dist:linux:deb:arm64": "npm run webpack && electron-builder --linux --arm64 --config.linux.target=deb",
-    "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64"
+    "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64",
+    "publish:mac": "electron-builder --mac --publish always",
+    "publish:win": "electron-builder --win --publish always",
+    "publish:linux": "electron-builder --linux --publish always",
+    "publish:all": "electron-builder -mwl --publish always"
   },
   "build": {
     "appId": "io.openheaders",
@@ -80,7 +84,10 @@
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
-      "target": ["deb", "AppImage"],
+      "target": [
+        "deb",
+        "AppImage"
+      ],
       "icon": "build/icon.png",
       "category": "Utility;Development;Network",
       "executableName": "open-headers",
@@ -147,6 +154,11 @@
           "path": "/Applications"
         }
       ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "OpenHeaders",
+      "repo": "open-headers-app"
     }
   },
   "dependencies": {
@@ -155,6 +167,8 @@
     "auto-launch": "^5.0.6",
     "chokidar": "^3.5.3",
     "electron-is-dev": "^2.0.0",
+    "electron-log": "^5.4.0",
+    "electron-updater": "^6.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "ws": "^8.16.0"
