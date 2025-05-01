@@ -743,14 +743,17 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         // Get current refresh options to preserve values
         const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
+        // IMPORTANT: Preserve the existing enabled state
+        const currentEnabledState = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+
         // Update form values while preserving other settings
         form.setFieldsValue({
             refreshOptions: {
                 ...currentRefreshOptions,
                 interval: value,
                 type: 'preset',
-                // Keep the current enabled state
-                enabled: refreshEnabledRef.current
+                // Explicitly preserve the enabled state instead of using just the ref
+                enabled: currentEnabledState
             }
         });
 
