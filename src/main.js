@@ -45,38 +45,92 @@ function logToFile(message) {
 
 function setupAutoUpdater() {
     // Configure logging
-    autoUpdater.logger = require('electron-log');
-    autoUpdater.logger.transports.file.level = 'info';
+    const log = require('electron-log');
+    autoUpdater.logger = log;
+    log.transports.file.level = 'debug';
+    log.info('Auto updater initialized');
+    log.info('App version:', app.getVersion());
 
-    // Check for updates silently at startup
-    autoUpdater.checkForUpdatesAndNotify();
+    // Force updates in development mode for testing
+    if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
+        log.info('Development mode detected, forcing update checks');
+        autoUpdater.forceDevUpdateConfig = true;
+    }
 
-    // Set a timer to check periodically (e.g., every hour)
-    setInterval(() => {
-        autoUpdater.checkForUpdatesAndNotify();
-    }, 60 * 60 * 1000); // 1 hour
+    // Try to get and log the feed URL
+    try {
+        const updateURL = autoUpdater.getFeedURL();
+        log.info('Initial update feed URL:', updateURL || 'Not set yet');
+    } catch (e) {
+        log.info('Feed URL not available yet');
+    }
 
-    // Listen for update events
+    // Event listeners for update process
+    autoUpdater.on('checking-for-update', () => {
+        log.info('Checking for update...');
+        try {
+            const updateURL = autoUpdater.getFeedURL();
+            log.info('Using update feed URL:', updateURL);
+        } catch (e) {
+            log.error('Error getting feed URL:', e);
+        }
+    });
+
     autoUpdater.on('update-available', (info) => {
-        console.log('Update available:', info);
+        log.info('Update available:', info);
         if (mainWindow) {
             mainWindow.webContents.send('update-available', info);
         }
     });
 
+    autoUpdater.on('update-not-available', (info) => {
+        log.info('Update not available:', info);
+        if (mainWindow) {
+            mainWindow.webContents.send('update-not-available', info);
+        }
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+        const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
+        log.info(logMessage);
+
+        if (mainWindow) {
+            mainWindow.webContents.send('update-progress', progressObj);
+        }
+    });
+
     autoUpdater.on('update-downloaded', (info) => {
-        console.log('Update downloaded:', info);
+        log.info('Update downloaded:', info);
         if (mainWindow) {
             mainWindow.webContents.send('update-downloaded', info);
         }
     });
 
     autoUpdater.on('error', (err) => {
-        console.error('AutoUpdater error:', err);
+        log.error('Error in auto-updater:', err);
         if (mainWindow) {
             mainWindow.webContents.send('update-error', err.message);
         }
     });
+
+    // Check for updates on startup (with delay to allow app to load fully)
+    setTimeout(() => {
+        log.info('Performing initial update check...');
+        autoUpdater.checkForUpdatesAndNotify()
+            .catch(err => {
+                log.error('Error in initial update check:', err);
+            });
+    }, 3000);
+
+    // Set up periodic update checks (every 6 hours)
+    const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    setInterval(() => {
+        log.info('Performing periodic update check...');
+        autoUpdater.checkForUpdatesAndNotify()
+            .catch(err => {
+                log.error('Error in periodic update check:', err);
+            });
+    }, CHECK_INTERVAL);
 }
 
 // Enhanced auto-launch detection function
@@ -582,12 +636,22 @@ function setupIPC() {
     });
 
     // Add update-related IPC handlers
-    ipcMain.on('check-for-updates', () => {
-        autoUpdater.checkForUpdates();
+    ipcMain.on('check-for-updates', (event) => {
+        const log = require('electron-log');
+        log.info('Manual update check requested');
+        try {
+            autoUpdater.checkForUpdates();
+        } catch (err) {
+            log.error('Error checking for updates:', err);
+            event.reply('update-error', err.message);
+        }
     });
 
-    ipcMain.on('restart-and-install', () => {
-        autoUpdater.quitAndInstall();
+    // And for install handler:
+    ipcMain.on('install-update', () => {
+        const log = require('electron-log');
+        log.info('Update installation requested');
+        autoUpdater.quitAndInstall(false, true);
     });
 
     // Environment variable operations

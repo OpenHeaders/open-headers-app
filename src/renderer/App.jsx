@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Space, Dropdown, Tag } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Layout, Typography, Button, Space, Dropdown, Tag, notification } from 'antd';
 import {
     SettingOutlined,
     ExportOutlined,
@@ -13,11 +13,11 @@ import SourceForm from './components/SourceForm';
 import SourceTable from './components/SourceTable';
 import SettingsModal from './components/SettingsModal';
 import AboutModal from './components/AboutModal';
+import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
-import UpdateNotification from './components/UpdateNotification';
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
@@ -44,6 +44,9 @@ const AppComponent = () => {
         import: false
     });
     const [appVersion, setAppVersion] = useState('');
+
+    // Create a ref for the UpdateNotification component
+    const updateNotificationRef = useRef(null);
 
     // Get application version on component mount
     useEffect(() => {
@@ -163,6 +166,22 @@ const AppComponent = () => {
         }
     };
 
+    // Handle check for updates
+    const handleCheckForUpdates = () => {
+        // Use the ref method if available
+        if (updateNotificationRef.current && updateNotificationRef.current.checkForUpdates) {
+            updateNotificationRef.current.checkForUpdates();
+        } else {
+            // Fallback if ref not available
+            window.electronAPI.checkForUpdates();
+            notification.info({
+                message: 'Checking for Updates',
+                description: 'Looking for new versions...',
+                duration: 2
+            });
+        }
+    };
+
     // Handle settings
     const handleOpenSettings = () => {
         setSettingsVisible(true);
@@ -210,7 +229,7 @@ const AppComponent = () => {
             key: 'check-updates',
             icon: <DownloadOutlined />,
             label: 'Check for Updates',
-            onClick: () => window.electronAPI.checkForUpdates()
+            onClick: handleCheckForUpdates
         },
         {
             key: 'settings',
@@ -276,8 +295,9 @@ const AppComponent = () => {
                     appVersion={appVersion}
                 />
 
+                <UpdateNotification ref={updateNotificationRef} />
+
                 <TrayMenu />
-                <UpdateNotification />
             </Layout>
         </WebSocketProvider>
     );

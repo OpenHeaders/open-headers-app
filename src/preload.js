@@ -22,7 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Update functionality
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
-    restartAndInstall: () => ipcRenderer.send('restart-and-install'),
+    installUpdate: () => ipcRenderer.send('install-update'),
 
     // Update events
     onUpdateAvailable: (callback) => {
@@ -30,17 +30,25 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.on('update-available', subscription);
         return () => ipcRenderer.removeListener('update-available', subscription);
     },
-
+    onUpdateProgress: (callback) => {
+        const subscription = (_, progressObj) => callback(progressObj);
+        ipcRenderer.on('update-progress', subscription);
+        return () => ipcRenderer.removeListener('update-progress', subscription);
+    },
     onUpdateDownloaded: (callback) => {
         const subscription = (_, info) => callback(info);
         ipcRenderer.on('update-downloaded', subscription);
         return () => ipcRenderer.removeListener('update-downloaded', subscription);
     },
-
     onUpdateError: (callback) => {
         const subscription = (_, message) => callback(message);
         ipcRenderer.on('update-error', subscription);
         return () => ipcRenderer.removeListener('update-error', subscription);
+    },
+    onUpdateNotAvailable: (callback) => {
+        const subscription = (_, info) => callback(info);
+        ipcRenderer.on('update-not-available', subscription);
+        return () => ipcRenderer.removeListener('update-not-available', subscription);
     },
 
     // File change events
