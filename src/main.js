@@ -17,7 +17,7 @@ let isQuitting = false;
 
 // Fix for Electron 18+ where app.getPath('appData') could return /Application Support/open-headers-app
 // instead of /Application Support/Open Headers
-app.setName('Open Headers');
+app.setName('OpenHeaders');
 
 // Handle dock visibility early for macOS
 if (process.platform === 'darwin') {
@@ -769,7 +769,7 @@ async function handleGetSettings() {
 async function handleSetAutoLaunch(_, enable) {
     try {
         const autoLauncher = new AutoLaunch({
-            name: 'Open Headers',
+            name: 'OpenHeaders',
             path: app.getPath('exe'),
             args: ['--hidden']  // Add this flag to indicate auto-launch
         });
