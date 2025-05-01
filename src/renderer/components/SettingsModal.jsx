@@ -74,7 +74,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                     name="showStatusBarIcon"
                     valuePropName="checked"
                 >
-                    <Checkbox>Show Status Bar icon</Checkbox>
+                    <Checkbox>Show tray icon</Checkbox>
                 </Form.Item>
             </Form>
         </Modal>
