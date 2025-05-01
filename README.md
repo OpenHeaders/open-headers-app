@@ -81,7 +81,7 @@ Access app settings by clicking the menu button in the top-right corner:
 
 #### 🎨 Appearance
 - **Show Dock icon** (macOS): Choose whether to show the app in the dock
-- **Show Status Bar icon**: Choose whether to show the app in the system tray/menu bar
+- **Show tray icon**: Choose whether to show the app in the system tray/menu bar
 
 ### 📁 Adding a File Source
 

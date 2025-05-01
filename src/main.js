@@ -1,4 +1,4 @@
-// main.js - Electron main process
+// main.js - Electron main process with improved auto-launch window hiding
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -15,9 +15,63 @@ const fileWatchers = new Map();
 let tray = null;
 let isQuitting = false;
 
+// Log important process information
+console.log('App starting with args:', process.argv);
+console.log('App executable path:', process.execPath);
+
+// Store app launch arguments for debugging and auto-launch detection
+const appLaunchArgs = {
+    argv: process.argv,
+    startMinimized: process.argv.includes('--hidden') || process.argv.includes('--minimize') || process.argv.includes('/hidden'),
+    isAutoLaunch: false
+};
+
 // Fix for Electron 18+ where app.getPath('appData') could return /Application Support/open-headers-app
 // instead of /Application Support/Open Headers
 app.setName('OpenHeaders');
+
+// Add logging to help with debugging
+function logToFile(message) {
+    try {
+        const logPath = path.join(app.getPath('userData'), 'app.log');
+        const timestamp = new Date().toISOString();
+        const logMessage = `[${timestamp}] ${message}\n`;
+        fs.appendFileSync(logPath, logMessage);
+    } catch (err) {
+        // Silent fail if logging fails
+    }
+}
+
+// Enhanced auto-launch detection function
+function detectAutoLaunch() {
+    // Check login settings (works best on macOS)
+    const loginSettings = app.getLoginItemSettings();
+
+    // Log the detection process
+    console.log('Detecting auto-launch:', {
+        loginSettings,
+        argv: process.argv,
+        startMinimized: appLaunchArgs.startMinimized
+    });
+
+    // Check specific platform detection methods
+    if (process.platform === 'darwin') {
+        // macOS detection
+        return loginSettings.wasOpenedAtLogin || loginSettings.wasOpenedAsHidden;
+    } else if (process.platform === 'win32') {
+        // Windows detection - more lenient checking
+        return appLaunchArgs.startMinimized ||
+            process.argv.includes('--autostart') ||
+            process.execPath.toLowerCase().includes('\\appdata\\roaming\\microsoft\\windows\\start menu\\programs\\startup') ||
+            loginSettings.wasOpenedAtLogin;
+    } else {
+        // Linux detection - check for common autostart arguments
+        return appLaunchArgs.startMinimized ||
+            process.argv.includes('--autostart') ||
+            process.argv.some(arg => arg.includes('autostart')) ||
+            loginSettings.wasOpenedAtLogin;
+    }
+}
 
 // Handle dock visibility early for macOS
 if (process.platform === 'darwin') {
@@ -46,6 +100,7 @@ if (process.platform === 'darwin') {
 
 // Create the browser window
 function createWindow() {
+    // CRUCIAL CHANGE: Always create window hidden first, then decide to show it later
     mainWindow = new BrowserWindow({
         width: 1050,
         height: 700,
@@ -56,7 +111,7 @@ function createWindow() {
             sandbox: true,
             webSecurity: true
         },
-        show: false // Don't show until ready-to-show
+        show: false // IMPORTANT: Always start hidden regardless of settings
     });
 
     // Set CSP header
@@ -71,38 +126,44 @@ function createWindow() {
         });
     });
 
+    // Detect auto-launch
+    appLaunchArgs.isAutoLaunch = detectAutoLaunch();
+    console.log('Auto-launch detection result:', appLaunchArgs.isAutoLaunch);
+
     // Show window when it's ready to avoid flashing
     mainWindow.once('ready-to-show', () => {
         // Check settings for auto-hide
         const settingsPath = path.join(app.getPath('userData'), 'settings.json');
         try {
             if (fs.existsSync(settingsPath)) {
-                const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+                const settingsData = fs.readFileSync(settingsPath, 'utf8');
+                const settings = JSON.parse(settingsData);
 
-                // Check if this is likely an auto-launch scenario
-                const isAutoLaunch = process.argv.includes('--hidden') ||
-                    app.getLoginItemSettings().wasOpenedAtLogin ||
-                    app.getLoginItemSettings().wasOpenedAsHidden;
+                // IMPORTANT: Make sure hideOnLaunch is properly boolean-typed
+                const hideOnLaunch = Boolean(settings.hideOnLaunch);
+                const isAutoLaunch = appLaunchArgs.isAutoLaunch;
 
                 console.log('App launch details:', {
-                    hideOnLaunch: settings.hideOnLaunch,
+                    hideOnLaunch: hideOnLaunch,
                     isAutoLaunch: isAutoLaunch,
                     argv: process.argv,
                     loginItemSettings: app.getLoginItemSettings()
                 });
 
                 // Only hide window if both hideOnLaunch is enabled AND this is an auto-launch
-                const shouldHideWindow = settings.hideOnLaunch && isAutoLaunch;
+                const shouldHideWindow = hideOnLaunch && isAutoLaunch;
 
                 if (!shouldHideWindow) {
                     console.log('Showing window on startup (manual launch detected)');
                     mainWindow.show();
                     mainWindow.focus();
                 } else {
-                    console.log('Hiding window on startup (auto-launch with hide setting enabled)');
+                    console.log('Keeping window hidden on startup (auto-launch with hide setting enabled)');
+                    // The window is already hidden (show: false in BrowserWindow constructor)
                 }
             } else {
                 // No settings file exists, show by default
+                console.log('No settings file, showing window by default');
                 mainWindow.show();
             }
         } catch (err) {
@@ -403,6 +464,13 @@ function initializeWebSocket() {
 
 // App is ready
 app.whenReady().then(() => {
+    // Log app startup information to help with debugging
+    logToFile(`App started at ${new Date().toISOString()}`);
+    logToFile(`Process argv: ${JSON.stringify(process.argv)}`);
+    logToFile(`App version: ${app.getVersion()}`);
+    logToFile(`Platform: ${process.platform}`);
+    logToFile(`Executable path: ${process.execPath}`);
+
     createWindow();
     createTray();
 
@@ -750,6 +818,16 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 async function handleSaveSettings(_, settings) {
     try {
         const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+
+        // Log the settings being saved
+        logToFile(`Saving settings: ${JSON.stringify(settings)}`);
+
+        // Important: Ensure hideOnLaunch is properly boolean-typed
+        if (settings.hasOwnProperty('hideOnLaunch')) {
+            settings.hideOnLaunch = Boolean(settings.hideOnLaunch);
+            logToFile(`Normalized hideOnLaunch setting to: ${settings.hideOnLaunch}`);
+        }
+
         await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 
         // Apply settings
@@ -767,7 +845,12 @@ async function handleGetSettings() {
         const settingsPath = path.join(app.getPath('userData'), 'settings.json');
         if (fs.existsSync(settingsPath)) {
             const data = await fs.promises.readFile(settingsPath, 'utf8');
-            return JSON.parse(data);
+            const settings = JSON.parse(data);
+
+            // Log the retrieved settings
+            logToFile(`Retrieved settings: ${JSON.stringify(settings)}`);
+
+            return settings;
         } else {
             // Default settings
             const defaultSettings = {
@@ -789,15 +872,29 @@ async function handleGetSettings() {
 
 async function handleSetAutoLaunch(_, enable) {
     try {
+        // Platform-specific args configuration
+        let args = ['--hidden']; // Default for all platforms
+
+        // Add platform-specific args
+        if (process.platform === 'win32') {
+            args = ['--hidden', '--autostart']; // Windows needs more flags
+        } else if (process.platform === 'linux') {
+            args = ['--hidden', '--autostart']; // Linux needs more flags
+        }
+
+        // Log auto-launch configuration
+        logToFile(`Setting auto-launch to: ${enable} with args: ${args.join(' ')}`);
+
         const autoLauncher = new AutoLaunch({
             name: 'OpenHeaders',
             path: app.getPath('exe'),
-            args: ['--hidden']  // Add this flag to indicate auto-launch
+            args: args,
+            isHidden: true // Important for Windows
         });
 
         if (enable) {
             await autoLauncher.enable();
-            console.log('Auto launch enabled with --hidden flag');
+            console.log(`Auto launch enabled with args: ${args.join(' ')}`);
         } else {
             await autoLauncher.disable();
             console.log('Auto launch disabled');

@@ -1,6 +1,6 @@
 {
-  "name": "open-headers-app",
-  "version": "2.3.2",
+  "name": "open-headers",
+  "version": "2.3.3",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -16,7 +16,9 @@
     "dist:mac": "npm run webpack && electron-builder --mac",
     "dist:linux": "npm run webpack && electron-builder --linux --x64 --arm64",
     "dist:linux:deb": "npm run webpack && electron-builder --linux --x64 --arm64 --config.linux.target=deb",
-    "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64 --config.linux.target=AppImage"
+    "dist:linux:deb:x64": "npm run webpack && electron-builder --linux --x64 --config.linux.target=deb",
+    "dist:linux:deb:arm64": "npm run webpack && electron-builder --linux --arm64 --config.linux.target=deb",
+    "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64"
   },
   "build": {
     "appId": "io.openheaders",
@@ -57,7 +59,7 @@
     "removePackageScripts": true,
     "win": {
       "target": "nsis",
-      "artifactName": "${productName}-${version}.${ext}",
+      "artifactName": "${productName}-${version}-Setup.${ext}",
       "icon": "build/icon.ico"
     },
     "mac": {
@@ -74,14 +76,14 @@
           "x64",
           "arm64"
         ]
-      }
+      },
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "target": ["deb", "AppImage"],
       "icon": "build/icon.png",
       "category": "Utility;Development;Network",
       "executableName": "open-headers",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "maintainer": "Daniel Tirzuman <github@tirzuman.com>",
       "desktop": {
         "Name": "Open-Headers",
@@ -113,13 +115,26 @@
         "--deb-recommends=libatspi2.0-0",
         "--deb-recommends=libuuid1",
         "--deb-recommends=libsecret-1-0"
-      ]
+      ],
+      "artifactName": "${name}_${version}_${arch}.${ext}",
+      "compression": "xz",
+      "priority": "optional"
+    },
+    "appImage": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "desktop": {
+        "Name": "Open Headers",
+        "Comment": "Dynamic sources for Open Headers browser extension",
+        "Categories": "Utility;Development;Network"
+      }
     },
     "nsis": {
       "oneClick": true,
-      "perMachine": false
+      "perMachine": false,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
     },
     "dmg": {
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
       "contents": [
         {
           "x": 130,
