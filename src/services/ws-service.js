@@ -2,10 +2,14 @@
 const WebSocket = require('ws');
 const https = require('https');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+const crypto = require('crypto');
 
 /**
  * WebSocket service for communicating with browser extensions
- * Enhanced to support both WS and WSS protocols
+ * Enhanced to support both WS and WSS protocols with dynamic certificate generation
  */
 class WebSocketService {
     constructor() {
@@ -19,63 +23,15 @@ class WebSocketService {
         this.isInitializing = false;
         this.sources = [];
         this.sourceService = null;
+        this.appDataPath = null;     // Will be set during initialization
 
-        // Pre-generated, hardcoded certificate for localhost - key and cert pair
-        this.certificates = {
-            key: `-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDWAP8xndgTepM3
-3vBjgEVIppXva8vPKf0lvZ/iCxAzYyipwfxzdzUPKU3X5+sZgaB1eFbfBoII5OBr
-cGKUkCn3vycS8uUkNvGxGR5jJiXlB2EOi2oIsJxX+FR78GxuiLZkDIJ9vBcndN0m
-XY9/M75IxQnNxzOo9+SBY0OdNlN3/QhgcffuNhUJuFb6tJU/O9Yd9eG1z0m9ZcMJ
-2x1dkXDpMc8+T7miIX0xCz1v+5ib0hwrpg/8QvIKPpPOnOJ/i6yoGQGagVMGvAhH
-TcquHw39jeHPl2jYOiCGJDhZuHmRBB9dYVQvzFxJRiX5V1eu5CXr7JfmjMNW7vXw
-BDd5YhzDAgMBAAECggEAVgTUuQGZ0wUQJPQwAuQnR1gOZO6ySNR3bTrQXPBg4Sqd
-vdH4nmoMIJ67/MR3J+N5Wzm1+DjLQwY2A1L8VPGT9KyV/3TP3WdQrUSFLxwxqKge
-B1A7MIbBHMkUTxlIW0A80+JA1XBT8JlEQL3VsMLWB5kZQL6rh3lvlpQkDYcZ9Z4v
-68+F1S2LICoS5NgiUQ8j5E1siD1cBUOeMt9tSN7/b+PW7oFCDXSbxDTazEFe4hyt
-y3VVLbvoYZWCvi+HasnCnWWY/dFEKPHU2ULiMnTRAOd8V81qbE0uH1t9yBqmyUcK
-c7+H3XFGmWDCNjQ5CQ5trMhbPHmmLqKpHZzj7EfG4QKBgQDvpLGc53APBsxfBvS6
-mX7n+L+Q6a/UtOvJCCCUUtXGgPIdjJm2tqivSH/YQSJQBl0SQJHuCzEn49giIE35
-H/vMwzqzP3dkFuPsYq0N/R9gCFGVIL0ZhZuP5bJfpYkYWGkyAA+nSWsY5bwsGjjK
-lmCqQ6qdLYYJvuhKc1JKhCgq2QKBgQDkvfnW7+fTK0hQhEGXM1VIbAVaK83LRZ3n
-IxTqArdWJ9UYq1PzQs7a3lZfJuJL7DVyiyHQmAgCdXcVSDpcSMBtBq4r2CYM3o2w
-A3jj7vp8JLgikRu409YXfGaOOWbKB4QfOW3BbWvjnZdGjoUr8sEXxXQqj5S+2W32
-rGtVACm+OwKBgQCwVyRHx5c5Z2wzRbXCoAGQQxPjn0MmkVlTFGxPWFJl/QAuCcJx
-19YTmA8BRFF3JYvkf5pf9khxYUKfTvgbpnGRZQIiNMw3VD9+xyW9KSxBdASFO4ZF
-/ZYdcrsLUB3Yd43bkwK1hYBxLJj31DP0OW3JZpsrcU/qDpRAgdA1g2PtYQKBgBYt
-p3vMvKZoGsQMuZOuSm+fEKSKN58K5SXwFjxQkjgrnI0GcdRY8LUcK4K5FpSmNJ2S
-fdd+GvLyQw4pveNmREdIqGuTjxbB4CYbY4bYjVXxrwyNy4It+2wAiKDcZ3xKdBZv
-/UESOjJBZfVG18+CZMFtLNdYS6v1uLNqaLO+nj9/AoGAMJkBBX2hq5WUCMW/hHPy
-lJ63KaULHGrJLPE0X1RkG50LKnDirYXZ1iXcYCYnWvE21ZIvAx1qefLLQQJm6IzK
-c4kP6jOwCFFYVVGJa2S2xjM6qxy6PpXzEHLYUJAjSxn3SmH0jLaFlUC+pjIpEyUE
-3eVXzuGadKfEe1JGNp+GIWc=
------END PRIVATE KEY-----`,
-            cert: `-----BEGIN CERTIFICATE-----
-MIIDXTCCAkWgAwIBAgIUdl8TOP+3VYGDBQcz03TFYMYc7fMwDQYJKoZIhvcNAQEL
-BQAwPjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkNBMSIwIAYDVQQDDBlPcGVuIEhl
-YWRlcnMgTG9jYWxob3N0IENBMB4XDTIzMDQyODIwMTU1OVoXDTMzMDQyNTIwMTU1
-OVowPjELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkNBMSIwIAYDVQQDDBlPcGVuIEhl
-YWRlcnMgTG9jYWxob3N0IENBMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
-AQEA1gD/MZ3YE3qTN97wY4BFSKaV72vLzyn9Jb2f4gsQM2MoqcH8c3c1DylN1+fr
-GYGgdXhW3waCCOTga3BilJAp978nEvLlJDbxsRkeYyYl5QdhDotqCLCcV/hUe/Bs
-boi2ZAyCfbwXJ3TdJl2PfzO+SMUJzccz6PfkgWNDnTZTd/0IYHH37jYVCbhW+rSV
-PzvWHfXhtc9JvWXDCdsdXZFw6THPPk+5oiF9MQs9b/uYm9IcK6YP/ELyCj6Tzpzi
-f4usqBkBmoFTBrwIR03Krh8N/Y3hz5do2DoghiQ4Wbh5kQQfXWFUL8xcSUYl+VdX
-ruQl6+yX5ozDVu718AQ3eWIcwwIDAQABo1MwUTAdBgNVHQ4EFgQUc3cV39ebpXd2
-9WR5zNuv+BuYhpcwHwYDVR0jBBgwFoAUc3cV39ebpXd29WR5zNuv+BuYhpcwDwYD
-VR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAFIEF+iJBZswi2mgvTkQj
-Dut4TGNTXouFW/GLfhHj29NgWVjHBZQeHMJgEq0SvIPwJALVgJiJpMcGSXg59cKI
-j8PM97M4vAM6pkRYJI9BnJ6gHiJSsqFIotMspwKVZTrHTz2sYDMSNZWFAj5YCAsI
-SnCLc8S7RrXbjJGQ56PjYFxp8W0xKjgSCvzgAJkXQK8xUFii2q1sYYkXDqJpDvRW
-K9kvfHn4jZ8RFmvPQaNXMkHQDG9o3kLVVXF8k8aRphoHfBKAw5LqYRZAWMlGTLOV
-QjR4bnJFbZP+vYzKPXMWFcPR23kFwU1LUKqUvrKtZPv3qT64g72gLM7dT22WQC3C
-QA==
------END CERTIFICATE-----`,
-            // Updated fingerprint
-            fingerprint: "73:77:15:DF:D7:9B:A5:77:76:F5:64:79:CC:DB:AF:F8:1B:98:86:97"
+        // Certificate info
+        this.certificatePaths = {
+            keyPath: null,
+            certPath: null,
+            fingerprint: null
         };
     }
-
 
     /**
      * Initialize the WebSocket service with both WS and WSS servers
@@ -93,6 +49,22 @@ QA==
             if (options.wsPort) this.wsPort = options.wsPort;
             if (options.wssPort) this.wssPort = options.wssPort;
             if (options.sourceService) this.sourceService = options.sourceService;
+            if (options.appDataPath) this.appDataPath = options.appDataPath;
+
+            // If appDataPath wasn't provided, try to get it from electron app
+            if (!this.appDataPath) {
+                try {
+                    // Try to access electron app if available
+                    const electron = require('electron');
+                    if (electron && electron.app) {
+                        this.appDataPath = electron.app.getPath('userData');
+                        console.log(`Using Electron userData path: ${this.appDataPath}`);
+                    }
+                } catch (e) {
+                    console.log('Electron app not available, using current directory for certificates');
+                    this.appDataPath = process.cwd();
+                }
+            }
 
             // Start both servers
             this._setupWsServer();
@@ -163,73 +135,16 @@ QA==
         try {
             console.log(`Secure WebSocket server (WSS) starting on ${this.host}:${this.wssPort}`);
 
-            // Path to certificate files
-            const fs = require('fs');
-            const path = require('path');
-
-            // Check several possible locations for the certificate files
-            const possiblePaths = [
-                // Current directory
-                path.join(process.cwd(), 'certs'),
-                // App directory
-                path.join(__dirname, 'certs'),
-                // User data directory if available
-                this.appDataPath ? path.join(this.appDataPath, 'certs') : null
-            ].filter(Boolean);
-
-            let keyPath = null;
-            let certPath = null;
-
-            // Find the first location that has both files
-            for (const basePath of possiblePaths) {
-                const keyFile = path.join(basePath, 'server.key');
-                const certFile = path.join(basePath, 'server.cert');
-
-                if (fs.existsSync(keyFile) && fs.existsSync(certFile)) {
-                    keyPath = keyFile;
-                    certPath = certFile;
-                    console.log(`Found certificate files in ${basePath}`);
-                    break;
-                }
-            }
-
-            // If no files found, create them
-            if (!keyPath || !certPath) {
-                console.log('Certificate files not found, attempting to create them...');
-
-                // Create certs directory in current working directory
-                const certsDir = path.join(process.cwd(), 'certs');
-                if (!fs.existsSync(certsDir)) {
-                    fs.mkdirSync(certsDir, { recursive: true });
-                }
-
-                // Log the path for debugging
-                console.log(`Using certs directory: ${certsDir}`);
-
-                // Use OpenSSL to generate certificates
-                const { execSync } = require('child_process');
-
-                try {
-                    console.log('Generating private key...');
-                    execSync(`openssl genrsa -out ${path.join(certsDir, 'server.key')} 2048`);
-
-                    console.log('Generating self-signed certificate...');
-                    execSync(`openssl req -new -x509 -key ${path.join(certsDir, 'server.key')} -out ${path.join(certsDir, 'server.cert')} -days 3650 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
-
-                    keyPath = path.join(certsDir, 'server.key');
-                    certPath = path.join(certsDir, 'server.cert');
-
-                    console.log('Successfully generated certificate files');
-                } catch (execError) {
-                    console.error('Failed to generate certificates with OpenSSL:', execError.message);
-                    console.log('Certificate generation will need to be done manually');
-                    throw new Error('Unable to generate certificate files');
-                }
+            // Ensure certificate files exist or create them
+            const certInfo = this._ensureCertificatesExist();
+            if (!certInfo.success) {
+                console.error('Failed to set up certificates for WSS server:', certInfo.error);
+                return;
             }
 
             // Read the key and certificate files
-            const key = fs.readFileSync(keyPath);
-            const cert = fs.readFileSync(certPath);
+            const key = fs.readFileSync(this.certificatePaths.keyPath);
+            const cert = fs.readFileSync(this.certificatePaths.certPath);
 
             // Create HTTPS server with the loaded certificates
             this.httpsServer = https.createServer({
@@ -322,32 +237,183 @@ QA==
             // Start listening
             this.httpsServer.listen(this.wssPort, this.host, () => {
                 console.log(`Secure WebSocket server (WSS) listening on ${this.host}:${this.wssPort}`);
-
-                // Calculate certificate fingerprint
-                try {
-                    const crypto = require('crypto');
-                    const fingerprint = crypto
-                        .createHash('sha1')
-                        .update(cert)
-                        .digest('hex')
-                        .match(/.{2}/g)
-                        .join(':')
-                        .toUpperCase();
-
-                    console.log(`Certificate fingerprint: ${fingerprint}`);
-
-                    // Store the fingerprint for reference
-                    this.certificates = {
-                        fingerprint: fingerprint,
-                        keyPath: keyPath,
-                        certPath: certPath
-                    };
-                } catch (hashError) {
-                    console.error('Error calculating certificate fingerprint:', hashError);
-                }
+                console.log(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
             });
         } catch (error) {
             console.error('Error setting up WSS server:', error);
+        }
+    }
+
+    /**
+     * Ensure certificate files exist, or create them
+     * @private
+     * @returns {Object} - Status object with success flag and error message if applicable
+     */
+    _ensureCertificatesExist() {
+        try {
+            // Create certificates directory if needed
+            const certsDir = this._getCertificatesDirectory();
+            if (!fs.existsSync(certsDir)) {
+                fs.mkdirSync(certsDir, { recursive: true });
+                console.log(`Created certificates directory: ${certsDir}`);
+            }
+
+            const keyPath = path.join(certsDir, 'server.key');
+            const certPath = path.join(certsDir, 'server.cert');
+
+            // Check if certificates already exist
+            if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+                console.log('Using existing certificate files');
+
+                // Calculate and store fingerprint
+                const cert = fs.readFileSync(certPath);
+                const fingerprint = this._calculateCertFingerprint(cert);
+
+                // Store the paths
+                this.certificatePaths = {
+                    keyPath,
+                    certPath,
+                    fingerprint
+                };
+
+                return { success: true };
+            }
+
+            // Certificates don't exist, generate them
+            console.log('Certificate files not found, generating new ones...');
+
+            try {
+                // Generate certificates using OpenSSL
+                this._generateCertificates(certsDir, keyPath, certPath);
+
+                // Calculate and store fingerprint
+                const cert = fs.readFileSync(certPath);
+                const fingerprint = this._calculateCertFingerprint(cert);
+
+                // Store the paths
+                this.certificatePaths = {
+                    keyPath,
+                    certPath,
+                    fingerprint
+                };
+
+                return { success: true };
+            } catch (genError) {
+                return {
+                    success: false,
+                    error: `Failed to generate certificates: ${genError.message}`
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                error: `Error ensuring certificates exist: ${error.message}`
+            };
+        }
+    }
+
+    /**
+     * Gets the appropriate directory for storing certificates
+     * @private
+     * @returns {string} - Path to the certificates directory
+     */
+    _getCertificatesDirectory() {
+        if (this.appDataPath) {
+            return path.join(this.appDataPath, 'certs');
+        }
+
+        // Fallback to current working directory
+        return path.join(process.cwd(), 'certs');
+    }
+
+    /**
+     * Generate SSL certificates using OpenSSL
+     * @private
+     * @param {string} certsDir - Directory to store certificates
+     * @param {string} keyPath - Path for the key file
+     * @param {string} certPath - Path for the certificate file
+     */
+    _generateCertificates(certsDir, keyPath, certPath) {
+        try {
+            // Generate private key
+            console.log('Generating private key...');
+            execSync(`openssl genrsa -out "${keyPath}" 2048`);
+
+            // Generate self-signed certificate
+            console.log('Generating self-signed certificate...');
+            execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 3650 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+
+            console.log('Successfully generated certificate files');
+        } catch (error) {
+            console.error('Failed to generate certificates with OpenSSL:', error.message);
+
+            // Try a different approach with different OpenSSL syntax for older versions
+            try {
+                console.log('Trying alternative certificate generation method...');
+
+                // Generate private key
+                execSync(`openssl genrsa -out "${keyPath}" 2048`);
+
+                // Generate CSR without SAN extension
+                const csrPath = path.join(certsDir, 'server.csr');
+                execSync(`openssl req -new -key "${keyPath}" -out "${csrPath}" -subj "/CN=localhost"`);
+
+                // Create openssl config file for SAN
+                const configPath = path.join(certsDir, 'openssl.cnf');
+                const configContent = `
+                [req]
+                distinguished_name = req_distinguished_name
+                req_extensions = v3_req
+                prompt = no
+                
+                [req_distinguished_name]
+                CN = localhost
+                
+                [v3_req]
+                subjectAltName = @alt_names
+                
+                [alt_names]
+                DNS.1 = localhost
+                IP.1 = 127.0.0.1
+                `;
+
+                fs.writeFileSync(configPath, configContent);
+
+                // Generate self-signed certificate with SAN
+                execSync(`openssl x509 -req -days 3650 -in "${csrPath}" -signkey "${keyPath}" -out "${certPath}" -extensions v3_req -extfile "${configPath}"`);
+
+                // Clean up temporary files
+                if (fs.existsSync(csrPath)) fs.unlinkSync(csrPath);
+                if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
+
+                console.log('Successfully generated certificate files with alternative method');
+            } catch (altError) {
+                console.error('Failed to generate certificates with alternative method:', altError.message);
+                throw new Error('Unable to generate certificates with either method');
+            }
+        }
+    }
+
+    /**
+     * Calculate certificate fingerprint
+     * @private
+     * @param {Buffer} cert - Certificate buffer
+     * @returns {string} - Certificate fingerprint
+     */
+    _calculateCertFingerprint(cert) {
+        try {
+            const fingerprint = crypto
+                .createHash('sha1')
+                .update(cert)
+                .digest('hex')
+                .match(/.{2}/g)
+                .join(':')
+                .toUpperCase();
+
+            return fingerprint;
+        } catch (error) {
+            console.error('Error calculating certificate fingerprint:', error);
+            return 'UNKNOWN_FINGERPRINT';
         }
     }
 
