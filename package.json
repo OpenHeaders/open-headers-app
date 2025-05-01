@@ -1,6 +1,6 @@
 {
   "name": "open-headers-app",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -65,7 +65,7 @@
       "icon": "build/icon.icns",
       "extendInfo": {
         "CFBundleDisplayName": "Open Headers - Dynamic Sources",
-        "CFBundleName": "Open Headers",
+        "CFBundleName": "OpenHeaders",
         "CFBundleIdentifier": "io.openheaders"
       },
       "target": {
