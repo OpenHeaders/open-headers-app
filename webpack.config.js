@@ -1,6 +1,7 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
 
 // Main process config
 const mainConfig = {
@@ -36,9 +37,19 @@ const mainConfig = {
         alias: {
             // Force all fsevents to be disabled
             'fsevents': false,
-            'chokidar': path.resolve(__dirname, 'node_modules/chokidar')
+            'chokidar': path.resolve(__dirname, 'node_modules/chokidar'),
+            // Add config directory alias
+            'config': path.resolve(__dirname, 'config')
         }
     },
+    plugins: [
+        new webpack.DefinePlugin({
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
+            // Add config path
+            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+        })
+    ],
     externals: {
         'fsevents': 'empty'
     },
@@ -46,6 +57,12 @@ const mainConfig = {
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                terserOptions: {
+                    compress: {
+                        drop_console: process.env.NODE_ENV === 'production',
+                        drop_debugger: process.env.NODE_ENV === 'production'
+                    }
+                }
             })
         ]
     },
@@ -81,9 +98,19 @@ const preloadConfig = {
         },
         alias: {
             // Force all fsevents to be disabled
-            'fsevents': false
+            'fsevents': false,
+            // Add config directory alias
+            'config': path.resolve(__dirname, 'config')
         }
     },
+    plugins: [
+        new webpack.DefinePlugin({
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
+            // Add config path
+            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+        })
+    ],
     externals: {
         'fsevents': 'empty'
     },
@@ -91,6 +118,12 @@ const preloadConfig = {
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                terserOptions: {
+                    compress: {
+                        drop_console: process.env.NODE_ENV === 'production',
+                        drop_debugger: process.env.NODE_ENV === 'production'
+                    }
+                }
             })
         ]
     },
@@ -102,9 +135,14 @@ const rendererConfig = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'web',
     entry: './src/renderer/index.jsx',
+    performance: {
+        hints: false, // Disable performance warnings
+    },
     output: {
         path: path.resolve(__dirname, 'dist-webpack'),
-        filename: 'bundle.js'
+        filename: 'bundle.js',
+        // Add this to ensure unique filenames for chunks
+        chunkFilename: '[name].[chunkhash].js'
     },
     module: {
         rules: [
@@ -164,13 +202,26 @@ const rendererConfig = {
         },
         alias: {
             // Force all fsevents to be disabled
-            'fsevents': false
+            'fsevents': false,
+            // Force production version of React
+            'react': path.resolve('./node_modules/react'),
+            'react-dom': path.resolve('./node_modules/react-dom'),
+            'scheduler': path.resolve('./node_modules/scheduler'),
+            // Add config directory alias
+            'config': path.resolve(__dirname, 'config')
         }
     },
     externals: {
         'fsevents': 'empty'
     },
     plugins: [
+        new webpack.DefinePlugin({
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+            // Add explicit React production mode flag
+            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
+            // Add config path
+            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+        }),
         new CopyPlugin({
             patterns: [
                 {
@@ -181,16 +232,45 @@ const rendererConfig = {
                     from: path.resolve(__dirname, 'src/renderer/images'),
                     to: path.resolve(__dirname, 'dist-webpack/renderer/images'),
                     noErrorOnMissing: true
+                },
+                // Copy config directory files needed at runtime
+                {
+                    from: path.resolve(__dirname, 'config'),
+                    to: path.resolve(__dirname, 'dist-webpack/config'),
+                    noErrorOnMissing: true
                 }
             ]
         })
     ],
     optimization: {
+        minimize: true,
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                terserOptions: {
+                    parse: {
+                        ecma: 8,
+                    },
+                    compress: {
+                        ecma: 5,
+                        warnings: false,
+                        comparisons: false,
+                        inline: 2,
+                        drop_console: process.env.NODE_ENV === 'production',
+                        drop_debugger: process.env.NODE_ENV === 'production',
+                        pure_funcs: process.env.NODE_ENV === 'production' ? ['console.warn'] : []
+                    },
+                    output: {
+                        ecma: 5,
+                        comments: false,
+                        ascii_only: true,
+                    },
+                    safari10: true, // Compatibility for older Safari
+                }
             })
-        ]
+        ],
+        // Disable splitChunks to avoid the conflict
+        splitChunks: false
     },
     devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };

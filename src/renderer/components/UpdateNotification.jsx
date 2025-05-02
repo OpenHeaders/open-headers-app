@@ -9,21 +9,41 @@ const UpdateNotification = forwardRef((props, ref) => {
     const [isDownloading, setIsDownloading] = useState(false);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [manualCheckInProgress, setManualCheckInProgress] = useState(false);
-    const [isInstalling, setIsInstalling] = useState(false); // Added state for installation
+    const [isInstalling, setIsInstalling] = useState(false);
+
+    // Notification keys for proper management
+    const NOTIFICATION_KEYS = {
+        CHECKING: 'checking-updates',
+        DOWNLOADING: 'update-download-progress',
+        DOWNLOADED: 'update-downloaded',
+        INSTALLING: 'update-installing',
+        ERROR: 'update-error',
+        NOT_AVAILABLE: 'update-not-available'
+    };
 
     // Expose methods via ref to parent components
     useImperativeHandle(ref, () => ({
         checkForUpdates: () => {
             setManualCheckInProgress(true);
+            // Clear any existing notifications first
+            clearAllNotifications();
+
             notification.info({
                 message: 'Checking for Updates',
                 description: 'Looking for new versions...',
                 duration: 2,
-                key: 'checking-updates'
+                key: NOTIFICATION_KEYS.CHECKING
             });
             window.electronAPI.checkForUpdates();
         }
     }));
+
+    // Helper function to clear all update-related notifications
+    const clearAllNotifications = () => {
+        Object.values(NOTIFICATION_KEYS).forEach(key => {
+            notification.destroy(key);
+        });
+    };
 
     useEffect(() => {
         // Event handlers for update notifications
@@ -32,6 +52,9 @@ const UpdateNotification = forwardRef((props, ref) => {
             setIsDownloading(true);
             setManualCheckInProgress(false);
             setDownloadProgress(0);
+
+            // Clear any existing notifications first
+            clearAllNotifications();
 
             // Initial download notification - we'll update this same notification
             notification.info({
@@ -43,7 +66,7 @@ const UpdateNotification = forwardRef((props, ref) => {
                     </div>
                 ),
                 duration: 0, // Keep it visible until download completes
-                key: 'update-download-progress' // Use ONE consistent key for all progress updates
+                key: NOTIFICATION_KEYS.DOWNLOADING
             });
         };
 
@@ -56,12 +79,15 @@ const UpdateNotification = forwardRef((props, ref) => {
                 message: 'Downloading Update',
                 description: (
                     <div>
-                        <div>Downloaded {percent}%</div>
-                        <Progress percent={percent} status="active" />
+                        <Progress
+                            percent={percent}
+                            status="active"
+                            format={percent => `${percent}%`}
+                        />
                     </div>
                 ),
                 duration: 0, // Keep it visible until download completes
-                key: 'update-download-progress' // SAME key as initial notification
+                key: NOTIFICATION_KEYS.DOWNLOADING // SAME key as initial notification
             });
         };
 
@@ -71,15 +97,15 @@ const UpdateNotification = forwardRef((props, ref) => {
             setUpdateInfo(info);
             setManualCheckInProgress(false);
 
-            // Close the progress notification
-            notification.destroy('update-download-progress');
+            // Close the progress notification first
+            notification.destroy(NOTIFICATION_KEYS.DOWNLOADING);
 
             // Show completion notification
             notification.success({
                 message: 'Update Ready',
                 description: `Version ${info.version} is ready to install`,
                 duration: 0,
-                key: 'update-downloaded',
+                key: NOTIFICATION_KEYS.DOWNLOADED,
                 actions: [
                     <Button
                         type="primary"
@@ -87,6 +113,9 @@ const UpdateNotification = forwardRef((props, ref) => {
                         icon={<ReloadOutlined />}
                         loading={isInstalling} // Show loading state
                         onClick={() => {
+                            // First close the current notification
+                            notification.destroy(NOTIFICATION_KEYS.DOWNLOADED);
+
                             modal.confirm({
                                 title: 'Install Update',
                                 content: 'The application will restart to install the update. Continue?',
@@ -99,43 +128,11 @@ const UpdateNotification = forwardRef((props, ref) => {
                                         message: 'Installing Update',
                                         description: 'The application will restart momentarily...',
                                         duration: 0,
-                                        key: 'update-installing'
+                                        key: NOTIFICATION_KEYS.INSTALLING
                                     });
 
-                                    // Remove the previous notification
-                                    notification.destroy('update-downloaded');
-
-                                    // Call the install function in main process
+                                    // Call the install function in main process - use this exact event name
                                     window.electronAPI.installUpdate();
-
-                                    // Add a fallback - if app hasn't restarted after 10 seconds,
-                                    // show an error and reset installing state
-                                    setTimeout(() => {
-                                        if (document.hasFocus()) { // If app is still running
-                                            setIsInstalling(false);
-                                            notification.destroy('update-installing');
-                                            notification.error({
-                                                message: 'Installation Failed',
-                                                description: 'The update installation failed. Please try again or download the latest version manually.',
-                                                duration: 0,
-                                                key: 'update-install-failed',
-                                                actions: [
-                                                    <Button
-                                                        type="primary"
-                                                        size="small"
-                                                        onClick={() => {
-                                                            // Try to open GitHub releases page if available
-                                                            if (window.electronAPI.openExternal) {
-                                                                window.electronAPI.openExternal('https://github.com/OpenHeaders/open-headers-app/releases/latest');
-                                                            }
-                                                        }}
-                                                    >
-                                                        Download Manually
-                                                    </Button>
-                                                ]
-                                            });
-                                        }
-                                    }, 10000);
                                 },
                                 okText: 'Update Now',
                                 cancelText: 'Later'
@@ -153,26 +150,28 @@ const UpdateNotification = forwardRef((props, ref) => {
             setManualCheckInProgress(false);
             setIsInstalling(false);
 
-            // Close the progress notification
-            notification.destroy('update-download-progress');
-            notification.destroy('update-installing');
+            // Clear all existing notifications first
+            clearAllNotifications();
 
             notification.error({
                 message: 'Update Error',
                 description: message,
                 duration: 8,
-                key: 'update-error'
+                key: NOTIFICATION_KEYS.ERROR
             });
         };
 
         const handleUpdateNotAvailable = (info) => {
             // Only show this notification when manually checking for updates
             if (manualCheckInProgress) {
+                // Clear any existing notifications first
+                clearAllNotifications();
+
                 notification.success({
                     message: 'No Updates Available',
                     description: 'You are already using the latest version.',
                     duration: 4,
-                    key: 'update-not-available',
+                    key: NOTIFICATION_KEYS.NOT_AVAILABLE,
                     icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
                 });
                 setManualCheckInProgress(false);
@@ -199,8 +198,9 @@ const UpdateNotification = forwardRef((props, ref) => {
             unsubscribeError();
             unsubscribeNotAvailable();
             clearTimeout(initialCheckTimer);
+            clearAllNotifications();
         };
-    }, [manualCheckInProgress, notification, modal, isInstalling]); // Added isInstalling to dependency array
+    }, [manualCheckInProgress, notification, modal, isInstalling]);
 
     // This component doesn't render anything visible
     return null;
