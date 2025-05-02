@@ -23,6 +23,7 @@ A companion application for the Open Headers browser extension that manages dyna
 - 🦊 **Firefox Support**: Added secure WebSocket (WSS) support for Firefox extension
 - 📂 **Cross-Platform File Watching**: Improved file monitoring support across macOS, Windows, and Linux
 - 📦 **Debian Package Support**: Added native Debian package (.deb) distribution for Linux systems
+- 🔄 **Automatic Updates**: Built-in update system that checks for and installs new versions
 
 ## 📸 Screenshots
 
@@ -178,6 +179,19 @@ Easily save and share your source configurations:
 2. Launch the Dynamic Sources application
 3. The extension will automatically connect to the application
 4. In the extension popup, your dynamic sources will appear as options when creating headers
+
+### 🔄 Automatic Updates
+
+The application includes a built-in update system that:
+
+- Automatically checks for new versions on startup
+- Performs periodic update checks in the background
+- Notifies you when updates are available
+- Downloads updates automatically
+- Lets you install updates with a single click
+- Provides visual progress feedback during downloads
+
+You can also manually check for updates from the menu (Menu → Check for Updates).
 
 ## 📚 Documentation
 
