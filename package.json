@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -74,13 +74,16 @@
         "CFBundleName": "OpenHeaders",
         "CFBundleIdentifier": "io.openheaders"
       },
-      "target": {
-        "target": "dmg",
-        "arch": [
-          "x64",
-          "arm64"
-        ]
-      },
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
