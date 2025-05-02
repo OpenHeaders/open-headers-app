@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -14,12 +14,14 @@
     "dist": "npm run webpack && electron-builder",
     "dist:win": "npm run webpack && electron-builder --win",
     "dist:mac": "npm run webpack && electron-builder --mac --x64 --arm64",
+    "dist:mac:notarize": "npm run dist:mac --x64 --arm64 && chmod +x ./notarize-mac-builds.sh && ./notarize-mac-builds.sh",
     "dist:linux": "npm run webpack && electron-builder --linux --x64 --arm64",
     "dist:linux:deb": "npm run webpack && electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "npm run webpack && electron-builder --linux --x64 --config.linux.target=deb",
     "dist:linux:deb:arm64": "npm run webpack && electron-builder --linux --arm64 --config.linux.target=deb",
     "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64",
-    "publish:mac": "electron-builder --mac --x64 --arm64 --publish always",
+    "publish:mac": "npm run dist:mac && chmod +x ./notarize-mac-builds.sh && ./notarize-mac-builds.sh && ./publish-artifacts.js ",
+    "publish:mac:force": "node ./publish-artifacts.js",
     "publish:win": "electron-builder --win --publish always",
     "publish:linux": "electron-builder --linux --publish always",
     "publish:all": "electron-builder -mwl --x64 --arm64 --publish always"
@@ -39,7 +41,7 @@
     "extraResources": [
       {
         "from": "build",
-        "to": "build",
+        "to": ".",
         "filter": [
           "*.png",
           "*.ico",
@@ -48,13 +50,15 @@
       },
       {
         "from": "src/renderer/images",
-        "to": "build/images",
+        "to": "images",
         "filter": [
           "*.png"
         ]
       }
     ],
-    "asarUnpack": [],
+    "asarUnpack": [
+      "dist-webpack/renderer/images/**/*"
+    ],
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "extends": null,
@@ -65,14 +69,14 @@
       "icon": "build/icon.ico"
     },
     "mac": {
-      "category": "public.app-category.utilities",
+      "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "type": "distribution",
-      "identity": null,
+      "notarize": false,
       "extendInfo": {
         "CFBundleDisplayName": "Open Headers - Dynamic Sources",
         "CFBundleName": "OpenHeaders",
@@ -184,13 +188,15 @@
     "@babel/core": "^7.23.7",
     "@babel/preset-env": "^7.23.7",
     "@babel/preset-react": "^7.23.3",
+    "@electron/notarize": "^2.3.2",
+    "@octokit/rest": "^21.1.1",
     "babel-loader": "^9.1.3",
     "bufferutil": "^4.0.8",
     "concurrently": "^8.2.2",
     "copy-webpack-plugin": "^12.0.2",
     "css-loader": "^6.9.0",
     "electron": "^28.1.3",
-    "electron-builder": "^24.9.1",
+    "electron-builder": "^25.1.8",
     "less": "^4.2.0",
     "less-loader": "^12.1.0",
     "style-loader": "^3.3.4",
