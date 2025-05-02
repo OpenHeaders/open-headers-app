@@ -9,16 +9,19 @@ const chokidar = require('chokidar');
 const AutoLaunch = require('auto-launch');
 const webSocketService = require('./services/ws-service');
 
+// Initialize electron-log ONCE at the top level
+const log = require('electron-log');
+log.transports.file.level = 'info';
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}';
+log.info('App starting with args:', process.argv);
+log.info('App executable path:', process.execPath);
+
 // Globals
 let mainWindow;
 const fileWatchers = new Map();
 const { autoUpdater } = require('electron-updater');
 let tray = null;
 let isQuitting = false;
-
-// Log important process information
-console.log('App starting with args:', process.argv);
-console.log('App executable path:', process.execPath);
 
 // Store app launch arguments for debugging and auto-launch detection
 const appLaunchArgs = {
@@ -34,20 +37,17 @@ app.setName('OpenHeaders');
 // Add logging to help with debugging
 function logToFile(message) {
     try {
-        const logPath = path.join(app.getPath('userData'), 'app.log');
-        const timestamp = new Date().toISOString();
-        const logMessage = `[${timestamp}] ${message}\n`;
-        fs.appendFileSync(logPath, logMessage);
+        // Use our central log instance instead of writing directly to file
+        log.info(message);
     } catch (err) {
         // Silent fail if logging fails
+        console.error('Logging failed:', err);
     }
 }
 
 function setupAutoUpdater() {
-    // Configure logging
-    const log = require('electron-log');
+    // Use the existing log object instead of creating a new one
     autoUpdater.logger = log;
-    log.transports.file.level = 'debug';
     log.info('Auto updater initialized');
     log.info('App version:', app.getVersion());
 
@@ -139,7 +139,7 @@ function detectAutoLaunch() {
     const loginSettings = app.getLoginItemSettings();
 
     // Log the detection process
-    console.log('Detecting auto-launch:', {
+    log.info('Detecting auto-launch:', {
         loginSettings,
         argv: process.argv,
         startMinimized: appLaunchArgs.startMinimized
@@ -166,7 +166,7 @@ function detectAutoLaunch() {
 
 // Handle dock visibility early for macOS
 if (process.platform === 'darwin') {
-    console.log('Checking early dock visibility settings');
+    log.info('Checking early dock visibility settings');
     const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
     try {
@@ -176,15 +176,15 @@ if (process.platform === 'darwin') {
 
             // Set dock visibility based on settings
             if (settings.showDockIcon === false) {
-                console.log('Hiding dock icon at startup based on settings');
+                log.info('Hiding dock icon at startup based on settings');
                 app.dock.hide();
             } else if (settings.showDockIcon === true && !app.dock.isVisible()) {
-                console.log('Showing dock icon at startup based on settings');
+                log.info('Showing dock icon at startup based on settings');
                 app.dock.show();
             }
         }
     } catch (err) {
-        console.error('Error applying early dock visibility settings:', err);
+        log.error('Error applying early dock visibility settings:', err);
         // Default to showing dock icon on error
     }
 }
@@ -219,7 +219,7 @@ function createWindow() {
 
     // Detect auto-launch
     appLaunchArgs.isAutoLaunch = detectAutoLaunch();
-    console.log('Auto-launch detection result:', appLaunchArgs.isAutoLaunch);
+    log.info('Auto-launch detection result:', appLaunchArgs.isAutoLaunch);
 
     // Show window when it's ready to avoid flashing
     mainWindow.once('ready-to-show', () => {
@@ -234,7 +234,7 @@ function createWindow() {
                 const hideOnLaunch = Boolean(settings.hideOnLaunch);
                 const isAutoLaunch = appLaunchArgs.isAutoLaunch;
 
-                console.log('App launch details:', {
+                log.info('App launch details:', {
                     hideOnLaunch: hideOnLaunch,
                     isAutoLaunch: isAutoLaunch,
                     argv: process.argv,
@@ -245,20 +245,20 @@ function createWindow() {
                 const shouldHideWindow = hideOnLaunch && isAutoLaunch;
 
                 if (!shouldHideWindow) {
-                    console.log('Showing window on startup (manual launch detected)');
+                    log.info('Showing window on startup (manual launch detected)');
                     mainWindow.show();
                     mainWindow.focus();
                 } else {
-                    console.log('Keeping window hidden on startup (auto-launch with hide setting enabled)');
+                    log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
                     // The window is already hidden (show: false in BrowserWindow constructor)
                 }
             } else {
                 // No settings file exists, show by default
-                console.log('No settings file, showing window by default');
+                log.info('No settings file, showing window by default');
                 mainWindow.show();
             }
         } catch (err) {
-            console.error('Error loading settings:', err);
+            log.error('Error loading settings:', err);
             // Show window on error as fallback
             mainWindow.show();
         }
@@ -308,7 +308,7 @@ function createTray() {
             settings = { ...settings, ...loadedSettings };
         }
     } catch (err) {
-        console.error('Error loading settings for tray:', err);
+        log.error('Error loading settings for tray:', err);
     }
 
     // Check if the tray should be shown
@@ -356,24 +356,24 @@ function createTray() {
 
         // Find the first icon that exists
         for (const location of iconLocations) {
-            console.log('Checking icon at:', location);
+            log.info('Checking icon at:', location);
             if (fs.existsSync(location)) {
                 iconPath = location;
-                console.log('Found tray icon at:', iconPath);
+                log.info('Found tray icon at:', iconPath);
                 break;
             }
         }
 
         if (!iconPath) {
-            console.warn('No suitable icon found, using fallback path');
+            log.warn('No suitable icon found, using fallback path');
             iconPath = path.join(app.getAppPath(), '..', 'build', 'icon16.png');
         }
     } catch (error) {
-        console.error('Error determining tray icon path:', error);
+        log.error('Error determining tray icon path:', error);
         iconPath = path.join(app.getAppPath(), '..', 'build', 'icon.png');
     }
 
-    console.log('Using tray icon path:', iconPath);
+    log.info('Using tray icon path:', iconPath);
 
     try {
         // Create a native image from the icon with proper resizing
@@ -443,7 +443,7 @@ function createTray() {
         if (process.platform === 'darwin') {
             // Just let the default behavior show the context menu
             // No direct click handler to show the window
-            console.log('macOS tray setup: clicking will only show the menu');
+            log.info('macOS tray setup: clicking will only show the menu');
         } else {
             // For Windows and Linux, show app on double-click
             tray.on('double-click', () => {
@@ -456,9 +456,9 @@ function createTray() {
             });
         }
 
-        console.log('Tray icon created successfully');
+        log.info('Tray icon created successfully');
     } catch (error) {
-        console.error('Failed to create tray icon:', error);
+        log.error('Failed to create tray icon:', error);
         // Create a fallback tray with empty icon as last resort
         try {
             const emptyIcon = require('electron').nativeImage.createEmpty();
@@ -486,7 +486,7 @@ function createTray() {
             ]);
             tray.setContextMenu(basicMenu);
         } catch (fallbackError) {
-            console.error('Failed to create basic tray icon:', fallbackError);
+            log.error('Failed to create basic tray icon:', fallbackError);
         }
     }
 }
@@ -494,7 +494,7 @@ function createTray() {
 function updateTray(settings) {
     if (!settings) return;
 
-    console.log('Updating tray with settings:', settings.showStatusBarIcon, 'and dock:', settings.showDockIcon);
+    log.info('Updating tray with settings:', settings.showStatusBarIcon, 'and dock:', settings.showDockIcon);
 
     // PART 1: Handle status bar icon (tray)
     // -----------------------------------------
@@ -502,13 +502,13 @@ function updateTray(settings) {
     if (tray && !settings.showStatusBarIcon) {
         tray.destroy();
         tray = null;
-        console.log('Status bar icon destroyed');
+        log.info('Status bar icon destroyed');
     }
 
     // If tray doesn't exist but should be shown, create it
     if (!tray && settings.showStatusBarIcon) {
         createTray();
-        console.log('Status bar icon created');
+        log.info('Status bar icon created');
     }
 
     // PART 2: Handle dock icon on macOS (separate from tray handling)
@@ -519,10 +519,10 @@ function updateTray(settings) {
     // Update dock visibility on macOS
     if (process.platform === 'darwin') {
         if (settings.showDockIcon && !app.dock.isVisible()) {
-            console.log('Showing dock icon');
+            log.info('Showing dock icon');
             app.dock.show();
         } else if (!settings.showDockIcon && app.dock.isVisible()) {
-            console.log('Hiding dock icon');
+            log.info('Hiding dock icon');
             app.dock.hide();
 
             // Critical fix: Ensure window stays visible after hiding dock icon
@@ -533,7 +533,7 @@ function updateTray(settings) {
                         // Show and focus the window to bring it to front
                         mainWindow.show();
                         mainWindow.focus();
-                        console.log('Restoring window visibility after hiding dock icon');
+                        log.info('Restoring window visibility after hiding dock icon');
                     }
                 }, 100);
             }
@@ -542,7 +542,7 @@ function updateTray(settings) {
 }
 
 function initializeWebSocket() {
-    console.log('Initializing WebSocket service with both WS and WSS support...');
+    log.info('Initializing WebSocket service with both WS and WSS support...');
 
     // Initialize with both WS and WSS support
     webSocketService.initialize({
@@ -550,17 +550,17 @@ function initializeWebSocket() {
         wssPort: 59211   // Secure WebSocket port for Firefox
     });
 
-    console.log('WebSocket services initialized on ports 59210 (WS) and 59211 (WSS)');
+    log.info('WebSocket services initialized on ports 59210 (WS) and 59211 (WSS)');
 }
 
 // App is ready
 app.whenReady().then(() => {
     // Log app startup information to help with debugging
-    logToFile(`App started at ${new Date().toISOString()}`);
-    logToFile(`Process argv: ${JSON.stringify(process.argv)}`);
-    logToFile(`App version: ${app.getVersion()}`);
-    logToFile(`Platform: ${process.platform}`);
-    logToFile(`Executable path: ${process.execPath}`);
+    log.info(`App started at ${new Date().toISOString()}`);
+    log.info(`Process argv: ${JSON.stringify(process.argv)}`);
+    log.info(`App version: ${app.getVersion()}`);
+    log.info(`Platform: ${process.platform}`);
+    log.info(`Executable path: ${process.execPath}`);
 
     createWindow();
     createTray();
@@ -590,7 +590,7 @@ app.whenReady().then(() => {
             mainWindow.focus();
             // Notify the renderer process
             mainWindow.webContents.send('showApp');
-            console.log('Window restored after dock icon click');
+            log.info('Window restored after dock icon click');
         }
     });
 });
@@ -637,7 +637,6 @@ function setupIPC() {
 
     // Add update-related IPC handlers
     ipcMain.on('check-for-updates', (event) => {
-        const log = require('electron-log');
         log.info('Manual update check requested');
         try {
             autoUpdater.checkForUpdates();
@@ -649,7 +648,6 @@ function setupIPC() {
 
     // And for install handler:
     ipcMain.on('install-update', () => {
-        const log = require('electron-log');
         log.info('Update installation requested');
         autoUpdater.quitAndInstall(false, true);
     });
@@ -705,7 +703,7 @@ function setupIPC() {
             const validUrl = new URL(url);
             // Only allow https links to trusted domains
             if (validUrl.protocol !== 'https:') {
-                console.warn(`Blocked attempt to open non-HTTPS URL: ${url}`);
+                log.warn(`Blocked attempt to open non-HTTPS URL: ${url}`);
                 return { success: false, error: 'Only HTTPS URLs are allowed' };
             }
 
@@ -722,38 +720,58 @@ function setupIPC() {
             );
 
             if (!isAllowed) {
-                console.warn(`Blocked attempt to open URL to untrusted domain: ${validUrl.hostname}`);
+                log.warn(`Blocked attempt to open URL to untrusted domain: ${validUrl.hostname}`);
                 return { success: false, error: 'Only trusted domains are allowed' };
             }
 
             await shell.openExternal(url);
             return { success: true };
         } catch (error) {
-            console.error('Error opening external URL:', error);
+            log.error('Error opening external URL:', error);
             return { success: false, error: error.message };
         }
     });
 }
 
-// IPC Handlers
+// IPC Handlers - use log for all errors
 async function handleOpenFileDialog() {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile']
-    });
-    return result.canceled ? null : result.filePaths[0];
+    try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile']
+        });
+        return result.canceled ? null : result.filePaths[0];
+    } catch (error) {
+        log.error('Error in open file dialog:', error);
+        throw error;
+    }
 }
 
 async function handleSaveFileDialog(_, options = {}) {
-    const result = await dialog.showSaveDialog(mainWindow, options);
-    return result.canceled ? null : result.filePath;
+    try {
+        const result = await dialog.showSaveDialog(mainWindow, options);
+        return result.canceled ? null : result.filePath;
+    } catch (error) {
+        log.error('Error in save file dialog:', error);
+        throw error;
+    }
 }
 
 async function handleReadFile(_, filePath) {
-    return fs.promises.readFile(filePath, 'utf8');
+    try {
+        return fs.promises.readFile(filePath, 'utf8');
+    } catch (error) {
+        log.error('Error reading file:', error);
+        throw error;
+    }
 }
 
 async function handleWriteFile(_, filePath, content) {
-    return fs.promises.writeFile(filePath, content, 'utf8');
+    try {
+        return fs.promises.writeFile(filePath, content, 'utf8');
+    } catch (error) {
+        log.error('Error writing file:', error);
+        throw error;
+    }
 }
 
 async function handleWatchFile(_, sourceId, filePath) {
@@ -776,47 +794,68 @@ async function handleWatchFile(_, sourceId, filePath) {
                         mainWindow.webContents.send('fileChanged', sourceId, newContent);
                     }
                 } catch (err) {
-                    console.error('Error reading changed file:', err);
+                    log.error('Error reading changed file:', err);
                 }
             });
 
             fileWatchers.set(filePath, watcher);
+            log.info(`File watch set up for ${filePath}`);
         }
 
         return content;
     } catch (err) {
-        console.error('Error setting up file watch:', err);
+        log.error('Error setting up file watch:', err);
         throw err;
     }
 }
 
 async function handleUnwatchFile(_, filePath) {
-    if (fileWatchers.has(filePath)) {
-        const watcher = fileWatchers.get(filePath);
-        await watcher.close();
-        fileWatchers.delete(filePath);
-        return true;
+    try {
+        if (fileWatchers.has(filePath)) {
+            const watcher = fileWatchers.get(filePath);
+            await watcher.close();
+            fileWatchers.delete(filePath);
+            log.info(`File watch removed for ${filePath}`);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        log.error('Error unwatching file:', error);
+        throw error;
     }
-    return false;
 }
 
 function handleGetEnvVariable(_, name) {
-    return process.env[name] || `Environment variable '${name}' is not set`;
+    try {
+        return process.env[name] || `Environment variable '${name}' is not set`;
+    } catch (error) {
+        log.error('Error getting environment variable:', error);
+        throw error;
+    }
 }
 
 async function handleSaveToStorage(_, filename, content) {
-    const storagePath = path.join(app.getPath('userData'), filename);
-    return fs.promises.writeFile(storagePath, content, 'utf8');
+    try {
+        const storagePath = path.join(app.getPath('userData'), filename);
+        log.info(`Saving to storage: ${storagePath}`);
+        return fs.promises.writeFile(storagePath, content, 'utf8');
+    } catch (error) {
+        log.error('Error saving to storage:', error);
+        throw error;
+    }
 }
 
 async function handleLoadFromStorage(_, filename) {
-    const storagePath = path.join(app.getPath('userData'), filename);
     try {
+        const storagePath = path.join(app.getPath('userData'), filename);
+        log.info(`Loading from storage: ${storagePath}`);
         return await fs.promises.readFile(storagePath, 'utf8');
     } catch (err) {
         if (err.code === 'ENOENT') {
+            log.info(`Storage file not found: ${filename}`);
             return null; // File doesn't exist yet
         }
+        log.error('Error loading from storage:', err);
         throw err;
     }
 }
@@ -869,6 +908,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 }
             }
 
+            log.debug(`Making HTTP ${method} request to ${url}`);
+
             // Make the request
             const requester = parsedUrl.protocol === 'https:' ? https : http;
             const req = requester.request(requestOptions, (res) => {
@@ -898,8 +939,10 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                             body: data
                         };
 
+                        log.debug(`HTTP response received: ${res.statusCode}`);
                         resolve(JSON.stringify(response));
                     } catch (err) {
+                        log.error('Failed to process response:', err);
                         reject(new Error(`Failed to process response: ${err.message}`));
                     }
                 });
@@ -907,12 +950,14 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
             // Handle errors
             req.on('error', (error) => {
+                log.error('HTTP request error:', error);
                 reject(error);
             });
 
             // Handle timeout
             req.on('timeout', () => {
                 req.destroy();
+                log.error(`Request timed out after ${requestOptions.timeout}ms`);
                 reject(new Error(`Request timed out after ${requestOptions.timeout}ms`));
             });
 
@@ -923,6 +968,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
             req.end();
         } catch (error) {
+            log.error('Error making HTTP request:', error);
             reject(error);
         }
     });
@@ -933,12 +979,12 @@ async function handleSaveSettings(_, settings) {
         const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
         // Log the settings being saved
-        logToFile(`Saving settings: ${JSON.stringify(settings)}`);
+        log.info(`Saving settings: ${JSON.stringify(settings)}`);
 
         // Important: Ensure hideOnLaunch is properly boolean-typed
         if (settings.hasOwnProperty('hideOnLaunch')) {
             settings.hideOnLaunch = Boolean(settings.hideOnLaunch);
-            logToFile(`Normalized hideOnLaunch setting to: ${settings.hideOnLaunch}`);
+            log.info(`Normalized hideOnLaunch setting to: ${settings.hideOnLaunch}`);
         }
 
         await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
@@ -948,7 +994,7 @@ async function handleSaveSettings(_, settings) {
 
         return { success: true };
     } catch (err) {
-        console.error('Error saving settings:', err);
+        log.error('Error saving settings:', err);
         return { success: false, message: err.message };
     }
 }
@@ -961,7 +1007,7 @@ async function handleGetSettings() {
             const settings = JSON.parse(data);
 
             // Log the retrieved settings
-            logToFile(`Retrieved settings: ${JSON.stringify(settings)}`);
+            log.info(`Retrieved settings: ${JSON.stringify(settings)}`);
 
             return settings;
         } else {
@@ -975,10 +1021,11 @@ async function handleGetSettings() {
 
             // Create settings file
             await fs.promises.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2), 'utf8');
+            log.info('Created default settings file');
             return defaultSettings;
         }
     } catch (err) {
-        console.error('Error getting settings:', err);
+        log.error('Error getting settings:', err);
         throw err;
     }
 }
@@ -996,7 +1043,7 @@ async function handleSetAutoLaunch(_, enable) {
         }
 
         // Log auto-launch configuration
-        logToFile(`Setting auto-launch to: ${enable} with args: ${args.join(' ')}`);
+        log.info(`Setting auto-launch to: ${enable} with args: ${args.join(' ')}`);
 
         const autoLauncher = new AutoLaunch({
             name: 'OpenHeaders',
@@ -1007,15 +1054,17 @@ async function handleSetAutoLaunch(_, enable) {
 
         if (enable) {
             await autoLauncher.enable();
-            console.log(`Auto launch enabled with args: ${args.join(' ')}`);
+            log.info(`Auto launch enabled with args: ${args.join(' ')}`);
         } else {
             await autoLauncher.disable();
-            console.log('Auto launch disabled');
+            log.info('Auto launch disabled');
         }
 
         return { success: true };
     } catch (err) {
-        console.error('Error setting auto launch:', err);
+        log.error('Error setting auto launch:', err);
         return { success: false, message: err.message };
     }
 }
+
+module.exports = { app, mainWindow };
