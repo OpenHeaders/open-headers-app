@@ -48,8 +48,17 @@ function logToFile(message) {
 function setupAutoUpdater() {
     // Use the existing log object instead of creating a new one
     autoUpdater.logger = log;
-    log.info('Auto updater initialized');
-    log.info('App version:', app.getVersion());
+    autoUpdater.allowDowngrade = false;
+    autoUpdater.autoDownload = true;
+    autoUpdater.allowPrerelease = false;
+
+    // Log important details about the app
+    log.info(`App version: ${app.getVersion()}`);
+    log.info(`Electron version: ${process.versions.electron}`);
+    log.info(`Chrome version: ${process.versions.chrome}`);
+    log.info(`Node version: ${process.versions.node}`);
+    log.info(`Platform: ${process.platform}`);
+    log.info(`Arch: ${process.arch}`);
 
     // Force updates in development mode for testing
     if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
@@ -108,10 +117,21 @@ function setupAutoUpdater() {
 
     autoUpdater.on('error', (err) => {
         log.error('Error in auto-updater:', err);
+
+        // Better logging for specific signature errors
+        if (err.message.includes('code signature')) {
+            log.error('Code signature validation error details:', {
+                message: err.message,
+                code: err.code,
+                errno: err.errno
+            });
+        }
+
         if (mainWindow) {
             mainWindow.webContents.send('update-error', err.message);
         }
     });
+
 
     // Check for updates on startup (with delay to allow app to load fully)
     setTimeout(() => {

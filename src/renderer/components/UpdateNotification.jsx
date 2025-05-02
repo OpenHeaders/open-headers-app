@@ -1,5 +1,7 @@
+// src/components/UpdateNotification.jsx - Fixed notification API usage
+
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Button, notification, Modal, Progress, App } from 'antd';
+import { Button, App, Modal, Progress } from 'antd';
 import { DownloadOutlined, ReloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
 
 const UpdateNotification = forwardRef((props, ref) => {
@@ -81,7 +83,8 @@ const UpdateNotification = forwardRef((props, ref) => {
                                 okText: 'Update Now',
                                 cancelText: 'Later'
                             });
-                            notification.close('update-downloaded');
+                            // FIX: Use notification instance to close
+                            notification.destroy('update-downloaded');
                         }}
                     >
                         Install Now
@@ -138,7 +141,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             unsubscribeNotAvailable();
             clearTimeout(initialCheckTimer);
         };
-    }, [manualCheckInProgress]);
+    }, [manualCheckInProgress, notification]);
 
     // This component doesn't render anything visible
     return null;
