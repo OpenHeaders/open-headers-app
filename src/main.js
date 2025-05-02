@@ -669,7 +669,21 @@ function setupIPC() {
     // And for install handler:
     ipcMain.on('install-update', () => {
         log.info('Update installation requested');
-        autoUpdater.quitAndInstall(false, true);
+        try {
+            // Force application to close and install the update
+            // Parameters: isSilent (false = show dialog), isForceRunAfter (true = restart app after update)
+            autoUpdater.quitAndInstall(false, true);
+        } catch (error) {
+            log.error('Failed to install update:', error);
+            // Try fallback approach if the standard method fails
+            try {
+                log.info('Attempting fallback update installation method');
+                // Force quit and install with different parameters
+                autoUpdater.quitAndInstall();
+            } catch (fallbackError) {
+                log.error('Fallback installation method also failed:', fallbackError);
+            }
+        }
     });
 
     // Environment variable operations
