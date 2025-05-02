@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -13,16 +13,16 @@
     "build": "electron-builder --dir",
     "dist": "npm run webpack && electron-builder",
     "dist:win": "npm run webpack && electron-builder --win",
-    "dist:mac": "npm run webpack && electron-builder --mac",
+    "dist:mac": "npm run webpack && electron-builder --mac --x64 --arm64",
     "dist:linux": "npm run webpack && electron-builder --linux --x64 --arm64",
     "dist:linux:deb": "npm run webpack && electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "npm run webpack && electron-builder --linux --x64 --config.linux.target=deb",
     "dist:linux:deb:arm64": "npm run webpack && electron-builder --linux --arm64 --config.linux.target=deb",
     "dist:all": "npm run webpack && electron-builder -mwl --x64 --arm64",
-    "publish:mac": "electron-builder --mac --publish always",
+    "publish:mac": "electron-builder --mac --x64 --arm64 --publish always",
     "publish:win": "electron-builder --win --publish always",
     "publish:linux": "electron-builder --linux --publish always",
-    "publish:all": "electron-builder -mwl --publish always"
+    "publish:all": "electron-builder -mwl --x64 --arm64 --publish always"
   },
   "build": {
     "appId": "io.openheaders",
@@ -48,15 +48,13 @@
       },
       {
         "from": "src/renderer/images",
-        "to": "app.asar.unpacked/src/renderer/images",
+        "to": "build/images",
         "filter": [
           "*.png"
         ]
       }
     ],
-    "asarUnpack": [
-      "src/renderer/images/**/*"
-    ],
+    "asarUnpack": [],
     "npmRebuild": false,
     "nodeGypRebuild": false,
     "extends": null,
@@ -69,6 +67,10 @@
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
         "CFBundleDisplayName": "Open Headers - Dynamic Sources",
         "CFBundleName": "OpenHeaders",
