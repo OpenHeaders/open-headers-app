@@ -11,6 +11,7 @@ Thank you for your interest in contributing to the Open Headers dynamic sources 
 - [Commit Message Guidelines](#commit-message-guidelines)
 - [Pull Request Process](#pull-request-process)
 - [Cross-Platform Testing](#cross-platform-testing)
+- [Testing Automatic Updates](#testing-automatic-updates)
 - [Documentation](#documentation)
 - [Issue Tracking](#issue-tracking)
 - [Release Process](#release-process)
@@ -22,8 +23,8 @@ We expect all contributors to follow our Code of Conduct. Please be respectful a
 ## Getting Started
 
 1. **Fork the repository**:
-   - Visit the [Open Headers App repository](https://github.com/OpenHeaders/open-headers-app)
-   - Click the "Fork" button to create your own copy
+    - Visit the [Open Headers App repository](https://github.com/OpenHeaders/open-headers-app)
+    - Click the "Fork" button to create your own copy
 
 2. **Clone your fork**:
    ```bash
@@ -64,6 +65,8 @@ open-headers-app/
 ├── src/                  # Source code
 │   ├── main.js           # Electron main process
 │   ├── preload.js        # Electron preload script 
+│   ├── services/         # Backend services
+│   │   └── ws-service.js # WebSocket service (WS & WSS)
 │   ├── ui/               # Legacy UI assets (for reference)
 │   └── renderer/         # React renderer process
 │       ├── App.jsx       # Main React application
@@ -72,10 +75,14 @@ open-headers-app/
 │       ├── index.html    # HTML template
 │       ├── contexts/     # React contexts
 │       ├── components/   # React components
+│       │   ├── ...       # Various UI components
+│       │   └── UpdateNotification.jsx # Handles automatic updates
 │       ├── hooks/        # Custom React hooks
 │       └── images/       # Application images
 ├── webpack.config.js     # Webpack configuration
-└── package.json          # Project configuration
+├── package.json          # Project configuration
+├── dev-app-update.yml    # Development update configuration
+└── electron-builder.yml  # Electron builder configuration
 ```
 
 ## Branching Strategy
@@ -85,28 +92,31 @@ We use a feature-based branching strategy. All branches should be created from t
 ### Branch Naming Conventions
 
 - **Feature branches**: `feature/short-description` or `feature/issue-number-description`
-  - Example: `feature/totp-authentication` or `feature/42-json-filtering`
+    - Example: `feature/totp-authentication` or `feature/42-json-filtering`
 
 - **Bug fix branches**: `fix/short-description` or `fix/issue-number-description`
-  - Example: `fix/websocket-connection` or `fix/57-react-rendering`
+    - Example: `fix/websocket-connection` or `fix/57-react-rendering`
 
 - **Documentation branches**: `docs/short-description`
-  - Example: `docs/api-documentation`
+    - Example: `docs/api-documentation`
 
 - **Performance improvement branches**: `perf/short-description`
-  - Example: `perf/http-request-caching`
+    - Example: `perf/http-request-caching`
 
 - **Refactoring branches**: `refactor/short-description`
-  - Example: `refactor/source-context`
+    - Example: `refactor/source-context`
 
 - **UI branches**: `ui/short-description`
-  - Example: `ui/dark-mode-support`
+    - Example: `ui/dark-mode-support`
 
 - **Testing branches**: `test/short-description`
-  - Example: `test/source-service`
+    - Example: `test/source-service`
 
 - **Platform-specific branches**: `platform/os-name-description`
-  - Example: `platform/macos-dock-icon` or `platform/linux-support`
+    - Example: `platform/macos-dock-icon` or `platform/linux-support`
+
+- **Update branches**: `update/short-description`
+    - Example: `update/auto-update-notifications` or `update/progress-indicators`
 
 ### Branch Lifecycle
 
@@ -141,6 +151,7 @@ We follow a simplified version of the [Conventional Commits](https://www.convent
 - **chore**: Changes to build process, dependencies, etc.
 - **ui**: User interface changes
 - **platform**: Platform-specific changes or compatibility fixes
+- **update**: Updates to the update system components
 
 ### Examples
 
@@ -154,15 +165,13 @@ Closes #42
 ```
 
 ```
-ui: integrate Ant Design component library
+update: improve auto-update progress indicators
 
-Refactors the entire UI from vanilla HTML/CSS/JS to React with Ant Design.
-- Adds React component structure
-- Creates context providers for state management
-- Implements custom hooks for business logic
-- Updates build process with webpack for React
+Enhances the update download progress UI with percentage completion
+and estimated download time. Also adds more detailed error handling
+for update failures.
 
-Closes #57
+Closes #78
 ```
 
 ## Pull Request Process
@@ -187,16 +196,16 @@ All contributions should be tested across supported platforms:
 ### Required Testing
 
 1. **Testing on your platform**:
-   - Test all affected functionality thoroughly
-   - Verify UI rendering and interactions
-   - Check console for errors
+    - Test all affected functionality thoroughly
+    - Verify UI rendering and interactions
+    - Check console for errors
 
 ### Recommended Testing (if possible)
 
 2. **Cross-platform testing**:
-   - Test on macOS, Windows, and Linux if possible
-   - Verify platform-specific features (dock icon, tray icon, etc.)
-   - Test with different screen resolutions and DPI settings
+    - Test on macOS, Windows, and Linux if possible
+    - Verify platform-specific features (dock icon, tray icon, etc.)
+    - Test with different screen resolutions and DPI settings
 
 ### Testing Focus Areas
 
@@ -204,23 +213,73 @@ All contributions should be tested across supported platforms:
 - **File Watching**: Verify file monitoring works correctly
 - **Settings**: Confirm settings persist between sessions
 - **Performance**: Check for any platform-specific performance issues
+- **Update System**: Test update notifications and installation process
+
+## Testing Automatic Updates
+
+When working on features related to the update system:
+
+1. **Development Testing**:
+    - Set up local testing using the `dev-app-update.yml` file
+    - Configure the file with your fork's repository information
+   ```yaml
+   provider: github
+   owner: your-username
+   repo: open-headers-app
+   ```
+    - Use the `--dev` flag when running the app to force update checks
+    - The main process logs update activity to the electron-log file
+    - The renderer process receives update events via IPC
+
+2. **Update Flow Testing**:
+    - Create a release on your GitHub fork with a higher version number
+    - Test the complete update flow:
+        1. Update detection
+        2. Download progress indicators
+        3. Update ready notification
+        4. Install and restart process
+
+3. **Error Handling Testing**:
+    - Test how the app handles various error conditions:
+        - Network connection issues
+        - Invalid releases
+        - Download failures
+        - Installation failures
+
+4. **Component Testing**:
+    - Test the `UpdateNotification.jsx` component
+    - Verify all user interface elements appear correctly
+    - Ensure progress indicators update properly
+    - Test the manual update check functionality
+
+5. **Publishing Testing**:
+    - Test the publish scripts locally without actually publishing:
+   ```bash
+   npm run publish:mac -- --dry-run
+   npm run publish:win -- --dry-run
+   npm run publish:linux -- --dry-run
+   ```
 
 ## Documentation
 
 When adding features or making significant changes, please update the relevant documentation:
 
 1. **Code comments**:
-   - Use JSDoc format for function and class documentation
-   - Document React components with prop descriptions
-   - Explain complex logic or platform-specific code
+    - Use JSDoc format for function and class documentation
+    - Document React components with prop descriptions
+    - Explain complex logic or platform-specific code
 
 2. **README.md**:
-   - Update for new features or changed behaviors
-   - Add examples for new functionality
+    - Update for new features or changed behaviors
+    - Add examples for new functionality
 
 3. **DEVELOPER.md**:
-   - Update technical details for developers
-   - Document architecture changes
+    - Update technical details for developers
+    - Document architecture changes
+
+4. **Update Documentation**:
+    - For changes to the update system, ensure both user-facing (README.md)
+      and developer-facing (DEVELOPER.md) documentation is updated
 
 ## Issue Tracking
 
@@ -246,6 +305,7 @@ We use GitHub Issues to track bugs, enhancements, and feature requests.
 - `platform-linux`: Linux-specific issues
 - `ui`: User interface issues
 - `backend`: Backend service issues
+- `update-system`: Issues related to automatic updates
 
 ## Release Process
 
@@ -259,7 +319,10 @@ Our release process follows these steps:
    npm run dist:all
    ```
 5. **Create a GitHub release** with the version tag and release notes
-6. **Publish platform-specific installers** to GitHub releases
+6. **Publish platform-specific installers** to GitHub releases:
+   ```bash
+   npm run publish:all
+   ```
 
 ### Version Numbering
 

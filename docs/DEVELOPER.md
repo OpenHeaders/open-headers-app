@@ -14,6 +14,7 @@ The application consists of these main components:
 - **React Contexts**: Manages global state for sources and settings
 - **Custom Hooks**: Encapsulates business logic for file, HTTP, and environment operations
 - **WebSocket Service**: Provides both WS and WSS connections for browser extension communication
+- **Auto-Updater**: Manages application updates using electron-updater
 
 ### 📄 Key Files
 
@@ -30,6 +31,8 @@ The application consists of these main components:
 | `useHttp.jsx` | Custom hook for HTTP operations |
 | `useEnv.jsx` | Custom hook for environment variables |
 | `ws-service.js` | WebSocket service for browser extension communication (WS and WSS) |
+| `UpdateNotification.jsx` | React component for handling update notifications |
+| `dev-app-update.yml` | Configuration for testing updates in development mode |
 
 ### 🧪 React Components
 
@@ -48,6 +51,7 @@ The application consists of these main components:
 | `TrayMenu.jsx` | System tray integration component |
 | `JsonViewer.jsx` | JSON visualization and filtering preview |
 | `AboutModal.jsx` | Information about the app and extension links |
+| `UpdateNotification.jsx` | Handles application update notifications and installation |
 
 ### 🔄 Data Flow
 
@@ -123,7 +127,8 @@ open-headers-app/
 │       │   ├── SourceTable.jsx
 │       │   ├── TOTPOptions.jsx
 │       │   ├── TrayMenu.jsx
-│       │   └── AboutModal.jsx
+│       │   ├── AboutModal.jsx
+│       │   └── UpdateNotification.jsx
 │       ├── hooks/        # Custom React hooks
 │       │   ├── useEnv.jsx
 │       │   ├── useFileSystem.jsx
@@ -135,7 +140,9 @@ open-headers-app/
 │           ├── icon32.png
 │           └── icon128.png
 ├── webpack.config.js     # Webpack configuration
-└── package.json          # Project configuration
+├── package.json          # Project configuration
+├── dev-app-update.yml    # Update configuration for development
+└── electron-builder.yml  # Electron builder configuration
 ```
 
 ## 🎨 Ant Design Integration
@@ -208,6 +215,57 @@ The application uses React's Context API and custom hooks to manage state:
 4. **Custom Hooks**: Encapsulate complex behavior for file operations, HTTP requests, etc.
 
 ## 🔋 Feature Implementation Details
+
+### 🔄 Automatic Updates
+
+The application uses electron-updater to provide automatic updates:
+
+1. **Main Process Integration**: Updates are managed in the main process through `setupAutoUpdater()`:
+   - Configuration of electron-updater with proper logging
+   - Event listeners for update lifecycle events
+   - Initial update check on startup
+   - Periodic update checks (every 6 hours)
+
+2. **User Interface Components**:
+   - `UpdateNotification.jsx`: React component for handling update notifications and progress
+   - Notification system for update events (available, progress, downloaded, error)
+   - Modal dialog for update installation
+
+3. **IPC Communication**:
+   - Preload script exposes update-related functions to the renderer process
+   - Bidirectional communication for update checks and status
+   - Event-based system for update notifications
+
+Implementation details:
+- Updates are published to GitHub Releases
+- The app checks for updates on startup and every 6 hours
+- Update checks can be manually triggered from the UI
+- Download progress is displayed to the user
+- A notification is shown when an update is ready to install
+- The user can choose to install immediately or later
+
+The update configuration is defined in package.json under the `build.publish` section:
+```json
+{
+  "publish": {
+    "provider": "github",
+    "owner": "OpenHeaders",
+    "repo": "open-headers-app"
+  }
+}
+```
+
+The main update workflow:
+1. Application checks for updates via GitHub releases
+2. If an update is available, it's downloaded automatically
+3. When download completes, a notification appears
+4. User can install the update with one click
+5. The application will restart with the new version
+
+For development and testing of updates:
+- Use `process.env.NODE_ENV === 'development'` to force update checks in dev mode
+- Set `autoUpdater.forceDevUpdateConfig = true` to test updates in development
+- The `dev-app-update.yml` file contains GitHub repo information for dev testing
 
 ### ⚙️ Settings and Preferences
 
@@ -344,6 +402,11 @@ The SourceContext provider is the central state management solution:
    - Enable/disable "Show Dock icon" (macOS) and verify appearance
    - Enable/disable "Show tray icon" and verify tray appearance
 
+5. Test automatic updates:
+   - Use `dev-app-update.yml` for testing updates in development
+   - Create test releases on your fork to trigger update checks
+   - Verify update notification, download progress, and installation flow
+
 ### 🌐 Test Endpoints
 
 For testing HTTP sources, use services like:
@@ -392,4 +455,108 @@ npm run build
 # Bundle and create installers for current platform
 npm run dist
 
-# Platform-specific buil
+# Platform-specific builds
+npm run dist:mac      # macOS only
+npm run dist:win      # Windows only
+npm run dist:linux    # Linux only (AppImage and DEB)
+
+# Linux-specific builds
+npm run dist:linux:deb        # Linux DEB package (x64 and arm64)
+npm run dist:linux:deb:x64    # Linux DEB package (x64 only)
+npm run dist:linux:deb:arm64  # Linux DEB package (arm64 only)
+
+# Build for all platforms
+npm run dist:all      # All platforms (macOS, Windows, Linux)
+
+# Build and publish to GitHub releases
+npm run publish:mac     # Publish macOS build
+npm run publish:win     # Publish Windows build
+npm run publish:linux   # Publish Linux build
+npm run publish:all     # Publish all platforms
+```
+
+### 🚀 Publishing Updates
+
+For publishing updates to GitHub releases:
+
+1. Update version in `package.json`
+2. Make necessary changes and ensure they work correctly
+3. Build and publish using the appropriate script:
+   ```bash
+   npm run publish:all  # For all platforms
+   ```
+   or for specific platforms:
+   ```bash
+   npm run publish:mac
+   npm run publish:win
+   npm run publish:linux
+   ```
+
+The `electron-builder` utility will:
+1. Build the application for the specified platforms
+2. Create installers
+3. Upload the assets to GitHub releases
+4. Tag the release with the version from package.json
+
+### 📱 Platform-Specific Configuration
+
+The `package.json` file includes platform-specific build settings:
+
+1. **Windows (NSIS installer):**
+   - Icon and artifact naming
+   - One-click installer
+
+2. **macOS (DMG):**
+   - App category and bundle info
+   - Universal binary (x64 and arm64)
+   - DMG layout configuration
+
+3. **Linux (AppImage and DEB):**
+   - Desktop entry configuration
+   - Package dependencies
+   - Icon and artifact naming
+
+## 🔧 Technical Deep Dives
+
+### 📂 Dynamic Content Sourcing
+
+The application's core feature is retrieving dynamic content from different sources:
+
+1. **File Sources**:
+   - Monitors local files using chokidar
+   - Optimized for cross-platform consistency
+   - Updates content in real-time as file changes
+
+2. **Environment Variables**:
+   - Retrieves values from environment variables
+   - Secure integration with Electron main process
+   - Provides fallback messages for missing variables
+
+3. **HTTP Sources**:
+   - Configurable HTTP requests with customizable options
+   - Support for various content types and request methods
+   - JSON filtering for extracting specific data
+   - Auto-refresh for keeping data current
+   - TOTP authentication for secure API access
+
+### 🔐 Security Considerations
+
+Security measures implemented in the application:
+
+1. **Context Isolation**: Strict separation between main and renderer processes
+2. **Content Security Policy**: Restrictive CSP headers
+3. **localhost Binding**: WebSocket servers bound to 127.0.0.1 only
+4. **Input Validation**: Validation of all user inputs
+5. **Secure Storage**: Application data stored in user-specific directories
+6. **Update Verification**: Updates verified through code signing
+
+### 🏛️ Architecture Details
+
+The application follows these architectural principles:
+
+1. **Separation of Concerns**: Distinct layers for UI, business logic, and data
+2. **Component-Based Design**: Reusable components with clear responsibilities
+3. **Context-Based State Management**: Global state handled through contexts
+4. **Custom Hooks for Logic**: Business logic encapsulated in hooks
+5. **IPC for Cross-Process Communication**: Secure communication between processes
+6. **Event-Driven Updates**: Real-time updates based on events
