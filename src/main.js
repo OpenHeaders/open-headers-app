@@ -668,20 +668,34 @@ function setupIPC() {
 
     // And for install handler:
     ipcMain.on('install-update', () => {
-        log.info('Update installation requested');
+        log.info('Update installation requested with force');
+        isQuitting = true; // Set to true to allow the app to close
+
         try {
-            // Force application to close and install the update
-            // Parameters: isSilent (false = show dialog), isForceRunAfter (true = restart app after update)
+            // Signal that we want to restart after update
+            autoUpdater.autoInstallOnAppQuit = true;
+
+            // Force quit with updated options
             autoUpdater.quitAndInstall(false, true);
+
+            // Backup approach: If autoUpdater's quitAndInstall doesn't work,
+            // force the app to quit after a short delay
+            setTimeout(() => {
+                log.info('Forcing application quit for update...');
+                app.exit(0);
+            }, 1000);
         } catch (error) {
             log.error('Failed to install update:', error);
-            // Try fallback approach if the standard method fails
-            try {
-                log.info('Attempting fallback update installation method');
-                // Force quit and install with different parameters
-                autoUpdater.quitAndInstall();
-            } catch (fallbackError) {
-                log.error('Fallback installation method also failed:', fallbackError);
+
+            // Show error dialog
+            if (mainWindow) {
+                dialog.showMessageBox(mainWindow, {
+                    type: 'error',
+                    title: 'Update Error',
+                    message: 'Failed to install update',
+                    detail: error.message || 'Unknown error',
+                    buttons: ['OK']
+                });
             }
         }
     });
