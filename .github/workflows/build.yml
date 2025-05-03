@@ -5,10 +5,10 @@ on:
     tags:
       - 'v*'
     branches:
-      - main
+      - main  # or master, depending on your default branch
   pull_request:
     branches:
-      - main
+      - main  # or master
 
 jobs:
   build:
@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        node-version: [18.x]
+        node-version: [22.x]  # Updated to Node.js 22 LTS
 
     steps:
       - name: Checkout code
@@ -32,6 +32,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      # Once package-lock.json is committed, we can use npm ci again
       - name: Install dependencies
         run: npm ci
 
