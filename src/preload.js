@@ -21,8 +21,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
 
     // Update functionality
-    checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+    checkForUpdates: (isManual) => ipcRenderer.send('check-for-updates', isManual),
     installUpdate: () => ipcRenderer.send('install-update'),
+    onUpdateCheckAlreadyInProgress: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('update-check-already-in-progress', subscription);
+        return () => ipcRenderer.removeListener('update-check-already-in-progress', subscription);
+    },
+
+    onUpdateAlreadyDownloaded: (callback) => {
+        const subscription = (_, data) => {
+            // Call the callback with isManual flag if available
+            if (data && data.isManual) {
+                callback(true); // Pass isManual flag to the callback
+            } else {
+                callback(false);
+            }
+        };
+        ipcRenderer.on('update-already-downloaded', subscription);
+        return () => ipcRenderer.removeListener('update-already-downloaded', subscription);
+    },
 
     // Update events
     onUpdateAvailable: (callback) => {
