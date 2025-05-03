@@ -45,8 +45,7 @@
         "to": ".",
         "filter": [
           "*.png",
-          "*.ico",
-          "*.icns"
+          "*.ico"
         ]
       },
       {
@@ -78,6 +77,8 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "type": "distribution",
       "notarize": false,
+      "forceCodeSigning": false,
+      "darkModeSupport": true,
       "extendInfo": {
         "CFBundleDisplayName": "Open Headers - Dynamic Sources",
         "CFBundleName": "OpenHeaders",
