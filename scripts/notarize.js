@@ -4,25 +4,21 @@ const fs = require('fs');
 
 // This function will be called by electron-builder after signing
 async function notarizeApp(context) {
-    // Check if we're building for macOS
-    // The packager.platform can be 'darwin', 'mac', 'win32', 'win', 'linux'
-    const isMacOS = context.packager.platform === 'darwin' ||
-        context.packager.platform === 'mac';
+    // More reliable macOS detection
+    const isMacOS =
+        String(context.packager.platform).toLowerCase().includes('mac') ||
+        String(context.packager.platform).toLowerCase().includes('darwin') ||
+        process.platform === 'darwin';
 
     if (!isMacOS) {
         console.log(`⏭️ Skipping notarization for non-macOS platform: ${context.packager.platform}`);
         return;
     }
 
-    // First, check if notarization should be skipped
+    // Check if notarization should be explicitly skipped
+    // This allows CI to set SKIP_NOTARIZATION=true for PRs/non-tag builds
     if (process.env.SKIP_NOTARIZATION === 'true') {
         console.log('⏭️ Skipping notarization as requested by SKIP_NOTARIZATION=true');
-        return;
-    }
-
-    // Only notarize on MacOS
-    if (process.platform !== 'darwin') {
-        console.log('Skipping notarization: Build not running on macOS');
         return;
     }
 
@@ -55,6 +51,7 @@ async function notarizeApp(context) {
     }
 
     console.log(`📝 Notarizing ${appName} (${appBundleId}) at: ${appPath}`);
+    console.log('This may take several minutes. Please be patient...');
 
     try {
         await notarize({
