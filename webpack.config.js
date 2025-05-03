@@ -59,8 +59,8 @@ const mainConfig = {
                 extractComments: false,
                 terserOptions: {
                     compress: {
-                        drop_console: process.env.NODE_ENV === 'production',
-                        drop_debugger: process.env.NODE_ENV === 'production'
+                        drop_console: false, // Keep console.log statements
+                        drop_debugger: false, // Keep debugger statements too
                     }
                 }
             })
@@ -120,8 +120,8 @@ const preloadConfig = {
                 extractComments: false,
                 terserOptions: {
                     compress: {
-                        drop_console: process.env.NODE_ENV === 'production',
-                        drop_debugger: process.env.NODE_ENV === 'production'
+                        drop_console: false, // Keep console.log statements
+                        drop_debugger: false, // Keep debugger statements too
                     }
                 }
             })
@@ -256,9 +256,9 @@ const rendererConfig = {
                         warnings: false,
                         comparisons: false,
                         inline: 2,
-                        drop_console: process.env.NODE_ENV === 'production',
-                        drop_debugger: process.env.NODE_ENV === 'production',
-                        pure_funcs: process.env.NODE_ENV === 'production' ? ['console.warn'] : []
+                        drop_console: false, // Keep console.log statements
+                        drop_debugger: false, // Keep debugger statements too
+                        pure_funcs: [], // Don't remove any console methods
                     },
                     output: {
                         ecma: 5,
