@@ -27,15 +27,35 @@ jobs:
           node-version: 22.x
           cache: npm
 
-      # Cache Electron and electron-builder
+      # Create cache directories for all platforms
+      - name: Create Electron cache directories
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            mkdir -p ~/.cache/electron
+            mkdir -p ~/.cache/electron-builder
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            mkdir -p ~/Library/Caches/electron
+            mkdir -p ~/Library/Caches/electron-builder
+            mkdir -p ~/.electron
+          elif [ "$RUNNER_OS" == "Windows" ]; then
+            mkdir -p ~/AppData/Local/electron/Cache
+            mkdir -p ~/AppData/Local/electron-builder/Cache
+            mkdir -p ~/.electron
+          fi
+
+      # Cache Electron and electron-builder with platform-specific paths
       - name: Cache Electron
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/electron
             ~/.cache/electron-builder
+            ~/Library/Caches/electron
             ~/Library/Caches/electron-builder
             ~/.electron
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
           key: ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-electron-cache-
@@ -62,7 +82,7 @@ jobs:
       # macOS specific steps
       - name: Setup macOS code signing
         if: matrix.os == 'macos-latest' && startsWith(github.ref, 'refs/tags/')
-        uses: apple-actions/import-codesign-certs@v2
+        uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
@@ -74,13 +94,6 @@ jobs:
           # Complete cleanup of output directory
           rm -rf dist
           mkdir -p dist
-          
-          # Force cleanup of electron-builder cache
-          rm -rf ~/Library/Caches/electron-builder
-          rm -rf ~/.electron
-          
-          # Wait for filesystem to settle
-          sleep 1
         shell: bash
 
       # Build for macOS
