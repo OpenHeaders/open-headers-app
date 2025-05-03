@@ -94,10 +94,6 @@
           "arch": ["x64", "arm64"]
         }
       ],
-      "dmg": {
-        "format": "ULFO",
-        "writeUpdateInfo": false
-      },
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
@@ -158,6 +154,8 @@
       "artifactName": "${productName}-${version}-Setup.${ext}"
     },
     "dmg": {
+      "format": "ULFO",
+      "writeUpdateInfo": false,
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
       "contents": [
         {
