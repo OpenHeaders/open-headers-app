@@ -80,9 +80,8 @@ jobs:
           # Wait for filesystem to settle
           sleep 1
           
-          # Call the build with clean environment
-          NODE_ENV=production npm run webpack
-          electron-builder --mac
+          # Use npm script after thorough cleanup
+          npm run dist:mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
