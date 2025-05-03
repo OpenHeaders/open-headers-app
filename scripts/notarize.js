@@ -5,8 +5,9 @@ const fs = require('fs');
 // This function will be called by electron-builder after signing
 async function notarizeApp(context) {
     // More reliable macOS detection
-    const isMacOS = context.packager.platform.includes('mac') ||
-        context.packager.platform.includes('darwin') ||
+    const isMacOS =
+        String(context.packager.platform).toLowerCase().includes('mac') ||
+        String(context.packager.platform).toLowerCase().includes('darwin') ||
         process.platform === 'darwin';
 
     if (!isMacOS) {
