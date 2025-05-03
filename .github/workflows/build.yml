@@ -32,7 +32,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      # Clean up any previous build artifacts - Using cross-platform commands
+      # Clean up any previous build artifacts - Using cross-platform approach
       - name: Clean dist directory
         shell: bash
         run: |
@@ -64,21 +64,29 @@ jobs:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
 
-      # Build for macOS - With explicit cleanup
+      # Build for macOS - With comprehensive cleanup
       - name: Build for macOS
         if: matrix.os == 'macos-latest'
         shell: bash
         run: |
-          # Ensure icon destination directory doesn't exist yet
-          rm -rf dist/mac
-          # Remove any existing macOS artifacts
-          rm -rf dist/*.dmg dist/*.zip
-          npm run dist:mac
+          # Complete cleanup of output directory
+          rm -rf dist
+          mkdir -p dist
+          
+          # Force cleanup of electron-builder cache
+          rm -rf ~/Library/Caches/electron-builder
+          rm -rf ~/.electron
+          
+          # Wait for filesystem to settle
+          sleep 1
+          
+          # Call the build with clean environment
+          NODE_ENV=production npm run webpack
+          electron-builder --mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Skip notarization for non-tag builds
           SKIP_NOTARIZATION: ${{ !startsWith(github.ref, 'refs/tags/') }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
