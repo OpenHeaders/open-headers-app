@@ -22,12 +22,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -50,7 +50,7 @@ jobs:
       # Mac Signing & Notarization (only on tags for releases)
       - name: Import Mac Certificates
         if: matrix.os == 'macos-latest' && startsWith(github.ref, 'refs/tags/')
-        uses: apple-actions/import-codesign-certs@v1
+        uses: apple-actions/import-codesign-certs@v2
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
@@ -81,7 +81,7 @@ jobs:
 
       # Upload artifacts for all builds
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-artifacts
           path: |
@@ -102,17 +102,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           draft: true
           files: |
@@ -132,12 +132,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: release
     if: startsWith(github.ref, 'refs/tags/')
-    # Uncomment if you want to run this step only on specific conditions
-    # if: startsWith(github.ref, 'refs/tags/') && github.repository == 'YourUsername/YourRepo'
 
     steps:
       - name: Publish Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           draft: false
         env:
