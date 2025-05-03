@@ -87,17 +87,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"],
-          "options": {
-            "format": "ULFO",
-            "writeUpdateInfo": false
-          }
+          "arch": ["x64", "arm64"]
         },
         {
           "target": "zip",
           "arch": ["x64", "arm64"]
         }
       ],
+      "dmg": {
+        "format": "ULFO",
+        "writeUpdateInfo": false
+      },
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
