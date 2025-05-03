@@ -102,7 +102,7 @@ jobs:
       # Build for macOS
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: npm run dist:mac:skip-publish
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -113,14 +113,14 @@ jobs:
       # Build for Windows
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win
+        run: npm run dist:win:skip-publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build for Linux
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npm run dist:linux:deb
+        run: npm run dist:linux:skip-publish
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
