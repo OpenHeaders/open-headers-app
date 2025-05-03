@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
-        node-version: [22.x]  # Updated to Node.js 22 LTS
+        node-version: [22.x]
 
     steps:
       - name: Checkout code
@@ -32,7 +32,12 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      # Once package-lock.json is committed, we can use npm ci again
+      # Clean up any previous build artifacts
+      - name: Clean dist directory
+        run: |
+          rm -rf dist
+          mkdir -p dist
+
       - name: Install dependencies
         run: npm ci
 
@@ -59,7 +64,10 @@ jobs:
       # Build for current platform
       - name: Build for macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: |
+          # Ensure icon destination directory doesn't exist yet
+          rm -rf dist/mac
+          npm run dist:mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
