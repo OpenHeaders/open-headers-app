@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.12",
+  "version": "2.4.13",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -13,9 +13,12 @@
     "build": "cross-env NODE_ENV=production electron-builder --dir",
     "dist": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder",
     "dist:win": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --win",
+    "dist:win:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --win --publish never",
     "dist:mac": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac",
+    "dist:mac:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac --publish never",
     "dist:mac:skip-notarize": "cross-env NODE_ENV=production SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder --mac",
     "dist:linux": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64",
+    "dist:linux:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --publish never",
     "dist:linux:deb": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=deb",
     "dist:linux:deb:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=deb",
