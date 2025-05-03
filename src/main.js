@@ -22,6 +22,9 @@ const fileWatchers = new Map();
 const { autoUpdater } = require('electron-updater');
 let tray = null;
 let isQuitting = false;
+let updateCheckInProgress = false;
+let updateDownloadInProgress = false;
+let updateDownloaded = false;
 
 // Store app launch arguments for debugging and auto-launch detection
 const appLaunchArgs = {
@@ -46,6 +49,11 @@ function logToFile(message) {
 }
 
 function setupAutoUpdater() {
+    // Define state tracking variables for update process
+    global.updateCheckInProgress = false;
+    global.updateDownloadInProgress = false;
+    global.updateDownloaded = false;
+
     // Use the existing log object instead of creating a new one
     autoUpdater.logger = log;
     autoUpdater.allowDowngrade = false;
@@ -83,18 +91,33 @@ function setupAutoUpdater() {
         } catch (e) {
             log.error('Error getting feed URL:', e);
         }
+
+        // Set the checking state
+        global.updateCheckInProgress = true;
+        log.info(`[DEBUG] Set updateCheckInProgress = true`);
     });
 
     autoUpdater.on('update-available', (info) => {
-        log.info('Update available:', info);
+        log.info(`[DEBUG] Update available: version=${info.version}, tag=${info.tag}`);
+        // We're now checking and downloading
+        global.updateCheckInProgress = false;
+        global.updateDownloadInProgress = true;
+        log.info(`[DEBUG] Set updateCheckInProgress = false, updateDownloadInProgress = true`);
+
         if (mainWindow) {
+            log.info(`[DEBUG] Sending update-available event to renderer`);
             mainWindow.webContents.send('update-available', info);
         }
     });
 
     autoUpdater.on('update-not-available', (info) => {
-        log.info('Update not available:', info);
+        log.info(`[DEBUG] Update not available, current version up to date`);
+        // Reset checking state
+        global.updateCheckInProgress = false;
+        log.info(`[DEBUG] Set updateCheckInProgress = false`);
+
         if (mainWindow) {
+            log.info(`[DEBUG] Sending update-not-available event to renderer`);
             mainWindow.webContents.send('update-not-available', info);
         }
     });
@@ -103,20 +126,42 @@ function setupAutoUpdater() {
         const logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
         log.info(logMessage);
 
+        // Ensure download state is set
+        global.updateDownloadInProgress = true;
+
+        // Every 10% progress, log a debug message
+        if (Math.round(progressObj.percent) % 10 === 0) {
+            log.info(`[DEBUG] Download progress at ${Math.round(progressObj.percent)}%`);
+        }
+
         if (mainWindow) {
             mainWindow.webContents.send('update-progress', progressObj);
         }
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-        log.info('Update downloaded:', info);
+        log.info('[DEBUG] Update downloaded, marking as ready to install');
+        log.info(`[DEBUG] Downloaded version: ${info.version}, tag: ${info.tag}, path: ${info.path}`);
+
+        // Update is downloaded and ready to install
+        global.updateDownloadInProgress = false;
+        global.updateDownloaded = true;
+        log.info(`[DEBUG] Set updateDownloadInProgress = false, updateDownloaded = true`);
+
         if (mainWindow) {
+            log.info(`[DEBUG] Sending update-downloaded event to renderer`);
             mainWindow.webContents.send('update-downloaded', info);
         }
     });
 
     autoUpdater.on('error', (err) => {
         log.error('Error in auto-updater:', err);
+        log.info(`[DEBUG] Auto-updater error: ${err.message}`);
+
+        // Reset all states on error
+        global.updateCheckInProgress = false;
+        global.updateDownloadInProgress = false;
+        log.info(`[DEBUG] Reset update states due to error`);
 
         // Better logging for specific signature errors
         if (err.message.includes('code signature')) {
@@ -128,27 +173,29 @@ function setupAutoUpdater() {
         }
 
         if (mainWindow) {
+            log.info(`[DEBUG] Sending update-error event to renderer`);
             mainWindow.webContents.send('update-error', err.message);
         }
     });
 
-
     // Check for updates on startup (with delay to allow app to load fully)
     setTimeout(() => {
-        log.info('Performing initial update check...');
+        log.info('[DEBUG] Performing initial update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
                 log.error('Error in initial update check:', err);
+                log.info(`[DEBUG] Initial update check failed: ${err.message}`);
             });
     }, 3000);
 
     // Set up periodic update checks (every 6 hours)
     const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
     setInterval(() => {
-        log.info('Performing periodic update check...');
+        log.info('[DEBUG] Performing periodic update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
                 log.error('Error in periodic update check:', err);
+                log.info(`[DEBUG] Periodic update check failed: ${err.message}`);
             });
     }, CHECK_INTERVAL);
 }
@@ -656,39 +703,94 @@ function setupIPC() {
     });
 
     // Add update-related IPC handlers
-    ipcMain.on('check-for-updates', (event) => {
-        log.info('Manual update check requested');
+    ipcMain.on('check-for-updates', (event, isManual) => {
+        log.info(`[DEBUG] ${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
+
+        // First check if an update is already downloaded and ready
+        if (global.updateDownloaded) {
+            log.info('[DEBUG] Update already downloaded, notifying client to show install prompt');
+            if (mainWindow) {
+                // Check if this was a manual check (passed from renderer)
+                const isManualCheck = event.sender === mainWindow.webContents;
+
+                // Send event with a flag indicating it was a manual check
+                mainWindow.webContents.send('update-already-downloaded', {
+                    isManual: isManualCheck
+                });
+            }
+            return;
+        }
+
+        // Skip if already checking or downloading
+        if (global.updateCheckInProgress || global.updateDownloadInProgress) {
+            log.info(`[DEBUG] Update check/download already in progress, skipping duplicate request
+              updateCheckInProgress=${global.updateCheckInProgress}, 
+              updateDownloadInProgress=${global.updateDownloadInProgress}`);
+
+            // Notify renderer that we're already checking
+            if (mainWindow) {
+                log.info('[DEBUG] Sending update-check-already-in-progress event to renderer');
+                mainWindow.webContents.send('update-check-already-in-progress');
+            }
+            return;
+        }
+
+        global.updateCheckInProgress = true;
+        log.info('[DEBUG] Set updateCheckInProgress = true');
+
         try {
-            autoUpdater.checkForUpdates();
+            log.info('[DEBUG] Calling autoUpdater.checkForUpdates()');
+            autoUpdater.checkForUpdates()
+                .then(() => {
+                    log.info('[DEBUG] autoUpdater.checkForUpdates() completed successfully');
+                })
+                .catch(error => {
+                    log.error('[DEBUG] autoUpdater.checkForUpdates() failed:', error);
+                })
+                .finally(() => {
+                    // Reset flag when check is complete (successful or not)
+                    setTimeout(() => {
+                        global.updateCheckInProgress = false;
+                        log.info('[DEBUG] Reset updateCheckInProgress = false after timeout');
+                    }, 1000); // Small delay to prevent race conditions
+                });
         } catch (err) {
-            log.error('Error checking for updates:', err);
+            global.updateCheckInProgress = false;
+            log.error('[DEBUG] Error calling checkForUpdates:', err);
             event.reply('update-error', err.message);
         }
     });
 
     // And for install handler:
     ipcMain.on('install-update', () => {
-        log.info('Update installation requested with force');
+        log.info('[DEBUG] Update installation requested with force');
         isQuitting = true; // Set to true to allow the app to close
+        global.updateDownloaded = false; // Reset the state
+        log.info('[DEBUG] Set isQuitting = true, updateDownloaded = false');
 
         try {
             // Signal that we want to restart after update
             autoUpdater.autoInstallOnAppQuit = true;
+            log.info('[DEBUG] Set autoUpdater.autoInstallOnAppQuit = true');
 
             // Force quit with updated options
+            log.info('[DEBUG] Calling autoUpdater.quitAndInstall(false, true)');
             autoUpdater.quitAndInstall(false, true);
 
             // Backup approach: If autoUpdater's quitAndInstall doesn't work,
             // force the app to quit after a short delay
             setTimeout(() => {
-                log.info('Forcing application quit for update...');
+                log.info('[DEBUG] Forcing application quit for update...');
                 app.exit(0);
             }, 1000);
         } catch (error) {
-            log.error('Failed to install update:', error);
+            log.error('[DEBUG] Failed to install update:', error);
+            global.updateDownloaded = true; // Reset back since install failed
+            log.info('[DEBUG] Reset updateDownloaded = true due to install failure');
 
             // Show error dialog
             if (mainWindow) {
+                log.info('[DEBUG] Showing error dialog for failed update installation');
                 dialog.showMessageBox(mainWindow, {
                     type: 'error',
                     title: 'Update Error',

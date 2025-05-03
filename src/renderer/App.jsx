@@ -7,7 +7,8 @@ import {
     DownOutlined,
     MenuOutlined,
     QuestionCircleOutlined,
-    DownloadOutlined
+    DownloadOutlined,
+    LoadingOutlined
 } from '@ant-design/icons';
 import SourceForm from './components/SourceForm';
 import SourceTable from './components/SourceTable';
@@ -168,16 +169,21 @@ const AppComponent = () => {
 
     // Handle check for updates
     const handleCheckForUpdates = () => {
-        // Use the ref method if available
-        if (updateNotificationRef.current && updateNotificationRef.current.checkForUpdates) {
-            updateNotificationRef.current.checkForUpdates();
+        if (updateNotificationRef.current?.checkForUpdates) {
+            // Pass true to indicate this is a manual check
+            updateNotificationRef.current.checkForUpdates(true);
         } else {
-            // Fallback if ref not available
-            window.electronAPI.checkForUpdates();
-            notification.info({
+            // Only fall back to direct API call if the component method isn't available
+            window.electronAPI.checkForUpdates(true); // Pass true to indicate manual check
+
+            // Show loading notification only if we're not using the component method
+            const loadingIcon = <LoadingOutlined spin />;
+            notification.open({
                 message: 'Checking for Updates',
-                description: 'Looking for new versions...',
-                duration: 2
+                description: 'Looking for new versions…',
+                duration: 0,
+                key: 'checking-updates',
+                icon: loadingIcon
             });
         }
     };
