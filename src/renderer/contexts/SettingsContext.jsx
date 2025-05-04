@@ -6,8 +6,8 @@ const SettingsContext = createContext();
 
 // Default settings
 const defaultSettings = {
-    launchAtLogin: false,
-    hideOnLaunch: false,
+    launchAtLogin: true,
+    hideOnLaunch: true,
     showDockIcon: true,
     showStatusBarIcon: true
 };
