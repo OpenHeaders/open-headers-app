@@ -29,6 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('update-check-already-in-progress', subscription);
     },
 
+    onClearUpdateCheckingNotification: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('clear-update-checking-notification', subscription);
+        return () => ipcRenderer.removeListener('clear-update-checking-notification', subscription);
+    },
+
     onUpdateAlreadyDownloaded: (callback) => {
         const subscription = (_, data) => {
             // Call the callback with isManual flag if available
