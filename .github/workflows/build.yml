@@ -224,26 +224,24 @@ jobs:
       - name: Generate Release Body with Downloads
         id: generate_body
         run: |
-          cat > release_body.md << 'EOL'
-
+          VERSION=${GITHUB_REF_NAME/v/}
+          cat > release_body.md << EOF
           ## 📥 Download
           Download the latest version for your platform:
 
           ### macOS
-          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-mac-arm64.dmg)
+          - [Intel (x64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
+          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg)
 
           ### Windows
-          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-Setup.exe)
+          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe)
 
           ### Linux
-          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-x86_64.AppImage)
-          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-arm64.AppImage)
-          - [Debian x64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/open-headers_${github.ref_name#v}_amd64.deb)
-          - [Debian ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/open-headers_${github.ref_name#v}_arm64.deb)
-
-          ## 🔄 Auto-update
-          The application will automatically check for updates and prompt you to install them.
-          EOL
+          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x86_64.AppImage)
+          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage)
+          - [Debian x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
+          - [Debian ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
+          EOF
 
       # Create release using processed files
       - name: Create Release
