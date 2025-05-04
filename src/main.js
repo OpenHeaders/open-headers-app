@@ -68,6 +68,11 @@ function setupAutoUpdater() {
     log.info(`Platform: ${process.platform}`);
     log.info(`Arch: ${process.arch}`);
 
+    log.info(`[DEBUG] Initial update states:
+      updateCheckInProgress = ${global.updateCheckInProgress}
+      updateDownloadInProgress = ${global.updateDownloadInProgress}
+      updateDownloaded = ${global.updateDownloaded}`);
+
     // Force updates in development mode for testing
     if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
         log.info('Development mode detected, forcing update checks');
@@ -123,6 +128,10 @@ function setupAutoUpdater() {
         if (mainWindow) {
             log.info(`[DEBUG] Sending update-not-available event to renderer`);
             mainWindow.webContents.send('update-not-available', info);
+
+            // Also send a clear notification event as a safeguard
+            log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
+            mainWindow.webContents.send('clear-update-checking-notification');
         }
     });
 
@@ -166,6 +175,12 @@ function setupAutoUpdater() {
         global.updateCheckInProgress = false;
         global.updateDownloadInProgress = false;
         log.info(`[DEBUG] Reset update states due to error`);
+
+        // Always send clear notification event on error
+        if (mainWindow) {
+            log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
+            mainWindow.webContents.send('clear-update-checking-notification');
+        }
 
         // Handle network errors with a shorter retry time
         const isNetworkError = err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
@@ -725,6 +740,10 @@ function setupIPC() {
     // Add update-related IPC handlers
     ipcMain.on('check-for-updates', (event, isManual) => {
         log.info(`[DEBUG] ${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
+        log.info(`[DEBUG] Current states: 
+      updateCheckInProgress = ${global.updateCheckInProgress}
+      updateDownloadInProgress = ${global.updateDownloadInProgress}
+      updateDownloaded = ${global.updateDownloaded}`);
 
         // First check if an update is already downloaded and ready
         if (global.updateDownloaded) {
@@ -744,8 +763,8 @@ function setupIPC() {
         // Skip if already checking or downloading
         if (global.updateCheckInProgress || global.updateDownloadInProgress) {
             log.info(`[DEBUG] Update check/download already in progress, skipping duplicate request
-              updateCheckInProgress=${global.updateCheckInProgress}, 
-              updateDownloadInProgress=${global.updateDownloadInProgress}`);
+          updateCheckInProgress=${global.updateCheckInProgress}, 
+          updateDownloadInProgress=${global.updateDownloadInProgress}`);
 
             // Notify renderer that we're already checking
             if (mainWindow) {
@@ -766,18 +785,52 @@ function setupIPC() {
                 })
                 .catch(error => {
                     log.error('[DEBUG] autoUpdater.checkForUpdates() failed:', error);
+
+                    // IMPORTANT: Reset check state on error and notify client
+                    log.info('[DEBUG] Resetting updateCheckInProgress = false due to error');
+                    global.updateCheckInProgress = false;
+
+                    // Send clear notification event
+                    if (mainWindow) {
+                        log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
+                        mainWindow.webContents.send('clear-update-checking-notification');
+                    }
+
+                    // Send error event if it was a manual check
+                    if (isManual && mainWindow) {
+                        log.info('[DEBUG] Sending update-error event to renderer');
+                        mainWindow.webContents.send('update-error', error.message || 'Update check failed');
+                    }
                 })
                 .finally(() => {
                     // Reset flag when check is complete (successful or not)
                     setTimeout(() => {
-                        global.updateCheckInProgress = false;
-                        log.info('[DEBUG] Reset updateCheckInProgress = false after timeout');
-                    }, 1000); // Small delay to prevent race conditions
+                        log.info('[DEBUG] Checking if updateCheckInProgress needs reset');
+                        if (global.updateCheckInProgress) {
+                            global.updateCheckInProgress = false;
+                            log.info('[DEBUG] Reset updateCheckInProgress = false after timeout');
+
+                            // Also send clear notification event as a safeguard
+                            if (mainWindow) {
+                                log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
+                                mainWindow.webContents.send('clear-update-checking-notification');
+                            }
+                        }
+                    }, 10000); // 10 second timeout as a failsafe
                 });
         } catch (err) {
             global.updateCheckInProgress = false;
             log.error('[DEBUG] Error calling checkForUpdates:', err);
-            event.reply('update-error', err.message);
+
+            // Send clear notification event
+            if (mainWindow) {
+                log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
+                mainWindow.webContents.send('clear-update-checking-notification');
+            }
+
+            if (isManual) {
+                event.reply('update-error', err.message);
+            }
         }
     });
 
