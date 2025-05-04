@@ -82,6 +82,10 @@ function setupAutoUpdater() {
         log.info('Feed URL not available yet');
     }
 
+    // Network error retry configuration
+    let networkErrorRetryTimer = null;
+    const NETWORK_RETRY_INTERVAL = 15 * 60 * 1000; // 15 minutes
+
     // Event listeners for update process
     autoUpdater.on('checking-for-update', () => {
         log.info('Checking for update...');
@@ -163,6 +167,40 @@ function setupAutoUpdater() {
         global.updateDownloadInProgress = false;
         log.info(`[DEBUG] Reset update states due to error`);
 
+        // Handle network errors with a shorter retry time
+        const isNetworkError = err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+            err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+            err.message.includes('net::ERR_CONNECTION_REFUSED');
+
+        if (isNetworkError) {
+            log.info(`[DEBUG] Network error during update check, will retry in 15 minutes`);
+
+            // Clear any existing retry timer
+            if (networkErrorRetryTimer) {
+                clearTimeout(networkErrorRetryTimer);
+            }
+
+            // Set a shorter retry timer for network errors (15 minutes)
+            networkErrorRetryTimer = setTimeout(() => {
+                if (!global.updateCheckInProgress && !global.updateDownloadInProgress) {
+                    log.info('[DEBUG] Retrying update check after network error...');
+                    autoUpdater.checkForUpdates();
+                }
+                networkErrorRetryTimer = null;
+            }, NETWORK_RETRY_INTERVAL);
+
+            // Also destroy any existing checking notification
+            if (mainWindow) {
+                mainWindow.webContents.send('clear-update-checking-notification');
+            }
+        }
+
+        // Only send non-network errors to renderer
+        if (!isNetworkError && mainWindow) {
+            log.info(`[DEBUG] Sending update-error event to renderer`);
+            mainWindow.webContents.send('update-error', err.message);
+        }
+
         // Better logging for specific signature errors
         if (err.message.includes('code signature')) {
             log.error('Code signature validation error details:', {
@@ -170,11 +208,6 @@ function setupAutoUpdater() {
                 code: err.code,
                 errno: err.errno
             });
-        }
-
-        if (mainWindow) {
-            log.info(`[DEBUG] Sending update-error event to renderer`);
-            mainWindow.webContents.send('update-error', err.message);
         }
     });
 
@@ -191,11 +224,21 @@ function setupAutoUpdater() {
     // Set up periodic update checks (every 6 hours)
     const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
     setInterval(() => {
+        // Check if we're already in the process of checking for updates
+        if (global.updateCheckInProgress || global.updateDownloadInProgress) {
+            log.info('[DEBUG] Skipping periodic update check - another check/download already in progress');
+            return;
+        }
+
         log.info('[DEBUG] Performing periodic update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
                 log.error('Error in periodic update check:', err);
                 log.info(`[DEBUG] Periodic update check failed: ${err.message}`);
+
+                // Even if the check fails, we'll try again at the next interval
+                // No need to show error to user for routine background checks
+                global.updateCheckInProgress = false;
             });
     }, CHECK_INTERVAL);
 }
@@ -357,115 +400,142 @@ function createWindow() {
 }
 
 // Create the tray icon and associated context menu
+function updateTray(settings) {
+    if (!settings) return;
+
+    // Explicitly convert to boolean values to avoid type coercion issues
+    const showStatusBarIcon = Boolean(settings.showStatusBarIcon);
+    const showDockIcon = Boolean(settings.showDockIcon);
+
+    log.info('Updating tray with settings:',
+        'showStatusBarIcon =', showStatusBarIcon,
+        'showDockIcon =', showDockIcon);
+
+    // PART 1: Handle status bar icon (tray)
+    // -----------------------------------------
+    // If tray exists but should be hidden, destroy it
+    if (tray && !showStatusBarIcon) {
+        try {
+            tray.destroy();
+            tray = null;
+            log.info('Status bar icon destroyed');
+        } catch (error) {
+            log.error('Error destroying tray:', error);
+            // Try to force cleanup
+            tray = null;
+        }
+    }
+
+    // If tray doesn't exist but should be shown, create it
+    if (!tray && showStatusBarIcon) {
+        try {
+            createTray();
+            log.info('Status bar icon created');
+        } catch (error) {
+            log.error('Error creating tray:', error);
+        }
+    }
+
+    // PART 2: Handle dock icon on macOS (separate from tray handling)
+    // --------------------------------------------------------------
+    // Store whether the window was visible before updating dock
+    const wasWindowVisible = mainWindow && mainWindow.isVisible();
+
+    // Update dock visibility on macOS
+    if (process.platform === 'darwin') {
+        if (showDockIcon && !app.dock.isVisible()) {
+            log.info('Showing dock icon');
+            app.dock.show();
+        } else if (!showDockIcon && app.dock.isVisible()) {
+            log.info('Hiding dock icon');
+            app.dock.hide();
+
+            // Critical fix: Ensure window stays visible after hiding dock icon
+            if (mainWindow && wasWindowVisible) {
+                // Small delay to let the dock hide operation complete
+                setTimeout(() => {
+                    if (mainWindow) {
+                        // Show and focus the window to bring it to front
+                        mainWindow.show();
+                        mainWindow.focus();
+                        log.info('Restoring window visibility after hiding dock icon');
+                    }
+                }, 100);
+            }
+        }
+    }
+}
+
 function createTray() {
     // Don't create tray if it already exists
     if (tray) return;
 
-    // Load the settings
-    const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-    let settings = {
-        showStatusBarIcon: true, // Default to true
-        showDockIcon: true
-    };
-
     try {
-        if (fs.existsSync(settingsPath)) {
-            const data = fs.readFileSync(settingsPath, 'utf8');
-            const loadedSettings = JSON.parse(data);
-            settings = { ...settings, ...loadedSettings };
-        }
-    } catch (err) {
-        log.error('Error loading settings for tray:', err);
-    }
+        // Create a native image from the icon with proper resizing
+        const { nativeImage } = require('electron');
+        let trayIcon = null;
 
-    // Check if the tray should be shown
-    if (!settings.showStatusBarIcon) return;
+        // Define possible icon locations in priority order specifically for macOS Resources directory
+        const iconLocations = [
+            // First check icon files we know exist from your paste.txt
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'icon128.png'),
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'icon.png'),
+            path.join(process.resourcesPath, 'icon128.png'),
+            path.join(process.resourcesPath, 'icon.png'),
 
-    // Determine correct icon path based on platform and app packaging
-    let iconPath;
+            // Then check in images subdirectory
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon16.png'),
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon32.png'),
+            path.join(process.resourcesPath, 'images', 'icon16.png'),
+            path.join(process.resourcesPath, 'images', 'icon32.png'),
 
-    try {
-        // Define possible icon locations in order of priority
-        const iconLocations = [];
+            // Add any other possible locations
+            path.join(app.getAppPath(), 'renderer', 'images', 'icon16.png'),
+            path.join(__dirname, 'renderer', 'images', 'icon16.png')
+        ];
 
-        // Based on webpack.config.js and package.json, images are copied to specific locations
-        if (app.isPackaged) {
-            // For packaged app, check extraResources and asarUnpack locations first
-            iconLocations.push(
-                // From asarUnpack in package.json
-                path.join(app.getAppPath(), '..', 'app.asar.unpacked', 'src', 'renderer', 'images', 'icon32.png'),
-                path.join(app.getAppPath(), '..', 'app.asar.unpacked', 'src', 'renderer', 'images', 'icon16.png'),
-                // From extraResources in package.json
-                path.join(process.resourcesPath, 'build', 'icon32.png'),
-                path.join(process.resourcesPath, 'build', 'icon16.png'),
-                // From webpack copy to dist-webpack
-                path.join(app.getAppPath(), 'renderer', 'images', 'icon32.png'),
-                path.join(app.getAppPath(), 'renderer', 'images', 'icon16.png')
-            );
-        } else {
-            // For development
-            iconLocations.push(
-                // From src directory
-                path.join(__dirname, '..', 'src', 'renderer', 'images', 'icon32.png'),
-                path.join(__dirname, '..', 'src', 'renderer', 'images', 'icon16.png'),
-                // From webpack output
-                path.join(__dirname, 'renderer', 'images', 'icon32.png'),
-                path.join(__dirname, 'renderer', 'images', 'icon16.png')
-            );
-        }
-
-        // Add fallback locations for both dev and prod
-        iconLocations.push(
-            path.join(app.getAppPath(), '..', 'build', 'icon32.png'),
-            path.join(app.getAppPath(), '..', 'build', 'icon16.png'),
-            path.join(app.getAppPath(), '..', 'build', 'icon.png')
-        );
-
-        // Find the first icon that exists
+        // Try each location in order
         for (const location of iconLocations) {
             log.info('Checking icon at:', location);
             if (fs.existsSync(location)) {
-                iconPath = location;
-                log.info('Found tray icon at:', iconPath);
+                trayIcon = nativeImage.createFromPath(location);
+                log.info('Found tray icon at:', location);
                 break;
             }
         }
 
-        if (!iconPath) {
-            log.warn('No suitable icon found, using fallback path');
-            iconPath = path.join(app.getAppPath(), '..', 'build', 'icon16.png');
-        }
-    } catch (error) {
-        log.error('Error determining tray icon path:', error);
-        iconPath = path.join(app.getAppPath(), '..', 'build', 'icon.png');
-    }
+        // If no icon found, create a basic icon as fallback
+        if (!trayIcon) {
+            log.warn('No icon file found, creating basic icon');
 
-    log.info('Using tray icon path:', iconPath);
+            // Create a minimal 16x16 template icon for macOS
+            // This is a simple square icon data URL that will work as a tray icon
+            const iconDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAALEwAACxMBAJqcGAAAADxJREFUOBFjYBgFAx0BRkZGRkZLS8v/UH4DA8EAZGZlZP7/r6SkBNeHywBCimEuIKSYKAOIUjwaDcQlIQBu+xIQiOn5+QAAAABJRU5ErkJggg==';
 
-    try {
-        // Create a native image from the icon with proper resizing
-        const { nativeImage } = require('electron');
-        let trayIcon = nativeImage.createFromPath(iconPath);
+            trayIcon = nativeImage.createFromDataURL(iconDataURL);
 
-        // Resize properly for the platform
-        let resizedIcon;
-        if (process.platform === 'darwin') {
-            // macOS typically needs 16x16 for menu bar
-            resizedIcon = trayIcon.resize({ width: 16, height: 16 });
-            // For Retina displays
-            if (trayIcon.getSize().width >= 32) {
-                resizedIcon.setTemplateImage(true);
+            // For macOS, make it a template icon
+            if (process.platform === 'darwin') {
+                trayIcon = trayIcon.resize({ width: 16, height: 16 });
+                trayIcon.setTemplateImage(true);
             }
-        } else if (process.platform === 'win32') {
-            // Windows typically looks better with 16x16 tray icons
-            resizedIcon = trayIcon.resize({ width: 16, height: 16 });
         } else {
-            // Linux - also use 16x16
-            resizedIcon = trayIcon.resize({ width: 16, height: 16 });
+            // Resize properly for the platform
+            if (process.platform === 'darwin') {
+                // For macOS, resize to 16x16 and make it a template icon
+                trayIcon = trayIcon.resize({ width: 16, height: 16 });
+                trayIcon.setTemplateImage(true);
+            } else if (process.platform === 'win32') {
+                // Windows typically looks better with 16x16 tray icons
+                trayIcon = trayIcon.resize({ width: 16, height: 16 });
+            } else {
+                // Linux - also use 16x16
+                trayIcon = trayIcon.resize({ width: 16, height: 16 });
+            }
         }
 
-        // Create the tray with the properly sized icon
-        tray = new Tray(resizedIcon);
+        // Create the tray with the icon
+        tray = new Tray(trayIcon);
 
         // Set proper tooltip
         tray.setToolTip('Open Headers');
@@ -506,10 +576,8 @@ function createTray() {
         // Set the context menu
         tray.setContextMenu(contextMenu);
 
-        // MODIFIED: On macOS, only show context menu on click
+        // Platform-specific behavior
         if (process.platform === 'darwin') {
-            // Just let the default behavior show the context menu
-            // No direct click handler to show the window
             log.info('macOS tray setup: clicking will only show the menu');
         } else {
             // For Windows and Linux, show app on double-click
@@ -526,6 +594,7 @@ function createTray() {
         log.info('Tray icon created successfully');
     } catch (error) {
         log.error('Failed to create tray icon:', error);
+
         // Create a fallback tray with empty icon as last resort
         try {
             const emptyIcon = require('electron').nativeImage.createEmpty();
@@ -552,58 +621,9 @@ function createTray() {
                 }
             ]);
             tray.setContextMenu(basicMenu);
+            log.info('Created fallback tray with empty icon');
         } catch (fallbackError) {
             log.error('Failed to create basic tray icon:', fallbackError);
-        }
-    }
-}
-
-function updateTray(settings) {
-    if (!settings) return;
-
-    log.info('Updating tray with settings:', settings.showStatusBarIcon, 'and dock:', settings.showDockIcon);
-
-    // PART 1: Handle status bar icon (tray)
-    // -----------------------------------------
-    // If tray exists but should be hidden, destroy it
-    if (tray && !settings.showStatusBarIcon) {
-        tray.destroy();
-        tray = null;
-        log.info('Status bar icon destroyed');
-    }
-
-    // If tray doesn't exist but should be shown, create it
-    if (!tray && settings.showStatusBarIcon) {
-        createTray();
-        log.info('Status bar icon created');
-    }
-
-    // PART 2: Handle dock icon on macOS (separate from tray handling)
-    // --------------------------------------------------------------
-    // Store whether the window was visible before updating dock
-    const wasWindowVisible = mainWindow && mainWindow.isVisible();
-
-    // Update dock visibility on macOS
-    if (process.platform === 'darwin') {
-        if (settings.showDockIcon && !app.dock.isVisible()) {
-            log.info('Showing dock icon');
-            app.dock.show();
-        } else if (!settings.showDockIcon && app.dock.isVisible()) {
-            log.info('Hiding dock icon');
-            app.dock.hide();
-
-            // Critical fix: Ensure window stays visible after hiding dock icon
-            if (mainWindow && wasWindowVisible) {
-                // Small delay to let the dock hide operation complete
-                setTimeout(() => {
-                    if (mainWindow) {
-                        // Show and focus the window to bring it to front
-                        mainWindow.show();
-                        mainWindow.focus();
-                        log.info('Restoring window visibility after hiding dock icon');
-                    }
-                }, 100);
-            }
         }
     }
 }
@@ -1131,11 +1151,25 @@ async function handleSaveSettings(_, settings) {
         // Log the settings being saved
         log.info(`Saving settings: ${JSON.stringify(settings)}`);
 
-        // Important: Ensure hideOnLaunch is properly boolean-typed
+        // Important: Ensure ALL boolean settings are properly typed
         if (settings.hasOwnProperty('hideOnLaunch')) {
             settings.hideOnLaunch = Boolean(settings.hideOnLaunch);
-            log.info(`Normalized hideOnLaunch setting to: ${settings.hideOnLaunch}`);
         }
+
+        // Add explicit type conversion for tray settings
+        if (settings.hasOwnProperty('showStatusBarIcon')) {
+            settings.showStatusBarIcon = Boolean(settings.showStatusBarIcon);
+        }
+
+        if (settings.hasOwnProperty('showDockIcon')) {
+            settings.showDockIcon = Boolean(settings.showDockIcon);
+        }
+
+        if (settings.hasOwnProperty('launchAtLogin')) {
+            settings.launchAtLogin = Boolean(settings.launchAtLogin);
+        }
+
+        log.info(`Normalized settings: ${JSON.stringify(settings)}`);
 
         await fs.promises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
 
@@ -1192,19 +1226,25 @@ async function handleSetAutoLaunch(_, enable) {
             args = ['--hidden', '--autostart']; // Linux needs more flags
         }
 
-        // Log auto-launch configuration
+        // Get all relevant app naming properties
+        const appName = app.getName(); // app name from package.json name field
+        const productName = app.name; // should match productName from package.json
+        const execPath = app.getPath('exe'); // executable path
+
+        // Log auto-launch configuration and app naming details
         log.info(`Setting auto-launch to: ${enable} with args: ${args.join(' ')}`);
+        log.info(`App details: name=${appName}, productName=${productName}, execPath=${execPath}`);
 
         const autoLauncher = new AutoLaunch({
-            name: 'OpenHeaders',
-            path: app.getPath('exe'),
+            name: appName, // Use app name from running instance
+            path: execPath,
             args: args,
             isHidden: true // Important for Windows
         });
 
         if (enable) {
             await autoLauncher.enable();
-            log.info(`Auto launch enabled with args: ${args.join(' ')}`);
+            log.info(`Auto launch enabled for ${appName} with args: ${args.join(' ')}`);
         } else {
             await autoLauncher.disable();
             log.info('Auto launch disabled');
