@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.16",
+  "version": "2.4.17",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -48,7 +48,8 @@
         "to": ".",
         "filter": [
           "*.png",
-          "*.ico"
+          "*.ico",
+          "*.icns"
         ]
       },
       {
@@ -60,7 +61,8 @@
       }
     ],
     "asarUnpack": [
-      "dist-webpack/renderer/images/**/*"
+      "dist-webpack/renderer/images/**/*",
+      "src/renderer/images/**/*"
     ],
     "npmRebuild": false,
     "nodeGypRebuild": false,
@@ -90,11 +92,7 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
-        },
-        {
-          "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": ["arm64"]
         }
       ],
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
