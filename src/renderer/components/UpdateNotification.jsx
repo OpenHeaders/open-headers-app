@@ -195,6 +195,16 @@ const UpdateNotification = forwardRef((props, ref) => {
             }
         };
 
+        // Add handler for clearing checking notification
+        const handleClearCheckingNotification = () => {
+            notification.destroy('checking-updates');
+        };
+
+        // Add subscription for clearing checking notification
+        const unsubscribeClearChecking = window.electronAPI.onClearUpdateCheckingNotification(
+            handleClearCheckingNotification
+        );
+
         // Handle the case where an update is already downloaded
         const handleUpdateAlreadyDownloaded = (isManual = false) => {
             debugLog(`Received "update-already-downloaded" event (manual check: ${isManual})`);
@@ -530,6 +540,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             unsubscribeDownloaded();
             unsubscribeError();
             unsubscribeNotAvailable();
+            unsubscribeClearChecking();
 
             // Clean up timers
             if (checkDebounceTimerRef.current) {
