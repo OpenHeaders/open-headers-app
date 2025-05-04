@@ -160,7 +160,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                                 <EyeInvisibleOutlined style={getIconStyle(canHideOnLaunch && formValues.hideOnLaunch)} />
                                 <Space direction="vertical" size={0}>
                                     <span>Hide on start</span>
-                                    <span style={getDescStyle(canHideOnLaunch && formValues.hideOnLaunch)}>Start in background mode</span>
+                                    <span style={getDescStyle(canHideOnLaunch && formValues.hideOnLaunch)}>Start automatically in background mode</span>
                                 </Space>
                             </div>
                         </Col>
@@ -182,7 +182,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                             <AppstoreOutlined style={getIconStyle(formValues.showDockIcon)} />
                             <Space direction="vertical" size={0}>
                                 <span>Show in Dock</span>
-                                <span style={getDescStyle(formValues.showDockIcon)}>Display app icon in the Dock</span>
+                                <span style={getDescStyle(formValues.showDockIcon)}>Display app icon in the Dock (MacOS)</span>
                             </Space>
                         </div>
                     </Col>
@@ -199,7 +199,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                             <MenuOutlined style={getIconStyle(formValues.showStatusBarIcon)} />
                             <Space direction="vertical" size={0}>
                                 <span>Show in menu bar</span>
-                                <span style={getDescStyle(formValues.showStatusBarIcon)}>Display app icon in the menu bar</span>
+                                <span style={getDescStyle(formValues.showStatusBarIcon)}>Display app icon in the system tray/menu bar</span>
                             </Space>
                         </div>
                     </Col>
