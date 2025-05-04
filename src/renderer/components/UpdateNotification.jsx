@@ -12,6 +12,9 @@ const UpdateNotification = forwardRef((props, ref) => {
     const [isInstalling, setIsInstalling] = useState(false);
     const [lastCheckTime, setLastCheckTime] = useState(0);
 
+    // Debug label for consistent logging
+    const debugLabel = '[UpdateNotification Debug]';
+
     // Use refs to maintain state across re-renders
     const checkingNotificationRef = useRef(false);
     const checkStartTimeRef = useRef(0);
@@ -20,8 +23,10 @@ const UpdateNotification = forwardRef((props, ref) => {
     const initialCheckPerformedRef = useRef(false);
     const notificationTimeoutRef = useRef(null);
     const checkDebounceTimerRef = useRef(null);
-    // Add a ref to track if we're in silent check mode
+    // ref to track if we're in silent check mode
     const inSilentCheckModeRef = useRef(false);
+    // ref to track if we're waiting to show a delayed notification
+    const pendingNotificationRef = useRef(false);
 
     // Minimum time to display checking notification (ms)
     const MIN_CHECK_DISPLAY_TIME = 2000; // 2 seconds
@@ -64,13 +69,15 @@ const UpdateNotification = forwardRef((props, ref) => {
 
     // Helper function to clear all update-related notifications
     const clearAllNotifications = () => {
-        debugLog('Clearing all notifications');
+        debugLog(`${debugLabel} Clearing all notifications`);
         Object.values(NOTIFICATION_KEYS).forEach(key => {
+            debugLog(`${debugLabel} Destroying notification: ${key}`);
             notification.destroy(key);
         });
 
         // Also clear any pending notification timeout
         if (notificationTimeoutRef.current) {
+            debugLog(`${debugLabel} Clearing notification timeout`);
             clearTimeout(notificationTimeoutRef.current);
             notificationTimeoutRef.current = null;
         }
@@ -79,20 +86,23 @@ const UpdateNotification = forwardRef((props, ref) => {
     // Expose methods via ref to parent components
     useImperativeHandle(ref, () => ({
         checkForUpdates(isManual = false) {
-            debugLog(`Check for updates requested (manual: ${isManual})`);
+            debugLog(`${debugLabel} checkForUpdates called (manual: ${isManual})`);
 
             // Prevent rapid consecutive checks
             const now = Date.now();
             const timeSinceLastCheck = now - lastCheckTime;
 
             if (timeSinceLastCheck < 5000) { // 5 seconds minimum between checks
-                debugLog(`Ignoring rapid update check (${timeSinceLastCheck}ms since last check)`);
+                debugLog(`${debugLabel} Ignoring rapid update check (${timeSinceLastCheck}ms since last check)`);
                 return;
             }
 
             // Don't allow new checks if we're already checking or downloading
             if (checkingNotificationRef.current || isDownloading || manualCheckInProgress) {
-                debugLog('Update check or download already in progress');
+                debugLog(`${debugLabel} Update check already in progress: 
+                  checkingNotificationRef=${checkingNotificationRef.current}, 
+                  isDownloading=${isDownloading}, 
+                  manualCheckInProgress=${manualCheckInProgress}`);
 
                 notification.info({
                     message: isDownloading ? 'Download In Progress' : 'Check In Progress',
@@ -108,17 +118,22 @@ const UpdateNotification = forwardRef((props, ref) => {
 
             // Clear any existing debounce timer
             if (checkDebounceTimerRef.current) {
+                debugLog(`${debugLabel} Clearing existing debounce timer`);
                 clearTimeout(checkDebounceTimerRef.current);
                 checkDebounceTimerRef.current = null;
             }
 
             // Clear any existing notifications before showing new ones
+            debugLog(`${debugLabel} Clearing all existing notifications`);
             clearAllNotifications();
 
             // Reset the flag for already-downloaded updates
             handlingAlreadyDownloadedRef.current = false;
 
             // Mark that we're checking and update the last check time
+            debugLog(`${debugLabel} Setting checking states: 
+              checkingNotificationRef.current=true, 
+              manualCheckInProgress=${isManual}`);
             checkingNotificationRef.current = true;
             setManualCheckInProgress(true);
             setLastCheckTime(now);
@@ -128,10 +143,11 @@ const UpdateNotification = forwardRef((props, ref) => {
 
             // Record when we started the check
             checkStartTimeRef.current = now;
-            debugLog(`Starting update check, setting checkStartTime to ${new Date(checkStartTimeRef.current).toISOString()}`);
+            debugLog(`${debugLabel} Starting update check, setting checkStartTime to ${new Date(checkStartTimeRef.current).toISOString()}`);
 
             // Only show checking notification for manual checks
             if (isManual) {
+                debugLog(`${debugLabel} Showing 'Checking for Updates' notification`);
                 notification.open({
                     message: 'Checking for Updates',
                     description: 'Looking for new versions…',
@@ -142,18 +158,19 @@ const UpdateNotification = forwardRef((props, ref) => {
             }
 
             // Actually trigger the update check
-            debugLog('Calling electronAPI.checkForUpdates()');
+            debugLog(`${debugLabel} Calling electronAPI.checkForUpdates()`);
             window.electronAPI.checkForUpdates(isManual);
 
             // Set a timer to ensure minimum display time for checking notification
             if (isManual) {
+                debugLog(`${debugLabel} Setting minimum display timer for notification`);
                 checkDebounceTimerRef.current = setTimeout(() => {
-                    debugLog('Minimum check notification display time reached');
+                    debugLog(`${debugLabel} Minimum check notification display time reached`);
                     checkDebounceTimerRef.current = null;
 
                     // If we haven't received any response yet, keep the notification visible
                     if (checkingNotificationRef.current && !handlingAlreadyDownloadedRef.current) {
-                        debugLog('Still checking for updates, keeping notification visible');
+                        debugLog(`${debugLabel} Still checking for updates, keeping notification visible`);
                     }
                 }, MIN_CHECK_DISPLAY_TIME);
             }
@@ -172,7 +189,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Handle the case where an update check is already in progress
         const handleUpdateCheckAlreadyInProgress = () => {
-            debugLog('Received "update-check-already-in-progress" event');
+            debugLog(`${debugLabel} Received "update-check-already-in-progress" event`);
 
             // Update state and refs
             setManualCheckInProgress(false);
@@ -197,7 +214,17 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Add handler for clearing checking notification
         const handleClearCheckingNotification = () => {
-            notification.destroy('checking-updates');
+            debugLog(`${debugLabel} Received clear-checking-notification event`);
+            notification.destroy(NOTIFICATION_KEYS.CHECKING);
+
+            // Only reset state if we're not waiting for a delayed notification
+            if (!pendingNotificationRef.current) {
+                debugLog(`${debugLabel} Resetting checking states: checkingNotificationRef.current = false, manualCheckInProgress = false`);
+                checkingNotificationRef.current = false;
+                setManualCheckInProgress(false);
+            } else {
+                debugLog(`${debugLabel} Not resetting state - waiting for delayed notification`);
+            }
         };
 
         // Add subscription for clearing checking notification
@@ -207,11 +234,11 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Handle the case where an update is already downloaded
         const handleUpdateAlreadyDownloaded = (isManual = false) => {
-            debugLog(`Received "update-already-downloaded" event (manual check: ${isManual})`);
+            debugLog(`${debugLabel} Received "update-already-downloaded" event (manual check: ${isManual})`);
 
             // Skip notification if in silent mode and this wasn't a manual check
             if (inSilentCheckModeRef.current && !isManual && !manualCheckInProgress) {
-                debugLog('In silent check mode, not showing notification');
+                debugLog(`${debugLabel} In silent check mode, not showing notification`);
                 return;
             }
 
@@ -222,10 +249,10 @@ const UpdateNotification = forwardRef((props, ref) => {
             const elapsed = Date.now() - checkStartTimeRef.current;
             const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
 
-            debugLog(`Checking notification shown for ${elapsed}ms, minimum is ${MIN_CHECK_DISPLAY_TIME}ms`);
+            debugLog(`${debugLabel} Checking notification shown for ${elapsed}ms, minimum is ${MIN_CHECK_DISPLAY_TIME}ms`);
 
             if (remainingTime > 0) {
-                debugLog(`Delaying "update-already-downloaded" handling for ${remainingTime}ms`);
+                debugLog(`${debugLabel} Delaying "update-already-downloaded" handling for ${remainingTime}ms`);
 
                 // Wait to ensure minimum display time for checking notification
                 setTimeout(() => {
@@ -239,7 +266,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Helper function to show update ready notification
         const showUpdateReadyNotification = (isManual) => {
-            debugLog('Showing update ready notification');
+            debugLog(`${debugLabel} Showing update ready notification`);
 
             // Clear checking notification
             notification.destroy(NOTIFICATION_KEYS.CHECKING);
@@ -303,13 +330,13 @@ const UpdateNotification = forwardRef((props, ref) => {
                     btn: installButton
                 });
 
-                debugLog(`Showed "update ready" notification for version ${version}`);
+                debugLog(`${debugLabel} Showed "update ready" notification for version ${version}`);
             }
         };
 
         // Handle event when update is available
         const handleUpdateAvailable = (info) => {
-            debugLog(`Received "update-available" event with version ${info.version}`);
+            debugLog(`${debugLabel} Received "update-available" event with version ${info.version}`);
 
             // Update state
             setUpdateInfo(info);
@@ -363,7 +390,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Handle completed download
         const handleUpdateDownloaded = (info) => {
-            debugLog(`Received "update-downloaded" event for version ${info.version}`);
+            debugLog(`${debugLabel} Received "update-downloaded" event for version ${info.version}`);
 
             // Update state
             setUpdateDownloaded(true);
@@ -425,9 +452,10 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Handle update errors
         const handleUpdateError = (message) => {
-            debugLog(`Received "update-error" event: ${message}`);
+            debugLog(`${debugLabel} Received "update-error" event: ${message}`);
 
             // Update state
+            debugLog(`${debugLabel} Resetting states: isDownloading = false, manualCheckInProgress = false, checkingNotificationRef = false, isInstalling = false`);
             setIsDownloading(false);
             setManualCheckInProgress(false);
             checkingNotificationRef.current = false;
@@ -435,7 +463,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
             // Skip notification if in silent mode
             if (inSilentCheckModeRef.current) {
-                debugLog('In silent check mode, not showing error notification');
+                debugLog(`${debugLabel} In silent check mode, not showing error notification`);
                 return;
             }
 
@@ -444,9 +472,10 @@ const UpdateNotification = forwardRef((props, ref) => {
             const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
 
             if (remainingTime > 0) {
-                debugLog(`Delaying error notification for ${remainingTime}ms`);
+                debugLog(`${debugLabel} Delaying error notification for ${remainingTime}ms`);
                 setTimeout(() => {
                     // Clear notifications and show error
+                    debugLog(`${debugLabel} Showing error notification after delay`);
                     clearAllNotifications();
                     notification.error({
                         message: 'Update Error',
@@ -457,6 +486,7 @@ const UpdateNotification = forwardRef((props, ref) => {
                 }, remainingTime);
             } else {
                 // Clear notifications and show error
+                debugLog(`${debugLabel} Showing error notification immediately`);
                 clearAllNotifications();
                 notification.error({
                     message: 'Update Error',
@@ -469,40 +499,33 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         // Handle when no updates are available
         const handleUpdateNotAvailable = (info) => {
-            debugLog('Received "update-not-available" event');
+            debugLog(`${debugLabel} Received "update-not-available" event`);
+            debugLog(`${debugLabel} Current states: manualCheckInProgress=${manualCheckInProgress}, inSilentCheckModeRef=${inSilentCheckModeRef.current}`);
 
-            // Skip notification if in silent mode
-            if (inSilentCheckModeRef.current) {
-                debugLog('In silent check mode, not showing "no updates" notification');
+            // Skip notification if in silent mode AND not a manual check in progress
+            if (inSilentCheckModeRef.current && !manualCheckInProgress) {
+                debugLog(`${debugLabel} In silent check mode and no manual check in progress, not showing notification`);
+                debugLog(`${debugLabel} Resetting state flags: checkingNotificationRef.current=false, manualCheckInProgress=false`);
                 checkingNotificationRef.current = false;
                 setManualCheckInProgress(false);
                 return;
             }
 
-            // Only show notification for manual checks
-            if (manualCheckInProgress) {
-                // Calculate minimum notification time
-                const elapsed = Date.now() - checkStartTimeRef.current;
-                const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
+            // If we get here, either it's a manual check OR silent mode is off
+            debugLog(`${debugLabel} Manual check detected, showing "no updates" notification`);
 
-                if (remainingTime > 0) {
-                    debugLog(`Delaying "no updates" notification for ${remainingTime}ms`);
-                    setTimeout(() => {
-                        // Clear notifications and show "no updates" notification
-                        clearAllNotifications();
-                        notification.success({
-                            message: 'No Updates Available',
-                            description: 'You are already using the latest version.',
-                            duration: 4,
-                            key: NOTIFICATION_KEYS.NOT_AVAILABLE,
-                            icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
-                        });
-                        // Reset state
-                        setManualCheckInProgress(false);
-                        checkingNotificationRef.current = false;
-                    }, remainingTime);
-                } else {
-                    // Clear notifications and show "no updates" notification
+            // Calculate minimum notification time
+            const elapsed = Date.now() - checkStartTimeRef.current;
+            const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
+
+            if (remainingTime > 0) {
+                debugLog(`${debugLabel} Delaying "no updates" notification for ${remainingTime}ms (${elapsed}ms elapsed)`);
+                // Set pending notification flag to prevent premature state reset
+                pendingNotificationRef.current = true;
+
+                setTimeout(() => {
+                    // Clear all notifications and show "no updates" notification
+                    debugLog(`${debugLabel} Showing "no updates" notification after delay`);
                     clearAllNotifications();
                     notification.success({
                         message: 'No Updates Available',
@@ -511,12 +534,26 @@ const UpdateNotification = forwardRef((props, ref) => {
                         key: NOTIFICATION_KEYS.NOT_AVAILABLE,
                         icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
                     });
-                    // Reset state
+                    // Reset state and pending flag
+                    debugLog(`${debugLabel} Resetting state flags after showing notification`);
                     setManualCheckInProgress(false);
                     checkingNotificationRef.current = false;
-                }
+                    pendingNotificationRef.current = false;
+                }, remainingTime);
             } else {
-                // Reset state for silent checks
+                // Show immediately if minimum display time already elapsed
+                debugLog(`${debugLabel} Showing "no updates" notification immediately`);
+                clearAllNotifications();
+                notification.success({
+                    message: 'No Updates Available',
+                    description: 'You are already using the latest version.',
+                    duration: 4,
+                    key: NOTIFICATION_KEYS.NOT_AVAILABLE,
+                    icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                });
+                // Reset state
+                debugLog(`${debugLabel} Resetting state flags after showing notification`);
+                setManualCheckInProgress(false);
                 checkingNotificationRef.current = false;
             }
         };
