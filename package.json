@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.25",
+  "version": "2.4.26",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -22,6 +22,10 @@
     "dist:linux:deb": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=deb",
     "dist:linux:deb:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=deb",
+    "dist:linux:rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=rpm",
+    "dist:linux:rpm:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=rpm",
+    "dist:linux:rpm:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=rpm",
+    "dist:macos:no-rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb --config.linux.target=AppImage --publish never",
     "dist:all": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder -mwl --x64 --arm64",
     "dist:dev": "cross-env NODE_ENV=development SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder",
     "publish:mac": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac --publish always",
@@ -102,6 +106,7 @@
     "linux": {
       "target": [
         "deb",
+        "rpm",
         "AppImage"
       ],
       "icon": "build/icon.png",
@@ -142,6 +147,27 @@
       "artifactName": "${name}_${version}_${arch}.${ext}",
       "compression": "xz",
       "priority": "optional"
+    },
+    "rpm": {
+      "artifactName": "${name}-${version}.${arch}.rpm",
+      "depends": [
+        "libgtk-3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libXtst",
+        "xdg-utils",
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
+      ],
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none",
+        "--rpm-os=linux",
+        "--rpm-rpmbuild-define=_binary_payload w2.xzdio",
+        "--rpm-rpmbuild-define=_binary_filedigest_algorithm 2",
+        "--rpm-rpmbuild-define=_source_filedigest_algorithm 2"
+      ]
     },
     "appImage": {
       "artifactName": "${productName}-${version}-${arch}.${ext}",
