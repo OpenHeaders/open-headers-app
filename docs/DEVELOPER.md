@@ -33,6 +33,8 @@ The application consists of these main components:
 | `ws-service.js` | WebSocket service for browser extension communication (WS and WSS) |
 | `UpdateNotification.jsx` | React component for handling update notifications |
 | `dev-app-update.yml` | Configuration for testing updates in development mode |
+| `build.yml` | GitHub Actions workflow for CI/CD |
+| `notarize.js` | Script for macOS app notarization |
 
 ### 🧪 React Components
 
@@ -62,7 +64,7 @@ The application consists of these main components:
 5. Updates flow back through IPC to React contexts
 6. React components re-render based on updated context values
 
-## 💻 Development
+## 💻 Development Environment Setup
 
 ### 📋 Prerequisites
 
@@ -139,11 +141,138 @@ open-headers-app/
 │       └── images/       # Application images
 │           ├── icon32.png
 │           └── icon128.png
+├── scripts/              # Build and CI scripts
+│   └── notarize.js       # macOS app notarization script
+├── .github/workflows/    # GitHub Actions workflows
+│   └── build.yml         # CI/CD workflow configuration
 ├── webpack.config.js     # Webpack configuration
 ├── package.json          # Project configuration
 ├── dev-app-update.yml    # Update configuration for development
 └── electron-builder.yml  # Electron builder configuration
 ```
+
+## 🔄 CI/CD Pipeline
+
+The application uses GitHub Actions for Continuous Integration and Continuous Deployment (CI/CD). The workflow is defined in `.github/workflows/build.yml`.
+
+### 🚀 Workflow Triggers
+
+The CI/CD workflow is triggered by:
+- Pushes to the `main` branch
+- Pull requests targeting the `main` branch
+- Tag pushes that start with 'v' (e.g., v2.4.24)
+
+### 🏗️ Build Matrix
+
+The workflow uses a build matrix to build the application on multiple platforms simultaneously:
+- **macOS** (Latest)
+- **Windows** (Latest)
+- **Ubuntu** (Latest)
+
+### 📦 Build Process
+
+For each platform, the workflow:
+
+1. Checks out the code with full history
+2. Sets up Node.js v22
+3. Creates platform-specific Electron cache directories
+4. Caches Electron and electron-builder dependencies
+5. Installs npm dependencies
+6. Builds the webpack bundle
+7. Builds platform-specific application packages
+8. Organizes artifacts for release
+
+#### macOS-specific Steps:
+
+When building on macOS:
+- For tagged releases, it imports code signing certificates from repository secrets
+- It runs code signing and notarization (unless skipped with `SKIP_NOTARIZATION=true`)
+
+### 📢 Release Creation
+
+For tagged commits (starting with 'v'), the workflow:
+
+1. Downloads all artifacts from the build jobs
+2. Processes artifacts for release
+3. Generates a release body with download links
+4. Creates a GitHub release with all platform packages
+5. Attaches release notes with download links
+
+### 🔐 Required Secrets for Builds
+
+For full functionality, the following repository secrets should be configured:
+
+**For Code Signing and Notarization (macOS):**
+- `APPLE_ID`: Apple Developer Account email
+- `APPLE_APP_SPECIFIC_PASSWORD`: App-specific password for your Apple ID
+- `APPLE_TEAM_ID`: Apple Developer Team ID
+- `MACOS_CERTIFICATE`: Base64-encoded .p12 certificate file
+- `MACOS_CERTIFICATE_PWD`: Password for the certificate file
+- `KEYCHAIN_PASSWORD`: Password for the temporary keychain
+
+**General:**
+- `GITHUB_TOKEN`: Automatically provided by GitHub Actions for release creation
+
+## 🔏 macOS Notarization
+
+### 📜 Overview
+
+macOS notarization is an Apple security process that verifies your application is free of malware. Starting with macOS Catalina (10.15), applications must be notarized to run without security warnings.
+
+### 🛠️ Implementation
+
+The notarization process is implemented in `scripts/notarize.js` and is executed by electron-builder through the `afterSign` hook in `package.json`.
+
+```javascript
+// package.json
+{
+  "build": {
+    // ...
+    "afterSign": "./scripts/notarize.js",
+    // ...
+  }
+}
+```
+
+### 🔄 Notarization Process
+
+The notarization script:
+
+1. **Detects Platform**: Checks if the build is running on macOS
+2. **Checks Environment Variables**: Verifies required Apple credentials are available
+3. **Prepares App**: Gets the app bundle path and identifier
+4. **Submits to Apple**: Uploads the app to Apple's notary service
+5. **Waits for Approval**: Waits for Apple to complete the notarization process
+6. **Staples Ticket**: Attaches the notarization ticket to the app bundle
+
+### ⏭️ Skipping Notarization
+
+Notarization can be skipped by setting the `SKIP_NOTARIZATION` environment variable to `true`. This is useful for development builds or when Apple credentials are not available.
+
+You can use the dedicated build script that skips notarization:
+```bash
+npm run dist:mac:skip-notarize
+```
+
+### 🔐 Required Environment Variables
+
+For notarization to succeed, these environment variables must be set:
+
+- `APPLE_ID`: Your Apple Developer Account email
+- `APPLE_APP_SPECIFIC_PASSWORD`: An app-specific password for your Apple ID
+- `APPLE_TEAM_ID`: Your Apple Developer Team ID
+
+You can add these to your `.env` file locally, or configure them as repository secrets for GitHub Actions.
+
+### 🧪 Testing Notarization Locally
+
+To test notarization locally:
+
+1. Create a `.env` file with your Apple credentials
+2. Run the macOS build
+   ```bash
+   npm run dist:mac
+   ```
 
 ## 🎨 Ant Design Integration
 
@@ -267,6 +396,136 @@ For development and testing of updates:
 - Set `autoUpdater.forceDevUpdateConfig = true` to test updates in development
 - The `dev-app-update.yml` file contains GitHub repo information for dev testing
 
+### 🚀 Build Scripts and Release Process
+
+The application provides a comprehensive set of build scripts in `package.json`:
+
+#### Production Builds
+
+```bash
+# Build for current platform with default options
+npm run dist
+
+# Platform-specific builds
+npm run dist:mac          # macOS (universal)
+npm run dist:win          # Windows
+npm run dist:linux        # Linux (AppImage + deb)
+npm run dist:linux:deb    # Linux deb package only
+npm run dist:linux:deb:x64    # Linux deb package x64 only
+npm run dist:linux:deb:arm64  # Linux deb package ARM64 only
+
+# Cross-platform build
+npm run dist:all          # macOS, Windows, Linux (x64 + ARM64)
+
+# Skip code signing/notarization
+npm run dist:mac:skip-notarize  # macOS build without notarization
+npm run dist:mac:skip-publish   # macOS build without publishing
+npm run dist:win:skip-publish   # Windows build without publishing
+npm run dist:linux:skip-publish # Linux build without publishing
+```
+
+#### Publishing to GitHub
+
+```bash
+# Publish to GitHub releases with auto-version
+npm run publish:mac      # Publish macOS builds
+npm run publish:win      # Publish Windows builds
+npm run publish:linux    # Publish Linux builds
+npm run publish:all      # Publish all platform builds
+```
+
+#### Development and Testing
+
+```bash
+# Start in development mode with hot reload
+npm run dev:react
+
+# Build in development mode
+npm run dist:dev
+```
+
+### 📦 Packaging Configuration
+
+The application's packaging configuration is defined in `package.json` under the `build` section:
+
+```json
+"build": {
+  "appId": "io.openheaders",
+  "productName": "OpenHeaders",
+  "directories": {
+    "buildResources": "build",
+    "output": "dist"
+  },
+  "files": [
+    "dist-webpack/**/*"
+  ],
+  "asar": true,
+  "compression": "maximum",
+  "afterSign": "./scripts/notarize.js",
+  "extraResources": [
+    {
+      "from": "build",
+      "to": ".",
+      "filter": [
+        "*.png",
+        "*.ico"
+      ]
+    },
+    {
+      "from": "src/renderer/images",
+      "to": "images",
+      "filter": [
+        "*.png"
+      ]
+    }
+  ],
+  "asarUnpack": [
+    "dist-webpack/renderer/images/**/*"
+  ],
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "extends": null,
+  "removePackageScripts": true,
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "icon": "build/icon.icns",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "type": "distribution",
+    "notarize": false,
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ]
+  },
+  "win": {
+    "target": "nsis",
+    "icon": "build/icon.ico"
+  },
+  "linux": {
+    "target": [
+      "deb",
+      "AppImage"
+    ],
+    "icon": "build/icon.png",
+    "category": "Utility;Development;Network"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "OpenHeaders",
+    "repo": "open-headers-app"
+  }
+}
+```
+
 ### ⚙️ Settings and Preferences
 
 Application settings are managed through the React SettingsContext:
@@ -295,6 +554,40 @@ The system tray (status bar icon) is managed through the Electron main process a
 3. **Context Menu**: Created dynamically based on current application state
 4. **Icon Management**: Adaptive icon loading for different environments
 
+Implementation details from the code:
+- Icon resolution is adjusted based on platform (16x16 for most platforms)
+- For macOS, the icon is set as a template icon for better Dark Mode support
+- The tray menu is built with dynamic options based on the application state
+- Window show/hide state is managed through IPC messages
+
+Code snippet from `main.js`:
+```javascript
+// Create the tray with the icon
+tray = new Tray(trayIcon);
+
+// Set proper tooltip
+tray.setToolTip('Open Headers');
+
+// Create context menu
+const contextMenu = Menu.buildFromTemplate([
+    {
+        label: 'Show Open Headers',
+        click: () => {
+            if (mainWindow) {
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.show();
+                mainWindow.focus();
+                mainWindow.webContents.send('showApp');
+            }
+        }
+    },
+    // ... other menu items
+]);
+
+// Set the context menu
+tray.setContextMenu(contextMenu);
+```
+
 ### 🌐 WebSocket Service for Browser Extension
 
 The WebSocket service provides communication with the browser extension:
@@ -306,257 +599,105 @@ The WebSocket service provides communication with the browser extension:
 
 Implementation details:
 - Main process manages WebSocket servers
-- SSL certificates are generated on first run
-- All communication is limited to localhost
+- SSL certificates are generated on first run using OpenSSL
+- All communication is limited to localhost (127.0.0.1)
 - Browser extension can connect to either WS or WSS endpoint
 
-### 📁 Cross-Platform File Watching
+The WebSocket server has multiple communication channels:
+- Initial source data on connection
+- Updates when sources change
+- Client-initiated requests for refreshed data
 
-File watching is implemented using chokidar with consistent behavior across all platforms:
+### 📂 Cross-Platform File Watching
 
-1. **Consistent Polling**: Uses polling strategy for all platforms (macOS, Windows, Linux)
-2. **Fallback Mechanism**: If chokidar fails, falls back to basic interval-based polling
-3. **Resource Management**: Proper cleanup of watchers when application exits
-4. **Event Propagation**: File change events flow through IPC to React components
+File sources use a polling-based file watching mechanism:
 
-Implementation details:
-- Chokidar initialized with `usePolling: true` for cross-platform consistency
-- Watch options include `stabilityThreshold` to handle rapid changes
-- Fallback polling uses basic interval mechanism if native watching fails
+1. **Chokidar Library**: Uses the chokidar library with polling configuration for cross-platform compatibility
+2. **Event Handlers**: IPC messages notify the renderer process when file content changes
+3. **Cleanup Management**: Proper cleanup of watchers when sources are removed or the app is closed
 
-### 🔐 TOTP Authentication
+### 🔍 JSON Filtering
 
-Time-based One-Time Password (TOTP) authentication implemented with TOTPOptions component:
+The JSON filtering functionality allows extracting specific data from HTTP responses:
 
-1. **UI Integration**: Clean Ant Design form with live preview
-2. **Time Sync**: Ability to adjust time offset for misaligned clocks
-3. **Live Countdown**: Visual timer showing seconds until code rotation
-4. **Template Variables**: `_TOTP_CODE` used in HTTP requests to insert codes dynamically
+1. **Path-based Access**: Uses dot notation to navigate nested objects and arrays
+2. **UI Integration**: Controls in `JsonFilter.jsx` component
+3. **Flexible Parsing**: Supports various JSON structures, including arrays and deeply nested objects
+4. **Error Handling**: Graceful handling of invalid paths or non-JSON content
 
-Implementation details:
-- TOTP generation is handled in the preload script using WebCrypto API
-- The component provides real-time validation and preview
-- Time synchronization helps when client and server clocks are misaligned
+## 🧪 Testing and Debugging
 
-### 🌐 HTTP Source Editing
+### 🔍 Debug Logging
 
-The application allows for comprehensive editing of HTTP sources after creation:
+The application uses electron-log for comprehensive logging:
 
-1. **EditSourceModal Component**: Provides a complete interface for editing all HTTP source properties
-2. **State Persistence**: Form values are preserved when toggling features on/off
-3. **TOTP Integration**: Full support for adding/editing TOTP authentication settings
-4. **JSON Filtering**: Can enable/disable and modify JSON filtering rules
-5. **Request Parameters**: Comprehensive editing of headers, query parameters, and body content
-6. **Refresh Options**: Configure or modify auto-refresh scheduling
-7. **Immediate Refresh**: Option to refresh the source immediately after saving changes
-
-Implementation details:
-- Custom form state persistence logic maintains values even when fields are conditionally rendered
-- TOTP settings are properly stored and retrieved using imperative handling via refs
-- Synchronization between form state and component state ensures consistent updates
-- Careful timing management for refresh operations ensures UI feedback is accurate and responsive
-
-### 🔍 Dynamic HTTP Sources with JSON Filtering
-
-HTTP sources with JSON path filtering are implemented using:
-
-1. **HttpOptions Component**: Configures request details with tabbed interface
-2. **JsonFilter Component**: Specifies how to extract values from JSON responses
-3. **Preview System**: Tests filters and displays results in real-time
-4. **Error Handling**: Graceful error handling with user feedback
-
-### 🧠 React Context for Source Management
-
-The SourceContext provider is the central state management solution:
-
-1. **CRUD Operations**: Exposes methods for creating, reading, updating, and deleting sources
-2. **IPC Bridge**: Communicates with Electron main process via the preload script
-3. **Caching**: Maintains local state to improve UI responsiveness
-4. **Validation**: Ensures data integrity before persistence
-5. **Real-time Updates**: Ensures UI reflects the current state of sources
-
-## 🧪 Testing
-
-### 🔄 Manual Testing
-
-1. Run the application in development mode:
-   ```bash
-   npm run dev:react
-   ```
-
-2. Test each source type:
-   - Create a text file and set up a file source, then modify the file
-   - Set an environment variable and create an env source
-   - Create an HTTP source pointing to a test endpoint
-   - Test TOTP generation with a test secret
-
-3. Test UI interactions:
-   - Verify all forms function correctly
-   - Check responsive layout at different window sizes
-   - Verify modal interactions work as expected
-   - Test keyboard shortcuts and accessibility
-
-4. Test application settings:
-   - Enable/disable "Launch at login" and verify behavior on restart
-   - Enable/disable "Hide window on startup" and verify behavior
-   - Enable/disable "Show Dock icon" (macOS) and verify appearance
-   - Enable/disable "Show tray icon" and verify tray appearance
-
-5. Test automatic updates:
-   - Use `dev-app-update.yml` for testing updates in development
-   - Create test releases on your fork to trigger update checks
-   - Verify update notification, download progress, and installation flow
-
-### 🌐 Test Endpoints
-
-For testing HTTP sources, use services like:
-- [httpbin.org](https://httpbin.org/json) - Returns test JSON
-- [jsonplaceholder.typicode.com](https://jsonplaceholder.typicode.com/posts) - Fake API for testing
-
-### 🦊 Firefox Extension Testing
-
-For testing with Firefox extension:
-1. Launch the application, which will start both WS and WSS servers
-2. Install the Firefox extension
-3. The extension will automatically connect via WSS (port 59211)
-4. Verify in the extension that dynamic sources are available
-5. Test adding and using dynamic sources in header rules
-
-## 📦 Building for Distribution
-
-### 🔄 Webpack and React Build Process
-
-This project uses Webpack to bundle React components and other assets:
-
-1. **React Bundling**: JSX transpilation and component bundling
-2. **Less Compilation**: Processing Ant Design styles
-3. **Asset Management**: Copying static assets to distribution folder
-4. **Code Optimization**: Minification for production builds
-
-The webpack configuration handles three main targets:
-- Main process (Electron main)
-- Preload script (Electron preload)
-- Renderer process (React application)
-
-### 📋 Production Build Scripts
-
-Available npm scripts for building:
-
-```bash
-# Development with React hot reload
-npm run dev:react
-
-# Just bundle with webpack (without creating installers)
-npm run webpack
-
-# Bundle and create unpacked app
-npm run build
-
-# Bundle and create installers for current platform
-npm run dist
-
-# Platform-specific builds
-npm run dist:mac      # macOS only
-npm run dist:win      # Windows only
-npm run dist:linux    # Linux only (AppImage and DEB)
-
-# Linux-specific builds
-npm run dist:linux:deb        # Linux DEB package (x64 and arm64)
-npm run dist:linux:deb:x64    # Linux DEB package (x64 only)
-npm run dist:linux:deb:arm64  # Linux DEB package (arm64 only)
-
-# Build for all platforms
-npm run dist:all      # All platforms (macOS, Windows, Linux)
-
-# Build and publish to GitHub releases
-npm run publish:mac     # Publish macOS build
-npm run publish:win     # Publish Windows build
-npm run publish:linux   # Publish Linux build
-npm run publish:all     # Publish all platforms
+```javascript
+// main.js
+const log = require('electron-log');
+log.transports.file.level = 'info';
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}';
 ```
 
-### 🚀 Publishing Updates
+Log files are stored at:
+- **macOS**: `~/Library/Logs/OpenHeaders/main.log`
+- **Windows**: `%USERPROFILE%\AppData\Roaming\OpenHeaders\logs\main.log`
+- **Linux**: `~/.config/OpenHeaders/logs/main.log`
 
-For publishing updates to GitHub releases:
+### 🛠️ Development Mode
 
-1. Update version in `package.json`
-2. Make necessary changes and ensure they work correctly
-3. Build and publish using the appropriate script:
-   ```bash
-   npm run publish:all  # For all platforms
-   ```
-   or for specific platforms:
-   ```bash
-   npm run publish:mac
-   npm run publish:win
-   npm run publish:linux
-   ```
+Running the app in development mode:
+```bash
+npm run dev:react
+```
 
-The `electron-builder` utility will:
-1. Build the application for the specified platforms
-2. Create installers
-3. Upload the assets to GitHub releases
-4. Tag the release with the version from package.json
+This:
+- Enables hot reloading of React components
+- Opens Chrome DevTools automatically
+- Disables production optimizations
+- Uses development webpack configuration
 
-### 📱 Platform-Specific Configuration
+### 🔄 Testing Auto-Updates
 
-The `package.json` file includes platform-specific build settings:
+The `dev-app-update.yml` file configures update testing in development:
 
-1. **Windows (NSIS installer):**
-   - Icon and artifact naming
-   - One-click installer
+```yaml
+provider: github
+owner: OpenHeaders
+repo: open-headers-app
+```
 
-2. **macOS (DMG):**
-   - App category and bundle info
-   - Universal binary (x64 and arm64)
-   - DMG layout configuration
+To test updates:
+1. Change this file to point to your fork
+2. Increase the version in `package.json`
+3. Create a release in your fork
+4. Run the app with the `--dev` flag
 
-3. **Linux (AppImage and DEB):**
-   - Desktop entry configuration
-   - Package dependencies
-   - Icon and artifact naming
+The app will check for updates from your fork's releases instead of the main repository.
 
-## 🔧 Technical Deep Dives
+## 📋 Future Development and Improvements
 
-### 📂 Dynamic Content Sourcing
+### 🚀 Build and CI/CD Enhancements
 
-The application's core feature is retrieving dynamic content from different sources:
+Potential improvements to the build and CI/CD process:
 
-1. **File Sources**:
-   - Monitors local files using chokidar
-   - Optimized for cross-platform consistency
-   - Updates content in real-time as file changes
+1. **Automated Versioning**: Implement semantic versioning based on commit messages
+2. **Code Quality Checks**: Add automated linting and testing in the CI pipeline
+3. **Platform-specific Optimizations**: Tailor builds more specifically to each platform
+4. **Code Signing for Windows**: Add Windows code signing to the CI process
+5. **Artifact Caching**: Improve caching strategies for faster builds
+6. **Docker-based Builds**: Use Docker containers for consistent build environments
+7. **Preview Builds**: Generate preview builds for pull requests
+8. **Test Coverage Reporting**: Add test coverage analysis to the CI pipeline
 
-2. **Environment Variables**:
-   - Retrieves values from environment variables
-   - Secure integration with Electron main process
-   - Provides fallback messages for missing variables
+### 🧪 Contributing to the Codebase
 
-3. **HTTP Sources**:
-   - Configurable HTTP requests with customizable options
-   - Support for various content types and request methods
-   - JSON filtering for extracting specific data
-   - Auto-refresh for keeping data current
-   - TOTP authentication for secure API access
+When contributing to the Open Headers application:
 
-### 🔐 Security Considerations
+1. **Fork the Repository**: Create your own fork to work on
+2. **Create a Feature Branch**: Work on a feature-specific branch 
+3. **Follow Code Style**: Match the existing code style and patterns
+4. **Add Tests**: Include appropriate tests for your changes
+5. **Document Changes**: Update documentation to reflect your changes
+6. **Create Pull Request**: Submit your changes for review
 
-Security measures implemented in the application:
-
-1. **Context Isolation**: Strict separation between main and renderer processes
-2. **Content Security Policy**: Restrictive CSP headers
-3. **localhost Binding**: WebSocket servers bound to 127.0.0.1 only
-4. **Input Validation**: Validation of all user inputs
-5. **Secure Storage**: Application data stored in user-specific directories
-6. **Update Verification**: Updates verified through code signing
-
-### 🏛️ Architecture Details
-
-The application follows these architectural principles:
-
-1. **Separation of Concerns**: Distinct layers for UI, business logic, and data
-2. **Component-Based Design**: Reusable components with clear responsibilities
-3. **Context-Based State Management**: Global state handled through contexts
-4. **Custom Hooks for Logic**: Business logic encapsulated in hooks
-5. **IPC for Cross-Process Communication**: Secure communication between processes
-6. **Event-Driven Updates**: Real-time updates based on events
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed contribution guidelines.
