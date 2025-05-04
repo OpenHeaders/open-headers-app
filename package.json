@@ -166,9 +166,7 @@
         "--rpm-os=linux",
         "--rpm-rpmbuild-define=_binary_payload w2.xzdio",
         "--rpm-rpmbuild-define=_binary_filedigest_algorithm 2",
-        "--rpm-rpmbuild-define=_source_filedigest_algorithm 2",
-        "--rpm-tag=Provides: open-headers = ${version}",
-        "--rpm-tag=Provides: openheaders = ${version}"
+        "--rpm-rpmbuild-define=_source_filedigest_algorithm 2"
       ]
     },
     "appImage": {
