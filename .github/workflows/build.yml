@@ -31,6 +31,15 @@ jobs:
           cache: npm
           cache-dependency-path: '**/package-lock.json'
 
+      # Install RPM build dependencies on Linux runner ONLY
+      - name: Install RPM build tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm librpm-dev rpm-build
+          echo "::debug::Installed RPM build tools"
+          rpm --version
+
       # Create cache directories for all platforms
       - name: Create Electron cache directories
         shell: bash
@@ -102,7 +111,7 @@ jobs:
           mkdir -p dist
         shell: bash
 
-      # Build for macOS
+      # Build for macOS - skip RPM builds on macOS
       - name: Build macOS
         if: matrix.os == 'macos-latest'
         run: npm run dist:mac:skip-publish
@@ -123,7 +132,25 @@ jobs:
       # Build for Linux
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
-        run: npm run dist:linux:skip-publish
+        run: |
+          # Build all Linux targets (including RPM)
+          npm run dist:linux:skip-publish
+          
+          # Verify RPM packages were built successfully
+          if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
+            echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
+            npm run dist:linux:rpm:x64
+            npm run dist:linux:rpm:arm64
+          
+            # Check again after explicit build attempt
+            if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
+              echo "::error::Failed to build RPM packages even with explicit build"
+              exit 1
+            fi
+          else
+            echo "RPM packages successfully built in main Linux build:"
+            find dist -name "*.rpm" -type f | xargs ls -la
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -136,7 +163,7 @@ jobs:
           
           # Move files to platform-specific directories to avoid conflicts during download
           # This preserves original filenames required by electron-updater
-          find dist -type f -name "*.yml" -o -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" | while read file; do
+          find dist -type f -name "*.yml" -o -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" | while read file; do
             filename=$(basename "$file")
             # Only copy files, don't move, to avoid breaking electron-builder paths
             cp "$file" "dist/${{ matrix.os }}/$filename"
@@ -154,6 +181,7 @@ jobs:
             dist/*.zip
             dist/*.AppImage
             dist/*.deb
+            dist/*.rpm
             dist/*.yml
             dist/*-latest*.yml
             dist/*-builder-debug.yml
@@ -202,10 +230,26 @@ jobs:
             fi
           fi
           
-          # Linux files last
+          # Linux files last (RPM files come from Ubuntu runner only)
           if [ -d "dist/ubuntu-latest-artifacts" ]; then
             cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/
             cp dist/ubuntu-latest-artifacts/*.deb processed_files/
+          
+            # Explicitly copy RPM files - ensure they exist
+            echo "Copying RPM files to processed_files"
+            find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \;
+          
+            # Check if RPM files were copied
+            RPM_COUNT=$(find processed_files -name "*.rpm" | wc -l)
+            echo "Found $RPM_COUNT RPM files in processed_files directory"
+          
+            # Fail if no RPM files found
+            if [ $RPM_COUNT -eq 0 ]; then
+              echo "::error::No RPM files found in artifacts"
+              exit 1
+            fi
+          
+            # Continue with other files
             if [ -f "dist/ubuntu-latest-artifacts/latest-linux.yml" ] && [ -z "${seen_files[latest-linux.yml]}" ]; then
               cp dist/ubuntu-latest-artifacts/latest-linux.yml processed_files/
               seen_files["latest-linux.yml"]=1
@@ -239,8 +283,10 @@ jobs:
           ### Linux
           - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x86_64.AppImage)
           - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage)
-          - [Debian x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
-          - [Debian ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
+          - [Debian/Ubuntu x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
+          - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
+          - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm)
+          - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
           EOF
 
       # Create release using processed files
