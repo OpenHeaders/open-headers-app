@@ -221,6 +221,30 @@ jobs:
           ls -la processed_files/
         shell: bash
 
+      - name: Generate Release Body with Downloads
+        id: generate_body
+        run: |
+          cat > release_body.md << 'EOL'
+
+          ## 📥 Download
+          Download the latest version for your platform:
+
+          ### macOS
+          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-mac-arm64.dmg)
+
+          ### Windows
+          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-Setup.exe)
+
+          ### Linux
+          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-x86_64.AppImage)
+          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/OpenHeaders-${github.ref_name#v}-arm64.AppImage)
+          - [Debian x64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/open-headers_${github.ref_name#v}_amd64.deb)
+          - [Debian ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/${{ github.ref_name }}/open-headers_${github.ref_name#v}_arm64.deb)
+
+          ## 🔄 Auto-update
+          The application will automatically check for updates and prompt you to install them.
+          EOL
+
       # Create release using processed files
       - name: Create Release
         id: create_release
@@ -230,6 +254,8 @@ jobs:
           prerelease: false
           files: processed_files/*
           fail_on_unmatched_files: false
+          body_path: release_body.md
           generate_release_notes: true
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
