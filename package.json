@@ -25,7 +25,6 @@
     "dist:linux:rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=rpm",
     "dist:linux:rpm:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=rpm",
     "dist:linux:rpm:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=rpm",
-    "dist:linux:rpm:fedora": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=rpm --config.rpm.depends=\"gtk3,libnotify,nss,libXScrnSaver,libXtst,xdg-utils,at-spi2-atk,libuuid,libsecret\"",
     "dist:macos:no-rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb --config.linux.target=AppImage --publish never",
     "dist:all": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder -mwl --x64 --arm64",
     "dist:dev": "cross-env NODE_ENV=development SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder",
@@ -152,15 +151,15 @@
     "rpm": {
       "artifactName": "${name}-${version}.${arch}.rpm",
       "depends": [
-        "libgtk-3 >= 3.0.0 | gtk3 >= 3.0.0",
-        "libnotify >= 0.7.0 | libnotify4 >= 0.7.0",
-        "nss >= 3.0.0",
-        "libXScrnSaver | libxss1",
-        "libXtst | libxtst6",
+        "gtk3",
+        "libnotify",
+        "nss",
+        "libXScrnSaver",
+        "libXtst",
         "xdg-utils",
-        "at-spi2-core | at-spi2-atk | libatspi2.0-0",
-        "libuuid | libuuid1",
-        "libsecret | libsecret-1-0"
+        "at-spi2-core",
+        "libuuid",
+        "libsecret"
       ],
       "fpm": [
         "--rpm-rpmbuild-define=_build_id_links none",
