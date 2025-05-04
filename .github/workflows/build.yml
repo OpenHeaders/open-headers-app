@@ -62,11 +62,8 @@ jobs:
             ~/AppData/Local/electron-builder/Cache
           key: ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
-            # First try exact match
             ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
-            # For tags, fall back to main branch
             ${{ runner.os }}-electron-cache-main-
-            # Fall back to any cache for this OS
             ${{ runner.os }}-electron-cache-
 
       # Prepare build directory
