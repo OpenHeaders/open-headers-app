@@ -31,12 +31,12 @@ jobs:
           cache: npm
           cache-dependency-path: '**/package-lock.json'
 
-      # Install RPM build dependencies on Linux runner ONLY
-      - name: Install RPM build tools (Linux)
+      # Install RPM tools on Linux runner only (using correct package name for Ubuntu)
+      - name: Install RPM tools (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm librpm-dev rpm-build
+          sudo apt-get install -y rpm librpm-dev
           echo "::debug::Installed RPM build tools"
           rpm --version
 
@@ -129,7 +129,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build for Linux
+      # Build for Linux (including RPM packages)
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
