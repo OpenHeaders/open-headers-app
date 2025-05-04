@@ -656,13 +656,16 @@ function initializeWebSocket() {
 }
 
 // App is ready
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
     // Log app startup information to help with debugging
     log.info(`App started at ${new Date().toISOString()}`);
     log.info(`Process argv: ${JSON.stringify(process.argv)}`);
     log.info(`App version: ${app.getVersion()}`);
     log.info(`Platform: ${process.platform}`);
     log.info(`Executable path: ${process.execPath}`);
+
+    // Setup first run configuration - added for default auto-launch and hide
+    await setupFirstRun();
 
     createWindow();
     createTray();
@@ -696,6 +699,57 @@ app.whenReady().then(() => {
         }
     });
 });
+
+// Add this new function to handle first run setup
+async function setupFirstRun() {
+    try {
+        const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+        const isFirstRun = !fs.existsSync(settingsPath);
+
+        if (isFirstRun) {
+            log.info('First run detected, creating default settings with auto-launch enabled');
+
+            // Create default settings with auto-launch and hide on start enabled
+            const defaultSettings = {
+                launchAtLogin: true,
+                hideOnLaunch: true,
+                showDockIcon: true,
+                showStatusBarIcon: true
+            };
+
+            // Save default settings
+            await fs.promises.writeFile(settingsPath, JSON.stringify(defaultSettings, null, 2), 'utf8');
+            log.info('Created default settings file with auto-launch and hide enabled');
+
+            // Set up auto-launch for the application
+            try {
+                const args = process.platform === 'win32' ?
+                    ['--hidden', '--autostart'] :
+                    ['--hidden'];
+
+                const autoLauncher = new AutoLaunch({
+                    name: app.getName(),
+                    path: app.getPath('exe'),
+                    args: args,
+                    isHidden: true
+                });
+
+                await autoLauncher.enable();
+                log.info('Auto-launch enabled for first-time user');
+            } catch (autoLaunchError) {
+                log.error('Error setting up auto-launch for first-time user:', autoLaunchError);
+                // Continue application startup even if auto-launch setup fails
+            }
+
+            // Flag for the createWindow function to know this is first run
+            // but don't keep the window hidden on the very first run
+            global.isFirstRun = true;
+        }
+    } catch (err) {
+        log.error('Error during first run setup:', err);
+        // Continue with startup even if there was an error
+    }
+}
 
 // Quit when all windows are closed (except on macOS)
 app.on('window-all-closed', () => {
@@ -1250,8 +1304,8 @@ async function handleGetSettings() {
         } else {
             // Default settings
             const defaultSettings = {
-                launchAtLogin: false,
-                hideOnLaunch: false,
+                launchAtLogin: true,
+                hideOnLaunch: true,
                 showDockIcon: true,
                 showStatusBarIcon: true
             };
