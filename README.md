@@ -7,8 +7,8 @@ A companion application for the Open Headers browser extension that manages dyna
 ## ✨ Features
 
 - 🔄 **Multiple Source Types**: Retrieve values from HTTP requests, environment variables, and local files
-- 🔍 **JSON Path Filtering**: Extract specific values from JSON responses
-- ⏱️ **Auto-Refresh**: Schedule periodic updates for HTTP sources
+- 🔍 **JSON Path Filtering**: Extract specific values from JSON responses with intuitive dot notation
+- ⏱️ **Auto-Refresh**: Schedule periodic updates for HTTP sources with flexible timing options
 - 🛡️ **TOTP Authentication**: Generate time-based one-time passwords for secure API access
 - 📝 **HTTP Source Editing**: Modify all aspects of HTTP sources after creation
 - 💾 **Import/Export**: Share source configurations between instances
@@ -45,7 +45,18 @@ A companion application for the Open Headers browser extension that manages dyna
 
 ## 📥 Installation
 
-### 🖥️ Prebuilt Binaries
+### 🖥️ System Requirements
+
+- **Operating Systems**:
+  - Windows 10/11 (64-bit)
+  - macOS 10.15 (Catalina) or later
+  - Linux with GTK3 support (Ubuntu 18.04+, Debian 10+, Fedora 32+)
+- **Hardware**:
+  - 100MB of disk space
+  - 2GB RAM (4GB recommended)
+  - 1280x720 minimum screen resolution
+
+### 🛠️ Prebuilt Binaries
 
 1. Download the latest release for your platform:
    - [macOS](https://github.com/OpenHeaders/open-headers-app/releases)
@@ -57,12 +68,58 @@ A companion application for the Open Headers browser extension that manages dyna
    - **Windows**: Run the installer executable
    - **Linux**: Install the Debian package (.deb) or extract the AppImage and make it executable
 
-### 🛠️ Building from Source
+### 🧑‍💻 Building from Source
 
-1. Clone the repository
-2. Install dependencies with `npm install`
-3. Run `npm run dist` to create installers for your platform
-4. The built application will be in the `dist` directory
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/OpenHeaders/open-headers-app.git
+   cd open-headers-app
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run in development mode:
+   ```bash
+   npm run dev:react
+   ```
+
+4. Build for your platform:
+   ```bash
+   npm run dist
+   ```
+
+5. The built application will be in the `dist` directory
+
+For more detailed build options, see the [DEVELOPER.md](./docs/DEVELOPER.md) document.
+
+## 🔄 CI/CD and Release Process
+
+The Open Headers application uses GitHub Actions for continuous integration and deployment:
+
+### 🚀 Automated Builds
+
+All pushes to the main branch and pull requests are automatically built on:
+- macOS (both Intel and Apple Silicon)
+- Windows
+- Linux (x64 and ARM64)
+
+### 📦 Release Automation
+
+When a new tag is pushed (starting with 'v', e.g., v2.4.24):
+1. Applications are built for all supported platforms
+2. macOS builds are automatically notarized with Apple when proper secrets are configured
+3. A GitHub release is created with all artifacts
+4. Release notes are automatically generated
+
+### 🔐 Code Signing
+
+- **macOS**: Builds are signed and notarized with Apple when the proper certificates are configured
+- **Windows**: Can be signed when proper certificates are available
+
+For more details on the CI/CD and release process, see the [DEVELOPER.md](./docs/DEVELOPER.md) document.
 
 ## 📋 Usage
 
@@ -104,11 +161,39 @@ The file content will be continuously monitored for changes on all platforms.
 
 1. Select "HTTP Request" as the source type
 2. Enter the URL for the request
-3. Select the HTTP method (GET, POST, etc.)
-4. Configure request options (headers, query parameters, body)
-5. Optionally enable JSON filtering to extract specific values
-6. Set up auto-refresh if you want regular updates
-7. Click "Add Source"
+3. Click on the tabs to configure different aspects of the request:
+   - **Headers**: Add custom HTTP headers
+   - **Query Params**: Add URL query parameters
+   - **Body**: Add request body with JSON or form-urlencoded content
+   - **Options**: Configure advanced features like JSON filtering, TOTP, and auto-refresh
+
+#### 📝 Headers Configuration
+1. Click the "Headers" tab
+2. Click "Add Header" to add a new header
+3. Enter the header name and value
+4. Repeat for additional headers
+
+#### 📊 Query Parameters
+1. Click the "Query Params" tab
+2. Click "Add Query Parameter" to add a new parameter
+3. Enter the parameter name and value
+4. Repeat for additional parameters
+
+#### 📄 Request Body
+1. Click the "Body" tab
+2. Select the content type (JSON or Form URL Encoded)
+3. Enter the body content in the text area
+
+#### ⚙️ Advanced Options
+1. Click the "Options" tab to access:
+   - **JSON Filter**: Extract specific values from JSON responses
+   - **TOTP Authentication**: Generate time-based codes for API access
+   - **Auto-Refresh**: Schedule periodic updates
+
+#### 🧪 Testing HTTP Requests
+1. After configuring your request, click "Test Request"
+2. The response will be displayed in the "Response Preview" section
+3. You can view the body, headers, and raw response in separate tabs
 
 ### ✏️ Editing HTTP Sources
 
@@ -130,22 +215,57 @@ The edit interface provides full access to all HTTP source features and preserve
 
 ### 🔍 Using JSON Filtering
 
-For HTTP sources that return JSON:
+JSON filtering allows you to extract specific values from JSON responses:
 
-1. Enable the "JSON Filter" option
-2. Enter a JSON path using dot notation (e.g., `root.data.access_token`)
-3. Use the "Test Request" button to verify your filter works correctly
+1. Enable the "JSON Filter" toggle in the Options tab
+2. Enter a JSON path using dot notation:
+   - Start with `root` to reference the root object
+   - Use dots to access nested properties (e.g., `root.data.user.name`)
+   - Use brackets with indices for arrays (e.g., `root.items[0].id`)
+3. Click "Test Request" to preview the filtered result
+4. After adding the source, the JSON filter will be applied to all responses
+
+#### 📌 JSON Path Examples:
+- `root.data.token` - Extracts the token property from the data object
+- `root.results[0].id` - Extracts the id from the first item in the results array
+- `root.user.addresses[2].street` - Extracts the street from the third address in the user's addresses
 
 ### 🔐 Using TOTP Authentication
 
 For APIs requiring time-based one-time passwords:
 
-1. Enable "TOTP Authentication" in your HTTP source
+1. Enable the "TOTP Authentication" toggle in the Options tab
 2. Enter your TOTP secret key (base32 encoded)
-3. Use `_TOTP_CODE` placeholder in your request where the code should be inserted
-4. Example: Add `verification_code:_TOTP_CODE` in a form-encoded body
+3. Click "Test" to verify the TOTP code generation
+4. Use `_TOTP_CODE` placeholder in any part of your request:
+   - In URL: `https://api.example.com/verify?code=_TOTP_CODE`
+   - In headers: `Authorization: Bearer _TOTP_CODE`
+   - In body: `{"verification_code": "_TOTP_CODE"}`
 
 The application will automatically generate and insert the current TOTP code whenever the request is made.
+
+### ⏰ Setting Up Auto-Refresh
+
+To automatically update HTTP sources at regular intervals:
+
+1. Enable the "Auto-Refresh" toggle in the Options tab
+2. Choose a refresh method:
+   - **Preset**: Select from predefined intervals (1 min to 24 hours)
+   - **Custom**: Enter a specific interval in minutes
+3. Click "Add Source" to create the source with auto-refresh enabled
+
+The source will be refreshed automatically according to the specified interval. You can view the next refresh time in the source list.
+
+### 📊 Viewing Source Content
+
+To view the content of any source:
+
+1. In the sources table, click the "View" button for the source
+2. For HTTP sources, you can see:
+   - Filtered Response (if JSON filtering is enabled)
+   - Original Response
+   - HTTP Headers
+3. For file and environment variable sources, you'll see the raw content
 
 ### 💾 Importing and Exporting Sources
 
@@ -163,11 +283,28 @@ Easily save and share your source configurations:
 3. Select a previously exported JSON file
 4. The sources will be loaded and added to your existing sources
 
+The application will detect duplicate sources during import and only add new ones.
+
 ### 🔽 Minimizing to Tray
 
 - When the application window is closed, it will minimize to the system tray rather than quitting
 - Click the tray icon to restore the window
 - Right-click the tray icon for additional options (Show Open Headers, Hide Open Headers, Quit)
+
+### 🔄 Automatic Updates
+
+The application includes a built-in update system that:
+
+1. Automatically checks for new versions on startup
+2. Performs periodic update checks every 6 hours
+3. Notifies you when updates are available
+4. Downloads updates in the background
+5. Shows download progress
+6. Prompts you to install when ready
+
+To manually check for updates:
+1. Click the menu button in the top-right corner
+2. Select "Check for Updates"
 
 ## 🔄 Connecting to the Browser Extension
 
@@ -177,28 +314,56 @@ Easily save and share your source configurations:
    - 🦊 **[Mozilla Firefox](https://addons.mozilla.org/en-US/firefox/addon/open-headers/)**
    - **🐙 Build it yourself from [Github](https://github.com/OpenHeaders/open-headers-browser-extension)**
 2. Launch the Dynamic Sources application
-3. The extension will automatically connect to the application
+3. The extension will automatically connect to the application:
+   - Chrome/Edge use standard WebSocket (WS) on port 59210
+   - Firefox uses secure WebSocket (WSS) on port 59211
 4. In the extension popup, your dynamic sources will appear as options when creating headers
 
-### 🔄 Automatic Updates
+The application automatically generates and manages self-signed certificates for the secure WebSocket connection used by Firefox.
 
-The application includes a built-in update system that:
+## ❓ Troubleshooting
 
-- Automatically checks for new versions on startup
-- Performs periodic update checks in the background
-- Notifies you when updates are available
-- Downloads updates automatically
-- Lets you install updates with a single click
-- Provides visual progress feedback during downloads
+### 🔄 Update Issues
 
-You can also manually check for updates from the menu (Menu → Check for Updates).
+If automatic updates aren't working:
+
+1. Check your internet connection
+2. Ensure you have write permissions to the application directory
+3. Try manually downloading the latest version
+4. Check the log file at:
+   - **macOS**: `~/Library/Logs/OpenHeaders/main.log`
+   - **Windows**: `%USERPROFILE%\AppData\Roaming\OpenHeaders\logs\main.log`
+   - **Linux**: `~/.config/OpenHeaders/logs/main.log`
+
+### 🔌 Extension Connection Problems
+
+If the browser extension can't connect:
+
+1. Ensure the Open Headers app is running
+2. Check if any firewall is blocking localhost connections on ports 59210/59211
+3. For Firefox, you may need to accept the self-signed certificate by visiting:
+   - https://localhost:59211/verify-cert
+
+### 📁 File Watching Not Working
+
+If file source updates aren't detected:
+
+1. Ensure you have read permissions for the file
+2. Try using an absolute file path instead of a relative path
+3. Some network drives may not support file watching - copy to a local drive instead
+
+### 🐞 Common Errors
+
+- **"Failed to connect to WebSocket server"**: Ensure the app is running and no other application is using ports 59210/59211
+- **"Failed to update source"**: Check your internet connection or API endpoint
+- **"Failed to generate TOTP code"**: Verify your TOTP secret is correct and properly formatted
+- **"JSON filter path not found"**: Check that your JSON path matches the actual response structure
 
 ## 📚 Documentation
 
 For more detailed information, see:
 - [DEVELOPER.md](./docs/DEVELOPER.md) - Technical documentation for developers
 - [CONTRIBUTING.md](./docs/CONTRIBUTING.md) - Guidelines for contributing to the project
-- [PRIVACY.md](./docs/PRIVACY.md) - Privacy policy
 
 ## 👥 Contributing
 
