@@ -243,6 +243,10 @@ const rendererConfig = {
                     from: path.resolve(__dirname, 'scripts/debian'),
                     to: path.resolve(__dirname, 'dist-webpack/scripts/debian'),
                     noErrorOnMissing: true
+                },
+                {
+                    from: path.resolve(__dirname, 'build/linux/install-open-headers.sh'),
+                    to: path.resolve(__dirname, 'dist-webpack/install-open-headers.sh')
                 }
             ]
         })
