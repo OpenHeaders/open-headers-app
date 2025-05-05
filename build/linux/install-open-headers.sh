@@ -1,13 +1,13 @@
 #!/bin/bash
-# OpenHeaders AppImage Installation Script
-# This script follows the exact steps that worked manually
+# Open Headers AppImage Installation Script
+# With fix for update detection on ARM64
 
 # Exit on any error
 set -e
 
 # Display script header
 echo "=========================================================="
-echo "     OpenHeaders Installation Script"
+echo "     Open Headers Installation Script"
 echo "=========================================================="
 echo ""
 
@@ -20,7 +20,7 @@ fi
 
 # Get directory where script is located
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APPIMAGE_NAME="OpenHeaders-2.4.28-arm64.AppImage"
+APPIMAGE_NAME="OpenHeaders-2.4.29-arm64.AppImage"
 APPIMAGE_PATH="$SCRIPT_DIR/$APPIMAGE_NAME"
 
 # Check if AppImage exists
@@ -51,20 +51,20 @@ chmod 4755 squashfs-root/chrome-sandbox
 echo "✓ Done"
 echo ""
 
-echo "Step 4: Installing to /opt/OpenHeaders..."
+echo "Step 4: Installing to /opt/open-headers..."
 # Remove previous installation if exists
-if [ -d "/opt/OpenHeaders" ]; then
-    rm -rf /opt/OpenHeaders
+if [ -d "/opt/open-headers" ]; then
+    rm -rf /opt/open-headers
 fi
 
 # Move the extracted files to /opt
-mv squashfs-root /opt/OpenHeaders
+mv squashfs-root /opt/open-headers
 
 # CRITICAL: Fix directory permissions so user can access it
-chown -R $CURRENT_USER:$CURRENT_USER /opt/OpenHeaders
+chown -R $CURRENT_USER:$CURRENT_USER /opt/open-headers
 # Keep chrome-sandbox with root ownership
-chown root:root /opt/OpenHeaders/chrome-sandbox
-chmod 4755 /opt/OpenHeaders/chrome-sandbox
+chown root:root /opt/open-headers/chrome-sandbox
+chmod 4755 /opt/open-headers/chrome-sandbox
 echo "✓ Done"
 echo ""
 
@@ -72,8 +72,9 @@ echo "Step 5: Creating command-line access..."
 # Create a wrapper script in /usr/bin which is in PATH
 cat > /usr/bin/open-headers << 'EOF'
 #!/bin/bash
-# Run OpenHeaders and force window to show
-cd /opt/OpenHeaders
+# Run Open Headers with AppImage detection enabled
+cd /opt/open-headers
+export APPIMAGE="true"
 ./open-headers "$@"
 EOF
 
@@ -83,12 +84,12 @@ echo "✓ Done"
 echo ""
 
 echo "Step 6: Creating desktop shortcut..."
-cat > /usr/share/applications/openheaders.desktop << EOF
+cat > /usr/share/applications/open-headers.desktop << EOF
 [Desktop Entry]
-Name=OpenHeaders
+Name=Open Headers
 Comment=Dynamic sources for Open Headers browser extension
-Exec=/usr/bin/open-headers
-Icon=/opt/OpenHeaders/open-headers.png
+Exec=env APPIMAGE=true /usr/bin/open-headers
+Icon=/opt/open-headers/open-headers.png
 Terminal=false
 Type=Application
 Categories=Utility;Development;Network;
@@ -96,13 +97,33 @@ EOF
 echo "✓ Done"
 echo ""
 
+echo "Step 7: Setting up auto-launch entry..."
+# Create autostart directory if it doesn't exist
+mkdir -p /etc/xdg/autostart
+
+# Create autostart desktop entry
+cat > /etc/xdg/autostart/open-headers.desktop << EOF
+[Desktop Entry]
+Name=Open Headers
+Comment=Dynamic sources for Open Headers browser extension
+Exec=env APPIMAGE=true /usr/bin/open-headers --hidden
+Icon=/opt/open-headers/open-headers.png
+Terminal=false
+Type=Application
+Categories=Utility;Development;Network;
+X-GNOME-Autostart-enabled=true
+EOF
+echo "✓ Done"
+echo ""
+
 echo "=========================================================="
-echo "✅ OpenHeaders has been successfully installed!"
+echo "✅ Open Headers has been successfully installed!"
 echo "   You can now launch it by:"
 echo ""
 echo "   • Running 'open-headers' from the terminal"
 echo "   • Using the application menu in your desktop environment"
 echo ""
-echo "   If you encounter any issues, try running directly:"
-echo "   $ cd /opt/OpenHeaders && ./open-headers"
+echo "   The app will automatically start with the system."
+echo "   If you encounter any issues, please report them on GitHub."
 echo "=========================================================="
+echo ""
