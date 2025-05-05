@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.28",
+  "version": "2.4.29",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -18,6 +18,7 @@
     "dist:mac:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac --publish never",
     "dist:mac:skip-notarize": "cross-env NODE_ENV=production SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder --mac",
     "dist:linux": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64",
+    "dist:linux:app-image:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=AppImage",
     "dist:linux:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --publish never",
     "dist:linux:deb": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb",
     "dist:linux:deb:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=deb",
@@ -46,6 +47,7 @@
     "asar": true,
     "compression": "maximum",
     "afterSign": "./scripts/notarize.js",
+    "afterPack": "./scripts/afterPackHook.js",
     "extraResources": [
       {
         "from": "build",
