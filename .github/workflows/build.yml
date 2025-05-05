@@ -234,6 +234,7 @@ jobs:
           if [ -d "dist/ubuntu-latest-artifacts" ]; then
             cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/
             cp dist/ubuntu-latest-artifacts/*.deb processed_files/
+            cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || echo "Installation script not found"
           
             # Explicitly copy RPM files - ensure they exist
             echo "Copying RPM files to processed_files"
