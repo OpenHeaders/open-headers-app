@@ -275,19 +275,38 @@ jobs:
           Download the latest version for your platform:
 
           ### macOS
-          - [Intel (x64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
-          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg)
+          - [Intel (x64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg) (.dmg for macOS)
+          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg) (.dmg for macOS)
 
           ### Windows
-          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe)
+          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe) (.exe for Windows)
 
           ### Linux
-          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x86_64.AppImage)
-          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage)
-          - [Debian/Ubuntu x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
-          - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
-          - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm)
-          - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
+          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x64.AppImage) (.AppImage for any Linux distro)
+          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage) (.AppImage for any Linux distro)
+          - [Debian/Ubuntu x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb) (.deb for Debian/Ubuntu)
+          - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb) (.deb for Debian/Ubuntu)
+          - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm) (.rpm for Fedora/RHEL/CentOS)
+          - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm) (.rpm for Fedora/RHEL/CentOS)
+
+          ## 🚀 Installation & Startup
+
+          ### Windows
+          - **Installation**: Run the installer
+          - **Startup**: Access from Start menu or desktop shortcut
+
+          ### macOS
+          - **Installation**: Click DMG and drag to Applications folder
+          - **Startup**: Launch from Applications or Spotlight
+
+          ### Linux
+          - **AppImage**: \`chmod +x OpenHeaders-*.AppImage && sudo ./install-open-headers.sh\`
+          - **DEB package**: \`sudo apt install ./open-headers_*.deb\`
+          - **RPM package**: \`sudo rpm -i open-headers-*.rpm\`
+          - **Startup for all**: Application menu or \`open-headers\` command
+
+          > **Note:** Following system reboot, the application launches automatically in background mode and resides in the system tray/menu bar.  
+          > This default behavior can be configured through the application settings (Menu → Settings).
           EOF
 
       # Create release using processed files
