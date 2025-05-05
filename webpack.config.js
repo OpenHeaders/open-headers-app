@@ -238,6 +238,11 @@ const rendererConfig = {
                     from: path.resolve(__dirname, 'config'),
                     to: path.resolve(__dirname, 'dist-webpack/config'),
                     noErrorOnMissing: true
+                },
+                {
+                    from: path.resolve(__dirname, 'scripts/debian'),
+                    to: path.resolve(__dirname, 'dist-webpack/scripts/debian'),
+                    noErrorOnMissing: true
                 }
             ]
         })

@@ -1,0 +1,22 @@
+#!/bin/bash
+# Fixes Chrome sandbox permissions and creates necessary symlinks
+
+# Set the correct permissions for the Chrome sandbox
+if [ -e "/opt/OpenHeaders/chrome-sandbox" ]; then
+  chown root:root "/opt/OpenHeaders/chrome-sandbox"
+  chmod 4755 "/opt/OpenHeaders/chrome-sandbox"
+  echo "Chrome sandbox permissions fixed"
+fi
+
+# Create symlink in /usr/bin for command-line access
+if [ -e "/opt/OpenHeaders/open-headers" ] && [ ! -e "/usr/bin/open-headers" ]; then
+  ln -sf "/opt/OpenHeaders/open-headers" "/usr/bin/open-headers"
+  echo "Command-line access enabled: created symlink in /usr/bin"
+fi
+
+# Update desktop database
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database
+fi
+
+exit 0

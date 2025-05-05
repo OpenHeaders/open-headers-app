@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.4.27",
+  "version": "2.4.28",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -116,7 +116,8 @@
       "desktop": {
         "Name": "OpenHeaders",
         "Comment": "Dynamic sources for Open Headers browser extension",
-        "Terminal": false
+        "Terminal": false,
+        "Categories": "Utility;Development;Network"
       },
       "synopsis": "Manage dynamic sources from files, environment variables, and HTTP endpoints",
       "description": "Companion app for the Open Headers browser extension that manages dynamic sources from files, environment variables, and HTTP endpoints."
@@ -146,7 +147,8 @@
       ],
       "artifactName": "${name}_${version}_${arch}.${ext}",
       "compression": "xz",
-      "priority": "optional"
+      "priority": "optional",
+      "afterInstall": "./scripts/debian/postinst"
     },
     "rpm": {
       "artifactName": "${name}-${version}.${arch}.rpm",
