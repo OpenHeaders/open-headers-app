@@ -669,6 +669,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         // Get current refresh options to preserve values
         const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
+        // IMPORTANT BUG FIX: Preserve the enabled flag when switching refresh types
+        const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+
         // If switching to preset, find closest preset value when needed
         let intervalValue = currentRefreshOptions.interval || customIntervalRef.current;
 
@@ -692,8 +695,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 ...currentRefreshOptions,
                 type: newType,
                 interval: intervalValue,
-                // Keep the current enabled state
-                enabled: refreshEnabledRef.current
+                // FIXED: Explicitly preserve the enabled state rather than letting it default
+                enabled: isCurrentlyEnabled
             }
         });
 
@@ -715,6 +718,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         // Get current refresh options to preserve values
         const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
+        // IMPORTANT BUG FIX: Preserve the enabled flag
+        const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+
         // Update form values while preserving other settings
         form.setFieldsValue({
             refreshOptions: {
@@ -722,8 +728,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 interval: interval,
                 // Ensure refresh type is set to custom
                 type: 'custom',
-                // Keep the current enabled state
-                enabled: refreshEnabledRef.current
+                // FIXED: Explicitly preserve the current enabled state
+                enabled: isCurrentlyEnabled
             }
         });
 
@@ -744,7 +750,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
         // IMPORTANT: Preserve the existing enabled state
-        const currentEnabledState = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+        const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
 
         // Update form values while preserving other settings
         form.setFieldsValue({
@@ -752,8 +758,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 ...currentRefreshOptions,
                 interval: value,
                 type: 'preset',
-                // Explicitly preserve the enabled state instead of using just the ref
-                enabled: currentEnabledState
+                // FIXED: Explicitly preserve the enabled state
+                enabled: isCurrentlyEnabled
             }
         });
 

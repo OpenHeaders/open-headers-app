@@ -1,3 +1,4 @@
+// Fix for SourceTable.jsx to properly update refresh timers display after edit
 import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Tag, Typography, Space, Modal, Popconfirm } from 'antd';
 import {
@@ -28,9 +29,10 @@ const SourceTable = ({
     const [selectedSourceId, setSelectedSourceId] = useState(null);
     const [refreshingSourceId, setRefreshingSourceId] = useState(null);
     const [removingSourceId, setRemovingSourceId] = useState(null);
+    // Add a lastRefreshOptionsRef to track source refresh changes
+    const lastRefreshOptionsRef = React.useRef({});
 
     // Get the currently selected source from the latest sources array
-    // This ensures we're always working with the most up-to-date data
     const selectedSource = selectedSourceId ?
         sources.find(s => s.sourceId === selectedSourceId) : null;
 
@@ -70,6 +72,52 @@ const SourceTable = ({
         // Fall back to displaying the interval
         return `Auto-refresh: ${source.refreshOptions.interval}m`;
     };
+
+    // NEW: Update refresh times whenever sources change
+    useEffect(() => {
+        // Process all sources with HTTP type and check for refresh option changes
+        sources.forEach(source => {
+            if (source.sourceType === 'http' && source.refreshOptions) {
+                const lastOptions = lastRefreshOptionsRef.current[source.sourceId];
+                const currentOptions = source.refreshOptions;
+
+                // Check if refresh options changed (especially interval)
+                if (!lastOptions ||
+                    lastOptions.interval !== currentOptions.interval ||
+                    lastOptions.enabled !== currentOptions.enabled) {
+
+                    // Store updated options
+                    lastRefreshOptionsRef.current[source.sourceId] = {...currentOptions};
+
+                    // Update refresh status text immediately
+                    const now = Date.now();
+                    if (currentOptions.enabled && currentOptions.interval > 0) {
+                        // For enabled refresh, show appropriate status
+                        if (currentOptions.nextRefresh && currentOptions.nextRefresh > now) {
+                            const remaining = currentOptions.nextRefresh - now;
+                            setRefreshTimes(prev => ({
+                                ...prev,
+                                [source.sourceId]: `Refreshes in ${formatTimeRemaining(remaining)}`
+                            }));
+                        } else {
+                            // Show interval if no valid nextRefresh time
+                            setRefreshTimes(prev => ({
+                                ...prev,
+                                [source.sourceId]: `Auto-refresh: ${currentOptions.interval}m`
+                            }));
+                        }
+                    } else {
+                        // For disabled refresh, clear any refresh time
+                        setRefreshTimes(prev => {
+                            const updated = {...prev};
+                            delete updated[source.sourceId];
+                            return updated;
+                        });
+                    }
+                }
+            }
+        });
+    }, [sources]);
 
     // Initialize refresh times when sources change
     useEffect(() => {
@@ -160,46 +208,7 @@ const SourceTable = ({
         return () => clearInterval(timer);
     }, [sources, refreshingSourceId, onRefreshSource, refreshTimes]);
 
-    // Handle edit source
-    const handleEditSource = useCallback((source) => {
-        // Only store the ID so we always pull latest data from sources array
-        setSelectedSourceId(source.sourceId);
-        setEditModalVisible(true);
-    }, []);
-
-    // Handle view content
-    const handleViewContent = useCallback((source) => {
-        // Store only the ID for the selected source
-        setSelectedSourceId(source.sourceId);
-        setContentViewerVisible(true);
-    }, []);
-
-    // Handle refresh source with update to modal if open
-    const handleRefreshSource = async (sourceId, updatedSource = null) => {
-        try {
-            console.log('SourceTable: Starting refresh for source', sourceId);
-
-            // Set refreshing state
-            setRefreshingSourceId(sourceId);
-
-            // Call the parent refresh handler with the updated source if provided
-            const success = await onRefreshSource(sourceId, updatedSource);
-
-            console.log('SourceTable: Refresh completed with success =', success);
-
-            return success;
-        } catch (error) {
-            console.error('Error refreshing source:', error);
-            return false;
-        } finally {
-            // Clear refreshing state with a small delay to ensure UI updates
-            setTimeout(() => {
-                setRefreshingSourceId(null);
-            }, 100);
-        }
-    };
-
-    // Handle save edited source
+    // Handle save edited source with improved refresh time update
     const handleSaveSource = async (sourceData) => {
         try {
             // Set loading state to give visual feedback
@@ -239,6 +248,34 @@ const SourceTable = ({
             const updatedSource = await onUpdateSource(dataToSave);
 
             if (updatedSource) {
+                // IMPORTANT: Immediately update the refresh time display for this source
+                // This ensures the main view shows the updated interval right away
+                if (updatedSource.refreshOptions) {
+                    const now = Date.now();
+                    if (updatedSource.refreshOptions.enabled && updatedSource.refreshOptions.interval > 0) {
+                        const interval = updatedSource.refreshOptions.interval;
+                        const nextRefresh = updatedSource.refreshOptions.nextRefresh ||
+                            (now + (interval * 60 * 1000));
+
+                        // Calculate the new status text
+                        if (nextRefresh > now) {
+                            const remaining = nextRefresh - now;
+                            const timeText = `Refreshes in ${formatTimeRemaining(remaining)}`;
+
+                            // Update refreshTimes state immediately
+                            setRefreshTimes(prev => ({
+                                ...prev,
+                                [sourceData.sourceId]: timeText
+                            }));
+                        } else {
+                            setRefreshTimes(prev => ({
+                                ...prev,
+                                [sourceData.sourceId]: `Auto-refresh: ${interval}m`
+                            }));
+                        }
+                    }
+                }
+
                 // If immediate refresh is requested, trigger it and wait for it to complete
                 // before closing the modal
                 if (shouldRefreshNow) {
@@ -271,6 +308,46 @@ const SourceTable = ({
         } finally {
             // Clear refreshing state
             setRefreshingSourceId(null);
+        }
+    };
+
+    // Keep the rest of the component code as is...
+    // Handle edit source
+    const handleEditSource = useCallback((source) => {
+        // Only store the ID so we always pull latest data from sources array
+        setSelectedSourceId(source.sourceId);
+        setEditModalVisible(true);
+    }, []);
+
+    // Handle view content
+    const handleViewContent = useCallback((source) => {
+        // Store only the ID for the selected source
+        setSelectedSourceId(source.sourceId);
+        setContentViewerVisible(true);
+    }, []);
+
+    // Handle refresh source with update to modal if open
+    const handleRefreshSource = async (sourceId, updatedSource = null) => {
+        try {
+            console.log('SourceTable: Starting refresh for source', sourceId);
+
+            // Set refreshing state
+            setRefreshingSourceId(sourceId);
+
+            // Call the parent refresh handler with the updated source if provided
+            const success = await onRefreshSource(sourceId, updatedSource);
+
+            console.log('SourceTable: Refresh completed with success =', success);
+
+            return success;
+        } catch (error) {
+            console.error('Error refreshing source:', error);
+            return false;
+        } finally {
+            // Clear refreshing state with a small delay to ensure UI updates
+            setTimeout(() => {
+                setRefreshingSourceId(null);
+            }, 100);
         }
     };
 
