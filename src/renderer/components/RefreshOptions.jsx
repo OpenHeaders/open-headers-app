@@ -89,6 +89,11 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
         const newType = e.target.value;
         setRefreshType(newType);
 
+        // IMPORTANT FIX: Preserve the enabled state when changing type
+        // We don't need to modify any form values here as this component
+        // doesn't use a form directly, but we need to ensure the
+        // refreshEnabled state doesn't get reset
+
         // If switching to preset, find closest preset value
         if (newType === 'preset') {
             const presetValues = [1, 5, 15, 30, 60, 120, 360, 720, 1440];

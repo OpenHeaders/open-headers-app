@@ -86,7 +86,11 @@ const SourceForm = ({ onAddSource }) => {
 
             // Check if JSON filter is enabled but missing a path
             if (values.jsonFilter?.enabled && !values.jsonFilter?.path) {
-                showMessage('error', 'JSON filter is enabled but no path is specified. Please enter a JSON path.');
+                form.setFields([{
+                    name: ['jsonFilter', 'path'],
+                    errors: ['JSON path is required when filter is enabled']
+                }]);
+                showMessage('error', 'JSON filter is enabled but no path is specified');
                 setSubmitting(false);
                 return;
             }
@@ -149,8 +153,8 @@ const SourceForm = ({ onAddSource }) => {
                             if (parsedResponse.filteredWith && sourceData.jsonFilter?.enabled) {
                                 sourceData.initialContent = parsedResponse.body; // This is already filtered
 
-                                // Use originalBody for the original response
-                                sourceData.originalResponse = parsedResponse.originalBody || parsedResponse.body;
+                                // Use originalResponse for the original response (supporting multiple formats for backward compatibility)
+                                sourceData.originalResponse = parsedResponse.originalResponse || parsedResponse.originalBody || parsedResponse.body;
 
                                 console.log('Setting filtered content and original response:',
                                     'filtered:', sourceData.initialContent.substring(0, 50) + '...',

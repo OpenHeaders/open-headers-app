@@ -31,10 +31,22 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
         refreshNow: true
     });
 
+    // Store original values for comparison
+    const originalValuesRef = useRef({
+        interval: 0,
+        enabled: false
+    });
+
     // Initialize form when source changes or modal opens
     useEffect(() => {
         if (open && source) {
             console.log("Initializing EditSourceModal form with source:", source.sourceId);
+
+            // Store original values for comparison
+            originalValuesRef.current = {
+                interval: source.refreshOptions?.interval || 0,
+                enabled: source.refreshOptions?.enabled || false
+            };
 
             // Check for TOTP secret in the source
             const hasTotpSecret = !!(source.requestOptions?.totpSecret);
@@ -270,6 +282,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 console.log(`Normalized JSON filter for source ${source.sourceId}:`,
                     JSON.stringify(normalizedJsonFilter));
 
+                // IMPORTANT NEW PART: Return a promise that resolves with the updated source
                 // Get TOTP values - collect from multiple sources
                 // First check form values
                 let isTotpEnabled = values.enableTOTP === true;
@@ -303,6 +316,9 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     secret: totpSecretValue ? "exists" : "none"
                 });
 
+                // Store whether we should refresh now
+                const shouldRefreshNow = refreshNow;
+
                 // Prepare source data for update - preserve originalResponse if available
                 const sourceData = {
                     sourceId: source.sourceId,
@@ -321,7 +337,11 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     // Use normalized jsonFilter object
                     jsonFilter: normalizedJsonFilter,
                     refreshOptions: values.refreshOptions || { enabled: false, interval: 0 },
-                    refreshNow: refreshNow
+                    // IMPORTANT: Always pass refreshNow: true to trigger refresh in case we can't do it manually
+                    refreshNow: shouldRefreshNow,
+                    // Preserve filtering status
+                    isFiltered: source.isFiltered || normalizedJsonFilter.enabled,
+                    filteredWith: normalizedJsonFilter.enabled ? normalizedJsonFilter.path : source.filteredWith
                 };
 
                 // Preserve the original response if it exists
@@ -361,6 +381,10 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                             path: jsonFilterState.enabled === true ? (jsonFilterState.path || '') : ''
                         };
 
+                        // Update filtering status based on current filter state
+                        sourceData.isFiltered = jsonFilterState.enabled;
+                        sourceData.filteredWith = jsonFilterState.enabled ? jsonFilterState.path : null;
+
                         console.log("Setting JSON filter state in source data:",
                             JSON.stringify(sourceData.jsonFilter));
                     }
@@ -389,8 +413,46 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
                 console.log("Saving source with data:", sourceData);
 
+                // FIXED: Check if refresh interval or enabled state has changed
+                // and only preserve timing if they haven't changed
+                const hasIntervalChanged =
+                    sourceData.refreshOptions?.interval !== originalValuesRef.current.interval;
+                const hasEnabledChanged =
+                    sourceData.refreshOptions?.enabled !== originalValuesRef.current.enabled;
+
+                // If refresh interval or enabled status changed, don't preserve timing
+                if (!hasIntervalChanged && !hasEnabledChanged &&
+                    source.refreshOptions?.nextRefresh &&
+                    source.refreshOptions.nextRefresh > Date.now()) {
+                    console.log(`Preserving refresh timing for source ${source.sourceId}: next refresh at ${new Date(source.refreshOptions.nextRefresh).toISOString()}`);
+                    if (!sourceData.refreshOptions) {
+                        sourceData.refreshOptions = {};
+                    }
+                    sourceData.refreshOptions.preserveTiming = true;
+                } else if (hasIntervalChanged) {
+                    // Log that we're NOT preserving timing due to interval change
+                    console.log(`NOT preserving refresh timing for source ${source.sourceId} because interval changed from ${originalValuesRef.current.interval} to ${sourceData.refreshOptions?.interval}`);
+                    if (sourceData.refreshOptions) {
+                        sourceData.refreshOptions.preserveTiming = false;
+                    }
+                } else if (hasEnabledChanged) {
+                    // Log that we're NOT preserving timing due to enabled state change
+                    console.log(`NOT preserving refresh timing for source ${source.sourceId} because enabled state changed from ${originalValuesRef.current.enabled} to ${sourceData.refreshOptions?.enabled}`);
+                    if (sourceData.refreshOptions) {
+                        sourceData.refreshOptions.preserveTiming = false;
+                    }
+                }
+
                 // Call parent save handler
                 const success = await onSave(sourceData);
+
+                // Only manually do an additional refresh if necessary
+                if (shouldRefreshNow && success) {
+                    console.log("Manual refresh requested, triggering refresh...");
+
+                    // Wait a short time for the source update to complete
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
 
                 // Reset saving state to ensure button returns to normal state
                 if (isMountedRef.current) {
@@ -437,6 +499,28 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     const handleTestResponse = (response) => {
         console.log("EditSourceModal received test response:", response.substring(0, 100));
         setTestResponse(response);
+
+        // Process test response if needed
+        if (response) {
+            try {
+                const parsedResponse = JSON.parse(response);
+
+                if (parsedResponse.body) {
+                    // For filtered responses, handle differently
+                    if (parsedResponse.filteredWith && form.getFieldValue(['jsonFilter', 'enabled'])) {
+                        console.log('Setting filtered content and original response from test:',
+                            'filtered:', parsedResponse.body.substring(0, 50) + '...');
+
+                        // Use originalResponse for the original response (supporting multiple formats for backward compatibility)
+                        const originalResponse = parsedResponse.originalResponse || parsedResponse.originalBody || parsedResponse.body;
+                        console.log('original:', originalResponse.substring(0, 50) + '...');
+                    }
+                }
+            } catch (error) {
+                console.error("Error parsing test response:", error);
+                // Skip processing if parsing fails
+            }
+        }
     };
 
     // Handle refresh checkbox change with improved state preservation

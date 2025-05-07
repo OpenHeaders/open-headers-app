@@ -287,10 +287,10 @@ jobs:
           - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage) (.AppImage for any Linux distro)
           - [Debian/Ubuntu x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb) (.deb for Debian/Ubuntu)
           - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb) (.deb for Debian/Ubuntu)
-          
           - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm) (.rpm for Fedora/RHEL/CentOS)
           - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm) (.rpm for Fedora/RHEL/CentOS)
           
+           ### Other
           - [Installation Script](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/install-open-headers.sh) (Helper script for Linux .AppImage installation)
           
           ## 🚀 Installation & Startup

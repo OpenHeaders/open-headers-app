@@ -16,8 +16,13 @@ const ContentViewer = ({ source, open, onClose }) => {
 
     // Store our own internal copy of content to avoid the intermediate "Refreshing..." state
     const [internalContent, setInternalContent] = useState(null);
-    const [internalOriginalJson, setInternalOriginalJson] = useState(null);
+    const [internalOriginalResponse, setInternalOriginalResponse] = useState(null);
     const [responseHeaders, setResponseHeaders] = useState(null);
+
+    // Add variables to detect filtered content
+    const isFilteredContent = source?.isFiltered || source?.filteredWith ||
+        (source?.jsonFilter?.enabled && source?.jsonFilter?.path);
+    const filterPath = source?.jsonFilter?.path || source?.filteredWith || 'unknown';
 
     // Initialize or update internal content when source changes
     useEffect(() => {
@@ -39,16 +44,16 @@ const ContentViewer = ({ source, open, onClose }) => {
                 setInternalContent(source.sourceContent);
             }
 
-            if (source.originalResponse !== internalOriginalJson) {
-                setInternalOriginalJson(source.originalResponse);
+            if (source.originalResponse !== internalOriginalResponse) {
+                setInternalOriginalResponse(source.originalResponse);
             }
 
             // Try to extract headers from source
             extractHeaders(source);
         }
-    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalJson]);
+    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalResponse]);
 
-    // Extract headers from source or originalJson - Improved version
+    // Extract headers from source or originalResponse - Improved version
     const extractHeaders = (source) => {
         console.log("Attempting to extract headers for source:", source?.sourceId);
 
@@ -189,7 +194,7 @@ const ContentViewer = ({ source, open, onClose }) => {
     // Check if this is an HTTP source with JSON content
     const isHttpSource = source?.sourceType === 'http';
     const hasJsonFilter = source?.jsonFilter?.enabled && source?.jsonFilter?.path;
-    const hasOriginalJson = !!internalOriginalJson;
+    const hasOriginalResponse = !!internalOriginalResponse;
 
     // Content skeleton for loading state
     const ContentSkeleton = () => (
@@ -317,10 +322,23 @@ const ContentViewer = ({ source, open, onClose }) => {
             children: (
                 <div>
                     <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        {/* Always show JSON filter path info, display N/A if no filter is enabled */}
-                        <Text type="secondary" style={{ fontSize: 11 }}>
-                            JSON Filter Path: <code>{hasJsonFilter ? source?.jsonFilter?.path : 'N/A'}</code>
-                        </Text>
+                        {/* Updated indicator for filtered content */}
+                        {isFilteredContent ? (
+                            <div style={{
+                                backgroundColor: '#f0f8ff',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                marginBottom: '8px',
+                                fontSize: '12px',
+                                color: '#0066cc'
+                            }}>
+                                <Text strong>JSON Filtered:</Text> {filterPath}
+                            </div>
+                        ) : (
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                                JSON Filter Path: <code>N/A</code>
+                            </Text>
+                        )}
                         <Button
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
@@ -352,7 +370,7 @@ const ContentViewer = ({ source, open, onClose }) => {
     ];
 
     // Add original JSON tab for HTTP sources with JSON data
-    if (isHttpSource && hasOriginalJson) {
+    if (isHttpSource && hasOriginalResponse) {
         items.push({
             key: 'originalResponse',
             label: 'Response',
@@ -362,7 +380,7 @@ const ContentViewer = ({ source, open, onClose }) => {
                         <Button
                             size="small"
                             icon={copyingJson ? <CheckOutlined /> : <CopyOutlined />}
-                            onClick={() => handleCopy(internalOriginalJson || '', 'json')}
+                            onClick={() => handleCopy(internalOriginalResponse || '', 'json')}
                             type={copyingJson ? "success" : "default"}
                         >
                             {copyingJson ? 'Copied!' : 'Copy'}
@@ -382,7 +400,7 @@ const ContentViewer = ({ source, open, onClose }) => {
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>
-                        {formatJson(internalOriginalJson)}
+                        {formatJson(internalOriginalResponse)}
                     </pre>
                 </div>
             )
