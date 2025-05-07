@@ -331,6 +331,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                         ...values.requestOptions,
                         headers: values.requestOptions?.headers || source.requestOptions?.headers || [],
                         queryParams: values.requestOptions?.queryParams || source.requestOptions?.queryParams || [],
+                        variables: values.requestOptions?.variables || source.requestOptions?.variables || [],
                         body: values.requestOptions?.body || source.requestOptions?.body || null,
                         contentType: values.requestOptions?.contentType || source.requestOptions?.contentType || 'application/json'
                     },
@@ -395,6 +396,15 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                         console.log("Getting headers state from HttpOptions ref:", headers);
                         if (headers && headers.length > 0) {
                             sourceData.requestOptions.headers = headers;
+                        }
+                    }
+
+                    // If there's a getVariablesState method, use it to get the latest variables
+                    if (httpOptionsRef.current.getVariablesState) {
+                        const variables = httpOptionsRef.current.getVariablesState();
+                        console.log("Getting variables state from HttpOptions ref:", variables);
+                        if (variables && variables.length > 0) {
+                            sourceData.requestOptions.variables = variables;
                         }
                     }
                 }

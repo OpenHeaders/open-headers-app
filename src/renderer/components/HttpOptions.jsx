@@ -215,6 +215,30 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             return Array.isArray(headers) ? headers : [];
         },
 
+        // Method to get variables state
+        getVariablesState: () => {
+            // Get the current variables from the form
+            const variables = form.getFieldValue(['requestOptions', 'variables']);
+
+            // Log what we're returning for debugging
+            console.log('[HttpOptions] Getting variables state:', variables);
+
+            return Array.isArray(variables) ? variables : [];
+        },
+
+        // Method to force variables state
+        forceVariablesState: (variables) => {
+            console.log(`[HttpOptions] forceVariablesState called with ${variables?.length || 0} variables`);
+
+            // Update form values
+            if (Array.isArray(variables) && variables.length > 0) {
+                form.setFieldValue(['requestOptions', 'variables'], variables);
+                console.log('[HttpOptions] Directly set variables in form:', variables);
+            }
+
+            return true;
+        },
+
         getJsonFilterState: () => {
             // First check the direct Form value (most accurate)
             const jsonFilter = form.getFieldValue('jsonFilter');
@@ -303,12 +327,12 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                     console.log('[HttpOptions] Fixing missing headers in form');
                     form.setFieldValue(['requestOptions', 'headers'], []);
                 }
-            }
 
-            // Check for json filter
-            if (!currentValues.jsonFilter) {
-                console.log('[HttpOptions] Fixing missing jsonFilter in form');
-                form.setFieldValue('jsonFilter', { enabled: false, path: '' });
+                // Check for variables
+                if (!Array.isArray(currentValues.requestOptions.variables)) {
+                    console.log('[HttpOptions] Fixing missing variables in form');
+                    form.setFieldValue(['requestOptions', 'variables'], []);
+                }
             }
         } catch (err) {
             console.error('[HttpOptions] Error fixing form structure:', err);
@@ -986,10 +1010,25 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 console.log("[HttpOptions] Fixed missing queryParams array in form");
             }
 
+            // CRITICAL FIX: Ensure variables array is included and properly copied
+            if (!Array.isArray(values.requestOptions.variables)) {
+                // Get variables directly from the form field
+                const formVariables = form.getFieldValue(['requestOptions', 'variables']);
+                values.requestOptions.variables = Array.isArray(formVariables)
+                    ? JSON.parse(JSON.stringify(formVariables)) // Deep copy to avoid reference issues
+                    : [];
+                console.log("[HttpOptions] Fixed missing variables array, found variables:",
+                    values.requestOptions.variables.length);
+            }
+
             if (!values.jsonFilter) {
                 values.jsonFilter = { enabled: false, path: '' };
                 console.log("[HttpOptions] Fixed missing jsonFilter in form");
             }
+
+            // DEBUGGING: Log the complete variables array
+            console.log("[HttpOptions] Variables for HTTP request:",
+                JSON.stringify(values.requestOptions.variables));
 
             // Check if JSON filter is enabled but missing a path
             if (values.jsonFilter?.enabled === true && !values.jsonFilter?.path) {
@@ -1006,7 +1045,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 queryParams: {},
                 headers: {},
                 body: null,
-                contentType: values.requestOptions?.contentType || 'application/json'
+                contentType: values.requestOptions?.contentType || 'application/json',
+                // CRITICAL: Include the variables array explicitly
+                variables: values.requestOptions.variables || []
             };
 
             // Log the headers directly from the form for debugging
@@ -1016,6 +1057,10 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // IMPORTANT FIX: Also log queryParams directly from the form
             const formQueryParams = form.getFieldValue(['requestOptions', 'queryParams']);
             console.log("[HttpOptions] Query params direct from form:", formQueryParams);
+
+            // IMPORTANT FIX: Log variables directly from the form
+            const formVariables = form.getFieldValue(['requestOptions', 'variables']);
+            console.log("[HttpOptions] Variables direct from form:", formVariables);
 
             // Add query params if defined - FIX: Use formQueryParams directly
             if (Array.isArray(formQueryParams) && formQueryParams.length > 0) {
@@ -1036,7 +1081,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             }
             console.log("[HttpOptions] Query params after formatting:", requestOptions.queryParams);
 
-            // Add headers if defined
+            // Process headers from array format to object
             console.log("[HttpOptions] Full requestOptions from form:", JSON.stringify(values.requestOptions || {}, null, 2));
             console.log("[HttpOptions] Headers from form:", values.requestOptions?.headers);
 
@@ -1058,6 +1103,14 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 });
             }
             console.log("[HttpOptions] Headers after formatting:", requestOptions.headers);
+
+            // CRITICAL FIX: Make sure variables are explicitly included in the requestOptions
+            if (Array.isArray(formVariables) && formVariables.length > 0) {
+                console.log("[HttpOptions] Explicitly using variables from form field");
+                // Deep copy the variables to avoid reference issues
+                requestOptions.variables = JSON.parse(JSON.stringify(formVariables));
+                console.log(`[HttpOptions] Added ${requestOptions.variables.length} variables to request options`);
+            }
 
             // Add body if applicable
             if (['POST', 'PUT', 'PATCH'].includes(values.sourceMethod)) {
@@ -1096,6 +1149,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             console.log("[HttpOptions] Final JSON Filter for test:", jsonFilter);
             console.log("[HttpOptions] Making test request with headers:", requestOptions.headers);
             console.log("[HttpOptions] Making test request with query params:", requestOptions.queryParams);
+            console.log("[HttpOptions] Making test request with variables:", requestOptions.variables);
 
             // Make the test request
             const response = await http.testRequest(
@@ -1497,6 +1551,60 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                                     </Card>
                                 </Col>
                             </Row>
+                        )
+                    },
+                    {
+                        key: 'variables',
+                        label: 'Variables',
+                        children: (
+                            <Form.List name={['requestOptions', 'variables']}>
+                                {(fields, { add, remove }) => (
+                                    <>
+                                        {fields.map(({ key, name, ...restField }) => (
+                                            <Space
+                                                key={key}
+                                                style={{ display: 'flex', marginBottom: 8 }}
+                                                align="baseline"
+                                                size="small"
+                                            >
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'key']}
+                                                    rules={[{ required: true, message: 'Missing key' }]}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Variable name" size="small" />
+                                                </Form.Item>
+                                                <Form.Item
+                                                    {...restField}
+                                                    name={[name, 'value']}
+                                                    style={{ marginBottom: 0 }}
+                                                >
+                                                    <Input placeholder="Value" size="small" />
+                                                </Form.Item>
+                                                <MinusCircleOutlined
+                                                    onClick={() => remove(name)}
+                                                    style={{ color: '#ff4d4f' }}
+                                                />
+                                            </Space>
+                                        ))}
+                                        <Form.Item style={{ marginBottom: 0 }}>
+                                            <Button
+                                                type="dashed"
+                                                onClick={() => add()}
+                                                block
+                                                icon={<PlusOutlined />}
+                                                size="small"
+                                            >
+                                                Add Variable
+                                            </Button>
+                                        </Form.Item>
+                                        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(0, 0, 0, 0.45)' }}>
+                                            Use variables like <code>_VARIABLE_NAME</code> in URL, headers, query params, or body
+                                        </div>
+                                    </>
+                                )}
+                            </Form.List>
                         )
                     }
                 ]}
