@@ -10,13 +10,13 @@ const { Text } = Typography;
 const JsonViewer = ({ source, onRefresh }) => {
     // Get filtered and original data
     const filteredContent = source.sourceContent || '';
-    const originalJson = source.originalJson || '';
+    const originalResponse = source.originalResponse || '';
     const jsonFilterPath = source.jsonFilter?.path || '';
 
     // Use refs to track previous values for comparison
     const prevSourceIdRef = useRef(null);
     const prevContentRef = useRef(null);
-    const prevOriginalJsonRef = useRef(null);
+    const prevOriginalResponseRef = useRef(null);
 
     // Log only when component mounts or when important data changes
     useEffect(() => {
@@ -26,21 +26,21 @@ const JsonViewer = ({ source, onRefresh }) => {
         if (
             prevSourceIdRef.current !== sourceId ||
             prevContentRef.current !== filteredContent ||
-            prevOriginalJsonRef.current !== originalJson
+            prevOriginalResponseRef.current !== originalResponse
         ) {
             console.log("JsonViewer updated for source:", {
                 id: sourceId,
                 filteredContent: filteredContent ? filteredContent.substring(0, 50) + '...' : 'none',
-                originalJson: originalJson ? originalJson.substring(0, 50) + '...' : 'none',
+                originalResponse: originalResponse ? originalResponse.substring(0, 50) + '...' : 'none',
                 jsonFilterPath
             });
 
             // Update refs with current values
             prevSourceIdRef.current = sourceId;
             prevContentRef.current = filteredContent;
-            prevOriginalJsonRef.current = originalJson;
+            prevOriginalResponseRef.current = originalResponse;
         }
-    }, [source.sourceId, filteredContent, originalJson, jsonFilterPath]);
+    }, [source.sourceId, filteredContent, originalResponse, jsonFilterPath]);
 
     // Format JSON for display
     const formatJson = (jsonString) => {
@@ -114,7 +114,7 @@ const JsonViewer = ({ source, onRefresh }) => {
                         fontSize: 12,
                         borderRadius: 6
                     }}>
-                        {formatJson(originalJson)}
+                        {formatJson(originalResponse)}
                     </pre>
                 </Card>
             </Space>

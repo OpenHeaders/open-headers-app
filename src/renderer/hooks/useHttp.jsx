@@ -32,7 +32,7 @@ export function useHttp() {
     }, []);
 
     /**
-     * Apply JSON filter to a response body
+     * Apply JSON filter to a response body with improved error handling
      */
     const applyJsonFilter = useCallback((body, jsonFilter) => {
         // FIXED: Always normalize the filter object to ensure consistent behavior
@@ -66,6 +66,23 @@ export function useHttp() {
                 jsonObj = body;
             }
 
+            // IMPROVED: First check if this is an error response
+            if (jsonObj.error) {
+                console.log("Detected error response, checking if we should bypass filter");
+
+                // Create a more user-friendly message for errors
+                let errorMessage = `Error: ${jsonObj.error}`;
+                if (jsonObj.error_description) {
+                    errorMessage += ` - ${jsonObj.error_description}`;
+                } else if (jsonObj.message) {
+                    errorMessage += ` - ${jsonObj.message}`;
+                }
+
+                // Return the error message instead of trying to apply the filter
+                console.log("Returning user-friendly error message instead of applying filter");
+                return errorMessage;
+            }
+
             // Extract path (remove 'root.' prefix if present)
             const path = normalizedFilter.path.startsWith('root.')
                 ? normalizedFilter.path.substring(5)
@@ -91,27 +108,31 @@ export function useHttp() {
                     console.log(`Processing array part: ${propName}[${index}]`);
 
                     if (current[propName] === undefined) {
+                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' not found (property '${propName}' is missing)`);
-                        return `Path '${normalizedFilter.path}' not found (property '${propName}' is missing)`;
+                        return `The field "${path}" was not found in the response.`;
                     }
 
                     if (!Array.isArray(current[propName])) {
+                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' is invalid ('${propName}' is not an array)`);
-                        return `Path '${normalizedFilter.path}' is invalid ('${propName}' is not an array)`;
+                        return `The field "${propName}" exists but is not an array.`;
                     }
 
                     const idx = parseInt(index, 10);
                     if (idx >= current[propName].length) {
+                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' is invalid (index ${idx} out of bounds)`);
-                        return `Path '${normalizedFilter.path}' is invalid (index ${idx} out of bounds)`;
+                        return `The array index [${idx}] is out of bounds.`;
                     }
 
                     current = current[propName][idx];
                 } else {
                     console.log(`Processing object part: ${part}`);
                     if (current[part] === undefined) {
+                        // IMPROVED: Better error message format and more user-friendly
                         console.error(`Path '${normalizedFilter.path}' not found (property '${part}' is missing)`);
-                        return `Path '${normalizedFilter.path}' not found (property '${part}' is missing)`;
+                        return `The field "${part}" was not found in the response.`;
                     }
                     current = current[part];
                 }
@@ -127,7 +148,8 @@ export function useHttp() {
             }
         } catch (error) {
             console.error('Error applying JSON filter:', error);
-            return `Error applying filter: ${error.message}`;
+            // IMPROVED: More user-friendly error message
+            return `Could not filter response: ${error.message}`;
         }
     }, [parseJSON]);
 
@@ -298,6 +320,15 @@ export function useHttp() {
                 console.log(`Applying JSON filter with path: ${normalizedJsonFilter.path}`);
                 finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
                 console.log("Filtered content:", finalContent ? finalContent.substring(0, 200) + "..." : "empty");
+
+                return {
+                    content: finalContent,
+                    originalResponse: bodyContent,
+                    headers: headers,
+                    rawResponse: responseJson,
+                    filteredWith: normalizedJsonFilter.path, // Add this to match testRequest behavior
+                    isFiltered: true // Add an explicit flag
+                };
             } else {
                 // Log why we're not filtering
                 if (!normalizedJsonFilter.enabled) {
@@ -490,7 +521,7 @@ export function useHttp() {
                     ...response,
                     body: filteredContent,
                     filteredWith: jsonFilter.path,
-                    originalBody: bodyContent,
+                    originalResponse: bodyContent,  // Changed from originalBody to originalResponse for consistency
                     headers: headers
                 };
 
@@ -548,45 +579,75 @@ export function useHttp() {
         // Determine when next refresh should happen
         let nextRefresh = refreshOptions.nextRefresh;
 
-        // If we should NOT refresh immediately, set nextRefresh to future time
-        // This check prevents the immediate refresh when setting up a refresh
-        const skipImmediateRefresh = refreshOptions.skipImmediateRefresh === true;
+        // IMPORTANT FIX #3: Check if preserveTiming is explicitly disabled first
+        const explicitlyDisablePreserveTiming = refreshOptions.preserveTiming === false;
 
-        // Check for preserveTiming flag - this takes precedence over skipImmediateRefresh
-        const preserveTiming = refreshOptions.preserveTiming === true;
+        // If preserveTiming is explicitly disabled, we should NOT preserve timing
+        if (explicitlyDisablePreserveTiming) {
+            // Force a fresh timing calculation
+            nextRefresh = now + intervalMs;
+            console.log(`Source ${sourceId} requires fresh timing because preserveTiming=false - next refresh in ${Math.round(intervalMs / 1000)} seconds`);
+        }
+        // Otherwise, continue with normal logic
+        else {
+            // If we should NOT refresh immediately, set nextRefresh to future time
+            // This check prevents the immediate refresh when setting up a refresh
+            const skipImmediateRefresh = refreshOptions.skipImmediateRefresh === true;
 
-        console.log(`Source ${sourceId} configuration: skipImmediateRefresh=${skipImmediateRefresh}, preserveTiming=${preserveTiming}`);
+            // Check for preserveTiming flag - this takes precedence over skipImmediateRefresh
+            const preserveTiming = refreshOptions.preserveTiming === true;
 
-        // Check if we have a valid nextRefresh time
-        const hasValidNextRefresh = nextRefresh && nextRefresh > now;
+            // IMPORTANT NEW FIX: Check if this request uses TOTP authentication
+            // If TOTP is used, we should always skip immediate refresh to avoid TOTP reuse
+            const hasTOTPAuth = requestOptions && requestOptions.totpSecret &&
+                (requestOptions.body?.includes('_TOTP_CODE') ||
+                    url.includes('_TOTP_CODE') ||
+                    Object.values(requestOptions.headers || {}).some(val =>
+                        typeof val === 'string' && val.includes('_TOTP_CODE')
+                    ));
 
-        if (!hasValidNextRefresh) {
-            if (skipImmediateRefresh || preserveTiming) {
-                // If we should skip the immediate refresh, schedule for future
-                nextRefresh = now + intervalMs;
-                console.log(`Source ${sourceId} immediate refresh skipped - next refresh in ${Math.round(intervalMs / 1000)} seconds`);
-            } else {
-                // Schedule immediate refresh
-                nextRefresh = now;
-                console.log(`Source ${sourceId} needs immediate refresh - scheduling now`);
+            // Force skipImmediateRefresh if using TOTP
+            const shouldSkipImmediate = skipImmediateRefresh || hasTOTPAuth;
+
+            if (hasTOTPAuth) {
+                console.log(`Source ${sourceId} uses TOTP authentication - forcing skip of immediate refresh to prevent TOTP reuse`);
             }
-        } else {
-            // We have a valid future time for nextRefresh
-            console.log(`Source ${sourceId} has valid nextRefresh time: ${new Date(nextRefresh).toISOString()}`);
-            const timeUntilNextRefresh = Math.round((nextRefresh - now) / 1000);
-            console.log(`Source ${sourceId} will refresh in ${timeUntilNextRefresh} seconds (${Math.round(timeUntilNextRefresh/60)} minutes)`);
+
+            console.log(`Source ${sourceId} configuration: skipImmediateRefresh=${shouldSkipImmediate}, preserveTiming=${preserveTiming}`);
+
+            // Check if we have a valid nextRefresh time
+            const hasValidNextRefresh = nextRefresh && nextRefresh > now;
+
+            if (!hasValidNextRefresh) {
+                if (shouldSkipImmediate || preserveTiming) {
+                    // If we should skip the immediate refresh, schedule for future
+                    nextRefresh = now + intervalMs;
+                    console.log(`Source ${sourceId} immediate refresh skipped - next refresh in ${Math.round(intervalMs / 1000)} seconds`);
+                } else {
+                    // Schedule immediate refresh
+                    nextRefresh = now;
+                    console.log(`Source ${sourceId} needs immediate refresh - scheduling now`);
+                }
+            } else {
+                // We have a valid future time for nextRefresh
+                console.log(`Source ${sourceId} has valid nextRefresh time: ${new Date(nextRefresh).toISOString()}`);
+                const timeUntilNextRefresh = Math.round((nextRefresh - now) / 1000);
+                console.log(`Source ${sourceId} will refresh in ${timeUntilNextRefresh} seconds (${Math.round(timeUntilNextRefresh/60)} minutes)`);
+            }
         }
 
         const timeUntilRefresh = Math.max(0, nextRefresh - now);
 
         console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
 
+        // Rest of the function remains the same...
+
         // Set up initial timer
         const timer = setTimeout(async () => {
             try {
                 console.log(`Executing refresh for source ${sourceId}`);
                 // Perform refresh
-                const { content, originalJson, headers } = await request(
+                const { content, originalResponse, headers } = await request(
                     sourceId,
                     url,
                     method,
@@ -601,7 +662,7 @@ export function useHttp() {
                     const nextRefreshTime = updatedTimestamp + intervalMs;
 
                     onUpdate(sourceId, content, {
-                        originalJson,
+                        originalResponse, // Changed from originalJson to originalResponse
                         headers, // Pass headers to onUpdate
                         refreshOptions: {
                             ...refreshOptions,
@@ -617,7 +678,7 @@ export function useHttp() {
                 const regularTimer = setInterval(async () => {
                     try {
                         console.log(`Executing scheduled refresh for source ${sourceId}`);
-                        const { content, originalJson, headers } = await request(
+                        const { content, originalResponse, headers } = await request(
                             sourceId,
                             url,
                             method,
@@ -631,7 +692,7 @@ export function useHttp() {
                             const nextRefreshTime = updatedTimestamp + intervalMs;
 
                             onUpdate(sourceId, content, {
-                                originalJson,
+                                originalResponse, // Changed from originalJson to originalResponse
                                 headers, // Pass headers to onUpdate
                                 refreshOptions: {
                                     ...refreshOptions,

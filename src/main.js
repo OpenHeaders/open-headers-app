@@ -1142,113 +1142,233 @@ function handleGetAppPath() {
 }
 
 async function handleMakeHttpRequest(_, url, method, options = {}) {
-    return new Promise((resolve, reject) => {
-        try {
-            // Process URL and query parameters
-            const parsedUrl = new URL(url);
+    // Configure retry parameters
+    const MAX_RETRIES = 2;  // Maximum number of retry attempts
+    const RETRY_DELAY = 500;  // Delay between retries in milliseconds
 
-            // Add query parameters
-            if (options.queryParams) {
-                Object.entries(options.queryParams).forEach(([key, value]) => {
-                    if (value !== undefined && value !== null) {
-                        parsedUrl.searchParams.append(key, value);
-                    }
-                });
-            }
+    // Function to perform the actual request with retry logic
+    const performRequest = async (retryCount = 0) => {
+        return new Promise((resolve, reject) => {
+            try {
+                // Process URL and query parameters
+                const parsedUrl = new URL(url);
 
-            // Prepare request options
-            const requestOptions = {
-                method: method || 'GET',
-                hostname: parsedUrl.hostname,
-                port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-                path: parsedUrl.pathname + parsedUrl.search,
-                headers: {
-                    'User-Agent': 'OpenHeaders/1.0',
-                    ...options.headers
-                },
-                timeout: 10000 // 10 seconds timeout
-            };
-
-            // Prepare request body if needed
-            let requestBody = null;
-            if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
-                if (options.contentType === 'application/json') {
-                    requestBody = JSON.stringify(options.body);
-                    requestOptions.headers['Content-Type'] = 'application/json';
-                } else if (options.contentType === 'application/x-www-form-urlencoded') {
-                    requestBody = querystring.stringify(options.body);
-                    requestOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                // Add query parameters
+                if (options.queryParams) {
+                    Object.entries(options.queryParams).forEach(([key, value]) => {
+                        if (value !== undefined && value !== null) {
+                            parsedUrl.searchParams.append(key, value);
+                        }
+                    });
                 }
 
-                if (requestBody) {
-                    requestOptions.headers['Content-Length'] = Buffer.byteLength(requestBody);
-                }
-            }
+                // Prepare request options
+                const requestOptions = {
+                    method: method || 'GET',
+                    hostname: parsedUrl.hostname,
+                    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+                    path: parsedUrl.pathname + parsedUrl.search,
+                    headers: {
+                        'User-Agent': `OpenHeaders/${app.getVersion()}`,
+                        ...options.headers
+                    },
+                    timeout: 10000 // 10 seconds timeout
+                };
 
-            log.debug(`Making HTTP ${method} request to ${url}`);
+                // Prepare request body if needed
+                let requestBody = null;
+                if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
+                    if (options.contentType === 'application/x-www-form-urlencoded') {
+                        // Set Content-Type header
+                        requestOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-            // Make the request
-            const requester = parsedUrl.protocol === 'https:' ? https : http;
-            const req = requester.request(requestOptions, (res) => {
-                let data = '';
+                        // Check body format and handle appropriately
+                        if (typeof options.body === 'string') {
+                            // Format 1: Standard "key=value&key2=value2" format
+                            if (options.body.includes('=') && options.body.includes('&')) {
+                                requestBody = options.body;
+                            }
+                            // Format 2: Line-separated "key=value\nkey2=value2" format
+                            else if (options.body.includes('=') && options.body.includes('\n')) {
+                                requestBody = options.body.split('\n')
+                                    .filter(line => line.trim() !== '' && line.includes('='))
+                                    .join('&');
+                            }
+                            // Format 3 & 4: Colon-separated formats
+                            else if (options.body.includes(':')) {
+                                // Convert to object first
+                                const formData = {};
 
-                res.on('data', (chunk) => {
-                    data += chunk;
-                });
+                                // Split by lines
+                                const lines = options.body.split('\n')
 
-                res.on('end', () => {
-                    try {
-                        // Create headers object from the raw headers to preserve case
-                        const preservedHeaders = {};
-                        const rawHeaders = res.rawHeaders;
+                                lines.forEach(line => {
+                                    line = line.trim();
+                                    if (line === '') return;
 
-                        // rawHeaders is an array with alternating key, value pairs
-                        for (let i = 0; i < rawHeaders.length; i += 2) {
-                            const headerName = rawHeaders[i];
-                            const headerValue = rawHeaders[i + 1];
-                            preservedHeaders[headerName] = headerValue;
+                                    // Handle key:"value" format (with quotes)
+                                    if (line.includes(':"')) {
+                                        const colonPos = line.indexOf(':');
+                                        const key = line.substring(0, colonPos).trim();
+                                        // Extract value between quotes
+                                        const value = line.substring(colonPos + 2, line.lastIndexOf('"'));
+                                        formData[key] = value;
+                                    }
+                                    // Handle key:value format (without quotes)
+                                    else if (line.includes(':')) {
+                                        const parts = line.split(':');
+                                        if (parts.length >= 2) {
+                                            const key = parts[0].trim();
+                                            const value = parts.slice(1).join(':').trim();
+                                            formData[key] = value;
+                                        }
+                                    }
+                                });
+
+                                // Use the querystring module to properly encode the form data
+                                requestBody = querystring.stringify(formData);
+                            }
+                            // Any other string format - try as-is
+                            else {
+                                requestBody = options.body;
+                            }
+                        }
+                        // Handle object format
+                        else if (typeof options.body === 'object') {
+                            requestBody = querystring.stringify(options.body);
+                        }
+                        // Fallback for any other type
+                        else {
+                            requestBody = String(options.body);
                         }
 
-                        // Format response
-                        const response = {
-                            statusCode: res.statusCode,
-                            headers: preservedHeaders,
-                            body: data
-                        };
+                        console.log('Processed form data:', requestBody);
+                    }
+                    else if (options.contentType === 'application/json') {
+                        if (typeof options.body === 'string') {
+                            try {
+                                // Try to parse as JSON to validate
+                                JSON.parse(options.body);
+                                requestBody = options.body;
+                            } catch (e) {
+                                // If not valid JSON, stringify it
+                                requestBody = JSON.stringify(options.body);
+                            }
+                        } else {
+                            requestBody = JSON.stringify(options.body);
+                        }
+                        requestOptions.headers['Content-Type'] = 'application/json';
+                    }
+                    else {
+                        requestBody = typeof options.body === 'string'
+                            ? options.body
+                            : JSON.stringify(options.body);
+                        requestOptions.headers['Content-Type'] = options.contentType || 'text/plain';
+                    }
 
-                        log.debug(`HTTP response received: ${res.statusCode}`);
-                        resolve(JSON.stringify(response));
-                    } catch (err) {
-                        log.error('Failed to process response:', err);
-                        reject(new Error(`Failed to process response: ${err.message}`));
+                    if (requestBody) {
+                        requestOptions.headers['Content-Length'] = Buffer.byteLength(requestBody);
+                    }
+                }
+
+                // Make the request
+                const requester = parsedUrl.protocol === 'https:' ? https : http;
+                const req = requester.request(requestOptions, (res) => {
+                    let data = '';
+
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                    });
+
+                    res.on('end', () => {
+                        try {
+                            // Create headers object from the raw headers to preserve case
+                            const preservedHeaders = {};
+                            const rawHeaders = res.rawHeaders;
+
+                            // rawHeaders is an array with alternating key, value pairs
+                            for (let i = 0; i < rawHeaders.length; i += 2) {
+                                const headerName = rawHeaders[i];
+                                const headerValue = rawHeaders[i + 1];
+                                preservedHeaders[headerName] = headerValue;
+                            }
+
+                            // Format response
+                            const response = {
+                                statusCode: res.statusCode,
+                                headers: preservedHeaders,
+                                body: data
+                            };
+
+                            console.log(`HTTP response received: ${res.statusCode}`);
+                            resolve(JSON.stringify(response));
+                        } catch (err) {
+                            console.error('Failed to process response:', err);
+                            reject(new Error(`Failed to process response: ${err.message}`));
+                        }
+                    });
+                });
+
+                // Handle errors WITH RETRY LOGIC
+                req.on('error', (error) => {
+                    console.error(`HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+
+                    // Check if we should retry (connection reset or network error)
+                    const isRetryableError = error.code === 'ECONNRESET' ||
+                        error.code === 'ETIMEDOUT' ||
+                        error.code === 'ECONNREFUSED';
+
+                    if (isRetryableError && retryCount < MAX_RETRIES) {
+                        console.log(`Retrying request in ${RETRY_DELAY}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+
+                        // Wait and retry
+                        setTimeout(() => {
+                            performRequest(retryCount + 1)
+                                .then(resolve)
+                                .catch(reject);
+                        }, RETRY_DELAY);
+                    } else {
+                        // Max retries reached or non-retryable error
+                        reject(error);
                     }
                 });
-            });
 
-            // Handle errors
-            req.on('error', (error) => {
-                log.error('HTTP request error:', error);
+                // Handle timeout
+                req.on('timeout', () => {
+                    req.destroy();
+                    console.error(`Request timed out after ${requestOptions.timeout}ms`);
+
+                    // Check if we should retry
+                    if (retryCount < MAX_RETRIES) {
+                        console.log(`Retrying request in ${RETRY_DELAY}ms after timeout (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+
+                        // Wait and retry
+                        setTimeout(() => {
+                            performRequest(retryCount + 1)
+                                .then(resolve)
+                                .catch(reject);
+                        }, RETRY_DELAY);
+                    } else {
+                        // Max retries reached
+                        reject(new Error(`Request timed out after ${requestOptions.timeout}ms`));
+                    }
+                });
+
+                // Send body if present
+                if (requestBody) {
+                    req.write(requestBody);
+                }
+
+                req.end();
+            } catch (error) {
+                console.error('Error making HTTP request:', error);
                 reject(error);
-            });
-
-            // Handle timeout
-            req.on('timeout', () => {
-                req.destroy();
-                log.error(`Request timed out after ${requestOptions.timeout}ms`);
-                reject(new Error(`Request timed out after ${requestOptions.timeout}ms`));
-            });
-
-            // Send body if present
-            if (requestBody) {
-                req.write(requestBody);
             }
+        });
+    };
 
-            req.end();
-        } catch (error) {
-            log.error('Error making HTTP request:', error);
-            reject(error);
-        }
-    });
+    // Start the request process with retry capability
+    return performRequest();
 }
 
 async function handleSaveSettings(_, settings) {

@@ -414,6 +414,7 @@ export function SourceProvider({ children }) {
     }, [sources, initialized, validateSourceIds]);
 
     // Add new source
+    // Add new source
     const addSource = async (sourceData) => {
         try {
             // Check for duplicates
@@ -483,11 +484,21 @@ export function SourceProvider({ children }) {
                         // Make sure originalResponse and headers are also set if available
                         if (sourceData.originalResponse) {
                             if (isMounted.current) {
-                                const updateData = { originalResponse: sourceData.originalResponse };
+                                const updateData = {
+                                    originalResponse: sourceData.originalResponse,
+                                    isFiltered: sourceData.jsonFilter?.enabled === true
+                                };
+
+                                // Preserve filtering information
+                                if (sourceData.jsonFilter?.enabled === true) {
+                                    updateData.filteredWith = sourceData.jsonFilter.path;
+                                    debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
+                                }
 
                                 // If headers are provided, include them
                                 if (sourceData.headers) {
                                     updateData.headers = sourceData.headers;
+                                    console.log('Setting headers from test response:', sourceData.headers);
                                 }
 
                                 updateSourceContent(sourceId, initialContent, updateData);
@@ -508,7 +519,7 @@ export function SourceProvider({ children }) {
                         );
 
                         // Destructure with all possible properties
-                        const { content, originalResponse, headers, rawResponse } = result;
+                        const { content, originalResponse, headers, rawResponse, filteredWith, isFiltered } = result;
                         initialContent = content;
 
                         // Update with all available data
@@ -519,6 +530,13 @@ export function SourceProvider({ children }) {
                                 headers,
                                 rawResponse
                             };
+
+                            // Store filtering information explicitly for better UI handling
+                            if (sourceData.jsonFilter?.enabled === true) {
+                                updateData.isFiltered = true;
+                                updateData.filteredWith = sourceData.jsonFilter.path;
+                                debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
+                            }
 
                             // Log what we're storing
                             console.log(`Storing headers for source ${sourceId}:`, headers);
@@ -547,24 +565,24 @@ export function SourceProvider({ children }) {
                             enabled: true
                         };
 
-                        // Check if we should preserve existing timing (from imports)
+                        // We've JUST made a successful request, so ALWAYS skip immediate refresh
+                        // This is the key fix - force skipImmediateRefresh to true for new sources
+                        const skipImmediateRefresh = true;
+
+                        // Set up the first refresh time
                         const now = Date.now();
-                        const hasValidTimingData =
-                            sourceData.refreshOptions?.preserveTiming === true &&
-                            sourceData.refreshOptions?.nextRefresh &&
-                            sourceData.refreshOptions?.nextRefresh > now;
+                        const nextRefresh = now + (refreshInterval * 60 * 1000);
 
-                        // Skip immediate refresh if we're preserving timing
-                        const skipImmediateRefresh = hasValidTimingData;
+                        // Add explicit timestamps
+                        refreshOptions.lastRefresh = now;
+                        refreshOptions.nextRefresh = nextRefresh;
 
-                        // Log detailed information about timing preservation
-                        debugLog(`Setting up refresh for source ${sourceId}: interval=${refreshInterval}m, ` +
+                        // Log detailed information
+                        debugLog(`Setting up refresh for newly added source ${sourceId}: interval=${refreshInterval}m, ` +
                             `skipImmediateRefresh=${skipImmediateRefresh}, ` +
-                            `preserveTiming=${hasValidTimingData}, ` +
-                            `nextRefresh=${sourceData.refreshOptions?.nextRefresh ?
-                                new Date(sourceData.refreshOptions.nextRefresh).toISOString() : 'none'}`);
+                            `nextRefresh=${new Date(nextRefresh).toISOString()}`);
 
-                        // Setup refresh schedule
+                        // Setup refresh schedule with explicit skipImmediateRefresh flag
                         http.setupRefresh(
                             sourceId,
                             sourceData.sourcePath,
@@ -669,11 +687,12 @@ export function SourceProvider({ children }) {
                 path: sourceData.jsonFilter?.enabled ? (sourceData.jsonFilter.path || '') : ''
             };
 
-            // Debug log the normalized JSON filter
+            // Log the normalized JSON filter
             console.log(`Normalizing JSON filter for source ${sourceId}:`,
                 JSON.stringify(normalizedJsonFilter));
 
             // IMPORTANT NEW PART: Return a promise that resolves with the updated source
+            // Get TOTP values - collect from multiple sources
             return new Promise((resolve) => {
                 // Update state
                 if (isMounted.current) {
@@ -708,8 +727,17 @@ export function SourceProvider({ children }) {
                                     console.log(`Kept existing TOTP secret for source ${sourceId}`);
                                 }
 
+                                // IMPORTANT FIX #1: Check explicitly if preserveTiming is false
+                                // and make sure we don't accidentally override it
+                                const explicitlyDisablePreserveTiming =
+                                    sourceData.refreshOptions?.preserveTiming === false;
+
                                 // IMPORTANT: Check if we need to preserve refresh timing
-                                if (sourceData.refreshOptions && sourceData.refreshOptions.preserveTiming === true) {
+                                // Only do this if preserveTiming is not explicitly set to false
+                                if (!explicitlyDisablePreserveTiming &&
+                                    sourceData.refreshOptions &&
+                                    sourceData.refreshOptions.preserveTiming === true) {
+
                                     console.log(`Preserving refresh timing for source ${sourceId}`);
 
                                     // Make sure we preserve the nextRefresh time if it exists in both source data and original source
@@ -737,6 +765,14 @@ export function SourceProvider({ children }) {
                                         };
 
                                         console.log(`Using original source nextRefresh time: ${new Date(s.refreshOptions.nextRefresh).toISOString()}`);
+                                    }
+                                } else if (explicitlyDisablePreserveTiming) {
+                                    // Log that we're explicitly NOT preserving timing
+                                    console.log(`NOT preserving refresh timing for source ${sourceId} - explicitly disabled`);
+
+                                    // Make sure preserveTiming stays false
+                                    if (updatedSource.refreshOptions) {
+                                        updatedSource.refreshOptions.preserveTiming = false;
                                     }
                                 }
 
@@ -775,15 +811,21 @@ export function SourceProvider({ children }) {
                     const refreshInterval = parseInt(sourceData.refreshOptions?.interval || 0, 10);
 
                     if (isEnabled && refreshInterval > 0) {
-                        // Check if we're preserving timing
-                        const preserveTiming = sourceData.refreshOptions?.preserveTiming === true;
+                        // IMPORTANT FIX #2: Check if preserveTiming was explicitly disabled
+                        const explicitlyDisablePreserveTiming =
+                            sourceData.refreshOptions?.preserveTiming === false;
+
+                        // Only allow preserveTiming if it's explicitly true and not explicitly false
+                        const preserveTiming = !explicitlyDisablePreserveTiming &&
+                            sourceData.refreshOptions?.preserveTiming === true;
+
                         const skipImmediateRefresh = preserveTiming;
 
                         // Use our normalized jsonFilter for the refresh schedule
                         debugLog(`Setting up refresh schedule for updated source ${sourceId} with jsonFilter: ${
                             JSON.stringify(normalizedJsonFilter)}`);
 
-                        // Create refresh options, preserving the nextRefresh time if available
+                        // Create refresh options, preserving the nextRefresh time if available and allowed
                         const refreshOptionsForSetup = {
                             ...sourceData.refreshOptions,
                             skipImmediateRefresh: skipImmediateRefresh
@@ -899,7 +941,7 @@ export function SourceProvider({ children }) {
                             'disabled');
 
                     // Make the request with the properly formatted jsonFilter
-                    const { content, originalJson, headers } = await http.request(
+                    const { content, originalResponse, headers } = await http.request(
                         sourceId,
                         source.sourcePath,
                         source.sourceMethod,
@@ -910,7 +952,7 @@ export function SourceProvider({ children }) {
                     if (isMounted.current) {
                         debugLog(`HTTP refresh completed for source ${sourceId}`);
                         updateSourceContent(sourceId, content, {
-                            originalJson,
+                            originalResponse,
                             headers
                         });
                     }
@@ -1215,9 +1257,9 @@ export function SourceProvider({ children }) {
                         refreshOptions: sourceData.refreshOptions || { enabled: false, interval: 0 }
                     };
 
-                    // Preserve originalJson if available
-                    if (sourceData.originalJson) {
-                        cleanSourceData.originalJson = sourceData.originalJson;
+                    // Preserve originalResponse if available
+                    if (sourceData.originalResponse) {
+                        cleanSourceData.originalResponse = sourceData.originalResponse;
                     }
 
                     // Preserve headers if available
