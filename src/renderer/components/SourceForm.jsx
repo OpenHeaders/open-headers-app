@@ -109,7 +109,7 @@ const SourceForm = ({ onAddSource }) => {
                 // Make a deep copy of request options to avoid reference issues
                 sourceData.requestOptions = JSON.parse(JSON.stringify(values.requestOptions || {}));
 
-                // Ensure headers and queryParams are properly formatted
+                // Ensure headers, queryParams and variables are properly formatted
                 if (!sourceData.requestOptions.headers) {
                     sourceData.requestOptions.headers = [];
                 }
@@ -118,11 +118,26 @@ const SourceForm = ({ onAddSource }) => {
                     sourceData.requestOptions.queryParams = [];
                 }
 
+                // Add variables array initialization
+                if (!sourceData.requestOptions.variables) {
+                    sourceData.requestOptions.variables = [];
+                }
+
+                // Check if we have variables
+                if (sourceData.requestOptions.variables && sourceData.requestOptions.variables.length > 0) {
+                    console.log("Variables being sent:", JSON.stringify(sourceData.requestOptions.variables, null, 2));
+                }
+
                 console.log("Request options being sent:", JSON.stringify(sourceData.requestOptions, null, 2));
 
                 // Check if we have headers
                 if (sourceData.requestOptions.headers && sourceData.requestOptions.headers.length > 0) {
                     console.log("Headers being sent:", JSON.stringify(sourceData.requestOptions.headers, null, 2));
+                }
+
+                // Check if we have variables
+                if (sourceData.requestOptions.variables && sourceData.requestOptions.variables.length > 0) {
+                    console.log("Variables being sent:", JSON.stringify(sourceData.requestOptions.variables, null, 2));
                 }
 
                 sourceData.jsonFilter = values.jsonFilter || { enabled: false, path: '' };

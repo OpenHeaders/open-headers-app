@@ -414,7 +414,6 @@ export function SourceProvider({ children }) {
     }, [sources, initialized, validateSourceIds]);
 
     // Add new source
-    // Add new source
     const addSource = async (sourceData) => {
         try {
             // Check for duplicates
@@ -473,84 +472,43 @@ export function SourceProvider({ children }) {
             }
             else if (sourceData.sourceType === 'http') {
                 try {
-                    // For HTTP sources with auto-refresh, set up refresh and immediate request if needed
-                    const isEnabled = sourceData.refreshOptions?.enabled || false;
-                    const interval = sourceData.refreshOptions?.interval || 0;
+                    // ALWAYS make a fresh HTTP request, regardless of test data
+                    debugLog(`Making fresh HTTP request for source ${sourceId}`);
 
-                    // For HTTP sources, optionally use initial content from test
-                    if (sourceData.initialContent) {
-                        initialContent = sourceData.initialContent;
+                    const result = await http.request(
+                        sourceId,
+                        sourceData.sourcePath,
+                        sourceData.sourceMethod,
+                        sourceData.requestOptions,
+                        sourceData.jsonFilter
+                    );
 
-                        // Make sure originalResponse and headers are also set if available
-                        if (sourceData.originalResponse) {
-                            if (isMounted.current) {
-                                const updateData = {
-                                    originalResponse: sourceData.originalResponse,
-                                    isFiltered: sourceData.jsonFilter?.enabled === true
-                                };
+                    // Destructure with all possible properties
+                    const { content, originalResponse, headers, rawResponse, filteredWith, isFiltered } = result;
+                    initialContent = content;
 
-                                // Preserve filtering information
-                                if (sourceData.jsonFilter?.enabled === true) {
-                                    updateData.filteredWith = sourceData.jsonFilter.path;
-                                    debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
-                                }
+                    // Update with all available data
+                    if (isMounted.current) {
+                        debugLog(`Updating source ${sourceId} with HTTP response`);
+                        const updateData = {
+                            originalResponse,
+                            headers,
+                            rawResponse
+                        };
 
-                                // If headers are provided, include them
-                                if (sourceData.headers) {
-                                    updateData.headers = sourceData.headers;
-                                    console.log('Setting headers from test response:', sourceData.headers);
-                                }
-
-                                updateSourceContent(sourceId, initialContent, updateData);
-                            }
-                            return true;
+                        // Store filtering information explicitly for better UI handling
+                        if (sourceData.jsonFilter?.enabled === true) {
+                            updateData.isFiltered = true;
+                            updateData.filteredWith = sourceData.jsonFilter.path;
+                            debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
                         }
-                    }
 
-                    // Otherwise make a fresh HTTP request
-                    debugLog(`Making HTTP request for source ${sourceId}`);
-                    try {
-                        const result = await http.request(
-                            sourceId,
-                            sourceData.sourcePath,
-                            sourceData.sourceMethod,
-                            sourceData.requestOptions,
-                            sourceData.jsonFilter
-                        );
+                        // Log what we're storing
+                        console.log(`Storing headers for source ${sourceId}:`, headers);
+                        console.log(`Storing originalResponse for source ${sourceId}:`,
+                            updateData.originalResponse ? updateData.originalResponse.substring(0, 50) + '...' : 'undefined');
 
-                        // Destructure with all possible properties
-                        const { content, originalResponse, headers, rawResponse, filteredWith, isFiltered } = result;
-                        initialContent = content;
-
-                        // Update with all available data
-                        if (isMounted.current) {
-                            debugLog(`Updating source ${sourceId} with HTTP response`);
-                            const updateData = {
-                                originalResponse,
-                                headers,
-                                rawResponse
-                            };
-
-                            // Store filtering information explicitly for better UI handling
-                            if (sourceData.jsonFilter?.enabled === true) {
-                                updateData.isFiltered = true;
-                                updateData.filteredWith = sourceData.jsonFilter.path;
-                                debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
-                            }
-
-                            // Log what we're storing
-                            console.log(`Storing headers for source ${sourceId}:`, headers);
-                            console.log(`Storing originalResponse for source ${sourceId}:`,
-                                updateData.originalResponse ? updateData.originalResponse.substring(0, 50) + '...' : 'undefined');
-
-                            updateSourceContent(sourceId, initialContent, updateData);
-                        }
-                    } catch (error) {
-                        console.error(`Error making HTTP request for source ${sourceId}:`, error);
-                        initialContent = `Error: ${error.message}`;
-                        if (isMounted.current) {
-                            updateSourceContent(sourceId, initialContent);
-                        }
+                        updateSourceContent(sourceId, initialContent, updateData);
                     }
 
                     // Set up refresh if enabled and interval > 0
@@ -566,7 +524,6 @@ export function SourceProvider({ children }) {
                         };
 
                         // We've JUST made a successful request, so ALWAYS skip immediate refresh
-                        // This is the key fix - force skipImmediateRefresh to true for new sources
                         const skipImmediateRefresh = true;
 
                         // Set up the first refresh time
@@ -599,8 +556,12 @@ export function SourceProvider({ children }) {
 
                     return true;
                 } catch (error) {
+                    console.error(`Error making HTTP request for source ${sourceId}:`, error);
                     initialContent = `Error: ${error.message}`;
-                    console.error(`Error setting up HTTP source ${sourceId}:`, error);
+                    if (isMounted.current) {
+                        updateSourceContent(sourceId, initialContent);
+                    }
+                    return false;
                 }
             }
 
