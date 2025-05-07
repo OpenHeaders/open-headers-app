@@ -153,6 +153,36 @@ export function useHttp() {
         }
     }, [parseJSON]);
 
+    const substituteVariables = (text, variables, totpCode = null) => {
+        if (!text) return text;
+
+        let result = text;
+
+        console.log(`Starting substitution on: '${text}'`);
+        console.log(`With variables: ${JSON.stringify(variables)}`);
+
+        // First replace TOTP code if available
+        if (totpCode) {
+            result = result.replace(/_TOTP_CODE/g, totpCode);
+        }
+
+        // Then replace all variables
+        if (Array.isArray(variables) && variables.length > 0) {
+            variables.forEach(variable => {
+                if (variable && variable.key && variable.value !== undefined) {
+                    // Use regular expression with global flag for reliable replacement
+                    const regex = new RegExp(variable.key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+                    result = result.replace(regex, variable.value);
+                    console.log(`Substituted ${variable.key} with ${variable.value}`);
+                }
+            });
+        }
+
+        console.log(`Final result after substitution: '${result}'`);
+        return result;
+    };
+
+
     /**
      * Make HTTP request - Clean refactored version
      */
@@ -178,17 +208,24 @@ export function useHttp() {
                     ...requestOptions,
                     headers: requestOptions.headers ? "headers present" : "no headers",
                     queryParams: requestOptions.queryParams ? "params present" : "no params",
-                    totpSecret: requestOptions.totpSecret ? "present" : "not present"
+                    totpSecret: requestOptions.totpSecret ? "present" : "not present",
+                    variables: requestOptions.variables ? `${requestOptions.variables.length} variables` : "no variables"
                 },
                 jsonFilter: JSON.stringify(normalizedJsonFilter)
             });
 
-            // Log jsonFilter state
-            if (normalizedJsonFilter.enabled) {
-                console.log(`JSON filter will be applied for source ${sourceId}: path=${normalizedJsonFilter.path}`);
-            } else {
-                console.log(`No JSON filter will be applied for source ${sourceId}`);
-            }
+            // Store variables array explicitly and make a deep copy
+            const variables = Array.isArray(requestOptions.variables)
+                ? JSON.parse(JSON.stringify(requestOptions.variables))
+                : [];
+
+            console.log(`Source ${sourceId} has ${variables.length} variables for substitution`);
+
+            // CRITICAL DEBUGGING: Log the actual variables array content
+            console.log("VARIABLES DETAILS for request:");
+            console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
+            console.log("Extracted variables array:", JSON.stringify(variables));
+            variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
 
             // Format options
             const formattedOptions = {
@@ -208,15 +245,23 @@ export function useHttp() {
 
                     if (totpCode && totpCode !== 'ERROR') {
                         console.log(`Generated TOTP code for source ${sourceId}: ${totpCode}`);
-                        if (url.includes('_TOTP_CODE')) {
-                            url = url.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in URL for source ${sourceId}`);
-                        }
                     } else {
                         console.error(`Failed to generate TOTP code for source ${sourceId}`);
                     }
                 } catch (totpError) {
                     console.error(`Error generating TOTP code: ${totpError.message}`);
+                }
+            }
+
+            // Perform variable substitution in URL
+            let originalUrl = url;
+            if (url.includes('_TOTP_CODE') || variables.length > 0) {
+                console.log(`URL before substitution: ${url}`);
+                url = substituteVariables(url, variables, totpCode);
+                console.log(`URL after substitution: ${url}`);
+
+                if (url !== originalUrl) {
+                    console.log(`Variable substitution performed in URL for source ${sourceId}`);
                 }
             }
 
@@ -226,10 +271,10 @@ export function useHttp() {
                 requestOptions.headers.forEach(header => {
                     if (header && header.key) {
                         let headerValue = header.value || '';
-                        if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                            headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in header "${header.key}" for source ${sourceId}`);
-                        }
+                        console.log(`Header before substitution: ${header.key} = ${headerValue}`);
+                        // Apply variable substitution to header value
+                        headerValue = substituteVariables(headerValue, variables, totpCode);
+                        console.log(`Header after substitution: ${header.key} = ${headerValue}`);
                         formattedOptions.headers[header.key] = headerValue;
                         console.log(`Added header: ${header.key} = ${formattedOptions.headers[header.key]}`);
                     }
@@ -237,10 +282,10 @@ export function useHttp() {
             } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
                 Object.entries(requestOptions.headers).forEach(([key, value]) => {
                     let headerValue = value || '';
-                    if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                        headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                        console.log(`TOTP code substituted in header "${key}" for source ${sourceId}`);
-                    }
+                    console.log(`Header before substitution: ${key} = ${headerValue}`);
+                    // Apply variable substitution to header value
+                    headerValue = substituteVariables(headerValue, variables, totpCode);
+                    console.log(`Header after substitution: ${key} = ${headerValue}`);
                     formattedOptions.headers[key] = headerValue;
                 });
                 console.log("Headers already in object format:", formattedOptions.headers);
@@ -248,43 +293,49 @@ export function useHttp() {
 
             // Process query params from array format to object
             if (Array.isArray(requestOptions.queryParams)) {
+                console.log("Processing query params array:", requestOptions.queryParams);
                 requestOptions.queryParams.forEach(param => {
                     if (param && param.key) {
                         let paramValue = param.value || '';
-                        if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                            paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in query param "${param.key}" for source ${sourceId}`);
-                        }
+                        console.log(`Query param before substitution: ${param.key} = ${paramValue}`);
+                        // Apply variable substitution to param value
+                        paramValue = substituteVariables(paramValue, variables, totpCode);
+                        console.log(`Query param after substitution: ${param.key} = ${paramValue}`);
                         formattedOptions.queryParams[param.key] = paramValue;
+                        console.log(`Added query param: ${param.key} = ${paramValue}`);
                     }
                 });
             } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
                 Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
                     let paramValue = value || '';
-                    if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                        paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                        console.log(`TOTP code substituted in query param "${key}" for source ${sourceId}`);
-                    }
+                    console.log(`Query param before substitution: ${key} = ${paramValue}`);
+                    // Apply variable substitution to param value
+                    paramValue = substituteVariables(paramValue, variables, totpCode);
+                    console.log(`Query param after substitution: ${key} = ${paramValue}`);
                     formattedOptions.queryParams[key] = paramValue;
                 });
             }
 
-            // Process body for TOTP code substitution if available
-            if (requestOptions.body && totpCode) {
+            // Process body for variable substitution
+            if (requestOptions.body) {
                 let bodyContent = requestOptions.body;
-                if (typeof bodyContent === 'string' && bodyContent.includes('_TOTP_CODE')) {
-                    bodyContent = bodyContent.replace(/_TOTP_CODE/g, totpCode);
+                if (typeof bodyContent === 'string') {
+                    console.log(`Body before substitution: ${bodyContent.substring(0, 50)}...`);
+                    // Apply variable substitution to body content
+                    bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                    console.log(`Body after substitution: ${bodyContent.substring(0, 50)}...`);
                     formattedOptions.body = bodyContent;
-                    console.log(`TOTP code substituted in request body for source ${sourceId}`);
+                    console.log(`Variable substitution in request body for source ${sourceId}`);
                 } else {
                     formattedOptions.body = requestOptions.body;
                 }
-            } else {
-                formattedOptions.body = requestOptions.body;
             }
 
             // Copy other request options
             formattedOptions.contentType = requestOptions.contentType || 'application/json';
+
+            // Very important: preserve variables in the formatted options
+            formattedOptions.variables = variables;
 
             // Make sure we don't include the TOTP secret in the actual request
             delete formattedOptions.totpSecret;
@@ -300,7 +351,7 @@ export function useHttp() {
             const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
             console.log("Raw response:", responseJson.substring(0, 200) + "...");
 
-            // Parse response
+            // Process response as before
             const response = parseJSON(responseJson);
             if (!response) {
                 throw new Error('Invalid response format');
@@ -326,8 +377,8 @@ export function useHttp() {
                     originalResponse: bodyContent,
                     headers: headers,
                     rawResponse: responseJson,
-                    filteredWith: normalizedJsonFilter.path, // Add this to match testRequest behavior
-                    isFiltered: true // Add an explicit flag
+                    filteredWith: normalizedJsonFilter.path,
+                    isFiltered: true
                 };
             } else {
                 // Log why we're not filtering
@@ -361,6 +412,11 @@ export function useHttp() {
      */
     const testRequest = useCallback(async (url, method, requestOptions, jsonFilter) => {
         try {
+            // Store variables array explicitly and make a deep copy to avoid reference issues
+            const variables = Array.isArray(requestOptions.variables)
+                ? JSON.parse(JSON.stringify(requestOptions.variables))
+                : [];
+
             console.log("Testing HTTP request:", {
                 url,
                 method,
@@ -368,10 +424,18 @@ export function useHttp() {
                     ...requestOptions,
                     headers: requestOptions.headers ? "headers present" : "no headers",
                     queryParams: Object.keys(requestOptions.queryParams || {}).length > 0 ? "params present" : "no params",
-                    totpSecret: requestOptions.totpSecret ? "present" : "not present"
+                    totpSecret: requestOptions.totpSecret ? "present" : "not present",
+                    variables: variables.length > 0 ? `${variables.length} variables` : "no variables"
                 },
                 jsonFilter
             });
+
+            // CRITICAL DEBUGGING: Log the actual variables array content
+            console.log("VARIABLES DETAILS:");
+            console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
+            console.log("Extracted variables array:", JSON.stringify(variables));
+            console.log("Variable array length:", variables.length);
+            variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
 
             // Format options
             const formattedOptions = {
@@ -391,15 +455,23 @@ export function useHttp() {
 
                     if (totpCode && totpCode !== 'ERROR') {
                         console.log(`Generated TOTP code for test request: ${totpCode}`);
-                        if (url.includes('_TOTP_CODE')) {
-                            url = url.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test URL`);
-                        }
                     } else {
                         console.error(`Failed to generate TOTP code for test request`);
                     }
                 } catch (totpError) {
                     console.error(`Error generating TOTP code for test: ${totpError.message}`);
+                }
+            }
+
+            // Perform variable substitution in URL
+            let originalUrl = url;
+            if (url.includes('_TOTP_CODE') || variables.length > 0) {
+                console.log(`URL before substitution: ${url}`);
+                url = substituteVariables(url, variables, totpCode);
+                console.log(`URL after substitution: ${url}`);
+
+                if (url !== originalUrl) {
+                    console.log(`Variable substitution performed in test URL`);
                 }
             }
 
@@ -409,10 +481,10 @@ export function useHttp() {
                 requestOptions.headers.forEach(header => {
                     if (header && header.key) {
                         let headerValue = header.value || '';
-                        if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                            headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test header "${header.key}"`);
-                        }
+                        console.log(`Header before substitution: ${header.key} = ${headerValue}`);
+                        // Apply variable substitution to header value
+                        headerValue = substituteVariables(headerValue, variables, totpCode);
+                        console.log(`Header after substitution: ${header.key} = ${headerValue}`);
                         formattedOptions.headers[header.key] = headerValue;
                         console.log(`Added test header: ${header.key} = ${formattedOptions.headers[header.key]}`);
                     }
@@ -420,10 +492,10 @@ export function useHttp() {
             } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
                 Object.entries(requestOptions.headers).forEach(([key, value]) => {
                     let headerValue = value || '';
-                    if (totpCode && headerValue.includes('_TOTP_CODE')) {
-                        headerValue = headerValue.replace(/_TOTP_CODE/g, totpCode);
-                        console.log(`TOTP code substituted in test header "${key}"`);
-                    }
+                    console.log(`Header before substitution: ${key} = ${headerValue}`);
+                    // Apply variable substitution to header value
+                    headerValue = substituteVariables(headerValue, variables, totpCode);
+                    console.log(`Header after substitution: ${key} = ${headerValue}`);
                     formattedOptions.headers[key] = headerValue;
                 });
                 console.log("Test headers already in object format:", formattedOptions.headers);
@@ -433,47 +505,58 @@ export function useHttp() {
             if (requestOptions.queryParams) {
                 if (Array.isArray(requestOptions.queryParams)) {
                     console.log("Processing query params array for test request:", requestOptions.queryParams);
+                    console.log("Available variables for substitution:", JSON.stringify(variables));
+
                     requestOptions.queryParams.forEach(param => {
                         if (param && param.key) {
                             let paramValue = param.value || '';
-                            if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                                paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                                console.log(`TOTP code substituted in test query param "${param.key}"`);
-                            }
+                            console.log(`Before substitution: param ${param.key} = ${paramValue}`);
+
+                            // Apply variable substitution to param value
+                            paramValue = substituteVariables(paramValue, variables, totpCode);
+
+                            console.log(`After substitution: param ${param.key} = ${paramValue}`);
                             formattedOptions.queryParams[param.key] = paramValue;
                             console.log(`Added test query param: ${param.key} = ${paramValue}`);
                         }
                     });
                 } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
                     console.log("Processing query params object for test request:", requestOptions.queryParams);
+                    console.log("Available variables for substitution:", JSON.stringify(variables));
+
                     Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
                         let paramValue = value || '';
-                        if (totpCode && paramValue.includes('_TOTP_CODE')) {
-                            paramValue = paramValue.replace(/_TOTP_CODE/g, totpCode);
-                            console.log(`TOTP code substituted in test query param "${key}"`);
-                        }
+                        console.log(`Before substitution: param ${key} = ${paramValue}`);
+
+                        // Apply variable substitution to param value
+                        paramValue = substituteVariables(paramValue, variables, totpCode);
+
+                        console.log(`After substitution: param ${key} = ${paramValue}`);
                         formattedOptions.queryParams[key] = paramValue;
-                        console.log(`Added test query param: ${key} = ${paramValue}`);
                     });
                 }
             }
 
-            // Process body for TOTP code substitution if available
-            if (requestOptions.body && totpCode) {
+            // Process body for variable substitution
+            if (requestOptions.body) {
                 let bodyContent = requestOptions.body;
-                if (typeof bodyContent === 'string' && bodyContent.includes('_TOTP_CODE')) {
-                    bodyContent = bodyContent.replace(/_TOTP_CODE/g, totpCode);
+                if (typeof bodyContent === 'string') {
+                    console.log(`Body before substitution: ${bodyContent.substring(0, 50)}...`);
+                    // Apply variable substitution to body content
+                    bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                    console.log(`Body after substitution: ${bodyContent.substring(0, 50)}...`);
                     formattedOptions.body = bodyContent;
-                    console.log(`TOTP code substituted in test request body`);
+                    console.log(`Variable substitution in test request body`);
                 } else {
                     formattedOptions.body = requestOptions.body;
                 }
-            } else {
-                formattedOptions.body = requestOptions.body;
             }
 
             // Copy other request options
             formattedOptions.contentType = requestOptions.contentType || 'application/json';
+
+            // Very important: preserve variables in the formatted options for the request
+            formattedOptions.variables = variables;
 
             // Make sure we don't include the TOTP secret in the actual request
             delete formattedOptions.totpSecret;
@@ -535,8 +618,8 @@ export function useHttp() {
             throw error;
         }
     }, [parseJSON, applyJsonFilter]);
-
     /**
+     *
      * Cancel a refresh timer
      */
     const cancelRefresh = useCallback((sourceId) => {
