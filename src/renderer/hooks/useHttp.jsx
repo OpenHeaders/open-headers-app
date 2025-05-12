@@ -11,11 +11,18 @@ export function useHttp() {
     useEffect(() => {
         return () => {
             // Clear all timers when component unmounts
-            for (const timer of refreshTimers.current.values()) {
-                clearTimeout(timer);
-                clearInterval(timer);
+            const timerCount = refreshTimers.current.size;
+            if (timerCount > 0) {
+                console.log(`Cleaning up ${timerCount} refresh timers on useHttp unmount`);
+
+                for (const [sourceId, timer] of refreshTimers.current.entries()) {
+                    clearTimeout(timer);
+                    clearInterval(timer);
+                    console.log(`Cleaned up timer for source ${sourceId}`);
+                }
+
+                refreshTimers.current.clear();
             }
-            refreshTimers.current.clear();
         };
     }, []);
 
@@ -619,19 +626,53 @@ export function useHttp() {
         }
     }, [parseJSON, applyJsonFilter]);
     /**
-     *
-     * Cancel a refresh timer
+     * Cancel a refresh timer and ensure all resources are properly cleaned up
+     * Returns true if a timer was found and cancelled, false otherwise
      */
     const cancelRefresh = useCallback((sourceId) => {
+        // Get the timer reference from our map
         const timer = refreshTimers.current.get(sourceId);
+
         if (timer) {
+            // Clear both timeout and interval to be safe
+            // This ensures we catch all timer types
             clearTimeout(timer);
             clearInterval(timer);
+
+            // Remove from our map
             refreshTimers.current.delete(sourceId);
+
             console.log(`Cancelled refresh timer for source ${sourceId}`);
             return true;
+        } else {
+            console.log(`No active timer found for source ${sourceId}`);
+            return false;
         }
-        return false;
+    }, []);
+
+    /**
+     * Helper function to cancel all refresh timers
+     * Useful for component unmount or app shutdown
+     */
+    const cancelAllRefreshes = useCallback(() => {
+        const timerCount = refreshTimers.current.size;
+
+        if (timerCount > 0) {
+            console.log(`Cancelling all ${timerCount} active refresh timers`);
+
+            // Clear all timers
+            for (const [sourceId, timer] of refreshTimers.current.entries()) {
+                clearTimeout(timer);
+                clearInterval(timer);
+                console.log(`Cancelled timer for source ${sourceId}`);
+            }
+
+            // Clear the map
+            refreshTimers.current.clear();
+            return timerCount;
+        }
+
+        return 0;
     }, []);
 
     /**
@@ -651,6 +692,7 @@ export function useHttp() {
 
         // Only proceed if interval > 0
         if (!refreshOptions || refreshOptions.interval <= 0) {
+            console.log(`Skipping refresh setup for source ${sourceId} - interval is zero or not specified`);
             return;
         }
 
@@ -719,16 +761,36 @@ export function useHttp() {
             }
         }
 
-        const timeUntilRefresh = Math.max(0, nextRefresh - now);
+        // IMPORTANT: Handle case when the nextRefresh time is in the past
+        if (nextRefresh <= now) {
+            console.log(`Source ${sourceId} nextRefresh time (${new Date(nextRefresh).toISOString()}) is in the past, performing immediate refresh...`);
 
-        console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
+            // Add a small delay before executing the refresh to ensure the component is fully mounted
+            // This helps prevent race conditions during app startup
+            const timer = setTimeout(() => {
+                console.log(`Executing delayed immediate refresh for source ${sourceId}`);
+                executeRefresh();
+            }, 1000); // 1 second delay
 
-        // Rest of the function remains the same...
+            refreshTimers.current.set(sourceId, timer);
+        } else {
+            // Set up a timer for future refresh
+            const timeUntilRefresh = nextRefresh - now;
+            console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
 
-        // Set up initial timer
-        const timer = setTimeout(async () => {
+            // Set up initial timer (single execution)
+            const timer = setTimeout(executeRefresh, timeUntilRefresh);
+            refreshTimers.current.set(sourceId, timer);
+        }
+
+        // Function to execute a refresh and then set up a regular interval
+        async function executeRefresh() {
             try {
                 console.log(`Executing refresh for source ${sourceId}`);
+
+                // Store a flag to identify if this is a recurring interval
+                let isRecurringInterval = false;
+
                 // Perform refresh
                 const { content, originalResponse, headers } = await request(
                     sourceId,
@@ -738,15 +800,14 @@ export function useHttp() {
                     jsonFilter
                 );
 
-                // Update content
+                // Update content and set up next refresh time
                 if (onUpdate) {
-                    // Include the next refresh time in the update
                     const updatedTimestamp = Date.now();
                     const nextRefreshTime = updatedTimestamp + intervalMs;
 
                     onUpdate(sourceId, content, {
-                        originalResponse, // Changed from originalJson to originalResponse
-                        headers, // Pass headers to onUpdate
+                        originalResponse,
+                        headers,
                         refreshOptions: {
                             ...refreshOptions,
                             lastRefresh: updatedTimestamp,
@@ -755,68 +816,88 @@ export function useHttp() {
                             preserveTiming: false
                         }
                     });
-                }
 
-                // Set up regular interval
-                const regularTimer = setInterval(async () => {
-                    try {
-                        console.log(`Executing scheduled refresh for source ${sourceId}`);
-                        const { content, originalResponse, headers } = await request(
-                            sourceId,
-                            url,
-                            method,
-                            requestOptions,
-                            jsonFilter
-                        );
+                    // Set up regular interval if not already
+                    if (!isRecurringInterval) {
+                        isRecurringInterval = true;
 
-                        if (onUpdate) {
-                            // Include the next refresh time in the update
-                            const updatedTimestamp = Date.now();
-                            const nextRefreshTime = updatedTimestamp + intervalMs;
+                        // Clear any existing timer for this source
+                        cancelRefresh(sourceId);
 
-                            onUpdate(sourceId, content, {
-                                originalResponse, // Changed from originalJson to originalResponse
-                                headers, // Pass headers to onUpdate
-                                refreshOptions: {
-                                    ...refreshOptions,
-                                    lastRefresh: updatedTimestamp,
-                                    nextRefresh: nextRefreshTime,
-                                    // ensure preserveTiming is false for regular updates
-                                    preserveTiming: false
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        console.error(`Error during auto-refresh for source ${sourceId}:`, error);
-                        if (onUpdate) {
-                            onUpdate(sourceId, `Error: ${error.message}`);
-                        }
+                        // Set up new interval timer
+                        const regularTimer = setInterval(executeRecurringRefresh, intervalMs);
+                        refreshTimers.current.set(sourceId, regularTimer);
+
+                        console.log(`Set up recurring refresh interval for source ${sourceId} every ${refreshOptions.interval} minutes`);
                     }
-                }, intervalMs);
-
-                // Store new timer
-                refreshTimers.current.set(sourceId, regularTimer);
+                }
             } catch (error) {
-                console.error(`Error during initial refresh for source ${sourceId}:`, error);
+                console.error(`Error during refresh for source ${sourceId}:`, error);
                 if (onUpdate) {
-                    onUpdate(sourceId, `Error: ${error.message}`);
-
-                    // Even if there was an error, we need to update the refresh timestamps
-                    // to prevent getting stuck in a loop
+                    // Always update refresh timestamps even on error to prevent getting stuck
+                    const errorTimestamp = Date.now();
                     onUpdate(sourceId, `Error: ${error.message}`, {
                         refreshOptions: {
                             ...refreshOptions,
-                            lastRefresh: Date.now(),
-                            nextRefresh: Date.now() + intervalMs,
+                            lastRefresh: errorTimestamp,
+                            nextRefresh: errorTimestamp + intervalMs,
+                            preserveTiming: false
+                        }
+                    });
+
+                    // Set up regular interval timer even after error
+                    cancelRefresh(sourceId);
+                    const regularTimer = setInterval(executeRecurringRefresh, intervalMs);
+                    refreshTimers.current.set(sourceId, regularTimer);
+
+                    console.log(`Set up recurring refresh interval after error for source ${sourceId}`);
+                }
+            }
+        }
+
+        // Separate function for recurring refresh to avoid nesting callbacks
+        async function executeRecurringRefresh() {
+            try {
+                console.log(`Executing scheduled refresh for source ${sourceId}`);
+                const { content, originalResponse, headers } = await request(
+                    sourceId,
+                    url,
+                    method,
+                    requestOptions,
+                    jsonFilter
+                );
+
+                if (onUpdate) {
+                    const updatedTimestamp = Date.now();
+                    const nextRefreshTime = updatedTimestamp + intervalMs;
+
+                    onUpdate(sourceId, content, {
+                        originalResponse,
+                        headers,
+                        refreshOptions: {
+                            ...refreshOptions,
+                            lastRefresh: updatedTimestamp,
+                            nextRefresh: nextRefreshTime,
+                            preserveTiming: false
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error(`Error during scheduled refresh for source ${sourceId}:`, error);
+                if (onUpdate) {
+                    // Always update refresh timestamps even on error to prevent getting stuck
+                    const errorTimestamp = Date.now();
+                    onUpdate(sourceId, `Error: ${error.message}`, {
+                        refreshOptions: {
+                            ...refreshOptions,
+                            lastRefresh: errorTimestamp,
+                            nextRefresh: errorTimestamp + intervalMs,
                             preserveTiming: false
                         }
                     });
                 }
             }
-        }, timeUntilRefresh);
-
-        // Store timer reference
-        refreshTimers.current.set(sourceId, timer);
+        }
 
         return () => cancelRefresh(sourceId);
     }, [request, cancelRefresh]);
@@ -825,6 +906,7 @@ export function useHttp() {
         request,
         setupRefresh,
         cancelRefresh,
+        cancelAllRefreshes,
         testRequest,
         applyJsonFilter
     };
