@@ -35,6 +35,8 @@ export function SourceProvider({ children }) {
     const isMounted = useRef(true);
     // Track current highest ID to avoid conflicts
     const highestIdRef = useRef(0);
+    // Track if we've done the initial HTTP refresh
+    const initialHttpRefreshDoneRef = useRef(false);
 
     // Custom hooks for source types
     const fileSystem = useFileSystem();
@@ -44,7 +46,10 @@ export function SourceProvider({ children }) {
     // Helper for updating source content
     const updateSourceContent = useCallback((sourceId, content, additionalData = {}) => {
         // Check if component is still mounted before updating state
-        if (!isMounted.current) return;
+        if (!isMounted.current) {
+            console.log(`Skipping update for source ${sourceId} - component is unmounted`);
+            return;
+        }
 
         debugLog(`Updating content for source ${sourceId}`);
         needsSave.current = true;
@@ -65,9 +70,17 @@ export function SourceProvider({ children }) {
             const sourceExists = prev.some(s => s.sourceId === sourceId);
 
             if (!sourceExists) {
+                // IMPROVED ERROR HANDLING: Instead of just logging, wait for the source to be available
+                // This can happen during initial loading when timers fire before sources are fully loaded
                 debugLog(`Source ${sourceId} not found when updating content`, {
                     availableIds: prev.map(s => s.sourceId)
                 });
+
+                // If the content shows "Refreshing...", clear that state to avoid UI getting stuck
+                if (content === 'Refreshing...') {
+                    debugLog(`Detected stuck 'Refreshing...' state for source ${sourceId} that doesn't exist yet`);
+                }
+
                 return prev;
             }
 
@@ -293,49 +306,50 @@ export function SourceProvider({ children }) {
                                 const nextRefresh = source.refreshOptions?.nextRefresh || 0;
                                 const needsImmediateRefresh = nextRefresh <= now;
 
+                                // Prepare refreshOptions for setupRefresh - will handle both immediate and scheduled refreshes
+                                const refreshOptionsForSetup = {
+                                    ...source.refreshOptions,
+                                    interval: interval
+                                };
+
+                                // If the timer has expired, ensure we clear the 'Refreshing...' state even if we get an error
                                 if (needsImmediateRefresh) {
-                                    // Perform immediate refresh
-                                    try {
-                                        debugLog(`Source ${validSourceId} needs immediate refresh`);
-                                        const { content, originalJson } = await http.request(
+                                    debugLog(`Source ${validSourceId} needs immediate refresh (timer expired or not set)`);
+
+                                    // Update content immediately to "Refreshing..." to avoid UI being stuck
+                                    if (isMounted.current) {
+                                        updateSourceContent(validSourceId, 'Refreshing...', {
+                                            refreshOptions: {
+                                                ...source.refreshOptions,
+                                                lastRefresh: now,
+                                                // Set a temporary nextRefresh just in case (will be updated by http.setupRefresh)
+                                                nextRefresh: now + (interval * 60 * 1000)
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    debugLog(`Source ${validSourceId} has valid future refresh time: ${new Date(nextRefresh).toISOString()}`);
+                                }
+
+                                // CRITICAL FIX: Wait for sources to be fully loaded before setting up refresh
+                                // This prevents the race condition where timers fire before sources are available in state
+                                setTimeout(() => {
+                                    if (isMounted.current) {
+                                        debugLog(`Setting up refresh with delay for source ${validSourceId} to avoid race conditions`);
+
+                                        // Set up the refresh schedule for future updates - our improved setupRefresh will handle
+                                        // immediate refresh if needed and ensures error states are properly handled
+                                        http.setupRefresh(
                                             validSourceId,
                                             source.sourcePath,
                                             source.sourceMethod,
                                             source.requestOptions,
-                                            source.jsonFilter
+                                            refreshOptionsForSetup,
+                                            source.jsonFilter,
+                                            updateSourceContent
                                         );
-
-                                        if (isMounted.current) {
-                                            // Update with new content and reset timers
-                                            const updatedRefreshOptions = {
-                                                ...source.refreshOptions,
-                                                lastRefresh: now,
-                                                nextRefresh: now + (interval * 60 * 1000)
-                                            };
-
-                                            updateSourceContent(validSourceId, content, {
-                                                originalJson,
-                                                refreshOptions: updatedRefreshOptions
-                                            });
-                                        }
-                                    } catch (error) {
-                                        console.error(`Error refreshing source ${validSourceId}:`, error);
-                                        if (isMounted.current) {
-                                            updateSourceContent(validSourceId, `Error: ${error.message}`);
-                                        }
                                     }
-                                }
-
-                                // Set up the refresh schedule for future updates
-                                http.setupRefresh(
-                                    validSourceId,
-                                    source.sourcePath,
-                                    source.sourceMethod,
-                                    source.requestOptions,
-                                    source.refreshOptions,
-                                    source.jsonFilter,
-                                    updateSourceContent
-                                );
+                                }, 2000); // 2 second delay ensures sources are fully loaded
                             }
                         }
                     }
@@ -343,10 +357,38 @@ export function SourceProvider({ children }) {
                     // Validate final sources before setting state
                     validateSourceIds(initializedSources, 'after initialization');
 
-                    // Set the sources state
+                    // Set the sources state - this is the CRITICAL step that makes sources available in state
                     if (isMounted.current) {
-                        debugLog(`Setting initial sources state with ${initializedSources.length} sources`);
+                        // First set sources without any refreshing state to ensure they're properly loaded
+                        debugLog(`Setting initial sources state with ${initializedSources.length} sources (CRITICAL: sources available after this)`);
                         setSources(initializedSources);
+
+                        // Additional safeguard - clear any "Refreshing..." state after a short delay
+                        // This ensures we don't get stuck in a bad UI state
+                        setTimeout(() => {
+                            if (isMounted.current) {
+                                debugLog(`Checking for stuck 'Refreshing...' states after initial load`);
+                                setSources(current =>
+                                    current.map(s => {
+                                        if (s.sourceContent === 'Refreshing...') {
+                                            debugLog(`Clearing stuck 'Refreshing...' state for source ${s.sourceId}`);
+                                            // Force a refresh attempt
+                                            setTimeout(() => {
+                                                if (isMounted.current) {
+                                                    refreshSource(s.sourceId);
+                                                }
+                                            }, 1000);
+
+                                            return {
+                                                ...s,
+                                                sourceContent: 'Waiting for refresh...'
+                                            };
+                                        }
+                                        return s;
+                                    })
+                                );
+                            }
+                        }, 5000); // Check after 5 seconds
                     }
                 }
 
@@ -372,9 +414,72 @@ export function SourceProvider({ children }) {
 
         // Cleanup function
         return () => {
+            // Mark component as unmounted to prevent state updates
             isMounted.current = false;
+
+            // Cancel all HTTP refresh timers to prevent memory leaks and stale updates
+            http.cancelAllRefreshes();
+
+            // For file watchers, we rely on the individual cleanup functions
+            // that were returned from each fileSystem.watchFile call
         };
     }, []); // Empty dependency array - only run once
+
+    // CRITICAL FIX: Effect to directly refresh HTTP sources after component is initialized
+    // This ensures HTTP sources are refreshed properly regardless of race conditions
+    useEffect(() => {
+        // Only run once we're fully initialized and have sources loaded
+        // And ONLY if we haven't done the initial refresh yet
+        if (!initialized || isLoading.current || sources.length === 0 || initialHttpRefreshDoneRef.current) {
+            return;
+        }
+
+        // Mark that we're doing the initial refresh (prevents future executions)
+        initialHttpRefreshDoneRef.current = true;
+
+        // Find all HTTP sources that need refreshing
+        const httpSources = sources.filter(source =>
+            source.sourceType === 'http' &&
+            (source.refreshOptions?.enabled || source.refreshOptions?.interval > 0)
+        );
+
+        if (httpSources.length === 0) {
+            debugLog('No HTTP sources found that need initial refresh');
+            return; // No HTTP sources to refresh
+        }
+
+        debugLog(`ONE-TIME INITIALIZATION: Found ${httpSources.length} HTTP sources for initial refresh`);
+
+        // Set up a delay to ensure everything is properly mounted
+        const timer = setTimeout(() => {
+            // Process each HTTP source
+            httpSources.forEach((source, index) => {
+                // Stagger the refreshes to avoid overwhelming the system
+                setTimeout(() => {
+                    if (!isMounted.current) return;
+
+                    debugLog(`ONE-TIME initial refresh for source ${source.sourceId}`);
+
+                    // First update the UI to show we're refreshing
+                    updateSourceContent(source.sourceId, 'Refreshing...');
+
+                    // Then directly refresh the source using our enhanced refresh function
+                    refreshSource(source.sourceId)
+                        .then(() => {
+                            debugLog(`Initial one-time refresh completed for source ${source.sourceId}`);
+                        })
+                        .catch(error => {
+                            console.error(`Error in initial one-time refresh for source ${source.sourceId}:`, error);
+                        });
+
+                }, index * 1000); // 1 second between each source refresh
+            });
+        }, 3000); // Wait 3 seconds after initialization for everything to stabilize
+
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [initialized, sources]);
 
     // Save sources when needed - use a separate effect with a timer
     useEffect(() => {
@@ -772,13 +877,22 @@ export function SourceProvider({ children }) {
                     const refreshInterval = parseInt(sourceData.refreshOptions?.interval || 0, 10);
 
                     if (isEnabled && refreshInterval > 0) {
-                        // IMPORTANT FIX #2: Check if preserveTiming was explicitly disabled
+                        // IMPORTANT FIX #2: Check if preserveTiming was explicitly configured either way
                         const explicitlyDisablePreserveTiming =
                             sourceData.refreshOptions?.preserveTiming === false;
-
-                        // Only allow preserveTiming if it's explicitly true and not explicitly false
-                        const preserveTiming = !explicitlyDisablePreserveTiming &&
+                        const explicitlyEnablePreserveTiming =
                             sourceData.refreshOptions?.preserveTiming === true;
+
+                        // If nextRefresh and lastRefresh are not present, we should definitely not preserve timing
+                        // This is typically when editing from the UI, where we want fresh timers
+                        const hasMissingTimingInfo =
+                            !sourceData.refreshOptions.nextRefresh ||
+                            !sourceData.refreshOptions.lastRefresh;
+
+                        // Decide whether to preserve timing based on explicit settings and presence of timing info
+                        const preserveTiming = explicitlyEnablePreserveTiming &&
+                            !explicitlyDisablePreserveTiming &&
+                            !hasMissingTimingInfo;
 
                         const skipImmediateRefresh = preserveTiming;
 
@@ -824,7 +938,7 @@ export function SourceProvider({ children }) {
     };
 
     // Refresh a source
-    // Complete updated refreshSource function
+    // Complete updated refreshSource function with improved error handling
     const refreshSource = async (sourceId, updatedSource = null) => {
         try {
             // Use the provided updatedSource if available, otherwise get from current state
@@ -863,10 +977,38 @@ export function SourceProvider({ children }) {
 
             debugLog(`Refreshing source ${sourceId}`);
 
-            // Update UI to show loading
+            // Capture the current time before updating UI
+            const refreshStartTime = Date.now();
+
+            // Update UI to show loading with a refreshOptions update to prevent "stuck" refresh
             if (isMounted.current) {
-                updateSourceContent(sourceId, 'Refreshing...');
+                // Make sure we always update refresh timestamps even if the request fails
+                updateSourceContent(sourceId, 'Refreshing...', {
+                    refreshOptions: {
+                        ...source.refreshOptions,
+                        lastRefresh: refreshStartTime,
+                        // Ensure we have a valid nextRefresh time to reset any stuck timer
+                        nextRefresh: refreshStartTime + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                    }
+                });
             }
+
+            // Set a timeout to clear the "Refreshing..." state if the request takes too long
+            const refreshTimeout = setTimeout(() => {
+                if (isMounted.current) {
+                    debugLog(`Refresh timeout triggered for source ${sourceId} - request too slow`);
+                    // Only update if the content is still in "Refreshing..." state
+                    setSources(prev => prev.map(s => {
+                        if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
+                            return {
+                                ...s,
+                                sourceContent: `Error: Refresh timed out after 15 seconds`
+                            };
+                        }
+                        return s;
+                    }));
+                }
+            }, 15000); // 15 second timeout
 
             // Refresh based on source type
             if (source.sourceType === 'file') {
@@ -910,16 +1052,38 @@ export function SourceProvider({ children }) {
                         normalizedJsonFilter  // Pass the properly structured jsonFilter
                     );
 
+                    // Clear the timeout since the request succeeded
+                    clearTimeout(refreshTimeout);
+
                     if (isMounted.current) {
                         debugLog(`HTTP refresh completed for source ${sourceId}`);
                         updateSourceContent(sourceId, content, {
                             originalResponse,
-                            headers
+                            headers,
+                            // Always update refresh times on successful refresh
+                            refreshOptions: {
+                                ...source.refreshOptions,
+                                lastRefresh: Date.now(),
+                                nextRefresh: Date.now() + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                            }
                         });
                     }
                 } catch (error) {
+                    // Clear the timeout since the request finished (with error)
+                    clearTimeout(refreshTimeout);
+
+                    console.error(`Error refreshing HTTP source ${sourceId}:`, error);
+
                     if (isMounted.current) {
-                        updateSourceContent(sourceId, `Error: ${error.message}`);
+                        const now = Date.now();
+                        // Also update refresh timestamps when errors occur
+                        updateSourceContent(sourceId, `Error: ${error.message}`, {
+                            refreshOptions: {
+                                ...source.refreshOptions,
+                                lastRefresh: now,
+                                nextRefresh: now + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                            }
+                        });
                     }
                 }
             }
@@ -927,8 +1091,20 @@ export function SourceProvider({ children }) {
             return true;
         } catch (error) {
             console.error('Error refreshing source:', error);
+
             if (isMounted.current) {
                 showMessage('error', `Failed to refresh source: ${error.message}`);
+
+                // Update source content to error state if still showing "Refreshing..."
+                setSources(prev => prev.map(s => {
+                    if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
+                        return {
+                            ...s,
+                            sourceContent: `Error: ${error.message}`
+                        };
+                    }
+                    return s;
+                }));
             }
             return false;
         }

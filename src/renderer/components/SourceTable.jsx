@@ -119,14 +119,24 @@ const SourceTable = ({
         });
     }, [sources]);
 
-    // Initialize refresh times when sources change
+    // Initialize refresh times when sources change and detect stuck "Refreshing..." state
     useEffect(() => {
         const timer = setInterval(() => {
             const now = Date.now();
             const newRefreshTimes = {};
             let needsUpdate = false;
 
+            // Track any sources that are stuck in refreshing
+            const stuckSources = [];
+
             sources.forEach(source => {
+                // Check for stuck "Refreshing..." content with no nextRefresh time
+                if (source.sourceContent === 'Refreshing...' &&
+                    (!source.refreshOptions || !source.refreshOptions.nextRefresh)) {
+                    stuckSources.push(source.sourceId);
+                }
+
+                // Handle normal time display for refresh countdown
                 if (source.sourceType === 'http' &&
                     source.refreshOptions &&
                     (source.refreshOptions.enabled || source.refreshOptions.interval > 0) &&
@@ -149,6 +159,16 @@ const SourceTable = ({
             if (needsUpdate) {
                 setRefreshTimes(newRefreshTimes); // Replace entire object instead of merging
             }
+
+            // CRITICAL FIX: If we find any sources stuck in "Refreshing..." state with no nextRefresh time,
+            // trigger a refresh for them (but only if we're not already refreshing something)
+            if (stuckSources.length > 0 && !refreshingSourceId) {
+                console.log(`Found ${stuckSources.length} sources stuck in 'Refreshing...' state: ${stuckSources.join(', ')}`);
+                // Force refresh the first stuck source
+                setTimeout(() => {
+                    onRefreshSource(stuckSources[0]);
+                }, 500);
+            }
         }, 1000);
 
         return () => clearInterval(timer);
@@ -161,39 +181,67 @@ const SourceTable = ({
             const newRefreshTimes = {};
             let needsUpdate = false;
 
+            // Track sources that need a stuck-detection refresh
+            const sourcesNeedingRefresh = [];
+
             sources.forEach(source => {
                 if (source.sourceType === 'http' &&
                     source.refreshOptions &&
-                    (source.refreshOptions.enabled || source.refreshOptions.interval > 0) &&
-                    source.refreshOptions.nextRefresh) {
+                    (source.refreshOptions.enabled || source.refreshOptions.interval > 0)) {
 
-                    const remaining = Math.max(0, source.refreshOptions.nextRefresh - now);
+                    // Check if the source content is currently in the refreshing state
+                    const isCurrentlyRefreshing = source.sourceContent === 'Refreshing...';
 
-                    // If the time has passed, it should be refreshing or needs a fresh refresh cycle
-                    if (remaining <= 0) {
-                        // If more than 30 seconds have passed since the nextRefresh time,
-                        // it's probably stuck and needs a manual refresh
-                        if (remaining < -30000) { // 30 seconds
-                            newRefreshTimes[source.sourceId] = 'Refresh needed';
-                            needsUpdate = true;
+                    // Check if next refresh time exists
+                    if (source.refreshOptions.nextRefresh) {
+                        const remaining = Math.max(0, source.refreshOptions.nextRefresh - now);
 
-                            // Trigger a refresh if it's not already refreshing
-                            if (!refreshingSourceId) {
-                                // Use setTimeout to prevent the refresh from happening on every interval tick
-                                setTimeout(() => {
-                                    onRefreshSource(source.sourceId);
-                                }, 500);
+                        // If the time has passed, it should be refreshing or needs a fresh refresh cycle
+                        if (remaining <= 0) {
+                            // Check if we're stuck in refreshing state for too long (more than 60 seconds)
+                            const lastRefresh = source.refreshOptions.lastRefresh || 0;
+                            const timeSinceLastRefresh = now - lastRefresh;
+
+                            if (isCurrentlyRefreshing && timeSinceLastRefresh > 60000) {
+                                // We've been stuck in "Refreshing..." for too long - force a refresh
+                                newRefreshTimes[source.sourceId] = 'Refresh needed (stuck)';
+                                needsUpdate = true;
+
+                                // Add to the list of sources needing refresh
+                                sourcesNeedingRefresh.push(source.sourceId);
+                            }
+                            // If more than 30 seconds have passed since the nextRefresh time,
+                            // it's probably stuck and needs a manual refresh
+                            else if (remaining < -30000) { // 30 seconds
+                                newRefreshTimes[source.sourceId] = 'Refresh needed';
+                                needsUpdate = true;
+
+                                // Add to the list of sources needing refresh
+                                sourcesNeedingRefresh.push(source.sourceId);
+                            } else {
+                                newRefreshTimes[source.sourceId] = 'Refreshing now...';
+                                needsUpdate = true;
                             }
                         } else {
-                            newRefreshTimes[source.sourceId] = 'Refreshing now...';
-                            needsUpdate = true;
+                            // Format the remaining time
+                            const timeText = `Refreshes in ${formatTimeRemaining(remaining)}`;
+                            if (refreshTimes[source.sourceId] !== timeText) {
+                                newRefreshTimes[source.sourceId] = timeText;
+                                needsUpdate = true;
+                            }
                         }
-                    } else {
-                        // Format the remaining time
-                        const timeText = `Refreshes in ${formatTimeRemaining(remaining)}`;
-                        if (refreshTimes[source.sourceId] !== timeText) {
-                            newRefreshTimes[source.sourceId] = timeText;
+                    }
+                    // If no nextRefresh time but we're in refreshing state for more than 60 seconds, trigger refresh
+                    else if (isCurrentlyRefreshing) {
+                        const lastRefresh = source.refreshOptions.lastRefresh || 0;
+                        const timeSinceLastRefresh = now - lastRefresh;
+
+                        if (timeSinceLastRefresh > 60000) { // 60 seconds
+                            newRefreshTimes[source.sourceId] = 'Refresh needed (stuck)';
                             needsUpdate = true;
+
+                            // Add to the list of sources needing refresh
+                            sourcesNeedingRefresh.push(source.sourceId);
                         }
                     }
                 }
@@ -202,6 +250,18 @@ const SourceTable = ({
             // Only update state if there are changes
             if (needsUpdate) {
                 setRefreshTimes(prev => ({...prev, ...newRefreshTimes}));
+            }
+
+            // Process any sources that need refresh, but only if we're not already refreshing
+            if (!refreshingSourceId && sourcesNeedingRefresh.length > 0) {
+                // Only refresh one source at a time, we'll get to the others on the next interval
+                const sourceToRefresh = sourcesNeedingRefresh[0];
+
+                // Use setTimeout to avoid triggering on every interval tick
+                setTimeout(() => {
+                    console.log(`Triggering refresh for stuck source ID ${sourceToRefresh}`);
+                    onRefreshSource(sourceToRefresh);
+                }, 500);
             }
         }, 1000);
 
@@ -219,25 +279,21 @@ const SourceTable = ({
             const dataToSave = { ...sourceData };
             delete dataToSave.refreshNow;
 
-            // IMPORTANT: Preserve existing refresh timing if not refreshing immediately
-            if (!shouldRefreshNow) {
-                // Find the current source to get its existing refresh schedule
-                const currentSource = sources.find(s => s.sourceId === sourceData.sourceId);
-                if (currentSource && currentSource.refreshOptions &&
-                    currentSource.refreshOptions.nextRefresh &&
-                    currentSource.refreshOptions.nextRefresh > Date.now()) {
+            // IMPORTANT: When saving from Edit dialog, we should reset the refresh timer
+            // Unless the user specifically asked to preserve timing (which they didn't)
 
-                    // Explicitly preserve the nextRefresh timestamp
-                    if (!dataToSave.refreshOptions) {
-                        dataToSave.refreshOptions = {};
-                    }
+            // Always reset the timer when saving from Edit dialog, regardless of shouldRefreshNow
+            // This ensures the countdown is fresh after edits
+            if (dataToSave.refreshOptions) {
+                // Explicitly set to NOT preserve timing
+                dataToSave.refreshOptions.preserveTiming = false;
 
-                    dataToSave.refreshOptions.preserveTiming = true;
-                    dataToSave.refreshOptions.nextRefresh = currentSource.refreshOptions.nextRefresh;
-                    dataToSave.refreshOptions.lastRefresh = currentSource.refreshOptions.lastRefresh;
+                // Explicitly clear any existing nextRefresh and lastRefresh
+                // to force a new timer to be created
+                delete dataToSave.refreshOptions.nextRefresh;
+                delete dataToSave.refreshOptions.lastRefresh;
 
-                    console.log(`Preserving refresh timing for source ${sourceData.sourceId}: next refresh at ${new Date(currentSource.refreshOptions.nextRefresh).toISOString()}`);
-                }
+                console.log(`Resetting refresh timer for source ${sourceData.sourceId} after edit`);
             }
 
             // Show loading state for a reasonable duration
