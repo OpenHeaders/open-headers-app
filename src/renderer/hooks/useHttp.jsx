@@ -634,6 +634,14 @@ export function useHttp() {
         const timer = refreshTimers.current.get(sourceId);
 
         if (timer) {
+            // If timer is the string 'REFRESHING', it means we're in the middle of a refresh
+            // We don't need to clear anything, but we should remove it from our map
+            if (timer === 'REFRESHING') {
+                console.log(`Source ${sourceId} is currently refreshing, clearing refresh state`);
+                refreshTimers.current.delete(sourceId);
+                return true;
+            }
+
             // Clear both timeout and interval to be safe
             // This ensures we catch all timer types
             clearTimeout(timer);
@@ -676,7 +684,7 @@ export function useHttp() {
     }, []);
 
     /**
-     * Set up auto-refresh for HTTP sources
+     * Set up auto-refresh for HTTP sources - CLEAN IMPLEMENTATION
      */
     const setupRefresh = useCallback((
         sourceId,
@@ -692,7 +700,7 @@ export function useHttp() {
 
         // Only proceed if interval > 0
         if (!refreshOptions || refreshOptions.interval <= 0) {
-            console.log(`Skipping refresh setup for source ${sourceId} - interval is zero or not specified`);
+            console.log(`No refresh for source ${sourceId} - interval is zero or not specified`);
             return;
         }
 
@@ -701,204 +709,96 @@ export function useHttp() {
         const now = Date.now();
         const intervalMs = refreshOptions.interval * 60 * 1000;
 
-        // Determine when next refresh should happen
-        let nextRefresh = refreshOptions.nextRefresh;
+        // Simple timer setup logic with only one decision point:
+        // When should the next refresh happen?
+        let nextRefresh;
 
-        // IMPORTANT FIX #3: Check if preserveTiming is explicitly disabled first
-        const explicitlyDisablePreserveTiming = refreshOptions.preserveTiming === false;
-
-        // If preserveTiming is explicitly disabled, we should NOT preserve timing
-        if (explicitlyDisablePreserveTiming) {
-            // Force a fresh timing calculation
+        // Case 1: We have a valid future refresh time to preserve
+        if (refreshOptions.nextRefresh && refreshOptions.nextRefresh > now) {
+            nextRefresh = refreshOptions.nextRefresh;
+            console.log(`Source ${sourceId} using existing refresh time: ${new Date(nextRefresh).toISOString()}`);
+        }
+        // Case 2: We need to start fresh, but skip immediate refresh
+        else if (refreshOptions.skipImmediateRefresh === true) {
             nextRefresh = now + intervalMs;
-            console.log(`Source ${sourceId} requires fresh timing because preserveTiming=false - next refresh in ${Math.round(intervalMs / 1000)} seconds`);
+            console.log(`Source ${sourceId} will refresh in ${Math.round(intervalMs/1000)} seconds`);
         }
-        // Otherwise, continue with normal logic
+        // Case 3: We need to refresh immediately
         else {
-            // If we should NOT refresh immediately, set nextRefresh to future time
-            // This check prevents the immediate refresh when setting up a refresh
-            const skipImmediateRefresh = refreshOptions.skipImmediateRefresh === true;
-
-            // Check for preserveTiming flag - this takes precedence over skipImmediateRefresh
-            const preserveTiming = refreshOptions.preserveTiming === true;
-
-            // IMPORTANT NEW FIX: Check if this request uses TOTP authentication
-            // If TOTP is used, we should always skip immediate refresh to avoid TOTP reuse
-            const hasTOTPAuth = requestOptions && requestOptions.totpSecret &&
-                (requestOptions.body?.includes('_TOTP_CODE') ||
-                    url.includes('_TOTP_CODE') ||
-                    Object.values(requestOptions.headers || {}).some(val =>
-                        typeof val === 'string' && val.includes('_TOTP_CODE')
-                    ));
-
-            // Force skipImmediateRefresh if using TOTP
-            const shouldSkipImmediate = skipImmediateRefresh || hasTOTPAuth;
-
-            if (hasTOTPAuth) {
-                console.log(`Source ${sourceId} uses TOTP authentication - forcing skip of immediate refresh to prevent TOTP reuse`);
-            }
-
-            console.log(`Source ${sourceId} configuration: skipImmediateRefresh=${shouldSkipImmediate}, preserveTiming=${preserveTiming}`);
-
-            // Check if we have a valid nextRefresh time
-            const hasValidNextRefresh = nextRefresh && nextRefresh > now;
-
-            if (!hasValidNextRefresh) {
-                if (shouldSkipImmediate || preserveTiming) {
-                    // If we should skip the immediate refresh, schedule for future
-                    nextRefresh = now + intervalMs;
-                    console.log(`Source ${sourceId} immediate refresh skipped - next refresh in ${Math.round(intervalMs / 1000)} seconds`);
-                } else {
-                    // Schedule immediate refresh
-                    nextRefresh = now;
-                    console.log(`Source ${sourceId} needs immediate refresh - scheduling now`);
-                }
-            } else {
-                // We have a valid future time for nextRefresh
-                console.log(`Source ${sourceId} has valid nextRefresh time: ${new Date(nextRefresh).toISOString()}`);
-                const timeUntilNextRefresh = Math.round((nextRefresh - now) / 1000);
-                console.log(`Source ${sourceId} will refresh in ${timeUntilNextRefresh} seconds (${Math.round(timeUntilNextRefresh/60)} minutes)`);
-            }
+            nextRefresh = now;
+            console.log(`Source ${sourceId} will refresh immediately`);
         }
 
-        // IMPORTANT: Handle case when the nextRefresh time is in the past
-        if (nextRefresh <= now) {
-            console.log(`Source ${sourceId} nextRefresh time (${new Date(nextRefresh).toISOString()}) is in the past, performing immediate refresh...`);
+        // Function to perform a refresh and schedule the next one
+        function performRefresh() {
+            console.log(`Refreshing source ${sourceId}`);
 
-            // Add a small delay before executing the refresh to ensure the component is fully mounted
-            // This helps prevent race conditions during app startup
-            const timer = setTimeout(() => {
-                console.log(`Executing delayed immediate refresh for source ${sourceId}`);
-                executeRefresh();
-            }, 1000); // 1 second delay
+            // Perform the HTTP request
+            request(sourceId, url, method, requestOptions, jsonFilter)
+                .then(result => {
+                    // On success, update content and schedule next refresh
+                    const { content, originalResponse, headers } = result;
+                    const refreshTime = Date.now();
+                    const nextRefreshTime = refreshTime + intervalMs;
 
-            refreshTimers.current.set(sourceId, timer);
-        } else {
-            // Set up a timer for future refresh
-            const timeUntilRefresh = nextRefresh - now;
-            console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh / 1000)} seconds`);
-
-            // Set up initial timer (single execution)
-            const timer = setTimeout(executeRefresh, timeUntilRefresh);
-            refreshTimers.current.set(sourceId, timer);
-        }
-
-        // Function to execute a refresh and then set up a regular interval
-        async function executeRefresh() {
-            try {
-                console.log(`Executing refresh for source ${sourceId}`);
-
-                // Store a flag to identify if this is a recurring interval
-                let isRecurringInterval = false;
-
-                // Perform refresh
-                const { content, originalResponse, headers } = await request(
-                    sourceId,
-                    url,
-                    method,
-                    requestOptions,
-                    jsonFilter
-                );
-
-                // Update content and set up next refresh time
-                if (onUpdate) {
-                    const updatedTimestamp = Date.now();
-                    const nextRefreshTime = updatedTimestamp + intervalMs;
-
-                    onUpdate(sourceId, content, {
-                        originalResponse,
-                        headers,
-                        refreshOptions: {
-                            ...refreshOptions,
-                            lastRefresh: updatedTimestamp,
-                            nextRefresh: nextRefreshTime,
-                            // Remove preserveTiming flag after the first refresh
-                            preserveTiming: false
-                        }
-                    });
-
-                    // Set up regular interval if not already
-                    if (!isRecurringInterval) {
-                        isRecurringInterval = true;
-
-                        // Clear any existing timer for this source
-                        cancelRefresh(sourceId);
-
-                        // Set up new interval timer
-                        const regularTimer = setInterval(executeRecurringRefresh, intervalMs);
-                        refreshTimers.current.set(sourceId, regularTimer);
-
-                        console.log(`Set up recurring refresh interval for source ${sourceId} every ${refreshOptions.interval} minutes`);
+                    // Update the content via callback
+                    if (onUpdate) {
+                        onUpdate(sourceId, content, {
+                            originalResponse,
+                            headers,
+                            refreshOptions: {
+                                ...refreshOptions,
+                                lastRefresh: refreshTime,
+                                nextRefresh: nextRefreshTime
+                            }
+                        });
                     }
-                }
-            } catch (error) {
-                console.error(`Error during refresh for source ${sourceId}:`, error);
-                if (onUpdate) {
-                    // Always update refresh timestamps even on error to prevent getting stuck
-                    const errorTimestamp = Date.now();
-                    onUpdate(sourceId, `Error: ${error.message}`, {
-                        refreshOptions: {
-                            ...refreshOptions,
-                            lastRefresh: errorTimestamp,
-                            nextRefresh: errorTimestamp + intervalMs,
-                            preserveTiming: false
-                        }
-                    });
 
-                    // Set up regular interval timer even after error
-                    cancelRefresh(sourceId);
-                    const regularTimer = setInterval(executeRecurringRefresh, intervalMs);
-                    refreshTimers.current.set(sourceId, regularTimer);
+                    // Schedule next refresh
+                    const timer = setTimeout(performRefresh, intervalMs);
+                    refreshTimers.current.set(sourceId, timer);
+                    console.log(`Source ${sourceId} refreshed successfully, next refresh in ${Math.round(intervalMs/1000)} seconds`);
+                })
+                .catch(error => {
+                    // On error, still update the UI and schedule next refresh
+                    console.error(`Error refreshing source ${sourceId}:`, error);
 
-                    console.log(`Set up recurring refresh interval after error for source ${sourceId}`);
-                }
-            }
+                    if (onUpdate) {
+                        const errorTime = Date.now();
+                        const nextRefreshTime = errorTime + intervalMs;
+
+                        onUpdate(sourceId, `Error: ${error.message}`, {
+                            refreshOptions: {
+                                ...refreshOptions,
+                                lastRefresh: errorTime,
+                                nextRefresh: nextRefreshTime
+                            }
+                        });
+                    }
+
+                    // Even on error, schedule the next refresh
+                    const timer = setTimeout(performRefresh, intervalMs);
+                    refreshTimers.current.set(sourceId, timer);
+                    console.log(`Source ${sourceId} refresh failed, will retry in ${Math.round(intervalMs/1000)} seconds`);
+                });
         }
 
-        // Separate function for recurring refresh to avoid nesting callbacks
-        async function executeRecurringRefresh() {
-            try {
-                console.log(`Executing scheduled refresh for source ${sourceId}`);
-                const { content, originalResponse, headers } = await request(
-                    sourceId,
-                    url,
-                    method,
-                    requestOptions,
-                    jsonFilter
-                );
-
-                if (onUpdate) {
-                    const updatedTimestamp = Date.now();
-                    const nextRefreshTime = updatedTimestamp + intervalMs;
-
-                    onUpdate(sourceId, content, {
-                        originalResponse,
-                        headers,
-                        refreshOptions: {
-                            ...refreshOptions,
-                            lastRefresh: updatedTimestamp,
-                            nextRefresh: nextRefreshTime,
-                            preserveTiming: false
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error(`Error during scheduled refresh for source ${sourceId}:`, error);
-                if (onUpdate) {
-                    // Always update refresh timestamps even on error to prevent getting stuck
-                    const errorTimestamp = Date.now();
-                    onUpdate(sourceId, `Error: ${error.message}`, {
-                        refreshOptions: {
-                            ...refreshOptions,
-                            lastRefresh: errorTimestamp,
-                            nextRefresh: errorTimestamp + intervalMs,
-                            preserveTiming: false
-                        }
-                    });
-                }
-            }
+        // Set up the initial timer based on nextRefresh time
+        if (nextRefresh <= now) {
+            // If refresh time is now or in the past, refresh immediately with a small delay
+            // The delay helps ensure components are fully mounted
+            const timer = setTimeout(performRefresh, 1000);
+            refreshTimers.current.set(sourceId, timer);
+            console.log(`Source ${sourceId} scheduled for immediate refresh (with 1s delay)`);
+        } else {
+            // If refresh time is in the future, set up a timer for that specific time
+            const timeUntilRefresh = nextRefresh - now;
+            const timer = setTimeout(performRefresh, timeUntilRefresh);
+            refreshTimers.current.set(sourceId, timer);
+            console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh/1000)} seconds`);
         }
 
+        // Return a cleanup function that cancels the timer
         return () => cancelRefresh(sourceId);
     }, [request, cancelRefresh]);
 
