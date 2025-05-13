@@ -85,51 +85,83 @@ export function SourceProvider({ children }) {
 
             return prev.map(source => {
                 if (source.sourceId === sourceId) {
-                    const updatedSource = { ...source, sourceContent: content };
+                    // Check if this is a timing-only update
+                    const isTimingOnlyUpdate = additionalData.updateTimingOnly === true;
+                    // Check if we need to force update the content
+                    const forceContentUpdate = additionalData.forceUpdateContent === true;
+
+                    // Only update content if this is not a timing-only update and content is provided
+                    // OR if forceUpdateContent is true (to clear "Refreshing..." state)
+                    const updatedSource = {
+                        ...source,
+                        sourceContent: isTimingOnlyUpdate ? source.sourceContent :
+                            (content !== null || forceContentUpdate) ?
+                                content || source.sourceContent : source.sourceContent
+                    };
+
+                    // Log the update type
+                    if (isTimingOnlyUpdate) {
+                        debugLog(`Timing-only update for source ${sourceId} - preserving content`);
+                    }
+                    else if (forceContentUpdate) {
+                        debugLog(`Forced content update for source ${sourceId} - ensuring 'Refreshing...' state is cleared`);
+                    }
 
                     // Merge any additional data provided
                     Object.keys(additionalData).forEach(key => {
                         if (key === 'refreshOptions' && source.refreshOptions) {
                             // Special handling for refreshOptions to ensure we preserve existing values
 
-                            // Check if we need to preserve the existing timing
-                            const preserveTiming = (
-                                // If source explicitly says to preserve timing
-                                (source.refreshOptions.preserveTiming === true &&
-                                    source.refreshOptions.nextRefresh &&
-                                    source.refreshOptions.nextRefresh > Date.now()) ||
-                                // OR if we're updating from a non-refresh operation and timing exists
-                                (!additionalData.refreshOptions.lastRefresh &&
-                                    source.refreshOptions.nextRefresh &&
-                                    source.refreshOptions.nextRefresh > Date.now())
-                            );
-
-                            if (preserveTiming) {
-                                // Only merge other refresh options but keep nextRefresh
-                                const currentNextRefresh = source.refreshOptions.nextRefresh;
-                                const currentLastRefresh = source.refreshOptions.lastRefresh;
-
-                                updatedSource.refreshOptions = {
-                                    ...source.refreshOptions,
-                                    ...additionalData.refreshOptions,
-                                    // Restore the original refresh times
-                                    nextRefresh: currentNextRefresh,
-                                    lastRefresh: currentLastRefresh,
-                                    // Keep the preserveTiming flag
-                                    preserveTiming: true
-                                };
-
-                                debugLog(`Preserved refresh timing for source ${sourceId}: next=${new Date(currentNextRefresh).toISOString()}, last=${new Date(currentLastRefresh).toISOString()}`);
-                            } else {
-                                // Normal merge of all refresh options
+                            // For timing-only updates, always use the new timing info
+                            if (isTimingOnlyUpdate && additionalData.refreshOptions.nextRefresh) {
                                 updatedSource.refreshOptions = {
                                     ...source.refreshOptions,
                                     ...additionalData.refreshOptions
                                 };
 
-                                // Log the new refresh times
-                                if (additionalData.refreshOptions.nextRefresh) {
-                                    debugLog(`Updated refresh timing for source ${sourceId}: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
+                                debugLog(`Updated timer for source ${sourceId} to: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
+                            }
+                            // Otherwise follow normal rules for preserving timing
+                            else {
+                                // Check if we need to preserve the existing timing
+                                const preserveTiming = (
+                                    // If source explicitly says to preserve timing
+                                    (source.refreshOptions.preserveTiming === true &&
+                                        source.refreshOptions.nextRefresh &&
+                                        source.refreshOptions.nextRefresh > Date.now()) ||
+                                    // OR if we're updating from a non-refresh operation and timing exists
+                                    (!additionalData.refreshOptions.lastRefresh &&
+                                        source.refreshOptions.nextRefresh &&
+                                        source.refreshOptions.nextRefresh > Date.now())
+                                );
+
+                                if (preserveTiming) {
+                                    // Only merge other refresh options but keep nextRefresh
+                                    const currentNextRefresh = source.refreshOptions.nextRefresh;
+                                    const currentLastRefresh = source.refreshOptions.lastRefresh;
+
+                                    updatedSource.refreshOptions = {
+                                        ...source.refreshOptions,
+                                        ...additionalData.refreshOptions,
+                                        // Restore the original refresh times
+                                        nextRefresh: currentNextRefresh,
+                                        lastRefresh: currentLastRefresh,
+                                        // Keep the preserveTiming flag
+                                        preserveTiming: true
+                                    };
+
+                                    debugLog(`Preserved refresh timing for source ${sourceId}: next=${new Date(currentNextRefresh).toISOString()}, last=${new Date(currentLastRefresh).toISOString()}`);
+                                } else {
+                                    // Normal merge of all refresh options
+                                    updatedSource.refreshOptions = {
+                                        ...source.refreshOptions,
+                                        ...additionalData.refreshOptions
+                                    };
+
+                                    // Log the new refresh times
+                                    if (additionalData.refreshOptions.nextRefresh) {
+                                        debugLog(`Updated refresh timing for source ${sourceId}: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
+                                    }
                                 }
                             }
                         }
@@ -148,7 +180,7 @@ export function SourceProvider({ children }) {
                             updatedSource.rawResponse = additionalData.rawResponse;
                             console.log(`Updated rawResponse for source ${sourceId}`);
                         }
-                        else {
+                        else if (key !== 'updateTimingOnly' && key !== 'forceUpdateContent') {  // Skip special flags
                             // Handle any other properties
                             updatedSource[key] = additionalData[key];
                         }
@@ -969,6 +1001,22 @@ export function SourceProvider({ children }) {
             const currentSourceState = sources.find(s => s.sourceId === sourceId);
             if (currentSourceState && currentSourceState.sourceContent === 'Refreshing...') {
                 debugLog(`Source ${sourceId} already in 'Refreshing...' state, attempting to recover`);
+
+                // If a source is stuck in "Refreshing..." state, force a timeout to clear it
+                setTimeout(() => {
+                    if (isMounted.current) {
+                        debugLog(`Force clearing stuck 'Refreshing...' state for source ${sourceId}`);
+                        setSources(prev => prev.map(s => {
+                            if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
+                                return {
+                                    ...s,
+                                    sourceContent: 'Waiting for next refresh...'
+                                };
+                            }
+                            return s;
+                        }));
+                    }
+                }, 5000); // Clear after 5 seconds if still stuck
             }
 
             // Capture the current time before updating UI
@@ -976,8 +1024,13 @@ export function SourceProvider({ children }) {
 
             // Update UI to show loading with a refreshOptions update to prevent "stuck" refresh
             if (isMounted.current) {
+                // Only set to "Refreshing..." if not already in that state
+                const newContent = currentSourceState && currentSourceState.sourceContent === 'Refreshing...'
+                    ? currentSourceState.sourceContent
+                    : 'Refreshing...';
+
                 // Make sure we always update refresh timestamps even if the request fails
-                updateSourceContent(sourceId, 'Refreshing...', {
+                updateSourceContent(sourceId, newContent, {
                     refreshOptions: {
                         ...source.refreshOptions,
                         lastRefresh: refreshStartTime,
