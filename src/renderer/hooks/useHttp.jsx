@@ -729,6 +729,24 @@ export function useHttp() {
             console.log(`Source ${sourceId} will refresh immediately`);
         }
 
+        // Prepare refresh data to return to UI immediately - even before first refresh
+        // This fixes the issue with timer not updating when interval changes
+        if (onUpdate && refreshOptions.skipImmediateRefresh === true && nextRefresh > now) {
+            // Immediately update UI with the new timing
+            const timeUntilRefresh = nextRefresh - now;
+            console.log(`Immediately updating UI for source ${sourceId} with new timing: next refresh in ${Math.round(timeUntilRefresh/1000)} seconds`);
+
+            // Call onUpdate with current content but updated timing
+            onUpdate(sourceId, null, {
+                updateTimingOnly: true,
+                refreshOptions: {
+                    ...refreshOptions,
+                    lastRefresh: refreshOptions.lastRefresh || now,
+                    nextRefresh: nextRefresh
+                }
+            });
+        }
+
         // Function to perform a refresh and schedule the next one
         function performRefresh() {
             console.log(`Refreshing source ${sourceId}`);
@@ -741,16 +759,17 @@ export function useHttp() {
                     const refreshTime = Date.now();
                     const nextRefreshTime = refreshTime + intervalMs;
 
-                    // Update the content via callback
+                    // Update the content via callback - always provide content to ensure we clear any "Refreshing..." state
                     if (onUpdate) {
-                        onUpdate(sourceId, content, {
+                        onUpdate(sourceId, content || "Request completed with no content", {
                             originalResponse,
                             headers,
                             refreshOptions: {
                                 ...refreshOptions,
                                 lastRefresh: refreshTime,
                                 nextRefresh: nextRefreshTime
-                            }
+                            },
+                            forceUpdateContent: true  // Flag to ensure content is updated even if null
                         });
                     }
 
