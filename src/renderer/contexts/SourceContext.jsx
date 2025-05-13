@@ -351,7 +351,9 @@ export function SourceProvider({ children }) {
                                                             refreshOptions: {
                                                                 ...source.refreshOptions,
                                                                 lastRefresh: Date.now(),
-                                                                nextRefresh: Date.now() + (interval * 60 * 1000)
+                                                                nextRefresh: Date.now() + (interval * 60 * 1000),
+                                                                // Force skipImmediateRefresh to prevent duplicate auto-refresh
+                                                                skipImmediateRefresh: true
                                                             }
                                                         });
 
@@ -373,17 +375,23 @@ export function SourceProvider({ children }) {
 
                                 // CRITICAL FIX: Wait for sources to be fully loaded before setting up refresh
                                 // This prevents the race condition where timers fire before sources are available in state
-                                // Direct, immediate approach
+                                // Make sure we set up the timer for future refreshes, but skip immediate refresh
                                 if (isMounted.current) {
                                     debugLog(`Setting up refresh for source ${validSourceId}`);
 
-                                    // Standard refresh logic without delays or special flags
+                                    // When a source has expired timer, we perform the refresh directly above,
+                                    // so we always want to skip immediate refresh in setupRefresh to avoid duplicates
+                                    const skipImmediateRefreshOptions = {
+                                        ...refreshOptionsForSetup,
+                                        skipImmediateRefresh: true  // Always skip immediate refresh during initial load
+                                    };
+
                                     http.setupRefresh(
                                         validSourceId,
                                         source.sourcePath,
                                         source.sourceMethod,
                                         source.requestOptions,
-                                        refreshOptionsForSetup,
+                                        skipImmediateRefreshOptions,
                                         source.jsonFilter,
                                         updateSourceContent
                                     );
@@ -875,10 +883,11 @@ export function SourceProvider({ children }) {
                         debugLog(`Setting up refresh schedule for updated source ${sourceId} with jsonFilter: ${
                             JSON.stringify(normalizedJsonFilter)}`);
 
-                        // Create refresh options, preserving the nextRefresh time if available and allowed
+                        // Create refresh options, preserving timing info and preventing immediate refresh
+                        // Always skip immediate refresh for edit operations to prevent duplicate requests
                         const refreshOptionsForSetup = {
                             ...sourceData.refreshOptions,
-                            skipImmediateRefresh: skipImmediateRefresh
+                            skipImmediateRefresh: true // Force skip immediate refresh for Edit Modal
                         };
 
                         if (preserveTiming && updatedSource && updatedSource.refreshOptions &&
