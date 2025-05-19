@@ -1096,7 +1096,7 @@ export function SourceProvider({ children }) {
             }
             else if (source.sourceType === 'http') {
                 // Handle HTTP request with retry for ECONNRESET
-                const handleHttpRefresh = async (attempt = 1) => {
+                const handleHttpRefresh = async (attempt = 1, maxRetries = 3) => {
                     try {
                         console.log(`HTTP refresh attempt ${attempt} for source ${sourceId}`);
 
@@ -1134,19 +1134,23 @@ export function SourceProvider({ children }) {
                         }
                         return true;
                     } catch (error) {
-                        // Check if this is a connection reset error and we should retry
-                        const isConnectionResetError = error.message && (
+                        // Enhanced retry logic for connection issues
+                        const isRetryableError = error.message && (
                             error.message.includes('ECONNRESET') ||
-                            error.message.includes('Connection Reset')
+                            error.message.includes('Connection Reset') ||
+                            error.message.includes('ETIMEDOUT') ||
+                            error.message.includes('ECONNREFUSED') ||
+                            error.message.includes('socket hang up') ||
+                            error.message.includes('network error')
                         );
 
-                        if (isConnectionResetError && attempt === 1) {
-                            // For ECONNRESET errors, try one more time after a short delay
-                            debugLog(`ECONNRESET detected for source ${sourceId}, attempting retry...`);
+                        if (isRetryableError && attempt < maxRetries) {
+                            // For retryable errors, try again with exponential backoff
+                            debugLog(`${error.message} detected for source ${sourceId}, attempting retry ${attempt} of ${maxRetries}...`);
 
                             // Show temporary status to user
                             if (isMounted.current) {
-                                updateSourceContent(sourceId, "Retrying connection...", {
+                                updateSourceContent(sourceId, `Retrying connection (${attempt}/${maxRetries})...`, {
                                     refreshOptions: {
                                         ...source.refreshOptions,
                                         lastRefresh: Date.now()
@@ -1154,14 +1158,22 @@ export function SourceProvider({ children }) {
                                 });
                             }
 
-                            // Wait a bit before retry
-                            await new Promise(resolve => setTimeout(resolve, 1000));
+                            // Calculate exponential backoff delay with jitter
+                            const backoffDelay = Math.min(
+                                1000 * Math.pow(2, attempt - 1) + Math.random() * 1000,
+                                10000
+                            );
 
-                            // Try again (recursively with attempt=2)
-                            return handleHttpRefresh(2);
+                            debugLog(`Waiting ${Math.round(backoffDelay)}ms before retry ${attempt}...`);
+
+                            // Wait and retry
+                            await new Promise(resolve => setTimeout(resolve, backoffDelay));
+
+                            // Try again (recursively with incremented attempt)
+                            return handleHttpRefresh(attempt + 1, maxRetries);
                         }
 
-                        // If it's not ECONNRESET or we've already retried, handle the error normally
+                        // If it's not retryable or we've exhausted retries, handle the error normally
                         clearTimeout(refreshTimeout);
                         console.error(`Error refreshing HTTP source ${sourceId} (attempt ${attempt}):`, error);
 
