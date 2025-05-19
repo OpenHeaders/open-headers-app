@@ -1241,8 +1241,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         else {
                             requestBody = String(options.body);
                         }
-
-                        console.log('Processed form data:', requestBody);
                     }
                     else if (options.contentType === 'application/json') {
                         if (typeof options.body === 'string') {
