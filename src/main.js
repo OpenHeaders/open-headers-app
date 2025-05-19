@@ -36,6 +36,9 @@ const appLaunchArgs = {
 // Fix for Electron 18+ where app.getPath('appData') could return /Application Support/open-headers-app
 // instead of /Application Support/Open Headers
 app.setName('OpenHeaders');
+// Enable use of system certificate store
+// This doesn't affect the WSS server which uses its own certificates
+app.commandLine.appendSwitch('use-system-ca-store');
 
 // Add logging to help with debugging
 function logToFile(message) {
@@ -1191,7 +1194,10 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     keepAlive: options.connectionOptions?.keepAlive !== false,
                     keepAliveMsecs: 5000,
                     maxSockets: 8,
-                    timeout: options.connectionOptions?.timeout || 15000
+                    timeout: options.connectionOptions?.timeout || 15000,
+                    // This ensures Node.js uses the OS cert store
+                    // when the use-system-ca-store switch is enabled
+                    ca: undefined
                 });
 
                 // Prepare request body if needed
@@ -1358,6 +1364,22 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 // ENHANCED ERROR HANDLING with exponential backoff
                 req.on('error', (error) => {
                     log.error(`[${requestId}] HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+
+                    if (error.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
+                        error.code === 'CERT_SIGNATURE_FAILURE' ||
+                        error.code === 'ERR_CERT_AUTHORITY_INVALID' ||
+                        error.message.includes('certificate')) {
+
+                        // Log detailed certificate error info
+                        log.error(`[${requestId}] Certificate validation error: ${error.message}`);
+                        log.error(`[${requestId}] Host: ${parsedUrl.hostname}, Protocol: ${parsedUrl.protocol}`);
+                        log.error(`[${requestId}] Using system certificate store: true`);
+
+                        // Include stack in development logs
+                        if (process.env.NODE_ENV === 'development') {
+                            log.error(`[${requestId}] Stack: ${error.stack}`);
+                        }
+                    }
 
                     // Check if we should retry (expanded list of retryable errors)
                     const isRetryableError = error.code === 'ECONNRESET' ||
