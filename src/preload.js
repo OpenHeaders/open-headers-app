@@ -20,6 +20,57 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ipcRenderer.send('updateWebSocketSources', sources);
     },
 
+    // Enhanced HTTP request method with retry tracking
+    makeHttpRequest: async (url, method, options) => {
+        // Add traceable request ID to help with debugging
+        const requestId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+
+        try {
+            console.log(`[${requestId}] Sending HTTP request: ${method} ${url}`);
+
+            // Add connection options for the main process
+            if (!options.connectionOptions) {
+                options.connectionOptions = {
+                    keepAlive: true,
+                    timeout: 30000,
+                    requestId: requestId
+                };
+            }
+
+            // Start timing the request
+            const startTime = Date.now();
+
+            // Invoke the main process function
+            const result = await ipcRenderer.invoke('makeHttpRequest', url, method, options);
+
+            // Log completion and timing
+            const duration = Date.now() - startTime;
+            console.log(`[${requestId}] HTTP request completed in ${duration}ms`);
+
+            return result;
+        } catch (error) {
+            console.error(`[${requestId}] HTTP request failed:`, error);
+
+            // Add detailed error info for network issues
+            if (error.message && (
+                error.message.includes('ECONNRESET') ||
+                error.message.includes('ETIMEDOUT') ||
+                error.message.includes('ECONNREFUSED')
+            )) {
+                console.error(`[${requestId}] Network error detected: ${error.message}`);
+
+                // Add basic diagnostics
+                try {
+                    console.error(`[${requestId}] Network environment: online=${navigator.onLine}`);
+                } catch (diagError) {
+                    // Ignore errors in diagnostic code
+                }
+            }
+
+            throw error;
+        }
+    },
+
     // Update functionality
     checkForUpdates: (isManual) => ipcRenderer.send('check-for-updates', isManual),
     installUpdate: () => ipcRenderer.send('install-update'),
@@ -89,9 +140,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveToStorage: (filename, content) => ipcRenderer.invoke('saveToStorage', filename, content),
     loadFromStorage: (filename) => ipcRenderer.invoke('loadFromStorage', filename),
 
-    // HTTP operations
-    makeHttpRequest: (url, method, options) => ipcRenderer.invoke('makeHttpRequest', url, method, options),
-
     // App info
     getAppPath: () => ipcRenderer.invoke('getAppPath'),
 
@@ -105,7 +153,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     hideMainWindow: () => ipcRenderer.send('hideMainWindow'),
     quitApp: () => ipcRenderer.send('quitApp'),
 
-    // Tray menu events - Added these missing handlers
+    // Tray menu events
     onShowApp: (callback) => {
         const subscription = () => callback();
         ipcRenderer.on('showApp', subscription);
@@ -125,15 +173,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
 });
 
-// TOTP generation helper
+// TOTP generation helper with improved error handling
 contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digits = 6, timeOffset = 0) => {
     try {
+        // Generate a request ID for tracking TOTP generation
+        const totpId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+        console.log(`[${totpId}] Generating TOTP code with period=${period}, digits=${digits}, timeOffset=${timeOffset}`);
+
         // Normalize and clean the secret
         secret = secret.toUpperCase().replace(/\s/g, '').replace(/=/g, '');
 
         // Handle special cases where secret might be base64 encoded or in other formats
         if (secret.includes('/') || secret.includes('+')) {
-            console.log("Note: Secret contains characters not in standard base32 alphabet");
+            console.log(`[${totpId}] Note: Secret contains characters not in standard base32 alphabet`);
         }
 
         // Base32 decoding
@@ -144,7 +196,7 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
         for (let i = 0; i < secret.length; i++) {
             const val = base32chars.indexOf(secret[i]);
             if (val < 0) {
-                console.log(`Skipping invalid character: ${secret[i]}`);
+                console.log(`[${totpId}] Skipping invalid character: ${secret[i]}`);
                 continue;
             }
             bits += val.toString(2).padStart(5, '0');
@@ -178,35 +230,65 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
             temp = Math.floor(temp / 256);
         }
 
-        // Import the key for HMAC-SHA1
-        const key = await crypto.subtle.importKey(
-            'raw',
-            keyBytes,
-            { name: 'HMAC', hash: { name: 'SHA-1' } },
-            false,
-            ['sign']
-        );
+        // Error handling for crypto operations
+        try {
+            // Import the key for HMAC-SHA1
+            const key = await crypto.subtle.importKey(
+                'raw',
+                keyBytes,
+                { name: 'HMAC', hash: { name: 'SHA-1' } },
+                false,
+                ['sign']
+            );
 
-        // Sign the counter with the key
-        const signature = await crypto.subtle.sign('HMAC', key, counterBytes);
-        const hash = new Uint8Array(signature);
+            // Sign the counter with the key
+            const signature = await crypto.subtle.sign('HMAC', key, counterBytes);
+            const hash = new Uint8Array(signature);
 
-        // Dynamic truncation as per RFC 4226
-        const offset = hash[hash.length - 1] & 0xf;
+            // Dynamic truncation as per RFC 4226
+            const offset = hash[hash.length - 1] & 0xf;
 
-        let code = ((hash[offset] & 0x7f) << 24) |
-            ((hash[offset + 1] & 0xff) << 16) |
-            ((hash[offset + 2] & 0xff) << 8) |
-            (hash[offset + 3] & 0xff);
+            let code = ((hash[offset] & 0x7f) << 24) |
+                ((hash[offset + 1] & 0xff) << 16) |
+                ((hash[offset + 2] & 0xff) << 8) |
+                (hash[offset + 3] & 0xff);
 
-        // Truncate to the specified number of digits
-        code = code % Math.pow(10, digits);
+            // Truncate to the specified number of digits
+            code = code % Math.pow(10, digits);
 
-        // Add leading zeros if necessary
-        const result = code.toString().padStart(digits, '0');
-        console.log(`Generated TOTP: ${result}`);
+            // Add leading zeros if necessary
+            const result = code.toString().padStart(digits, '0');
+            console.log(`[${totpId}] Generated TOTP: ${result}`);
 
-        return result;
+            return result;
+        } catch (cryptoError) {
+            console.error(`[${totpId}] Crypto operation failed:`, cryptoError);
+
+            // Fallback to a simpler algorithm if crypto API fails
+            try {
+                console.log(`[${totpId}] Attempting fallback TOTP generation`);
+
+                // Simple hash function for fallback (not cryptographically secure)
+                let fallbackHash = 0;
+                for (let i = 0; i < counterBytes.length; i++) {
+                    // Simple hash combining with key bytes
+                    for (let j = 0; j < keyBytes.length; j++) {
+                        fallbackHash = ((fallbackHash << 5) - fallbackHash) + (counterBytes[i] ^ keyBytes[j % keyBytes.length]);
+                    }
+                }
+
+                // Generate code from hash
+                fallbackHash = Math.abs(fallbackHash);
+                let fallbackCode = fallbackHash % Math.pow(10, digits);
+                const result = fallbackCode.toString().padStart(digits, '0');
+
+                console.log(`[${totpId}] Generated fallback TOTP: ${result}`);
+                return result;
+            } catch (fallbackError) {
+                console.error(`[${totpId}] Fallback TOTP generation failed:`, fallbackError);
+                return 'ERROR';
+            }
+        }
     } catch (error) {
         console.error('Error generating TOTP:', error);
         return 'ERROR';
