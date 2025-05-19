@@ -2,8 +2,6 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const http = require('http');
-const https = require('https');
 const querystring = require('querystring');
 const chokidar = require('chokidar');
 const AutoLaunch = require('auto-launch');
@@ -1144,13 +1142,25 @@ function handleGetAppPath() {
     return app.getPath('userData');
 }
 
+/**
+ * Make HTTP request using Electron's net module
+ *
+ * This implementation uses Electron's net module instead of Node.js's http/https modules
+ * because it properly integrates with the operating system's certificate store
+ * through the `app.commandLine.appendSwitch('use-system-ca-store')` setting.
+ *
+ * This allows the app to respect certificates that are trusted in the OS, which
+ * is critical for connecting to services with self-signed certificates or internal CAs.
+ */
 async function handleMakeHttpRequest(_, url, method, options = {}) {
-    // Configure enhanced retry parameters
-    const MAX_RETRIES = 4;  // Increased from 2 to 4 maximum retries
-    const INITIAL_RETRY_DELAY = 1000;  // Increased initial delay to 1 second
-    const MAX_RETRY_DELAY = 10000;  // Maximum delay of 10 seconds
+    const { net } = require('electron');
 
-    // Function to perform the actual request with exponential backoff retry logic
+    // Configure enhanced retry parameters
+    const MAX_RETRIES = 4;
+    const INITIAL_RETRY_DELAY = 1000;
+    const MAX_RETRY_DELAY = 10000;
+
+    // Function to perform the request with Electron's net module
     const performRequest = async (retryCount = 0) => {
         return new Promise((resolve, reject) => {
             try {
@@ -1166,238 +1176,167 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     });
                 }
 
-                // Get requestId from options if available, or generate a new one
+                // Get requestId
                 const requestId = (options.connectionOptions && options.connectionOptions.requestId) ||
                     (Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
 
-                // Prepare request options with improved defaults
-                const requestOptions = {
+                // Create request using Electron's net module
+                const request = net.request({
                     method: method || 'GET',
-                    hostname: parsedUrl.hostname,
-                    port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
-                    path: parsedUrl.pathname + parsedUrl.search,
-                    headers: {
-                        'User-Agent': `OpenHeaders/${app.getVersion()}`,
-                        ...options.headers
-                    },
-                    timeout: options.connectionOptions?.timeout || 15000, // Use provided timeout or default to 15s
-
-                    // Configure keepAlive settings if provided
-                    agent: null // Will be set below
-                };
-
-                // Create a keepAlive agent (better connection handling)
-                const isSecure = parsedUrl.protocol === 'https:';
-                const Agent = isSecure ? require('https').Agent : require('http').Agent;
-
-                requestOptions.agent = new Agent({
-                    keepAlive: options.connectionOptions?.keepAlive !== false,
-                    keepAliveMsecs: 5000,
-                    maxSockets: 8,
-                    timeout: options.connectionOptions?.timeout || 15000,
-                    // This ensures Node.js uses the OS cert store
-                    // when the use-system-ca-store switch is enabled
-                    ca: undefined
+                    url: parsedUrl.toString(),
+                    redirect: 'follow'
                 });
 
-                // Prepare request body if needed
-                let requestBody = null;
-                if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
-                    // Set Content-Type header
-                    if (options.contentType) {
-                        requestOptions.headers['Content-Type'] = options.contentType;
+                // Manual timeout handling - Electron's net doesn't have setTimeout
+                const timeoutMs = options.connectionOptions?.timeout || 15000;
+                let timeoutId = null;
+
+                // Set up timeout handler using JavaScript's setTimeout
+                timeoutId = setTimeout(() => {
+                    request.abort(); // Abort the request on timeout
+                    log.error(`[${requestId}] Request timed out after ${timeoutMs}ms`);
+
+                    // Check if we should retry
+                    if (retryCount < MAX_RETRIES) {
+                        const delay = Math.min(
+                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                            MAX_RETRY_DELAY
+                        );
+
+                        log.info(`[${requestId}] Retrying after timeout in ${Math.round(delay)}ms`);
+
+                        // Wait and retry
+                        setTimeout(() => {
+                            performRequest(retryCount + 1)
+                                .then(resolve)
+                                .catch(reject);
+                        }, delay);
+                    } else {
+                        reject(new Error(`Request timed out after ${timeoutMs}ms and ${MAX_RETRIES} retries`));
                     }
+                }, timeoutMs);
 
-                    // Determine how to handle the body based on contentType
-                    if (options.contentType === 'application/x-www-form-urlencoded') {
-                        requestOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-
-                        // Process the form data based on its format
-                        if (typeof options.body === 'string') {
-                            // Format 1: Standard "key=value&key2=value2" format
-                            if (options.body.includes('=') && options.body.includes('&')) {
-                                requestBody = options.body;
-                            }
-                            // Format 2: Line-separated "key=value\nkey2=value2" format
-                            else if (options.body.includes('=') && options.body.includes('\n')) {
-                                requestBody = options.body.split('\n')
-                                    .filter(line => line.trim() !== '' && line.includes('='))
-                                    .join('&');
-                            }
-                            // Format 3 & 4: Colon-separated formats
-                            else if (options.body.includes(':')) {
-                                // Convert to object first
-                                const formData = {};
-
-                                // Split by lines
-                                const lines = options.body.split('\n')
-
-                                lines.forEach(line => {
-                                    line = line.trim();
-                                    if (line === '') return;
-
-                                    // Handle key:"value" format (with quotes)
-                                    if (line.includes(':"')) {
-                                        const colonPos = line.indexOf(':');
-                                        const key = line.substring(0, colonPos).trim();
-                                        // Extract value between quotes
-                                        const value = line.substring(colonPos + 2, line.lastIndexOf('"'));
-                                        formData[key] = value;
-                                    }
-                                    // Handle key:value format (without quotes)
-                                    else if (line.includes(':')) {
-                                        const parts = line.split(':');
-                                        if (parts.length >= 2) {
-                                            const key = parts[0].trim();
-                                            const value = parts.slice(1).join(':').trim();
-                                            formData[key] = value;
-                                        }
-                                    }
-                                });
-
-                                // Use the querystring module to properly encode the form data
-                                requestBody = querystring.stringify(formData);
-                            }
-                            // Any other string format - try as-is
-                            else {
-                                requestBody = options.body;
-                            }
-                        }
-                        // Handle object format
-                        else if (typeof options.body === 'object') {
-                            requestBody = querystring.stringify(options.body);
-                        }
-                        // Fallback for any other type
-                        else {
-                            requestBody = String(options.body);
-                        }
-                    }
-                    else if (options.contentType === 'application/json') {
-                        if (typeof options.body === 'string') {
-                            try {
-                                // Try to parse as JSON to validate
-                                JSON.parse(options.body);
-                                requestBody = options.body;
-                            } catch (e) {
-                                // If not valid JSON, stringify it
-                                requestBody = JSON.stringify(options.body);
-                            }
-                        } else {
-                            requestBody = JSON.stringify(options.body);
-                        }
-                        requestOptions.headers['Content-Type'] = 'application/json';
-                    }
-                    else {
-                        requestBody = typeof options.body === 'string'
-                            ? options.body
-                            : JSON.stringify(options.body);
-                        requestOptions.headers['Content-Type'] = options.contentType || 'text/plain';
-                    }
-
-                    if (requestBody) {
-                        requestOptions.headers['Content-Length'] = Buffer.byteLength(requestBody);
-                    }
+                // Set headers
+                if (options.headers) {
+                    Object.entries(options.headers).forEach(([key, value]) => {
+                        request.setHeader(key, value);
+                    });
                 }
 
-                // Choose HTTP/HTTPS requester based on protocol
-                const requester = parsedUrl.protocol === 'https:' ? https : http;
+                // Set User-Agent
+                request.setHeader('User-Agent', `OpenHeaders/${app.getVersion()}`);
 
                 log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
 
-                const req = requester.request(requestOptions, (res) => {
-                    let data = '';
+                // Collect response chunks
+                let responseData = '';
+                let statusCode = 0;
 
-                    res.on('data', (chunk) => {
-                        data += chunk;
+                request.on('response', (response) => {
+                    // Clear the timeout since we got a response
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                        timeoutId = null;
+                    }
+
+                    statusCode = response.statusCode;
+
+                    // In Electron's net module, headers are directly available as an object
+                    // We don't need getHeaderNames() or getHeader()
+                    const responseHeaders = response.headers;
+
+                    response.on('data', (chunk) => {
+                        responseData += chunk.toString();
                     });
 
-                    res.on('end', () => {
-                        try {
-                            // Create headers object from the raw headers to preserve case
-                            const preservedHeaders = {};
-                            const rawHeaders = res.rawHeaders;
+                    response.on('end', () => {
+                        log.info(`[${requestId}] HTTP response received: ${statusCode}`);
 
-                            // rawHeaders is an array with alternating key, value pairs
-                            for (let i = 0; i < rawHeaders.length; i += 2) {
-                                const headerName = rawHeaders[i];
-                                const headerValue = rawHeaders[i + 1];
-                                preservedHeaders[headerName] = headerValue;
-                            }
+                        // Check for server errors (5xx) that might benefit from a retry
+                        if (statusCode >= 500 && retryCount < MAX_RETRIES) {
+                            log.info(`[${requestId}] Server error ${statusCode} received, will retry`);
 
+                            // Calculate delay with exponential backoff and jitter
+                            const delay = Math.min(
+                                INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                                MAX_RETRY_DELAY
+                            );
+
+                            log.info(`[${requestId}] Retrying in ${Math.round(delay)}ms`);
+
+                            // Wait and retry
+                            setTimeout(() => {
+                                performRequest(retryCount + 1)
+                                    .then(resolve)
+                                    .catch(reject);
+                            }, delay);
+                        } else {
                             // Format response
-                            const response = {
-                                statusCode: res.statusCode,
-                                headers: preservedHeaders,
-                                body: data
+                            const formattedResponse = {
+                                statusCode: statusCode,
+                                headers: responseHeaders,
+                                body: responseData
                             };
 
-                            log.info(`[${requestId}] HTTP response received: ${res.statusCode}`);
-
-                            // Check for server errors (5xx) that might benefit from a retry
-                            if (res.statusCode >= 500 && retryCount < MAX_RETRIES) {
-                                log.info(`[${requestId}] Server error ${res.statusCode} received, will retry`);
-
-                                // Calculate delay with exponential backoff and jitter
-                                const delay = Math.min(
-                                    INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
-                                    MAX_RETRY_DELAY
-                                );
-
-                                log.info(`[${requestId}] Retrying in ${Math.round(delay)}ms`);
-
-                                // Wait and retry
-                                setTimeout(() => {
-                                    performRequest(retryCount + 1)
-                                        .then(resolve)
-                                        .catch(reject);
-                                }, delay);
-                            } else {
-                                resolve(JSON.stringify(response));
-                            }
-                        } catch (err) {
-                            log.error(`[${requestId}] Failed to process response:`, err);
-                            reject(new Error(`Failed to process response: ${err.message}`));
+                            resolve(JSON.stringify(formattedResponse));
                         }
                     });
                 });
 
-                // ENHANCED ERROR HANDLING with exponential backoff
-                req.on('error', (error) => {
-                    log.error(`[${requestId}] HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
-
-                    if (error.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
-                        error.code === 'CERT_SIGNATURE_FAILURE' ||
-                        error.code === 'ERR_CERT_AUTHORITY_INVALID' ||
-                        error.message.includes('certificate')) {
-
-                        // Log detailed certificate error info
-                        log.error(`[${requestId}] Certificate validation error: ${error.message}`);
-                        log.error(`[${requestId}] Host: ${parsedUrl.hostname}, Protocol: ${parsedUrl.protocol}`);
-                        log.error(`[${requestId}] Using system certificate store: true`);
-
-                        // Include stack in development logs
-                        if (process.env.NODE_ENV === 'development') {
-                            log.error(`[${requestId}] Stack: ${error.stack}`);
-                        }
+                // Handle errors
+                request.on('error', (error) => {
+                    // Clear timeout on error
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                        timeoutId = null;
                     }
 
-                    // Check if we should retry (expanded list of retryable errors)
-                    const isRetryableError = error.code === 'ECONNRESET' ||
+                    log.error(`[${requestId}] HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+
+                    // Improved error detection for Chromium errors
+                    // Check if we should retry - include both Node.js and Chromium error codes
+                    const isRetryableError =
+                        // Node.js error codes
+                        error.code === 'ECONNRESET' ||
                         error.code === 'ETIMEDOUT' ||
                         error.code === 'ECONNREFUSED' ||
                         error.code === 'ENOTFOUND' ||
                         error.code === 'ECONNABORTED' ||
                         error.code === 'ENETUNREACH' ||
-                        error.code === 'EHOSTUNREACH';
+                        error.code === 'EHOSTUNREACH' ||
+                        // Chromium error codes (check for "net::" prefix)
+                        (error.message && error.message.includes('net::ERR_CONNECTION_RESET')) ||
+                        (error.message && error.message.includes('net::ERR_CONNECTION_TIMED_OUT')) ||
+                        (error.message && error.message.includes('net::ERR_CONNECTION_REFUSED')) ||
+                        (error.message && error.message.includes('net::ERR_NAME_NOT_RESOLVED')) ||
+                        (error.message && error.message.includes('net::ERR_NETWORK_CHANGED')) ||
+                        (error.message && error.message.includes('net::ERR_CONNECTION_ABORTED'));
 
-                    if (isRetryableError && retryCount < MAX_RETRIES) {
+                    // Certificate errors should NOT be retryable
+                    const isCertificateError =
+                        (error.message && error.message.includes('net::ERR_CERT_AUTHORITY_INVALID')) ||
+                        (error.message && error.message.includes('net::ERR_CERT_COMMON_NAME_INVALID')) ||
+                        (error.message && error.message.includes('net::ERR_CERT_DATE_INVALID')) ||
+                        (error.message && error.message.includes('net::ERR_CERT_'));
+
+                    if (isCertificateError) {
+                        log.error(`[${requestId}] Certificate error details:`);
+                        log.error(`[${requestId}] - URL: ${parsedUrl.href}`);
+                        log.error(`[${requestId}] - Host: ${parsedUrl.hostname}`);
+                        log.error(`[${requestId}] - Error: ${error.message}`);
+                        log.error(`[${requestId}] - Using system certificate store: true`);
+
+                        // Reject with a more user-friendly error message
+                        reject(new Error(`Certificate validation failed: ${error.message}`));
+                    }
+                    else if (isRetryableError && retryCount < MAX_RETRIES) {
                         // Calculate delay with exponential backoff and jitter
                         const delay = Math.min(
                             INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
                             MAX_RETRY_DELAY
                         );
 
-                        log.info(`[${requestId}] Retrying due to ${error.code} in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
+                        log.info(`[${requestId}] Retrying due to network error in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
                         // Wait and retry
                         setTimeout(() => {
@@ -1407,55 +1346,40 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         }, delay);
                     } else {
                         // Max retries reached or non-retryable error
-                        log.error(`[${requestId}] Error ${error.code} not retryable or max retries reached`);
+                        log.error(`[${requestId}] Error not retryable or max retries reached`);
                         reject(error);
                     }
                 });
 
-                // Enhanced timeout handling with exponential backoff
-                req.on('timeout', () => {
-                    req.destroy();
-                    log.error(`[${requestId}] Request timed out after ${requestOptions.timeout}ms`);
+                // Add body if applicable
+                if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
+                    let requestBody = options.body;
 
-                    // Check if we should retry
-                    if (retryCount < MAX_RETRIES) {
-                        // Calculate delay with exponential backoff and jitter
-                        const delay = Math.min(
-                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
-                            MAX_RETRY_DELAY
-                        );
-
-                        log.info(`[${requestId}] Retrying after timeout in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
-
-                        // Wait and retry
-                        setTimeout(() => {
-                            performRequest(retryCount + 1)
-                                .then(resolve)
-                                .catch(reject);
-                        }, delay);
-                    } else {
-                        // Max retries reached
-                        log.error(`[${requestId}] Max retries reached for timeout`);
-                        reject(new Error(`Request timed out after ${requestOptions.timeout}ms and ${MAX_RETRIES} retries`));
-                    }
-                });
-
-                // Add specific ECONNRESET handling for typical network interruptions
-                req.on('socket', (socket) => {
-                    socket.on('error', (error) => {
-                        if (error.code === 'ECONNRESET') {
-                            log.info(`[${requestId}] Socket ECONNRESET detected at the socket level`);
-                            // The 'error' event on req will still be triggered
+                    // Handle different content types
+                    if (options.contentType === 'application/x-www-form-urlencoded' && typeof options.body === 'object') {
+                        requestBody = querystring.stringify(options.body);
+                        request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+                    } else if (options.contentType === 'application/json') {
+                        if (typeof options.body !== 'string') {
+                            requestBody = JSON.stringify(options.body);
                         }
-                    });
-                });
+                        request.setHeader('Content-Type', 'application/json');
+                    } else if (options.contentType) {
+                        request.setHeader('Content-Type', options.contentType);
+                    }
 
-                // Send body if present
-                if (requestBody) {
-                    req.write(requestBody);
+                    // Convert to Buffer if it's a string
+                    if (typeof requestBody === 'string') {
+                        requestBody = Buffer.from(requestBody);
+                    }
+
+                    // Write the request body
+                    request.write(requestBody);
                 }
 
-                req.end();
+                // Complete the request
+                request.end();
+
             } catch (error) {
                 log.error('Error preparing HTTP request:', error);
                 reject(error);
