@@ -957,10 +957,6 @@ export function SourceProvider({ children }) {
     // This function is called directly by the UI or can be triggered by timers
     const refreshSource = async (sourceId, updatedSource = null) => {
         try {
-            // Removed duplicate checking - it was preventing refreshes from happening
-
-            // Simple implementation without complex tracking
-
             // Use the provided updatedSource if available, otherwise get from current state
             let source;
 
@@ -1072,10 +1068,14 @@ export function SourceProvider({ children }) {
                     if (isMounted.current) {
                         updateSourceContent(sourceId, content);
                     }
+                    clearTimeout(refreshTimeout);
+                    return true;
                 } catch (error) {
+                    clearTimeout(refreshTimeout);
                     if (isMounted.current) {
                         updateSourceContent(sourceId, `Error: ${error.message}`);
                     }
+                    return false;
                 }
             }
             else if (source.sourceType === 'env') {
@@ -1084,74 +1084,109 @@ export function SourceProvider({ children }) {
                     if (isMounted.current) {
                         updateSourceContent(sourceId, content);
                     }
+                    clearTimeout(refreshTimeout);
+                    return true;
                 } catch (error) {
+                    clearTimeout(refreshTimeout);
                     if (isMounted.current) {
                         updateSourceContent(sourceId, `Error: ${error.message}`);
                     }
+                    return false;
                 }
             }
             else if (source.sourceType === 'http') {
-                try {
-                    // Log the JSON filter state that will actually be used
-                    console.log(`Refreshing HTTP source ${sourceId} with jsonFilter:`,
-                        normalizedJsonFilter.enabled ?
-                            `enabled=${normalizedJsonFilter.enabled}, path=${normalizedJsonFilter.path}` :
-                            'disabled');
+                // Handle HTTP request with retry for ECONNRESET
+                const handleHttpRefresh = async (attempt = 1) => {
+                    try {
+                        console.log(`HTTP refresh attempt ${attempt} for source ${sourceId}`);
 
-                    // Make the request with the properly formatted jsonFilter
-                    const { content, originalResponse, headers } = await http.request(
-                        sourceId,
-                        source.sourcePath,
-                        source.sourceMethod,
-                        source.requestOptions,
-                        normalizedJsonFilter  // Pass the properly structured jsonFilter
-                    );
+                        // Log the JSON filter state that will actually be used
+                        console.log(`Refreshing HTTP source ${sourceId} with jsonFilter:`,
+                            normalizedJsonFilter.enabled ?
+                                `enabled=${normalizedJsonFilter.enabled}, path=${normalizedJsonFilter.path}` :
+                                'disabled');
 
-                    // Clear the timeout since the request succeeded
-                    clearTimeout(refreshTimeout);
+                        // Make the request with the properly formatted jsonFilter
+                        const result = await http.request(
+                            sourceId,
+                            source.sourcePath,
+                            source.sourceMethod,
+                            source.requestOptions,
+                            normalizedJsonFilter  // Pass the properly structured jsonFilter
+                        );
 
-                    if (isMounted.current) {
-                        debugLog(`HTTP refresh completed for source ${sourceId}`);
-                        updateSourceContent(sourceId, content, {
-                            originalResponse,
-                            headers,
-                            // Always update refresh times on successful refresh
-                            refreshOptions: {
-                                ...source.refreshOptions,
-                                lastRefresh: Date.now(),
-                                nextRefresh: Date.now() + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                        // Clear the timeout since the request succeeded
+                        clearTimeout(refreshTimeout);
+
+                        if (isMounted.current) {
+                            debugLog(`HTTP refresh completed for source ${sourceId}`);
+                            const { content, originalResponse, headers } = result;
+                            updateSourceContent(sourceId, content, {
+                                originalResponse,
+                                headers,
+                                // Always update refresh times on successful refresh
+                                refreshOptions: {
+                                    ...source.refreshOptions,
+                                    lastRefresh: Date.now(),
+                                    nextRefresh: Date.now() + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                                }
+                            });
+                        }
+                        return true;
+                    } catch (error) {
+                        // Check if this is a connection reset error and we should retry
+                        const isConnectionResetError = error.message && (
+                            error.message.includes('ECONNRESET') ||
+                            error.message.includes('Connection Reset')
+                        );
+
+                        if (isConnectionResetError && attempt === 1) {
+                            // For ECONNRESET errors, try one more time after a short delay
+                            debugLog(`ECONNRESET detected for source ${sourceId}, attempting retry...`);
+
+                            // Show temporary status to user
+                            if (isMounted.current) {
+                                updateSourceContent(sourceId, "Retrying connection...", {
+                                    refreshOptions: {
+                                        ...source.refreshOptions,
+                                        lastRefresh: Date.now()
+                                    }
+                                });
                             }
-                        });
+
+                            // Wait a bit before retry
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+
+                            // Try again (recursively with attempt=2)
+                            return handleHttpRefresh(2);
+                        }
+
+                        // If it's not ECONNRESET or we've already retried, handle the error normally
+                        clearTimeout(refreshTimeout);
+                        console.error(`Error refreshing HTTP source ${sourceId} (attempt ${attempt}):`, error);
+
+                        if (isMounted.current) {
+                            const now = Date.now();
+                            // Update refresh timestamps when errors occur
+                            updateSourceContent(sourceId, `Error: ${error.message}`, {
+                                refreshOptions: {
+                                    ...source.refreshOptions,
+                                    lastRefresh: now,
+                                    nextRefresh: now + ((source.refreshOptions?.interval || 1) * 60 * 1000)
+                                }
+                            });
+                        }
+                        return false;
                     }
+                };
 
-                    // Modern implementation uses clean timeouts instead of tracking
-                } catch (error) {
-                    // Clear the timeout since the request finished (with error)
-                    clearTimeout(refreshTimeout);
-
-                    console.error(`Error refreshing HTTP source ${sourceId}:`, error);
-
-                    if (isMounted.current) {
-                        const now = Date.now();
-                        // Also update refresh timestamps when errors occur
-                        updateSourceContent(sourceId, `Error: ${error.message}`, {
-                            refreshOptions: {
-                                ...source.refreshOptions,
-                                lastRefresh: now,
-                                nextRefresh: now + ((source.refreshOptions?.interval || 1) * 60 * 1000)
-                            }
-                        });
-                    }
-
-                    // Modern implementation uses clean timeouts instead of tracking
-                }
+                // Start the HTTP request process with retry capability
+                return await handleHttpRefresh(1);
             }
 
             return true;
         } catch (error) {
             console.error('Error refreshing source:', error);
-
-            // Modern implementation uses clean timeouts instead of tracking
 
             if (isMounted.current) {
                 showMessage('error', `Failed to refresh source: ${error.message}`);
