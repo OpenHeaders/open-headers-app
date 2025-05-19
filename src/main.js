@@ -1153,14 +1153,14 @@ function handleGetAppPath() {
  * is critical for connecting to services with self-signed certificates or internal CAs.
  */
 async function handleMakeHttpRequest(_, url, method, options = {}) {
+    // Get the net module from Electron
     const { net } = require('electron');
 
-    // Configure enhanced retry parameters
-    const MAX_RETRIES = 4;
-    const INITIAL_RETRY_DELAY = 1000;
-    const MAX_RETRY_DELAY = 10000;
+    // Configure retry parameters
+    const MAX_RETRIES = 2;  // Maximum number of retry attempts
+    const RETRY_DELAY = 500;  // Delay between retries in milliseconds
 
-    // Function to perform the request with Electron's net module
+    // Function to perform the actual request with retry logic
     const performRequest = async (retryCount = 0) => {
         return new Promise((resolve, reject) => {
             try {
@@ -1198,12 +1198,13 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                     // Check if we should retry
                     if (retryCount < MAX_RETRIES) {
+                        // Calculate delay with exponential backoff and jitter
                         const delay = Math.min(
-                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
-                            MAX_RETRY_DELAY
+                            RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                            10000
                         );
 
-                        log.info(`[${requestId}] Retrying after timeout in ${Math.round(delay)}ms`);
+                        log.info(`[${requestId}] Retrying due to timeout in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
                         // Wait and retry
                         setTimeout(() => {
@@ -1212,7 +1213,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                                 .catch(reject);
                         }, delay);
                     } else {
-                        reject(new Error(`Request timed out after ${timeoutMs}ms and ${MAX_RETRIES} retries`));
+                        reject(new Error(`Request timed out after ${timeoutMs}ms`));
                     }
                 }, timeoutMs);
 
@@ -1241,8 +1242,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                     statusCode = response.statusCode;
 
-                    // In Electron's net module, headers are directly available as an object
-                    // We don't need getHeaderNames() or getHeader()
+                    // Get headers - In Electron's net module, headers are directly available as an object
                     const responseHeaders = response.headers;
 
                     response.on('data', (chunk) => {
@@ -1258,8 +1258,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                             // Calculate delay with exponential backoff and jitter
                             const delay = Math.min(
-                                INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
-                                MAX_RETRY_DELAY
+                                RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                                10000
                             );
 
                             log.info(`[${requestId}] Retrying in ${Math.round(delay)}ms`);
@@ -1325,7 +1325,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         log.error(`[${requestId}] - URL: ${parsedUrl.href}`);
                         log.error(`[${requestId}] - Host: ${parsedUrl.hostname}`);
                         log.error(`[${requestId}] - Error: ${error.message}`);
-                        log.error(`[${requestId}] - Using system certificate store: true`);
 
                         // Reject with a more user-friendly error message
                         reject(new Error(`Certificate validation failed: ${error.message}`));
@@ -1333,8 +1332,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     else if (isRetryableError && retryCount < MAX_RETRIES) {
                         // Calculate delay with exponential backoff and jitter
                         const delay = Math.min(
-                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
-                            MAX_RETRY_DELAY
+                            RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                            10000
                         );
 
                         log.info(`[${requestId}] Retrying due to network error in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
@@ -1352,20 +1351,79 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     }
                 });
 
-                // Add body if applicable
+                // Prepare request body if applicable
                 if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
                     let requestBody = options.body;
 
                     // Handle different content types
-                    if (options.contentType === 'application/x-www-form-urlencoded' && typeof options.body === 'object') {
-                        requestBody = querystring.stringify(options.body);
+                    if (options.contentType === 'application/x-www-form-urlencoded') {
+                        let formData = {};
+
+                        if (typeof options.body === 'string') {
+                            // Handle different string format types for form data
+
+                            // Format 1: Standard "key=value&key2=value2" format
+                            if (options.body.includes('=') && options.body.includes('&')) {
+                                requestBody = options.body; // Already in proper format
+                            }
+                            // Format 2: Line-separated "key=value\nkey2=value2" format
+                            else if (options.body.includes('=') && options.body.includes('\n')) {
+                                requestBody = options.body.split('\n')
+                                    .filter(line => line.trim() !== '' && line.includes('='))
+                                    .join('&');
+                            }
+                            // Format 3 & 4: Colon-separated formats (username:value\npassword:value)
+                            else if (options.body.includes(':')) {
+                                // Split by lines
+                                const lines = options.body.split('\n');
+
+                                log.info(`[${requestId}] Converting colon format form data with ${lines.length} lines`);
+
+                                // Process each line
+                                lines.forEach(line => {
+                                    line = line.trim();
+                                    if (line === '') return;
+
+                                    // Handle key:"value" format (with quotes)
+                                    if (line.includes(':"')) {
+                                        const colonPos = line.indexOf(':');
+                                        const key = line.substring(0, colonPos).trim();
+                                        // Extract value between quotes
+                                        const value = line.substring(colonPos + 2, line.lastIndexOf('"'));
+                                        formData[key] = value;
+                                    }
+                                    // Handle key:value format (without quotes)
+                                    else if (line.includes(':')) {
+                                        const parts = line.split(':');
+                                        if (parts.length >= 2) {
+                                            const key = parts[0].trim();
+                                            const value = parts.slice(1).join(':').trim();
+                                            formData[key] = value;
+                                            log.info(`[${requestId}] Form param: ${key}=${value}`);
+                                        }
+                                    }
+                                });
+
+                                // Use querystring module to properly encode the form data
+                                requestBody = querystring.stringify(formData);
+                                log.info(`[${requestId}] Converted colon-separated format to URL-encoded: ${requestBody.substring(0, 100)}...`);
+                            }
+                        }
+                        // Process object format
+                        else if (typeof options.body === 'object' && options.body !== null) {
+                            requestBody = querystring.stringify(options.body);
+                        }
+
+                        // Ensure Content-Type header is set
                         request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-                    } else if (options.contentType === 'application/json') {
+                    }
+                    else if (options.contentType === 'application/json') {
                         if (typeof options.body !== 'string') {
                             requestBody = JSON.stringify(options.body);
                         }
                         request.setHeader('Content-Type', 'application/json');
-                    } else if (options.contentType) {
+                    }
+                    else if (options.contentType) {
                         request.setHeader('Content-Type', options.contentType);
                     }
 
