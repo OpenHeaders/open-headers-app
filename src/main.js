@@ -1310,7 +1310,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         (error.message && error.message.includes('net::ERR_CONNECTION_REFUSED')) ||
                         (error.message && error.message.includes('net::ERR_NAME_NOT_RESOLVED')) ||
                         (error.message && error.message.includes('net::ERR_NETWORK_CHANGED')) ||
-                        (error.message && error.message.includes('net::ERR_CONNECTION_ABORTED'));
+                        (error.message && error.message.includes('net::ERR_CONNECTION_ABORTED')) ||
+                        (error.message && error.message.includes('net::ERR_EMPTY_RESPONSE'));
 
                     // Certificate errors should NOT be retryable
                     const isCertificateError =
