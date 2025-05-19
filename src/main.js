@@ -1142,11 +1142,12 @@ function handleGetAppPath() {
 }
 
 async function handleMakeHttpRequest(_, url, method, options = {}) {
-    // Configure retry parameters
-    const MAX_RETRIES = 2;  // Maximum number of retry attempts
-    const RETRY_DELAY = 500;  // Delay between retries in milliseconds
+    // Configure enhanced retry parameters
+    const MAX_RETRIES = 4;  // Increased from 2 to 4 maximum retries
+    const INITIAL_RETRY_DELAY = 1000;  // Increased initial delay to 1 second
+    const MAX_RETRY_DELAY = 10000;  // Maximum delay of 10 seconds
 
-    // Function to perform the actual request with retry logic
+    // Function to perform the actual request with exponential backoff retry logic
     const performRequest = async (retryCount = 0) => {
         return new Promise((resolve, reject) => {
             try {
@@ -1162,7 +1163,11 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     });
                 }
 
-                // Prepare request options
+                // Get requestId from options if available, or generate a new one
+                const requestId = (options.connectionOptions && options.connectionOptions.requestId) ||
+                    (Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
+
+                // Prepare request options with improved defaults
                 const requestOptions = {
                     method: method || 'GET',
                     hostname: parsedUrl.hostname,
@@ -1172,17 +1177,36 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         'User-Agent': `OpenHeaders/${app.getVersion()}`,
                         ...options.headers
                     },
-                    timeout: 10000 // 10 seconds timeout
+                    timeout: options.connectionOptions?.timeout || 15000, // Use provided timeout or default to 15s
+
+                    // Configure keepAlive settings if provided
+                    agent: null // Will be set below
                 };
+
+                // Create a keepAlive agent (better connection handling)
+                const isSecure = parsedUrl.protocol === 'https:';
+                const Agent = isSecure ? require('https').Agent : require('http').Agent;
+
+                requestOptions.agent = new Agent({
+                    keepAlive: options.connectionOptions?.keepAlive !== false,
+                    keepAliveMsecs: 5000,
+                    maxSockets: 8,
+                    timeout: options.connectionOptions?.timeout || 15000
+                });
 
                 // Prepare request body if needed
                 let requestBody = null;
                 if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
+                    // Set Content-Type header
+                    if (options.contentType) {
+                        requestOptions.headers['Content-Type'] = options.contentType;
+                    }
+
+                    // Determine how to handle the body based on contentType
                     if (options.contentType === 'application/x-www-form-urlencoded') {
-                        // Set Content-Type header
                         requestOptions.headers['Content-Type'] = 'application/x-www-form-urlencoded';
 
-                        // Check body format and handle appropriately
+                        // Process the form data based on its format
                         if (typeof options.body === 'string') {
                             // Format 1: Standard "key=value&key2=value2" format
                             if (options.body.includes('=') && options.body.includes('&')) {
@@ -1269,8 +1293,11 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     }
                 }
 
-                // Make the request
+                // Choose HTTP/HTTPS requester based on protocol
                 const requester = parsedUrl.protocol === 'https:' ? https : http;
+
+                log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+
                 const req = requester.request(requestOptions, (res) => {
                     let data = '';
 
@@ -1298,58 +1325,107 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                                 body: data
                             };
 
-                            console.log(`HTTP response received: ${res.statusCode}`);
-                            resolve(JSON.stringify(response));
+                            log.info(`[${requestId}] HTTP response received: ${res.statusCode}`);
+
+                            // Check for server errors (5xx) that might benefit from a retry
+                            if (res.statusCode >= 500 && retryCount < MAX_RETRIES) {
+                                log.info(`[${requestId}] Server error ${res.statusCode} received, will retry`);
+
+                                // Calculate delay with exponential backoff and jitter
+                                const delay = Math.min(
+                                    INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                                    MAX_RETRY_DELAY
+                                );
+
+                                log.info(`[${requestId}] Retrying in ${Math.round(delay)}ms`);
+
+                                // Wait and retry
+                                setTimeout(() => {
+                                    performRequest(retryCount + 1)
+                                        .then(resolve)
+                                        .catch(reject);
+                                }, delay);
+                            } else {
+                                resolve(JSON.stringify(response));
+                            }
                         } catch (err) {
-                            console.error('Failed to process response:', err);
+                            log.error(`[${requestId}] Failed to process response:`, err);
                             reject(new Error(`Failed to process response: ${err.message}`));
                         }
                     });
                 });
 
-                // Handle errors WITH RETRY LOGIC
+                // ENHANCED ERROR HANDLING with exponential backoff
                 req.on('error', (error) => {
-                    console.error(`HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
+                    log.error(`[${requestId}] HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
 
-                    // Check if we should retry (connection reset or network error)
+                    // Check if we should retry (expanded list of retryable errors)
                     const isRetryableError = error.code === 'ECONNRESET' ||
                         error.code === 'ETIMEDOUT' ||
-                        error.code === 'ECONNREFUSED';
+                        error.code === 'ECONNREFUSED' ||
+                        error.code === 'ENOTFOUND' ||
+                        error.code === 'ECONNABORTED' ||
+                        error.code === 'ENETUNREACH' ||
+                        error.code === 'EHOSTUNREACH';
 
                     if (isRetryableError && retryCount < MAX_RETRIES) {
-                        console.log(`Retrying request in ${RETRY_DELAY}ms (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                        // Calculate delay with exponential backoff and jitter
+                        const delay = Math.min(
+                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                            MAX_RETRY_DELAY
+                        );
+
+                        log.info(`[${requestId}] Retrying due to ${error.code} in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
                         // Wait and retry
                         setTimeout(() => {
                             performRequest(retryCount + 1)
                                 .then(resolve)
                                 .catch(reject);
-                        }, RETRY_DELAY);
+                        }, delay);
                     } else {
                         // Max retries reached or non-retryable error
+                        log.error(`[${requestId}] Error ${error.code} not retryable or max retries reached`);
                         reject(error);
                     }
                 });
 
-                // Handle timeout
+                // Enhanced timeout handling with exponential backoff
                 req.on('timeout', () => {
                     req.destroy();
-                    console.error(`Request timed out after ${requestOptions.timeout}ms`);
+                    log.error(`[${requestId}] Request timed out after ${requestOptions.timeout}ms`);
 
                     // Check if we should retry
                     if (retryCount < MAX_RETRIES) {
-                        console.log(`Retrying request in ${RETRY_DELAY}ms after timeout (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+                        // Calculate delay with exponential backoff and jitter
+                        const delay = Math.min(
+                            INITIAL_RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
+                            MAX_RETRY_DELAY
+                        );
+
+                        log.info(`[${requestId}] Retrying after timeout in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
                         // Wait and retry
                         setTimeout(() => {
                             performRequest(retryCount + 1)
                                 .then(resolve)
                                 .catch(reject);
-                        }, RETRY_DELAY);
+                        }, delay);
                     } else {
                         // Max retries reached
-                        reject(new Error(`Request timed out after ${requestOptions.timeout}ms`));
+                        log.error(`[${requestId}] Max retries reached for timeout`);
+                        reject(new Error(`Request timed out after ${requestOptions.timeout}ms and ${MAX_RETRIES} retries`));
                     }
+                });
+
+                // Add specific ECONNRESET handling for typical network interruptions
+                req.on('socket', (socket) => {
+                    socket.on('error', (error) => {
+                        if (error.code === 'ECONNRESET') {
+                            log.info(`[${requestId}] Socket ECONNRESET detected at the socket level`);
+                            // The 'error' event on req will still be triggered
+                        }
+                    });
                 });
 
                 // Send body if present
@@ -1359,7 +1435,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                 req.end();
             } catch (error) {
-                console.error('Error making HTTP request:', error);
+                log.error('Error preparing HTTP request:', error);
                 reject(error);
             }
         });
