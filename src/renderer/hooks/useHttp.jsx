@@ -200,219 +200,263 @@ export function useHttp() {
         requestOptions = {},
         jsonFilter = { enabled: false, path: '' }
     ) => {
-        try {
-            // Create a normalized jsonFilter object
-            const normalizedJsonFilter = {
-                enabled: jsonFilter?.enabled === true,
-                path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
-            };
+        // Track retry attempts
+        let retryAttempt = 0;
+        const MAX_CLIENT_RETRIES = 2;  // Client-side retries (in addition to server-side)
 
-            console.log("Making HTTP request:", {
-                sourceId,
-                url,
-                method,
-                requestOptions: {
+        const attemptRequest = async () => {
+            try {
+                // Create a normalized jsonFilter object
+                const normalizedJsonFilter = {
+                    enabled: jsonFilter?.enabled === true,
+                    path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
+                };
+
+                console.log("Making HTTP request:", {
+                    sourceId,
+                    url,
+                    method,
+                    requestOptions: {
+                        ...requestOptions,
+                        headers: requestOptions.headers ? "headers present" : "no headers",
+                        queryParams: requestOptions.queryParams ? "params present" : "no params",
+                        totpSecret: requestOptions.totpSecret ? "present" : "not present",
+                        variables: requestOptions.variables ? `${requestOptions.variables.length} variables` : "no variables"
+                    },
+                    jsonFilter: JSON.stringify(normalizedJsonFilter),
+                    retryAttempt: retryAttempt
+                });
+
+                // Store variables array explicitly and make a deep copy
+                const variables = Array.isArray(requestOptions.variables)
+                    ? JSON.parse(JSON.stringify(requestOptions.variables))
+                    : [];
+
+                console.log(`Source ${sourceId} has ${variables.length} variables for substitution`);
+
+                // CRITICAL DEBUGGING: Log the actual variables array content
+                console.log("VARIABLES DETAILS for request:");
+                console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
+                console.log("Extracted variables array:", JSON.stringify(variables));
+                variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
+
+                // Format options
+                const formattedOptions = {
                     ...requestOptions,
-                    headers: requestOptions.headers ? "headers present" : "no headers",
-                    queryParams: requestOptions.queryParams ? "params present" : "no params",
-                    totpSecret: requestOptions.totpSecret ? "present" : "not present",
-                    variables: requestOptions.variables ? `${requestOptions.variables.length} variables` : "no variables"
-                },
-                jsonFilter: JSON.stringify(normalizedJsonFilter)
-            });
+                    headers: {},
+                    queryParams: {}
+                };
 
-            // Store variables array explicitly and make a deep copy
-            const variables = Array.isArray(requestOptions.variables)
-                ? JSON.parse(JSON.stringify(requestOptions.variables))
-                : [];
+                // Handle TOTP if present
+                let totpCode = null;
+                if (requestOptions.totpSecret) {
+                    console.log(`Source ${sourceId} has TOTP secret, generating TOTP code`);
 
-            console.log(`Source ${sourceId} has ${variables.length} variables for substitution`);
+                    try {
+                        const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
+                        totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
 
-            // CRITICAL DEBUGGING: Log the actual variables array content
-            console.log("VARIABLES DETAILS for request:");
-            console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
-            console.log("Extracted variables array:", JSON.stringify(variables));
-            variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
-
-            // Format options
-            const formattedOptions = {
-                ...requestOptions,
-                headers: {},
-                queryParams: {}
-            };
-
-            // Handle TOTP if present
-            let totpCode = null;
-            if (requestOptions.totpSecret) {
-                console.log(`Source ${sourceId} has TOTP secret, generating TOTP code`);
-
-                try {
-                    const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
-                    totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-
-                    if (totpCode && totpCode !== 'ERROR') {
-                        console.log(`Generated TOTP code for source ${sourceId}: ${totpCode}`);
-                    } else {
-                        console.error(`Failed to generate TOTP code for source ${sourceId}`);
+                        if (totpCode && totpCode !== 'ERROR') {
+                            console.log(`Generated TOTP code for source ${sourceId}: ${totpCode}`);
+                        } else {
+                            console.error(`Failed to generate TOTP code for source ${sourceId}`);
+                        }
+                    } catch (totpError) {
+                        console.error(`Error generating TOTP code: ${totpError.message}`);
                     }
-                } catch (totpError) {
-                    console.error(`Error generating TOTP code: ${totpError.message}`);
                 }
-            }
 
-            // Perform variable substitution in URL
-            let originalUrl = url;
-            if (url.includes('_TOTP_CODE') || variables.length > 0) {
-                console.log(`URL before substitution: ${url}`);
-                url = substituteVariables(url, variables, totpCode);
-                console.log(`URL after substitution: ${url}`);
+                // Perform variable substitution in URL
+                let originalUrl = url;
+                if (url.includes('_TOTP_CODE') || variables.length > 0) {
+                    console.log(`URL before substitution: ${url}`);
+                    url = substituteVariables(url, variables, totpCode);
+                    console.log(`URL after substitution: ${url}`);
 
-                if (url !== originalUrl) {
-                    console.log(`Variable substitution performed in URL for source ${sourceId}`);
+                    if (url !== originalUrl) {
+                        console.log(`Variable substitution performed in URL for source ${sourceId}`);
+                    }
                 }
-            }
 
-            // Process headers from array format to object
-            if (Array.isArray(requestOptions.headers)) {
-                console.log("Processing headers array:", requestOptions.headers);
-                requestOptions.headers.forEach(header => {
-                    if (header && header.key) {
-                        let headerValue = header.value || '';
-                        console.log(`Header before substitution: ${header.key} = ${headerValue}`);
+                // Process headers from array format to object
+                if (Array.isArray(requestOptions.headers)) {
+                    console.log("Processing headers array:", requestOptions.headers);
+                    requestOptions.headers.forEach(header => {
+                        if (header && header.key) {
+                            let headerValue = header.value || '';
+                            console.log(`Header before substitution: ${header.key} = ${headerValue}`);
+                            // Apply variable substitution to header value
+                            headerValue = substituteVariables(headerValue, variables, totpCode);
+                            console.log(`Header after substitution: ${header.key} = ${headerValue}`);
+                            formattedOptions.headers[header.key] = headerValue;
+                            console.log(`Added header: ${header.key} = ${formattedOptions.headers[header.key]}`);
+                        }
+                    });
+                } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
+                    Object.entries(requestOptions.headers).forEach(([key, value]) => {
+                        let headerValue = value || '';
+                        console.log(`Header before substitution: ${key} = ${headerValue}`);
                         // Apply variable substitution to header value
                         headerValue = substituteVariables(headerValue, variables, totpCode);
-                        console.log(`Header after substitution: ${header.key} = ${headerValue}`);
-                        formattedOptions.headers[header.key] = headerValue;
-                        console.log(`Added header: ${header.key} = ${formattedOptions.headers[header.key]}`);
-                    }
-                });
-            } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                Object.entries(requestOptions.headers).forEach(([key, value]) => {
-                    let headerValue = value || '';
-                    console.log(`Header before substitution: ${key} = ${headerValue}`);
-                    // Apply variable substitution to header value
-                    headerValue = substituteVariables(headerValue, variables, totpCode);
-                    console.log(`Header after substitution: ${key} = ${headerValue}`);
-                    formattedOptions.headers[key] = headerValue;
-                });
-                console.log("Headers already in object format:", formattedOptions.headers);
-            }
+                        console.log(`Header after substitution: ${key} = ${headerValue}`);
+                        formattedOptions.headers[key] = headerValue;
+                    });
+                    console.log("Headers already in object format:", formattedOptions.headers);
+                }
 
-            // Process query params from array format to object
-            if (Array.isArray(requestOptions.queryParams)) {
-                console.log("Processing query params array:", requestOptions.queryParams);
-                requestOptions.queryParams.forEach(param => {
-                    if (param && param.key) {
-                        let paramValue = param.value || '';
-                        console.log(`Query param before substitution: ${param.key} = ${paramValue}`);
+                // Process query params from array format to object
+                console.log("Full requestOptions from form:", JSON.stringify(requestOptions || {}, null, 2));
+                console.log("Query params from form:", requestOptions?.queryParams);
+
+                if (Array.isArray(requestOptions.queryParams)) {
+                    console.log("Processing query params array:", requestOptions.queryParams);
+                    requestOptions.queryParams.forEach(param => {
+                        if (param && param.key) {
+                            let paramValue = param.value || '';
+                            console.log(`Query param before substitution: ${param.key} = ${paramValue}`);
+                            // Apply variable substitution to param value
+                            paramValue = substituteVariables(paramValue, variables, totpCode);
+                            console.log(`Query param after substitution: ${param.key} = ${paramValue}`);
+                            formattedOptions.queryParams[param.key] = paramValue;
+                            console.log(`Added query param: ${param.key} = ${paramValue}`);
+                        }
+                    });
+                } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
+                    Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
+                        let paramValue = value || '';
+                        console.log(`Query param before substitution: ${key} = ${paramValue}`);
                         // Apply variable substitution to param value
                         paramValue = substituteVariables(paramValue, variables, totpCode);
-                        console.log(`Query param after substitution: ${param.key} = ${paramValue}`);
-                        formattedOptions.queryParams[param.key] = paramValue;
-                        console.log(`Added query param: ${param.key} = ${paramValue}`);
-                    }
-                });
-            } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
-                    let paramValue = value || '';
-                    console.log(`Query param before substitution: ${key} = ${paramValue}`);
-                    // Apply variable substitution to param value
-                    paramValue = substituteVariables(paramValue, variables, totpCode);
-                    console.log(`Query param after substitution: ${key} = ${paramValue}`);
-                    formattedOptions.queryParams[key] = paramValue;
-                });
-            }
-
-            // Process body for variable substitution
-            if (requestOptions.body) {
-                let bodyContent = requestOptions.body;
-                if (typeof bodyContent === 'string') {
-                    console.log(`Body before substitution: ${bodyContent.substring(0, 50)}...`);
-                    // Apply variable substitution to body content
-                    bodyContent = substituteVariables(bodyContent, variables, totpCode);
-                    console.log(`Body after substitution: ${bodyContent.substring(0, 50)}...`);
-                    formattedOptions.body = bodyContent;
-                    console.log(`Variable substitution in request body for source ${sourceId}`);
-                } else {
-                    formattedOptions.body = requestOptions.body;
+                        console.log(`Query param after substitution: ${key} = ${paramValue}`);
+                        formattedOptions.queryParams[key] = paramValue;
+                    });
                 }
-            }
+                console.log("Query params after formatting:", formattedOptions.queryParams);
 
-            // Copy other request options
-            formattedOptions.contentType = requestOptions.contentType || 'application/json';
+                // Process body for variable substitution
+                if (requestOptions.body) {
+                    let bodyContent = requestOptions.body;
+                    if (typeof bodyContent === 'string') {
+                        console.log(`Body before substitution: ${bodyContent.substring(0, 50)}...`);
+                        // Apply variable substitution to body content
+                        bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                        console.log(`Body after substitution: ${bodyContent.substring(0, 50)}...`);
+                        formattedOptions.body = bodyContent;
+                        console.log(`Variable substitution in request body for source ${sourceId}`);
+                    } else {
+                        formattedOptions.body = requestOptions.body;
+                    }
+                }
 
-            // Very important: preserve variables in the formatted options
-            formattedOptions.variables = variables;
+                // Copy other request options
+                formattedOptions.contentType = requestOptions.contentType || 'application/json';
 
-            // Make sure we don't include the TOTP secret in the actual request
-            delete formattedOptions.totpSecret;
+                // Very important: preserve variables in the formatted options
+                formattedOptions.variables = variables;
 
-            console.log("Formatted request options:", {
-                ...formattedOptions,
-                headers: Object.keys(formattedOptions.headers).length > 0 ? "headers present" : "no headers",
-                queryParams: Object.keys(formattedOptions.queryParams).length > 0 ? "params present" : "no params",
-                body: formattedOptions.body ? "body present" : "no body"
-            });
+                // Make sure we don't include the TOTP secret in the actual request
+                delete formattedOptions.totpSecret;
 
-            // Make request
-            const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
-            console.log("Raw response:", responseJson.substring(0, 200) + "...");
+                console.log("Formatted request options:", {
+                    ...formattedOptions,
+                    headers: Object.keys(formattedOptions.headers).length > 0 ? "headers present" : "no headers",
+                    queryParams: Object.keys(formattedOptions.queryParams).length > 0 ? "params present" : "no params",
+                    body: formattedOptions.body ? "body present" : "no body"
+                });
 
-            // Process response as before
-            const response = parseJSON(responseJson);
-            if (!response) {
-                throw new Error('Invalid response format');
-            }
+                // Make request with retry tracking
+                console.log(`Making HTTP request for source ${sourceId} (attempt ${retryAttempt + 1})`);
+                const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
+                console.log("Raw response:", responseJson.substring(0, 200) + "...");
 
-            // Extract body and headers
-            const bodyContent = response.body || '';
-            const headers = response.headers || {};
-            console.log("Body content (original):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
-            console.log("Headers received:", headers);
+                // Process response as before
+                const response = parseJSON(responseJson);
+                if (!response) {
+                    throw new Error('Invalid response format');
+                }
 
-            // Apply JSON filter if enabled - use normalized filter
-            let finalContent = bodyContent;
+                // Extract body and headers
+                const bodyContent = response.body || '';
+                const headers = response.headers || {};
+                console.log("Body content (original):", bodyContent ? bodyContent.substring(0, 200) + "..." : "empty");
+                console.log("Headers received:", headers);
 
-            // Use the normalized filter object
-            if (normalizedJsonFilter.enabled && normalizedJsonFilter.path && bodyContent) {
-                console.log(`Applying JSON filter with path: ${normalizedJsonFilter.path}`);
-                finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
-                console.log("Filtered content:", finalContent ? finalContent.substring(0, 200) + "..." : "empty");
+                // Apply JSON filter if enabled - use normalized filter
+                let finalContent = bodyContent;
 
+                // Use the normalized filter object
+                if (normalizedJsonFilter.enabled && normalizedJsonFilter.path && bodyContent) {
+                    console.log(`Applying JSON filter with path: ${normalizedJsonFilter.path}`);
+                    finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
+                    console.log("Filtered content:", finalContent ? finalContent.substring(0, 200) + "..." : "empty");
+
+                    return {
+                        content: finalContent,
+                        originalResponse: bodyContent,
+                        headers: headers,
+                        rawResponse: responseJson,
+                        filteredWith: normalizedJsonFilter.path,
+                        isFiltered: true
+                    };
+                } else {
+                    // Log why we're not filtering
+                    if (!normalizedJsonFilter.enabled) {
+                        console.log(`JSON filtering disabled: normalizedJsonFilter.enabled is false`);
+                    } else if (!normalizedJsonFilter.path) {
+                        console.log("JSON filtering disabled: normalizedJsonFilter.path is empty");
+                    } else if (!bodyContent) {
+                        console.log("JSON filtering disabled: response body is empty");
+                    } else {
+                        console.log("JSON filtering disabled for unknown reason");
+                    }
+                    console.log("Using original content without filtering");
+                }
+
+                // Use originalResponse instead of originalJson
                 return {
                     content: finalContent,
                     originalResponse: bodyContent,
                     headers: headers,
-                    rawResponse: responseJson,
-                    filteredWith: normalizedJsonFilter.path,
-                    isFiltered: true
+                    rawResponse: responseJson
                 };
-            } else {
-                // Log why we're not filtering
-                if (!normalizedJsonFilter.enabled) {
-                    console.log(`JSON filtering disabled: normalizedJsonFilter.enabled is false`);
-                } else if (!normalizedJsonFilter.path) {
-                    console.log("JSON filtering disabled: normalizedJsonFilter.path is empty");
-                } else if (!bodyContent) {
-                    console.log("JSON filtering disabled: response body is empty");
-                } else {
-                    console.log("JSON filtering disabled for unknown reason");
-                }
-                console.log("Using original content without filtering");
-            }
+            } catch (error) {
+                // Improved error handling with specific retry for network errors
+                console.error(`HTTP request error (attempt ${retryAttempt + 1}):`, error);
 
-            // Use originalResponse instead of originalJson
-            return {
-                content: finalContent,
-                originalResponse: bodyContent,
-                headers: headers,
-                rawResponse: responseJson
-            };
-        } catch (error) {
-            console.error("HTTP request error:", error);
-            throw error;
-        }
-    }, [parseJSON, applyJsonFilter]);
+                // Detect if this is a network error that could benefit from a retry
+                const isRetryableError =
+                    error.message.includes('ECONNRESET') ||
+                    error.message.includes('ETIMEDOUT') ||
+                    error.message.includes('ECONNREFUSED') ||
+                    error.message.includes('socket hang up') ||
+                    error.message.includes('network error');
+
+                // Check if we should retry
+                if (isRetryableError && retryAttempt < MAX_CLIENT_RETRIES) {
+                    retryAttempt++;
+                    console.log(`Retrying request for source ${sourceId} (attempt ${retryAttempt + 1} of ${MAX_CLIENT_RETRIES + 1})`);
+
+                    // Calculate exponential backoff delay (starting at 2s with jitter)
+                    const backoffDelay = Math.min(
+                        2000 * Math.pow(2, retryAttempt - 1) + Math.random() * 1000,
+                        10000
+                    );
+
+                    console.log(`Waiting ${Math.round(backoffDelay)}ms before retry`);
+
+                    // Wait and retry
+                    await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                    return attemptRequest(); // Recursive retry
+                }
+
+                // If we've exhausted retries or it's not a retryable error, throw
+                throw error;
+            }
+        };
+
+        // Start the request process with retry capability
+        return attemptRequest();
+    }, [parseJSON, applyJsonFilter, substituteVariables]);
 
     /**
      * Test HTTP request (used for UI testing)
