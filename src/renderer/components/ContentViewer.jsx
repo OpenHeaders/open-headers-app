@@ -53,9 +53,16 @@ const ContentViewer = ({ source, open, onClose }) => {
         }
     }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalResponse]);
 
-    // Extract headers from source or originalResponse - Improved version
+    // Extract headers from source or originalResponse
     const extractHeaders = (source) => {
         console.log("Attempting to extract headers for source:", source?.sourceId);
+
+        // Check if headers was explicitly cleared (null means error state)
+        if (source?.headers === null) {
+            console.log("Headers explicitly cleared (error state)");
+            setResponseHeaders(null);
+            return;
+        }
 
         // First check if there are headers directly in the source
         if (source?.headers) {

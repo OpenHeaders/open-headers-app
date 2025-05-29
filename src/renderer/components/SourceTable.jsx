@@ -1,5 +1,5 @@
 // Fix for SourceTable.jsx to properly update refresh timers display after edit
-import React, { useState, useEffect, useCallback } from 'react';
+import React, {useState, useEffect, useCallback, useRef} from 'react';
 import { Table, Button, Tag, Typography, Space, Modal, Popconfirm } from 'antd';
 import {
     ReloadOutlined,
@@ -30,7 +30,8 @@ const SourceTable = ({
     const [refreshingSourceId, setRefreshingSourceId] = useState(null);
     const [removingSourceId, setRemovingSourceId] = useState(null);
     // Add a lastRefreshOptionsRef to track source refresh changes
-    const lastRefreshOptionsRef = React.useRef({});
+    const lastRefreshOptionsRef = useRef({});
+    const refreshingStartTimes = useRef({});
 
     // Get the currently selected source from the latest sources array
     const selectedSource = selectedSourceId ?
@@ -185,12 +186,40 @@ const SourceTable = ({
             const sourcesNeedingRefresh = [];
 
             sources.forEach(source => {
+                const sourceId = source.sourceId;
+                const isCurrentlyRefreshing = source.sourceContent === 'Refreshing...';
+
+                // ENHANCED STUCK DETECTION: Track when sources first start refreshing
+                if (isCurrentlyRefreshing) {
+                    // If we don't have a start time for this source, record it now
+                    if (!refreshingStartTimes.current[sourceId]) {
+                        refreshingStartTimes.current[sourceId] = now;
+                        console.log(`Started tracking refresh time for source ${sourceId}`);
+                    }
+
+                    // Check if source has been refreshing for too long (5 minutes)
+                    // This handles the sleep/wake scenario where timestamps might be unreliable
+                    const timeInRefreshingState = now - refreshingStartTimes.current[sourceId];
+                    if (timeInRefreshingState > 5 * 60 * 1000) { // 5 minutes
+                        console.log(`Source ${sourceId} has been stuck in 'Refreshing...' for ${Math.round(timeInRefreshingState/1000)} seconds - forcing refresh`);
+                        sourcesNeedingRefresh.push(sourceId);
+                        newRefreshTimes[sourceId] = 'Refresh needed (stuck too long)';
+                        needsUpdate = true;
+
+                        // Reset the tracking time so we don't spam refreshes
+                        refreshingStartTimes.current[sourceId] = now;
+                    }
+                } else {
+                    // If source is no longer refreshing, clear its tracking time
+                    if (refreshingStartTimes.current[sourceId]) {
+                        delete refreshingStartTimes.current[sourceId];
+                    }
+                }
+
+                // Continue with existing refresh time logic for HTTP sources
                 if (source.sourceType === 'http' &&
                     source.refreshOptions &&
                     (source.refreshOptions.enabled || source.refreshOptions.interval > 0)) {
-
-                    // Check if the source content is currently in the refreshing state
-                    const isCurrentlyRefreshing = source.sourceContent === 'Refreshing...';
 
                     // Check if next refresh time exists
                     if (source.refreshOptions.nextRefresh) {
@@ -198,50 +227,45 @@ const SourceTable = ({
 
                         // If the time has passed, it should be refreshing or needs a fresh refresh cycle
                         if (remaining <= 0) {
-                            // Check if we're stuck in refreshing state for too long (more than 60 seconds)
+                            // Check if we're stuck in refreshing state for too long (more than 2 minutes)
+                            // Reduced from 60 seconds to catch stuck states faster
                             const lastRefresh = source.refreshOptions.lastRefresh || 0;
                             const timeSinceLastRefresh = now - lastRefresh;
 
-                            if (isCurrentlyRefreshing && timeSinceLastRefresh > 60000) {
+                            if (isCurrentlyRefreshing && timeSinceLastRefresh > 2 * 60 * 1000) { // 2 minutes
                                 // We've been stuck in "Refreshing..." for too long - force a refresh
-                                newRefreshTimes[source.sourceId] = 'Refresh needed (stuck)';
+                                newRefreshTimes[sourceId] = 'Refresh needed (stuck)';
                                 needsUpdate = true;
-
-                                // Add to the list of sources needing refresh
-                                sourcesNeedingRefresh.push(source.sourceId);
+                                sourcesNeedingRefresh.push(sourceId);
                             }
-                            // If more than 30 seconds have passed since the nextRefresh time,
+                                // If more than 30 seconds have passed since the nextRefresh time,
                             // it's probably stuck and needs a manual refresh
                             else if (remaining < -30000) { // 30 seconds
-                                newRefreshTimes[source.sourceId] = 'Refresh needed';
+                                newRefreshTimes[sourceId] = 'Refresh needed';
                                 needsUpdate = true;
-
-                                // Add to the list of sources needing refresh
-                                sourcesNeedingRefresh.push(source.sourceId);
+                                sourcesNeedingRefresh.push(sourceId);
                             } else {
-                                newRefreshTimes[source.sourceId] = 'Refreshing now...';
+                                newRefreshTimes[sourceId] = 'Refreshing now...';
                                 needsUpdate = true;
                             }
                         } else {
                             // Format the remaining time
                             const timeText = `Refreshes in ${formatTimeRemaining(remaining)}`;
-                            if (refreshTimes[source.sourceId] !== timeText) {
-                                newRefreshTimes[source.sourceId] = timeText;
+                            if (refreshTimes[sourceId] !== timeText) {
+                                newRefreshTimes[sourceId] = timeText;
                                 needsUpdate = true;
                             }
                         }
                     }
-                    // If no nextRefresh time but we're in refreshing state for more than 60 seconds, trigger refresh
+                    // If no nextRefresh time but we're in refreshing state for more than 2 minutes, trigger refresh
                     else if (isCurrentlyRefreshing) {
                         const lastRefresh = source.refreshOptions.lastRefresh || 0;
                         const timeSinceLastRefresh = now - lastRefresh;
 
-                        if (timeSinceLastRefresh > 60000) { // 60 seconds
-                            newRefreshTimes[source.sourceId] = 'Refresh needed (stuck)';
+                        if (timeSinceLastRefresh > 2 * 60 * 1000) { // 2 minutes
+                            newRefreshTimes[sourceId] = 'Refresh needed (stuck)';
                             needsUpdate = true;
-
-                            // Add to the list of sources needing refresh
-                            sourcesNeedingRefresh.push(source.sourceId);
+                            sourcesNeedingRefresh.push(sourceId);
                         }
                     }
                 }
@@ -267,6 +291,14 @@ const SourceTable = ({
 
         return () => clearInterval(timer);
     }, [sources, refreshingSourceId, onRefreshSource, refreshTimes]);
+
+// Also add cleanup when component unmounts
+    useEffect(() => {
+        return () => {
+            // Clear tracking times when component unmounts
+            refreshingStartTimes.current = {};
+        };
+    }, []);
 
     // Handle save edited source with improved refresh time update
     const handleSaveSource = async (sourceData) => {

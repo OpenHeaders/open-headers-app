@@ -309,7 +309,10 @@ export function SourceProvider({ children }) {
                                 })
                                 .catch(error => {
                                     if (isMounted.current) {
-                                        updateSourceContent(validSourceId, `Error: ${error.message}`);
+                                        updateSourceContent(validSourceId, `Error: ${error.message}`,{
+                                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                                            headers: null
+                                        });
                                     }
                                 });
                         }
@@ -321,7 +324,10 @@ export function SourceProvider({ children }) {
                                 }
                             } catch (error) {
                                 if (isMounted.current) {
-                                    updateSourceContent(validSourceId, `Error: ${error.message}`);
+                                    updateSourceContent(validSourceId, `Error: ${error.message}`,{
+                                        originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                                        headers: null
+                                    });
                                 }
                             }
                         }
@@ -394,7 +400,10 @@ export function SourceProvider({ children }) {
                                                 })
                                                 .catch(error => {
                                                     if (isMounted.current) {
-                                                        updateSourceContent(validSourceId, `Error: ${error.message}`);
+                                                        updateSourceContent(validSourceId, `Error: ${error.message}`,{
+                                                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                                                            headers: null
+                                                        });
                                                         console.error(`Error in direct refresh: ${error.message}`);
                                                     }
                                                 });
@@ -1073,7 +1082,10 @@ export function SourceProvider({ children }) {
                 } catch (error) {
                     clearTimeout(refreshTimeout);
                     if (isMounted.current) {
-                        updateSourceContent(sourceId, `Error: ${error.message}`);
+                        updateSourceContent(sourceId, `Error: ${error.message}`,{
+                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                            headers: null
+                        });
                     }
                     return false;
                 }
@@ -1089,7 +1101,10 @@ export function SourceProvider({ children }) {
                 } catch (error) {
                     clearTimeout(refreshTimeout);
                     if (isMounted.current) {
-                        updateSourceContent(sourceId, `Error: ${error.message}`);
+                        updateSourceContent(sourceId, `Error: ${error.message}`,{
+                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                            headers: null
+                        });
                     }
                     return false;
                 }
@@ -1181,6 +1196,8 @@ export function SourceProvider({ children }) {
                             const now = Date.now();
                             // Update refresh timestamps when errors occur
                             updateSourceContent(sourceId, `Error: ${error.message}`, {
+                                originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
+                                headers: null,
                                 refreshOptions: {
                                     ...source.refreshOptions,
                                     lastRefresh: now,
