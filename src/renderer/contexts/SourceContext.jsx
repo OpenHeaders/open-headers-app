@@ -1,8 +1,11 @@
+// SourceContext.jsx - FIXED to prevent broadcasting status-only updates
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useHttp } from '../hooks/useHttp';
 import { useEnv } from '../hooks/useEnv';
-import { showMessage } from '../utils/messageUtil'; // Import the utility function
+import { showMessage } from '../utils/messageUtil';
+import refreshManager from '../services/RefreshManager';
 
 // Create context
 const SourceContext = createContext();
@@ -16,9 +19,6 @@ const debugLog = (message, data = null) => {
         console.log(`[${timestamp}] SourceContext: ${message}`);
     }
 };
-
-// IMPORTANT: Remove this function as it's causing the conflict
-// The original showMessage function is removed, and we'll use the imported one instead
 
 export function SourceProvider({ children }) {
     const [sources, setSources] = useState([]);
@@ -35,7 +35,15 @@ export function SourceProvider({ children }) {
     const isMounted = useRef(true);
     // Track current highest ID to avoid conflicts
     const highestIdRef = useRef(0);
-    // Remove tracking - this was causing problems
+    // Track sources that need to be added to RefreshManager after initialization
+    const pendingRefreshSources = useRef([]);
+
+    // FIXED: More granular broadcast control - track suppression per update
+    const broadcastControl = useRef({
+        updateCounter: 0,
+        suppressedUpdates: new Set(), // Track which update IDs should be suppressed
+        lastContentHash: new Map() // sourceId -> content hash
+    });
 
     // Custom hooks for source types
     const fileSystem = useFileSystem();
@@ -43,6 +51,7 @@ export function SourceProvider({ children }) {
     const env = useEnv();
 
     // Helper for updating source content
+    // FIXED: Granular suppression tracking per update
     const updateSourceContent = useCallback((sourceId, content, additionalData = {}) => {
         // Check if component is still mounted before updating state
         if (!isMounted.current) {
@@ -50,7 +59,14 @@ export function SourceProvider({ children }) {
             return;
         }
 
-        debugLog(`Updating content for source ${sourceId}`);
+        // FIXED: Generate unique update ID for granular suppression tracking
+        const updateId = ++broadcastControl.current.updateCounter;
+        const isStatusOnly = additionalData.statusOnly === true;
+        const isTimingOnlyUpdate = additionalData.updateTimingOnly === true && content === null;
+
+        debugLog(`Updating content for source ${sourceId}${isStatusOnly ? ' (status only)' : ''}${isTimingOnlyUpdate ? ' (timing only)' : ''} [update #${updateId}]`);
+
+        // Always mark as needing save for persistence
         needsSave.current = true;
 
         // Log additional data if present
@@ -59,9 +75,10 @@ export function SourceProvider({ children }) {
                 Object.keys(additionalData).map(key => key).join(', '));
         }
 
-        // If headers are included, log them
-        if (additionalData.headers) {
-            console.log(`Headers for source ${sourceId}:`, additionalData.headers);
+        // FIXED: Track which specific updates should be suppressed
+        if (isStatusOnly) {
+            broadcastControl.current.suppressedUpdates.add(updateId);
+            console.log(`[SourceContext] Marking update #${updateId} for suppression (status-only update on source ${sourceId})`);
         }
 
         setSources(prev => {
@@ -69,140 +86,54 @@ export function SourceProvider({ children }) {
             const sourceExists = prev.some(s => s.sourceId === sourceId);
 
             if (!sourceExists) {
-                // IMPROVED ERROR HANDLING: Instead of just logging, wait for the source to be available
-                // This can happen during initial loading when timers fire before sources are fully loaded
-                debugLog(`Source ${sourceId} not found when updating content`, {
-                    availableIds: prev.map(s => s.sourceId)
-                });
-
-                // If the content shows "Refreshing...", clear that state to avoid UI getting stuck
-                if (content === 'Refreshing...') {
-                    debugLog(`Detected stuck 'Refreshing...' state for source ${sourceId} that doesn't exist yet`);
-                }
-
+                debugLog(`Source ${sourceId} not found when updating content`);
                 return prev;
             }
 
             return prev.map(source => {
                 if (source.sourceId === sourceId) {
-                    // Check if this is a timing-only update
-                    const isTimingOnlyUpdate = additionalData.updateTimingOnly === true;
-                    // Check if we need to force update the content
-                    const forceContentUpdate = additionalData.forceUpdateContent === true;
-
-                    // Only update content if this is not a timing-only update and content is provided
-                    // OR if forceUpdateContent is true (to clear "Refreshing..." state)
+                    // Create updated source
                     const updatedSource = {
                         ...source,
-                        sourceContent: isTimingOnlyUpdate ? source.sourceContent :
-                            (content !== null || forceContentUpdate) ?
-                                content || source.sourceContent : source.sourceContent
+                        // FIXED: Only update content if provided and not a status-only update
+                        sourceContent: (content !== null && !isStatusOnly) ? content : source.sourceContent,
+                        // FIXED: Store update ID for granular suppression checking
+                        _lastUpdateId: updateId
                     };
 
-                    // Log the update type
-                    if (isTimingOnlyUpdate) {
-                        debugLog(`Timing-only update for source ${sourceId} - preserving content`);
-                    }
-                    else if (forceContentUpdate) {
-                        debugLog(`Forced content update for source ${sourceId} - ensuring 'Refreshing...' state is cleared`);
-                    }
-
-                    // Merge any additional data provided
+                    // Merge additional data
                     Object.keys(additionalData).forEach(key => {
                         if (key === 'refreshOptions' && source.refreshOptions) {
-                            // Special handling for refreshOptions to ensure we preserve existing values
+                            // Merge refresh options properly
+                            updatedSource.refreshOptions = {
+                                ...source.refreshOptions,
+                                ...additionalData.refreshOptions
+                            };
 
-                            // For timing-only updates, always use the new timing info
-                            if (isTimingOnlyUpdate && additionalData.refreshOptions.nextRefresh) {
-                                updatedSource.refreshOptions = {
-                                    ...source.refreshOptions,
-                                    ...additionalData.refreshOptions
-                                };
-
-                                debugLog(`Updated timer for source ${sourceId} to: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
-                            }
-                            // Otherwise follow normal rules for preserving timing
-                            else {
-                                // Check if we need to preserve the existing timing
-                                const preserveTiming = (
-                                    // If source explicitly says to preserve timing
-                                    (source.refreshOptions.preserveTiming === true &&
-                                        source.refreshOptions.nextRefresh &&
-                                        source.refreshOptions.nextRefresh > Date.now()) ||
-                                    // OR if we're updating from a non-refresh operation and timing exists
-                                    (!additionalData.refreshOptions.lastRefresh &&
-                                        source.refreshOptions.nextRefresh &&
-                                        source.refreshOptions.nextRefresh > Date.now())
-                                );
-
-                                if (preserveTiming) {
-                                    // Only merge other refresh options but keep nextRefresh
-                                    const currentNextRefresh = source.refreshOptions.nextRefresh;
-                                    const currentLastRefresh = source.refreshOptions.lastRefresh;
-
-                                    updatedSource.refreshOptions = {
-                                        ...source.refreshOptions,
-                                        ...additionalData.refreshOptions,
-                                        // Restore the original refresh times
-                                        nextRefresh: currentNextRefresh,
-                                        lastRefresh: currentLastRefresh,
-                                        // Keep the preserveTiming flag
-                                        preserveTiming: true
-                                    };
-
-                                    debugLog(`Preserved refresh timing for source ${sourceId}: next=${new Date(currentNextRefresh).toISOString()}, last=${new Date(currentLastRefresh).toISOString()}`);
-                                } else {
-                                    // Normal merge of all refresh options
-                                    updatedSource.refreshOptions = {
-                                        ...source.refreshOptions,
-                                        ...additionalData.refreshOptions
-                                    };
-
-                                    // Log the new refresh times
-                                    if (additionalData.refreshOptions.nextRefresh) {
-                                        debugLog(`Updated refresh timing for source ${sourceId}: next=${new Date(additionalData.refreshOptions.nextRefresh).toISOString()}`);
-                                    }
-                                }
-                            }
-                        }
-                        else if (key === 'originalResponse') {
-                            // Handle originalResponse updates
-                            updatedSource.originalResponse = additionalData.originalResponse;
-                            console.log(`Updated originalResponse for source ${sourceId}`);
-                        }
-                        else if (key === 'headers') {
-                            // Handle headers updates
-                            updatedSource.headers = additionalData.headers;
-                            console.log(`Updated headers for source ${sourceId}:`, additionalData.headers);
-                        }
-                        else if (key === 'rawResponse') {
-                            // Store the raw response
-                            updatedSource.rawResponse = additionalData.rawResponse;
-                            console.log(`Updated rawResponse for source ${sourceId}`);
-                        }
-                        else if (key !== 'updateTimingOnly' && key !== 'forceUpdateContent') {  // Skip special flags
-                            // Handle any other properties
+                            console.log(`Updated refresh timing for source ${sourceId}:`, {
+                                lastRefresh: updatedSource.refreshOptions.lastRefresh,
+                                nextRefresh: updatedSource.refreshOptions.nextRefresh,
+                                interval: updatedSource.refreshOptions.interval
+                            });
+                        } else if (key !== 'updateTimingOnly' && key !== 'forceUpdateContent' && key !== 'statusOnly' && key !== 'refreshStatus') {
+                            // Copy other fields except control flags
                             updatedSource[key] = additionalData[key];
                         }
                     });
 
-                    // For HTTP sources with auto-refresh, update timestamps if not already provided
-                    // and we're not preserving timing
-                    const preservingTiming = source.refreshOptions?.preserveTiming === true &&
-                        source.refreshOptions?.nextRefresh &&
-                        source.refreshOptions.nextRefresh > Date.now();
+                    // FIXED: Track content changes for broadcast control - only for content updates
+                    if (content !== null && !isStatusOnly) {
+                        const contentHash = JSON.stringify(content);
+                        const lastHash = broadcastControl.current.lastContentHash.get(sourceId);
 
-                    if (source.sourceType === 'http' &&
-                        (source.refreshOptions?.enabled || source.refreshOptions?.interval > 0) &&
-                        !additionalData.refreshOptions &&
-                        !preservingTiming) {
+                        broadcastControl.current.lastContentHash.set(sourceId, contentHash);
 
-                        const now = Date.now();
-                        updatedSource.refreshOptions = {
-                            ...source.refreshOptions,
-                            lastRefresh: now,
-                            nextRefresh: now + (source.refreshOptions.interval * 60 * 1000)
-                        };
+                        if (contentHash !== lastHash) {
+                            console.log(`[SourceContext] Content actually changed for source ${sourceId}, allowing broadcast [update #${updateId}]`);
+                        } else {
+                            console.log(`[SourceContext] Content unchanged for source ${sourceId}, suppressing broadcast [update #${updateId}]`);
+                            broadcastControl.current.suppressedUpdates.add(updateId);
+                        }
                     }
 
                     return updatedSource;
@@ -211,6 +142,36 @@ export function SourceProvider({ children }) {
             });
         });
     }, []);
+
+    // FIXED: Check if specific update should be suppressed
+    const shouldSuppressUpdate = useCallback((sourceId, source) => {
+        const updateId = source?._lastUpdateId;
+
+        if (!updateId) {
+            return false; // No update ID, don't suppress
+        }
+
+        const shouldSuppress = broadcastControl.current.suppressedUpdates.has(updateId);
+
+        if (shouldSuppress) {
+            // Remove from suppressed set after checking (consume the suppression)
+            broadcastControl.current.suppressedUpdates.delete(updateId);
+            console.log(`[SourceContext] Suppressing broadcast for update #${updateId} on source ${sourceId}`);
+        }
+
+        return shouldSuppress;
+    }, []);
+
+    // FIXED: Expose granular suppression check to WebSocketContext
+    const shouldSuppressBroadcast = useCallback((sources) => {
+        // Check if any of the sources have updates that should be suppressed
+        for (const source of sources) {
+            if (shouldSuppressUpdate(source.sourceId, source)) {
+                return true;
+            }
+        }
+        return false;
+    }, [shouldSuppressUpdate]);
 
     // Check for duplicate IDs in the source array - used for debugging
     const validateSourceIds = useCallback((sourcesArray, operation = 'unknown') => {
@@ -257,7 +218,27 @@ export function SourceProvider({ children }) {
         return newId;
     }, [nextSourceId]);
 
-    // Load sources on startup - once only
+    // Initialize RefreshManager and process pending sources
+    useEffect(() => {
+        if (initialized && !refreshManager.isInitialized) {
+            debugLog('Initializing RefreshManager');
+            refreshManager.initialize(http, updateSourceContent);
+
+            // Process any pending sources
+            if (pendingRefreshSources.current.length > 0) {
+                debugLog(`Processing ${pendingRefreshSources.current.length} pending refresh sources`);
+
+                pendingRefreshSources.current.forEach(source => {
+                    refreshManager.addSource(source);
+                    debugLog(`Added pending source ${source.sourceId} to RefreshManager`);
+                });
+
+                pendingRefreshSources.current = [];
+            }
+        }
+    }, [initialized, http, updateSourceContent]);
+
+    // Load sources - removed complex timing cleanup
     useEffect(() => {
         const loadSources = async () => {
             if (isLoading.current) return;
@@ -266,7 +247,6 @@ export function SourceProvider({ children }) {
                 debugLog('Loading sources from storage...');
                 isLoading.current = true;
 
-                // Load sources from storage
                 const sourcesJson = await window.electronAPI.loadFromStorage('sources.json');
                 debugLog(`Loaded sources JSON: ${sourcesJson ? 'data available' : 'null'}`);
 
@@ -274,32 +254,34 @@ export function SourceProvider({ children }) {
                     const loadedSources = JSON.parse(sourcesJson);
                     debugLog(`Loaded ${loadedSources.length} sources`);
 
-                    // Validate all source IDs
                     validateSourceIds(loadedSources, 'initial load');
 
-                    // Set next ID based on loaded sources
                     if (loadedSources.length > 0) {
                         const maxId = Math.max(...loadedSources.map(s => Number(s.sourceId) || 0));
                         highestIdRef.current = maxId;
                         setNextSourceId(maxId + 1);
-                        debugLog(`Initial nextSourceId set to ${maxId + 1} based on loaded sources`);
                     }
 
-                    // Initialize each source based on type
                     const initializedSources = [];
 
                     for (const source of loadedSources) {
-                        // Ensure each source has a valid ID
                         const validSourceId = Number(source.sourceId) || getUniqueSourceId();
 
-                        // First add with loading status
-                        initializedSources.push({
+                        const initializedSource = {
                             ...source,
                             sourceId: validSourceId,
                             sourceContent: source.sourceContent || 'Loading content...'
-                        });
+                        };
 
-                        // Then init the source based on type (async)
+                        initializedSources.push(initializedSource);
+
+                        // FIXED: Initialize content hash tracking
+                        if (initializedSource.sourceContent) {
+                            const contentHash = JSON.stringify(initializedSource.sourceContent);
+                            broadcastControl.current.lastContentHash.set(validSourceId, contentHash);
+                        }
+
+                        // Initialize based on type
                         if (source.sourceType === 'file') {
                             fileSystem.watchFile(validSourceId, source.sourcePath)
                                 .then(content => {
@@ -309,10 +291,7 @@ export function SourceProvider({ children }) {
                                 })
                                 .catch(error => {
                                     if (isMounted.current) {
-                                        updateSourceContent(validSourceId, `Error: ${error.message}`,{
-                                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                                            headers: null
-                                        });
+                                        updateSourceContent(validSourceId, `Error: ${error.message}`);
                                     }
                                 });
                         }
@@ -324,159 +303,24 @@ export function SourceProvider({ children }) {
                                 }
                             } catch (error) {
                                 if (isMounted.current) {
-                                    updateSourceContent(validSourceId, `Error: ${error.message}`,{
-                                        originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                                        headers: null
-                                    });
+                                    updateSourceContent(validSourceId, `Error: ${error.message}`);
                                 }
                             }
                         }
                         else if (source.sourceType === 'http') {
-                            // For HTTP sources with auto-refresh, set up refresh and immediate request if needed
-                            const isEnabled = source.refreshOptions?.enabled || false;
-                            const interval = source.refreshOptions?.interval || 0;
-
-                            // For HTTP sources, check if refresh is needed immediately
-                            if (isEnabled || interval > 0) {
-                                // Check if the nextRefresh is in the past (or not set)
-                                const now = Date.now();
-                                const nextRefresh = source.refreshOptions?.nextRefresh || 0;
-                                const needsImmediateRefresh = nextRefresh <= now;
-
-                                // Prepare refreshOptions for setupRefresh - will handle both immediate and scheduled refreshes
-                                const refreshOptionsForSetup = {
-                                    ...source.refreshOptions,
-                                    interval: interval
-                                };
-
-                                // If the timer has expired, ensure we clear the 'Refreshing...' state even if we get an error
-                                if (needsImmediateRefresh) {
-                                    debugLog(`Source ${validSourceId} needs immediate refresh (timer expired or not set)`);
-
-                                    // IMPORTANT: Do immediate refresh for expired timers
-                                    if (isMounted.current) {
-                                        // Update UI first
-                                        updateSourceContent(validSourceId, 'Refreshing...', {
-                                            refreshOptions: {
-                                                ...source.refreshOptions,
-                                                lastRefresh: now,
-                                                nextRefresh: now + (interval * 60 * 1000)
-                                            }
-                                        });
-
-                                        // CRITICAL: Then directly perform the refresh immediately
-                                        // Use a very small delay to ensure UI is updated first
-                                        setTimeout(() => {
-                                            if (isMounted.current) {
-                                                debugLog(`Performing IMMEDIATE refresh for source ${validSourceId} with expired timer`);
-
-                                                // Make the HTTP request directly
-                                                http.request(
-                                                    validSourceId,
-                                                    source.sourcePath,
-                                                    source.sourceMethod,
-                                                    source.requestOptions,
-                                                    source.jsonFilter
-                                                )
-                                                .then(result => {
-                                                    if (isMounted.current) {
-                                                        const { content, originalResponse, headers } = result;
-
-                                                        // Update with the result
-                                                        updateSourceContent(validSourceId, content, {
-                                                            originalResponse,
-                                                            headers,
-                                                            refreshOptions: {
-                                                                ...source.refreshOptions,
-                                                                lastRefresh: Date.now(),
-                                                                nextRefresh: Date.now() + (interval * 60 * 1000),
-                                                                // Force skipImmediateRefresh to prevent duplicate auto-refresh
-                                                                skipImmediateRefresh: true
-                                                            }
-                                                        });
-
-                                                        debugLog(`Direct immediate refresh complete for source ${validSourceId}`);
-                                                    }
-                                                })
-                                                .catch(error => {
-                                                    if (isMounted.current) {
-                                                        updateSourceContent(validSourceId, `Error: ${error.message}`,{
-                                                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                                                            headers: null
-                                                        });
-                                                        console.error(`Error in direct refresh: ${error.message}`);
-                                                    }
-                                                });
-                                            }
-                                        }, 100);
-                                    }
-                                } else {
-                                    debugLog(`Source ${validSourceId} has valid future refresh time: ${new Date(nextRefresh).toISOString()}`);
-                                }
-
-                                // CRITICAL FIX: Wait for sources to be fully loaded before setting up refresh
-                                // This prevents the race condition where timers fire before sources are available in state
-                                // Make sure we set up the timer for future refreshes, but skip immediate refresh
-                                if (isMounted.current) {
-                                    debugLog(`Setting up refresh for source ${validSourceId}`);
-
-                                    // When a source has expired timer, we perform the refresh directly above,
-                                    // so we always want to skip immediate refresh in setupRefresh to avoid duplicates
-                                    const skipImmediateRefreshOptions = {
-                                        ...refreshOptionsForSetup,
-                                        skipImmediateRefresh: true  // Always skip immediate refresh during initial load
-                                    };
-
-                                    http.setupRefresh(
-                                        validSourceId,
-                                        source.sourcePath,
-                                        source.sourceMethod,
-                                        source.requestOptions,
-                                        skipImmediateRefreshOptions,
-                                        source.jsonFilter,
-                                        updateSourceContent
-                                    );
-                                }
+                            // Queue for RefreshManager - no complex timing logic
+                            if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
+                                pendingRefreshSources.current.push(initializedSource);
+                                debugLog(`Queued HTTP source ${validSourceId} for RefreshManager`);
                             }
                         }
                     }
 
-                    // Validate final sources before setting state
                     validateSourceIds(initializedSources, 'after initialization');
 
-                    // Set the sources state - this is the CRITICAL step that makes sources available in state
                     if (isMounted.current) {
-                        // First set sources without any refreshing state to ensure they're properly loaded
-                        debugLog(`Setting initial sources state with ${initializedSources.length} sources (CRITICAL: sources available after this)`);
+                        debugLog(`Setting initial sources state with ${initializedSources.length} sources`);
                         setSources(initializedSources);
-
-                        // Additional safeguard - clear any "Refreshing..." state after a short delay
-                        // This ensures we don't get stuck in a bad UI state
-                        setTimeout(() => {
-                            if (isMounted.current) {
-                                debugLog(`Checking for stuck 'Refreshing...' states after initial load`);
-                                setSources(current =>
-                                    current.map(s => {
-                                        if (s.sourceContent === 'Refreshing...') {
-                                            debugLog(`Clearing stuck 'Refreshing...' state for source ${s.sourceId}`);
-                                            // Force a refresh attempt
-                                            setTimeout(() => {
-                                                if (isMounted.current) {
-                                                    debugLog(`*** FORCING REFRESH for source ${s.sourceId} that was stuck in 'Refreshing...' state ***`);
-                                                    refreshSource(s.sourceId);
-                                                }
-                                            }, 1000);
-
-                                            return {
-                                                ...s,
-                                                sourceContent: 'Waiting for refresh...'
-                                            };
-                                        }
-                                        return s;
-                                    })
-                                );
-                            }
-                        }, 10000); // Check after 10 seconds (increased from 5 to allow more time for initial operations)
                     }
                 }
 
@@ -495,39 +339,53 @@ export function SourceProvider({ children }) {
             }
         };
 
-        // Only load on first render
         if (firstLoad.current) {
             loadSources();
         }
 
-        // Cleanup function
         return () => {
-            // Mark component as unmounted to prevent state updates
             isMounted.current = false;
-
-            // Cancel all HTTP refresh timers to prevent memory leaks and stale updates
-            http.cancelAllRefreshes();
-
-            // For file watchers, we rely on the individual cleanup functions
-            // that were returned from each fileSystem.watchFile call
+            if (refreshManager.isInitialized) {
+                refreshManager.destroy();
+            }
         };
-    }, []); // Empty dependency array - only run once
+    }, []);
 
-    // A simpler effect to handle HTTP sources that need immediate refreshing
-    useEffect(() => {
-        // Only run when fully initialized with sources loaded
-        if (!initialized || isLoading.current || sources.length === 0) {
-            return;
+    // Helper function to clean up stale timing data from previous sessions
+    const cleanupStaleTimingData = useCallback((source) => {
+        if (source.sourceType !== 'http' || !source.refreshOptions) {
+            return source;
         }
 
-        // Simple approach - let the standard refresh mechanisms handle it all
-        // Don't try to intercept or duplicate the refreshes
-        debugLog(`HTTP sources are now initialized - relying on standard refresh mechanisms`);
+        const now = Date.now(); // Use regular timestamp, not high-res time
+        const cleanedSource = { ...source };
 
-    }, [initialized, sources]);
+        // Check if the nextRefresh time is from a previous session (more than 5 minutes old)
+        if (source.refreshOptions.nextRefresh) {
+            const timeDiff = now - source.refreshOptions.nextRefresh;
 
-    // We've removed complex state tracking and timer monitoring.
-    // Now we rely only on the simple setupRefresh implementation in useHttp.jsx
+            // If nextRefresh is in the past by more than the refresh interval, it's stale
+            const intervalMs = (source.refreshOptions.interval || 15) * 60 * 1000;
+            const isStale = timeDiff > intervalMs;
+
+            if (isStale) {
+                debugLog(`Cleaning up stale timing data for source ${source.sourceId}`, {
+                    oldNextRefresh: source.refreshOptions.nextRefresh,
+                    timeDiffMinutes: Math.round(timeDiff / 60000),
+                    intervalMinutes: source.refreshOptions.interval
+                });
+
+                // Remove stale timing data so RefreshManager can recalculate
+                cleanedSource.refreshOptions = {
+                    ...source.refreshOptions,
+                    lastRefresh: null,
+                    nextRefresh: null
+                };
+            }
+        }
+
+        return cleanedSource;
+    }, []);
 
     // Save sources when needed - use a separate effect with a timer
     useEffect(() => {
@@ -545,7 +403,13 @@ export function SourceProvider({ children }) {
                 // Validate before saving
                 validateSourceIds(sources, 'before saving');
 
-                await window.electronAPI.saveToStorage('sources.json', JSON.stringify(sources));
+                // FIXED: Clean sources before saving (remove internal update tracking)
+                const cleanedSources = sources.map(source => {
+                    const { _lastUpdateId, ...cleanSource } = source;
+                    return cleanSource;
+                });
+
+                await window.electronAPI.saveToStorage('sources.json', JSON.stringify(cleanedSources));
                 debugLog('Sources saved successfully');
                 needsSave.current = false;
             } catch (error) {
@@ -566,6 +430,54 @@ export function SourceProvider({ children }) {
         };
     }, [sources, initialized, validateSourceIds]);
 
+    // FIXED: Clean up broadcast control tracking when source is removed
+    const removeSource = async (sourceId) => {
+        try {
+            const source = sources.find(s => s.sourceId === sourceId);
+            if (!source) {
+                debugLog(`Attempted to remove nonexistent source ${sourceId}`);
+                return false;
+            }
+
+            debugLog(`Removing source ${sourceId}`);
+
+            // Remove from state immediately for UI feedback
+            if (isMounted.current) {
+                setSources(prev => {
+                    const updated = prev.filter(s => s.sourceId !== sourceId);
+                    debugLog(`Source ${sourceId} removed, remaining sources: ${updated.length}`);
+                    return updated;
+                });
+                needsSave.current = true;
+            }
+
+            // FIXED: Clean up broadcast control tracking
+            broadcastControl.current.lastContentHash.delete(sourceId);
+
+            // Clean up based on source type
+            if (source.sourceType === 'file') {
+                await fileSystem.unwatchFile(source.sourceId, source.sourcePath);
+            }
+            else if (source.sourceType === 'http') {
+                // Remove from RefreshManager
+                if (refreshManager.isInitialized) {
+                    refreshManager.removeSource(sourceId);
+                } else {
+                    // Remove from pending sources if it's there
+                    pendingRefreshSources.current = pendingRefreshSources.current.filter(s => s.sourceId !== sourceId);
+                }
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error removing source:', error);
+            if (isMounted.current) {
+                showMessage('error', `Failed to remove source: ${error.message}`);
+            }
+            return false;
+        }
+    };
+
     // Add new source
     const addSource = async (sourceData) => {
         try {
@@ -581,32 +493,26 @@ export function SourceProvider({ children }) {
                 return false;
             }
 
-            // Create a new source with a unique ID
             const sourceId = getUniqueSourceId();
-            debugLog(`Adding new source with ID ${sourceId}`, {
-                type: sourceData.sourceType,
-                path: sourceData.sourcePath
-            });
+            debugLog(`Adding new source with ID ${sourceId}`);
 
-            // Create new source object with loading status
             const newSource = {
                 sourceId,
                 ...sourceData,
                 sourceContent: 'Loading content...'
             };
 
-            // Add to state immediately for UI feedback
+            // Add to state immediately
             if (isMounted.current) {
                 setSources(prev => {
                     const updated = [...prev, newSource];
                     debugLog(`Source ${sourceId} added, total sources: ${updated.length}`);
-                    validateSourceIds(updated, 'after adding source');
                     return updated;
                 });
                 needsSave.current = true;
             }
 
-            // Initialize source based on type
+            // Initialize based on type
             let initialContent = '';
 
             if (sourceData.sourceType === 'file') {
@@ -625,9 +531,7 @@ export function SourceProvider({ children }) {
             }
             else if (sourceData.sourceType === 'http') {
                 try {
-                    // ALWAYS make a fresh HTTP request, regardless of test data
-                    debugLog(`Making fresh HTTP request for source ${sourceId}`);
-
+                    // Make initial HTTP request
                     const result = await http.request(
                         sourceId,
                         sourceData.sourcePath,
@@ -636,75 +540,39 @@ export function SourceProvider({ children }) {
                         sourceData.jsonFilter
                     );
 
-                    // Destructure with all possible properties
-                    const { content, originalResponse, headers, rawResponse, filteredWith, isFiltered } = result;
-                    initialContent = content;
+                    initialContent = result.content;
 
                     // Update with all available data
                     if (isMounted.current) {
-                        debugLog(`Updating source ${sourceId} with HTTP response`);
                         const updateData = {
-                            originalResponse,
-                            headers,
-                            rawResponse
+                            originalResponse: result.originalResponse,
+                            headers: result.headers,
+                            rawResponse: result.rawResponse
                         };
 
-                        // Store filtering information explicitly for better UI handling
                         if (sourceData.jsonFilter?.enabled === true) {
                             updateData.isFiltered = true;
                             updateData.filteredWith = sourceData.jsonFilter.path;
-                            debugLog(`Source ${sourceId} content is filtered with path: ${sourceData.jsonFilter.path}`);
                         }
-
-                        // Log what we're storing
-                        console.log(`Storing headers for source ${sourceId}:`, headers);
-                        console.log(`Storing originalResponse for source ${sourceId}:`,
-                            updateData.originalResponse ? updateData.originalResponse.substring(0, 50) + '...' : 'undefined');
 
                         updateSourceContent(sourceId, initialContent, updateData);
                     }
 
-                    // Set up refresh if enabled and interval > 0
-                    const isRefreshEnabled = sourceData.refreshOptions?.enabled === true;
-                    const refreshInterval = sourceData.refreshOptions?.interval || 0;
-
-                    if (isRefreshEnabled && refreshInterval > 0) {
-                        // Create base refresh options
-                        const refreshOptions = {
-                            ...sourceData.refreshOptions,
-                            interval: refreshInterval,
-                            enabled: true
+                    // Add to RefreshManager if refresh is enabled
+                    if (sourceData.refreshOptions?.enabled && sourceData.refreshOptions?.interval > 0) {
+                        const sourceForManager = {
+                            ...newSource,
+                            sourceContent: initialContent,
+                            ...updateData
                         };
 
-                        // We've JUST made a successful request, so ALWAYS skip immediate refresh
-                        const skipImmediateRefresh = true;
-
-                        // Set up the first refresh time
-                        const now = Date.now();
-                        const nextRefresh = now + (refreshInterval * 60 * 1000);
-
-                        // Add explicit timestamps
-                        refreshOptions.lastRefresh = now;
-                        refreshOptions.nextRefresh = nextRefresh;
-
-                        // Log detailed information
-                        debugLog(`Setting up refresh for newly added source ${sourceId}: interval=${refreshInterval}m, ` +
-                            `skipImmediateRefresh=${skipImmediateRefresh}, ` +
-                            `nextRefresh=${new Date(nextRefresh).toISOString()}`);
-
-                        // Setup refresh schedule with explicit skipImmediateRefresh flag
-                        http.setupRefresh(
-                            sourceId,
-                            sourceData.sourcePath,
-                            sourceData.sourceMethod,
-                            sourceData.requestOptions,
-                            {
-                                ...refreshOptions,
-                                skipImmediateRefresh: skipImmediateRefresh
-                            },
-                            sourceData.jsonFilter,
-                            updateSourceContent
-                        );
+                        if (refreshManager.isInitialized) {
+                            refreshManager.addSource(sourceForManager);
+                            debugLog(`Added source ${sourceId} to RefreshManager`);
+                        } else {
+                            pendingRefreshSources.current.push(sourceForManager);
+                            debugLog(`Queued source ${sourceId} for RefreshManager`);
+                        }
                     }
 
                     return true;
@@ -718,57 +586,16 @@ export function SourceProvider({ children }) {
                 }
             }
 
-            // Update content
-            if (isMounted.current) {
+            // Update content for non-HTTP sources
+            if (sourceData.sourceType !== 'http' && isMounted.current) {
                 updateSourceContent(sourceId, initialContent);
             }
+
             return true;
         } catch (error) {
             console.error('Error adding source:', error);
             if (isMounted.current) {
                 showMessage('error', `Failed to add source: ${error.message}`);
-            }
-            return false;
-        }
-    };
-
-    // Remove source
-    const removeSource = async (sourceId) => {
-        try {
-            const source = sources.find(s => s.sourceId === sourceId);
-            if (!source) {
-                debugLog(`Attempted to remove nonexistent source ${sourceId}`);
-                // Don't show a message here - let the SourceTable handle it
-                return false;
-            }
-
-            debugLog(`Removing source ${sourceId}`);
-
-            // Remove from state immediately for UI feedback
-            if (isMounted.current) {
-                setSources(prev => {
-                    const updated = prev.filter(s => s.sourceId !== sourceId);
-                    debugLog(`Source ${sourceId} removed, remaining sources: ${updated.length}`);
-                    return updated;
-                });
-                needsSave.current = true;
-            }
-
-            // Clean up based on source type
-            if (source.sourceType === 'file') {
-                await fileSystem.unwatchFile(source.sourceId, source.sourcePath);
-            }
-            else if (source.sourceType === 'http') {
-                http.cancelRefresh(sourceId);
-            }
-
-            // We've removed this message call to prevent duplicates
-            // The message will be shown by SourceTable.jsx instead
-            return true;
-        } catch (error) {
-            console.error('Error removing source:', error);
-            if (isMounted.current) {
-                showMessage('error', `Failed to remove source: ${error.message}`);
             }
             return false;
         }
@@ -785,174 +612,45 @@ export function SourceProvider({ children }) {
                 return false;
             }
 
-            debugLog(`Updating source ${sourceId}`, {
-                type: sourceData.sourceType,
-                path: sourceData.sourcePath
-            });
+            debugLog(`Updating source ${sourceId}`);
 
-            // Check if source has TOTP data
-            if (sourceData.requestOptions?.totpSecret) {
-                console.log(`Source ${sourceId} has TOTP secret that will be preserved`);
-            }
-
-            // FIXED: Create a normalized jsonFilter object with proper boolean typing
+            // Clean JSON filter normalization
             const normalizedJsonFilter = {
                 enabled: Boolean(sourceData.jsonFilter?.enabled),
-                path: sourceData.jsonFilter?.enabled ? (sourceData.jsonFilter.path || '') : ''
+                path: sourceData.jsonFilter?.enabled === true ? (sourceData.jsonFilter.path || '') : ''
             };
 
-            // Log the normalized JSON filter
-            console.log(`Normalizing JSON filter for source ${sourceId}:`,
-                JSON.stringify(normalizedJsonFilter));
-
-            // IMPORTANT NEW PART: Return a promise that resolves with the updated source
-            // Get TOTP values - collect from multiple sources
-            return new Promise((resolve) => {
-                // Update state
-                if (isMounted.current) {
-                    setSources(prev => {
-                        const updatedSources = prev.map(s => {
-                            if (s.sourceId === sourceId) {
-                                // Create an updated source with normalized jsonFilter
-                                const updatedSource = {
-                                    ...s,
-                                    ...sourceData,
-                                    // For HTTP sources, ensure we preserve content until a refresh happens
-                                    sourceContent: s.sourceContent,
-                                    // Use our normalized jsonFilter object
-                                    jsonFilter: normalizedJsonFilter
-                                };
-
-                                // IMPORTANT: Make sure TOTP settings are preserved
-                                if (sourceData.requestOptions && sourceData.requestOptions.totpSecret) {
-                                    // Ensure the totpSecret is properly retained
-                                    if (!updatedSource.requestOptions) {
-                                        updatedSource.requestOptions = {};
-                                    }
-                                    updatedSource.requestOptions.totpSecret = sourceData.requestOptions.totpSecret;
-                                    console.log(`Preserved TOTP secret for source ${sourceId}`);
-                                } else if (s.requestOptions && s.requestOptions.totpSecret &&
-                                    !sourceData.requestOptions?.hasOwnProperty('totpSecret')) {
-                                    // If source had TOTP before and the update doesn't explicitly remove it, preserve it
-                                    if (!updatedSource.requestOptions) {
-                                        updatedSource.requestOptions = {};
-                                    }
-                                    updatedSource.requestOptions.totpSecret = s.requestOptions.totpSecret;
-                                    console.log(`Kept existing TOTP secret for source ${sourceId}`);
-                                }
-
-                                // Simple timing check: look for valid future refresh times
-                                const now = Date.now();
-                                console.log(`Checking for valid refresh times for source ${sourceId}`);
-
-                                // First try sourceData timing, then fall back to original source timing
-                                let validFutureRefreshTime = null;
-                                let correspondingLastRefreshTime = null;
-
-                                // Check sourceData first (higher priority)
-                                if (sourceData.refreshOptions?.nextRefresh && sourceData.refreshOptions.nextRefresh > now) {
-                                    validFutureRefreshTime = sourceData.refreshOptions.nextRefresh;
-                                    correspondingLastRefreshTime = sourceData.refreshOptions.lastRefresh || s.refreshOptions?.lastRefresh;
-                                    console.log(`Found valid future refresh time in sourceData: ${new Date(validFutureRefreshTime).toISOString()}`);
-                                }
-                                // Then check original source
-                                else if (s.refreshOptions?.nextRefresh && s.refreshOptions.nextRefresh > now) {
-                                    validFutureRefreshTime = s.refreshOptions.nextRefresh;
-                                    correspondingLastRefreshTime = s.refreshOptions.lastRefresh;
-                                    console.log(`Found valid future refresh time in original source: ${new Date(validFutureRefreshTime).toISOString()}`);
-                                }
-
-                                // If we have a valid time, use it
-                                if (validFutureRefreshTime) {
-                                    updatedSource.refreshOptions = {
-                                        ...updatedSource.refreshOptions,
-                                        nextRefresh: validFutureRefreshTime,
-                                        lastRefresh: correspondingLastRefreshTime
-                                    };
-                                    console.log(`Using existing timing: next refresh at ${new Date(validFutureRefreshTime).toISOString()}`);
-                                } else {
-                                    console.log(`No valid existing refresh time found for source ${sourceId}`);
-                                }
-
-                                // Debug log to verify jsonFilter state
-                                console.log(`Updated source ${sourceId} jsonFilter:`,
-                                    JSON.stringify(updatedSource.jsonFilter));
-
-                                // Also log the refresh timing
-                                if (updatedSource.refreshOptions && updatedSource.refreshOptions.nextRefresh) {
-                                    console.log(`Source ${sourceId} next refresh at: ${new Date(updatedSource.refreshOptions.nextRefresh).toISOString()}`);
-                                }
-
-                                // Resolve with this specific updated source
-                                setTimeout(() => resolve(updatedSource), 0);
-
-                                return updatedSource;
-                            }
-                            return s;
-                        });
-
-                        return updatedSources;
-                    });
-
-                    needsSave.current = true;
-                } else {
-                    resolve(null);
-                }
-            }).then(updatedSource => {
-                // If this is an HTTP source, update refresh schedules if needed
-                if (sourceData.sourceType === 'http') {
-                    // Cancel existing refresh
-                    http.cancelRefresh(sourceId);
-
-                    // Set up refresh if enabled
-                    const isEnabled = sourceData.refreshOptions?.enabled === true;
-                    const refreshInterval = parseInt(sourceData.refreshOptions?.interval || 0, 10);
-
-                    if (isEnabled && refreshInterval > 0) {
-                        // Simple check for timing preservation
-                        // Simply check if we have a valid future refresh time
-                        const hasValidFutureTime = sourceData.refreshOptions?.nextRefresh &&
-                            sourceData.refreshOptions.nextRefresh > Date.now();
-
-                        // We'll preserve timing if a valid time exists
-                        // No need for a separate preserveTiming flag
-                        const preserveTiming = hasValidFutureTime;
-
-                        const skipImmediateRefresh = preserveTiming;
-
-                        // Use our normalized jsonFilter for the refresh schedule
-                        debugLog(`Setting up refresh schedule for updated source ${sourceId} with jsonFilter: ${
-                            JSON.stringify(normalizedJsonFilter)}`);
-
-                        // Create refresh options, preserving timing info and preventing immediate refresh
-                        // Always skip immediate refresh for edit operations to prevent duplicate requests
-                        const refreshOptionsForSetup = {
-                            ...sourceData.refreshOptions,
-                            skipImmediateRefresh: true // Force skip immediate refresh for Edit Modal
-                        };
-
-                        if (preserveTiming && updatedSource && updatedSource.refreshOptions &&
-                            updatedSource.refreshOptions.nextRefresh) {
-                            console.log(`Using preserved timing for refresh setup: next refresh at ${
-                                new Date(updatedSource.refreshOptions.nextRefresh).toISOString()}`);
-                        } else {
-                            console.log(`Not preserving timing for refresh setup - will use fresh timing`);
+            // Update state
+            if (isMounted.current) {
+                setSources(prev => {
+                    return prev.map(s => {
+                        if (s.sourceId === sourceId) {
+                            return {
+                                ...s,
+                                ...sourceData,
+                                sourceContent: s.sourceContent, // Preserve existing content
+                                jsonFilter: normalizedJsonFilter
+                            };
                         }
+                        return s;
+                    });
+                });
+                needsSave.current = true;
+            }
 
-                        http.setupRefresh(
-                            sourceId,
-                            sourceData.sourcePath,
-                            sourceData.sourceMethod,
-                            sourceData.requestOptions,
-                            refreshOptionsForSetup,
-                            normalizedJsonFilter, // Pass the normalized jsonFilter
-                            updateSourceContent
-                        );
-                    }
+            // Update RefreshManager if HTTP source
+            if (sourceData.sourceType === 'http') {
+                const updatedSourceForManager = {
+                    ...sourceData,
+                    jsonFilter: normalizedJsonFilter
+                };
+
+                if (refreshManager.isInitialized) {
+                    refreshManager.updateSource(updatedSourceForManager);
                 }
+            }
 
-                return updatedSource;
-            });
+            return sourceData;
         } catch (error) {
             console.error('Error updating source:', error);
             if (isMounted.current) {
@@ -962,280 +660,66 @@ export function SourceProvider({ children }) {
         }
     };
 
-    // Refresh a source - simple implementation
-    // This function is called directly by the UI or can be triggered by timers
+    // Refresh source - delegate to RefreshManager
     const refreshSource = async (sourceId, updatedSource = null) => {
         try {
-            // Use the provided updatedSource if available, otherwise get from current state
-            let source;
+            const source = sources.find(s => s.sourceId === sourceId);
+            if (!source) {
+                debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
+                return false;
+            }
 
-            if (updatedSource && updatedSource.sourceId === sourceId) {
-                // Use the provided source directly - this avoids race conditions
-                source = updatedSource;
-                console.log(`Using provided source for refresh of source ${sourceId} with jsonFilter:`,
-                    JSON.stringify(updatedSource.jsonFilter));
-            } else {
-                // Get fresh copy from current state as a fallback
-                const currentSource = [...sources].find(s => s.sourceId === sourceId);
+            console.log('SourceContext: Starting refresh for source', sourceId);
 
-                if (!currentSource) {
-                    debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
+            if (source.sourceType === 'http') {
+                // Delegate to RefreshManager
+                if (refreshManager.isInitialized) {
+                    return await refreshManager.refreshSource(sourceId);
+                } else {
+                    debugLog(`RefreshManager not initialized, cannot refresh source ${sourceId}`);
                     return false;
                 }
-
-                // Create a deep clone to avoid reference issues
-                source = JSON.parse(JSON.stringify(currentSource));
-            }
-
-            // Debug logging to identify the issue
-            console.log(`DEBUG: Current source jsonFilter before refresh:`,
-                source.jsonFilter ? JSON.stringify(source.jsonFilter) : 'undefined');
-
-            // FIXED: Create a normalized jsonFilter object with proper boolean typing
-            const normalizedJsonFilter = {
-                enabled: Boolean(source.jsonFilter?.enabled),
-                path: source.jsonFilter?.enabled ? (source.jsonFilter.path || '') : ''
-            };
-
-            console.log(`Refreshing source ${sourceId} with normalized jsonFilter:`,
-                JSON.stringify(normalizedJsonFilter));
-
-            debugLog(`Refreshing source ${sourceId}`);
-
-            // Check if source is already in "Refreshing..." state to avoid getting stuck
-            const currentSourceState = sources.find(s => s.sourceId === sourceId);
-            if (currentSourceState && currentSourceState.sourceContent === 'Refreshing...') {
-                debugLog(`Source ${sourceId} already in 'Refreshing...' state, attempting to recover`);
-
-                // If a source is stuck in "Refreshing..." state, force a timeout to clear it
-                setTimeout(() => {
-                    if (isMounted.current) {
-                        debugLog(`Force clearing stuck 'Refreshing...' state for source ${sourceId}`);
-                        setSources(prev => prev.map(s => {
-                            if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
-                                return {
-                                    ...s,
-                                    sourceContent: 'Waiting for next refresh...'
-                                };
-                            }
-                            return s;
-                        }));
-                    }
-                }, 5000); // Clear after 5 seconds if still stuck
-            }
-
-            // Capture the current time before updating UI
-            const refreshStartTime = Date.now();
-
-            // Update UI to show loading with a refreshOptions update to prevent "stuck" refresh
-            if (isMounted.current) {
-                // Only set to "Refreshing..." if not already in that state
-                const newContent = currentSourceState && currentSourceState.sourceContent === 'Refreshing...'
-                    ? currentSourceState.sourceContent
-                    : 'Refreshing...';
-
-                // Make sure we always update refresh timestamps even if the request fails
-                updateSourceContent(sourceId, newContent, {
-                    refreshOptions: {
-                        ...source.refreshOptions,
-                        lastRefresh: refreshStartTime,
-                        // Ensure we have a valid nextRefresh time to reset any stuck timer
-                        nextRefresh: refreshStartTime + ((source.refreshOptions?.interval || 1) * 60 * 1000)
-                    }
-                });
-            }
-
-            // Set a timeout to clear the "Refreshing..." state if the request takes too long
-            const refreshTimeout = setTimeout(() => {
-                if (isMounted.current) {
-                    debugLog(`Refresh timeout triggered for source ${sourceId} - request too slow`);
-                    // Only update if the content is still in "Refreshing..." state
-                    setSources(prev => prev.map(s => {
-                        if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
-                            // Also force a retry in 30 seconds
-                            const retryTimer = setTimeout(() => {
-                                if (isMounted.current) {
-                                    debugLog(`*** AUTO-RETRY refresh for source ${sourceId} after timeout ***`);
-                                    refreshSource(sourceId);
-                                }
-                            }, 30000);
-
-                            return {
-                                ...s,
-                                sourceContent: `Error: Refresh timed out after 15 seconds. Will retry automatically.`
-                            };
-                        }
-                        return s;
-                    }));
-                }
-            }, 15000); // 15 second timeout
-
-            // Refresh based on source type
-            if (source.sourceType === 'file') {
+            } else if (source.sourceType === 'file') {
+                // Handle file sources directly
                 try {
                     const content = await fileSystem.readFile(source.sourcePath);
                     if (isMounted.current) {
                         updateSourceContent(sourceId, content);
                     }
-                    clearTimeout(refreshTimeout);
                     return true;
                 } catch (error) {
-                    clearTimeout(refreshTimeout);
                     if (isMounted.current) {
-                        updateSourceContent(sourceId, `Error: ${error.message}`,{
-                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                            headers: null
-                        });
+                        updateSourceContent(sourceId, `Error: ${error.message}`);
                     }
                     return false;
                 }
-            }
-            else if (source.sourceType === 'env') {
+            } else if (source.sourceType === 'env') {
+                // Handle environment variable sources
                 try {
                     const content = await env.getVariable(source.sourcePath);
                     if (isMounted.current) {
                         updateSourceContent(sourceId, content);
                     }
-                    clearTimeout(refreshTimeout);
                     return true;
                 } catch (error) {
-                    clearTimeout(refreshTimeout);
                     if (isMounted.current) {
-                        updateSourceContent(sourceId, `Error: ${error.message}`,{
-                            originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                            headers: null
-                        });
+                        updateSourceContent(sourceId, `Error: ${error.message}`);
                     }
                     return false;
                 }
-            }
-            else if (source.sourceType === 'http') {
-                // Handle HTTP request with retry for ECONNRESET
-                const handleHttpRefresh = async (attempt = 1, maxRetries = 3) => {
-                    try {
-                        console.log(`HTTP refresh attempt ${attempt} for source ${sourceId}`);
-
-                        // Log the JSON filter state that will actually be used
-                        console.log(`Refreshing HTTP source ${sourceId} with jsonFilter:`,
-                            normalizedJsonFilter.enabled ?
-                                `enabled=${normalizedJsonFilter.enabled}, path=${normalizedJsonFilter.path}` :
-                                'disabled');
-
-                        // Make the request with the properly formatted jsonFilter
-                        const result = await http.request(
-                            sourceId,
-                            source.sourcePath,
-                            source.sourceMethod,
-                            source.requestOptions,
-                            normalizedJsonFilter  // Pass the properly structured jsonFilter
-                        );
-
-                        // Clear the timeout since the request succeeded
-                        clearTimeout(refreshTimeout);
-
-                        if (isMounted.current) {
-                            debugLog(`HTTP refresh completed for source ${sourceId}`);
-                            const { content, originalResponse, headers } = result;
-                            updateSourceContent(sourceId, content, {
-                                originalResponse,
-                                headers,
-                                // Always update refresh times on successful refresh
-                                refreshOptions: {
-                                    ...source.refreshOptions,
-                                    lastRefresh: Date.now(),
-                                    nextRefresh: Date.now() + ((source.refreshOptions?.interval || 1) * 60 * 1000)
-                                }
-                            });
-                        }
-                        return true;
-                    } catch (error) {
-                        // Enhanced retry logic for connection issues
-                        const isRetryableError = error.message && (
-                            error.message.includes('ECONNRESET') ||
-                            error.message.includes('Connection Reset') ||
-                            error.message.includes('ETIMEDOUT') ||
-                            error.message.includes('ECONNREFUSED') ||
-                            error.message.includes('socket hang up') ||
-                            error.message.includes('network error')
-                        );
-
-                        if (isRetryableError && attempt < maxRetries) {
-                            // For retryable errors, try again with exponential backoff
-                            debugLog(`${error.message} detected for source ${sourceId}, attempting retry ${attempt} of ${maxRetries}...`);
-
-                            // Show temporary status to user
-                            if (isMounted.current) {
-                                updateSourceContent(sourceId, `Retrying connection (${attempt}/${maxRetries})...`, {
-                                    refreshOptions: {
-                                        ...source.refreshOptions,
-                                        lastRefresh: Date.now()
-                                    }
-                                });
-                            }
-
-                            // Calculate exponential backoff delay with jitter
-                            const backoffDelay = Math.min(
-                                1000 * Math.pow(2, attempt - 1) + Math.random() * 1000,
-                                10000
-                            );
-
-                            debugLog(`Waiting ${Math.round(backoffDelay)}ms before retry ${attempt}...`);
-
-                            // Wait and retry
-                            await new Promise(resolve => setTimeout(resolve, backoffDelay));
-
-                            // Try again (recursively with incremented attempt)
-                            return handleHttpRefresh(attempt + 1, maxRetries);
-                        }
-
-                        // If it's not retryable or we've exhausted retries, handle the error normally
-                        clearTimeout(refreshTimeout);
-                        console.error(`Error refreshing HTTP source ${sourceId} (attempt ${attempt}):`, error);
-
-                        if (isMounted.current) {
-                            const now = Date.now();
-                            // Update refresh timestamps when errors occur
-                            updateSourceContent(sourceId, `Error: ${error.message}`, {
-                                originalResponse: `{"error": "${error.message}", "timestamp": "${new Date().toISOString()}"}`,
-                                headers: null,
-                                refreshOptions: {
-                                    ...source.refreshOptions,
-                                    lastRefresh: now,
-                                    nextRefresh: now + ((source.refreshOptions?.interval || 1) * 60 * 1000)
-                                }
-                            });
-                        }
-                        return false;
-                    }
-                };
-
-                // Start the HTTP request process with retry capability
-                return await handleHttpRefresh(1);
             }
 
             return true;
         } catch (error) {
             console.error('Error refreshing source:', error);
-
             if (isMounted.current) {
                 showMessage('error', `Failed to refresh source: ${error.message}`);
-
-                // Update source content to error state if still showing "Refreshing..."
-                setSources(prev => prev.map(s => {
-                    if (s.sourceId === sourceId && s.sourceContent === 'Refreshing...') {
-                        return {
-                            ...s,
-                            sourceContent: `Error: ${error.message}`
-                        };
-                    }
-                    return s;
-                }));
             }
             return false;
         }
     };
 
-    // Update refresh options
+    // Update refresh options - delegated to RefreshManager
     const updateRefreshOptions = async (sourceId, options) => {
         try {
             const source = sources.find(s => s.sourceId === sourceId);
@@ -1246,46 +730,18 @@ export function SourceProvider({ children }) {
 
             debugLog(`Updating refresh options for source ${sourceId}`, options);
 
-            // Deep clone to avoid reference issues and ensure we're working with a clean object
-            const refreshOptions = JSON.parse(JSON.stringify(options));
-
-            // Get core settings with proper typing
-            const isEnabled = Boolean(refreshOptions.enabled);
-            const refreshInterval = parseInt(refreshOptions.interval || 0, 10);
-            const effectiveInterval = isEnabled ? Math.max(0, refreshInterval) : 0;
-
-            // CRITICAL: refreshNow is a UI-only flag that should NEVER be stored in the source
-            // We explicitly extract it here, then invert it for the skipImmediateRefresh flag
-            // If refreshNow is false (don't refresh now), then skipImmediateRefresh should be true
-            const shouldRefreshNow = refreshOptions.refreshNow === true;
-            const skipImmediateRefresh = !shouldRefreshNow;
-
-            debugLog(`For source ${sourceId}: refreshNow=${shouldRefreshNow}, skipImmediateRefresh=${skipImmediateRefresh}`);
-
-            // Remove the refreshNow property from what gets saved to storage
-            delete refreshOptions.refreshNow;
-
-            // Update state with clean values
+            // Update local state
             if (isMounted.current) {
                 setSources(prev => prev.map(s => {
                     if (s.sourceId === sourceId) {
-                        const now = Date.now();
-                        const nextRefresh = effectiveInterval > 0 ? now + (effectiveInterval * 60 * 1000) : 0;
-
-                        // Create a clean refreshOptions object
-                        const updatedOptions = {
-                            enabled: isEnabled,
-                            interval: refreshInterval,
-                            type: refreshOptions.type || 'preset',
-                            lastRefresh: now,
-                            nextRefresh: nextRefresh
-                        };
-
-                        debugLog(`Updated refresh options for source ${sourceId}`, updatedOptions);
-
                         return {
                             ...s,
-                            refreshOptions: updatedOptions
+                            refreshOptions: {
+                                ...s.refreshOptions,
+                                ...options,
+                                // Remove refreshNow from storage
+                                refreshNow: undefined
+                            }
                         };
                     }
                     return s;
@@ -1293,72 +749,33 @@ export function SourceProvider({ children }) {
                 needsSave.current = true;
             }
 
-            // Handle refresh schedule setup or cancellation
-            if (isEnabled && refreshInterval > 0) {
-                debugLog(`Setting up refresh schedule for source ${sourceId}`);
-
-                // Set up the refresh schedule with the current time
-                const now = Date.now();
-                const nextRefresh = now + (refreshInterval * 60 * 1000);
-
-                // Update the refreshOptions with the new timing info
-                refreshOptions.lastRefresh = now;
-                refreshOptions.nextRefresh = nextRefresh;
-
-                http.setupRefresh(
-                    sourceId,
-                    source.sourcePath,
-                    source.sourceMethod,
-                    source.requestOptions,
-                    {
-                        interval: refreshInterval,
-                        enabled: true,
-                        type: refreshOptions.type || 'preset',
-                        skipImmediateRefresh: skipImmediateRefresh,
-                        lastRefresh: now,
-                        nextRefresh: nextRefresh
-                    },
-                    source.jsonFilter,
-                    updateSourceContent
-                );
-
-                // Force an update to the UI by updating the source with the new timing
-                if (isMounted.current) {
-                    setSources(prev => prev.map(s => {
-                        if (s.sourceId === sourceId) {
-                            return {
-                                ...s,
-                                refreshOptions: {
-                                    ...s.refreshOptions,
-                                    ...refreshOptions,
-                                    lastRefresh: now,
-                                    nextRefresh: nextRefresh
-                                }
-                            };
-                        }
-                        return s;
-                    }));
+            // Update RefreshManager
+            const updatedSource = {
+                ...source,
+                refreshOptions: {
+                    ...source.refreshOptions,
+                    ...options,
+                    refreshNow: undefined
                 }
-            } else {
-                debugLog(`Cancelling refresh schedule for source ${sourceId}`);
-                http.cancelRefresh(sourceId);
+            };
+
+            if (refreshManager.isInitialized) {
+                refreshManager.updateSource(updatedSource);
             }
 
-            // Handle immediate refresh - completely separated from state updates
-            // We don't rely on setupRefresh for this anymore - we handle it directly
-            if (shouldRefreshNow) {
-                debugLog(`Performing immediate refresh for source ${sourceId} (refreshNow is true)`);
-                // Wait a bit to ensure state is fully updated
+            // Handle immediate refresh if requested
+            if (options.refreshNow === true) {
+                debugLog(`Performing immediate refresh for source ${sourceId}`);
                 setTimeout(async () => {
                     try {
-                        await refreshSource(sourceId);
-                        debugLog(`Immediate refresh completed for source ${sourceId}`);
+                        if (refreshManager.isInitialized) {
+                            await refreshManager.refreshSource(sourceId);
+                            debugLog(`Immediate refresh completed for source ${sourceId}`);
+                        }
                     } catch (err) {
                         console.error(`Error during immediate refresh for source ${sourceId}:`, err);
                     }
                 }, 500);
-            } else {
-                debugLog(`Skipping immediate refresh for source ${sourceId}, refreshNow is false`);
             }
 
             return true;
@@ -1385,7 +802,7 @@ export function SourceProvider({ children }) {
                     jsonFilter: source.jsonFilter || { enabled: false, path: '' }
                 };
 
-                // For HTTP sources, include COMPLETE refresh options
+                // For HTTP sources, include refresh options
                 if (source.sourceType === 'http') {
                     const now = Date.now();
                     const refreshOptions = source.refreshOptions || {};
@@ -1396,7 +813,7 @@ export function SourceProvider({ children }) {
                         debugLog(`Exporting HTTP source with ${timeRemaining}min remaining until next refresh`);
                     }
 
-                    // Include ALL refresh settings (especially timing data)
+                    // Include refresh settings
                     exportedSource.refreshOptions = {
                         enabled: refreshOptions.enabled || false,
                         interval: refreshOptions.interval || 0,
@@ -1417,12 +834,9 @@ export function SourceProvider({ children }) {
 
                     // Include TOTP secret if available
                     if (source.requestOptions && source.requestOptions.totpSecret) {
-                        // Make sure requestOptions exists
                         if (!exportedSource.requestOptions) {
                             exportedSource.requestOptions = {};
                         }
-
-                        // Copy the TOTP secret to the exported source
                         exportedSource.requestOptions.totpSecret = source.requestOptions.totpSecret;
                         console.log(`Including TOTP secret in export for source ${source.sourceId}`);
                     }
@@ -1493,14 +907,9 @@ export function SourceProvider({ children }) {
                         if (hasValidTimingData) {
                             // Calculate time remaining in minutes
                             const timeRemaining = Math.round((nextRefresh - now) / 60000);
-
                             debugLog(`Importing HTTP source with ${timeRemaining}min remaining until next refresh`);
-
-                            // No need to set special flags
-                            // Valid future refresh times will be used automatically
                         } else {
                             debugLog(`Importing HTTP source with invalid or expired timing - will use fresh timing`);
-
                             // Reset timing if invalid
                             delete sourceData.refreshOptions.lastRefresh;
                             delete sourceData.refreshOptions.nextRefresh;
@@ -1515,7 +924,6 @@ export function SourceProvider({ children }) {
                         sourceMethod: sourceData.sourceMethod || '',
                         requestOptions: sourceData.requestOptions || {},
                         jsonFilter: sourceData.jsonFilter || { enabled: false, path: '' },
-                        // Include complete refresh options
                         refreshOptions: sourceData.refreshOptions || { enabled: false, interval: 0 }
                     };
 
@@ -1529,14 +937,11 @@ export function SourceProvider({ children }) {
                         cleanSourceData.headers = sourceData.headers;
                     }
 
-                    // IMPORTANT: Preserve TOTP secret if available
+                    // Preserve TOTP secret if available
                     if (sourceData.requestOptions && sourceData.requestOptions.totpSecret) {
-                        // Make sure requestOptions exists
                         if (!cleanSourceData.requestOptions) {
                             cleanSourceData.requestOptions = {};
                         }
-
-                        // Copy the TOTP secret to the clean source data
                         cleanSourceData.requestOptions.totpSecret = sourceData.requestOptions.totpSecret;
                         console.log(`Preserving TOTP secret during import for source with path ${sourceData.sourcePath}`);
                     }
@@ -1601,7 +1006,8 @@ export function SourceProvider({ children }) {
         updateSource,
         exportSources,
         importSources,
-        forceSave
+        forceSave,
+        shouldSuppressBroadcast // FIXED: Expose granular broadcast control to WebSocketContext
     };
 
     return (

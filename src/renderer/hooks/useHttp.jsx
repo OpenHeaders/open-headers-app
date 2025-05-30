@@ -1,31 +1,10 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback } from 'react';
 
 /**
- * Custom hook for HTTP operations
+ * Custom hook for HTTP operations - Simplified version without refresh logic
+ * All refresh management is now handled by RefreshManager
  */
 export function useHttp() {
-    // Track active refresh timers
-    const refreshTimers = useRef(new Map());
-
-    // Clean up timers on unmount
-    useEffect(() => {
-        return () => {
-            // Clear all timers when component unmounts
-            const timerCount = refreshTimers.current.size;
-            if (timerCount > 0) {
-                console.log(`Cleaning up ${timerCount} refresh timers on useHttp unmount`);
-
-                for (const [sourceId, timer] of refreshTimers.current.entries()) {
-                    clearTimeout(timer);
-                    clearInterval(timer);
-                    console.log(`Cleaned up timer for source ${sourceId}`);
-                }
-
-                refreshTimers.current.clear();
-            }
-        };
-    }, []);
-
     /**
      * Parse JSON safely
      */
@@ -42,7 +21,7 @@ export function useHttp() {
      * Apply JSON filter to a response body with improved error handling
      */
     const applyJsonFilter = useCallback((body, jsonFilter) => {
-        // FIXED: Always normalize the filter object to ensure consistent behavior
+        // Always normalize the filter object to ensure consistent behavior
         const normalizedFilter = {
             enabled: jsonFilter?.enabled === true, // Use strict equality check
             path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : '' // Only include path if enabled
@@ -73,7 +52,7 @@ export function useHttp() {
                 jsonObj = body;
             }
 
-            // IMPROVED: First check if this is an error response
+            // Check if this is an error response
             if (jsonObj.error) {
                 console.log("Detected error response, checking if we should bypass filter");
 
@@ -115,20 +94,17 @@ export function useHttp() {
                     console.log(`Processing array part: ${propName}[${index}]`);
 
                     if (current[propName] === undefined) {
-                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' not found (property '${propName}' is missing)`);
                         return `The field "${path}" was not found in the response.`;
                     }
 
                     if (!Array.isArray(current[propName])) {
-                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' is invalid ('${propName}' is not an array)`);
                         return `The field "${propName}" exists but is not an array.`;
                     }
 
                     const idx = parseInt(index, 10);
                     if (idx >= current[propName].length) {
-                        // IMPROVED: Better error message format
                         console.error(`Path '${normalizedFilter.path}' is invalid (index ${idx} out of bounds)`);
                         return `The array index [${idx}] is out of bounds.`;
                     }
@@ -137,7 +113,6 @@ export function useHttp() {
                 } else {
                     console.log(`Processing object part: ${part}`);
                     if (current[part] === undefined) {
-                        // IMPROVED: Better error message format and more user-friendly
                         console.error(`Path '${normalizedFilter.path}' not found (property '${part}' is missing)`);
                         return `The field "${part}" was not found in the response.`;
                     }
@@ -155,12 +130,14 @@ export function useHttp() {
             }
         } catch (error) {
             console.error('Error applying JSON filter:', error);
-            // IMPROVED: More user-friendly error message
             return `Could not filter response: ${error.message}`;
         }
     }, [parseJSON]);
 
-    const substituteVariables = (text, variables, totpCode = null) => {
+    /**
+     * Substitute variables in text
+     */
+    const substituteVariables = useCallback((text, variables, totpCode = null) => {
         if (!text) return text;
 
         let result = text;
@@ -187,11 +164,10 @@ export function useHttp() {
 
         console.log(`Final result after substitution: '${result}'`);
         return result;
-    };
-
+    }, []);
 
     /**
-     * Make HTTP request - Clean refactored version
+     * Make HTTP request - Clean simplified version
      */
     const request = useCallback(async (
         sourceId,
@@ -202,7 +178,7 @@ export function useHttp() {
     ) => {
         // Track retry attempts
         let retryAttempt = 0;
-        const MAX_CLIENT_RETRIES = 2;  // Client-side retries (in addition to server-side)
+        const MAX_CLIENT_RETRIES = 3;  // Increased retries for better reliability
 
         const attemptRequest = async () => {
             try {
@@ -233,12 +209,6 @@ export function useHttp() {
                     : [];
 
                 console.log(`Source ${sourceId} has ${variables.length} variables for substitution`);
-
-                // CRITICAL DEBUGGING: Log the actual variables array content
-                console.log("VARIABLES DETAILS for request:");
-                console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
-                console.log("Extracted variables array:", JSON.stringify(variables));
-                variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
 
                 // Format options
                 const formattedOptions = {
@@ -369,7 +339,7 @@ export function useHttp() {
                 const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
                 console.log("Raw response:", responseJson.substring(0, 200) + "...");
 
-                // Process response as before
+                // Process response
                 const response = parseJSON(responseJson);
                 if (!response) {
                     throw new Error('Invalid response format');
@@ -412,7 +382,6 @@ export function useHttp() {
                     console.log("Using original content without filtering");
                 }
 
-                // Use originalResponse instead of originalJson
                 return {
                     content: finalContent,
                     originalResponse: bodyContent,
@@ -429,17 +398,19 @@ export function useHttp() {
                     error.message.includes('ETIMEDOUT') ||
                     error.message.includes('ECONNREFUSED') ||
                     error.message.includes('socket hang up') ||
-                    error.message.includes('network error');
+                    error.message.includes('network error') ||
+                    error.message.includes('DNS resolution failed') ||
+                    error.message.includes('Connection refused');
 
                 // Check if we should retry
                 if (isRetryableError && retryAttempt < MAX_CLIENT_RETRIES) {
                     retryAttempt++;
                     console.log(`Retrying request for source ${sourceId} (attempt ${retryAttempt + 1} of ${MAX_CLIENT_RETRIES + 1})`);
 
-                    // Calculate exponential backoff delay (starting at 2s with jitter)
+                    // Calculate exponential backoff delay with jitter
                     const backoffDelay = Math.min(
                         2000 * Math.pow(2, retryAttempt - 1) + Math.random() * 1000,
-                        10000
+                        30000 // Max 30 seconds
                     );
 
                     console.log(`Waiting ${Math.round(backoffDelay)}ms before retry`);
@@ -480,13 +451,6 @@ export function useHttp() {
                 },
                 jsonFilter
             });
-
-            // CRITICAL DEBUGGING: Log the actual variables array content
-            console.log("VARIABLES DETAILS:");
-            console.log("Original variables from requestOptions:", JSON.stringify(requestOptions.variables));
-            console.log("Extracted variables array:", JSON.stringify(variables));
-            console.log("Variable array length:", variables.length);
-            variables.forEach((v, i) => console.log(`Variable ${i}: ${v.key} = ${v.value}`));
 
             // Format options
             const formattedOptions = {
@@ -655,7 +619,7 @@ export function useHttp() {
                     ...response,
                     body: filteredContent,
                     filteredWith: jsonFilter.path,
-                    originalResponse: bodyContent,  // Changed from originalBody to originalResponse for consistency
+                    originalResponse: bodyContent,
                     headers: headers
                 };
 
@@ -668,208 +632,10 @@ export function useHttp() {
             console.error("Test request error:", error);
             throw error;
         }
-    }, [parseJSON, applyJsonFilter]);
-    /**
-     * Cancel a refresh timer and ensure all resources are properly cleaned up
-     * Returns true if a timer was found and cancelled, false otherwise
-     */
-    const cancelRefresh = useCallback((sourceId) => {
-        // Get the timer reference from our map
-        const timer = refreshTimers.current.get(sourceId);
-
-        if (timer) {
-            // If timer is the string 'REFRESHING', it means we're in the middle of a refresh
-            // We don't need to clear anything, but we should remove it from our map
-            if (timer === 'REFRESHING') {
-                console.log(`Source ${sourceId} is currently refreshing, clearing refresh state`);
-                refreshTimers.current.delete(sourceId);
-                return true;
-            }
-
-            // Clear both timeout and interval to be safe
-            // This ensures we catch all timer types
-            clearTimeout(timer);
-            clearInterval(timer);
-
-            // Remove from our map
-            refreshTimers.current.delete(sourceId);
-
-            console.log(`Cancelled refresh timer for source ${sourceId}`);
-            return true;
-        } else {
-            console.log(`No active timer found for source ${sourceId}`);
-            return false;
-        }
-    }, []);
-
-    /**
-     * Helper function to cancel all refresh timers
-     * Useful for component unmount or app shutdown
-     */
-    const cancelAllRefreshes = useCallback(() => {
-        const timerCount = refreshTimers.current.size;
-
-        if (timerCount > 0) {
-            console.log(`Cancelling all ${timerCount} active refresh timers`);
-
-            // Clear all timers
-            for (const [sourceId, timer] of refreshTimers.current.entries()) {
-                clearTimeout(timer);
-                clearInterval(timer);
-                console.log(`Cancelled timer for source ${sourceId}`);
-            }
-
-            // Clear the map
-            refreshTimers.current.clear();
-            return timerCount;
-        }
-
-        return 0;
-    }, []);
-
-    /**
-     * Set up auto-refresh for HTTP sources - CLEAN IMPLEMENTATION
-     */
-    const setupRefresh = useCallback((
-        sourceId,
-        url,
-        method,
-        requestOptions,
-        refreshOptions,
-        jsonFilter,
-        onUpdate
-    ) => {
-        // Cancel any existing refresh
-        cancelRefresh(sourceId);
-
-        // Only proceed if interval > 0
-        if (!refreshOptions || refreshOptions.interval <= 0) {
-            console.log(`No refresh for source ${sourceId} - interval is zero or not specified`);
-            return;
-        }
-
-        console.log(`Setting up refresh for source ${sourceId} with interval ${refreshOptions.interval} minutes`);
-
-        const now = Date.now();
-        const intervalMs = refreshOptions.interval * 60 * 1000;
-
-        // Simple timer setup logic with only one decision point:
-        // When should the next refresh happen?
-        let nextRefresh;
-
-        // Case 1: We have a valid future refresh time to preserve
-        if (refreshOptions.nextRefresh && refreshOptions.nextRefresh > now) {
-            nextRefresh = refreshOptions.nextRefresh;
-            console.log(`Source ${sourceId} using existing refresh time: ${new Date(nextRefresh).toISOString()}`);
-        }
-        // Case 2: We need to start fresh, but skip immediate refresh
-        else if (refreshOptions.skipImmediateRefresh === true) {
-            nextRefresh = now + intervalMs;
-            console.log(`Source ${sourceId} will refresh in ${Math.round(intervalMs/1000)} seconds`);
-        }
-        // Case 3: We need to refresh immediately
-        else {
-            nextRefresh = now;
-            console.log(`Source ${sourceId} will refresh immediately`);
-        }
-
-        // Prepare refresh data to return to UI immediately - even before first refresh
-        // This fixes the issue with timer not updating when interval changes
-        if (onUpdate && refreshOptions.skipImmediateRefresh === true && nextRefresh > now) {
-            // Immediately update UI with the new timing
-            const timeUntilRefresh = nextRefresh - now;
-            console.log(`Immediately updating UI for source ${sourceId} with new timing: next refresh in ${Math.round(timeUntilRefresh/1000)} seconds`);
-
-            // Call onUpdate with current content but updated timing
-            onUpdate(sourceId, null, {
-                updateTimingOnly: true,
-                refreshOptions: {
-                    ...refreshOptions,
-                    lastRefresh: refreshOptions.lastRefresh || now,
-                    nextRefresh: nextRefresh
-                }
-            });
-        }
-
-        // Function to perform a refresh and schedule the next one
-        function performRefresh() {
-            console.log(`Refreshing source ${sourceId}`);
-
-            // Perform the HTTP request
-            request(sourceId, url, method, requestOptions, jsonFilter)
-                .then(result => {
-                    // On success, update content and schedule next refresh
-                    const { content, originalResponse, headers } = result;
-                    const refreshTime = Date.now();
-                    const nextRefreshTime = refreshTime + intervalMs;
-
-                    // Update the content via callback - always provide content to ensure we clear any "Refreshing..." state
-                    if (onUpdate) {
-                        onUpdate(sourceId, content || "Request completed with no content", {
-                            originalResponse,
-                            headers,
-                            refreshOptions: {
-                                ...refreshOptions,
-                                lastRefresh: refreshTime,
-                                nextRefresh: nextRefreshTime
-                            },
-                            forceUpdateContent: true  // Flag to ensure content is updated even if null
-                        });
-                    }
-
-                    // Schedule next refresh
-                    const timer = setTimeout(performRefresh, intervalMs);
-                    refreshTimers.current.set(sourceId, timer);
-                    console.log(`Source ${sourceId} refreshed successfully, next refresh in ${Math.round(intervalMs/1000)} seconds`);
-                })
-                .catch(error => {
-                    // On error, still update the UI and schedule next refresh
-                    console.error(`Error refreshing source ${sourceId}:`, error);
-
-                    if (onUpdate) {
-                        const errorTime = Date.now();
-                        const nextRefreshTime = errorTime + intervalMs;
-
-                        onUpdate(sourceId, `Error: ${error.message}`, {
-                            refreshOptions: {
-                                ...refreshOptions,
-                                lastRefresh: errorTime,
-                                nextRefresh: nextRefreshTime
-                            }
-                        });
-                    }
-
-                    // Even on error, schedule the next refresh
-                    const timer = setTimeout(performRefresh, intervalMs);
-                    refreshTimers.current.set(sourceId, timer);
-                    console.log(`Source ${sourceId} refresh failed, will retry in ${Math.round(intervalMs/1000)} seconds`);
-                });
-        }
-
-        // Set up the initial timer based on nextRefresh time
-        if (nextRefresh <= now) {
-            // If refresh time is now or in the past, refresh immediately with a small delay
-            // The delay helps ensure components are fully mounted
-            const timer = setTimeout(performRefresh, 1000);
-            refreshTimers.current.set(sourceId, timer);
-            console.log(`Source ${sourceId} scheduled for immediate refresh (with 1s delay)`);
-        } else {
-            // If refresh time is in the future, set up a timer for that specific time
-            const timeUntilRefresh = nextRefresh - now;
-            const timer = setTimeout(performRefresh, timeUntilRefresh);
-            refreshTimers.current.set(sourceId, timer);
-            console.log(`Source ${sourceId} next refresh in ${Math.round(timeUntilRefresh/1000)} seconds`);
-        }
-
-        // Return a cleanup function that cancels the timer
-        return () => cancelRefresh(sourceId);
-    }, [request, cancelRefresh]);
+    }, [parseJSON, applyJsonFilter, substituteVariables]);
 
     return {
         request,
-        setupRefresh,
-        cancelRefresh,
-        cancelAllRefreshes,
         testRequest,
         applyJsonFilter
     };
