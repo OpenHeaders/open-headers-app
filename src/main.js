@@ -1,5 +1,7 @@
 // main.js - Electron main process with improved auto-launch window hiding
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
+const { powerMonitor, net } = require('electron');
+
 const path = require('path');
 const fs = require('fs');
 const querystring = require('querystring');
@@ -23,6 +25,11 @@ let isQuitting = false;
 let updateCheckInProgress = false;
 let updateDownloadInProgress = false;
 let updateDownloaded = false;
+let systemState = {
+    isOnline: true,
+    lastNetworkCheck: Date.now(),
+    powerState: 'active' // 'active', 'suspend', 'resume'
+};
 
 // Store app launch arguments for debugging and auto-launch detection
 const appLaunchArgs = {
@@ -259,6 +266,108 @@ function setupAutoUpdater() {
     }, CHECK_INTERVAL);
 }
 
+function setupNativeMonitoring() {
+    console.log('Setting up native system monitoring...');
+
+    // Power monitoring
+    powerMonitor.on('suspend', () => {
+        console.log('System is going to sleep');
+        systemState.powerState = 'suspend';
+
+        // Notify all renderer processes
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send('system-suspend');
+            }
+        });
+    });
+
+    powerMonitor.on('resume', () => {
+        console.log('System woke up');
+        systemState.powerState = 'resume';
+
+        // Check network state after resume
+        setTimeout(() => {
+            checkNetworkConnectivity().then(isOnline => {
+                systemState.isOnline = isOnline;
+
+                // Notify all renderer processes
+                BrowserWindow.getAllWindows().forEach(window => {
+                    if (window && !window.isDestroyed()) {
+                        window.webContents.send('system-resume');
+                        window.webContents.send('network-state-changed', isOnline);
+                    }
+                });
+            });
+        }, 1000);
+    });
+
+    // Initial network check
+    checkNetworkConnectivity().then(isOnline => {
+        systemState.isOnline = isOnline;
+        console.log(`Initial network state: ${isOnline ? 'online' : 'offline'}`);
+    });
+
+    // Periodic network monitoring
+    setInterval(async () => {
+        const wasOnline = systemState.isOnline;
+        const isOnline = await checkNetworkConnectivity();
+
+        if (wasOnline !== isOnline) {
+            console.log(`Network state changed: ${isOnline ? 'online' : 'offline'}`);
+            systemState.isOnline = isOnline;
+
+            // Notify all renderer processes
+            BrowserWindow.getAllWindows().forEach(window => {
+                if (window && !window.isDestroyed()) {
+                    window.webContents.send('network-state-changed', isOnline);
+                }
+            });
+        }
+
+        systemState.lastNetworkCheck = Date.now();
+    }, 30000); // Check every 30 seconds
+}
+
+async function checkNetworkConnectivity() {
+    return new Promise((resolve) => {
+        // Use Electron's net module to check connectivity
+        const request = net.request({
+            method: 'HEAD',
+            url: 'https://www.github.com',
+            timeout: 5000
+        });
+
+        let resolved = false;
+
+        const handleResponse = (online) => {
+            if (!resolved) {
+                resolved = true;
+                resolve(online);
+            }
+        };
+
+        request.on('response', (response) => {
+            // Any response means we're online
+            handleResponse(true);
+        });
+
+        request.on('error', (error) => {
+            console.log('Network connectivity check failed:', error.message);
+            handleResponse(false);
+        });
+
+        // Timeout fallback
+        setTimeout(() => {
+            if (!resolved) {
+                handleResponse(false);
+            }
+        }, 6000);
+
+        request.end();
+    });
+}
+
 // Enhanced auto-launch detection function
 function detectAutoLaunch() {
     // Check login settings (works best on macOS)
@@ -337,7 +446,11 @@ function createWindow() {
             responseHeaders: {
                 ...details.responseHeaders,
                 'Content-Security-Policy': [
-                    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;"
+                    "default-src 'self'; " +
+                    "script-src 'self'; " +
+                    "style-src 'self' 'unsafe-inline'; " +
+                    "img-src 'self' data:; " +
+                    "connect-src 'none';"  // Explicitly block all external connections from renderer
                 ]
             }
         });
@@ -676,6 +789,8 @@ app.whenReady().then(async () => {
 
     setupIPC();
 
+    setupNativeMonitoring();
+
     // Set up auto-updater
     setupAutoUpdater();
 
@@ -783,6 +898,24 @@ function setupIPC() {
     ipcMain.handle('writeFile', handleWriteFile);
     ipcMain.handle('watchFile', handleWatchFile);
     ipcMain.handle('unwatchFile', handleUnwatchFile);
+
+    // Network connectivity check
+    ipcMain.handle('checkNetworkConnectivity', async () => {
+        try {
+            return await checkNetworkConnectivity();
+        } catch (error) {
+            console.error('Error checking network connectivity:', error);
+            return false;
+        }
+    });
+
+    // Get current system state
+    ipcMain.handle('getSystemState', () => {
+        return {
+            ...systemState,
+            timestamp: Date.now()
+        };
+    });
 
     ipcMain.on('updateWebSocketSources', (event, sources) => {
         // Initialize WebSocket if needed (lazy loading)
