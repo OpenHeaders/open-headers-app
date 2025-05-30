@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.5.11",
+  "version": "2.6.0",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {

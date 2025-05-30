@@ -153,6 +153,31 @@ contextBridge.exposeInMainWorld('electronAPI', {
     hideMainWindow: () => ipcRenderer.send('hideMainWindow'),
     quitApp: () => ipcRenderer.send('quitApp'),
 
+    // Native network connectivity check
+    checkNetworkConnectivity: () => ipcRenderer.invoke('checkNetworkConnectivity'),
+
+    // Get current system state
+    getSystemState: () => ipcRenderer.invoke('getSystemState'),
+
+    // System monitoring events for RefreshManager (these already exist, just showing for completeness)
+    onSystemSuspend: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('system-suspend', subscription);
+        return () => ipcRenderer.removeListener('system-suspend', subscription);
+    },
+
+    onSystemResume: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('system-resume', subscription);
+        return () => ipcRenderer.removeListener('system-resume', subscription);
+    },
+
+    onNetworkStateChanged: (callback) => {
+        const subscription = (_, isOnline) => callback(isOnline);
+        ipcRenderer.on('network-state-changed', subscription);
+        return () => ipcRenderer.removeListener('network-state-changed', subscription);
+    },
+
     // Tray menu events
     onShowApp: (callback) => {
         const subscription = () => callback();
