@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -96,11 +96,7 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
-        },
-        {
-          "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": ["arm64"]
         }
       ],
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"

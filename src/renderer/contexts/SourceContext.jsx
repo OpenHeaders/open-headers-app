@@ -222,19 +222,21 @@ export function SourceProvider({ children }) {
     useEffect(() => {
         if (initialized && !refreshManager.isInitialized) {
             debugLog('Initializing RefreshManager');
-            refreshManager.initialize(http, updateSourceContent);
 
-            // Process any pending sources
-            if (pendingRefreshSources.current.length > 0) {
-                debugLog(`Processing ${pendingRefreshSources.current.length} pending refresh sources`);
+            // Initialize returns a promise when truly ready
+            refreshManager.initialize(http, updateSourceContent).then(() => {
+                // Process any pending sources
+                if (pendingRefreshSources.current.length > 0) {
+                    debugLog(`Processing ${pendingRefreshSources.current.length} pending refresh sources`);
 
-                pendingRefreshSources.current.forEach(source => {
-                    refreshManager.addSource(source);
-                    debugLog(`Added pending source ${source.sourceId} to RefreshManager`);
-                });
+                    pendingRefreshSources.current.forEach(source => {
+                        refreshManager.addSource(source);
+                        debugLog(`Added pending source ${source.sourceId} to RefreshManager`);
+                    });
 
-                pendingRefreshSources.current = [];
-            }
+                    pendingRefreshSources.current = [];
+                }
+            });
         }
     }, [initialized, http, updateSourceContent]);
 

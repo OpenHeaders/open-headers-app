@@ -1,4 +1,4 @@
-// main.js - Electron main process with improved auto-launch window hiding
+// main.js - Electron main process with improved auto-launch window hiding and enhanced network monitoring
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
 const { powerMonitor, net } = require('electron');
 
@@ -8,6 +8,7 @@ const querystring = require('querystring');
 const chokidar = require('chokidar');
 const AutoLaunch = require('auto-launch');
 const webSocketService = require('./services/ws-service');
+const NetworkMonitor = require('./services/NetworkMonitor');
 
 // Initialize electron-log ONCE at the top level
 const log = require('electron-log');
@@ -25,10 +26,17 @@ let isQuitting = false;
 let updateCheckInProgress = false;
 let updateDownloadInProgress = false;
 let updateDownloaded = false;
+let networkMonitor = null;
+
+// Enhanced system state with network info
 let systemState = {
     isOnline: true,
     lastNetworkCheck: Date.now(),
-    powerState: 'active' // 'active', 'suspend', 'resume'
+    powerState: 'active',
+    networkQuality: 'good',
+    corporateEnvironment: 'unknown',
+    vpnActive: false,
+    networkInterfaces: {}
 };
 
 // Store app launch arguments for debugging and auto-launch detection
@@ -54,6 +62,74 @@ function logToFile(message) {
         // Silent fail if logging fails
         console.error('Logging failed:', err);
     }
+}
+
+// Initialize network monitor when app is ready
+async function initializeNetworkMonitor() {
+    console.log('Initializing enhanced network monitoring...');
+
+    networkMonitor = new NetworkMonitor();
+
+    // Initialize and get initial state
+    const initialState = await networkMonitor.initialize();
+
+    // Update system state
+    systemState = {
+        ...systemState,
+        isOnline: initialState.isOnline,
+        networkQuality: initialState.networkQuality,
+        corporateEnvironment: initialState.corporateEnvironment,
+        vpnActive: initialState.vpnActive,
+        networkInterfaces: initialState.networkInterfaces
+    };
+
+    // Listen to network events
+    networkMonitor.on('network-change', (event) => {
+        console.log('Network change detected:', event);
+
+        // Update system state
+        if (event.state) {
+            systemState = {
+                ...systemState,
+                ...event.state
+            };
+        }
+
+        // Notify all renderer windows
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send('network-change', event);
+            }
+        });
+    });
+
+    networkMonitor.on('status-change', (event) => {
+        console.log('Network status change:', event);
+
+        systemState.isOnline = event.isOnline;
+
+        // Notify all renderer windows
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send('network-state-changed', event.isOnline);
+            }
+        });
+    });
+
+    networkMonitor.on('vpn-change', (event) => {
+        console.log('VPN state change:', event);
+
+        systemState.vpnActive = event.active;
+
+        // Notify all renderer windows
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send('vpn-state-changed', event);
+            }
+        });
+    });
+
+    console.log('Network monitor initialized with state:', systemState);
 }
 
 function setupAutoUpdater() {
@@ -266,6 +342,7 @@ function setupAutoUpdater() {
     }, CHECK_INTERVAL);
 }
 
+// Enhanced native monitoring with network monitor integration
 function setupNativeMonitoring() {
     console.log('Setting up native system monitoring...');
 
@@ -286,86 +363,36 @@ function setupNativeMonitoring() {
         console.log('System woke up');
         systemState.powerState = 'resume';
 
-        // Check network state after resume
-        setTimeout(() => {
-            checkNetworkConnectivity().then(isOnline => {
-                systemState.isOnline = isOnline;
+        // Force network check after resume
+        if (networkMonitor) {
+            setTimeout(async () => {
+                const state = await networkMonitor.forceCheck();
+                systemState = {
+                    ...systemState,
+                    ...state
+                };
 
                 // Notify all renderer processes
                 BrowserWindow.getAllWindows().forEach(window => {
                     if (window && !window.isDestroyed()) {
                         window.webContents.send('system-resume');
-                        window.webContents.send('network-state-changed', isOnline);
+                        window.webContents.send('network-state-changed', state.isOnline);
                     }
                 });
-            });
-        }, 1000);
-    });
-
-    // Initial network check
-    checkNetworkConnectivity().then(isOnline => {
-        systemState.isOnline = isOnline;
-        console.log(`Initial network state: ${isOnline ? 'online' : 'offline'}`);
-    });
-
-    // Periodic network monitoring
-    setInterval(async () => {
-        const wasOnline = systemState.isOnline;
-        const isOnline = await checkNetworkConnectivity();
-
-        if (wasOnline !== isOnline) {
-            console.log(`Network state changed: ${isOnline ? 'online' : 'offline'}`);
-            systemState.isOnline = isOnline;
-
-            // Notify all renderer processes
-            BrowserWindow.getAllWindows().forEach(window => {
-                if (window && !window.isDestroyed()) {
-                    window.webContents.send('network-state-changed', isOnline);
-                }
-            });
+            }, 1000);
         }
-
-        systemState.lastNetworkCheck = Date.now();
-    }, 30000); // Check every 30 seconds
+    });
 }
 
+// Network connectivity check using NetworkMonitor
 async function checkNetworkConnectivity() {
-    return new Promise((resolve) => {
-        // Use Electron's net module to check connectivity
-        const request = net.request({
-            method: 'HEAD',
-            url: 'https://www.github.com',
-            timeout: 5000
-        });
+    if (networkMonitor) {
+        const state = await networkMonitor.forceCheck();
+        return state.isOnline;
+    }
 
-        let resolved = false;
-
-        const handleResponse = (online) => {
-            if (!resolved) {
-                resolved = true;
-                resolve(online);
-            }
-        };
-
-        request.on('response', (response) => {
-            // Any response means we're online
-            handleResponse(true);
-        });
-
-        request.on('error', (error) => {
-            console.log('Network connectivity check failed:', error.message);
-            handleResponse(false);
-        });
-
-        // Timeout fallback
-        setTimeout(() => {
-            if (!resolved) {
-                handleResponse(false);
-            }
-        }, 6000);
-
-        request.end();
-    });
+    // Fallback to system network state
+    return systemState.isOnline;
 }
 
 // Enhanced auto-launch detection function
@@ -781,6 +808,9 @@ app.whenReady().then(async () => {
     // Setup first run configuration - added for default auto-launch and hide
     await setupFirstRun();
 
+    // Initialize network monitoring
+    await initializeNetworkMonitor();
+
     createWindow();
     createTray();
 
@@ -883,6 +913,11 @@ app.on('before-quit', () => {
         watcher.close();
     }
 
+    // Clean up network monitor
+    if (networkMonitor) {
+        networkMonitor.destroy();
+    }
+
     // Close WebSocket server if initialized
     if (webSocketService) {
         webSocketService.close();
@@ -909,7 +944,28 @@ function setupIPC() {
         }
     });
 
-    // Get current system state
+    // Enhanced network state
+    ipcMain.handle('getNetworkState', async () => {
+        if (networkMonitor) {
+            return networkMonitor.getState();
+        }
+        return {
+            isOnline: systemState.isOnline,
+            networkQuality: systemState.networkQuality,
+            corporateEnvironment: systemState.corporateEnvironment,
+            vpnActive: systemState.vpnActive
+        };
+    });
+
+    // Force network check
+    ipcMain.handle('forceNetworkCheck', async () => {
+        if (networkMonitor) {
+            return await networkMonitor.forceCheck();
+        }
+        return null;
+    });
+
+    // Get current system state (updated with network info)
     ipcMain.handle('getSystemState', () => {
         return {
             ...systemState,
@@ -1276,22 +1332,31 @@ function handleGetAppPath() {
 }
 
 /**
- * Make HTTP request using Electron's net module
+ * Enhanced HTTP request handler with network awareness
  *
- * This implementation uses Electron's net module instead of Node.js's http/https modules
- * because it properly integrates with the operating system's certificate store
- * through the `app.commandLine.appendSwitch('use-system-ca-store')` setting.
- *
- * This allows the app to respect certificates that are trusted in the OS, which
- * is critical for connecting to services with self-signed certificates or internal CAs.
+ * This implementation uses Electron's net module with adaptive retry logic
+ * based on current network conditions (quality, corporate environment, VPN status)
  */
 async function handleMakeHttpRequest(_, url, method, options = {}) {
-    // Get the net module from Electron
     const { net } = require('electron');
 
-    // Configure retry parameters
-    const MAX_RETRIES = 2;  // Maximum number of retry attempts
-    const RETRY_DELAY = 500;  // Delay between retries in milliseconds
+    // Get current network state
+    const networkState = networkMonitor ? networkMonitor.getState() : systemState;
+
+    // Configure retry parameters based on network quality
+    const MAX_RETRIES = networkState.networkQuality === 'poor' ? 3 : 2;
+    const RETRY_DELAY = networkState.networkQuality === 'poor' ? 1000 : 500;
+
+    // Add network context to options
+    const enhancedOptions = {
+        ...options,
+        networkContext: {
+            quality: networkState.networkQuality,
+            corporate: networkState.corporateEnvironment,
+            vpn: networkState.vpnActive,
+            confidence: networkState.confidence
+        }
+    };
 
     // Function to perform the actual request with retry logic
     const performRequest = async (retryCount = 0) => {
@@ -1320,18 +1385,25 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     redirect: 'follow'
                 });
 
-                // Manual timeout handling - Electron's net doesn't have setTimeout
-                const timeoutMs = options.connectionOptions?.timeout || 15000;
+                // Adjust timeout based on network quality
+                let timeoutMs = options.connectionOptions?.timeout || 15000;
+
+                // Increase timeout for poor network or corporate environment
+                if (networkState.networkQuality === 'poor') {
+                    timeoutMs = Math.min(timeoutMs * 2, 60000);
+                } else if (networkState.corporateEnvironment === 'corporate') {
+                    timeoutMs = Math.min(timeoutMs * 1.5, 45000);
+                }
+
                 let timeoutId = null;
 
-                // Set up timeout handler using JavaScript's setTimeout
+                // Set up timeout handler
                 timeoutId = setTimeout(() => {
-                    request.abort(); // Abort the request on timeout
-                    log.error(`[${requestId}] Request timed out after ${timeoutMs}ms`);
+                    request.abort();
+                    log.error(`[${requestId}] Request timed out after ${timeoutMs}ms (network: ${networkState.networkQuality})`);
 
                     // Check if we should retry
-                    if (retryCount < MAX_RETRIES) {
-                        // Calculate delay with exponential backoff and jitter
+                    if (retryCount < MAX_RETRIES && networkState.isOnline) {
                         const delay = Math.min(
                             RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
                             10000
@@ -1339,7 +1411,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                         log.info(`[${requestId}] Retrying due to timeout in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
-                        // Wait and retry
                         setTimeout(() => {
                             performRequest(retryCount + 1)
                                 .then(resolve)
@@ -1360,7 +1431,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 // Set User-Agent
                 request.setHeader('User-Agent', `OpenHeaders/${app.getVersion()}`);
 
-                log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+                log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1}, network: ${networkState.networkQuality})`);
 
                 // Collect response chunks
                 let responseData = '';
@@ -1374,8 +1445,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                     }
 
                     statusCode = response.statusCode;
-
-                    // Get headers - In Electron's net module, headers are directly available as an object
                     const responseHeaders = response.headers;
 
                     response.on('data', (chunk) => {
@@ -1389,7 +1458,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         if (statusCode >= 500 && retryCount < MAX_RETRIES) {
                             log.info(`[${requestId}] Server error ${statusCode} received, will retry`);
 
-                            // Calculate delay with exponential backoff and jitter
                             const delay = Math.min(
                                 RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
                                 10000
@@ -1397,7 +1465,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                             log.info(`[${requestId}] Retrying in ${Math.round(delay)}ms`);
 
-                            // Wait and retry
                             setTimeout(() => {
                                 performRequest(retryCount + 1)
                                     .then(resolve)
@@ -1408,7 +1475,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                             const formattedResponse = {
                                 statusCode: statusCode,
                                 headers: responseHeaders,
-                                body: responseData
+                                body: responseData,
+                                networkContext: networkState
                             };
 
                             resolve(JSON.stringify(formattedResponse));
@@ -1426,10 +1494,8 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                     log.error(`[${requestId}] HTTP request error (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, error);
 
-                    // Improved error detection for Chromium errors
-                    // Check if we should retry - include both Node.js and Chromium error codes
+                    // Improved error detection
                     const isRetryableError =
-                        // Node.js error codes
                         error.code === 'ECONNRESET' ||
                         error.code === 'ETIMEDOUT' ||
                         error.code === 'ECONNREFUSED' ||
@@ -1437,33 +1503,24 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                         error.code === 'ECONNABORTED' ||
                         error.code === 'ENETUNREACH' ||
                         error.code === 'EHOSTUNREACH' ||
-                        // Chromium error codes (check for "net::" prefix)
-                        (error.message && error.message.includes('net::ERR_CONNECTION_RESET')) ||
-                        (error.message && error.message.includes('net::ERR_CONNECTION_TIMED_OUT')) ||
-                        (error.message && error.message.includes('net::ERR_CONNECTION_REFUSED')) ||
-                        (error.message && error.message.includes('net::ERR_NAME_NOT_RESOLVED')) ||
-                        (error.message && error.message.includes('net::ERR_NETWORK_CHANGED')) ||
-                        (error.message && error.message.includes('net::ERR_CONNECTION_ABORTED')) ||
-                        (error.message && error.message.includes('net::ERR_EMPTY_RESPONSE'));
+                        (error.message && (
+                            error.message.includes('net::ERR_CONNECTION_RESET') ||
+                            error.message.includes('net::ERR_CONNECTION_TIMED_OUT') ||
+                            error.message.includes('net::ERR_CONNECTION_REFUSED') ||
+                            error.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                            error.message.includes('net::ERR_NETWORK_CHANGED') ||
+                            error.message.includes('net::ERR_CONNECTION_ABORTED') ||
+                            error.message.includes('net::ERR_EMPTY_RESPONSE')
+                        ));
 
-                    // Certificate errors should NOT be retryable
                     const isCertificateError =
-                        (error.message && error.message.includes('net::ERR_CERT_AUTHORITY_INVALID')) ||
-                        (error.message && error.message.includes('net::ERR_CERT_COMMON_NAME_INVALID')) ||
-                        (error.message && error.message.includes('net::ERR_CERT_DATE_INVALID')) ||
                         (error.message && error.message.includes('net::ERR_CERT_'));
 
                     if (isCertificateError) {
-                        log.error(`[${requestId}] Certificate error details:`);
-                        log.error(`[${requestId}] - URL: ${parsedUrl.href}`);
-                        log.error(`[${requestId}] - Host: ${parsedUrl.hostname}`);
-                        log.error(`[${requestId}] - Error: ${error.message}`);
-
-                        // Reject with a more user-friendly error message
+                        log.error(`[${requestId}] Certificate error - not retrying`);
                         reject(new Error(`Certificate validation failed: ${error.message}`));
                     }
-                    else if (isRetryableError && retryCount < MAX_RETRIES) {
-                        // Calculate delay with exponential backoff and jitter
+                    else if (isRetryableError && retryCount < MAX_RETRIES && networkState.isOnline) {
                         const delay = Math.min(
                             RETRY_DELAY * Math.pow(2, retryCount) + Math.random() * 1000,
                             10000
@@ -1471,7 +1528,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                         log.info(`[${requestId}] Retrying due to network error in ${Math.round(delay)}ms (attempt ${retryCount + 1}/${MAX_RETRIES})`);
 
-                        // Wait and retry
                         setTimeout(() => {
                             performRequest(retryCount + 1)
                                 .then(resolve)
@@ -1494,60 +1550,43 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                         if (typeof options.body === 'string') {
                             // Handle different string format types for form data
-
-                            // Format 1: Standard "key=value&key2=value2" format
                             if (options.body.includes('=') && options.body.includes('&')) {
-                                requestBody = options.body; // Already in proper format
+                                requestBody = options.body;
                             }
-                            // Format 2: Line-separated "key=value\nkey2=value2" format
                             else if (options.body.includes('=') && options.body.includes('\n')) {
                                 requestBody = options.body.split('\n')
                                     .filter(line => line.trim() !== '' && line.includes('='))
                                     .join('&');
                             }
-                            // Format 3 & 4: Colon-separated formats (username:value\npassword:value)
                             else if (options.body.includes(':')) {
-                                // Split by lines
                                 const lines = options.body.split('\n');
-
-                                log.info(`[${requestId}] Converting colon format form data with ${lines.length} lines`);
-
-                                // Process each line
                                 lines.forEach(line => {
                                     line = line.trim();
                                     if (line === '') return;
 
-                                    // Handle key:"value" format (with quotes)
                                     if (line.includes(':"')) {
                                         const colonPos = line.indexOf(':');
                                         const key = line.substring(0, colonPos).trim();
-                                        // Extract value between quotes
                                         const value = line.substring(colonPos + 2, line.lastIndexOf('"'));
                                         formData[key] = value;
                                     }
-                                    // Handle key:value format (without quotes)
                                     else if (line.includes(':')) {
                                         const parts = line.split(':');
                                         if (parts.length >= 2) {
                                             const key = parts[0].trim();
                                             const value = parts.slice(1).join(':').trim();
                                             formData[key] = value;
-                                            log.info(`[${requestId}] Form param: ${key}=${value}`);
                                         }
                                     }
                                 });
 
-                                // Use querystring module to properly encode the form data
                                 requestBody = querystring.stringify(formData);
-                                log.info(`[${requestId}] Converted colon-separated format to URL-encoded: ${requestBody.substring(0, 100)}...`);
                             }
                         }
-                        // Process object format
                         else if (typeof options.body === 'object' && options.body !== null) {
                             requestBody = querystring.stringify(options.body);
                         }
 
-                        // Ensure Content-Type header is set
                         request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
                     }
                     else if (options.contentType === 'application/json') {
