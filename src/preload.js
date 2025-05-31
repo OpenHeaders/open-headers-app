@@ -156,10 +156,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Native network connectivity check
     checkNetworkConnectivity: () => ipcRenderer.invoke('checkNetworkConnectivity'),
 
+    // Enhanced network monitoring APIs
+    getNetworkState: () => ipcRenderer.invoke('getNetworkState'),
+    forceNetworkCheck: () => ipcRenderer.invoke('forceNetworkCheck'),
+
     // Get current system state
     getSystemState: () => ipcRenderer.invoke('getSystemState'),
 
-    // System monitoring events for RefreshManager (these already exist, just showing for completeness)
+    // System monitoring events for RefreshManager
     onSystemSuspend: (callback) => {
         const subscription = () => callback();
         ipcRenderer.on('system-suspend', subscription);
@@ -172,10 +176,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('system-resume', subscription);
     },
 
+    // Enhanced network state changed handler - backwards compatible
     onNetworkStateChanged: (callback) => {
-        const subscription = (_, isOnline) => callback(isOnline);
+        const subscription = (_, data) => {
+            // For backward compatibility, check if data is boolean or object
+            if (typeof data === 'object' && data.isOnline !== undefined) {
+                // New enhanced format - still pass boolean for backward compatibility
+                callback(data.isOnline);
+            } else {
+                // Legacy format - simple boolean
+                callback(data);
+            }
+        };
         ipcRenderer.on('network-state-changed', subscription);
         return () => ipcRenderer.removeListener('network-state-changed', subscription);
+    },
+
+    // New network change event (for NetworkMonitor)
+    onNetworkChange: (callback) => {
+        const subscription = (_, data) => callback(data);
+        ipcRenderer.on('network-change', subscription);
+        return () => ipcRenderer.removeListener('network-change', subscription);
+    },
+
+    // VPN state change event
+    onVPNStateChanged: (callback) => {
+        const subscription = (_, data) => callback(data);
+        ipcRenderer.on('vpn-state-changed', subscription);
+        return () => ipcRenderer.removeListener('vpn-state-changed', subscription);
     },
 
     // Tray menu events
