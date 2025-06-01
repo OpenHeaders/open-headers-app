@@ -744,15 +744,29 @@ class NetworkAwareScheduler {
       }
       
       const now = Date.now();
-      const expectedTime = this.lastTimeCheck + 5000;
-      const timeDiff = Math.abs(now - expectedTime);
+      const actualInterval = now - this.lastTimeCheck;
       
-      // If time jumped more than 30 seconds, recalculate all schedules
-      if (timeDiff > 30000) {
-        log.warn(`System time jump detected: ${Math.round(timeDiff / 1000)}s difference`);
-        this.handleTimeJump().catch(err => {
-          log.error('Error handling time jump:', err);
-        });
+      // Only check for time jumps if we have a previous check time
+      if (this.lastTimeCheck > 0) {
+        // Consider it a time jump if the actual interval is significantly different
+        // from what we'd expect (5 seconds +/- reasonable tolerance)
+        // Allow for system sleep/wake and high CPU load scenarios
+        const expectedInterval = 5000;
+        const tolerance = 10000; // 10 seconds tolerance for system sleep/load
+        const minExpected = expectedInterval - 1000; // Allow 1s early
+        const maxExpected = expectedInterval + tolerance;
+        
+        // Only treat as time jump if interval is way outside expected range
+        // and it's not just a system sleep/wake (which we handle separately)
+        if (actualInterval < minExpected || actualInterval > 60000) { // More than 1 minute = likely time jump
+          log.warn(`System time jump detected: actual interval ${Math.round(actualInterval / 1000)}s (expected ~5s)`);
+          this.handleTimeJump().catch(err => {
+            log.error('Error handling time jump:', err);
+          });
+        } else if (actualInterval > maxExpected) {
+          // This is likely just system sleep/wake, not a time jump
+          log.debug(`System wake/resume detected: interval ${Math.round(actualInterval / 1000)}s`);
+        }
       }
       
       this.lastTimeCheck = now;
