@@ -2,6 +2,7 @@ const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const webpack = require('webpack');
 
 // Main process config
@@ -222,9 +223,7 @@ const rendererConfig = {
     resolve: {
         extensions: ['.js', '.jsx'],
         fallback: {
-            "fsevents": false,
-            "buffer": false,
-            "process": false
+            "fsevents": false
         },
         alias: {
             // Force all fsevents to be disabled
@@ -254,8 +253,8 @@ const rendererConfig = {
             // Add config path
             'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
         }),
-        new webpack.ProvidePlugin({
-            global: 'globalThis',
+        new NodePolyfillPlugin({
+            includeAliases: ['global']
         }),
         new HtmlWebpackPlugin({
             template: path.resolve(__dirname, 'src/renderer/index.html'),
