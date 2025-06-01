@@ -17,8 +17,6 @@ class NetworkAwareScheduler {
     this.networkChangeDebounceTimer = null; // Debounce rapid network changes
     this.isDestroyed = false; // Track if instance has been destroyed
     this.activeRefreshes = new Set(); // Track active refresh operations
-    this.lastTimeCheck = Date.now(); // Track last time check for detecting time jumps
-    this.timeCheckInterval = null; // Interval for checking time jumps
     this.overdueCheckInProgress = false; // Prevent overlapping overdue checks
   }
   
@@ -31,8 +29,7 @@ class NetworkAwareScheduler {
     // Start periodic overdue check
     this.startOverdueCheck();
     
-    // Start time jump detection
-    this.startTimeJumpDetection();
+    // Note: Time jump detection removed - RefreshManager handles system sleep/wake events properly
     
     log.debug('Initialized');
   }
@@ -731,81 +728,6 @@ class NetworkAwareScheduler {
     }
   }
   
-  /**
-   * Start time jump detection
-   */
-  startTimeJumpDetection() {
-    // Check every 5 seconds for time jumps
-    this.timeCheckInterval = setInterval(() => {
-      // Check if destroyed
-      if (this.isDestroyed) {
-        this.stopTimeJumpDetection();
-        return;
-      }
-      
-      const now = Date.now();
-      const actualInterval = now - this.lastTimeCheck;
-      
-      // Only check for time jumps if we have a previous check time
-      if (this.lastTimeCheck > 0) {
-        // Consider it a time jump if the actual interval is significantly different
-        // from what we'd expect (5 seconds +/- reasonable tolerance)
-        // Allow for system sleep/wake and high CPU load scenarios
-        const expectedInterval = 5000;
-        const tolerance = 10000; // 10 seconds tolerance for system sleep/load
-        const minExpected = expectedInterval - 1000; // Allow 1s early
-        const maxExpected = expectedInterval + tolerance;
-        
-        // Only treat as time jump if interval is way outside expected range
-        // and it's not just a system sleep/wake (which we handle separately)
-        if (actualInterval < minExpected || actualInterval > 60000) { // More than 1 minute = likely time jump
-          log.warn(`System time jump detected: actual interval ${Math.round(actualInterval / 1000)}s (expected ~5s)`);
-          this.handleTimeJump().catch(err => {
-            log.error('Error handling time jump:', err);
-          });
-        } else if (actualInterval > maxExpected) {
-          // This is likely just system sleep/wake, not a time jump
-          log.debug(`System wake/resume detected: interval ${Math.round(actualInterval / 1000)}s`);
-        }
-      }
-      
-      this.lastTimeCheck = now;
-    }, 5000);
-  }
-  
-  /**
-   * Stop time jump detection
-   */
-  stopTimeJumpDetection() {
-    if (this.timeCheckInterval) {
-      clearInterval(this.timeCheckInterval);
-      this.timeCheckInterval = null;
-    }
-  }
-  
-  /**
-   * Handle system time jump
-   */
-  async handleTimeJump() {
-    log.info('Handling system time jump, recalculating all schedules');
-    
-    // Clear all existing timers
-    for (const sourceId of this.timers.keys()) {
-      this.clearTimer(sourceId);
-    }
-    
-    // Get current network state
-    const networkState = await window.electronAPI.getNetworkState();
-    
-    // Recalculate and reset all schedules
-    for (const [sourceId] of this.schedules) {
-      await this.calculateNextRefresh(sourceId, networkState);
-      this.setTimer(sourceId);
-    }
-    
-    // Check for overdue sources
-    await this.checkOverdueSources('time_jump');
-  }
   
   /**
    * Get quality multiplier for retry backoff calculations
@@ -908,9 +830,6 @@ class NetworkAwareScheduler {
     
     // Clear overdue check interval
     this.stopOverdueCheck();
-    
-    // Stop time jump detection
-    this.stopTimeJumpDetection();
     
     // Clear network change debounce timer
     if (this.networkChangeDebounceTimer) {
