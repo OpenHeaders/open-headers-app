@@ -27,20 +27,8 @@ const ContentViewer = ({ source, open, onClose }) => {
     // Initialize or update internal content when source changes
     useEffect(() => {
         if (source) {
-            console.log('ContentViewer: Source data received:', {
-                id: source.sourceId,
-                content: source.sourceContent?.substring(0, 30),
-                originalResponse: source.originalResponse?.substring(0, 30)
-            });
-
-            // Check if the source has headers directly
-            if (source.headers) {
-                console.log('ContentViewer: Found headers in source:', source.headers);
-            }
-
             // Only update internal content when it changes
             if (source.sourceContent !== internalContent) {
-                console.log('ContentViewer: Updating internal content');
                 setInternalContent(source.sourceContent);
             }
 
@@ -55,18 +43,14 @@ const ContentViewer = ({ source, open, onClose }) => {
 
     // Extract headers from source or originalResponse
     const extractHeaders = (source) => {
-        console.log("Attempting to extract headers for source:", source?.sourceId);
-
         // Check if headers was explicitly cleared (null means error state)
         if (source?.headers === null) {
-            console.log("Headers explicitly cleared (error state)");
             setResponseHeaders(null);
             return;
         }
 
         // First check if there are headers directly in the source
         if (source?.headers) {
-            console.log("Found headers directly in source object:", source.headers);
             setResponseHeaders(source.headers);
             return;
         }
@@ -74,15 +58,13 @@ const ContentViewer = ({ source, open, onClose }) => {
         // Check for rawResponse property
         if (source?.rawResponse) {
             try {
-                console.log("Trying to extract headers from rawResponse");
                 const parsed = JSON.parse(source.rawResponse);
                 if (parsed && parsed.headers) {
-                    console.log("Found headers in rawResponse:", parsed.headers);
                     setResponseHeaders(parsed.headers);
                     return;
                 }
             } catch (e) {
-                console.log("Failed to parse rawResponse:", e);
+                // Failed to parse rawResponse
             }
         }
 
@@ -92,12 +74,11 @@ const ContentViewer = ({ source, open, onClose }) => {
                 // First try parsing as JSON
                 const parsedJson = JSON.parse(source.originalResponse);
                 if (parsedJson.headers) {
-                    console.log("Extracted headers from parsed originalResponse:", parsedJson.headers);
                     setResponseHeaders(parsedJson.headers);
                     return;
                 }
             } catch (e) {
-                console.log("originalResponse is not valid JSON, will try alternate approach");
+                // originalResponse is not valid JSON, will try alternate approach
             }
 
             // Try to extract headers using a more lenient regex approach
@@ -112,20 +93,15 @@ const ContentViewer = ({ source, open, onClose }) => {
                             .replace(/\\"/g, '"')  // Replace escaped quotes
                             .replace(/([{,])\s*([a-zA-Z0-9_-]+):/g, '$1"$2":'); // Add quotes to keys
 
-                        console.log("Attempting to parse headers match:", headersText.substring(0, 50) + "...");
                         const headers = JSON.parse(headersText);
-
-                        console.log("Successfully extracted headers using regex:", headers);
                         setResponseHeaders(headers);
                         return;
                     } catch (err) {
-                        console.log("Failed to parse headers from regex match:", err);
+                        // Failed to parse headers from regex match
                     }
-                } else {
-                    console.log("No headers pattern found in originalResponse");
                 }
             } catch (regexErr) {
-                console.log("Regex extraction approach failed:", regexErr);
+                // Regex extraction approach failed
             }
         }
 
@@ -143,15 +119,14 @@ const ContentViewer = ({ source, open, onClose }) => {
                                 .replace(/([{,])\s*([a-zA-Z0-9_-]+):/g, '$1"$2":');
 
                             const headers = JSON.parse(cleanedMatch);
-                            console.log("Extracted headers from sourceContent:", headers);
                             setResponseHeaders(headers);
                             return;
                         } catch (err) {
-                            console.log("Failed to parse headers from sourceContent match:", err);
+                            // Failed to parse headers from sourceContent match
                         }
                     }
                 } catch (e) {
-                    console.log("Failed to extract headers from sourceContent:", e);
+                    // Failed to extract headers from sourceContent
                 }
             }
 
@@ -160,25 +135,22 @@ const ContentViewer = ({ source, open, onClose }) => {
                 // Look for a larger chunk that might contain the headers
                 const fullResponseMatch = source.sourceContent.match(/\{[\s\S]*?"headers"[\s\S]*?\}/);
                 if (fullResponseMatch) {
-                    console.log("Found potential full response object, trying to extract headers");
                     try {
                         const fullResponse = JSON.parse(fullResponseMatch[0]);
                         if (fullResponse.headers) {
-                            console.log("Extracted headers from full response object:", fullResponse.headers);
                             setResponseHeaders(fullResponse.headers);
                             return;
                         }
                     } catch (err) {
-                        console.log("Failed to parse full response match:", err);
+                        // Failed to parse full response match
                     }
                 }
             } catch (e) {
-                console.log("Failed aggressive extraction approach:", e);
+                // Failed aggressive extraction approach
             }
         }
 
         // Manual fallback for common headers
-        console.log("Attempting to create fallback headers from available information");
         const fallbackHeaders = {};
 
         // Check if we can extract content-type from the response
@@ -188,13 +160,11 @@ const ContentViewer = ({ source, open, onClose }) => {
         }
 
         if (Object.keys(fallbackHeaders).length > 0) {
-            console.log("Created fallback headers:", fallbackHeaders);
             setResponseHeaders(fallbackHeaders);
             return;
         }
 
         // If we couldn't find headers, set to null and show message
-        console.log("No headers found in any source property after trying all methods");
         setResponseHeaders(null);
     };
 
@@ -231,7 +201,7 @@ const ContentViewer = ({ source, open, onClose }) => {
             }
             return content || 'No content available';
         } catch (error) {
-            console.error('Error formatting content:', error);
+            // Error formatting content
             return content || 'No content available';
         }
     };
@@ -257,7 +227,7 @@ const ContentViewer = ({ source, open, onClose }) => {
             // Return as-is if not valid JSON (could be HTML, etc.)
             return jsonString;
         } catch (error) {
-            console.error('Error formatting content:', error);
+            // Error formatting content
             return jsonString || 'Invalid content';
         }
     };
@@ -278,7 +248,6 @@ const ContentViewer = ({ source, open, onClose }) => {
             })
             .catch(err => {
                 showMessage('error', 'Failed to copy content');
-                console.error('Failed to copy content:', err);
             })
             .finally(() => {
                 // Reset copying state after a short delay

@@ -3,6 +3,8 @@ import { Modal, Form, Input, Select, Button, Space, Tabs, Row, Col, Checkbox } f
 import { EditOutlined } from '@ant-design/icons';
 import HttpOptions from './HttpOptions';
 import { showMessage } from '../utils/messageUtil';
+const { createLogger } = require('../utils/logger');
+const log = createLogger('EditSourceModal');
 
 const { Option } = Select;
 
@@ -40,7 +42,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     // Initialize form when source changes or modal opens
     useEffect(() => {
         if (open && source) {
-            console.log("Initializing EditSourceModal form with source:", source.sourceId);
+            log.debug('Initializing EditSourceModal form with source:', source.sourceId);
 
             // Store original values for comparison
             originalValuesRef.current = {
@@ -52,7 +54,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             const hasTotpSecret = !!(source.requestOptions?.totpSecret);
             const extractedTotpSecret = source.requestOptions?.totpSecret || '';
 
-            console.log("Source has TOTP secret:", hasTotpSecret,
+            log.debug('Source has TOTP secret:', hasTotpSecret,
                 hasTotpSecret ? extractedTotpSecret : "none");
 
             // Update component state for TOTP
@@ -70,7 +72,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             };
 
             // Log the headers for debugging
-            console.log("Headers from source:", requestOptions.headers);
+            log.debug('Headers from source:', requestOptions.headers);
 
             // Prepare jsonFilter with proper type enforcement
             const jsonFilter = {
@@ -106,7 +108,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 refreshNow: true // Default checked
             };
 
-            console.log("Setting form values:", JSON.stringify({
+            log.debug('Setting form values:', JSON.stringify({
                 sourceType: initialValues.sourceType,
                 enableTOTP: initialValues.enableTOTP,
                 totpSecret: initialValues.totpSecret ? "exists" : "none",
@@ -137,7 +139,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 const headers = form.getFieldValue(['requestOptions', 'headers']);
                 const jsonFilter = form.getFieldValue('jsonFilter');
 
-                console.log("Form values after setting:", {
+                log.debug('Form values after setting:', {
                     enableTOTP,
                     totpSecret: totpSecret ? "exists" : "none",
                     headers: headers ? headers.length + " headers" : "none",
@@ -153,7 +155,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
     // Add value change detection to track user edits
     const handleFormChange = (changedValues, allValues) => {
-        console.log("Form values changed:", Object.keys(changedValues));
+        log.debug('Form values changed:', Object.keys(changedValues));
 
         // Only track changes when the component is initialized
         if (isInitializedRef.current) {
@@ -183,7 +185,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
     // Handle TOTP state changes
     const handleTotpChange = (enabled, secret) => {
-        console.log("TOTP state changed:", enabled, secret);
+        log.debug('TOTP state changed:', enabled, secret);
 
         // Only update if we're already initialized AND there's an actual change
         if (isInitializedRef.current &&
@@ -197,7 +199,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             formStateRef.current.totpEnabled = enabled;
             formStateRef.current.totpSecret = secret;
         } else {
-            console.log("Ignoring redundant TOTP change");
+            log.debug('Ignoring redundant TOTP change');
         }
     };
 
@@ -208,7 +210,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
             // If we have TOTP data from the source, force HttpOptions to show it
             if (source?.requestOptions?.totpSecret) {
-                console.log("Directly setting TOTP in HttpOptions ref");
+                log.debug('Directly setting TOTP in HttpOptions ref');
 
                 // Use a timeout to ensure HttpOptions is fully mounted
                 setTimeout(() => {
@@ -221,7 +223,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             // If we have headers in the source, make sure they're properly set
             if (source?.requestOptions?.headers && Array.isArray(source.requestOptions.headers)) {
                 const headers = source.requestOptions.headers;
-                console.log("Source has headers:", headers);
+                log.debug('Source has headers:', headers);
 
                 // Use a timeout to ensure HttpOptions is fully mounted
                 setTimeout(() => {
@@ -233,7 +235,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
             // If we have JSON filter data, make sure it's set correctly in the HttpOptions
             if (source?.jsonFilter?.enabled && source?.jsonFilter?.path) {
-                console.log("Source has JSON filter enabled:", source.jsonFilter);
 
                 // Use a timeout to ensure HttpOptions is fully mounted
                 setTimeout(() => {
@@ -267,7 +268,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             try {
                 // Now try to validate the form
                 const values = await form.validateFields();
-                console.log("Form validated with values:", values);
 
                 // Set saving state
                 setSaving(true);
@@ -279,8 +279,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 };
 
                 // Log the normalized JSON filter
-                console.log(`Normalized JSON filter for source ${source.sourceId}:`,
-                    JSON.stringify(normalizedJsonFilter));
 
                 // IMPORTANT NEW PART: Return a promise that resolves with the updated source
                 // Get TOTP values - collect from multiple sources
@@ -299,8 +297,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 // Check if ref is available and has TOTP state
                 if (httpOptionsRef.current && httpOptionsRef.current.getTotpState) {
                     const totpState = httpOptionsRef.current.getTotpState();
-                    console.log("Getting TOTP state from HttpOptions ref:",
-                        {enabled: totpState.enabled, secret: totpState.secret ? "exists" : "none"});
 
                     // Override previous values if TOTP is enabled in the ref
                     if (totpState.enabled) {
@@ -311,10 +307,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     }
                 }
 
-                console.log("TOTP values for saving:", {
-                    enabled: isTotpEnabled,
-                    secret: totpSecretValue ? "exists" : "none"
-                });
 
                 // Store whether we should refresh now
                 const shouldRefreshNow = refreshNow;
@@ -353,12 +345,10 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 // Explicitly add TOTP values to requestOptions if enabled
                 if (isTotpEnabled && totpSecretValue) {
                     sourceData.requestOptions.totpSecret = totpSecretValue;
-                    console.log("Added TOTP secret to requestOptions for saving");
                 } else {
                     // Explicitly remove any existing TOTP secret if TOTP is now disabled
                     if (sourceData.requestOptions.totpSecret) {
                         delete sourceData.requestOptions.totpSecret;
-                        console.log("Removed TOTP secret from requestOptions");
                     }
                 }
 
@@ -367,7 +357,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     // Check if we can get the JSON filter state
                     if (httpOptionsRef.current.getJsonFilterState) {
                         const jsonFilterState = httpOptionsRef.current.getJsonFilterState();
-                        console.log("Getting JSON filter state from HttpOptions ref:", jsonFilterState);
 
                         // Additional validation to ensure path exists when enabled
                         if (jsonFilterState.enabled === true && !jsonFilterState.path) {
@@ -386,14 +375,11 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                         sourceData.isFiltered = jsonFilterState.enabled;
                         sourceData.filteredWith = jsonFilterState.enabled ? jsonFilterState.path : null;
 
-                        console.log("Setting JSON filter state in source data:",
-                            JSON.stringify(sourceData.jsonFilter));
                     }
 
                     // Check if we can get the headers directly from the component
                     if (httpOptionsRef.current.getHeadersState) {
                         const headers = httpOptionsRef.current.getHeadersState();
-                        console.log("Getting headers state from HttpOptions ref:", headers);
                         if (headers && headers.length > 0) {
                             sourceData.requestOptions.headers = headers;
                         }
@@ -402,7 +388,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     // If there's a getVariablesState method, use it to get the latest variables
                     if (httpOptionsRef.current.getVariablesState) {
                         const variables = httpOptionsRef.current.getVariablesState();
-                        console.log("Getting variables state from HttpOptions ref:", variables);
                         if (variables && variables.length > 0) {
                             sourceData.requestOptions.variables = variables;
                         }
@@ -421,8 +406,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     sourceData.sourcePath = 'https://' + sourceData.sourcePath;
                 }
 
-                console.log("Saving source with data:", sourceData);
-
                 // FIXED: Check if refresh interval or enabled state has changed
                 // and only preserve timing if they haven't changed
                 const hasIntervalChanged =
@@ -434,20 +417,17 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 if (!hasIntervalChanged && !hasEnabledChanged &&
                     source.refreshOptions?.nextRefresh &&
                     source.refreshOptions.nextRefresh > Date.now()) {
-                    console.log(`Preserving refresh timing for source ${source.sourceId}: next refresh at ${new Date(source.refreshOptions.nextRefresh).toISOString()}`);
                     if (!sourceData.refreshOptions) {
                         sourceData.refreshOptions = {};
                     }
                     sourceData.refreshOptions.preserveTiming = true;
                 } else if (hasIntervalChanged) {
-                    // Log that we're NOT preserving timing due to interval change
-                    console.log(`NOT preserving refresh timing for source ${source.sourceId} because interval changed from ${originalValuesRef.current.interval} to ${sourceData.refreshOptions?.interval}`);
+                    // Not preserving timing due to interval change
                     if (sourceData.refreshOptions) {
                         sourceData.refreshOptions.preserveTiming = false;
                     }
                 } else if (hasEnabledChanged) {
-                    // Log that we're NOT preserving timing due to enabled state change
-                    console.log(`NOT preserving refresh timing for source ${source.sourceId} because enabled state changed from ${originalValuesRef.current.enabled} to ${sourceData.refreshOptions?.enabled}`);
+                    // Not preserving timing due to enabled state change
                     if (sourceData.refreshOptions) {
                         sourceData.refreshOptions.preserveTiming = false;
                     }
@@ -458,8 +438,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
                 // Only manually do an additional refresh if necessary
                 if (shouldRefreshNow && success) {
-                    console.log("Manual refresh requested, triggering refresh...");
-
                     // Wait a short time for the source update to complete
                     await new Promise(resolve => setTimeout(resolve, 500));
                 }
@@ -474,7 +452,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 return success;
             } catch (validationError) {
                 // Handle form validation errors separately
-                console.error("Validation error:", validationError);
                 setSaving(false);
 
                 // Check if this is a validation error with fields
@@ -496,7 +473,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 return false;
             }
         } catch (error) {
-            console.error("Error updating source:", error);
             if (isMountedRef.current) {
                 showMessage('error', `Failed to update source: ${error.message}`);
                 setSaving(false);
@@ -507,7 +483,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
 
     // Handle test response from HTTP options
     const handleTestResponse = (response) => {
-        console.log("EditSourceModal received test response:", response.substring(0, 100));
         setTestResponse(response);
 
         // Process test response if needed
@@ -518,16 +493,11 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 if (parsedResponse.body) {
                     // For filtered responses, handle differently
                     if (parsedResponse.filteredWith && form.getFieldValue(['jsonFilter', 'enabled'])) {
-                        console.log('Setting filtered content and original response from test:',
-                            'filtered:', parsedResponse.body.substring(0, 50) + '...');
-
                         // Use originalResponse for the original response (supporting multiple formats for backward compatibility)
                         const originalResponse = parsedResponse.originalResponse || parsedResponse.originalBody || parsedResponse.body;
-                        console.log('original:', originalResponse.substring(0, 50) + '...');
                     }
                 }
             } catch (error) {
-                console.error("Error parsing test response:", error);
                 // Skip processing if parsing fails
             }
         }
@@ -536,7 +506,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     // Handle refresh checkbox change with improved state preservation
     const handleRefreshNowChange = (e) => {
         const checked = e.target.checked;
-        console.log("Refresh immediately checkbox changed:", checked);
         setRefreshNow(checked);
 
         // Update form state reference
@@ -547,7 +516,6 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     const handleCustomCancel = () => {
         if (hasUserEdits) {
             // You could add a confirmation dialog here if desired
-            console.log("Cancelling with unsaved changes");
         }
         handleModalCancel();
     };

@@ -5,15 +5,12 @@ const TrayMenu = () => {
     useEffect(() => {
         // Create safe handler functions that check if the API exists
         const handleShowApp = () => {
-            console.log('App shown');
         };
 
         const handleHideApp = () => {
-            console.log('App hidden');
         };
 
         const handleQuitApp = () => {
-            console.log('App quit requested');
         };
 
         // Only subscribe to events if they exist in the API

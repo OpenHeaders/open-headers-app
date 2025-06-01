@@ -1,5 +1,8 @@
 import React, { createContext, useContext } from 'react';
 import { message } from 'antd';
+import { createLogger } from './logger';
+
+const log = createLogger('MessageProvider');
 
 // Create a context for the message API
 const MessageContext = createContext(null);
@@ -21,12 +24,12 @@ export const MessageProvider = ({ children }) => {
 
         // Skip if duplicate
         if (recentMessages.has(messageKey)) {
-            console.log(`[MessageProvider] Skipping duplicate message: ${content}`);
+            log.debug(`Skipping duplicate message: ${content}`);
             return;
         }
 
         // Log message attempt
-        console.log(`[MessageProvider] Showing ${type} message: ${content}`);
+        log.debug(`Showing ${type} message: ${content}`);
 
         // Add to recent messages set
         recentMessages.add(messageKey);
