@@ -133,11 +133,12 @@ async function initializeNetworkMonitor() {
     });
 
     networkMonitor.on('vpn-change', (event) => {
-        log.info('VPN state change:', event);
+        log.info('VPN state change:', event.active ? 'connected' : 'disconnected', 
+            event.interface ? `(${event.interface})` : '');
 
         networkStateManager.updateState({
             vpnActive: event.active
-        });
+        }, true); // Immediate update for VPN state
 
         // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {

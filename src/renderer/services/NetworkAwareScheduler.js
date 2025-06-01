@@ -468,13 +468,22 @@ class NetworkAwareScheduler {
     
     // If going offline, debounce to avoid duplicate logs
     if (!networkState.isOnline) {
+      // Only set up the timer if we weren't already offline
+      if (wasOffline) {
+        // Already offline, no need to clear timers again
+        return;
+      }
+      
       // Debounce offline handling to prevent duplicate logs
       this.networkChangeDebounceTimer = setTimeout(() => {
-        log.info('Network went offline, clearing all timers');
-        this.networkOfflineTime = Date.now();
-        this.lastNetworkQuality = 'offline';
-        for (const sourceId of this.timers.keys()) {
-          this.clearTimer(sourceId);
+        // Double-check we're still offline and have timers to clear
+        if (!this.lastNetworkState.isOnline && this.timers.size > 0) {
+          log.info('Network went offline, clearing all timers');
+          this.networkOfflineTime = Date.now();
+          this.lastNetworkQuality = 'offline';
+          for (const sourceId of this.timers.keys()) {
+            this.clearTimer(sourceId);
+          }
         }
       }, 500); // 500ms debounce to handle multiple rapid state changes
       return;
