@@ -3,6 +3,19 @@
  * Format: [YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] [Component] Message
  */
 
+// Lazy-load timeManager to avoid circular dependencies
+let timeManager = null;
+function getTimeManager() {
+  if (!timeManager && typeof require !== 'undefined') {
+    try {
+      timeManager = require('../services/TimeManager');
+    } catch (e) {
+      // TimeManager not available yet, use Date directly
+    }
+  }
+  return timeManager;
+}
+
 class Logger {
   constructor(component) {
     this.component = component;
@@ -17,8 +30,10 @@ class Logger {
   }
 
   formatMessage(level, message, data) {
-    const now = new Date();
-    const timestamp = now.toISOString().replace('T', ' ').substring(0, 23);
+    const tm = getTimeManager();
+    const now = tm ? tm.getDate() : new Date();
+    // Use UTC ISO format for consistent timestamps across timezone changes
+    const timestamp = now.toISOString().replace('T', ' ').substring(0, 23) + 'Z';
     const prefix = `[${timestamp}] [${level}] [${this.component}]`;
     
     if (data !== undefined) {

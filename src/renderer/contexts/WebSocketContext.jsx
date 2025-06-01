@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { useSources } from './SourceContext';
+import timeManager from '../services/TimeManager';
 
 // Create context
 const WebSocketContext = createContext();
@@ -83,7 +84,7 @@ export function WebSocketProvider({ children }) {
         }
 
         // Calculate how long to wait based on time since last broadcast
-        const now = Date.now();
+        const now = timeManager.now();
         const timeSinceLastBroadcast = now - lastBroadcastTimeRef.current;
         const debounceTime = timeSinceLastBroadcast < 1000 ? 300 : 50; // Longer debounce if recent broadcast
 
@@ -130,7 +131,7 @@ export function WebSocketProvider({ children }) {
             });
 
             window.electronAPI.updateWebSocketSources(cleanedSources);
-            lastBroadcastTimeRef.current = Date.now();
+            lastBroadcastTimeRef.current = timeManager.now();
             debounceTimerRef.current = null;
         }, debounceTime);
     };
@@ -181,7 +182,7 @@ export function WebSocketProvider({ children }) {
 
             window.electronAPI.updateWebSocketSources(cleanedSources);
             initialBroadcastDoneRef.current = true;
-            lastBroadcastTimeRef.current = Date.now();
+            lastBroadcastTimeRef.current = timeManager.now();
             prevSourcesRef.current = JSON.parse(JSON.stringify(sources)); // Deep clone
             return;
         }

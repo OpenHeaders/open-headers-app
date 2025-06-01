@@ -6,6 +6,7 @@ import { useHttp } from '../hooks/useHttp';
 import { useEnv } from '../hooks/useEnv';
 import { showMessage } from '../utils/messageUtil';
 import refreshManager from '../services/RefreshManager';
+import timeManager from '../services/TimeManager';
 
 // Create context
 const SourceContext = createContext();
@@ -338,7 +339,7 @@ export function SourceProvider({ children }) {
             return source;
         }
 
-        const now = Date.now(); // Use regular timestamp, not high-res time
+        const now = timeManager.now(); // Use regular timestamp, not high-res time
         const cleanedSource = { ...source };
 
         // Check if the nextRefresh time is from a previous session (more than 5 minutes old)
@@ -784,7 +785,7 @@ export function SourceProvider({ children }) {
 
                 // For HTTP sources, include refresh options
                 if (source.sourceType === 'http') {
-                    const now = Date.now();
+                    const now = timeManager.now();
                     const refreshOptions = source.refreshOptions || {};
 
                     // Log what we're exporting
@@ -877,7 +878,7 @@ export function SourceProvider({ children }) {
                         sourceData.refreshOptions &&
                         sourceData.refreshOptions.enabled) {
 
-                        const now = Date.now();
+                        const now = timeManager.now();
                         const nextRefresh = sourceData.refreshOptions.nextRefresh;
                         const lastRefresh = sourceData.refreshOptions.lastRefresh;
 
