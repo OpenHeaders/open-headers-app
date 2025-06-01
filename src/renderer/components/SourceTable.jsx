@@ -10,6 +10,8 @@ import EditSourceModal from './EditSourceModal';
 import ContentViewer from './ContentViewer';
 import { showMessage } from '../utils/messageUtil';
 import refreshManager from '../services/RefreshManager';
+const { createLogger } = require('../utils/logger');
+const log = createLogger('SourceTable');
 
 const { Text } = Typography;
 
@@ -89,7 +91,7 @@ const SourceTable = ({
     // Debug helper for tracking refresh states
     const debugRefreshState = (sourceId, action, data = {}) => {
         const timestamp = new Date().toISOString().substr(11, 8);
-        console.log(`[${timestamp}] [RefreshTable] Source ${sourceId} - ${action}:`, data);
+        log.debug(`[${timestamp}] [RefreshTable] Source ${sourceId} - ${action}:`, data);
     };
 
     // ENHANCED: Update refresh display states using RefreshManager data
@@ -153,7 +155,7 @@ const SourceTable = ({
                     filtered[sourceId] = prev[sourceId];
                 } else {
                     hasChanges = true;
-                    console.log(`[RefreshTable] Removing display state for deleted source ${sourceId}`);
+                    log.debug(`[RefreshTable] Removing display state for deleted source ${sourceId}`);
                 }
             });
 
@@ -172,17 +174,17 @@ const SourceTable = ({
             const dataToSave = { ...sourceData };
             delete dataToSave.refreshNow;
 
-            console.log("SourceTable: Saving source data...");
+            log.debug('Saving source data...');
 
             // Call parent handler to update the source and get the updated source
             const updatedSource = await onUpdateSource(dataToSave);
 
             if (updatedSource) {
-                console.log("SourceTable: Source updated successfully");
+                log.debug('Source updated successfully');
 
                 // If immediate refresh is requested, trigger it
                 if (shouldRefreshNow) {
-                    console.log("SourceTable: Triggering immediate refresh after save...");
+                    log.debug('Triggering immediate refresh after save...');
 
                     // Small delay to ensure the source is updated in the manager
                     setTimeout(async () => {
@@ -190,12 +192,12 @@ const SourceTable = ({
                             const refreshSuccess = await handleRefreshSource(sourceData.sourceId, updatedSource);
 
                             if (refreshSuccess) {
-                                console.log("SourceTable: Manual refresh completed successfully");
+                                log.debug('Manual refresh completed successfully');
                             } else {
-                                console.log("SourceTable: Manual refresh failed");
+                                log.debug('Manual refresh failed');
                             }
                         } catch (error) {
-                            console.error("SourceTable: Error during manual refresh:", error);
+                            log.error('Error during manual refresh:', error);
                         }
                     }, 500);
                 }
@@ -214,7 +216,7 @@ const SourceTable = ({
                 return false;
             }
         } catch (error) {
-            console.error('SourceTable: Error saving source:', error);
+            log.error('Error saving source:', error);
             showMessage('error', `Error: ${error.message}`);
             return false;
         } finally {
@@ -243,7 +245,7 @@ const SourceTable = ({
     const handleRefreshSource = async (sourceId, updatedSource = null) => {
         try {
             debugRefreshState(sourceId, 'Manual Refresh Started');
-            console.log('SourceTable: Starting refresh for source', sourceId);
+            log.debug('Starting refresh for source', sourceId);
 
             // Set refreshing state
             setRefreshingSourceId(sourceId);
@@ -261,12 +263,10 @@ const SourceTable = ({
             const success = await onRefreshSource(sourceId, updatedSource);
 
             debugRefreshState(sourceId, 'Manual Refresh Completed', { success });
-            console.log('SourceTable: Refresh completed with success =', success);
 
             return success;
         } catch (error) {
             debugRefreshState(sourceId, 'Manual Refresh Error', { error: error.message });
-            console.error('SourceTable: Error refreshing source:', error);
             return false;
         } finally {
             // Clear refreshing state with a delay to ensure UI updates
@@ -309,7 +309,6 @@ const SourceTable = ({
 
             return success;
         } catch (error) {
-            console.error('SourceTable: Error removing source:', error);
             showMessage('error', `Error removing source: ${error.message}`);
             return false;
         } finally {

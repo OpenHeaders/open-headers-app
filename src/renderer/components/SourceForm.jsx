@@ -28,7 +28,6 @@ const SourceForm = ({ onAddSource }) => {
     const handleTotpChange = (enabled, secret) => {
         setTotpEnabled(enabled);
         setTotpSecret(secret);
-        console.log("SourceForm updated TOTP state:", enabled, secret);
     };
 
     // Setup scroll event listener to detect when to make header sticky
@@ -82,7 +81,6 @@ const SourceForm = ({ onAddSource }) => {
     const handleSubmit = async (values) => {
         try {
             setSubmitting(true);
-            console.log("Form submitted with values:", values);
 
             // Check if JSON filter is enabled but missing a path
             if (values.jsonFilter?.enabled && !values.jsonFilter?.path) {
@@ -123,22 +121,6 @@ const SourceForm = ({ onAddSource }) => {
                     sourceData.requestOptions.variables = [];
                 }
 
-                // Check if we have variables
-                if (sourceData.requestOptions.variables && sourceData.requestOptions.variables.length > 0) {
-                    console.log("Variables being sent:", JSON.stringify(sourceData.requestOptions.variables, null, 2));
-                }
-
-                console.log("Request options being sent:", JSON.stringify(sourceData.requestOptions, null, 2));
-
-                // Check if we have headers
-                if (sourceData.requestOptions.headers && sourceData.requestOptions.headers.length > 0) {
-                    console.log("Headers being sent:", JSON.stringify(sourceData.requestOptions.headers, null, 2));
-                }
-
-                // Check if we have variables
-                if (sourceData.requestOptions.variables && sourceData.requestOptions.variables.length > 0) {
-                    console.log("Variables being sent:", JSON.stringify(sourceData.requestOptions.variables, null, 2));
-                }
 
                 sourceData.jsonFilter = values.jsonFilter || { enabled: false, path: '' };
                 sourceData.refreshOptions = values.refreshOptions || { interval: 0 };
@@ -146,7 +128,6 @@ const SourceForm = ({ onAddSource }) => {
                 // Add TOTP if enabled
                 if (totpEnabled && totpSecret) {
                     sourceData.requestOptions.totpSecret = totpSecret;
-                    console.log("Adding TOTP secret to request options");
                 }
 
                 // If we have test response, extract content and original response
@@ -157,10 +138,8 @@ const SourceForm = ({ onAddSource }) => {
                         // Include headers if they were extracted from the test response
                         if (testResponseHeaders) {
                             sourceData.headers = testResponseHeaders;
-                            console.log('Setting headers from test response:', testResponseHeaders);
                         } else if (parsedResponse.headers) {
                             sourceData.headers = parsedResponse.headers;
-                            console.log('Setting headers from parsed response:', parsedResponse.headers);
                         }
 
                         if (parsedResponse.body) {
@@ -170,26 +149,18 @@ const SourceForm = ({ onAddSource }) => {
 
                                 // Use originalResponse for the original response (supporting multiple formats for backward compatibility)
                                 sourceData.originalResponse = parsedResponse.originalResponse || parsedResponse.originalBody || parsedResponse.body;
-
-                                console.log('Setting filtered content and original response:',
-                                    'filtered:', sourceData.initialContent.substring(0, 50) + '...',
-                                    'original:', sourceData.originalResponse.substring(0, 50) + '...');
                             } else {
                                 // For non-filtered responses
                                 sourceData.initialContent = parsedResponse.body;
                                 sourceData.originalResponse = parsedResponse.body;
-                                console.log('Setting initial originalResponse from test response:',
-                                    parsedResponse.body.substring(0, 50) + '...');
                             }
 
                             // Include headers if they exist in the response
                             if (parsedResponse.headers) {
                                 sourceData.headers = parsedResponse.headers;
-                                console.log('Setting headers from test response:', parsedResponse.headers);
                             }
                         }
                     } catch (error) {
-                        console.error("Error parsing test response:", error);
                         // Use raw response if parsing fails
                         sourceData.initialContent = testResponse;
                         sourceData.originalResponse = testResponse;
@@ -204,8 +175,6 @@ const SourceForm = ({ onAddSource }) => {
                     sourceData.sourcePath = 'https://' + sourceData.sourcePath;
                 }
             }
-
-            console.log("Calling onAddSource with:", JSON.stringify(sourceData, null, 2));
 
             // Call parent handler to add source
             const success = await onAddSource(sourceData);
@@ -233,11 +202,10 @@ const SourceForm = ({ onAddSource }) => {
         try {
             const parsedResponse = JSON.parse(response);
             if (parsedResponse.headers) {
-                console.log('Extracted headers from test response:', parsedResponse.headers);
                 setTestResponseHeaders(parsedResponse.headers);
             }
         } catch (e) {
-            console.error('Error parsing test response headers:', e);
+            // Error parsing test response headers
         }
     };
 

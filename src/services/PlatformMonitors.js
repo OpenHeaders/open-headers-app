@@ -4,6 +4,7 @@ const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { createLogger } = require('../utils/mainLogger');
 
 // Base class for platform monitors
 class BasePlatformMonitor extends EventEmitter {
@@ -15,11 +16,13 @@ class BasePlatformMonitor extends EventEmitter {
     }
 
     start() {
-        console.log(`[${this.constructor.name}] Starting platform-specific monitoring`);
+        this.log = this.log || createLogger(this.constructor.name);
+        this.log.info('Starting platform-specific monitoring');
     }
 
     stop() {
-        console.log(`[${this.constructor.name}] Stopping platform-specific monitoring`);
+        this.log = this.log || createLogger(this.constructor.name);
+        this.log.info('Stopping platform-specific monitoring');
 
         // Clean up processes
         this.processes.forEach(proc => {
@@ -64,6 +67,11 @@ class BasePlatformMonitor extends EventEmitter {
 
 // macOS-specific network monitor
 class MacOSNetworkMonitor extends BasePlatformMonitor {
+    constructor() {
+        super();
+        this.log = createLogger('MacOSNetworkMonitor');
+    }
+
     start() {
         super.start();
 
@@ -86,7 +94,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 try {
                     const watcher = fs.watch(configPath, (eventType) => {
                         if (eventType === 'change') {
-                            console.log(`[MacOSNetworkMonitor] Network configuration changed: ${path.basename(configPath)}`);
+                            this.log.info(`Network configuration changed: ${path.basename(configPath)}`);
                             this.emit('network-change', {
                                 type: 'config-change',
                                 file: path.basename(configPath)
@@ -95,7 +103,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                     });
                     this.watchers.push(watcher);
                 } catch (e) {
-                    console.error(`[MacOSNetworkMonitor] Failed to watch ${configPath}:`, e.message);
+                    this.log.error(`Failed to watch ${configPath}:`, e.message);
                 }
             }
         });
@@ -132,7 +140,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 }
 
                 if (lastVPNState !== activeVPN) {
-                    console.log(`[MacOSNetworkMonitor] VPN state changed: ${activeVPN ? 'connected' : 'disconnected'}`);
+                    this.log.info(`VPN state changed: ${activeVPN ? 'connected' : 'disconnected'}`);
                     this.emit('vpn-state', {
                         active: activeVPN,
                         name: vpnName
@@ -193,7 +201,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 interface: vpnInterface
             });
         } catch (e) {
-            console.error('[MacOSNetworkMonitor] Failed to check VPN interfaces:', e.message);
+            this.log.error('Failed to check VPN interfaces:', e.message);
         }
     }
 
@@ -215,7 +223,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 const currentState = { on: isOn, ssid };
 
                 if (JSON.stringify(lastWiFiState) !== JSON.stringify(currentState)) {
-                    console.log(`[MacOSNetworkMonitor] WiFi state changed:`, currentState);
+                    this.log.info('WiFi state changed:', currentState);
                     this.emit('network-change', {
                         type: 'wifi-change',
                         wifi: currentState
@@ -244,7 +252,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 const output = data.toString();
 
                 if (output.includes('RTM_IFINFO') || output.includes('RTM_NEWADDR') || output.includes('RTM_DELADDR')) {
-                    console.log('[MacOSNetworkMonitor] Route change detected');
+                    this.log.info('Route change detected');
                     this.emit('network-change', {
                         type: 'route-change',
                         event: output.substring(0, 50)
@@ -253,18 +261,23 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
             });
 
             routeMonitor.on('error', (err) => {
-                console.error('[MacOSNetworkMonitor] Route monitor error:', err.message);
+                this.log.error('Route monitor error:', err.message);
             });
 
             this.processes.push(routeMonitor);
         } catch (e) {
-            console.error('[MacOSNetworkMonitor] Failed to start route monitor:', e.message);
+            this.log.error('Failed to start route monitor:', e.message);
         }
     }
 }
 
 // Windows-specific network monitor
 class WindowsNetworkMonitor extends BasePlatformMonitor {
+    constructor() {
+        super();
+        this.log = createLogger('WindowsNetworkMonitor');
+    }
+
     start() {
         super.start();
 
@@ -296,7 +309,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                         const currentState = JSON.stringify(adapters);
 
                         if (lastState && lastState !== currentState) {
-                            console.log('[WindowsNetworkMonitor] Network adapter change detected');
+                            this.log.info('Network adapter change detected');
                             this.emit('network-change', {
                                 type: 'adapter-change',
                                 adapters
@@ -311,12 +324,12 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             });
 
             monitor.on('error', (err) => {
-                console.error('[WindowsNetworkMonitor] Adapter monitor error:', err.message);
+                this.log.error('Adapter monitor error:', err.message);
             });
 
             this.processes.push(monitor);
         } catch (e) {
-            console.error('[WindowsNetworkMonitor] Failed to start adapter monitor:', e.message);
+            this.log.error('Failed to start adapter monitor:', e.message);
         }
     }
 
@@ -370,7 +383,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 }
 
                 if (lastVPNState !== activeVPN || lastVPNInterface !== vpnName) {
-                    console.log(`[MacOSNetworkMonitor] VPN state changed: ${activeVPN ? 'connected' : 'disconnected'} ${vpnName ? `(${vpnName})` : ''}`);
+                    this.log.info(`VPN state changed: ${activeVPN ? 'connected' : 'disconnected'} ${vpnName ? `(${vpnName})` : ''}`);
                     this.emit('vpn-state', {
                         active: activeVPN,
                         name: vpnName,
@@ -409,7 +422,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 const currentState = { connected: isConnected, ssid };
 
                 if (JSON.stringify(lastWiFiState) !== JSON.stringify(currentState)) {
-                    console.log(`[WindowsNetworkMonitor] WiFi state changed:`, currentState);
+                    this.log.info('WiFi state changed:', currentState);
                     this.emit('network-change', {
                         type: 'wifi-change',
                         wifi: currentState
@@ -444,7 +457,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             monitor.stdout.on('data', (data) => {
                 const output = data.toString().trim();
                 if (output.includes('NETWORK_CHANGE')) {
-                    console.log('[WindowsNetworkMonitor] WMI network event detected');
+                    this.log.info('WMI network event detected');
                     this.emit('network-change', {
                         type: 'wmi-event'
                     });
@@ -452,18 +465,23 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             });
 
             monitor.on('error', (err) => {
-                console.error('[WindowsNetworkMonitor] WMI monitor error:', err.message);
+                this.log.error('WMI monitor error:', err.message);
             });
 
             this.processes.push(monitor);
         } catch (e) {
-            console.error('[WindowsNetworkMonitor] Failed to start WMI monitor:', e.message);
+            this.log.error('Failed to start WMI monitor:', e.message);
         }
     }
 }
 
 // Linux-specific network monitor
 class LinuxNetworkMonitor extends BasePlatformMonitor {
+    constructor() {
+        super();
+        this.log = createLogger('LinuxNetworkMonitor');
+    }
+
     start() {
         super.start();
 
@@ -503,7 +521,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
 
                 if (output.includes('connected') || output.includes('disconnected') ||
                     output.includes('connecting') || output.includes('deactivating')) {
-                    console.log('[LinuxNetworkMonitor] NetworkManager event:', output.trim());
+                    this.log.info('NetworkManager event:', output.trim());
                     this.emit('network-change', {
                         type: 'networkmanager-event',
                         event: output.trim()
@@ -512,14 +530,14 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             monitor.on('error', (err) => {
-                console.error('[LinuxNetworkMonitor] NetworkManager monitor error:', err.message);
+                this.log.error('NetworkManager monitor error:', err.message);
                 // Fall back to ip monitor
                 this.monitorWithIPCommand();
             });
 
             this.processes.push(monitor);
         } catch (e) {
-            console.error('[LinuxNetworkMonitor] Failed to start NetworkManager monitor:', e.message);
+            this.log.error('Failed to start NetworkManager monitor:', e.message);
             this.monitorWithIPCommand();
         }
     }
@@ -533,7 +551,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                 const output = data.toString();
 
                 if (output.includes('link/') || output.includes('inet') || output.includes('route')) {
-                    console.log('[LinuxNetworkMonitor] IP monitor event:', output.substring(0, 100));
+                    this.log.info('IP monitor event:', output.substring(0, 100));
                     this.emit('network-change', {
                         type: 'ip-monitor-event',
                         event: output.substring(0, 100)
@@ -542,12 +560,12 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             monitor.on('error', (err) => {
-                console.error('[LinuxNetworkMonitor] IP monitor error:', err.message);
+                this.log.error('IP monitor error:', err.message);
             });
 
             this.processes.push(monitor);
         } catch (e) {
-            console.error('[LinuxNetworkMonitor] Failed to start IP monitor:', e.message);
+            this.log.error('Failed to start IP monitor:', e.message);
         }
     }
 
@@ -558,7 +576,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         try {
             const watcher = fs.watch(netPath, (eventType, filename) => {
                 if (eventType === 'rename' && filename) {
-                    console.log(`[LinuxNetworkMonitor] Network interface change: ${filename}`);
+                    this.log.info(`Network interface change: ${filename}`);
                     this.emit('network-change', {
                         type: 'interface-change',
                         interface: filename
@@ -568,7 +586,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
 
             this.watchers.push(watcher);
         } catch (e) {
-            console.error('[LinuxNetworkMonitor] Failed to watch network interfaces:', e.message);
+            this.log.error('Failed to watch network interfaces:', e.message);
         }
     }
 
@@ -610,7 +628,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                 }
 
                 if (lastVPNState !== vpnActive) {
-                    console.log(`[LinuxNetworkMonitor] VPN state changed: ${vpnActive ? 'connected' : 'disconnected'}`);
+                    this.log.info(`VPN state changed: ${vpnActive ? 'connected' : 'disconnected'}`);
                     this.emit('vpn-state', {
                         active: vpnActive,
                         interface: vpnInterface
@@ -618,7 +636,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                     lastVPNState = vpnActive;
                 }
             } catch (e) {
-                console.error('[LinuxNetworkMonitor] Failed to check VPN state:', e.message);
+                this.log.error('Failed to check VPN state:', e.message);
             }
         };
 
@@ -671,7 +689,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                 const currentState = wifiInfo || { connected: false, ssid: null };
 
                 if (JSON.stringify(lastWiFiState) !== JSON.stringify(currentState)) {
-                    console.log(`[LinuxNetworkMonitor] WiFi state changed:`, currentState);
+                    this.log.info('WiFi state changed:', currentState);
                     this.emit('network-change', {
                         type: 'wifi-change',
                         wifi: currentState
@@ -694,10 +712,15 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
 
 // Generic fallback monitor
 class GenericNetworkMonitor extends BasePlatformMonitor {
+    constructor() {
+        super();
+        this.log = createLogger('GenericNetworkMonitor');
+    }
+
     start() {
         super.start();
 
-        console.log('[GenericNetworkMonitor] Using generic network monitoring');
+        this.log.info('Using generic network monitoring');
 
         // Basic interface monitoring
         this.watchInterfaces();
@@ -710,7 +733,7 @@ class GenericNetworkMonitor extends BasePlatformMonitor {
             const currentInterfaces = JSON.stringify(os.networkInterfaces());
 
             if (currentInterfaces !== lastInterfaces) {
-                console.log('[GenericNetworkMonitor] Network interface change detected');
+                this.log.info('Network interface change detected');
                 this.emit('network-change', {
                     type: 'interface-change'
                 });

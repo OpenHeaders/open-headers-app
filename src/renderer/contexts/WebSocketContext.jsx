@@ -6,6 +6,9 @@ import { useSources } from './SourceContext';
 // Create context
 const WebSocketContext = createContext();
 
+const { createLogger } = require('../utils/logger');
+const log = createLogger('WebSocketContext');
+
 export function WebSocketProvider({ children }) {
     const { sources, shouldSuppressBroadcast } = useSources();
 
@@ -23,7 +26,7 @@ export function WebSocketProvider({ children }) {
     const haveSourcesChanged = (prevSources, currentSources) => {
         // Different number of sources means a source was added or removed
         if (prevSources.length !== currentSources.length) {
-            console.log(`WebSocketContext: Source count changed from ${prevSources.length} to ${currentSources.length}`);
+            log.debug(`Source count changed from ${prevSources.length} to ${currentSources.length}`);
             return true;
         }
 
@@ -35,15 +38,13 @@ export function WebSocketProvider({ children }) {
 
             // If source not found, it's a change
             if (!prevSource) {
-                console.log(`WebSocketContext: New source detected ${currentSource.sourceId}`);
+                log.debug(`New source detected ${currentSource.sourceId}`);
                 return true;
             }
 
             // ENHANCED: Check for actual content changes, not just timing updates
             if (prevSource.sourceContent !== currentSource.sourceContent) {
-                console.log(`WebSocketContext: Content changed for source ${currentSource.sourceId}`);
-                console.log(`WebSocketContext: Previous: ${prevSource.sourceContent?.substring(0, 50)}...`);
-                console.log(`WebSocketContext: Current: ${currentSource.sourceContent?.substring(0, 50)}...`);
+                log.debug(`Content changed for source ${currentSource.sourceId}`);
                 return true;
             }
 
@@ -51,7 +52,7 @@ export function WebSocketProvider({ children }) {
             const significantFields = ['sourceTag', 'sourcePath', 'sourceType', 'isFiltered', 'filteredWith'];
             for (const field of significantFields) {
                 if (prevSource[field] !== currentSource[field]) {
-                    console.log(`WebSocketContext: ${field} changed for source ${currentSource.sourceId}`);
+                    log.debug(`${field} changed for source ${currentSource.sourceId}`);
                     return true;
                 }
             }
@@ -59,7 +60,7 @@ export function WebSocketProvider({ children }) {
             // ENHANCED: Check JSON filter changes (but not timing changes)
             if (prevSource.jsonFilter?.enabled !== currentSource.jsonFilter?.enabled ||
                 prevSource.jsonFilter?.path !== currentSource.jsonFilter?.path) {
-                console.log(`WebSocketContext: JSON filter changed for source ${currentSource.sourceId}`);
+                log.debug(`JSON filter changed for source ${currentSource.sourceId}`);
                 return true;
             }
         }
@@ -72,7 +73,7 @@ export function WebSocketProvider({ children }) {
     const debouncedBroadcast = (sourcesToBroadcast, reason) => {
         // FIXED: Check if this specific set of sources should be suppressed
         if (shouldSuppressBroadcast && shouldSuppressBroadcast(sourcesToBroadcast)) {
-            console.log(`WebSocketContext: Broadcast suppressed for reason: ${reason} (granular suppression)`);
+            log.debug(`Broadcast suppressed for reason: ${reason} (granular suppression)`);
             return;
         }
 
@@ -90,11 +91,11 @@ export function WebSocketProvider({ children }) {
         debounceTimerRef.current = setTimeout(() => {
             // FIXED: Double-check suppression right before broadcasting
             if (shouldSuppressBroadcast && shouldSuppressBroadcast(sourcesToBroadcast)) {
-                console.log(`WebSocketContext: Broadcast suppressed at broadcast time for reason: ${reason} (granular suppression)`);
+                log.debug(`Broadcast suppressed at broadcast time for reason: ${reason} (granular suppression)`);
                 return;
             }
 
-            console.log(`WebSocketContext: Broadcasting ${sourcesToBroadcast.length} source(s) after ${reason}`);
+            log.debug(`Broadcasting ${sourcesToBroadcast.length} source(s) after change detected`);
 
             // ENHANCED: Filter out any temporary status data before broadcasting
             const cleanedSources = sourcesToBroadcast.map(source => {
@@ -141,11 +142,11 @@ export function WebSocketProvider({ children }) {
 
         // Always broadcast on first render to initialize clients
         if (!initialBroadcastDoneRef.current && sources.length > 0) {
-            console.log(`WebSocketContext: Initial broadcast of ${sources.length} source(s)`);
+            log.debug(`Initial broadcast of ${sources.length} source(s)`);
 
             // FIXED: Check suppression even for initial broadcast (but it should rarely be suppressed)
             if (shouldSuppressBroadcast && shouldSuppressBroadcast(sources)) {
-                console.log(`WebSocketContext: Initial broadcast suppressed (granular suppression)`);
+                log.debug(`Initial broadcast suppressed (granular suppression)`);
                 initialBroadcastDoneRef.current = true;
                 prevSourcesRef.current = JSON.parse(JSON.stringify(sources));
                 return;
@@ -194,7 +195,7 @@ export function WebSocketProvider({ children }) {
             prevSourcesRef.current = JSON.parse(JSON.stringify(sources)); // Deep clone
         } else {
             // ADDED: Log when changes are detected but not considered significant
-            console.log(`WebSocketContext: Sources updated but no significant changes detected`);
+            log.debug(`Sources updated but no significant changes detected`);
         }
 
         // Clean up on unmount
