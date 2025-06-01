@@ -6,6 +6,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
+const { createLogger } = require('../utils/mainLogger');
+const log = createLogger('WebSocketService');
 
 /**
  * WebSocket service for communicating with browser extensions
@@ -43,7 +45,7 @@ class WebSocketService {
         this.isInitializing = true;
 
         try {
-            console.log('Initializing WebSocket service with WS and WSS support...');
+            log.info('Initializing WebSocket service with WS and WSS support...');
 
             // Apply options
             if (options.wsPort) this.wsPort = options.wsPort;
@@ -58,10 +60,10 @@ class WebSocketService {
                     const electron = require('electron');
                     if (electron && electron.app) {
                         this.appDataPath = electron.app.getPath('userData');
-                        console.log(`Using Electron userData path: ${this.appDataPath}`);
+                        log.info(`Using Electron userData path: ${this.appDataPath}`);
                     }
                 } catch (e) {
-                    console.log('Electron app not available, using current directory for certificates');
+                    log.info('Electron app not available, using current directory for certificates');
                     this.appDataPath = process.cwd();
                 }
             }
@@ -78,7 +80,7 @@ class WebSocketService {
             this.isInitializing = false;
             return true;
         } catch (error) {
-            console.error('Failed to initialize WebSocket service:', error);
+            log.error('Failed to initialize WebSocket service:', error);
             this.isInitializing = false;
             return false;
         }
@@ -90,7 +92,7 @@ class WebSocketService {
      */
     _setupWsServer() {
         try {
-            console.log(`WebSocket server (WS) starting on ${this.host}:${this.wsPort}`);
+            log.info(`WebSocket server (WS) starting on ${this.host}:${this.wsPort}`);
 
             // Create HTTP server
             this.httpServer = http.createServer((req, res) => {
@@ -120,10 +122,10 @@ class WebSocketService {
 
             // Start listening
             this.httpServer.listen(this.wsPort, this.host, () => {
-                console.log(`WebSocket server (WS) listening on ${this.host}:${this.wsPort}`);
+                log.info(`WebSocket server (WS) listening on ${this.host}:${this.wsPort}`);
             });
         } catch (error) {
-            console.error('Error setting up WS server:', error);
+            log.error('Error setting up WS server:', error);
         }
     }
 
@@ -133,12 +135,12 @@ class WebSocketService {
      */
     _setupWssServer() {
         try {
-            console.log(`Secure WebSocket server (WSS) starting on ${this.host}:${this.wssPort}`);
+            log.info(`Secure WebSocket server (WSS) starting on ${this.host}:${this.wssPort}`);
 
             // Ensure certificate files exist or create them
             const certInfo = this._ensureCertificatesExist();
             if (!certInfo.success) {
-                console.error('Failed to set up certificates for WSS server:', certInfo.error);
+                log.error('Failed to set up certificates for WSS server:', certInfo.error);
                 return;
             }
 
@@ -236,11 +238,11 @@ class WebSocketService {
 
             // Start listening
             this.httpsServer.listen(this.wssPort, this.host, () => {
-                console.log(`Secure WebSocket server (WSS) listening on ${this.host}:${this.wssPort}`);
-                console.log(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
+                log.info(`Secure WebSocket server (WSS) listening on ${this.host}:${this.wssPort}`);
+                log.info(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
             });
         } catch (error) {
-            console.error('Error setting up WSS server:', error);
+            log.error('Error setting up WSS server:', error);
         }
     }
 
@@ -255,7 +257,7 @@ class WebSocketService {
             const certsDir = this._getCertificatesDirectory();
             if (!fs.existsSync(certsDir)) {
                 fs.mkdirSync(certsDir, { recursive: true });
-                console.log(`Created certificates directory: ${certsDir}`);
+                log.info(`Created certificates directory: ${certsDir}`);
             }
 
             const keyPath = path.join(certsDir, 'server.key');
@@ -263,7 +265,7 @@ class WebSocketService {
 
             // Check if certificates already exist
             if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-                console.log('Using existing certificate files');
+                log.info('Using existing certificate files');
 
                 // Calculate and store fingerprint
                 const cert = fs.readFileSync(certPath);
@@ -280,7 +282,7 @@ class WebSocketService {
             }
 
             // Certificates don't exist, generate them
-            console.log('Certificate files not found, generating new ones...');
+            log.info('Certificate files not found, generating new ones...');
 
             try {
                 // Generate certificates using OpenSSL
@@ -336,20 +338,20 @@ class WebSocketService {
     _generateCertificates(certsDir, keyPath, certPath) {
         try {
             // Generate private key
-            console.log('Generating private key...');
+            log.info('Generating private key...');
             execSync(`openssl genrsa -out "${keyPath}" 2048`);
 
             // Generate self-signed certificate
-            console.log('Generating self-signed certificate...');
+            log.info('Generating self-signed certificate...');
             execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 3650 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
 
-            console.log('Successfully generated certificate files');
+            log.info('Successfully generated certificate files');
         } catch (error) {
-            console.error('Failed to generate certificates with OpenSSL:', error.message);
+            log.error('Failed to generate certificates with OpenSSL:', error.message);
 
             // Try a different approach with different OpenSSL syntax for older versions
             try {
-                console.log('Trying alternative certificate generation method...');
+                log.info('Trying alternative certificate generation method...');
 
                 // Generate private key
                 execSync(`openssl genrsa -out "${keyPath}" 2048`);
@@ -386,9 +388,9 @@ class WebSocketService {
                 if (fs.existsSync(csrPath)) fs.unlinkSync(csrPath);
                 if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
 
-                console.log('Successfully generated certificate files with alternative method');
+                log.info('Successfully generated certificate files with alternative method');
             } catch (altError) {
-                console.error('Failed to generate certificates with alternative method:', altError.message);
+                log.error('Failed to generate certificates with alternative method:', altError.message);
                 throw new Error('Unable to generate certificates with either method');
             }
         }
@@ -412,7 +414,7 @@ class WebSocketService {
 
             return fingerprint;
         } catch (error) {
-            console.error('Error calculating certificate fingerprint:', error);
+            log.error('Error calculating certificate fingerprint:', error);
             return 'UNKNOWN_FINGERPRINT';
         }
     }
@@ -425,7 +427,7 @@ class WebSocketService {
      */
     _configureWebSocketServer(server, serverType) {
         server.on('connection', (ws) => {
-            console.log(`${serverType} client connected`);
+            log.info(`${serverType} client connected`);
 
             // Track client initialization state
             ws.isInitialized = false;
@@ -435,33 +437,33 @@ class WebSocketService {
 
             // Handle client disconnection
             ws.on('close', () => {
-                console.log(`${serverType} client disconnected`);
+                log.info(`${serverType} client disconnected`);
             });
 
             // Handle client errors
             ws.on('error', (error) => {
-                console.error(`${serverType} client error:`, error);
+                log.error(`${serverType} client error:`, error);
             });
 
             // Handle client messages
             ws.on('message', (message) => {
                 try {
                     const data = JSON.parse(message);
-                    console.log(`Received message from ${serverType} client:`, data);
+                    log.info(`Received message from ${serverType} client:`, data);
 
                     // Handle specific message types
                     if (data.type === 'requestSources') {
                         this._sendSourcesToClient(ws);
                     }
                 } catch (err) {
-                    console.error(`Error processing ${serverType} client message:`, err);
+                    log.error(`Error processing ${serverType} client message:`, err);
                 }
             });
         });
 
         // Handle server errors
         server.on('error', (error) => {
-            console.error(`${serverType} server error:`, error);
+            log.error(`${serverType} server error:`, error);
 
             // Attempt to restart server after a delay
             setTimeout(() => {
@@ -496,9 +498,9 @@ class WebSocketService {
 
             ws.send(message);
             ws.isInitialized = true;
-            console.log(`Sent initial ${this.sources.length} source(s) to client`);
+            log.info(`Sent initial ${this.sources.length} source(s) to client`);
         } catch (error) {
-            console.error('Error sending sources to client:', error);
+            log.error('Error sending sources to client:', error);
         }
     }
 
@@ -540,7 +542,7 @@ class WebSocketService {
         }
 
         if (clientCount > 0) {
-            console.log(`Broadcasted ${this.sources.length} source(s) to ${clientCount} client(s)`);
+            log.info(`Broadcasted ${this.sources.length} source(s) to ${clientCount} client(s)`);
         }
     }
 
@@ -553,7 +555,7 @@ class WebSocketService {
         try {
             if (serverType === 'WS') {
                 if (this.wss) {
-                    console.log('Closing WS server for restart...');
+                    log.info('Closing WS server for restart...');
                     this.wss.close();
                     if (this.httpServer) this.httpServer.close();
                 }
@@ -562,7 +564,7 @@ class WebSocketService {
             }
             else if (serverType === 'WSS') {
                 if (this.secureWss) {
-                    console.log('Closing WSS server for restart...');
+                    log.info('Closing WSS server for restart...');
                     this.secureWss.close();
                     if (this.httpsServer) this.httpsServer.close();
                 }
@@ -570,7 +572,7 @@ class WebSocketService {
                 setTimeout(() => this._setupWssServer(), 1000);
             }
         } catch (error) {
-            console.error(`Error restarting ${serverType} server:`, error);
+            log.error(`Error restarting ${serverType} server:`, error);
         }
     }
 
@@ -597,9 +599,9 @@ class WebSocketService {
                 });
             }
 
-            console.log('Registered for source service events');
+            log.info('Registered for source service events');
         } catch (error) {
-            console.error('Error registering for source service events:', error);
+            log.error('Error registering for source service events:', error);
         }
     }
 
@@ -619,7 +621,7 @@ class WebSocketService {
             // Broadcast to all clients
             this._broadcastSources();
         } catch (error) {
-            console.error('Error updating and broadcasting sources:', error);
+            log.error('Error updating and broadcasting sources:', error);
         }
     }
 
@@ -632,9 +634,9 @@ class WebSocketService {
             try {
                 this.wss.close();
                 if (this.httpServer) this.httpServer.close();
-                console.log(`WebSocket server (WS) on ${this.host}:${this.wsPort} closed`);
+                log.info(`WebSocket server (WS) on ${this.host}:${this.wsPort} closed`);
             } catch (error) {
-                console.error('Error closing WS server:', error);
+                log.error('Error closing WS server:', error);
             }
         }
 
@@ -643,9 +645,9 @@ class WebSocketService {
             try {
                 this.secureWss.close();
                 if (this.httpsServer) this.httpsServer.close();
-                console.log(`Secure WebSocket server (WSS) on ${this.host}:${this.wssPort} closed`);
+                log.info(`Secure WebSocket server (WSS) on ${this.host}:${this.wssPort} closed`);
             } catch (error) {
-                console.error('Error closing WSS server:', error);
+                log.error('Error closing WSS server:', error);
             }
         }
     }

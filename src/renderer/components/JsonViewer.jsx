@@ -28,12 +28,6 @@ const JsonViewer = ({ source, onRefresh }) => {
             prevContentRef.current !== filteredContent ||
             prevOriginalResponseRef.current !== originalResponse
         ) {
-            console.log("JsonViewer updated for source:", {
-                id: sourceId,
-                filteredContent: filteredContent ? filteredContent.substring(0, 50) + '...' : 'none',
-                originalResponse: originalResponse ? originalResponse.substring(0, 50) + '...' : 'none',
-                jsonFilterPath
-            });
 
             // Update refs with current values
             prevSourceIdRef.current = sourceId;
@@ -58,7 +52,7 @@ const JsonViewer = ({ source, onRefresh }) => {
             // Return as-is if not valid JSON
             return jsonString;
         } catch (error) {
-            console.error('Error formatting JSON:', error);
+            // Error formatting JSON
             return jsonString || 'Invalid JSON';
         }
     };

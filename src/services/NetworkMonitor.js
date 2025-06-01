@@ -3,6 +3,8 @@ const { EventEmitter } = require('events');
 const os = require('os');
 const dns = require('dns').promises;
 const { net } = require('electron');
+const { createLogger } = require('../utils/mainLogger');
+const log = createLogger('NetworkMonitor');
 
 class NetworkMonitor extends EventEmitter {
     constructor() {
@@ -13,7 +15,6 @@ class NetworkMonitor extends EventEmitter {
             connectionType: 'unknown',
             lastChange: Date.now(),
             confidence: 1.0,
-            corporateEnvironment: 'unknown',
             networkInterfaces: new Map(),
             vpnActive: false,
             lastCheck: Date.now(),
@@ -40,7 +41,7 @@ class NetworkMonitor extends EventEmitter {
     }
 
     async initialize() {
-        console.log('[NetworkMonitor] Initializing comprehensive network monitoring...');
+        log.info('Initializing comprehensive network monitoring...');
 
         // Create platform-specific monitor
         this.platformMonitor = this.createPlatformMonitor();
@@ -79,7 +80,7 @@ class NetworkMonitor extends EventEmitter {
         // Start platform-specific monitoring
         if (this.platformMonitor) {
             this.platformMonitor.on('network-change', (data) => {
-                console.log('[NetworkMonitor] Platform-specific network change detected:', data);
+                log.debug('Platform-specific network change detected:', data);
                 this.handlePlatformNetworkChange(data);
             });
 
@@ -90,7 +91,7 @@ class NetworkMonitor extends EventEmitter {
             this.platformMonitor.start();
         }
 
-        console.log('[NetworkMonitor] Monitoring started');
+        log.info('Monitoring started');
     }
 
     startInterfaceMonitoring() {
@@ -115,7 +116,7 @@ class NetworkMonitor extends EventEmitter {
         const changes = this.detectInterfaceChanges(currentInterfaces);
 
         if (changes.length > 0) {
-            console.log('[NetworkMonitor] Network interface changes detected:', changes);
+            log.debug('Network interface changes detected:', changes);
 
             // Update state
             this.state.networkInterfaces = new Map(Object.entries(currentInterfaces));
@@ -203,7 +204,7 @@ class NetworkMonitor extends EventEmitter {
                     name.startsWith('ppp') ||
                     name.includes('ipsec')) {
                     vpnDetected = true;
-                    console.log(`[NetworkMonitor] VPN interface detected: ${name}`);
+                    log.debug(`VPN interface detected: ${name}`);
                 }
             }
         }
@@ -220,21 +221,21 @@ class NetworkMonitor extends EventEmitter {
 
             if (change.type === 'added' && change.hasIPv4) {
                 significantChange = true;
-                console.log(`[NetworkMonitor] Significant: Interface ${change.interface} added with IPv4`);
+                log.info(`Significant: Interface ${change.interface} added with IPv4`);
 
                 // If a VPN interface was added, emit VPN state change
                 if (isVPNInterface) {
-                    console.log(`[NetworkMonitor] VPN interface ${change.interface} connected`);
+                    log.info(`VPN interface ${change.interface} connected`);
                     this.handleVPNStateChange({ active: true, interface: change.interface });
                 }
             } else if (change.type === 'removed' && change.previousAddresses?.some(addr =>
                 addr.family === 'IPv4' && !addr.internal)) {
                 significantChange = true;
-                console.log(`[NetworkMonitor] Significant: Interface ${change.interface} with IPv4 removed`);
+                log.info(`Significant: Interface ${change.interface} with IPv4 removed`);
 
                 // If a VPN interface was removed, emit VPN state change
                 if (isVPNInterface) {
-                    console.log(`[NetworkMonitor] VPN interface ${change.interface} disconnected`);
+                    log.info(`VPN interface ${change.interface} disconnected`);
                     this.handleVPNStateChange({ active: false, interface: change.interface });
                 }
             } else if (change.type === 'modified') {
@@ -244,7 +245,7 @@ class NetworkMonitor extends EventEmitter {
 
                 if (hadIPv4 !== change.hasIPv4) {
                     significantChange = true;
-                    console.log(`[NetworkMonitor] Significant: Interface ${change.interface} IPv4 state changed`);
+                    log.info(`Significant: Interface ${change.interface} IPv4 state changed`);
                 }
             }
         }
@@ -260,20 +261,18 @@ class NetworkMonitor extends EventEmitter {
     }
 
     async performComprehensiveCheck() {
-        console.log('[NetworkMonitor] Performing comprehensive network check...');
+        log.debug('Performing comprehensive network check...');
 
         const checks = await Promise.allSettled([
             this.checkBasicConnectivity(),
             this.checkDNSResolution(),
-            this.checkMultipleEndpoints(),
-            this.detectCorporateEnvironment()
+            this.checkMultipleEndpoints()
         ]);
 
         const results = {
             basic: checks[0].status === 'fulfilled' ? checks[0].value : { success: false },
             dns: checks[1].status === 'fulfilled' ? checks[1].value : { success: false },
-            endpoints: checks[2].status === 'fulfilled' ? checks[2].value : { success: false },
-            corporate: checks[3].status === 'fulfilled' ? checks[3].value : { likely: false }
+            endpoints: checks[2].status === 'fulfilled' ? checks[2].value : { success: false }
         };
 
         return this.updateStateFromResults(results);
@@ -292,7 +291,7 @@ class NetworkMonitor extends EventEmitter {
                 this.state.lastCheck = Date.now();
             }
         } catch (error) {
-            console.error('[NetworkMonitor] Connectivity check error:', error);
+            log.error('Connectivity check error:', error);
         }
     }
 
@@ -434,77 +433,7 @@ class NetworkMonitor extends EventEmitter {
         });
     }
 
-    async detectCorporateEnvironment() {
-        const indicators = {
-            proxy: !!(process.env.HTTP_PROXY || process.env.HTTPS_PROXY),
-            domain: this.checkCorporateDomain(),
-            vpn: this.state.vpnActive,
-            privateIP: this.hasPrivateIPRange(),
-            dnsSuffix: await this.checkDNSSuffix()
-        };
 
-        const score = Object.values(indicators).filter(Boolean).length;
-
-        return {
-            likely: score >= 2,
-            indicators,
-            confidence: score / 5,
-            environment: score >= 3 ? 'corporate' : score >= 1 ? 'mixed' : 'public'
-        };
-    }
-
-    checkCorporateDomain() {
-        const hostname = os.hostname().toLowerCase();
-        const corporatePatterns = [
-            '.local', '.corp', '.internal', '.lan',
-            '.company', '.enterprise', '.ad', '.domain'
-        ];
-
-        return corporatePatterns.some(pattern => hostname.includes(pattern));
-    }
-
-    hasPrivateIPRange() {
-        const interfaces = os.networkInterfaces();
-
-        for (const addresses of Object.values(interfaces)) {
-            for (const addr of addresses) {
-                if (addr.family === 'IPv4' && !addr.internal) {
-                    // Check for private IP ranges
-                    if (addr.address.startsWith('10.') ||
-                        addr.address.startsWith('172.') ||
-                        addr.address.startsWith('192.168.')) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    async checkDNSSuffix() {
-        try {
-            const hostname = os.hostname();
-            const fqdn = await dns.reverse(this.getLocalIP());
-            return fqdn && fqdn[0] !== hostname && fqdn[0].includes('.');
-        } catch {
-            return false;
-        }
-    }
-
-    getLocalIP() {
-        const interfaces = os.networkInterfaces();
-
-        for (const addresses of Object.values(interfaces)) {
-            for (const addr of addresses) {
-                if (addr.family === 'IPv4' && !addr.internal) {
-                    return addr.address;
-                }
-            }
-        }
-
-        return '127.0.0.1';
-    }
 
     calculateNetworkQuality(results) {
         if (!results.success) return 'offline';
@@ -524,7 +453,6 @@ class NetworkMonitor extends EventEmitter {
         this.state.isOnline = results.basic.success || results.endpoints.success;
         this.state.confidence = results.endpoints.confidence || 0;
         this.state.networkQuality = this.calculateNetworkQuality(results.endpoints);
-        this.state.corporateEnvironment = results.corporate.environment;
         this.state.lastCheck = Date.now();
 
         // Update consecutive failures
@@ -548,7 +476,7 @@ class NetworkMonitor extends EventEmitter {
     }
 
     handleNetworkChange(data) {
-        console.log('[NetworkMonitor] Handling network change:', data.type);
+        log.debug('Handling network change:', data.type);
 
         // Debounce rapid changes
         if (this.changeDebounceTimer) {
@@ -569,7 +497,7 @@ class NetworkMonitor extends EventEmitter {
 
     handlePlatformNetworkChange(data) {
         // Platform-specific change detected
-        console.log('[NetworkMonitor] Platform network change:', data);
+        log.debug('Platform network change:', data);
         this.handleNetworkChange({ ...data, source: 'platform' });
     }
 
@@ -578,7 +506,7 @@ class NetworkMonitor extends EventEmitter {
         this.state.vpnActive = data.active;
 
         if (wasActive !== data.active) {
-            console.log(`[NetworkMonitor] VPN state changed: ${data.active ? 'connected' : 'disconnected'}`);
+            log.info(`VPN state changed: ${data.active ? 'connected' : 'disconnected'}`);
 
             this.emit('vpn-change', {
                 active: data.active,
@@ -625,28 +553,18 @@ class NetworkMonitor extends EventEmitter {
         this.state.lastChange = Date.now();
     }
 
-    isNetworkStable() {
-        // Check if network has been stable for at least 30 seconds
-        if (this.stateChangeHistory.length === 0) return true;
-
-        const recentChanges = this.stateChangeHistory.filter(
-            change => Date.now() - change.timestamp < 30000
-        );
-
-        return recentChanges.length === 0;
-    }
 
     getState() {
         return { ...this.state };
     }
 
     async forceCheck() {
-        console.log('[NetworkMonitor] Force check requested');
+        log.info('Force check requested');
         return await this.performComprehensiveCheck();
     }
 
     destroy() {
-        console.log('[NetworkMonitor] Shutting down network monitor');
+        log.info('Shutting down network monitor');
 
         if (this.checkInterval) {
             clearInterval(this.checkInterval);

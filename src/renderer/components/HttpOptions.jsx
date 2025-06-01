@@ -4,6 +4,9 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
 import { showMessage } from '../utils/messageUtil';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('HttpOptions');
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -67,14 +70,14 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
         const formJsonFilter = form.getFieldValue('jsonFilter');
         if (formJsonFilter?.enabled !== undefined && formJsonFilter.enabled !== jsonFilterEnabled) {
-            console.log(`[HttpOptions] Syncing jsonFilterEnabled state with form: ${formJsonFilter.enabled}`);
+            log.debug(`[HttpOptions] Syncing jsonFilterEnabled state with form: ${formJsonFilter.enabled}`);
             setJsonFilterEnabled(formJsonFilter.enabled);
             jsonFilterEnabledRef.current = formJsonFilter.enabled;
 
             // Store the path in the ref if it exists
             if (formJsonFilter.path) {
                 jsonFilterPathRef.current = formJsonFilter.path;
-                console.log(`[HttpOptions] Storing JSON filter path in ref: ${formJsonFilter.path}`);
+                log.debug(`[HttpOptions] Storing JSON filter path in ref: ${formJsonFilter.path}`);
             }
         }
     }, [form, jsonFilterEnabled, isFormInitialized]);
@@ -83,7 +86,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
     useImperativeHandle(ref, () => ({
         // Method to force TOTP state directly
         forceTotpState: (enabled, secret) => {
-            console.log(`[HttpOptions] forceTotpState called with enabled=${enabled}, secret=${secret ? "exists" : "none"}`);
+            log.debug(`[HttpOptions] forceTotpState called with enabled=${enabled}, secret=${secret ? "exists" : "none"}`);
 
             // Update state and refs
             setTotpEnabled(enabled);
@@ -107,12 +110,12 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 // Add totpSecret to requestOptions
                 requestOptions.totpSecret = secret;
                 form.setFieldsValue({ requestOptions });
-                console.log("[HttpOptions] Added TOTP secret to requestOptions via forceTotpState");
+                log.debug("[HttpOptions] Added TOTP secret to requestOptions via forceTotpState");
             } else if (!enabled && requestOptions.totpSecret) {
                 // Remove totpSecret from requestOptions
                 delete requestOptions.totpSecret;
                 form.setFieldsValue({ requestOptions });
-                console.log("[HttpOptions] Removed TOTP secret from requestOptions via forceTotpState");
+                log.debug("[HttpOptions] Removed TOTP secret from requestOptions via forceTotpState");
             }
 
             // Update last notified values to prevent notification loop
@@ -127,11 +130,11 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const currentEnabledState = totpEnabled;
             const currentSecretState = totpSecret;
 
-            console.log(`[HttpOptions] getTotpState checking component state: enabled=${currentEnabledState}, secret=${currentSecretState ? "exists" : "none"}`);
+            log.debug(`[HttpOptions] getTotpState checking component state: enabled=${currentEnabledState}, secret=${currentSecretState ? "exists" : "none"}`);
 
             // If component state is enabled and has a secret, use it
             if (currentEnabledState && currentSecretState) {
-                console.log(`[HttpOptions] getTotpState returning from component state: enabled=true, secret=exists`);
+                log.debug(`[HttpOptions] getTotpState returning from component state: enabled=true, secret=exists`);
                 return {
                     enabled: true,
                     secret: currentSecretState
@@ -142,11 +145,11 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const formEnabled = form.getFieldValue('enableTOTP');
             const formSecret = form.getFieldValue('totpSecret');
 
-            console.log(`[HttpOptions] getTotpState checking form values: enabled=${formEnabled}, secret=${formSecret ? "exists" : "none"}`);
+            log.debug(`[HttpOptions] getTotpState checking form values: enabled=${formEnabled}, secret=${formSecret ? "exists" : "none"}`);
 
             // If form has enabled TOTP and has a secret, use it
             if (formEnabled && formSecret) {
-                console.log(`[HttpOptions] getTotpState returning from form values: enabled=true, secret=exists`);
+                log.debug(`[HttpOptions] getTotpState returning from form values: enabled=true, secret=exists`);
                 return {
                     enabled: true,
                     secret: formSecret
@@ -157,11 +160,11 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const refEnabled = totpEnabledRef.current;
             const refSecret = totpSecretRef.current;
 
-            console.log(`[HttpOptions] getTotpState checking refs: enabled=${refEnabled}, secret=${refSecret ? "exists" : "none"}`);
+            log.debug(`[HttpOptions] getTotpState checking refs: enabled=${refEnabled}, secret=${refSecret ? "exists" : "none"}`);
 
             // If refs have TOTP enabled and a secret, use them
             if (refEnabled && refSecret) {
-                console.log(`[HttpOptions] getTotpState returning from refs: enabled=true, secret=exists`);
+                log.debug(`[HttpOptions] getTotpState returning from refs: enabled=true, secret=exists`);
                 return {
                     enabled: true,
                     secret: refSecret
@@ -171,7 +174,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Check requestOptions directly (for already saved/existing TOTP settings)
             const requestOptions = form.getFieldValue('requestOptions') || {};
             if (requestOptions.totpSecret) {
-                console.log(`[HttpOptions] getTotpState found TOTP secret in requestOptions`);
+                log.debug(`[HttpOptions] getTotpState found TOTP secret in requestOptions`);
                 return {
                     enabled: true,
                     secret: requestOptions.totpSecret
@@ -179,7 +182,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             }
 
             // If we get here, TOTP is not enabled or has no secret
-            console.log(`[HttpOptions] getTotpState returning disabled state with no secret`);
+            log.debug(`[HttpOptions] getTotpState returning disabled state with no secret`);
             return {
                 enabled: false,
                 secret: ''
@@ -190,7 +193,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         syncFormState: () => {
             // Get all current form values for debugging
             const allValues = form.getFieldsValue(true);
-            console.log('[HttpOptions] Current form values:', {
+            log.debug('[HttpOptions] Current form values:', {
                 requestOptions: allValues.requestOptions,
                 jsonFilter: allValues.jsonFilter
             });
@@ -198,12 +201,12 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
         // In the useImperativeHandle section:
         forceHeadersState: (headers) => {
-            console.log(`[HttpOptions] forceHeadersState called with ${headers?.length || 0} headers`);
+            log.debug(`[HttpOptions] forceHeadersState called with ${headers?.length || 0} headers`);
 
             // Update form values
             if (Array.isArray(headers) && headers.length > 0) {
                 form.setFieldValue(['requestOptions', 'headers'], headers);
-                console.log('[HttpOptions] Directly set headers in form:', headers);
+                log.debug('[HttpOptions] Directly set headers in form:', headers);
             }
 
             return true;
@@ -221,19 +224,19 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const variables = form.getFieldValue(['requestOptions', 'variables']);
 
             // Log what we're returning for debugging
-            console.log('[HttpOptions] Getting variables state:', variables);
+            log.debug('[HttpOptions] Getting variables state:', variables);
 
             return Array.isArray(variables) ? variables : [];
         },
 
         // Method to force variables state
         forceVariablesState: (variables) => {
-            console.log(`[HttpOptions] forceVariablesState called with ${variables?.length || 0} variables`);
+            log.debug(`[HttpOptions] forceVariablesState called with ${variables?.length || 0} variables`);
 
             // Update form values
             if (Array.isArray(variables) && variables.length > 0) {
                 form.setFieldValue(['requestOptions', 'variables'], variables);
-                console.log('[HttpOptions] Directly set variables in form:', variables);
+                log.debug('[HttpOptions] Directly set variables in form:', variables);
             }
 
             return true;
@@ -244,8 +247,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const jsonFilter = form.getFieldValue('jsonFilter');
 
             // Debug log
-            console.log('[HttpOptions] Current JSON filter in form:', jsonFilter);
-            console.log('[HttpOptions] Current jsonFilterEnabled state:', jsonFilterEnabled);
+            log.debug('[HttpOptions] Current JSON filter in form:', jsonFilter);
+            log.debug('[HttpOptions] Current jsonFilterEnabled state:', jsonFilterEnabled);
 
             // FIXED: Create a clean, normalized object with explicit boolean
             // Combine both form and component state to get the most accurate state
@@ -258,7 +261,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             };
 
             // Log the final state being returned
-            console.log('[HttpOptions] Returning normalized JSON filter state:',
+            log.debug('[HttpOptions] Returning normalized JSON filter state:',
                 JSON.stringify(result));
 
             return result;
@@ -266,7 +269,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
         // Method to explicitly sync JSON filter state
         forceJsonFilterState: (enabled, path) => {
-            console.log(`[HttpOptions] forceJsonFilterState called with enabled=${enabled}, path=${path}`);
+            log.debug(`[HttpOptions] forceJsonFilterState called with enabled=${enabled}, path=${path}`);
 
             // Normalize the values
             const normalizedEnabled = Boolean(enabled);
@@ -279,7 +282,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Always store the path in the ref, even when disabling
             if (path) {
                 jsonFilterPathRef.current = path;
-                console.log(`[HttpOptions] Storing forced path in ref: ${path}`);
+                log.debug(`[HttpOptions] Storing forced path in ref: ${path}`);
             }
 
             // Update form values
@@ -290,7 +293,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 }
             });
 
-            console.log(`[HttpOptions] JSON filter state forced to: enabled=${normalizedEnabled}, path=${normalizedPath}`);
+            log.debug(`[HttpOptions] JSON filter state forced to: enabled=${normalizedEnabled}, path=${normalizedPath}`);
             return true;
         }
     }));
@@ -298,7 +301,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
     // Initialize using props
     useEffect(() => {
         if (initialTotpEnabled !== undefined && initialTotpSecret) {
-            console.log(`[HttpOptions] Initializing from props: enabled=${initialTotpEnabled}, secret=${initialTotpSecret ? "exists" : "none"}`);
+            log.debug(`[HttpOptions] Initializing from props: enabled=${initialTotpEnabled}, secret=${initialTotpSecret ? "exists" : "none"}`);
             setTotpEnabled(initialTotpEnabled);
             totpEnabledRef.current = initialTotpEnabled;
 
@@ -324,18 +327,18 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Check for headers
             if (currentValues.requestOptions) {
                 if (!Array.isArray(currentValues.requestOptions.headers)) {
-                    console.log('[HttpOptions] Fixing missing headers in form');
+                    log.debug('[HttpOptions] Fixing missing headers in form');
                     form.setFieldValue(['requestOptions', 'headers'], []);
                 }
 
                 // Check for variables
                 if (!Array.isArray(currentValues.requestOptions.variables)) {
-                    console.log('[HttpOptions] Fixing missing variables in form');
+                    log.debug('[HttpOptions] Fixing missing variables in form');
                     form.setFieldValue(['requestOptions', 'variables'], []);
                 }
             }
         } catch (err) {
-            console.error('[HttpOptions] Error fixing form structure:', err);
+            log.error('Error fixing form structure:', err);
         }
     }, [form]);
 
@@ -353,7 +356,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 form.setFieldValue(['requestOptions', 'contentType'], 'application/json');
             }
 
-            console.log("[HttpOptions] Initializing component from form values:", {
+            log.debug("[HttpOptions] Initializing component from form values:", {
                 requestOptionsTotpSecret: formValues.requestOptions?.totpSecret ? "exists" : "none",
                 totpSecret: formValues.totpSecret ? "exists" : "none",
                 enableTOTP: formValues.enableTOTP,
@@ -364,14 +367,14 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
             // Fix missing headers if needed
             if (formValues.requestOptions && !Array.isArray(formValues.requestOptions.headers)) {
-                console.log("[HttpOptions] No headers array found in form, adding empty array");
+                log.debug("[HttpOptions] No headers array found in form, adding empty array");
                 formValues.requestOptions.headers = [];
                 form.setFieldValue(['requestOptions', 'headers'], []);
             }
 
             // Fix missing JSON filter if needed
             if (!formValues.jsonFilter) {
-                console.log("[HttpOptions] No jsonFilter found in form, adding default");
+                log.debug("[HttpOptions] No jsonFilter found in form, adding default");
                 formValues.jsonFilter = { enabled: false, path: '' };
                 form.setFieldValue('jsonFilter', { enabled: false, path: '' });
             }
@@ -385,10 +388,10 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 // Always store the path in the ref, even if filter is disabled
                 if (formValues.jsonFilter.path) {
                     jsonFilterPathRef.current = formValues.jsonFilter.path;
-                    console.log(`[HttpOptions] Storing initial JSON filter path: ${formValues.jsonFilter.path}`);
+                    log.debug(`[HttpOptions] Storing initial JSON filter path: ${formValues.jsonFilter.path}`);
                 }
 
-                console.log(`[HttpOptions] Initialized JSON filter: enabled=${isEnabled}, path=${formValues.jsonFilter.path || '(empty)'}`);
+                log.debug(`[HttpOptions] Initialized JSON filter: enabled=${isEnabled}, path=${formValues.jsonFilter.path || '(empty)'}`);
             }
 
             // Initialize refresh state
@@ -409,7 +412,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                     customIntervalRef.current = intervalValue;
                 }
 
-                console.log("[HttpOptions] Initialized refresh options:", {
+                log.debug("[HttpOptions] Initialized refresh options:", {
                     enabled: isEnabled,
                     type: formValues.refreshOptions.type,
                     interval: formValues.refreshOptions.interval
@@ -424,7 +427,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // IMPORTANT: Initialize TOTP state - FIXED PRIORITY ORDER
             // First check if the TOTP secret exists in requestOptions (highest priority)
             if (formValues.requestOptions?.totpSecret) {
-                console.log("[HttpOptions] Found TOTP secret in requestOptions - setting enabled to TRUE:",
+                log.debug("[HttpOptions] Found TOTP secret in requestOptions - setting enabled to TRUE:",
                     formValues.requestOptions.totpSecret ? "exists" : "none");
                 setTotpSecret(formValues.requestOptions.totpSecret);
                 totpSecretRef.current = formValues.requestOptions.totpSecret;
@@ -444,7 +447,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             }
             // Then check for TOTP secret directly in form values
             else if (formValues.totpSecret) {
-                console.log("[HttpOptions] Setting TOTP secret from form field totpSecret:", formValues.totpSecret ? "exists" : "none");
+                log.debug("[HttpOptions] Setting TOTP secret from form field totpSecret:", formValues.totpSecret ? "exists" : "none");
                 setTotpSecret(formValues.totpSecret);
                 totpSecretRef.current = formValues.totpSecret;
 
@@ -464,7 +467,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Finally check enableTOTP field
             else if (formValues.enableTOTP !== undefined) {
                 const shouldEnableTotp = !!formValues.enableTOTP;
-                console.log("[HttpOptions] Setting TOTP enabled to:", shouldEnableTotp, "from enableTOTP field");
+                log.debug("[HttpOptions] Setting TOTP enabled to:", shouldEnableTotp, "from enableTOTP field");
                 setTotpEnabled(shouldEnableTotp);
                 totpEnabledRef.current = shouldEnableTotp;
 
@@ -480,7 +483,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
             // Debug log
             setTimeout(() => {
-                console.log("[HttpOptions] Initialization complete, current state:", {
+                log.debug("[HttpOptions] Initialization complete, current state:", {
                     enabled: totpEnabled,
                     secret: totpSecret ? "[secret exists]" : "none",
                     formEnableTOTP: form.getFieldValue('enableTOTP'),
@@ -493,7 +496,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 });
             }, 100);
         } catch (err) {
-            console.error("[HttpOptions] Error initializing HttpOptions:", err);
+            log.error("Error initializing HttpOptions:", err);
         }
     }, [form, isFormInitialized]);
 
@@ -504,13 +507,13 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             if (lastNotifiedRef.current.enabled !== totpEnabled ||
                 lastNotifiedRef.current.secret !== totpSecret) {
 
-                console.log(`[HttpOptions] Notifying parent of TOTP change: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
+                log.debug(`[HttpOptions] Notifying parent of TOTP change: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
                 notifyParentRef.current(totpEnabled, totpSecret);
 
                 // Update our reference to the last notified values
                 lastNotifiedRef.current = { enabled: totpEnabled, secret: totpSecret };
             } else {
-                console.log(`[HttpOptions] Skipping redundant notification: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
+                log.debug(`[HttpOptions] Skipping redundant notification: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
             }
         }
     }, [totpEnabled, totpSecret, isFormInitialized]);
@@ -656,7 +659,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
     // Handle refresh enabled toggle with improved state persistence
     const handleRefreshToggle = (checked) => {
-        console.log("[HttpOptions] Refresh toggle changed to:", checked);
+        log.debug("[HttpOptions] Refresh toggle changed to:", checked);
 
         // Update both state and ref
         setRefreshEnabled(checked);
@@ -677,14 +680,14 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         });
 
         // Log the update
-        console.log("[HttpOptions] Updated refresh options in form:",
+        log.debug("[HttpOptions] Updated refresh options in form:",
             JSON.stringify(form.getFieldValue('refreshOptions')));
     };
 
     // Handle refresh type change with improved state persistence
     const handleRefreshTypeChange = (e) => {
         const newType = e.target.value;
-        console.log("[HttpOptions] Refresh type changed to:", newType);
+        log.debug("[HttpOptions] Refresh type changed to:", newType);
 
         // Update both state and ref
         setRefreshType(newType);
@@ -725,7 +728,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         });
 
         // Log the update
-        console.log("[HttpOptions] Updated refresh type in form:",
+        log.debug("[HttpOptions] Updated refresh type in form:",
             JSON.stringify(form.getFieldValue('refreshOptions')));
     };
 
@@ -733,7 +736,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
     const handleCustomIntervalChange = (value) => {
         // Ensure value is a positive number
         const interval = value > 0 ? value : 1;
-        console.log("[HttpOptions] Custom interval changed to:", interval);
+        log.debug("[HttpOptions] Custom interval changed to:", interval);
 
         // Update both state and ref
         setCustomInterval(interval);
@@ -758,13 +761,13 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         });
 
         // Log the update
-        console.log("[HttpOptions] Updated custom interval in form:",
+        log.debug("[HttpOptions] Updated custom interval in form:",
             JSON.stringify(form.getFieldValue('refreshOptions')));
     };
 
     // Handle preset interval change with improved state persistence
     const handlePresetIntervalChange = (value) => {
-        console.log("[HttpOptions] Preset interval changed to:", value);
+        log.debug("[HttpOptions] Preset interval changed to:", value);
 
         // Update state and ref for consistency
         setCustomInterval(value); // We use the same state for both preset and custom
@@ -788,13 +791,13 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         });
 
         // Log the update
-        console.log("[HttpOptions] Updated preset interval in form:",
+        log.debug("[HttpOptions] Updated preset interval in form:",
             JSON.stringify(form.getFieldValue('refreshOptions')));
     };
 
     // Handle JSON filter toggle with improved state persistence
     const handleJsonFilterToggle = (enabled) => {
-        console.log(`[HttpOptions] JSON filter toggle changed to: ${enabled}`);
+        log.debug(`[HttpOptions] JSON filter toggle changed to: ${enabled}`);
 
         // Update both state and ref
         setJsonFilterEnabled(enabled);
@@ -806,7 +809,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         // When disabling, always save the current path to our ref
         if (!enabled && currentJsonFilter.path) {
             jsonFilterPathRef.current = currentJsonFilter.path;
-            console.log(`[HttpOptions] Saved JSON filter path before disabling: ${currentJsonFilter.path}`);
+            log.debug(`[HttpOptions] Saved JSON filter path before disabling: ${currentJsonFilter.path}`);
         }
 
         // When enabling, decide which path to use (current form path, saved ref path, or empty)
@@ -815,12 +818,12 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // First try the current form path
             if (currentJsonFilter.path) {
                 pathToUse = currentJsonFilter.path;
-                console.log(`[HttpOptions] Using current form path: ${pathToUse}`);
+                log.debug(`[HttpOptions] Using current form path: ${pathToUse}`);
             }
             // Then try the saved ref path
             else if (jsonFilterPathRef.current) {
                 pathToUse = jsonFilterPathRef.current;
-                console.log(`[HttpOptions] Restoring saved path: ${pathToUse}`);
+                log.debug(`[HttpOptions] Restoring saved path: ${pathToUse}`);
             }
         }
 
@@ -835,7 +838,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             jsonFilter: updatedJsonFilter
         });
 
-        console.log("[HttpOptions] Updated JSON filter in form:",
+        log.debug("[HttpOptions] Updated JSON filter in form:",
             JSON.stringify(form.getFieldValue('jsonFilter')));
 
         // If enabled but no path is set, focus the path input after a small delay
@@ -848,7 +851,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                         pathInput.focus();
                     }
                 } catch (e) {
-                    console.error("Failed to focus JSON path input:", e);
+                    log.error("Failed to focus JSON path input:", e);
                 }
             }, 100);
         }
@@ -856,7 +859,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
     // Handle TOTP toggle with improved state persistence
     const handleTotpToggle = (checked) => {
-        console.log("[HttpOptions] TOTP toggle changed to:", checked);
+        log.debug("[HttpOptions] TOTP toggle changed to:", checked);
 
         // Update both state and ref
         setTotpEnabled(checked);
@@ -880,7 +883,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             if (requestOptions.totpSecret) {
                 delete requestOptions.totpSecret;
                 form.setFieldsValue({ requestOptions });
-                console.log("[HttpOptions] Removed TOTP secret from requestOptions");
+                log.debug("[HttpOptions] Removed TOTP secret from requestOptions");
             }
         } else if (totpSecretRef.current) {
             // If we already have a secret, make sure it's in the form
@@ -889,14 +892,14 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Also update requestOptions
             requestOptions.totpSecret = totpSecretRef.current;
             form.setFieldsValue({ requestOptions });
-            console.log("[HttpOptions] Added TOTP secret to requestOptions");
+            log.debug("[HttpOptions] Added TOTP secret to requestOptions");
         }
     };
 
     // Handle TOTP secret change with improved state persistence
     const handleTotpSecretChange = (e) => {
         const newSecret = e.target.value;
-        console.log("[HttpOptions] TOTP secret changed to:", newSecret ? "exists" : "none");
+        log.debug("[HttpOptions] TOTP secret changed to:", newSecret ? "exists" : "none");
 
         // Update both state and ref
         setTotpSecret(newSecret);
@@ -913,7 +916,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             const requestOptions = form.getFieldValue('requestOptions') || {};
             requestOptions.totpSecret = newSecret;
             form.setFieldsValue({ requestOptions });
-            console.log("[HttpOptions] Updated TOTP secret in requestOptions");
+            log.debug("[HttpOptions] Updated TOTP secret in requestOptions");
         }
     };
 
@@ -931,7 +934,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Normalize secret for better compatibility
             const normalizedSecret = totpSecret.replace(/\s/g, '').replace(/=/g, '');
 
-            console.log(`[HttpOptions] Generating TOTP with secret: ${normalizedSecret}`);
+            log.debug(`[HttpOptions] Generating TOTP with secret: ${normalizedSecret}`);
 
             // Use the window.generateTOTP function
             const totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
@@ -943,7 +946,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 setTotpCode(totpCode);
             }
         } catch (error) {
-            console.error('[HttpOptions] Error generating TOTP:', error);
+            log.error('Error generating TOTP:', error);
             setTotpError(`Error: ${error.message}`);
             setTotpCode('ERROR');
         } finally {
@@ -1001,13 +1004,13 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
             if (!Array.isArray(values.requestOptions.headers)) {
                 values.requestOptions.headers = [];
-                console.log("[HttpOptions] Fixed missing headers array in form");
+                log.debug("[HttpOptions] Fixed missing headers array in form");
             }
 
             // IMPORTANT FIX: Also check for queryParams array
             if (!Array.isArray(values.requestOptions.queryParams)) {
                 values.requestOptions.queryParams = [];
-                console.log("[HttpOptions] Fixed missing queryParams array in form");
+                log.debug("[HttpOptions] Fixed missing queryParams array in form");
             }
 
             // CRITICAL FIX: Ensure variables array is included and properly copied
@@ -1017,17 +1020,17 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 values.requestOptions.variables = Array.isArray(formVariables)
                     ? JSON.parse(JSON.stringify(formVariables)) // Deep copy to avoid reference issues
                     : [];
-                console.log("[HttpOptions] Fixed missing variables array, found variables:",
+                log.debug("[HttpOptions] Fixed missing variables array, found variables:",
                     values.requestOptions.variables.length);
             }
 
             if (!values.jsonFilter) {
                 values.jsonFilter = { enabled: false, path: '' };
-                console.log("[HttpOptions] Fixed missing jsonFilter in form");
+                log.debug("[HttpOptions] Fixed missing jsonFilter in form");
             }
 
             // DEBUGGING: Log the complete variables array
-            console.log("[HttpOptions] Variables for HTTP request:",
+            log.debug("[HttpOptions] Variables for HTTP request:",
                 JSON.stringify(values.requestOptions.variables));
 
             // Check if JSON filter is enabled but missing a path
@@ -1052,64 +1055,64 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
             // Log the headers directly from the form for debugging
             const formHeaders = form.getFieldValue(['requestOptions', 'headers']);
-            console.log("[HttpOptions] Headers direct from form:", formHeaders);
+            log.debug("[HttpOptions] Headers direct from form:", formHeaders);
 
             // IMPORTANT FIX: Also log queryParams directly from the form
             const formQueryParams = form.getFieldValue(['requestOptions', 'queryParams']);
-            console.log("[HttpOptions] Query params direct from form:", formQueryParams);
+            log.debug("[HttpOptions] Query params direct from form:", formQueryParams);
 
             // IMPORTANT FIX: Log variables directly from the form
             const formVariables = form.getFieldValue(['requestOptions', 'variables']);
-            console.log("[HttpOptions] Variables direct from form:", formVariables);
+            log.debug("[HttpOptions] Variables direct from form:", formVariables);
 
             // Add query params if defined - FIX: Use formQueryParams directly
             if (Array.isArray(formQueryParams) && formQueryParams.length > 0) {
-                console.log("[HttpOptions] Explicitly using query params from form field");
+                log.debug("[HttpOptions] Explicitly using query params from form field");
                 formQueryParams.forEach(param => {
                     if (param && param.key) {
                         requestOptions.queryParams[param.key] = param.value || '';
-                        console.log(`[HttpOptions] Added query param from form: ${param.key} = ${param.value || ''}`);
+                        log.debug(`[HttpOptions] Added query param from form: ${param.key} = ${param.value || ''}`);
                     }
                 });
             } else if (values.requestOptions?.queryParams && Array.isArray(values.requestOptions.queryParams)) {
                 values.requestOptions.queryParams.forEach(param => {
                     if (param && param.key) {
                         requestOptions.queryParams[param.key] = param.value || '';
-                        console.log(`[HttpOptions] Added query param: ${param.key} = ${param.value || ''}`);
+                        log.debug(`[HttpOptions] Added query param: ${param.key} = ${param.value || ''}`);
                     }
                 });
             }
-            console.log("[HttpOptions] Query params after formatting:", requestOptions.queryParams);
+            log.debug("[HttpOptions] Query params after formatting:", requestOptions.queryParams);
 
             // Process headers from array format to object
-            console.log("[HttpOptions] Full requestOptions from form:", JSON.stringify(values.requestOptions || {}, null, 2));
-            console.log("[HttpOptions] Headers from form:", values.requestOptions?.headers);
+            log.debug("[HttpOptions] Full requestOptions from form:", JSON.stringify(values.requestOptions || {}, null, 2));
+            log.debug("[HttpOptions] Headers from form:", values.requestOptions?.headers);
 
             // Make sure to explicitly preserve headers in the request options
             if (Array.isArray(formHeaders) && formHeaders.length > 0) {
-                console.log("[HttpOptions] Explicitly using headers from form field");
+                log.debug("[HttpOptions] Explicitly using headers from form field");
                 formHeaders.forEach(header => {
                     if (header && header.key) {
                         requestOptions.headers[header.key] = header.value || '';
-                        console.log(`[HttpOptions] Added header from form: ${header.key} = ${header.value || ''}`);
+                        log.debug(`[HttpOptions] Added header from form: ${header.key} = ${header.value || ''}`);
                     }
                 });
             } else if (values.requestOptions?.headers && Array.isArray(values.requestOptions.headers)) {
                 values.requestOptions.headers.forEach(header => {
                     if (header && header.key) {
                         requestOptions.headers[header.key] = header.value || '';
-                        console.log(`[HttpOptions] Added header: ${header.key} = ${header.value || ''}`);
+                        log.debug(`[HttpOptions] Added header: ${header.key} = ${header.value || ''}`);
                     }
                 });
             }
-            console.log("[HttpOptions] Headers after formatting:", requestOptions.headers);
+            log.debug("[HttpOptions] Headers after formatting:", requestOptions.headers);
 
             // CRITICAL FIX: Make sure variables are explicitly included in the requestOptions
             if (Array.isArray(formVariables) && formVariables.length > 0) {
-                console.log("[HttpOptions] Explicitly using variables from form field");
+                log.debug("[HttpOptions] Explicitly using variables from form field");
                 // Deep copy the variables to avoid reference issues
                 requestOptions.variables = JSON.parse(JSON.stringify(formVariables));
-                console.log(`[HttpOptions] Added ${requestOptions.variables.length} variables to request options`);
+                log.debug(`[HttpOptions] Added ${requestOptions.variables.length} variables to request options`);
             }
 
             // Add body if applicable
@@ -1123,11 +1126,11 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             // Add TOTP secret if enabled
             if (totpEnabled && totpSecret) {
                 requestOptions.totpSecret = totpSecret;
-                console.log("[HttpOptions] Adding TOTP secret to request");
+                log.debug("[HttpOptions] Adding TOTP secret to request");
             }
 
             // Add JSON filter from form values - properly check both enabled flag and state
-            console.log("[HttpOptions] JSON Filter from form:", values.jsonFilter);
+            log.debug("[HttpOptions] JSON Filter from form:", values.jsonFilter);
 
             // Create a new jsonFilter object ensuring we check the form state correctly
             const jsonFilter = { enabled: false, path: '' };
@@ -1136,20 +1139,20 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             if (values.jsonFilter && values.jsonFilter.enabled === true && values.jsonFilter.path) {
                 jsonFilter.enabled = true;
                 jsonFilter.path = values.jsonFilter.path;
-                console.log(`[HttpOptions] JSON Filter is ENABLED with path: ${values.jsonFilter.path}`);
+                log.debug(`[HttpOptions] JSON Filter is ENABLED with path: ${values.jsonFilter.path}`);
             }
 
             // Alternatively, check if component state says it's enabled
             else if (jsonFilterEnabled && values.jsonFilter?.path) {
                 jsonFilter.enabled = true;
                 jsonFilter.path = values.jsonFilter.path;
-                console.log(`[HttpOptions] JSON Filter enabled from component state with path: ${values.jsonFilter.path}`);
+                log.debug(`[HttpOptions] JSON Filter enabled from component state with path: ${values.jsonFilter.path}`);
             }
 
-            console.log("[HttpOptions] Final JSON Filter for test:", jsonFilter);
-            console.log("[HttpOptions] Making test request with headers:", requestOptions.headers);
-            console.log("[HttpOptions] Making test request with query params:", requestOptions.queryParams);
-            console.log("[HttpOptions] Making test request with variables:", requestOptions.variables);
+            log.debug("[HttpOptions] Final JSON Filter for test:", jsonFilter);
+            log.debug("[HttpOptions] Making test request with headers:", requestOptions.headers);
+            log.debug("[HttpOptions] Making test request with query params:", requestOptions.queryParams);
+            log.debug("[HttpOptions] Making test request with variables:", requestOptions.variables);
 
             // Make the test request
             const response = await http.testRequest(

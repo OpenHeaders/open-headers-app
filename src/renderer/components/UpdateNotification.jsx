@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 import { Button, App, Progress } from 'antd';
 import { DownloadOutlined, ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+const { createLogger } = require('../utils/logger');
+const log = createLogger('UpdateNotification');
 
 const UpdateNotification = forwardRef((props, ref) => {
     const { notification, modal } = App.useApp();
@@ -46,9 +48,9 @@ const UpdateNotification = forwardRef((props, ref) => {
     const debugLog = (message, data = null) => {
         const timestamp = new Date().toISOString().slice(11, 19);
         if (data) {
-            console.log(`[${timestamp}] [UpdateNotification] ${message}`, data);
+            log.debug(`[${timestamp}] ${message}`, data);
         } else {
-            console.log(`[${timestamp}] [UpdateNotification] ${message}`);
+            log.debug(`[${timestamp}] ${message}`);
         }
     };
 
