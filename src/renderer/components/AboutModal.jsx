@@ -28,11 +28,13 @@ const AboutModal = ({ open, onClose, appVersion }) => {
             centered
             className="about-modal"
             closable={false}
-            bodyStyle={{
-                padding: '32px 24px',
-                textAlign: 'center',
-                borderRadius: '12px',
-                background: 'linear-gradient(to bottom, #fafafa, #f5f5f5)'
+            styles={{
+                body: {
+                    padding: '32px 24px',
+                    textAlign: 'center',
+                    borderRadius: '12px',
+                    background: 'linear-gradient(to bottom, #fafafa, #f5f5f5)'
+                }
             }}
         >
             <div className="about-content">

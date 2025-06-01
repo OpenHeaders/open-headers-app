@@ -119,9 +119,11 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                 </Button>
             ]}
             centered
-            bodyStyle={{
-                padding: '20px 24px',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
+            styles={{
+                body: {
+                    padding: '20px 24px',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif'
+                }
             }}
         >
             <Form
