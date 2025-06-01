@@ -1,14 +1,15 @@
 const { createLogger } = require('../utils/logger');
+const timeManager = require('./TimeManager');
 const log = createLogger('NetworkAwareScheduler');
 
 /**
  * Handles network-aware scheduling of refresh operations.
  * Separates scheduling logic from refresh execution.
+ * Integrated with TimeManager for robust time handling.
  */
 class NetworkAwareScheduler {
   constructor() {
     this.schedules = new Map(); // sourceId -> schedule info
-    this.timers = new Map(); // sourceId -> timer
     this.overdueCheckInterval = null;
     this.refreshCallback = null;
     this.networkOfflineTime = null; // Track when network went offline
@@ -16,22 +17,189 @@ class NetworkAwareScheduler {
     this.lastNetworkQuality = 'good'; // Track last known network quality
     this.networkChangeDebounceTimer = null; // Debounce rapid network changes
     this.isDestroyed = false; // Track if instance has been destroyed
-    this.activeRefreshes = new Set(); // Track active refresh operations
+    this.activeRefreshes = new Set(); // Track sourceIds of active refresh operations
     this.overdueCheckInProgress = false; // Prevent overlapping overdue checks
+    this.timeEventUnsubscribe = null; // TimeManager event listener cleanup
+    this.masterTimer = null; // Single timer for all scheduling
+    this.MASTER_TIMER_INTERVAL = 1000; // Check every second
   }
   
   /**
    * Initialize the scheduler with a callback for refresh execution
    */
-  initialize(refreshCallback) {
+  async initialize(refreshCallback) {
     this.refreshCallback = refreshCallback;
+    
+    // Initialize TimeManager
+    await timeManager.initialize();
+    
+    // Subscribe to time events
+    this.timeEventUnsubscribe = timeManager.addListener((events) => {
+      this.handleTimeEvents(events);
+    });
+    
+    // Start master timer instead of individual timers
+    this.startMasterTimer();
     
     // Start periodic overdue check
     this.startOverdueCheck();
     
-    // Note: Time jump detection removed - RefreshManager handles system sleep/wake events properly
+    log.info('NetworkAwareScheduler initialized with TimeManager integration');
+  }
+  
+  /**
+   * Handle time events from TimeManager
+   */
+  handleTimeEvents(events) {
+    log.info('Time events detected', { count: events.length });
     
-    log.debug('Initialized');
+    for (const event of events) {
+      switch (event.type) {
+        case timeManager.EventType.TIME_JUMP_FORWARD:
+        case timeManager.EventType.TIME_JUMP_BACKWARD:
+          log.warn(`Time jump detected: ${event.type}`, { delta: event.delta });
+          this.handleTimeJump();
+          break;
+          
+        case timeManager.EventType.TIMEZONE_CHANGE:
+          log.info('Timezone changed', { from: event.from, to: event.to });
+          this.handleTimezoneChange();
+          break;
+          
+        case timeManager.EventType.DST_CHANGE:
+          log.info('DST change detected', { offsetChange: event.offsetChange });
+          this.handleDSTChange();
+          break;
+          
+        case timeManager.EventType.SYSTEM_WAKE:
+          log.info('System wake detected by TimeManager');
+          this.checkOverdueSources('system_wake').catch(err => {
+            log.error('Error checking overdue sources after system wake:', err);
+          });
+          break;
+          
+        case timeManager.EventType.CLOCK_DRIFT:
+          // Small drifts are handled by regular scheduling
+          log.debug('Clock drift detected', { drift: event.drift });
+          break;
+      }
+    }
+  }
+  
+  /**
+   * Handle time jump (forward or backward)
+   */
+  handleTimeJump() {
+    // Recalculate all schedules
+    const now = Date.now();
+    
+    for (const [sourceId, schedule] of this.schedules) {
+      // Recalculate next refresh based on current time
+      if (schedule.lastRefresh) {
+        const timeSinceLastRefresh = now - schedule.lastRefresh;
+        
+        // If negative (time went backward), treat as if just refreshed
+        if (timeSinceLastRefresh < 0) {
+          schedule.lastRefresh = now;
+          schedule.nextRefresh = now + schedule.intervalMs;
+        } else if (timeSinceLastRefresh > schedule.intervalMs) {
+          // Overdue - refresh soon
+          schedule.nextRefresh = now + Math.random() * 5000; // 0-5s jitter
+        } else {
+          // Normal case - maintain interval
+          schedule.nextRefresh = schedule.lastRefresh + schedule.intervalMs;
+        }
+      }
+    }
+    
+    // Check for overdue sources
+    this.checkOverdueSources('time_jump').catch(err => {
+      log.error('Error checking overdue sources after time jump:', err);
+    });
+  }
+  
+  /**
+   * Handle timezone change
+   */
+  handleTimezoneChange() {
+    // Timezone changes don't affect UTC timestamps, but user expectations might change
+    // Log for debugging but no action needed for absolute time scheduling
+    const timeInfo = timeManager.getCurrentTimeInfo();
+    log.info('Current time info after timezone change', timeInfo);
+    
+    // Optionally trigger immediate check for sources that might appear overdue to user
+    this.checkOverdueSources('timezone_change').catch(err => {
+      log.error('Error checking sources after timezone change:', err);
+    });
+  }
+  
+  /**
+   * Handle DST change
+   */
+  handleDSTChange() {
+    // Similar to timezone change - UTC times remain valid
+    // This is mainly for logging and debugging
+    const timeInfo = timeManager.getCurrentTimeInfo();
+    log.info('Current time info after DST change', timeInfo);
+  }
+  
+  /**
+   * Start master timer for checking all schedules
+   */
+  startMasterTimer() {
+    if (this.masterTimer) return;
+    
+    this.masterTimer = setInterval(() => {
+      if (this.isDestroyed) {
+        this.stopMasterTimer();
+        return;
+      }
+      
+      this.checkSchedules();
+    }, this.MASTER_TIMER_INTERVAL);
+    
+    log.info('Master timer started - checking schedules every second');
+  }
+  
+  /**
+   * Stop master timer
+   */
+  stopMasterTimer() {
+    if (this.masterTimer) {
+      clearInterval(this.masterTimer);
+      this.masterTimer = null;
+    }
+  }
+  
+  /**
+   * Check all schedules and trigger refreshes as needed
+   */
+  checkSchedules() {
+    const now = Date.now();
+    
+    for (const [sourceId, schedule] of this.schedules) {
+      // Skip if no next refresh time or if offline
+      if (!schedule.nextRefresh || !this.lastNetworkState.isOnline) {
+        continue;
+      }
+      
+      // Check if it's time to refresh (with 500ms grace period)
+      if (now >= schedule.nextRefresh - 500) {
+        // Skip if already refreshing
+        if (this.activeRefreshes.has(sourceId)) {
+          continue;
+        }
+        
+        // Trigger refresh
+        try {
+          this.triggerRefresh(sourceId, 'scheduled').catch(err => {
+            log.error(`Error triggering scheduled refresh for ${sourceId}:`, err);
+          });
+        } catch (err) {
+          log.error(`Synchronous error triggering scheduled refresh for ${sourceId}:`, err);
+        }
+      }
+    }
   }
   
   /**
@@ -85,14 +253,19 @@ class NetworkAwareScheduler {
       maxRetries: 3,
       backoffFactor: 2,
       scheduledWhileOffline: false, // Track if initially scheduled while offline
+      hasBeenScheduled: existingSchedule ? true : false, // Track if this is first time scheduling
       failureCount: 0, // Track consecutive failures
-      maxConsecutiveFailures: 10 // Stop trying after 10 consecutive failures
+      maxConsecutiveFailures: 10, // Stop trying after 10 consecutive failures
+      // Wall-clock alignment options
+      alignToMinute: source.refreshOptions?.alignToMinute || false,
+      alignToHour: source.refreshOptions?.alignToHour || false,
+      alignToDay: source.refreshOptions?.alignToDay || false
     };
     
     this.schedules.set(source.sourceId, schedule);
     const networkState = await window.electronAPI.getNetworkState();
     await this.calculateNextRefresh(source.sourceId, networkState);
-    this.setTimer(source.sourceId);
+    // Note: No individual timer needed - master timer handles all schedules
     
     // Check if source is already overdue
     const now = Date.now();
@@ -106,7 +279,10 @@ class NetworkAwareScheduler {
         log.info(`Scheduled overdue source ${source.sourceId} - overdue by ${Math.round(overdueBy / 1000)}s, will refresh immediately`);
       }
     } else {
-      log.info(`Scheduled source ${source.sourceId} with interval ${intervalMs}ms (${source.refreshOptions?.interval} minutes)`);
+      const alignmentInfo = (schedule.alignToDay ? 'day-aligned' : 
+                           schedule.alignToHour ? 'hour-aligned' : 
+                           schedule.alignToMinute ? 'minute-aligned' : 'interval-based');
+      log.info(`Scheduled source ${source.sourceId} with interval ${intervalMs}ms (${source.refreshOptions?.interval} minutes, ${alignmentInfo})`);
     }
   }
   
@@ -121,7 +297,7 @@ class NetworkAwareScheduler {
   }
   
   /**
-   * Calculate next refresh time based on network conditions
+   * Calculate next refresh time based on network conditions and alignment options
    */
   async calculateNextRefresh(sourceId, networkState = null) {
     sourceId = String(sourceId); // Ensure sourceId is a string
@@ -141,13 +317,23 @@ class NetworkAwareScheduler {
     
     // Adjust delay based on network conditions
     if (!networkState.isOnline) {
-      // When offline, calculate next refresh time but don't set timer
+      // When offline, calculate next refresh time but master timer won't trigger it
       // This preserves the schedule for when network returns
       const baseTime = schedule.lastRefresh || now;
-      schedule.nextRefresh = baseTime + delay;
+      
+      // Use wall-clock alignment if configured
+      if (schedule.alignToMinute || schedule.alignToHour || schedule.alignToDay) {
+        schedule.nextRefresh = timeManager.getNextAlignedTime(delay, baseTime, {
+          alignToMinute: schedule.alignToMinute,
+          alignToHour: schedule.alignToHour,
+          alignToDay: schedule.alignToDay
+        });
+      } else {
+        schedule.nextRefresh = baseTime + delay;
+      }
       
       // Mark if this is initial scheduling while offline
-      if (!this.timers.has(sourceId) && !schedule.scheduledWhileOffline) {
+      if (!schedule.scheduledWhileOffline) {
         schedule.scheduledWhileOffline = true;
         log.info(`Source ${sourceId} initially scheduled while offline`);
       }
@@ -178,15 +364,16 @@ class NetworkAwareScheduler {
       
       if (isOverdue) {
         // Check if this is during initial scheduling or was scheduled while offline
-        const isInitialSchedule = !this.timers.has(sourceId) || schedule.scheduledWhileOffline;
+        const isInitialSchedule = !schedule.hasBeenScheduled || schedule.scheduledWhileOffline;
         
         if (isInitialSchedule) {
           // For initial schedule of overdue source, refresh immediately
           schedule.nextRefresh = now + 100; // 100ms delay to allow UI to settle
           log.debug(`Source ${sourceId} is overdue ${schedule.scheduledWhileOffline ? '(was offline)' : '(initial load)'}, scheduling immediate refresh`);
           
-          // Clear the offline flag
+          // Clear the offline flag and mark as scheduled
           schedule.scheduledWhileOffline = false;
+          schedule.hasBeenScheduled = true;
         } else {
           // For network recovery or other cases, add jitter to avoid thundering herd
           const jitter = Math.random() * 5000; // 0-5 seconds random jitter
@@ -202,11 +389,22 @@ class NetworkAwareScheduler {
     
     // Calculate from last refresh or now
     const baseTime = schedule.lastRefresh || now;
-    schedule.nextRefresh = baseTime + delay;
     
-    // Ensure next refresh is in the future
-    if (schedule.nextRefresh <= now) {
-      schedule.nextRefresh = now + Math.min(delay, 5000); // Min 5 second delay
+    // Use wall-clock alignment if configured
+    if (schedule.alignToMinute || schedule.alignToHour || schedule.alignToDay) {
+      schedule.nextRefresh = timeManager.getNextAlignedTime(delay, baseTime, {
+        alignToMinute: schedule.alignToMinute,
+        alignToHour: schedule.alignToHour,
+        alignToDay: schedule.alignToDay
+      });
+    } else {
+      // Standard interval-based scheduling
+      schedule.nextRefresh = baseTime + delay;
+      
+      // Ensure next refresh is in the future
+      if (schedule.nextRefresh <= now) {
+        schedule.nextRefresh = now + Math.min(delay, 5000); // Min 5 second delay
+      }
     }
     
     return schedule.nextRefresh;
@@ -214,61 +412,20 @@ class NetworkAwareScheduler {
   
   /**
    * Set or update timer for a source
+   * @deprecated Using master timer instead of individual timers
    */
   setTimer(sourceId) {
-    sourceId = String(sourceId); // Ensure sourceId is a string
-    const schedule = this.schedules.get(sourceId);
-    if (!schedule || !schedule.nextRefresh) {
-      log.warn(`Cannot set timer for source ${sourceId} - no schedule or nextRefresh`);
-      return;
-    }
-    
-    // Don't set timers when offline
-    if (schedule.lastNetworkState === false) {
-      log.debug(`Skipping timer for source ${sourceId} - network is offline`);
-      return;
-    }
-    
-    // Clear existing timer first to prevent duplicates
-    this.clearTimer(sourceId);
-    
-    const now = Date.now();
-    const delay = Math.max(100, schedule.nextRefresh - now); // Minimum 100ms delay to prevent immediate firing
-    
-    // Prevent setting timers for extremely long delays
-    if (delay > 24 * 60 * 60 * 1000) { // 24 hours
-      log.warn(`Timer delay too long for source ${sourceId}: ${delay}ms, capping at 24 hours`);
-      return;
-    }
-    
-    // Capture sourceId in closure to ensure it's available when timer fires
-    const capturedSourceId = sourceId;
-    const timer = setTimeout(() => {
-      // Remove timer from map when it fires
-      this.timers.delete(capturedSourceId);
-      // Double-check both timer and schedule still exist
-      if (!this.isDestroyed && this.schedules.has(capturedSourceId)) {
-        this.triggerRefresh(capturedSourceId).catch(err => {
-          log.error(`Error in scheduled refresh for ${capturedSourceId}:`, err);
-        });
-      }
-    }, delay);
-    
-    this.timers.set(sourceId, timer);
-    
-    log.debug(`Timer set for source ${sourceId}, will refresh in ${Math.round(delay/1000)}s`);
+    // No-op - master timer handles all scheduling
+    // Kept for backward compatibility
   }
   
   /**
    * Clear timer for a source
+   * @deprecated Using master timer instead of individual timers
    */
   clearTimer(sourceId) {
-    sourceId = String(sourceId); // Ensure sourceId is a string
-    const timer = this.timers.get(sourceId);
-    if (timer) {
-      clearTimeout(timer);
-      this.timers.delete(sourceId);
-    }
+    // No-op - master timer handles all scheduling
+    // Kept for backward compatibility
   }
   
   /**
@@ -296,20 +453,16 @@ class NetworkAwareScheduler {
       return;
     }
     
-    // Track this refresh operation with proper error handling
-    let refreshPromise;
+    // Track this refresh operation
+    this.activeRefreshes.add(sourceId);
+    
     try {
-      refreshPromise = this._performRefresh(sourceId, reason);
-      this.activeRefreshes.add(refreshPromise);
-      
-      await refreshPromise;
+      await this._performRefresh(sourceId, reason);
     } catch (error) {
       log.error(`Error in triggerRefresh for ${sourceId}:`, error);
       // Don't re-throw - we've logged it and callers may not handle it
     } finally {
-      if (refreshPromise) {
-        this.activeRefreshes.delete(refreshPromise);
-      }
+      this.activeRefreshes.delete(sourceId);
     }
   }
   
@@ -395,7 +548,6 @@ class NetworkAwareScheduler {
     
     // Reschedule for next refresh
     await this.calculateNextRefresh(sourceId, networkStateAfterRefresh);
-    this.setTimer(sourceId);
   }
   
   /**
@@ -418,14 +570,10 @@ class NetworkAwareScheduler {
       schedule.lastRefresh = timestamp;
       schedule.retryCount = 0; // Reset retry count on successful refresh
       schedule.failureCount = 0; // Reset failure count on successful refresh
+      schedule.hasBeenScheduled = true; // Mark as having been scheduled
       
-      // Don't await here to avoid blocking, but track the operation
-      this.calculateNextRefresh(sourceId).then(() => {
-        // Check if source still exists before setting timer
-        if (this.schedules.has(sourceId)) {
-          this.setTimer(sourceId);
-        }
-      }).catch(err => {
+      // Don't await here to avoid blocking
+      this.calculateNextRefresh(sourceId).catch(err => {
         log.error(`Error recalculating refresh time for ${sourceId}:`, err);
       });
     }
@@ -473,14 +621,12 @@ class NetworkAwareScheduler {
       
       // Debounce offline handling to prevent duplicate logs
       this.networkChangeDebounceTimer = setTimeout(() => {
-        // Double-check we're still offline and have timers to clear
-        if (!this.lastNetworkState.isOnline && this.timers.size > 0) {
-          log.info('Network went offline, clearing all timers');
+        // Double-check we're still offline
+        if (!this.lastNetworkState.isOnline) {
+          log.info('Network went offline, pausing refresh scheduling');
           this.networkOfflineTime = Date.now();
           this.lastNetworkQuality = 'offline';
-          for (const sourceId of this.timers.keys()) {
-            this.clearTimer(sourceId);
-          }
+          // Master timer will skip offline sources automatically
         }
       }, 500); // 500ms debounce to handle multiple rapid state changes
       return;
@@ -526,7 +672,6 @@ class NetworkAwareScheduler {
         schedule.scheduledWhileOffline = false;
         // Recalculate with online state to trigger immediate refresh if overdue
         await this.calculateNextRefresh(sourceId, networkState);
-        this.setTimer(sourceId);
       }
     }
     
@@ -579,15 +724,10 @@ class NetworkAwareScheduler {
         // Don't modify lastRefresh, just ensure timers are set properly
         for (const { sourceId } of overdueSources) {
           if (this.schedules.has(sourceId)) {
-            // Timer should already be set by triggerRefresh completion
-            // This is just a safety check
-            if (!this.timers.has(sourceId)) {
-              this.calculateNextRefresh(sourceId, networkState).then(() => {
-                this.setTimer(sourceId);
-              }).catch(err => {
-                log.error(`Error rescheduling source ${sourceId} after catch-up:`, err);
-              });
-            }
+            // Recalculate next refresh time if needed
+            this.calculateNextRefresh(sourceId, networkState).catch(err => {
+              log.error(`Error rescheduling source ${sourceId} after catch-up:`, err);
+            });
           }
         }
       }, catchUpTime + 5000); // Add 5 seconds buffer after all overdue refreshes
@@ -604,7 +744,6 @@ class NetworkAwareScheduler {
     for (const sourceId of remainingSourceIds) {
       if (this.schedules.has(sourceId)) {
         await this.calculateNextRefresh(sourceId, networkState);
-        this.setTimer(sourceId);
       }
     }
   }
@@ -797,7 +936,7 @@ class NetworkAwareScheduler {
   getStatistics() {
     const stats = {
       totalScheduled: this.schedules.size,
-      activeTimers: this.timers.size,
+      activeRefreshes: this.activeRefreshes.size,
       overdueCount: this.getOverdueSources().length,
       schedules: []
     };
@@ -823,13 +962,17 @@ class NetworkAwareScheduler {
     // Mark as destroyed to prevent new operations
     this.isDestroyed = true;
     
-    // Clear all timers
-    for (const sourceId of this.timers.keys()) {
-      this.clearTimer(sourceId);
-    }
+    // Stop master timer
+    this.stopMasterTimer();
     
     // Clear overdue check interval
     this.stopOverdueCheck();
+    
+    // Unsubscribe from TimeManager events
+    if (this.timeEventUnsubscribe) {
+      this.timeEventUnsubscribe();
+      this.timeEventUnsubscribe = null;
+    }
     
     // Clear network change debounce timer
     if (this.networkChangeDebounceTimer) {
@@ -839,17 +982,10 @@ class NetworkAwareScheduler {
     
     // Wait for active refreshes to complete (with timeout)
     if (this.activeRefreshes.size > 0) {
-      log.info(`Waiting for ${this.activeRefreshes.size} active refreshes to complete`);
+      log.info(`Active refresh operations in progress: ${Array.from(this.activeRefreshes).join(', ')}`);
+      // Give ongoing refreshes a chance to complete
       const timeout = new Promise(resolve => setTimeout(resolve, 5000)); // 5 second timeout
-      const activeRefreshPromises = Array.from(this.activeRefreshes);
-      try {
-        await Promise.race([
-          Promise.all(activeRefreshPromises),
-          timeout
-        ]);
-      } catch (err) {
-        log.error('Error waiting for active refreshes:', err);
-      }
+      await timeout;
     }
     
     // Clear all schedules

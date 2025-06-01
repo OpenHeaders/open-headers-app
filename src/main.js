@@ -846,6 +846,19 @@ app.whenReady().then(async () => {
     // Initialize network monitoring
     await initializeNetworkMonitor();
 
+    // Register essential IPC handlers before creating window
+    // These are needed immediately when the renderer loads
+    ipcMain.handle('getAppVersion', () => {
+        return app.getVersion();
+    });
+
+    ipcMain.handle('getSettings', handleGetSettings);
+    ipcMain.handle('saveSettings', handleSaveSettings);
+    ipcMain.handle('getSystemTimezone', handleGetSystemTimezone);
+    ipcMain.handle('loadFromStorage', handleLoadFromStorage);
+    ipcMain.handle('saveToStorage', handleSaveToStorage);
+    ipcMain.handle('makeHttpRequest', handleMakeHttpRequest);
+
     createWindow();
     createTray();
 
@@ -1019,6 +1032,9 @@ function setupIPC() {
         };
     });
 
+    // Get current system timezone - handled by handleGetSystemTimezone
+    // Handler already registered in pre-registered handlers section
+
     ipcMain.on('updateWebSocketSources', (event, sources) => {
         // Initialize WebSocket if needed (lazy loading)
         if (!webSocketService) {
@@ -1144,17 +1160,14 @@ function setupIPC() {
     // Environment variable operations
     ipcMain.handle('getEnvVariable', handleGetEnvVariable);
 
-    // Storage operations
-    ipcMain.handle('saveToStorage', handleSaveToStorage);
-    ipcMain.handle('loadFromStorage', handleLoadFromStorage);
+    // Storage operations - already registered before createWindow
 
-    // HTTP operations
-    ipcMain.handle('makeHttpRequest', handleMakeHttpRequest);
+    // HTTP operations - handler already registered in pre-registered handlers section
 
     // Application settings
     ipcMain.handle('getAppPath', handleGetAppPath);
-    ipcMain.handle('saveSettings', handleSaveSettings);
-    ipcMain.handle('getSettings', handleGetSettings);
+    // The following handlers are already registered before createWindow:
+    // getSystemTimezone, saveSettings, getSettings
 
     // System integration
     ipcMain.handle('setAutoLaunch', handleSetAutoLaunch);
@@ -1182,9 +1195,7 @@ function setupIPC() {
         app.quit();
     });
 
-    ipcMain.handle('getAppVersion', () => {
-        return app.getVersion();
-    });
+    // getAppVersion handler already registered before createWindow
 
     ipcMain.handle('openExternal', async (_, url) => {
         try {
@@ -1351,6 +1362,190 @@ async function handleLoadFromStorage(_, filename) {
 
 function handleGetAppPath() {
     return app.getPath('userData');
+}
+
+/**
+ * Get system timezone directly from OS
+ * This bypasses JavaScript's cached timezone information
+ */
+async function handleGetSystemTimezone() {
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    let timezone = null;
+    let method = 'unknown';
+    
+    try {
+        if (process.platform === 'darwin') {
+            // macOS: Read timezone from /etc/localtime symlink
+            try {
+                const { stdout } = await execAsync('readlink /etc/localtime');
+                // Handle both /usr/share/zoneinfo and /var/db/timezone/zoneinfo paths
+                const match = stdout.trim().match(/zoneinfo\/(.+)$/);
+                if (match) {
+                    timezone = match[1];
+                    method = 'readlink';
+                }
+            } catch (e) {
+                // Silent catch, will try fallback
+            }
+        } else if (process.platform === 'linux') {
+            // Linux: Read /etc/localtime symlink or /etc/timezone
+            try {
+                const { stdout } = await execAsync('readlink /etc/localtime');
+                const match = stdout.trim().match(/zoneinfo\/(.+)$/);
+                if (match) {
+                    timezone = match[1];
+                    method = 'readlink';
+                }
+            } catch {
+                // Fallback to /etc/timezone
+                try {
+                    const { stdout } = await execAsync('cat /etc/timezone');
+                    timezone = stdout.trim();
+                    method = 'etc_timezone';
+                } catch {
+                    // Silent catch
+                }
+            }
+        } else if (process.platform === 'win32') {
+            // Windows: Use PowerShell to get timezone
+            try {
+                const { stdout } = await execAsync('powershell -Command "Get-TimeZone | Select-Object -ExpandProperty Id"');
+                // Windows uses different timezone names, need to map to IANA
+                timezone = mapWindowsToIANA(stdout.trim());
+                method = 'powershell';
+            } catch {
+                // Silent catch
+            }
+        }
+    } catch (error) {
+        log.error('Error getting system timezone:', error);
+        method = 'error_fallback';
+    }
+    
+    // If we couldn't get system timezone, fall back to JavaScript
+    if (!timezone) {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        method = 'intl_fallback';
+    }
+    
+    // Get current offset
+    const offset = new Date().getTimezoneOffset();
+    
+    return {
+        timezone,
+        offset,
+        method
+    };
+}
+
+// Map Windows timezone IDs to IANA timezone names
+function mapWindowsToIANA(windowsId) {
+    const mapping = {
+        'Pacific Standard Time': 'America/Los_Angeles',
+        'Mountain Standard Time': 'America/Denver',
+        'Central Standard Time': 'America/Chicago',
+        'Eastern Standard Time': 'America/New_York',
+        'GMT Standard Time': 'Europe/London',
+        'Central European Standard Time': 'Europe/Berlin',
+        'E. Europe Standard Time': 'Europe/Bucharest',
+        'Turkey Standard Time': 'Europe/Istanbul',
+        'China Standard Time': 'Asia/Shanghai',
+        'Tokyo Standard Time': 'Asia/Tokyo',
+        'India Standard Time': 'Asia/Kolkata',
+        'Arabian Standard Time': 'Asia/Dubai',
+        'Atlantic Standard Time': 'Atlantic/Canary',
+        'W. Europe Standard Time': 'Europe/Paris',
+        'Romance Standard Time': 'Europe/Paris',
+        'Central Europe Standard Time': 'Europe/Warsaw',
+        'Russian Standard Time': 'Europe/Moscow',
+        'SA Pacific Standard Time': 'America/Bogota',
+        'Argentina Standard Time': 'America/Buenos_Aires',
+        'Brasilia Standard Time': 'America/Sao_Paulo',
+        'Canada Central Standard Time': 'America/Regina',
+        'Mexico Standard Time': 'America/Mexico_City',
+        'Venezuela Standard Time': 'America/Caracas',
+        'SA Eastern Standard Time': 'America/Cayenne',
+        'Newfoundland Standard Time': 'America/St_Johns',
+        'Greenland Standard Time': 'America/Godthab',
+        'Azores Standard Time': 'Atlantic/Azores',
+        'Cape Verde Standard Time': 'Atlantic/Cape_Verde',
+        'Morocco Standard Time': 'Africa/Casablanca',
+        'UTC': 'UTC',
+        'GMT Standard Time': 'Europe/London',
+        'British Summer Time': 'Europe/London',
+        'Egypt Standard Time': 'Africa/Cairo',
+        'South Africa Standard Time': 'Africa/Johannesburg',
+        'Israel Standard Time': 'Asia/Jerusalem',
+        'Jordan Standard Time': 'Asia/Amman',
+        'Middle East Standard Time': 'Asia/Beirut',
+        'Syria Standard Time': 'Asia/Damascus',
+        'West Asia Standard Time': 'Asia/Karachi',
+        'Afghanistan Standard Time': 'Asia/Kabul',
+        'Pakistan Standard Time': 'Asia/Karachi',
+        'Sri Lanka Standard Time': 'Asia/Colombo',
+        'Myanmar Standard Time': 'Asia/Yangon',
+        'SE Asia Standard Time': 'Asia/Bangkok',
+        'Singapore Standard Time': 'Asia/Singapore',
+        'Taipei Standard Time': 'Asia/Taipei',
+        'W. Australia Standard Time': 'Australia/Perth',
+        'Korea Standard Time': 'Asia/Seoul',
+        'Cen. Australia Standard Time': 'Australia/Adelaide',
+        'AUS Eastern Standard Time': 'Australia/Sydney',
+        'Tasmania Standard Time': 'Australia/Hobart',
+        'Vladivostok Standard Time': 'Asia/Vladivostok',
+        'West Pacific Standard Time': 'Pacific/Port_Moresby',
+        'Central Pacific Standard Time': 'Pacific/Guadalcanal',
+        'Fiji Standard Time': 'Pacific/Fiji',
+        'New Zealand Standard Time': 'Pacific/Auckland',
+        'Tonga Standard Time': 'Pacific/Tongatapu',
+        'Samoa Standard Time': 'Pacific/Apia',
+        'Hawaiian Standard Time': 'Pacific/Honolulu',
+        'Alaskan Standard Time': 'America/Anchorage',
+        'Pacific Standard Time (Mexico)': 'America/Tijuana',
+        'Mountain Standard Time (Mexico)': 'America/Chihuahua',
+        'Central Standard Time (Mexico)': 'America/Mexico_City',
+        'Eastern Standard Time (Mexico)': 'America/Cancun',
+        'US Mountain Standard Time': 'America/Phoenix',
+        'Central America Standard Time': 'America/Guatemala',
+        'US Eastern Standard Time': 'America/Indiana/Indianapolis',
+        'Paraguay Standard Time': 'America/Asuncion',
+        'Montevideo Standard Time': 'America/Montevideo',
+        'Magallanes Standard Time': 'America/Punta_Arenas',
+        'Cuba Standard Time': 'America/Havana',
+        'Haiti Standard Time': 'America/Port-au-Prince',
+        'Turks And Caicos Standard Time': 'America/Grand_Turk',
+        'Sao Tome Standard Time': 'Africa/Sao_Tome',
+        'Libya Standard Time': 'Africa/Tripoli',
+        'Namibia Standard Time': 'Africa/Windhoek',
+        'Mauritius Standard Time': 'Indian/Mauritius',
+        'Georgian Standard Time': 'Asia/Tbilisi',
+        'Caucasus Standard Time': 'Asia/Yerevan',
+        'Iran Standard Time': 'Asia/Tehran',
+        'Ekaterinburg Standard Time': 'Asia/Yekaterinburg',
+        'Omsk Standard Time': 'Asia/Omsk',
+        'Bangladesh Standard Time': 'Asia/Dhaka',
+        'Nepal Standard Time': 'Asia/Kathmandu',
+        'North Asia Standard Time': 'Asia/Krasnoyarsk',
+        'N. Central Asia Standard Time': 'Asia/Novosibirsk',
+        'North Asia East Standard Time': 'Asia/Irkutsk',
+        'Ulaanbaatar Standard Time': 'Asia/Ulaanbaatar',
+        'Yakutsk Standard Time': 'Asia/Yakutsk',
+        'Sakhalin Standard Time': 'Asia/Sakhalin',
+        'Magadan Standard Time': 'Asia/Magadan',
+        'Kamchatka Standard Time': 'Asia/Kamchatka',
+        'Norfolk Standard Time': 'Pacific/Norfolk',
+        'Lord Howe Standard Time': 'Australia/Lord_Howe',
+        'Easter Island Standard Time': 'Pacific/Easter',
+        'Marquesas Standard Time': 'Pacific/Marquesas',
+        'Tahiti Standard Time': 'Pacific/Tahiti',
+        'Line Islands Standard Time': 'Pacific/Kiritimati',
+        'Chatham Islands Standard Time': 'Pacific/Chatham'
+    };
+    
+    return mapping[windowsId] || windowsId;
 }
 
 /**
