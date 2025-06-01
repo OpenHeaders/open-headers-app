@@ -1,5 +1,6 @@
 const { createLogger } = require('../utils/logger');
 const log = createLogger('RefreshCoordinator');
+const timeManager = require('./TimeManager');
 
 /**
  * Coordinates refresh operations to prevent overlapping and conflicting operations.
@@ -70,11 +71,11 @@ class RefreshCoordinator {
    * Create a refresh operation with timeout
    */
   createRefreshOperation(sourceId, refreshFn, timeout, reason) {
-    const startTime = Date.now();
+    const startTime = timeManager.now();
     
     const refreshPromise = refreshFn(sourceId)
       .then(result => {
-        const duration = Date.now() - startTime;
+        const duration = timeManager.now() - startTime;
         this.updateMetrics(duration);
         
         log.debug(`Refresh completed for ${sourceId} in ${duration}ms`);
@@ -83,11 +84,11 @@ class RefreshCoordinator {
           success: true,
           result,
           duration,
-          timestamp: Date.now()
+          timestamp: timeManager.now()
         };
       })
       .catch(error => {
-        const duration = Date.now() - startTime;
+        const duration = timeManager.now() - startTime;
         
         log.error(`Refresh failed for ${sourceId}`, {
           error: error.message,
@@ -99,7 +100,7 @@ class RefreshCoordinator {
           success: false,
           error: error.message,
           duration,
-          timestamp: Date.now()
+          timestamp: timeManager.now()
         };
       });
     
@@ -134,7 +135,7 @@ class RefreshCoordinator {
         options,
         resolve,
         reject,
-        timestamp: Date.now()
+        timestamp: timeManager.now()
       });
       
       log.debug(`Queued refresh for ${sourceId}, queue size: ${queue.length}`);
@@ -215,8 +216,8 @@ class RefreshCoordinator {
       log.warn(`Global lock already held by ${this.globalLock.operation}`);
       
       // Wait for lock with timeout
-      const startTime = Date.now();
-      while (this.globalLock && (Date.now() - startTime) < timeout) {
+      const startTime = timeManager.now();
+      while (this.globalLock && (timeManager.now() - startTime) < timeout) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -227,7 +228,7 @@ class RefreshCoordinator {
     
     this.globalLock = {
       operation,
-      timestamp: Date.now()
+      timestamp: timeManager.now()
     };
     
     log.debug(`Global lock acquired for ${operation}`);

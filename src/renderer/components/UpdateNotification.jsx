@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 import { Button, App, Progress } from 'antd';
 import { DownloadOutlined, ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+import timeManager from '../services/TimeManager';
 const { createLogger } = require('../utils/logger');
 const log = createLogger('UpdateNotification');
 
@@ -46,7 +47,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
     // Debug logging function
     const debugLog = (message, data = null) => {
-        const timestamp = new Date().toISOString().slice(11, 19);
+        const timestamp = timeManager.getDate().toISOString().slice(11, 19);
         if (data) {
             log.debug(`[${timestamp}] ${message}`, data);
         } else {
@@ -91,7 +92,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             debugLog(`${debugLabel} checkForUpdates called (manual: ${isManual})`);
 
             // Prevent rapid consecutive checks
-            const now = Date.now();
+            const now = timeManager.now();
             const timeSinceLastCheck = now - lastCheckTime;
 
             if (timeSinceLastCheck < 5000) { // 5 seconds minimum between checks
@@ -145,7 +146,7 @@ const UpdateNotification = forwardRef((props, ref) => {
 
             // Record when we started the check
             checkStartTimeRef.current = now;
-            debugLog(`${debugLabel} Starting update check, setting checkStartTime to ${new Date(checkStartTimeRef.current).toISOString()}`);
+            debugLog(`${debugLabel} Starting update check, setting checkStartTime to ${timeManager.getDate(checkStartTimeRef.current).toISOString()}`);
 
             // Only show checking notification for manual checks
             if (isManual) {
@@ -248,7 +249,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             handlingAlreadyDownloadedRef.current = true;
 
             // Calculate how long the checking notification has been shown
-            const elapsed = Date.now() - checkStartTimeRef.current;
+            const elapsed = timeManager.now() - checkStartTimeRef.current;
             const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
 
             debugLog(`${debugLabel} Checking notification shown for ${elapsed}ms, minimum is ${MIN_CHECK_DISPLAY_TIME}ms`);
@@ -470,7 +471,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             }
 
             // Calculate minimum notification time
-            const elapsed = Date.now() - checkStartTimeRef.current;
+            const elapsed = timeManager.now() - checkStartTimeRef.current;
             const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
 
             if (remainingTime > 0) {
@@ -517,7 +518,7 @@ const UpdateNotification = forwardRef((props, ref) => {
             debugLog(`${debugLabel} Manual check detected, showing "no updates" notification`);
 
             // Calculate minimum notification time
-            const elapsed = Date.now() - checkStartTimeRef.current;
+            const elapsed = timeManager.now() - checkStartTimeRef.current;
             const remainingTime = Math.max(0, MIN_CHECK_DISPLAY_TIME - elapsed);
 
             if (remainingTime > 0) {

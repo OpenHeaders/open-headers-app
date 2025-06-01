@@ -2,6 +2,7 @@ const { createLogger } = require('../utils/logger');
 const log = createLogger('RefreshManager');
 const NetworkAwareScheduler = require('./NetworkAwareScheduler');
 const RefreshCoordinator = require('./RefreshCoordinator');
+const timeManager = require('./TimeManager');
 
 /**
  * RefreshManager - Simplified to focus only on coordinating refresh operations.
@@ -227,7 +228,7 @@ class RefreshManager {
    * Perform the actual refresh operation
    */
   async performRefresh(sourceId, source) {
-    const startTime = Date.now();
+    const startTime = timeManager.now();
     
     // Notify UI of refresh start (sourceId already converted to string)
     this.notifyUI(sourceId, null, {
@@ -259,12 +260,12 @@ class RefreshManager {
         headers: result.headers,
         refreshStatus: {
           isRefreshing: false,
-          lastRefresh: Date.now(),
+          lastRefresh: timeManager.now(),
           success: true
         },
         refreshOptions: {
           ...source.refreshOptions,
-          lastRefresh: Date.now()
+          lastRefresh: timeManager.now()
         }
       });
       
@@ -278,7 +279,7 @@ class RefreshManager {
       this.notifyUI(sourceId, null, {
         refreshStatus: {
           isRefreshing: false,
-          lastRefresh: Date.now(),
+          lastRefresh: timeManager.now(),
           success: false,
           error: error.message
         }
@@ -386,7 +387,7 @@ class RefreshManager {
       return 0;
     }
     
-    const now = Date.now();
+    const now = timeManager.now();
     const timeUntil = schedule.nextRefresh - now;
     
     return Math.max(0, timeUntil);

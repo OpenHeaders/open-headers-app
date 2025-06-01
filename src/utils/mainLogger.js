@@ -6,8 +6,9 @@
 const log = require('electron-log');
 
 // Configure electron-log format globally (only once)
-log.transports.console.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
+// Use UTC timestamps for consistency across timezone changes
+log.transports.console.format = '[{iso}] [{level}] {text}';
+log.transports.file.format = '[{iso}] [{level}] {text}';
 
 class MainLogger {
   constructor(component) {

@@ -91,7 +91,7 @@ class NetworkAwareScheduler {
    */
   handleTimeJump() {
     // Recalculate all schedules
-    const now = Date.now();
+    const now = timeManager.now();
     
     for (const [sourceId, schedule] of this.schedules) {
       // Recalculate next refresh based on current time
@@ -175,7 +175,7 @@ class NetworkAwareScheduler {
    * Check all schedules and trigger refreshes as needed
    */
   checkSchedules() {
-    const now = Date.now();
+    const now = timeManager.now();
     
     for (const [sourceId, schedule] of this.schedules) {
       // Skip if no next refresh time or if offline
@@ -247,7 +247,7 @@ class NetworkAwareScheduler {
     const schedule = {
       sourceId: String(source.sourceId), // Ensure sourceId is always a string
       intervalMs,
-      lastRefresh: source.refreshOptions?.lastRefresh ? new Date(source.refreshOptions.lastRefresh).getTime() : null,
+      lastRefresh: source.refreshOptions?.lastRefresh ? timeManager.getDate(source.refreshOptions.lastRefresh).getTime() : null,
       nextRefresh: null,
       retryCount: 0,
       maxRetries: 3,
@@ -268,7 +268,7 @@ class NetworkAwareScheduler {
     // Note: No individual timer needed - master timer handles all schedules
     
     // Check if source is already overdue
-    const now = Date.now();
+    const now = timeManager.now();
     const isOverdue = schedule.lastRefresh && (now - schedule.lastRefresh) > intervalMs;
     
     if (isOverdue) {
@@ -304,7 +304,7 @@ class NetworkAwareScheduler {
     const schedule = this.schedules.get(sourceId);
     if (!schedule) return;
     
-    const now = Date.now();
+    const now = timeManager.now();
     let delay = schedule.intervalMs;
     
     // Get current network state if not provided
@@ -456,6 +456,43 @@ class NetworkAwareScheduler {
     // Track this refresh operation
     this.activeRefreshes.add(sourceId);
     
+    // Calculate next refresh time BEFORE the refresh starts
+    // This ensures consistent intervals regardless of refresh duration
+    if (reason === 'scheduled' && schedule.lastRefresh) {
+      const now = timeManager.now();
+      
+      // Use wall-clock alignment if configured
+      if (schedule.alignToMinute || schedule.alignToHour || schedule.alignToDay) {
+        // For wall-clock aligned sources, use TimeManager to calculate next aligned time
+        const baseTime = schedule.nextRefresh || (schedule.lastRefresh + schedule.intervalMs);
+        schedule.nextRefresh = timeManager.getNextAlignedTime(schedule.intervalMs, baseTime, {
+          alignToMinute: schedule.alignToMinute,
+          alignToHour: schedule.alignToHour,
+          alignToDay: schedule.alignToDay
+        });
+        
+        // Ensure next refresh is in the future
+        if (schedule.nextRefresh <= now) {
+          schedule.nextRefresh = timeManager.getNextAlignedTime(schedule.intervalMs, now, {
+            alignToMinute: schedule.alignToMinute,
+            alignToHour: schedule.alignToHour,
+            alignToDay: schedule.alignToDay
+          });
+        }
+      } else {
+        // For interval-based scheduling, calculate from the expected refresh time
+        const expectedRefreshTime = schedule.nextRefresh || (schedule.lastRefresh + schedule.intervalMs);
+        schedule.nextRefresh = expectedRefreshTime + schedule.intervalMs;
+        
+        // Ensure next refresh is in the future
+        if (schedule.nextRefresh <= now) {
+          schedule.nextRefresh = now + schedule.intervalMs;
+        }
+      }
+      
+      log.debug(`Pre-calculated next refresh for ${sourceId}: ${timeManager.getDate(schedule.nextRefresh).toISOString()}`);
+    }
+    
     try {
       await this._performRefresh(sourceId, reason);
     } catch (error) {
@@ -546,19 +583,28 @@ class NetworkAwareScheduler {
       log.debug(`Network state changed during refresh of ${sourceId}, using updated state`);
     }
     
-    // Reschedule for next refresh
-    await this.calculateNextRefresh(sourceId, networkStateAfterRefresh);
+    // Only recalculate next refresh time if:
+    // 1. This was not a scheduled refresh (manual, overdue, etc.)
+    // 2. The refresh failed (need retry scheduling)
+    // 3. The next refresh time wasn't already set
+    if (reason !== 'scheduled' || refreshFailed || !schedule.nextRefresh) {
+      // Recalculate for non-scheduled refreshes, failures, or if no next time set
+      await this.calculateNextRefresh(sourceId, networkStateAfterRefresh);
+    }
   }
   
   /**
    * Update last refresh time for a source
    */
-  updateLastRefresh(sourceId, timestamp = Date.now()) {
+  updateLastRefresh(sourceId, timestamp = null) {
     sourceId = String(sourceId); // Ensure sourceId is a string
     const schedule = this.schedules.get(sourceId);
     if (schedule) {
       // Validate timestamp is reasonable (not in future, not too old)
-      const now = Date.now();
+      const now = timeManager.now();
+      if (!timestamp) {
+        timestamp = now;
+      }
       if (timestamp > now + 60000) { // More than 1 minute in future
         log.warn(`Invalid timestamp for ${sourceId}: ${timestamp} is in the future`);
         timestamp = now;
@@ -572,10 +618,13 @@ class NetworkAwareScheduler {
       schedule.failureCount = 0; // Reset failure count on successful refresh
       schedule.hasBeenScheduled = true; // Mark as having been scheduled
       
-      // Don't await here to avoid blocking
-      this.calculateNextRefresh(sourceId).catch(err => {
-        log.error(`Error recalculating refresh time for ${sourceId}:`, err);
-      });
+      // Only recalculate if next refresh time is not set or is in the past
+      if (!schedule.nextRefresh || schedule.nextRefresh <= now) {
+        // Don't await here to avoid blocking
+        this.calculateNextRefresh(sourceId).catch(err => {
+          log.error(`Error recalculating refresh time for ${sourceId}:`, err);
+        });
+      }
     }
   }
   
@@ -624,7 +673,7 @@ class NetworkAwareScheduler {
         // Double-check we're still offline
         if (!this.lastNetworkState.isOnline) {
           log.info('Network went offline, pausing refresh scheduling');
-          this.networkOfflineTime = Date.now();
+          this.networkOfflineTime = timeManager.now();
           this.lastNetworkQuality = 'offline';
           // Master timer will skip offline sources automatically
         }
@@ -642,7 +691,7 @@ class NetworkAwareScheduler {
     }
     
     // Network is online after being offline - handle recovery
-    const offlineDuration = this.networkOfflineTime ? Date.now() - this.networkOfflineTime : 0;
+    const offlineDuration = this.networkOfflineTime ? timeManager.now() - this.networkOfflineTime : 0;
     log.info('Network recovered from offline', {
       offlineDuration: offlineDuration ? `${Math.round(offlineDuration / 1000)}s` : 'unknown'
     });
@@ -754,7 +803,7 @@ class NetworkAwareScheduler {
    * @param {boolean} includeNeverRefreshed - Whether to include sources that have never been refreshed
    */
   getOverdueSources(bufferMs = 60000, includeNeverRefreshed = true) {
-    const now = Date.now();
+    const now = timeManager.now();
     const overdue = [];
     
     for (const [sourceId, schedule] of this.schedules) {
@@ -1008,7 +1057,7 @@ class NetworkAwareScheduler {
     
     if (!schedule.lastRefresh) return true;
     
-    const now = Date.now();
+    const now = timeManager.now();
     const expectedRefreshTime = schedule.lastRefresh + schedule.intervalMs;
     return (now - expectedRefreshTime) > bufferMs;
   }
