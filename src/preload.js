@@ -182,6 +182,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // App info
     getAppPath: () => ipcRenderer.invoke('getAppPath'),
+    getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
 
     // Settings
     saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
@@ -202,6 +203,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Get current system state
     getSystemState: () => ipcRenderer.invoke('getSystemState'),
+
+    // Get current system timezone (bypasses JavaScript's cached timezone)
+    getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
 
     // System monitoring events for RefreshManager
     onSystemSuspend: (callback) => {

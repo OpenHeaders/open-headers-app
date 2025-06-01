@@ -36,7 +36,7 @@ class RefreshManager {
     this.onUpdateCallback = onUpdateCallback;
     
     // Initialize scheduler with refresh callback
-    this.scheduler.initialize(this.refreshSource);
+    await this.scheduler.initialize(this.refreshSource);
     
     // Setup event listeners
     this.setupEventListeners();
