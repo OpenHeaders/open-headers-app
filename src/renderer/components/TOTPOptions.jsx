@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
+import timeManager from '../services/TimeManager';
 
 const { Text } = Typography;
 
@@ -84,7 +85,7 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
 
         // Calculate seconds remaining in current period
         const secondsInPeriod = 30;
-        const currentSeconds = Math.floor(Date.now() / 1000);
+        const currentSeconds = Math.floor(timeManager.now() / 1000);
         const secondsRemaining = secondsInPeriod - (currentSeconds % secondsInPeriod);
         setTimeRemaining(secondsRemaining);
 

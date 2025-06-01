@@ -3,6 +3,7 @@ import { Modal, Form, Input, Select, Button, Space, Tabs, Row, Col, Checkbox } f
 import { EditOutlined } from '@ant-design/icons';
 import HttpOptions from './HttpOptions';
 import { showMessage } from '../utils/messageUtil';
+import timeManager from '../services/TimeManager';
 const { createLogger } = require('../utils/logger');
 const log = createLogger('EditSourceModal');
 
@@ -416,7 +417,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 // If refresh interval or enabled status changed, don't preserve timing
                 if (!hasIntervalChanged && !hasEnabledChanged &&
                     source.refreshOptions?.nextRefresh &&
-                    source.refreshOptions.nextRefresh > Date.now()) {
+                    source.refreshOptions.nextRefresh > timeManager.now()) {
                     if (!sourceData.refreshOptions) {
                         sourceData.refreshOptions = {};
                     }

@@ -1,6 +1,7 @@
 const { EventEmitter } = require('events');
 const { BrowserWindow } = require('electron');
 const { createLogger } = require('../utils/mainLogger');
+const timeManager = require('./TimeManager');
 const log = createLogger('NetworkStateManager');
 
 /**
@@ -19,8 +20,8 @@ class NetworkStateManager extends EventEmitter {
       interfaces: [],
       primaryInterface: null,
       connectionType: 'unknown',
-      lastCheck: Date.now(),
-      lastStateChange: Date.now(),
+      lastCheck: timeManager.now(),
+      lastStateChange: timeManager.now(),
       diagnostics: {
         dnsResolvable: false, // Start with no DNS
         internetReachable: false, // Start with no internet
@@ -73,7 +74,7 @@ class NetworkStateManager extends EventEmitter {
     this.state = {
       ...this.state,
       ...this.pendingStateChanges,
-      lastCheck: Date.now()
+      lastCheck: timeManager.now()
     };
     
     // Check if state actually changed
@@ -82,7 +83,7 @@ class NetworkStateManager extends EventEmitter {
     );
     
     if (hasChanged) {
-      this.state.lastStateChange = Date.now();
+      this.state.lastStateChange = timeManager.now();
       log.info('State changed', {
         previous: previousState,
         current: this.state,
@@ -111,7 +112,7 @@ class NetworkStateManager extends EventEmitter {
     const windows = BrowserWindow.getAllWindows();
     const stateUpdate = {
       state: this.getState(),
-      timestamp: Date.now()
+      timestamp: timeManager.now()
     };
     
     windows.forEach(window => {

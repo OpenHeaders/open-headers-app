@@ -5,6 +5,7 @@ const dns = require('dns').promises;
 const { net } = require('electron');
 const { createLogger } = require('../utils/mainLogger');
 const log = createLogger('NetworkMonitor');
+const timeManager = require('./TimeManager');
 
 class NetworkMonitor extends EventEmitter {
     constructor() {
@@ -13,11 +14,11 @@ class NetworkMonitor extends EventEmitter {
         this.state = {
             isOnline: false, // Start offline until proven otherwise
             connectionType: 'unknown',
-            lastChange: Date.now(),
+            lastChange: timeManager.now(),
             confidence: 0, // No confidence until first check
             networkInterfaces: new Map(),
             vpnActive: false,
-            lastCheck: Date.now(),
+            lastCheck: timeManager.now(),
             consecutiveFailures: 0,
             networkQuality: 'offline' // Start offline
         };
@@ -40,7 +41,7 @@ class NetworkMonitor extends EventEmitter {
         this.maxHistorySize = 10;
         
         // Track initialization time to prevent false VPN disconnects
-        this.initializationTime = Date.now();
+        this.initializationTime = timeManager.now();
     }
 
     async initialize() {
@@ -311,7 +312,7 @@ class NetworkMonitor extends EventEmitter {
                 // Update confidence and quality metrics
                 this.state.confidence = results.confidence;
                 this.state.networkQuality = this.calculateNetworkQuality(results);
-                this.state.lastCheck = Date.now();
+                this.state.lastCheck = timeManager.now();
             }
         } catch (error) {
             log.error('Connectivity check error:', error);
@@ -446,7 +447,7 @@ class NetworkMonitor extends EventEmitter {
     }
 
     async checkEndpoint(endpoint) {
-        const startTime = Date.now();
+        const startTime = timeManager.now();
 
         return new Promise((resolve) => {
             const request = net.request({
@@ -463,7 +464,7 @@ class NetworkMonitor extends EventEmitter {
                     resolve({
                         success,
                         statusCode,
-                        responseTime: Date.now() - startTime,
+                        responseTime: timeManager.now() - startTime,
                         endpoint: endpoint.url,
                         error
                     });
@@ -519,7 +520,7 @@ class NetworkMonitor extends EventEmitter {
         this.state.isOnline = results.basic.success || results.endpoints.success;
         this.state.confidence = results.endpoints.confidence || 0;
         this.state.networkQuality = this.calculateNetworkQuality(results.endpoints);
-        this.state.lastCheck = Date.now();
+        this.state.lastCheck = timeManager.now();
 
         // Update consecutive failures
         if (!this.state.isOnline) {
@@ -611,7 +612,7 @@ class NetworkMonitor extends EventEmitter {
         
         // Only update VPN state if we have a definitive signal
         // Ignore "disconnected" signals during initialization phase
-        if (!data.active && Date.now() - this.initializationTime < 5000) {
+        if (!data.active && timeManager.now() - this.initializationTime < 5000) {
             log.debug('Ignoring VPN disconnect signal during initialization phase');
             return;
         }
@@ -652,10 +653,10 @@ class NetworkMonitor extends EventEmitter {
 
     recordStateChange(wasOnline, isOnline) {
         const change = {
-            timestamp: Date.now(),
+            timestamp: timeManager.now(),
             wasOnline,
             isOnline,
-            duration: this.state.lastChange ? Date.now() - this.state.lastChange : 0
+            duration: this.state.lastChange ? timeManager.now() - this.state.lastChange : 0
         };
 
         this.stateChangeHistory.push(change);
@@ -665,7 +666,7 @@ class NetworkMonitor extends EventEmitter {
             this.stateChangeHistory.shift();
         }
 
-        this.state.lastChange = Date.now();
+        this.state.lastChange = timeManager.now();
     }
 
 

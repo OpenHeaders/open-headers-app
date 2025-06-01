@@ -10,6 +10,7 @@ import EditSourceModal from './EditSourceModal';
 import ContentViewer from './ContentViewer';
 import { showMessage } from '../utils/messageUtil';
 import refreshManager from '../services/RefreshManager';
+import timeManager from '../services/TimeManager';
 const { createLogger } = require('../utils/logger');
 const log = createLogger('SourceTable');
 
@@ -74,7 +75,7 @@ const SourceTable = ({
         }
 
         // Use cached display state if available and recent
-        if (displayState && displayState.timestamp > Date.now() - 2000) {
+        if (displayState && displayState.timestamp > timeManager.now() - 2000) {
             return displayState.text;
         }
 
@@ -90,14 +91,14 @@ const SourceTable = ({
 
     // Debug helper for tracking refresh states
     const debugRefreshState = (sourceId, action, data = {}) => {
-        const timestamp = new Date().toISOString().substr(11, 8);
+        const timestamp = timeManager.getDate().toISOString().substr(11, 8);
         log.debug(`[${timestamp}] [RefreshTable] Source ${sourceId} - ${action}:`, data);
     };
 
     // ENHANCED: Update refresh display states using RefreshManager data
     useEffect(() => {
         const timer = setInterval(() => {
-            const now = Date.now();
+            const now = timeManager.now();
             const newDisplayStates = {};
             let needsUpdate = false;
 
@@ -255,7 +256,7 @@ const SourceTable = ({
                 ...prev,
                 [sourceId]: {
                     text: 'Refreshing...',
-                    timestamp: Date.now()
+                    timestamp: timeManager.now()
                 }
             }));
 

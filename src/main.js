@@ -10,6 +10,7 @@ const AutoLaunch = require('auto-launch');
 const webSocketService = require('./services/ws-service');
 const NetworkMonitor = require('./services/NetworkMonitor');
 const networkStateManager = require('./services/NetworkStateManager');
+const timeManager = require('./services/TimeManager');
 
 // Initialize standardized logger
 const { createLogger } = require('./utils/mainLogger');
@@ -879,7 +880,7 @@ function initializeWebSocket() {
 // App is ready
 app.whenReady().then(async () => {
     // Log app startup information to help with debugging
-    log.info(`App started at ${new Date().toISOString()}`);
+    log.info(`App started at ${timeManager.formatTimestamp()}`);
     log.info(`Process argv: ${JSON.stringify(process.argv)}`);
     log.info(`App version: ${app.getVersion()}`);
     log.info(`Platform: ${process.platform}`);
@@ -1073,7 +1074,7 @@ function setupIPC() {
         return {
             ...networkState,
             powerState: 'active', // Can be enhanced with powerMonitor
-            timestamp: Date.now()
+            timestamp: timeManager.now()
         };
     });
 
@@ -1498,7 +1499,7 @@ async function handleGetSystemTimezone() {
     }
     
     // Get current offset
-    const offset = new Date().getTimezoneOffset();
+    const offset = timeManager.getDate().getTimezoneOffset();
     
     return {
         timezone,
@@ -1658,7 +1659,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                 // Get requestId
                 const requestId = (options.connectionOptions && options.connectionOptions.requestId) ||
-                    (Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
+                    (timeManager.now().toString(36) + Math.random().toString(36).slice(2, 7));
 
                 // Create request using Electron's net module
                 const request = net.request({

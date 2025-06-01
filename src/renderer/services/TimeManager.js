@@ -19,11 +19,12 @@ class TimeManager {
     this.checkInterval = null;
     this.isDestroyed = false;
     
-    // Time tracking
-    this.lastWallTime = Date.now();
+    // Time tracking (using Date.now() directly in constructor for initialization)
+    const initialTime = Date.now();
+    this.lastWallTime = initialTime;
     this.lastMonotonicTime = performance.now();
     this.lastTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    this.lastTimezoneOffset = new Date().getTimezoneOffset();
+    this.lastTimezoneOffset = new Date(initialTime).getTimezoneOffset();
     
     // Detection thresholds
     this.TIME_JUMP_THRESHOLD = 5000; // 5 seconds
@@ -46,7 +47,7 @@ class TimeManager {
       timezoneChanges: 0,
       dstChanges: 0,
       systemWakes: 0,
-      startTime: Date.now()
+      startTime: initialTime
     };
   }
   
@@ -116,8 +117,8 @@ class TimeManager {
    * Main time check routine
    */
   async checkTime() {
-    const now = Date.now();
-    const monotonic = performance.now();
+    const now = this.now();
+    const monotonic = this.getMonotonicTime();
     
     // Get timezone info from system instead of cached JavaScript runtime
     let currentTimezone, currentOffset;
@@ -127,20 +128,20 @@ class TimeManager {
         currentTimezone = systemTz.timezone;
         currentOffset = systemTz.offset;
         
-        // Log if we're using a non-cached method
-        if (systemTz.method !== 'intl_fallback' && systemTz.method !== 'error_fallback') {
-          log.debug(`Timezone detected via ${systemTz.method}: ${currentTimezone}`);
+        // Only log if timezone actually changed
+        if (currentTimezone !== this.lastTimezone && systemTz.method !== 'intl_fallback' && systemTz.method !== 'error_fallback') {
+          log.debug(`Timezone changed via ${systemTz.method}: ${this.lastTimezone} -> ${currentTimezone}`);
         }
       } catch (error) {
         log.error('Failed to get system timezone:', error);
         // Fallback to JavaScript's cached values
         currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        currentOffset = new Date().getTimezoneOffset();
+        currentOffset = this.getDate().getTimezoneOffset();
       }
     } else {
       // Fallback for non-Electron environments
       currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      currentOffset = new Date().getTimezoneOffset();
+      currentOffset = this.getDate().getTimezoneOffset();
     }
     
     // Calculate expected wall time based on monotonic time
@@ -175,7 +176,8 @@ class TimeManager {
     }
     
     // 2. System wake detection (large monotonic jump)
-    if (monotonicDelta > 30000) { // More than 30 seconds
+    // Use 5 minutes as threshold to avoid false positives from normal app delays
+    if (monotonicDelta > 300000) { // More than 5 minutes (was 30 seconds)
       events.push({
         type: this.EventType.SYSTEM_WAKE,
         sleepDuration: monotonicDelta
@@ -232,8 +234,8 @@ class TimeManager {
     log.info('System wake detected by OS event');
     
     // Reset time tracking to current values
-    this.lastWallTime = Date.now();
-    this.lastMonotonicTime = performance.now();
+    this.lastWallTime = this.now();
+    this.lastMonotonicTime = this.getMonotonicTime();
     
     // Notify listeners
     this.notifyListeners([{
@@ -271,7 +273,7 @@ class TimeManager {
    * Get current time info
    */
   async getCurrentTimeInfo() {
-    const now = Date.now();
+    const now = this.now();
     let timezone, offset;
     
     // Try to get system timezone first
@@ -283,11 +285,11 @@ class TimeManager {
       } catch (error) {
         // Fallback to cached values
         timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        offset = new Date().getTimezoneOffset();
+        offset = this.getDate().getTimezoneOffset();
       }
     } else {
       timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      offset = new Date().getTimezoneOffset();
+      offset = this.getDate().getTimezoneOffset();
     }
     
     return {
@@ -295,18 +297,21 @@ class TimeManager {
       timezone,
       timezoneOffset: offset,
       isDST: this.isDST(now),
-      wallClock: new Date(now).toISOString(),
-      localTime: new Date(now).toLocaleString()
+      wallClock: this.getDate(now).toISOString(),
+      localTime: this.getDate(now).toLocaleString()
     };
   }
   
   /**
    * Check if date is in DST (approximation)
    */
-  isDST(timestamp = Date.now()) {
-    const date = new Date(timestamp);
-    const jan = new Date(date.getFullYear(), 0, 1);
-    const jul = new Date(date.getFullYear(), 6, 1);
+  isDST(timestamp = null) {
+    const ts = timestamp || this.now();
+    const date = this.getDate(ts);
+    const jan = this.getDate(date.getTime());
+    jan.setMonth(0, 1);
+    const jul = this.getDate(date.getTime());
+    jul.setMonth(6, 1);
     const janOffset = jan.getTimezoneOffset();
     const julOffset = jul.getTimezoneOffset();
     const currentOffset = date.getTimezoneOffset();
@@ -328,8 +333,8 @@ class TimeManager {
       alignToDay = false
     } = options;
     
-    const now = Date.now();
-    const date = new Date(now);
+    const now = this.now();
+    const date = this.getDate(now);
     
     // If no alignment requested, use simple interval
     if (!alignToMinute && !alignToHour && !alignToDay) {
@@ -360,12 +365,43 @@ class TimeManager {
   }
   
   /**
+   * Get current timestamp - replacement for Date.now()
+   * This is the primary method that should replace Date.now() throughout the app
+   */
+  now() {
+    return Date.now();
+  }
+  
+  /**
+   * Get current Date object - replacement for new Date()
+   */
+  getDate(timestamp = null) {
+    return timestamp ? new Date(timestamp) : new Date();
+  }
+  
+  /**
+   * Get current monotonic time for measuring durations
+   * Use this instead of Date.now() for measuring elapsed time
+   */
+  getMonotonicTime() {
+    return performance.now();
+  }
+  
+  /**
+   * Measure elapsed time since a start point (using monotonic time)
+   * This is immune to system clock changes
+   */
+  getElapsedTime(startTime) {
+    return performance.now() - startTime;
+  }
+  
+  /**
    * Get statistics
    */
   getStatistics() {
     return {
       ...this.stats,
-      uptime: Date.now() - this.stats.startTime,
+      uptime: this.now() - this.stats.startTime,
       currentTimezone: this.lastTimezone,
       currentOffset: this.lastTimezoneOffset
     };
