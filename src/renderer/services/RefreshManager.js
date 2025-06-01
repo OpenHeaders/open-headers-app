@@ -254,6 +254,9 @@ class RefreshManager {
         source.jsonFilter
       );
       
+      // Get the next refresh time from scheduler
+      const refreshStatus = this.getRefreshStatus(sourceId);
+      
       // Update UI with result
       this.notifyUI(sourceId, result.content, {
         originalResponse: result.originalResponse,
@@ -265,7 +268,8 @@ class RefreshManager {
         },
         refreshOptions: {
           ...source.refreshOptions,
-          lastRefresh: timeManager.now()
+          lastRefresh: timeManager.now(),
+          nextRefresh: refreshStatus.nextRefresh
         }
       });
       
