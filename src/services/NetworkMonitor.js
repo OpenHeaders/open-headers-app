@@ -38,6 +38,9 @@ class NetworkMonitor extends EventEmitter {
         // Track recent state changes to prevent flapping
         this.stateChangeHistory = [];
         this.maxHistorySize = 10;
+        
+        // Track initialization time to prevent false VPN disconnects
+        this.initializationTime = Date.now();
     }
 
     async initialize() {
@@ -605,14 +608,24 @@ class NetworkMonitor extends EventEmitter {
 
     handleVPNStateChange(data) {
         const wasActive = this.state.vpnActive;
+        
+        // Only update VPN state if we have a definitive signal
+        // Ignore "disconnected" signals during initialization phase
+        if (!data.active && Date.now() - this.initializationTime < 5000) {
+            log.debug('Ignoring VPN disconnect signal during initialization phase');
+            return;
+        }
+        
         this.state.vpnActive = data.active;
 
         if (wasActive !== data.active) {
-            log.info(`VPN state changed: ${data.active ? 'connected' : 'disconnected'}`);
+            log.info(`VPN state changed: ${data.active ? 'connected' : 'disconnected'} ${data.interface ? `(${data.interface})` : ''}`);
 
             this.emit('vpn-change', {
                 active: data.active,
                 wasActive,
+                interface: data.interface,
+                name: data.name,
                 state: { ...this.state }
             });
 

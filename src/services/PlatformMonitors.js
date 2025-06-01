@@ -111,10 +111,12 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
 
     watchVPNState() {
         let lastVPNState = null;
+        let lastVPNInterface = null;
+        let initialCheckDone = false;
 
         const checkVPN = async () => {
             try {
-                // Check using scutil
+                // First check using scutil for native VPNs
                 const output = await this.executeCommand('scutil', ['--nc', 'list']);
                 const lines = output.split('\n');
 
@@ -133,19 +135,57 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                     }
                 }
 
+                // If no native VPN found, check interfaces for third-party VPNs
+                if (!activeVPN) {
+                    // Check for active utun interfaces (used by NordVPN, ExpressVPN, etc.)
+                    const ifconfigOutput = await this.executeCommand('ifconfig');
+
+                    // Look for utun interfaces with inet addresses
+                    const utunMatches = ifconfigOutput.match(/utun\d+:.*\n(?:\s+.*\n)*?\s+inet\s+\d+\.\d+\.\d+\.\d+/g);
+
+                    if (utunMatches && utunMatches.length > 0) {
+                        activeVPN = true;
+                        // Extract the interface name
+                        const interfaceMatch = utunMatches[0].match(/^(utun\d+):/);
+                        if (interfaceMatch) {
+                            vpnName = interfaceMatch[1];
+                        }
+                    }
+                }
+
                 // Also check for IKEv2 VPNs
                 const ikev2Output = await this.executeCommand('scutil', ['--proxy']);
                 if (ikev2Output.includes('ProxyAutoConfigEnable : 1')) {
                     activeVPN = true;
                 }
 
-                if (lastVPNState !== activeVPN) {
-                    this.log.info(`VPN state changed: ${activeVPN ? 'connected' : 'disconnected'}`);
+                // Only emit state change if:
+                // 1. Not the first check OR
+                // 2. State actually changed OR
+                // 3. Interface changed
+                if (initialCheckDone && (lastVPNState !== activeVPN || lastVPNInterface !== vpnName)) {
+                    this.log.info(`VPN state changed: ${activeVPN ? 'connected' : 'disconnected'} ${vpnName ? `(${vpnName})` : ''}`);
                     this.emit('vpn-state', {
                         active: activeVPN,
-                        name: vpnName
+                        name: vpnName,
+                        interface: vpnName
                     });
                     lastVPNState = activeVPN;
+                    lastVPNInterface = vpnName;
+                } else if (!initialCheckDone) {
+                    // For initial check, only emit if VPN is detected
+                    // This prevents false "disconnected" events on startup
+                    if (activeVPN) {
+                        this.log.info(`Initial VPN state: connected (${vpnName})`);
+                        this.emit('vpn-state', {
+                            active: true,
+                            name: vpnName,
+                            interface: vpnName
+                        });
+                        lastVPNState = true;
+                        lastVPNInterface = vpnName;
+                    }
+                    initialCheckDone = true;
                 }
             } catch (e) {
                 // scutil might not be available or might fail
@@ -153,11 +193,13 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
             }
         };
 
-        // Initial check
-        checkVPN();
+        // Delay initial check to allow NetworkMonitor to establish baseline
+        setTimeout(() => {
+            checkVPN();
+        }, 500);
 
-        // Regular checks
-        const interval = setInterval(checkVPN, 2000);
+        // Regular checks - more frequent for better VPN detection
+        const interval = setInterval(checkVPN, 1000); // Check every second instead of 2 seconds
         this.intervals.push(interval);
     }
 
