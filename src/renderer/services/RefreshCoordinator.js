@@ -1,5 +1,6 @@
 const { createLogger } = require('../utils/logger');
 const log = createLogger('RefreshCoordinator');
+const timeManager = require('./TimeManager');
 
 /**
  * Coordinates refresh operations to prevent overlapping and conflicting operations.
@@ -29,6 +30,9 @@ class RefreshCoordinator {
       timeout = 30000,
       reason = 'manual'
     } = options;
+    
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     
     // Check if already refreshing
     if (this.activeRefreshes.has(sourceId)) {
@@ -67,11 +71,11 @@ class RefreshCoordinator {
    * Create a refresh operation with timeout
    */
   createRefreshOperation(sourceId, refreshFn, timeout, reason) {
-    const startTime = Date.now();
+    const startTime = timeManager.now();
     
     const refreshPromise = refreshFn(sourceId)
       .then(result => {
-        const duration = Date.now() - startTime;
+        const duration = timeManager.now() - startTime;
         this.updateMetrics(duration);
         
         log.debug(`Refresh completed for ${sourceId} in ${duration}ms`);
@@ -80,11 +84,11 @@ class RefreshCoordinator {
           success: true,
           result,
           duration,
-          timestamp: Date.now()
+          timestamp: timeManager.now()
         };
       })
       .catch(error => {
-        const duration = Date.now() - startTime;
+        const duration = timeManager.now() - startTime;
         
         log.error(`Refresh failed for ${sourceId}`, {
           error: error.message,
@@ -96,7 +100,7 @@ class RefreshCoordinator {
           success: false,
           error: error.message,
           duration,
-          timestamp: Date.now()
+          timestamp: timeManager.now()
         };
       });
     
@@ -116,6 +120,9 @@ class RefreshCoordinator {
    * Queue a refresh operation
    */
   async queueRefresh(sourceId, refreshFn, options) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
+    
     if (!this.refreshQueue.has(sourceId)) {
       this.refreshQueue.set(sourceId, []);
     }
@@ -128,7 +135,7 @@ class RefreshCoordinator {
         options,
         resolve,
         reject,
-        timestamp: Date.now()
+        timestamp: timeManager.now()
       });
       
       log.debug(`Queued refresh for ${sourceId}, queue size: ${queue.length}`);
@@ -139,6 +146,8 @@ class RefreshCoordinator {
    * Process queued refreshes for a source
    */
   async processQueue(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const queue = this.refreshQueue.get(sourceId);
     if (!queue || queue.length === 0) return;
     
@@ -207,8 +216,8 @@ class RefreshCoordinator {
       log.warn(`Global lock already held by ${this.globalLock.operation}`);
       
       // Wait for lock with timeout
-      const startTime = Date.now();
-      while (this.globalLock && (Date.now() - startTime) < timeout) {
+      const startTime = timeManager.now();
+      while (this.globalLock && (timeManager.now() - startTime) < timeout) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       
@@ -219,7 +228,7 @@ class RefreshCoordinator {
     
     this.globalLock = {
       operation,
-      timestamp: Date.now()
+      timestamp: timeManager.now()
     };
     
     log.debug(`Global lock acquired for ${operation}`);
@@ -238,6 +247,8 @@ class RefreshCoordinator {
    * Cancel active refresh for a source
    */
   cancelRefresh(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const activeRefresh = this.activeRefreshes.get(sourceId);
     if (activeRefresh) {
       // Note: We can't actually cancel the promise, but we can track it
@@ -285,6 +296,8 @@ class RefreshCoordinator {
    * Check if a source is currently refreshing
    */
   isRefreshing(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     return this.activeRefreshes.has(sourceId);
   }
   

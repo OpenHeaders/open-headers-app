@@ -1,11 +1,20 @@
 // preload.js - Secure bridge between renderer and main process
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Simple time utilities for preload context
+const timeUtils = {
+    now: () => Date.now(),
+    newDate: (timestamp) => timestamp ? new Date(timestamp) : new Date(),
+    getTimestamp: () => Date.now(),
+    getCurrentDate: () => new Date()
+};
+
 // Simple logger for preload context
 const log = {
     formatTimestamp: () => {
-        const now = new Date();
-        return now.toISOString().replace('T', ' ').substring(0, 23);
+        const now = timeUtils.newDate();
+        // Use UTC ISO format with Z suffix for consistency
+        return now.toISOString().replace('T', ' ').substring(0, 23) + 'Z';
     },
     info: (message, data) => {
         const timestamp = log.formatTimestamp();
@@ -63,7 +72,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Enhanced HTTP request method with retry tracking
     makeHttpRequest: async (url, method, options) => {
         // Add traceable request ID to help with debugging
-        const requestId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+        const requestId = timeUtils.now().toString(36) + Math.random().toString(36).substring(2, 5);
 
         try {
             log.info(`[${requestId}] Sending HTTP request: ${method} ${url}`);
@@ -78,13 +87,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
             }
 
             // Start timing the request
-            const startTime = Date.now();
+            const startTime = timeUtils.now();
 
             // Invoke the main process function
             const result = await ipcRenderer.invoke('makeHttpRequest', url, method, options);
 
             // Log completion and timing
-            const duration = Date.now() - startTime;
+            const duration = timeUtils.now() - startTime;
             log.info(`[${requestId}] HTTP request completed in ${duration}ms`);
 
             return result;
@@ -182,6 +191,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // App info
     getAppPath: () => ipcRenderer.invoke('getAppPath'),
+    getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
 
     // Settings
     saveSettings: (settings) => ipcRenderer.invoke('saveSettings', settings),
@@ -202,6 +212,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Get current system state
     getSystemState: () => ipcRenderer.invoke('getSystemState'),
+
+    // Get current system timezone (bypasses JavaScript's cached timezone)
+    getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
 
     // System monitoring events for RefreshManager
     onSystemSuspend: (callback) => {
@@ -277,7 +290,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digits = 6, timeOffset = 0) => {
     try {
         // Generate a request ID for tracking TOTP generation
-        const totpId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+        const totpId = timeUtils.now().toString(36) + Math.random().toString(36).substring(2, 5);
         log.debug(`[${totpId}] Generating TOTP code with period=${period}, digits=${digits}, timeOffset=${timeOffset}`);
 
         // Normalize and clean the secret
@@ -315,11 +328,11 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
         }
 
         // Apply time offset in seconds (for synchronization with other TOTP providers)
-        const currentTimeSeconds = Math.floor(Date.now() / 1000) + timeOffset;
+        const currentTimeSeconds = Math.floor(timeUtils.now() / 1000) + timeOffset;
 
         // Get the current time counter value (floor of seconds since epoch / period)
         const counter = Math.floor(currentTimeSeconds / period);
-        log.debug(`Current time: ${new Date(currentTimeSeconds * 1000).toISOString()}`);
+        log.debug(`Current time: ${timeUtils.newDate(currentTimeSeconds * 1000).toISOString()}`);
         log.debug(`Counter value: ${counter} (period: ${period}s)`);
 
         // Convert counter to bytes (8 bytes, big-endian) per RFC 4226

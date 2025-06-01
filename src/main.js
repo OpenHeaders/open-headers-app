@@ -10,6 +10,7 @@ const AutoLaunch = require('auto-launch');
 const webSocketService = require('./services/ws-service');
 const NetworkMonitor = require('./services/NetworkMonitor');
 const networkStateManager = require('./services/NetworkStateManager');
+const timeManager = require('./services/TimeManager');
 
 // Initialize standardized logger
 const { createLogger } = require('./utils/mainLogger');
@@ -62,7 +63,7 @@ async function initializeNetworkMonitor() {
         primaryInterface: initialState.primaryInterface,
         connectionType: initialState.connectionType,
         diagnostics: {
-            dnsResolvable: true,
+            dnsResolvable: initialState.isOnline, // Match online state
             internetReachable: initialState.isOnline,
             captivePortal: false,
             latency: 0
@@ -71,19 +72,55 @@ async function initializeNetworkMonitor() {
 
     // Listen to network events
     networkMonitor.on('network-change', (event) => {
-        log.info('Network change detected:', event);
+        log.info('Network change detected - detailed event data:', {
+            type: event.type,
+            hasState: !!event.state,
+            stateIsOnline: event.state?.isOnline,
+            stateConfidence: event.state?.confidence,
+            stateNetworkQuality: event.state?.networkQuality,
+            checkResult: event.checkResult,
+            analysis: event.analysis,
+            changes: event.changes?.length || 0
+        });
 
-        // Update centralized state
+        // Log the full state if present
         if (event.state) {
+            log.info('Network change - full state:', {
+                isOnline: event.state.isOnline,
+                connectionType: event.state.connectionType,
+                confidence: event.state.confidence,
+                networkQuality: event.state.networkQuality,
+                vpnActive: event.state.vpnActive,
+                lastCheck: event.state.lastCheck,
+                consecutiveFailures: event.state.consecutiveFailures,
+                networkInterfaces: event.state.networkInterfaces ? 
+                    `Map with ${event.state.networkInterfaces.size} interfaces` : 'undefined'
+            });
+            
+            // Update centralized state
+            log.info('Updating NetworkStateManager with new state...');
             networkStateManager.updateState(event.state);
+        } else {
+            log.warn('Network change event received without state object');
         }
 
         // State will be broadcast automatically by NetworkStateManager
     });
 
     networkMonitor.on('status-change', (event) => {
-        log.info('Network status change:', event);
+        log.info('Network status change - detailed:', {
+            wasOnline: event.wasOnline,
+            isOnline: event.isOnline,
+            transition: `${event.wasOnline ? 'online' : 'offline'} -> ${event.isOnline ? 'online' : 'offline'}`,
+            stateProvided: !!event.state,
+            stateDetails: event.state ? {
+                confidence: event.state.confidence,
+                networkQuality: event.state.networkQuality,
+                consecutiveFailures: event.state.consecutiveFailures
+            } : null
+        });
 
+        log.info('Updating NetworkStateManager with status change...');
         networkStateManager.updateState({
             isOnline: event.isOnline
         });
@@ -97,11 +134,12 @@ async function initializeNetworkMonitor() {
     });
 
     networkMonitor.on('vpn-change', (event) => {
-        log.info('VPN state change:', event);
+        log.info('VPN state change:', event.active ? 'connected' : 'disconnected', 
+            event.interface ? `(${event.interface})` : '');
 
         networkStateManager.updateState({
             vpnActive: event.active
-        });
+        }, true); // Immediate update for VPN state
 
         // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {
@@ -241,7 +279,19 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on('error', (err) => {
-        log.error('Error in auto-updater:', err);
+        // Check if it's a network error
+        const isNetworkError = err.message && (
+            err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+            err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+            err.message.includes('net::ERR_CONNECTION_REFUSED')
+        );
+        
+        if (isNetworkError) {
+            log.info('Auto-updater network error:', err.message);
+        } else {
+            log.error('Error in auto-updater:', err);
+        }
+        
         // Reset all states on error
         global.updateCheckInProgress = false;
         global.updateDownloadInProgress = false;
@@ -250,11 +300,6 @@ function setupAutoUpdater() {
         if (mainWindow) {
             mainWindow.webContents.send('clear-update-checking-notification');
         }
-
-        // Handle network errors with a shorter retry time
-        const isNetworkError = err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
-            err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
-            err.message.includes('net::ERR_CONNECTION_REFUSED');
 
         if (isNetworkError) {
             log.info('Network error during update check, will retry in 15 minutes');
@@ -296,17 +341,41 @@ function setupAutoUpdater() {
 
     // Check for updates on startup (with delay to allow app to load fully)
     setTimeout(() => {
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Skipping initial update check - network is offline');
+            return;
+        }
+        
         log.info('Performing initial update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
-                log.error('Error in initial update check:', err);
-                log.error('Initial update check failed:', err);
+                // Only log as error if it's not a network error
+                const isNetworkError = err.message && (
+                    err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                    err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                    err.message.includes('net::ERR_CONNECTION_REFUSED')
+                );
+                
+                if (isNetworkError) {
+                    log.info('Initial update check failed due to network error:', err.message);
+                } else {
+                    log.error('Error in initial update check:', err);
+                }
             });
     }, 3000);
 
     // Set up periodic update checks (every 6 hours)
     const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
     setInterval(() => {
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Skipping periodic update check - network is offline');
+            return;
+        }
+        
         // Check if we're already in the process of checking for updates
         if (global.updateCheckInProgress || global.updateDownloadInProgress) {
             log.info('Skipping periodic update check - another check/download already in progress');
@@ -316,8 +385,18 @@ function setupAutoUpdater() {
         log.info('Performing periodic update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
-                log.error('Error in periodic update check:', err);
-                log.error('Periodic update check failed:', err);
+                // Only log as error if it's not a network error
+                const isNetworkError = err.message && (
+                    err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                    err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                    err.message.includes('net::ERR_CONNECTION_REFUSED')
+                );
+                
+                if (isNetworkError) {
+                    log.info('Periodic update check failed due to network error:', err.message);
+                } else {
+                    log.error('Error in periodic update check:', err);
+                }
 
                 // Even if the check fails, we'll try again at the next interval
                 // No need to show error to user for routine background checks
@@ -631,21 +710,25 @@ function createTray() {
 
         // Define possible icon locations in priority order specifically for macOS Resources directory
         const iconLocations = [
-            // First check icon files we know exist from your paste.txt
+            // First check build directory icons
+            path.join(__dirname, '..', 'build', 'icon128.png'),
+            path.join(__dirname, '..', 'build', 'icon.png'),
+            
+            // Check renderer images directory (where files actually exist)
+            path.join(__dirname, 'renderer', 'images', 'icon32.png'),
+            path.join(__dirname, 'renderer', 'images', 'icon128.png'),
+            
+            // Check packaged app resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon128.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon.png'),
             path.join(process.resourcesPath, 'icon128.png'),
             path.join(process.resourcesPath, 'icon.png'),
 
-            // Then check in images subdirectory
-            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon16.png'),
+            // Check images subdirectory in resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon32.png'),
-            path.join(process.resourcesPath, 'images', 'icon16.png'),
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon128.png'),
             path.join(process.resourcesPath, 'images', 'icon32.png'),
-
-            // Add any other possible locations
-            path.join(app.getAppPath(), 'renderer', 'images', 'icon16.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon16.png')
+            path.join(process.resourcesPath, 'images', 'icon128.png')
         ];
 
         // Try each location in order
@@ -797,7 +880,7 @@ function initializeWebSocket() {
 // App is ready
 app.whenReady().then(async () => {
     // Log app startup information to help with debugging
-    log.info(`App started at ${new Date().toISOString()}`);
+    log.info(`App started at ${timeManager.formatTimestamp()}`);
     log.info(`Process argv: ${JSON.stringify(process.argv)}`);
     log.info(`App version: ${app.getVersion()}`);
     log.info(`Platform: ${process.platform}`);
@@ -808,6 +891,19 @@ app.whenReady().then(async () => {
 
     // Initialize network monitoring
     await initializeNetworkMonitor();
+
+    // Register essential IPC handlers before creating window
+    // These are needed immediately when the renderer loads
+    ipcMain.handle('getAppVersion', () => {
+        return app.getVersion();
+    });
+
+    ipcMain.handle('getSettings', handleGetSettings);
+    ipcMain.handle('saveSettings', handleSaveSettings);
+    ipcMain.handle('getSystemTimezone', handleGetSystemTimezone);
+    ipcMain.handle('loadFromStorage', handleLoadFromStorage);
+    ipcMain.handle('saveToStorage', handleSaveToStorage);
+    ipcMain.handle('makeHttpRequest', handleMakeHttpRequest);
 
     createWindow();
     createTray();
@@ -978,9 +1074,12 @@ function setupIPC() {
         return {
             ...networkState,
             powerState: 'active', // Can be enhanced with powerMonitor
-            timestamp: Date.now()
+            timestamp: timeManager.now()
         };
     });
+
+    // Get current system timezone - handled by handleGetSystemTimezone
+    // Handler already registered in pre-registered handlers section
 
     ipcMain.on('updateWebSocketSources', (event, sources) => {
         // Initialize WebSocket if needed (lazy loading)
@@ -993,6 +1092,16 @@ function setupIPC() {
     // Add update-related IPC handlers
     ipcMain.on('check-for-updates', (event, isManual) => {
         log.info(`${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
+
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Cannot check for updates - network is offline');
+            if (mainWindow) {
+                mainWindow.webContents.send('update-check-network-offline');
+            }
+            return;
+        }
 
         // First check if an update is already downloaded and ready
         if (global.updateDownloaded) {
@@ -1025,7 +1134,18 @@ function setupIPC() {
         try {
             autoUpdater.checkForUpdates()
                 .catch(error => {
-                    log.error('autoUpdater.checkForUpdates() failed:', error);
+                    // Check if it's a network error
+                    const isNetworkError = error.message && (
+                        error.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                        error.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                        error.message.includes('net::ERR_CONNECTION_REFUSED')
+                    );
+                    
+                    if (isNetworkError) {
+                        log.info('Manual update check failed due to network error:', error.message);
+                    } else {
+                        log.error('autoUpdater.checkForUpdates() failed:', error);
+                    }
 
                     // IMPORTANT: Reset check state on error and notify client
                     global.updateCheckInProgress = false;
@@ -1107,17 +1227,14 @@ function setupIPC() {
     // Environment variable operations
     ipcMain.handle('getEnvVariable', handleGetEnvVariable);
 
-    // Storage operations
-    ipcMain.handle('saveToStorage', handleSaveToStorage);
-    ipcMain.handle('loadFromStorage', handleLoadFromStorage);
+    // Storage operations - already registered before createWindow
 
-    // HTTP operations
-    ipcMain.handle('makeHttpRequest', handleMakeHttpRequest);
+    // HTTP operations - handler already registered in pre-registered handlers section
 
     // Application settings
     ipcMain.handle('getAppPath', handleGetAppPath);
-    ipcMain.handle('saveSettings', handleSaveSettings);
-    ipcMain.handle('getSettings', handleGetSettings);
+    // The following handlers are already registered before createWindow:
+    // getSystemTimezone, saveSettings, getSettings
 
     // System integration
     ipcMain.handle('setAutoLaunch', handleSetAutoLaunch);
@@ -1145,9 +1262,7 @@ function setupIPC() {
         app.quit();
     });
 
-    ipcMain.handle('getAppVersion', () => {
-        return app.getVersion();
-    });
+    // getAppVersion handler already registered before createWindow
 
     ipcMain.handle('openExternal', async (_, url) => {
         try {
@@ -1317,6 +1432,190 @@ function handleGetAppPath() {
 }
 
 /**
+ * Get system timezone directly from OS
+ * This bypasses JavaScript's cached timezone information
+ */
+async function handleGetSystemTimezone() {
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    let timezone = null;
+    let method = 'unknown';
+    
+    try {
+        if (process.platform === 'darwin') {
+            // macOS: Read timezone from /etc/localtime symlink
+            try {
+                const { stdout } = await execAsync('readlink /etc/localtime');
+                // Handle both /usr/share/zoneinfo and /var/db/timezone/zoneinfo paths
+                const match = stdout.trim().match(/zoneinfo\/(.+)$/);
+                if (match) {
+                    timezone = match[1];
+                    method = 'readlink';
+                }
+            } catch (e) {
+                // Silent catch, will try fallback
+            }
+        } else if (process.platform === 'linux') {
+            // Linux: Read /etc/localtime symlink or /etc/timezone
+            try {
+                const { stdout } = await execAsync('readlink /etc/localtime');
+                const match = stdout.trim().match(/zoneinfo\/(.+)$/);
+                if (match) {
+                    timezone = match[1];
+                    method = 'readlink';
+                }
+            } catch {
+                // Fallback to /etc/timezone
+                try {
+                    const { stdout } = await execAsync('cat /etc/timezone');
+                    timezone = stdout.trim();
+                    method = 'etc_timezone';
+                } catch {
+                    // Silent catch
+                }
+            }
+        } else if (process.platform === 'win32') {
+            // Windows: Use PowerShell to get timezone
+            try {
+                const { stdout } = await execAsync('powershell -Command "Get-TimeZone | Select-Object -ExpandProperty Id"');
+                // Windows uses different timezone names, need to map to IANA
+                timezone = mapWindowsToIANA(stdout.trim());
+                method = 'powershell';
+            } catch {
+                // Silent catch
+            }
+        }
+    } catch (error) {
+        log.error('Error getting system timezone:', error);
+        method = 'error_fallback';
+    }
+    
+    // If we couldn't get system timezone, fall back to JavaScript
+    if (!timezone) {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        method = 'intl_fallback';
+    }
+    
+    // Get current offset
+    const offset = timeManager.getDate().getTimezoneOffset();
+    
+    return {
+        timezone,
+        offset,
+        method
+    };
+}
+
+// Map Windows timezone IDs to IANA timezone names
+function mapWindowsToIANA(windowsId) {
+    const mapping = {
+        'Pacific Standard Time': 'America/Los_Angeles',
+        'Mountain Standard Time': 'America/Denver',
+        'Central Standard Time': 'America/Chicago',
+        'Eastern Standard Time': 'America/New_York',
+        'GMT Standard Time': 'Europe/London',
+        'Central European Standard Time': 'Europe/Berlin',
+        'E. Europe Standard Time': 'Europe/Bucharest',
+        'Turkey Standard Time': 'Europe/Istanbul',
+        'China Standard Time': 'Asia/Shanghai',
+        'Tokyo Standard Time': 'Asia/Tokyo',
+        'India Standard Time': 'Asia/Kolkata',
+        'Arabian Standard Time': 'Asia/Dubai',
+        'Atlantic Standard Time': 'Atlantic/Canary',
+        'W. Europe Standard Time': 'Europe/Paris',
+        'Romance Standard Time': 'Europe/Paris',
+        'Central Europe Standard Time': 'Europe/Warsaw',
+        'Russian Standard Time': 'Europe/Moscow',
+        'SA Pacific Standard Time': 'America/Bogota',
+        'Argentina Standard Time': 'America/Buenos_Aires',
+        'Brasilia Standard Time': 'America/Sao_Paulo',
+        'Canada Central Standard Time': 'America/Regina',
+        'Mexico Standard Time': 'America/Mexico_City',
+        'Venezuela Standard Time': 'America/Caracas',
+        'SA Eastern Standard Time': 'America/Cayenne',
+        'Newfoundland Standard Time': 'America/St_Johns',
+        'Greenland Standard Time': 'America/Godthab',
+        'Azores Standard Time': 'Atlantic/Azores',
+        'Cape Verde Standard Time': 'Atlantic/Cape_Verde',
+        'Morocco Standard Time': 'Africa/Casablanca',
+        'UTC': 'UTC',
+        'GMT Standard Time': 'Europe/London',
+        'British Summer Time': 'Europe/London',
+        'Egypt Standard Time': 'Africa/Cairo',
+        'South Africa Standard Time': 'Africa/Johannesburg',
+        'Israel Standard Time': 'Asia/Jerusalem',
+        'Jordan Standard Time': 'Asia/Amman',
+        'Middle East Standard Time': 'Asia/Beirut',
+        'Syria Standard Time': 'Asia/Damascus',
+        'West Asia Standard Time': 'Asia/Karachi',
+        'Afghanistan Standard Time': 'Asia/Kabul',
+        'Pakistan Standard Time': 'Asia/Karachi',
+        'Sri Lanka Standard Time': 'Asia/Colombo',
+        'Myanmar Standard Time': 'Asia/Yangon',
+        'SE Asia Standard Time': 'Asia/Bangkok',
+        'Singapore Standard Time': 'Asia/Singapore',
+        'Taipei Standard Time': 'Asia/Taipei',
+        'W. Australia Standard Time': 'Australia/Perth',
+        'Korea Standard Time': 'Asia/Seoul',
+        'Cen. Australia Standard Time': 'Australia/Adelaide',
+        'AUS Eastern Standard Time': 'Australia/Sydney',
+        'Tasmania Standard Time': 'Australia/Hobart',
+        'Vladivostok Standard Time': 'Asia/Vladivostok',
+        'West Pacific Standard Time': 'Pacific/Port_Moresby',
+        'Central Pacific Standard Time': 'Pacific/Guadalcanal',
+        'Fiji Standard Time': 'Pacific/Fiji',
+        'New Zealand Standard Time': 'Pacific/Auckland',
+        'Tonga Standard Time': 'Pacific/Tongatapu',
+        'Samoa Standard Time': 'Pacific/Apia',
+        'Hawaiian Standard Time': 'Pacific/Honolulu',
+        'Alaskan Standard Time': 'America/Anchorage',
+        'Pacific Standard Time (Mexico)': 'America/Tijuana',
+        'Mountain Standard Time (Mexico)': 'America/Chihuahua',
+        'Central Standard Time (Mexico)': 'America/Mexico_City',
+        'Eastern Standard Time (Mexico)': 'America/Cancun',
+        'US Mountain Standard Time': 'America/Phoenix',
+        'Central America Standard Time': 'America/Guatemala',
+        'US Eastern Standard Time': 'America/Indiana/Indianapolis',
+        'Paraguay Standard Time': 'America/Asuncion',
+        'Montevideo Standard Time': 'America/Montevideo',
+        'Magallanes Standard Time': 'America/Punta_Arenas',
+        'Cuba Standard Time': 'America/Havana',
+        'Haiti Standard Time': 'America/Port-au-Prince',
+        'Turks And Caicos Standard Time': 'America/Grand_Turk',
+        'Sao Tome Standard Time': 'Africa/Sao_Tome',
+        'Libya Standard Time': 'Africa/Tripoli',
+        'Namibia Standard Time': 'Africa/Windhoek',
+        'Mauritius Standard Time': 'Indian/Mauritius',
+        'Georgian Standard Time': 'Asia/Tbilisi',
+        'Caucasus Standard Time': 'Asia/Yerevan',
+        'Iran Standard Time': 'Asia/Tehran',
+        'Ekaterinburg Standard Time': 'Asia/Yekaterinburg',
+        'Omsk Standard Time': 'Asia/Omsk',
+        'Bangladesh Standard Time': 'Asia/Dhaka',
+        'Nepal Standard Time': 'Asia/Kathmandu',
+        'North Asia Standard Time': 'Asia/Krasnoyarsk',
+        'N. Central Asia Standard Time': 'Asia/Novosibirsk',
+        'North Asia East Standard Time': 'Asia/Irkutsk',
+        'Ulaanbaatar Standard Time': 'Asia/Ulaanbaatar',
+        'Yakutsk Standard Time': 'Asia/Yakutsk',
+        'Sakhalin Standard Time': 'Asia/Sakhalin',
+        'Magadan Standard Time': 'Asia/Magadan',
+        'Kamchatka Standard Time': 'Asia/Kamchatka',
+        'Norfolk Standard Time': 'Pacific/Norfolk',
+        'Lord Howe Standard Time': 'Australia/Lord_Howe',
+        'Easter Island Standard Time': 'Pacific/Easter',
+        'Marquesas Standard Time': 'Pacific/Marquesas',
+        'Tahiti Standard Time': 'Pacific/Tahiti',
+        'Line Islands Standard Time': 'Pacific/Kiritimati',
+        'Chatham Islands Standard Time': 'Pacific/Chatham'
+    };
+    
+    return mapping[windowsId] || windowsId;
+}
+
+/**
  * Enhanced HTTP request handler with network awareness
  *
  * This implementation uses Electron's net module with adaptive retry logic
@@ -1360,7 +1659,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
 
                 // Get requestId
                 const requestId = (options.connectionOptions && options.connectionOptions.requestId) ||
-                    (Date.now().toString(36) + Math.random().toString(36).slice(2, 7));
+                    (timeManager.now().toString(36) + Math.random().toString(36).slice(2, 7));
 
                 // Create request using Electron's net module
                 const request = net.request({

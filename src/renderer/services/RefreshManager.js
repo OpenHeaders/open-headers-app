@@ -2,6 +2,7 @@ const { createLogger } = require('../utils/logger');
 const log = createLogger('RefreshManager');
 const NetworkAwareScheduler = require('./NetworkAwareScheduler');
 const RefreshCoordinator = require('./RefreshCoordinator');
+const timeManager = require('./TimeManager');
 
 /**
  * RefreshManager - Simplified to focus only on coordinating refresh operations.
@@ -36,7 +37,7 @@ class RefreshManager {
     this.onUpdateCallback = onUpdateCallback;
     
     // Initialize scheduler with refresh callback
-    this.scheduler.initialize(this.refreshSource);
+    await this.scheduler.initialize(this.refreshSource);
     
     // Setup event listeners
     this.setupEventListeners();
@@ -122,7 +123,8 @@ class RefreshManager {
       return;
     }
     
-    const sourceId = source.sourceId;
+    // Convert sourceId to string to ensure consistency
+    const sourceId = String(source.sourceId);
     
     // Check if refresh is enabled
     if (!source.refreshOptions?.enabled || !source.refreshOptions?.interval) {
@@ -130,7 +132,7 @@ class RefreshManager {
       return;
     }
     
-    // Store source data
+    // Store source data with string key
     this.sources.set(sourceId, source);
     
     // Schedule the source
@@ -147,7 +149,8 @@ class RefreshManager {
   updateSource(source) {
     if (source.sourceType !== 'http') return;
     
-    const sourceId = source.sourceId;
+    // Convert sourceId to string to ensure consistency
+    const sourceId = String(source.sourceId);
     const existingSource = this.sources.get(sourceId);
     
     if (!existingSource) {
@@ -180,6 +183,8 @@ class RefreshManager {
    * Remove a source from management
    */
   removeSource(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     if (!this.sources.has(sourceId)) return;
     
     this.sources.delete(sourceId);
@@ -193,6 +198,8 @@ class RefreshManager {
    * Refresh a single source (called by scheduler or manually)
    */
   async refreshSource(sourceId, options = {}) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const source = this.sources.get(sourceId);
     if (!source) {
       log.warn(`Source ${sourceId} not found`);
@@ -221,9 +228,9 @@ class RefreshManager {
    * Perform the actual refresh operation
    */
   async performRefresh(sourceId, source) {
-    const startTime = Date.now();
+    const startTime = timeManager.now();
     
-    // Notify UI of refresh start
+    // Notify UI of refresh start (sourceId already converted to string)
     this.notifyUI(sourceId, null, {
       refreshStatus: {
         isRefreshing: true,
@@ -247,18 +254,22 @@ class RefreshManager {
         source.jsonFilter
       );
       
+      // Get the next refresh time from scheduler
+      const refreshStatus = this.getRefreshStatus(sourceId);
+      
       // Update UI with result
       this.notifyUI(sourceId, result.content, {
         originalResponse: result.originalResponse,
         headers: result.headers,
         refreshStatus: {
           isRefreshing: false,
-          lastRefresh: Date.now(),
+          lastRefresh: timeManager.now(),
           success: true
         },
         refreshOptions: {
           ...source.refreshOptions,
-          lastRefresh: Date.now()
+          lastRefresh: timeManager.now(),
+          nextRefresh: refreshStatus.nextRefresh
         }
       });
       
@@ -272,7 +283,7 @@ class RefreshManager {
       this.notifyUI(sourceId, null, {
         refreshStatus: {
           isRefreshing: false,
-          lastRefresh: Date.now(),
+          lastRefresh: timeManager.now(),
           success: false,
           error: error.message
         }
@@ -314,6 +325,8 @@ class RefreshManager {
    * Manual refresh - bypasses schedule
    */
   async manualRefresh(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     log.info(`Manual refresh requested for ${sourceId}`);
     
     const result = await this.refreshSource(sourceId, {
@@ -348,6 +361,8 @@ class RefreshManager {
    * Get refresh status for a source
    */
   getRefreshStatus(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const isRefreshing = this.coordinator.isRefreshing(sourceId);
     const isOverdue = this.scheduler.isSourceOverdue(sourceId);
     const stats = this.scheduler.getStatistics();
@@ -367,6 +382,8 @@ class RefreshManager {
    * Get time until next refresh in milliseconds
    */
   getTimeUntilRefresh(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const stats = this.scheduler.getStatistics();
     const schedule = stats.schedules.find(s => s.sourceId === sourceId);
     
@@ -374,7 +391,7 @@ class RefreshManager {
       return 0;
     }
     
-    const now = Date.now();
+    const now = timeManager.now();
     const timeUntil = schedule.nextRefresh - now;
     
     return Math.max(0, timeUntil);
@@ -397,7 +414,8 @@ class RefreshManager {
   notifyUI(sourceId, content, additionalData = {}) {
     if (!this.onUpdateCallback) return;
     
-    this.onUpdateCallback(sourceId, content, additionalData);
+    // Note: sourceId is already a string at this point, but ensure consistency
+    this.onUpdateCallback(String(sourceId), content, additionalData);
   }
   
   /**
