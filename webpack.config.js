@@ -1,6 +1,7 @@
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
 // Main process config
@@ -24,7 +25,8 @@ const mainConfig = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env']
+                        presets: ['@babel/preset-env'],
+                        cacheDirectory: true
                     }
                 }
             }
@@ -35,11 +37,18 @@ const mainConfig = {
             "fsevents": false
         },
         alias: {
-            // Force all fsevents to be disabled
             'fsevents': false,
             'chokidar': path.resolve(__dirname, 'node_modules/chokidar'),
-            // Add config directory alias
             'config': path.resolve(__dirname, 'config')
+        }
+    },
+    externals: {
+        'fsevents': 'empty'
+    },
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename]
         }
     },
     plugins: [
@@ -50,21 +59,24 @@ const mainConfig = {
             'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
         })
     ],
-    externals: {
-        'fsevents': 'empty'
-    },
     optimization: {
+        minimize: process.env.NODE_ENV === 'production',
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                parallel: true,
                 terserOptions: {
                     compress: {
-                        drop_console: false, // Keep console.log statements
-                        drop_debugger: false, // Keep debugger statements too
+                        drop_console: false,
+                        drop_debugger: false,
+                        passes: 2
                     }
                 }
             })
-        ]
+        ],
+        // Disable code splitting for main process
+        splitChunks: false,
+        runtimeChunk: false
     },
     devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
@@ -86,7 +98,8 @@ const preloadConfig = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env']
+                        presets: ['@babel/preset-env'],
+                        cacheDirectory: true
                     }
                 }
             }
@@ -97,10 +110,17 @@ const preloadConfig = {
             "fsevents": false
         },
         alias: {
-            // Force all fsevents to be disabled
             'fsevents': false,
-            // Add config directory alias
             'config': path.resolve(__dirname, 'config')
+        }
+    },
+    externals: {
+        'fsevents': 'empty'
+    },
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename]
         }
     },
     plugins: [
@@ -111,21 +131,24 @@ const preloadConfig = {
             'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
         })
     ],
-    externals: {
-        'fsevents': 'empty'
-    },
     optimization: {
+        minimize: process.env.NODE_ENV === 'production',
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                parallel: true,
                 terserOptions: {
                     compress: {
-                        drop_console: false, // Keep console.log statements
-                        drop_debugger: false, // Keep debugger statements too
+                        drop_console: false,
+                        drop_debugger: false,
+                        passes: 2
                     }
                 }
             })
-        ]
+        ],
+        // Disable code splitting for main process
+        splitChunks: false,
+        runtimeChunk: false
     },
     devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
@@ -133,16 +156,16 @@ const preloadConfig = {
 // Renderer process config (React)
 const rendererConfig = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
-    target: 'web',
+    target: 'web', // Changed from 'electron-renderer' to 'web' to avoid node polyfills
     entry: './src/renderer/index.jsx',
     performance: {
         hints: false, // Disable performance warnings
     },
     output: {
         path: path.resolve(__dirname, 'dist-webpack'),
-        filename: 'bundle.js',
-        // Add this to ensure unique filenames for chunks
-        chunkFilename: '[name].[chunkhash].js'
+        filename: process.env.NODE_ENV === 'production' ? '[name].[contenthash].js' : 'bundle.js',
+        chunkFilename: process.env.NODE_ENV === 'production' ? '[name].[contenthash].js' : '[name].js',
+        clean: false // Don't clean to avoid deleting main.js and preload.js
     },
     module: {
         rules: [
@@ -152,7 +175,8 @@ const rendererConfig = {
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-react']
+                        presets: ['@babel/preset-env', '@babel/preset-react'],
+                        cacheDirectory: true
                     }
                 }
             },
@@ -198,7 +222,9 @@ const rendererConfig = {
     resolve: {
         extensions: ['.js', '.jsx'],
         fallback: {
-            "fsevents": false
+            "fsevents": false,
+            "buffer": false,
+            "process": false
         },
         alias: {
             // Force all fsevents to be disabled
@@ -209,6 +235,12 @@ const rendererConfig = {
             'scheduler': path.resolve('./node_modules/scheduler'),
             // Add config directory alias
             'config': path.resolve(__dirname, 'config')
+        }
+    },
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename]
         }
     },
     externals: {
@@ -222,12 +254,17 @@ const rendererConfig = {
             // Add config path
             'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
         }),
+        new webpack.ProvidePlugin({
+            global: 'globalThis',
+        }),
+        new HtmlWebpackPlugin({
+            template: path.resolve(__dirname, 'src/renderer/index.html'),
+            filename: 'renderer/index.html',
+            inject: 'body',
+            scriptLoading: 'defer'
+        }),
         new CopyPlugin({
             patterns: [
-                {
-                    from: path.resolve(__dirname, 'src/renderer/index.html'),
-                    to: path.resolve(__dirname, 'dist-webpack/renderer/index.html')
-                },
                 {
                     from: path.resolve(__dirname, 'src/renderer/images'),
                     to: path.resolve(__dirname, 'dist-webpack/renderer/images'),
@@ -252,10 +289,11 @@ const rendererConfig = {
         })
     ],
     optimization: {
-        minimize: true,
+        minimize: process.env.NODE_ENV === 'production',
         minimizer: [
             new TerserPlugin({
                 extractComments: false,
+                parallel: true,
                 terserOptions: {
                     parse: {
                         ecma: 8,
@@ -265,21 +303,41 @@ const rendererConfig = {
                         warnings: false,
                         comparisons: false,
                         inline: 2,
-                        drop_console: false, // Keep console.log statements
-                        drop_debugger: false, // Keep debugger statements too
-                        pure_funcs: [], // Don't remove any console methods
+                        drop_console: false,
+                        drop_debugger: false,
+                        pure_funcs: [],
+                        passes: 2
                     },
                     output: {
                         ecma: 5,
                         comments: false,
                         ascii_only: true,
                     },
-                    safari10: true, // Compatibility for older Safari
+                    safari10: true,
                 }
             })
         ],
-        // Disable splitChunks to avoid the conflict
-        splitChunks: false
+        splitChunks: process.env.NODE_ENV === 'production' ? {
+            chunks: 'all',
+            cacheGroups: {
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    name: 'vendor',
+                    priority: 10
+                },
+                antd: {
+                    test: /[\\/]node_modules[\\/](antd|@ant-design|rc-[^/]+)[\\/]/,
+                    name: 'antd',
+                    priority: 20
+                },
+                react: {
+                    test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+                    name: 'react',
+                    priority: 20
+                }
+            }
+        } : false,
+        runtimeChunk: process.env.NODE_ENV === 'production' ? 'single' : false
     },
     devtool: process.env.NODE_ENV === 'production' ? false : 'source-map'
 };
