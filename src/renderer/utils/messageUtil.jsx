@@ -1,12 +1,15 @@
 // We're changing our approach to use the hook pattern
 import React, { useEffect } from 'react';
 import { useAppMessage } from './MessageProvider';
+import { createLogger } from './logger';
+
+const log = createLogger('messageUtil');
 
 // These functions will be used outside of React components
 let globalShowMessage = (type, content, duration) => {
-    console.log(`[messageUtil] Message API not initialized yet: ${type} - ${content}`);
+    log.debug(`Message API not initialized yet: ${type} - ${content}`);
     // Default implementation that just logs
-    console.log(`[messageUtil] This message will not be displayed to user: ${content}`);
+    log.debug(`This message will not be displayed to user: ${content}`);
 };
 
 /**
@@ -16,9 +19,9 @@ let globalShowMessage = (type, content, duration) => {
 export const initializeMessageApi = (showMessage) => {
     if (typeof showMessage === 'function') {
         globalShowMessage = showMessage;
-        console.log('[messageUtil] Message API initialized');
+        log.info('Message API initialized');
     } else {
-        console.error('[messageUtil] Failed to initialize Message API: showMessage is not a function');
+        log.error('Failed to initialize Message API: showMessage is not a function');
     }
 };
 
@@ -35,7 +38,7 @@ export const MessageInitializer = () => {
         return () => {
             // Reset to default implementation when component unmounts
             globalShowMessage = (type, content, duration) => {
-                console.log(`[messageUtil] Message API reset: ${type} - ${content}`);
+                log.debug(`Message API reset: ${type} - ${content}`);
             };
         };
     }, [showMessage]);
@@ -47,8 +50,7 @@ export const MessageInitializer = () => {
 // Exported functions that can be used anywhere in the application
 export const showMessage = (type, content, duration = 3) => {
     if (typeof globalShowMessage !== 'function') {
-        console.error('[messageUtil] Message API not properly initialized');
-        console.log(`[messageUtil] Would show message: ${type} - ${content}`);
+        // Message API not properly initialized
         return;
     }
     globalShowMessage(type, content, duration);

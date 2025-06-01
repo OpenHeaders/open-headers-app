@@ -9,11 +9,11 @@ const chokidar = require('chokidar');
 const AutoLaunch = require('auto-launch');
 const webSocketService = require('./services/ws-service');
 const NetworkMonitor = require('./services/NetworkMonitor');
+const networkStateManager = require('./services/NetworkStateManager');
 
-// Initialize electron-log ONCE at the top level
-const log = require('electron-log');
-log.transports.file.level = 'info';
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}] [{level}] {text}';
+// Initialize standardized logger
+const { createLogger } = require('./utils/mainLogger');
+const log = createLogger('Main');
 log.info('App starting with args:', process.argv);
 log.info('App executable path:', process.execPath);
 
@@ -27,17 +27,6 @@ let updateCheckInProgress = false;
 let updateDownloadInProgress = false;
 let updateDownloaded = false;
 let networkMonitor = null;
-
-// Enhanced system state with network info
-let systemState = {
-    isOnline: true,
-    lastNetworkCheck: Date.now(),
-    powerState: 'active',
-    networkQuality: 'good',
-    corporateEnvironment: 'unknown',
-    vpnActive: false,
-    networkInterfaces: {}
-};
 
 // Store app launch arguments for debugging and auto-launch detection
 const appLaunchArgs = {
@@ -53,62 +42,53 @@ app.setName('OpenHeaders');
 // This doesn't affect the WSS server which uses its own certificates
 app.commandLine.appendSwitch('use-system-ca-store');
 
-// Add logging to help with debugging
-function logToFile(message) {
-    try {
-        // Use our central log instance instead of writing directly to file
-        log.info(message);
-    } catch (err) {
-        // Silent fail if logging fails
-        console.error('Logging failed:', err);
-    }
-}
+// Remove deprecated logToFile function - use logger directly
 
 // Initialize network monitor when app is ready
 async function initializeNetworkMonitor() {
-    console.log('Initializing enhanced network monitoring...');
+    log.info('Initializing enhanced network monitoring...');
 
     networkMonitor = new NetworkMonitor();
 
     // Initialize and get initial state
     const initialState = await networkMonitor.initialize();
 
-    // Update system state
-    systemState = {
-        ...systemState,
+    // Update centralized network state
+    networkStateManager.updateState({
         isOnline: initialState.isOnline,
         networkQuality: initialState.networkQuality,
-        corporateEnvironment: initialState.corporateEnvironment,
         vpnActive: initialState.vpnActive,
-        networkInterfaces: initialState.networkInterfaces
-    };
+        interfaces: initialState.networkInterfaces ? Array.from(initialState.networkInterfaces.entries()) : [],
+        primaryInterface: initialState.primaryInterface,
+        connectionType: initialState.connectionType,
+        diagnostics: {
+            dnsResolvable: true,
+            internetReachable: initialState.isOnline,
+            captivePortal: false,
+            latency: 0
+        }
+    }, true); // immediate update
 
     // Listen to network events
     networkMonitor.on('network-change', (event) => {
-        console.log('Network change detected:', event);
+        log.info('Network change detected:', event);
 
-        // Update system state
+        // Update centralized state
         if (event.state) {
-            systemState = {
-                ...systemState,
-                ...event.state
-            };
+            networkStateManager.updateState(event.state);
         }
 
-        // Notify all renderer windows
-        BrowserWindow.getAllWindows().forEach(window => {
-            if (window && !window.isDestroyed()) {
-                window.webContents.send('network-change', event);
-            }
-        });
+        // State will be broadcast automatically by NetworkStateManager
     });
 
     networkMonitor.on('status-change', (event) => {
-        console.log('Network status change:', event);
+        log.info('Network status change:', event);
 
-        systemState.isOnline = event.isOnline;
+        networkStateManager.updateState({
+            isOnline: event.isOnline
+        });
 
-        // Notify all renderer windows
+        // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {
             if (window && !window.isDestroyed()) {
                 window.webContents.send('network-state-changed', event.isOnline);
@@ -117,11 +97,13 @@ async function initializeNetworkMonitor() {
     });
 
     networkMonitor.on('vpn-change', (event) => {
-        console.log('VPN state change:', event);
+        log.info('VPN state change:', event);
 
-        systemState.vpnActive = event.active;
+        networkStateManager.updateState({
+            vpnActive: event.active
+        });
 
-        // Notify all renderer windows
+        // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {
             if (window && !window.isDestroyed()) {
                 window.webContents.send('vpn-state-changed', event);
@@ -129,7 +111,24 @@ async function initializeNetworkMonitor() {
         });
     });
 
-    console.log('Network monitor initialized with state:', systemState);
+    // Subscribe to state changes from NetworkStateManager
+    networkStateManager.on('state-changed', (event) => {
+        log.info('NetworkStateManager state changed:', event.changes);
+        
+        // Send comprehensive network change event
+        BrowserWindow.getAllWindows().forEach(window => {
+            if (window && !window.isDestroyed()) {
+                window.webContents.send('network-change', {
+                    type: 'state-sync',
+                    state: event.state,
+                    changes: event.changes,
+                    analysis: networkStateManager.analyzeNetworkChange()
+                });
+            }
+        });
+    });
+
+    log.info('Network monitor initialized with state:', networkStateManager.getState());
 }
 
 function setupAutoUpdater() {
@@ -138,8 +137,16 @@ function setupAutoUpdater() {
     global.updateDownloadInProgress = false;
     global.updateDownloaded = false;
 
-    // Use the existing log object instead of creating a new one
-    autoUpdater.logger = log;
+    // Configure autoUpdater logging to suppress [debug] logs
+    const electronLog = require('electron-log');
+    // Create a filtered logger that only logs info level and above
+    const filteredLogger = {
+        info: (...args) => log.info('[AutoUpdater]', ...args),
+        warn: (...args) => log.warn('[AutoUpdater]', ...args),
+        error: (...args) => log.error('[AutoUpdater]', ...args),
+        debug: () => {} // Suppress debug logs from autoUpdater
+    };
+    autoUpdater.logger = filteredLogger;
     autoUpdater.allowDowngrade = false;
     autoUpdater.autoDownload = true;
     autoUpdater.allowPrerelease = false;
@@ -152,10 +159,7 @@ function setupAutoUpdater() {
     log.info(`Platform: ${process.platform}`);
     log.info(`Arch: ${process.arch}`);
 
-    log.info(`[DEBUG] Initial update states:
-      updateCheckInProgress = ${global.updateCheckInProgress}
-      updateDownloadInProgress = ${global.updateDownloadInProgress}
-      updateDownloaded = ${global.updateDownloaded}`);
+    // Initial update states are set above, no need to log them
 
     // Force updates in development mode for testing
     if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
@@ -187,34 +191,26 @@ function setupAutoUpdater() {
 
         // Set the checking state
         global.updateCheckInProgress = true;
-        log.info(`[DEBUG] Set updateCheckInProgress = true`);
     });
 
     autoUpdater.on('update-available', (info) => {
-        log.info(`[DEBUG] Update available: version=${info.version}, tag=${info.tag}`);
+        log.info(`Update available: version=${info.version}`);
         // We're now checking and downloading
         global.updateCheckInProgress = false;
         global.updateDownloadInProgress = true;
-        log.info(`[DEBUG] Set updateCheckInProgress = false, updateDownloadInProgress = true`);
 
         if (mainWindow) {
-            log.info(`[DEBUG] Sending update-available event to renderer`);
             mainWindow.webContents.send('update-available', info);
         }
     });
 
     autoUpdater.on('update-not-available', (info) => {
-        log.info(`[DEBUG] Update not available, current version up to date`);
+        log.info('Update not available, current version up to date');
         // Reset checking state
         global.updateCheckInProgress = false;
-        log.info(`[DEBUG] Set updateCheckInProgress = false`);
 
         if (mainWindow) {
-            log.info(`[DEBUG] Sending update-not-available event to renderer`);
             mainWindow.webContents.send('update-not-available', info);
-
-            // Also send a clear notification event as a safeguard
-            log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
             mainWindow.webContents.send('clear-update-checking-notification');
         }
     });
@@ -226,10 +222,6 @@ function setupAutoUpdater() {
         // Ensure download state is set
         global.updateDownloadInProgress = true;
 
-        // Every 10% progress, log a debug message
-        if (Math.round(progressObj.percent) % 10 === 0) {
-            log.info(`[DEBUG] Download progress at ${Math.round(progressObj.percent)}%`);
-        }
 
         if (mainWindow) {
             mainWindow.webContents.send('update-progress', progressObj);
@@ -237,32 +229,25 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-        log.info('[DEBUG] Update downloaded, marking as ready to install');
-        log.info(`[DEBUG] Downloaded version: ${info.version}, tag: ${info.tag}, path: ${info.path}`);
+        log.info(`Update downloaded: version ${info.version}`);
 
         // Update is downloaded and ready to install
         global.updateDownloadInProgress = false;
         global.updateDownloaded = true;
-        log.info(`[DEBUG] Set updateDownloadInProgress = false, updateDownloaded = true`);
 
         if (mainWindow) {
-            log.info(`[DEBUG] Sending update-downloaded event to renderer`);
             mainWindow.webContents.send('update-downloaded', info);
         }
     });
 
     autoUpdater.on('error', (err) => {
         log.error('Error in auto-updater:', err);
-        log.info(`[DEBUG] Auto-updater error: ${err.message}`);
-
         // Reset all states on error
         global.updateCheckInProgress = false;
         global.updateDownloadInProgress = false;
-        log.info(`[DEBUG] Reset update states due to error`);
 
         // Always send clear notification event on error
         if (mainWindow) {
-            log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
             mainWindow.webContents.send('clear-update-checking-notification');
         }
 
@@ -272,7 +257,7 @@ function setupAutoUpdater() {
             err.message.includes('net::ERR_CONNECTION_REFUSED');
 
         if (isNetworkError) {
-            log.info(`[DEBUG] Network error during update check, will retry in 15 minutes`);
+            log.info('Network error during update check, will retry in 15 minutes');
 
             // Clear any existing retry timer
             if (networkErrorRetryTimer) {
@@ -282,7 +267,7 @@ function setupAutoUpdater() {
             // Set a shorter retry timer for network errors (15 minutes)
             networkErrorRetryTimer = setTimeout(() => {
                 if (!global.updateCheckInProgress && !global.updateDownloadInProgress) {
-                    log.info('[DEBUG] Retrying update check after network error...');
+                    log.info('Retrying update check after network error...');
                     autoUpdater.checkForUpdates();
                 }
                 networkErrorRetryTimer = null;
@@ -296,7 +281,6 @@ function setupAutoUpdater() {
 
         // Only send non-network errors to renderer
         if (!isNetworkError && mainWindow) {
-            log.info(`[DEBUG] Sending update-error event to renderer`);
             mainWindow.webContents.send('update-error', err.message);
         }
 
@@ -312,11 +296,11 @@ function setupAutoUpdater() {
 
     // Check for updates on startup (with delay to allow app to load fully)
     setTimeout(() => {
-        log.info('[DEBUG] Performing initial update check...');
+        log.info('Performing initial update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
                 log.error('Error in initial update check:', err);
-                log.info(`[DEBUG] Initial update check failed: ${err.message}`);
+                log.error('Initial update check failed:', err);
             });
     }, 3000);
 
@@ -325,15 +309,15 @@ function setupAutoUpdater() {
     setInterval(() => {
         // Check if we're already in the process of checking for updates
         if (global.updateCheckInProgress || global.updateDownloadInProgress) {
-            log.info('[DEBUG] Skipping periodic update check - another check/download already in progress');
+            log.info('Skipping periodic update check - another check/download already in progress');
             return;
         }
 
-        log.info('[DEBUG] Performing periodic update check...');
+        log.info('Performing periodic update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
                 log.error('Error in periodic update check:', err);
-                log.info(`[DEBUG] Periodic update check failed: ${err.message}`);
+                log.error('Periodic update check failed:', err);
 
                 // Even if the check fails, we'll try again at the next interval
                 // No need to show error to user for routine background checks
@@ -344,12 +328,11 @@ function setupAutoUpdater() {
 
 // Enhanced native monitoring with network monitor integration
 function setupNativeMonitoring() {
-    console.log('Setting up native system monitoring...');
+    log.info('Setting up native system monitoring...');
 
     // Power monitoring
     powerMonitor.on('suspend', () => {
-        console.log('System is going to sleep');
-        systemState.powerState = 'suspend';
+        log.info('System is going to sleep');
 
         // Notify all renderer processes
         BrowserWindow.getAllWindows().forEach(window => {
@@ -360,23 +343,37 @@ function setupNativeMonitoring() {
     });
 
     powerMonitor.on('resume', () => {
-        console.log('System woke up');
-        systemState.powerState = 'resume';
+        log.info('System woke up');
 
         // Force network check after resume
         if (networkMonitor) {
             setTimeout(async () => {
                 const state = await networkMonitor.forceCheck();
-                systemState = {
-                    ...systemState,
-                    ...state
-                };
+                
+                // Update centralized network state
+                if (state) {
+                    networkStateManager.updateState({
+                        isOnline: state.isOnline,
+                        networkQuality: state.networkQuality,
+                        vpnActive: state.vpnActive,
+                        interfaces: state.networkInterfaces ? Array.from(state.networkInterfaces.entries()) : [],
+                        connectionType: state.connectionType,
+                        diagnostics: {
+                            dnsResolvable: true,
+                            internetReachable: state.isOnline,
+                            captivePortal: false,
+                            latency: 0
+                        }
+                    }, true);
+                }
 
                 // Notify all renderer processes
                 BrowserWindow.getAllWindows().forEach(window => {
                     if (window && !window.isDestroyed()) {
                         window.webContents.send('system-resume');
-                        window.webContents.send('network-state-changed', state.isOnline);
+                        if (state) {
+                            window.webContents.send('network-state-changed', state.isOnline);
+                        }
                     }
                 });
             }, 1000);
@@ -391,8 +388,9 @@ async function checkNetworkConnectivity() {
         return state.isOnline;
     }
 
-    // Fallback to system network state
-    return systemState.isOnline;
+    // Fallback to centralized network state
+    const currentState = networkStateManager.getState();
+    return currentState.isOnline;
 }
 
 // Enhanced auto-launch detection function
@@ -939,36 +937,47 @@ function setupIPC() {
         try {
             return await checkNetworkConnectivity();
         } catch (error) {
-            console.error('Error checking network connectivity:', error);
+            log.error('Error checking network connectivity:', error);
             return false;
         }
     });
 
     // Enhanced network state
     ipcMain.handle('getNetworkState', async () => {
-        if (networkMonitor) {
-            return networkMonitor.getState();
-        }
-        return {
-            isOnline: systemState.isOnline,
-            networkQuality: systemState.networkQuality,
-            corporateEnvironment: systemState.corporateEnvironment,
-            vpnActive: systemState.vpnActive
-        };
+        return networkStateManager.getState();
     });
 
     // Force network check
     ipcMain.handle('forceNetworkCheck', async () => {
         if (networkMonitor) {
-            return await networkMonitor.forceCheck();
+            const state = await networkMonitor.forceCheck();
+            // Update centralized state with force check results
+            if (state) {
+                networkStateManager.updateState({
+                    isOnline: state.isOnline,
+                    networkQuality: state.networkQuality,
+                    vpnActive: state.vpnActive,
+                    interfaces: state.networkInterfaces ? Array.from(state.networkInterfaces.entries()) : [],
+                    connectionType: state.connectionType,
+                    diagnostics: {
+                        dnsResolvable: true,
+                        internetReachable: state.isOnline,
+                        captivePortal: false,
+                        latency: 0
+                    }
+                }, true);
+            }
+            return networkStateManager.getState();
         }
         return null;
     });
 
     // Get current system state (updated with network info)
     ipcMain.handle('getSystemState', () => {
+        const networkState = networkStateManager.getState();
         return {
-            ...systemState,
+            ...networkState,
+            powerState: 'active', // Can be enhanced with powerMonitor
             timestamp: Date.now()
         };
     });
@@ -983,15 +992,11 @@ function setupIPC() {
 
     // Add update-related IPC handlers
     ipcMain.on('check-for-updates', (event, isManual) => {
-        log.info(`[DEBUG] ${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
-        log.info(`[DEBUG] Current states: 
-      updateCheckInProgress = ${global.updateCheckInProgress}
-      updateDownloadInProgress = ${global.updateDownloadInProgress}
-      updateDownloaded = ${global.updateDownloaded}`);
+        log.info(`${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
 
         // First check if an update is already downloaded and ready
         if (global.updateDownloaded) {
-            log.info('[DEBUG] Update already downloaded, notifying client to show install prompt');
+            log.info('Update already downloaded, notifying client to show install prompt');
             if (mainWindow) {
                 // Check if this was a manual check (passed from renderer)
                 const isManualCheck = event.sender === mainWindow.webContents;
@@ -1006,70 +1011,55 @@ function setupIPC() {
 
         // Skip if already checking or downloading
         if (global.updateCheckInProgress || global.updateDownloadInProgress) {
-            log.info(`[DEBUG] Update check/download already in progress, skipping duplicate request
-          updateCheckInProgress=${global.updateCheckInProgress}, 
-          updateDownloadInProgress=${global.updateDownloadInProgress}`);
+            log.info('Update check/download already in progress, skipping duplicate request');
 
             // Notify renderer that we're already checking
             if (mainWindow) {
-                log.info('[DEBUG] Sending update-check-already-in-progress event to renderer');
                 mainWindow.webContents.send('update-check-already-in-progress');
             }
             return;
         }
 
         global.updateCheckInProgress = true;
-        log.info('[DEBUG] Set updateCheckInProgress = true');
 
         try {
-            log.info('[DEBUG] Calling autoUpdater.checkForUpdates()');
             autoUpdater.checkForUpdates()
-                .then(() => {
-                    log.info('[DEBUG] autoUpdater.checkForUpdates() completed successfully');
-                })
                 .catch(error => {
-                    log.error('[DEBUG] autoUpdater.checkForUpdates() failed:', error);
+                    log.error('autoUpdater.checkForUpdates() failed:', error);
 
                     // IMPORTANT: Reset check state on error and notify client
-                    log.info('[DEBUG] Resetting updateCheckInProgress = false due to error');
                     global.updateCheckInProgress = false;
 
                     // Send clear notification event
                     if (mainWindow) {
-                        log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
-                        mainWindow.webContents.send('clear-update-checking-notification');
+                                    mainWindow.webContents.send('clear-update-checking-notification');
                     }
 
                     // Send error event if it was a manual check
                     if (isManual && mainWindow) {
-                        log.info('[DEBUG] Sending update-error event to renderer');
                         mainWindow.webContents.send('update-error', error.message || 'Update check failed');
                     }
                 })
                 .finally(() => {
                     // Reset flag when check is complete (successful or not)
                     setTimeout(() => {
-                        log.info('[DEBUG] Checking if updateCheckInProgress needs reset');
                         if (global.updateCheckInProgress) {
                             global.updateCheckInProgress = false;
-                            log.info('[DEBUG] Reset updateCheckInProgress = false after timeout');
 
                             // Also send clear notification event as a safeguard
                             if (mainWindow) {
-                                log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
-                                mainWindow.webContents.send('clear-update-checking-notification');
+                                                    mainWindow.webContents.send('clear-update-checking-notification');
                             }
                         }
                     }, 10000); // 10 second timeout as a failsafe
                 });
         } catch (err) {
             global.updateCheckInProgress = false;
-            log.error('[DEBUG] Error calling checkForUpdates:', err);
+            log.error('Error calling checkForUpdates:', err);
 
             // Send clear notification event
             if (mainWindow) {
-                log.info('[DEBUG] Sending clear-update-checking-notification event to renderer');
-                mainWindow.webContents.send('clear-update-checking-notification');
+                    mainWindow.webContents.send('clear-update-checking-notification');
             }
 
             if (isManual) {
@@ -1080,34 +1070,29 @@ function setupIPC() {
 
     // And for install handler:
     ipcMain.on('install-update', () => {
-        log.info('[DEBUG] Update installation requested with force');
+        log.info('Update installation requested');
         isQuitting = true; // Set to true to allow the app to close
         global.updateDownloaded = false; // Reset the state
-        log.info('[DEBUG] Set isQuitting = true, updateDownloaded = false');
 
         try {
             // Signal that we want to restart after update
             autoUpdater.autoInstallOnAppQuit = true;
-            log.info('[DEBUG] Set autoUpdater.autoInstallOnAppQuit = true');
 
             // Force quit with updated options
-            log.info('[DEBUG] Calling autoUpdater.quitAndInstall(false, true)');
             autoUpdater.quitAndInstall(false, true);
 
             // Backup approach: If autoUpdater's quitAndInstall doesn't work,
             // force the app to quit after a short delay
             setTimeout(() => {
-                log.info('[DEBUG] Forcing application quit for update...');
+                log.info('Forcing application quit for update...');
                 app.exit(0);
             }, 1000);
         } catch (error) {
-            log.error('[DEBUG] Failed to install update:', error);
+            log.error('Failed to install update:', error);
             global.updateDownloaded = true; // Reset back since install failed
-            log.info('[DEBUG] Reset updateDownloaded = true due to install failure');
 
             // Show error dialog
             if (mainWindow) {
-                log.info('[DEBUG] Showing error dialog for failed update installation');
                 dialog.showMessageBox(mainWindow, {
                     type: 'error',
                     title: 'Update Error',
@@ -1335,7 +1320,7 @@ function handleGetAppPath() {
  * Enhanced HTTP request handler with network awareness
  *
  * This implementation uses Electron's net module with adaptive retry logic
- * based on current network conditions (quality, corporate environment, VPN status)
+ * based on current network conditions (quality, VPN status)
  */
 async function handleMakeHttpRequest(_, url, method, options = {}) {
     const { net } = require('electron');
@@ -1352,7 +1337,6 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
         ...options,
         networkContext: {
             quality: networkState.networkQuality,
-            corporate: networkState.corporateEnvironment,
             vpn: networkState.vpnActive,
             confidence: networkState.confidence
         }
@@ -1388,11 +1372,9 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                 // Adjust timeout based on network quality
                 let timeoutMs = options.connectionOptions?.timeout || 15000;
 
-                // Increase timeout for poor network or corporate environment
+                // Increase timeout for poor network
                 if (networkState.networkQuality === 'poor') {
                     timeoutMs = Math.min(timeoutMs * 2, 60000);
-                } else if (networkState.corporateEnvironment === 'corporate') {
-                    timeoutMs = Math.min(timeoutMs * 1.5, 45000);
                 }
 
                 let timeoutId = null;

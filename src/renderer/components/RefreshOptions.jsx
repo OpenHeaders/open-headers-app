@@ -114,7 +114,6 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
         if (!isMountedRef.current) return;
 
         const isChecked = e.target.checked;
-        console.log("RefreshNow checkbox changed to:", isChecked);
         setRefreshNow(isChecked);
     };
 
@@ -133,12 +132,6 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
                 ? (refreshType === 'preset' ? interval : customInterval)
                 : 0;
 
-            console.log("Saving refresh options:", {
-                interval: actualInterval,
-                enabled: refreshEnabled,
-                type: refreshType,
-                refreshNow: refreshNow
-            });
 
             // Create refresh options object with explicit boolean
             const refreshOptions = {
@@ -156,13 +149,9 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
                 if (success && isMountedRef.current) {
                     // If refreshing immediately, we need to wait longer
                     if (refreshNow) {
-                        console.log("Waiting for refresh to complete before closing modal...");
-
                         // Keep the saving state active while we wait
                         // Wait 2 seconds to allow the refresh to complete
                         await new Promise(resolve => setTimeout(resolve, 2000));
-
-                        console.log("Refresh wait completed, closing modal now");
 
                         // Now we can safely close the modal
                         if (isMountedRef.current) {
@@ -195,7 +184,6 @@ const RefreshOptions = ({ source, onSave, onCancel }) => {
             // Show error message if something went wrong and component is still mounted
             if (isMountedRef.current) {
                 showMessage('error', `Failed to save refresh options: ${error.message}`);
-                console.error('Save error:', error);
             }
         } finally {
             // Only update state if component is still mounted

@@ -1,8 +1,48 @@
 // preload.js - Secure bridge between renderer and main process
 const { contextBridge, ipcRenderer } = require('electron');
 
+// Simple logger for preload context
+const log = {
+    formatTimestamp: () => {
+        const now = new Date();
+        return now.toISOString().replace('T', ' ').substring(0, 23);
+    },
+    info: (message, data) => {
+        const timestamp = log.formatTimestamp();
+        if (data !== undefined) {
+            console.log(`[${timestamp}] [INFO] [Preload] ${message}`, data);
+        } else {
+            console.log(`[${timestamp}] [INFO] [Preload] ${message}`);
+        }
+    },
+    error: (message, data) => {
+        const timestamp = log.formatTimestamp();
+        if (data !== undefined) {
+            console.error(`[${timestamp}] [ERROR] [Preload] ${message}`, data);
+        } else {
+            console.error(`[${timestamp}] [ERROR] [Preload] ${message}`);
+        }
+    },
+    debug: (message, data) => {
+        // In preload, we can access process but let's be safe
+        const isDebug = (typeof process !== 'undefined' && process.env && 
+                        (process.env.DEBUG_MODE === 'true' || process.env.NODE_ENV === 'development'));
+        if (!isDebug) return;
+        
+        const timestamp = log.formatTimestamp();
+        if (data !== undefined) {
+            console.debug(`[${timestamp}] [DEBUG] [Preload] ${message}`, data);
+        } else {
+            console.debug(`[${timestamp}] [DEBUG] [Preload] ${message}`);
+        }
+    }
+};
+
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
+    // Environment info
+    isDevelopment: process.env.NODE_ENV === 'development',
+    
     // File operations
     openFileDialog: () => ipcRenderer.invoke('openFileDialog'),
     saveFileDialog: (options) => ipcRenderer.invoke('saveFileDialog', options),
@@ -26,7 +66,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const requestId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
 
         try {
-            console.log(`[${requestId}] Sending HTTP request: ${method} ${url}`);
+            log.info(`[${requestId}] Sending HTTP request: ${method} ${url}`);
 
             // Add connection options for the main process
             if (!options.connectionOptions) {
@@ -45,11 +85,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
             // Log completion and timing
             const duration = Date.now() - startTime;
-            console.log(`[${requestId}] HTTP request completed in ${duration}ms`);
+            log.info(`[${requestId}] HTTP request completed in ${duration}ms`);
 
             return result;
         } catch (error) {
-            console.error(`[${requestId}] HTTP request failed:`, error);
+            log.error(`[${requestId}] HTTP request failed:`, error);
 
             // Add detailed error info for network issues
             if (error.message && (
@@ -57,11 +97,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
                 error.message.includes('ETIMEDOUT') ||
                 error.message.includes('ECONNREFUSED')
             )) {
-                console.error(`[${requestId}] Network error detected: ${error.message}`);
+                log.error(`[${requestId}] Network error detected: ${error.message}`);
 
                 // Add basic diagnostics
                 try {
-                    console.error(`[${requestId}] Network environment: online=${navigator.onLine}`);
+                    log.debug(`[${requestId}] Network environment: online=${navigator.onLine}`);
                 } catch (diagError) {
                     // Ignore errors in diagnostic code
                 }
@@ -206,6 +246,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
         return () => ipcRenderer.removeListener('vpn-state-changed', subscription);
     },
 
+    // Network state sync event from NetworkStateManager
+    onNetworkStateSync: (callback) => {
+        const subscription = (_, data) => callback(data);
+        ipcRenderer.on('network-state-sync', subscription);
+        return () => ipcRenderer.removeListener('network-state-sync', subscription);
+    },
+
     // Tray menu events
     onShowApp: (callback) => {
         const subscription = () => callback();
@@ -231,14 +278,14 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
     try {
         // Generate a request ID for tracking TOTP generation
         const totpId = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-        console.log(`[${totpId}] Generating TOTP code with period=${period}, digits=${digits}, timeOffset=${timeOffset}`);
+        log.debug(`[${totpId}] Generating TOTP code with period=${period}, digits=${digits}, timeOffset=${timeOffset}`);
 
         // Normalize and clean the secret
         secret = secret.toUpperCase().replace(/\s/g, '').replace(/=/g, '');
 
         // Handle special cases where secret might be base64 encoded or in other formats
         if (secret.includes('/') || secret.includes('+')) {
-            console.log(`[${totpId}] Note: Secret contains characters not in standard base32 alphabet`);
+            log.debug(`[${totpId}] Note: Secret contains characters not in standard base32 alphabet`);
         }
 
         // Base32 decoding
@@ -249,7 +296,7 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
         for (let i = 0; i < secret.length; i++) {
             const val = base32chars.indexOf(secret[i]);
             if (val < 0) {
-                console.log(`[${totpId}] Skipping invalid character: ${secret[i]}`);
+                log.debug(`[${totpId}] Skipping invalid character: ${secret[i]}`);
                 continue;
             }
             bits += val.toString(2).padStart(5, '0');
@@ -272,8 +319,8 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
 
         // Get the current time counter value (floor of seconds since epoch / period)
         const counter = Math.floor(currentTimeSeconds / period);
-        console.log(`Current time: ${new Date(currentTimeSeconds * 1000).toISOString()}`);
-        console.log(`Counter value: ${counter} (period: ${period}s)`);
+        log.debug(`Current time: ${new Date(currentTimeSeconds * 1000).toISOString()}`);
+        log.debug(`Counter value: ${counter} (period: ${period}s)`);
 
         // Convert counter to bytes (8 bytes, big-endian) per RFC 4226
         const counterBytes = new Uint8Array(8);
@@ -311,15 +358,15 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
 
             // Add leading zeros if necessary
             const result = code.toString().padStart(digits, '0');
-            console.log(`[${totpId}] Generated TOTP: ${result}`);
+            log.debug(`[${totpId}] Generated TOTP code successfully`);
 
             return result;
         } catch (cryptoError) {
-            console.error(`[${totpId}] Crypto operation failed:`, cryptoError);
+            log.error(`[${totpId}] Crypto operation failed:`, cryptoError);
 
             // Fallback to a simpler algorithm if crypto API fails
             try {
-                console.log(`[${totpId}] Attempting fallback TOTP generation`);
+                log.debug(`[${totpId}] Attempting fallback TOTP generation`);
 
                 // Simple hash function for fallback (not cryptographically secure)
                 let fallbackHash = 0;
@@ -335,15 +382,15 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
                 let fallbackCode = fallbackHash % Math.pow(10, digits);
                 const result = fallbackCode.toString().padStart(digits, '0');
 
-                console.log(`[${totpId}] Generated fallback TOTP: ${result}`);
+                log.debug(`[${totpId}] Generated fallback TOTP code successfully`);
                 return result;
             } catch (fallbackError) {
-                console.error(`[${totpId}] Fallback TOTP generation failed:`, fallbackError);
+                log.error(`[${totpId}] Fallback TOTP generation failed:`, fallbackError);
                 return 'ERROR';
             }
         }
     } catch (error) {
-        console.error('Error generating TOTP:', error);
+        log.error('Error generating TOTP:', error);
         return 'ERROR';
     }
 });

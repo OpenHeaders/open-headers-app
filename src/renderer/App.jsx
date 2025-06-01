@@ -18,6 +18,8 @@ import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
+const { createLogger } = require('./utils/logger');
+const log = createLogger('App');
 import { WebSocketProvider } from './contexts/WebSocketContext';
 import { showMessage } from './utils/messageUtil';
 
@@ -59,7 +61,7 @@ const AppComponent = () => {
                     setAppVersion(version);
                 }
             } catch (error) {
-                console.error('Failed to get app version:', error);
+                log.error('Failed to get app version:', error);
             }
         };
 
@@ -70,13 +72,13 @@ const AppComponent = () => {
     useEffect(() => {
         const unsubscribe = window.electronAPI.onFileChanged((sourceId, content) => {
             // File content has changed, update UI
-            console.log('File changed event for sourceId:', sourceId, 'content:', content.substring(0, 50));
+            log.debug('File changed event for sourceId:', sourceId, 'content:', content.substring(0, 50));
             const updatedSource = sources.find(s => s.sourceId === sourceId);
             if (updatedSource) {
-                console.log('Source found, refreshing...');
+                log.debug('Source found, refreshing...');
                 refreshSource(sourceId);
             } else {
-                console.log('Source not found in list');
+                log.debug('Source not found in list');
             }
         });
 
@@ -89,14 +91,14 @@ const AppComponent = () => {
 
     // Handle add source
     const handleAddSource = async (sourceData) => {
-        console.log('Adding source:', sourceData);
+        log.debug('Adding source:', sourceData);
         const success = await addSource(sourceData);
         if (success) {
-            console.log('Source added successfully');
-            console.log('Current sources after add:', sources);
+            log.debug('Source added successfully');
+            log.debug('Current sources after add:', sources);
             showMessage('success', 'Source added successfully');
         } else {
-            console.log('Failed to add source');
+            log.debug('Failed to add source');
         }
     };
 
@@ -160,7 +162,7 @@ const AppComponent = () => {
                 showMessage('warning', result.message || 'No sources were imported');
             }
         } catch (error) {
-            console.error('Error importing sources:', error);
+            log.error('Error importing sources:', error);
             showMessage('error', `Error importing sources: ${error.message}`);
         } finally {
             setLoading(prev => ({ ...prev, import: false }));

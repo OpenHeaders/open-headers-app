@@ -6,6 +6,8 @@ import {
     AppstoreOutlined,
     MenuOutlined
 } from '@ant-design/icons';
+const { createLogger } = require('../utils/logger');
+const log = createLogger('SettingsModal');
 
 const { Text } = Typography;
 
@@ -47,7 +49,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                 onSave(values);
             })
             .catch(info => {
-                console.log('Validation failed:', info);
+                log.debug('Validation failed:', info);
             });
     };
 

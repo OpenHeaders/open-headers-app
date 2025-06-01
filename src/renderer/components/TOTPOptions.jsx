@@ -26,7 +26,6 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
     useEffect(() => {
         if (initialized.current) return;
 
-        console.log("TOTP component initializing with props:", { initialEnabled, initialSecret });
 
         // Set initial state from props
         setEnabled(initialEnabled);
@@ -58,7 +57,6 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
             // Normalize secret for better compatibility
             const normalizedSecret = secret.replace(/\s/g, '').replace(/=/g, '');
 
-            console.log(`Generating TOTP with secret: ${normalizedSecret}, time offset: ${timeOffset}s`);
 
             // Use the window.generateTOTP function with time offset
             const totpCode = await window.generateTOTP(normalizedSecret, 30, 6, timeOffset);
@@ -70,7 +68,6 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                 setCode(totpCode);
             }
         } catch (error) {
-            console.error('Error generating TOTP:', error);
             setError(`Error: ${error.message}`);
             setCode('ERROR');
         } finally {
@@ -109,7 +106,6 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
 
     // Handle TOTP toggle
     const handleToggle = (checked) => {
-        console.log("TOTP toggle changed to:", checked);
         setEnabled(checked);
         setPreviewVisible(false);
         setError(null);

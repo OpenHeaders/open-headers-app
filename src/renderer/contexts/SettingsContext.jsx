@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { showMessage } from '../utils/messageUtil'; // Import the utility
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('SettingsContext');
 
 // Create context
 const SettingsContext = createContext();
@@ -34,7 +37,7 @@ export function SettingsProvider({ children }) {
                     setLoading(false);
                 }
             } catch (error) {
-                console.error('Error loading settings:', error);
+                log.error('Error loading settings:', error);
                 if (isMounted.current) {
                     showMessage('error', 'Failed to load settings, using defaults');
                     setLoading(false);
@@ -76,7 +79,7 @@ export function SettingsProvider({ children }) {
                 return false;
             }
         } catch (error) {
-            console.error('Error saving settings:', error);
+            log.error('Error saving settings:', error);
             if (isMounted.current) {
                 showMessage('error', `Error saving settings: ${error.message}`);
             }

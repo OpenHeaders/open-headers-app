@@ -10,15 +10,11 @@ import refreshManager from '../services/RefreshManager';
 // Create context
 const SourceContext = createContext();
 
-// Debug logging for source operations with unique timestamp
-const debugLog = (message, data = null) => {
-    const timestamp = new Date().toISOString().substr(11, 8); // HH:MM:SS
-    if (data) {
-        console.log(`[${timestamp}] SourceContext: ${message}`, data);
-    } else {
-        console.log(`[${timestamp}] SourceContext: ${message}`);
-    }
-};
+const { createLogger } = require('../utils/logger');
+const log = createLogger('SourceContext');
+
+// Wrapper for backward compatibility
+const debugLog = (message, data) => log.debug(message, data);
 
 export function SourceProvider({ children }) {
     const [sources, setSources] = useState([]);
@@ -35,8 +31,6 @@ export function SourceProvider({ children }) {
     const isMounted = useRef(true);
     // Track current highest ID to avoid conflicts
     const highestIdRef = useRef(0);
-    // Track sources that need to be added to RefreshManager after initialization
-    const pendingRefreshSources = useRef([]);
 
     // FIXED: More granular broadcast control - track suppression per update
     const broadcastControl = useRef({
@@ -55,7 +49,7 @@ export function SourceProvider({ children }) {
     const updateSourceContent = useCallback((sourceId, content, additionalData = {}) => {
         // Check if component is still mounted before updating state
         if (!isMounted.current) {
-            console.log(`Skipping update for source ${sourceId} - component is unmounted`);
+            log.debug(`Skipping update for source ${sourceId} - component is unmounted`);
             return;
         }
 
@@ -71,14 +65,14 @@ export function SourceProvider({ children }) {
 
         // Log additional data if present
         if (Object.keys(additionalData).length > 0) {
-            console.log(`Additional data for source ${sourceId}:`,
+            debugLog(`Additional data for source ${sourceId}:`,
                 Object.keys(additionalData).map(key => key).join(', '));
         }
 
         // FIXED: Track which specific updates should be suppressed
         if (isStatusOnly) {
             broadcastControl.current.suppressedUpdates.add(updateId);
-            console.log(`[SourceContext] Marking update #${updateId} for suppression (status-only update on source ${sourceId})`);
+            log.debug(`Marking update #${updateId} for suppression (status-only update on source ${sourceId}`);
         }
 
         setSources(prev => {
@@ -110,7 +104,7 @@ export function SourceProvider({ children }) {
                                 ...additionalData.refreshOptions
                             };
 
-                            console.log(`Updated refresh timing for source ${sourceId}:`, {
+                            log.debug(`Updated refresh timing for source ${sourceId}:`, {
                                 lastRefresh: updatedSource.refreshOptions.lastRefresh,
                                 nextRefresh: updatedSource.refreshOptions.nextRefresh,
                                 interval: updatedSource.refreshOptions.interval
@@ -129,9 +123,9 @@ export function SourceProvider({ children }) {
                         broadcastControl.current.lastContentHash.set(sourceId, contentHash);
 
                         if (contentHash !== lastHash) {
-                            console.log(`[SourceContext] Content actually changed for source ${sourceId}, allowing broadcast [update #${updateId}]`);
+                            log.debug(`Content actually changed for source ${sourceId}, allowing broadcast [update #${updateId}]`);
                         } else {
-                            console.log(`[SourceContext] Content unchanged for source ${sourceId}, suppressing broadcast [update #${updateId}]`);
+                            log.debug(`Content unchanged for source ${sourceId}, suppressing broadcast [update #${updateId}]`);
                             broadcastControl.current.suppressedUpdates.add(updateId);
                         }
                     }
@@ -156,7 +150,7 @@ export function SourceProvider({ children }) {
         if (shouldSuppress) {
             // Remove from suppressed set after checking (consume the suppression)
             broadcastControl.current.suppressedUpdates.delete(updateId);
-            console.log(`[SourceContext] Suppressing broadcast for update #${updateId} on source ${sourceId}`);
+            log.debug(`Suppressing broadcast for update #${updateId} on source ${sourceId}`);
         }
 
         return shouldSuppress;
@@ -218,37 +212,22 @@ export function SourceProvider({ children }) {
         return newId;
     }, [nextSourceId]);
 
-    // Initialize RefreshManager and process pending sources
+    // Load sources and initialize RefreshManager in proper order
     useEffect(() => {
-        if (initialized && !refreshManager.isInitialized) {
-            debugLog('Initializing RefreshManager');
-
-            // Initialize returns a promise when truly ready
-            refreshManager.initialize(http, updateSourceContent).then(() => {
-                // Process any pending sources
-                if (pendingRefreshSources.current.length > 0) {
-                    debugLog(`Processing ${pendingRefreshSources.current.length} pending refresh sources`);
-
-                    pendingRefreshSources.current.forEach(source => {
-                        refreshManager.addSource(source);
-                        debugLog(`Added pending source ${source.sourceId} to RefreshManager`);
-                    });
-
-                    pendingRefreshSources.current = [];
-                }
-            });
-        }
-    }, [initialized, http, updateSourceContent]);
-
-    // Load sources - removed complex timing cleanup
-    useEffect(() => {
-        const loadSources = async () => {
+        const initializeAndLoadSources = async () => {
             if (isLoading.current) return;
 
             try {
-                debugLog('Loading sources from storage...');
                 isLoading.current = true;
+                
+                // Initialize RefreshManager FIRST
+                if (!refreshManager.isInitialized) {
+                    debugLog('Initializing RefreshManager before loading sources');
+                    await refreshManager.initialize(http, updateSourceContent);
+                    debugLog('RefreshManager initialized successfully');
+                }
 
+                debugLog('Loading sources from storage...');
                 const sourcesJson = await window.electronAPI.loadFromStorage('sources.json');
                 debugLog(`Loaded sources JSON: ${sourcesJson ? 'data available' : 'null'}`);
 
@@ -310,10 +289,10 @@ export function SourceProvider({ children }) {
                             }
                         }
                         else if (source.sourceType === 'http') {
-                            // Queue for RefreshManager - no complex timing logic
+                            // Add to RefreshManager directly since it's already initialized
                             if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
-                                pendingRefreshSources.current.push(initializedSource);
-                                debugLog(`Queued HTTP source ${validSourceId} for RefreshManager`);
+                                refreshManager.addSource(initializedSource);
+                                debugLog(`Added HTTP source ${validSourceId} to RefreshManager`);
                             }
                         }
                     }
@@ -330,7 +309,7 @@ export function SourceProvider({ children }) {
                     setInitialized(true);
                 }
             } catch (error) {
-                console.error('Error loading sources:', error);
+                log.error('Failed to load sources:', error.message || error);
                 if (isMounted.current) {
                     showMessage('error', 'Failed to load sources');
                     setInitialized(true);
@@ -342,7 +321,7 @@ export function SourceProvider({ children }) {
         };
 
         if (firstLoad.current) {
-            loadSources();
+            initializeAndLoadSources();
         }
 
         return () => {
@@ -415,7 +394,7 @@ export function SourceProvider({ children }) {
                 debugLog('Sources saved successfully');
                 needsSave.current = false;
             } catch (error) {
-                console.error('Failed to save sources:', error);
+                log.error('Failed to save sources:', error.message || error);
             }
         };
 
@@ -472,7 +451,7 @@ export function SourceProvider({ children }) {
 
             return true;
         } catch (error) {
-            console.error('Error removing source:', error);
+            log.error('Error removing source:', error.message || error);
             if (isMounted.current) {
                 showMessage('error', `Failed to remove source: ${error.message}`);
             }
@@ -572,14 +551,13 @@ export function SourceProvider({ children }) {
                             refreshManager.addSource(sourceForManager);
                             debugLog(`Added source ${sourceId} to RefreshManager`);
                         } else {
-                            pendingRefreshSources.current.push(sourceForManager);
-                            debugLog(`Queued source ${sourceId} for RefreshManager`);
+                            debugLog(`RefreshManager not initialized when adding source ${sourceId}`);
                         }
                     }
 
                     return true;
                 } catch (error) {
-                    console.error(`Error making HTTP request for source ${sourceId}:`, error);
+                    log.error(`Error making HTTP request for source ${sourceId}:`, error.message || error);
                     initialContent = `Error: ${error.message}`;
                     if (isMounted.current) {
                         updateSourceContent(sourceId, initialContent);
@@ -595,7 +573,7 @@ export function SourceProvider({ children }) {
 
             return true;
         } catch (error) {
-            console.error('Error adding source:', error);
+            log.error('Error adding source:', error.message || error);
             if (isMounted.current) {
                 showMessage('error', `Failed to add source: ${error.message}`);
             }
@@ -654,7 +632,7 @@ export function SourceProvider({ children }) {
 
             return sourceData;
         } catch (error) {
-            console.error('Error updating source:', error);
+            log.error('Error updating source:', error.message || error);
             if (isMounted.current) {
                 showMessage('error', `Failed to update source: ${error.message}`);
             }
@@ -671,12 +649,12 @@ export function SourceProvider({ children }) {
                 return false;
             }
 
-            console.log('SourceContext: Starting refresh for source', sourceId);
+            log.debug('Starting refresh for source', sourceId);
 
             if (source.sourceType === 'http') {
                 // Delegate to RefreshManager
                 if (refreshManager.isInitialized) {
-                    return await refreshManager.refreshSource(sourceId);
+                    return await refreshManager.manualRefresh(sourceId);
                 } else {
                     debugLog(`RefreshManager not initialized, cannot refresh source ${sourceId}`);
                     return false;
@@ -713,7 +691,7 @@ export function SourceProvider({ children }) {
 
             return true;
         } catch (error) {
-            console.error('Error refreshing source:', error);
+            log.error('Error refreshing source:', error.message || error);
             if (isMounted.current) {
                 showMessage('error', `Failed to refresh source: ${error.message}`);
             }
@@ -726,7 +704,7 @@ export function SourceProvider({ children }) {
         try {
             const source = sources.find(s => s.sourceId === sourceId);
             if (!source || source.sourceType !== 'http') {
-                console.error(`Source not found or not HTTP: ${sourceId}`);
+                log.error(`Source not found or not HTTP: ${sourceId}`);
                 return false;
             }
 
@@ -775,14 +753,14 @@ export function SourceProvider({ children }) {
                             debugLog(`Immediate refresh completed for source ${sourceId}`);
                         }
                     } catch (err) {
-                        console.error(`Error during immediate refresh for source ${sourceId}:`, err);
+                        log.error(`Error during immediate refresh for source ${sourceId}:`, err.message || err);
                     }
                 }, 500);
             }
 
             return true;
         } catch (error) {
-            console.error('Error updating refresh options:', error);
+            log.error('Error updating refresh options:', error.message || error);
             if (isMounted.current) {
                 showMessage('error', `Failed to update refresh options: ${error.message}`);
             }
@@ -840,7 +818,7 @@ export function SourceProvider({ children }) {
                             exportedSource.requestOptions = {};
                         }
                         exportedSource.requestOptions.totpSecret = source.requestOptions.totpSecret;
-                        console.log(`Including TOTP secret in export for source ${source.sourceId}`);
+                        log.debug(`Including TOTP secret in export for source ${source.sourceId}`);
                     }
                 } else {
                     // Basic settings for non-HTTP sources
@@ -861,7 +839,7 @@ export function SourceProvider({ children }) {
             await window.electronAPI.writeFile(filePath, jsonData);
             return true;
         } catch (error) {
-            console.error('Error exporting sources:', error);
+            log.error('Error exporting sources:', error);
             if (isMounted.current) {
                 showMessage('error', `Failed to export sources: ${error.message}`);
             }
@@ -945,7 +923,7 @@ export function SourceProvider({ children }) {
                             cleanSourceData.requestOptions = {};
                         }
                         cleanSourceData.requestOptions.totpSecret = sourceData.requestOptions.totpSecret;
-                        console.log(`Preserving TOTP secret during import for source with path ${sourceData.sourcePath}`);
+                        log.debug(`Preserving TOTP secret during import for source with path ${sourceData.sourcePath}`);
                     }
 
                     // Add the source and track success
@@ -988,7 +966,7 @@ export function SourceProvider({ children }) {
                 throw new Error(`Invalid JSON format: ${parseError.message}`);
             }
         } catch (error) {
-            console.error('Error importing sources:', error);
+            log.error('Error importing sources:', error);
             throw error;
         }
     };
