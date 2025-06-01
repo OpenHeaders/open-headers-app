@@ -13,8 +13,8 @@ class NetworkStateManager extends EventEmitter {
     
     // Single source of truth for network state
     this.state = {
-      isOnline: true,
-      networkQuality: 'good',
+      isOnline: false, // Start offline until proven otherwise
+      networkQuality: 'offline', // Start with offline quality
       vpnActive: false,
       interfaces: [],
       primaryInterface: null,
@@ -22,8 +22,8 @@ class NetworkStateManager extends EventEmitter {
       lastCheck: Date.now(),
       lastStateChange: Date.now(),
       diagnostics: {
-        dnsResolvable: true,
-        internetReachable: true,
+        dnsResolvable: false, // Start with no DNS
+        internetReachable: false, // Start with no internet
         captivePortal: false,
         latency: 0
       }

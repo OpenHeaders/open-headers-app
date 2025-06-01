@@ -30,6 +30,9 @@ class RefreshCoordinator {
       reason = 'manual'
     } = options;
     
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
+    
     // Check if already refreshing
     if (this.activeRefreshes.has(sourceId)) {
       if (skipIfActive) {
@@ -116,6 +119,9 @@ class RefreshCoordinator {
    * Queue a refresh operation
    */
   async queueRefresh(sourceId, refreshFn, options) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
+    
     if (!this.refreshQueue.has(sourceId)) {
       this.refreshQueue.set(sourceId, []);
     }
@@ -139,6 +145,8 @@ class RefreshCoordinator {
    * Process queued refreshes for a source
    */
   async processQueue(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const queue = this.refreshQueue.get(sourceId);
     if (!queue || queue.length === 0) return;
     
@@ -238,6 +246,8 @@ class RefreshCoordinator {
    * Cancel active refresh for a source
    */
   cancelRefresh(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     const activeRefresh = this.activeRefreshes.get(sourceId);
     if (activeRefresh) {
       // Note: We can't actually cancel the promise, but we can track it
@@ -285,6 +295,8 @@ class RefreshCoordinator {
    * Check if a source is currently refreshing
    */
   isRefreshing(sourceId) {
+    // Convert sourceId to string to ensure consistency
+    sourceId = String(sourceId);
     return this.activeRefreshes.has(sourceId);
   }
   

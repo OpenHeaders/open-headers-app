@@ -11,15 +11,15 @@ class NetworkMonitor extends EventEmitter {
         super();
 
         this.state = {
-            isOnline: true,
+            isOnline: false, // Start offline until proven otherwise
             connectionType: 'unknown',
             lastChange: Date.now(),
-            confidence: 1.0,
+            confidence: 0, // No confidence until first check
             networkInterfaces: new Map(),
             vpnActive: false,
             lastCheck: Date.now(),
             consecutiveFailures: 0,
-            networkQuality: 'good' // 'good', 'fair', 'poor', 'offline'
+            networkQuality: 'offline' // Start offline
         };
 
         this.lastInterfaces = new Map();
@@ -275,6 +275,26 @@ class NetworkMonitor extends EventEmitter {
             endpoints: checks[2].status === 'fulfilled' ? checks[2].value : { success: false }
         };
 
+        // Log comprehensive check results
+        log.info('Comprehensive network check complete:', {
+            basic: {
+                success: results.basic.success,
+                details: results.basic
+            },
+            dns: {
+                success: results.dns.success,
+                successRate: results.dns.successRate || 0,
+                workingCombinations: results.dns.workingCombinations?.length || 0
+            },
+            endpoints: {
+                success: results.endpoints.success,
+                confidence: results.endpoints.confidence || 0,
+                successfulEndpoints: results.endpoints.successfulEndpoints || 0,
+                totalEndpoints: results.endpoints.totalEndpoints || 0,
+                avgResponseTime: results.endpoints.avgResponseTime || 0
+            }
+        });
+
         return this.updateStateFromResults(results);
     }
 
@@ -313,7 +333,10 @@ class NetworkMonitor extends EventEmitter {
             };
 
             request.on('response', () => handleResponse(true));
-            request.on('error', () => handleResponse(false));
+            request.on('error', (error) => {
+                log.debug('Basic connectivity check failed:', error.message);
+                handleResponse(false);
+            });
 
             setTimeout(() => handleResponse(false), 3500);
             request.end();
@@ -330,7 +353,10 @@ class NetworkMonitor extends EventEmitter {
                 checks.push(
                     dns.resolve4(domain, { servers: [server] })
                         .then(() => ({ success: true, server, domain }))
-                        .catch(() => ({ success: false, server, domain }))
+                        .catch((error) => {
+                            log.debug(`DNS resolution failed for ${domain} via ${server}:`, error.message);
+                            return { success: false, server, domain, error: error.message };
+                        })
                 );
             }
         }
@@ -339,6 +365,14 @@ class NetworkMonitor extends EventEmitter {
         const successful = results.filter(r =>
             r.status === 'fulfilled' && r.value.success
         ).length;
+        
+        const failed = results.filter(r =>
+            r.status === 'fulfilled' && !r.value.success
+        );
+        
+        if (failed.length > 0) {
+            log.debug(`DNS check: ${failed.length}/${checks.length} checks failed`);
+        }
 
         return {
             success: successful > 0,
@@ -365,6 +399,8 @@ class NetworkMonitor extends EventEmitter {
         let totalWeight = 0;
         let successWeight = 0;
         const responseTimes = [];
+        let successfulEndpoints = 0;
+        let failedEndpoints = 0;
 
         results.forEach((result, index) => {
             const endpoint = endpoints[index];
@@ -372,9 +408,14 @@ class NetworkMonitor extends EventEmitter {
 
             if (result.status === 'fulfilled' && result.value.success) {
                 successWeight += endpoint.weight;
+                successfulEndpoints++;
                 if (result.value.responseTime) {
                     responseTimes.push(result.value.responseTime);
                 }
+            } else {
+                failedEndpoints++;
+                log.debug(`Endpoint check failed for ${endpoint.url}:`, 
+                    result.status === 'rejected' ? result.reason : result.value?.error || 'Unknown error');
             }
         });
 
@@ -382,12 +423,18 @@ class NetworkMonitor extends EventEmitter {
         const avgResponseTime = responseTimes.length > 0
             ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
             : null;
+            
+        if (failedEndpoints > 0) {
+            log.debug(`Endpoint checks: ${successfulEndpoints}/${endpoints.length} successful`);
+        }
 
         return {
             success: confidence > 0.3,
             confidence,
             successRate: successWeight / totalWeight,
             avgResponseTime,
+            successfulEndpoints,
+            totalEndpoints: endpoints.length,
             responsive: results
                 .map((r, i) => ({ ...r, endpoint: endpoints[i] }))
                 .filter(r => r.status === 'fulfilled' && r.value?.success)
@@ -407,14 +454,15 @@ class NetworkMonitor extends EventEmitter {
 
             let resolved = false;
 
-            const handleResponse = (success, statusCode = null) => {
+            const handleResponse = (success, statusCode = null, error = null) => {
                 if (!resolved) {
                     resolved = true;
                     resolve({
                         success,
                         statusCode,
                         responseTime: Date.now() - startTime,
-                        endpoint: endpoint.url
+                        endpoint: endpoint.url,
+                        error
                     });
                 }
             };
@@ -423,8 +471,8 @@ class NetworkMonitor extends EventEmitter {
                 handleResponse(true, response.statusCode);
             });
 
-            request.on('error', () => {
-                handleResponse(false);
+            request.on('error', (error) => {
+                handleResponse(false, null, error.message);
             });
 
             setTimeout(() => handleResponse(false), endpoint.timeout + 100);
@@ -448,6 +496,21 @@ class NetworkMonitor extends EventEmitter {
 
     updateStateFromResults(results) {
         const wasOnline = this.state.isOnline;
+        const previousState = { ...this.state };
+
+        // Log the incoming results
+        log.info('updateStateFromResults - incoming results:', {
+            basic: results.basic?.success || false,
+            endpoints: {
+                success: results.endpoints?.success || false,
+                confidence: results.endpoints?.confidence || 0,
+                successfulEndpoints: results.endpoints?.successfulEndpoints || 0
+            },
+            dns: {
+                success: results.dns?.success || false,
+                successRate: results.dns?.successRate || 0
+            }
+        });
 
         // Determine online status
         this.state.isOnline = results.basic.success || results.endpoints.success;
@@ -462,8 +525,19 @@ class NetworkMonitor extends EventEmitter {
             this.state.consecutiveFailures = 0;
         }
 
+        // Log state changes
+        log.info('updateStateFromResults - state updated:', {
+            previousOnline: wasOnline,
+            currentOnline: this.state.isOnline,
+            confidence: this.state.confidence,
+            networkQuality: this.state.networkQuality,
+            consecutiveFailures: this.state.consecutiveFailures,
+            stateChanged: wasOnline !== this.state.isOnline
+        });
+
         // Emit change event if status changed
         if (wasOnline !== this.state.isOnline) {
+            log.info(`Network status change detected: ${wasOnline ? 'online' : 'offline'} -> ${this.state.isOnline ? 'online' : 'offline'}`);
             this.recordStateChange(wasOnline, this.state.isOnline);
             this.emit('status-change', {
                 wasOnline,
@@ -476,7 +550,11 @@ class NetworkMonitor extends EventEmitter {
     }
 
     handleNetworkChange(data) {
-        log.debug('Handling network change:', data.type);
+        log.info('Handling network change:', {
+            type: data.type,
+            changes: data.changes?.length || 0,
+            analysis: data.analysis
+        });
 
         // Debounce rapid changes
         if (this.changeDebounceTimer) {
@@ -484,14 +562,38 @@ class NetworkMonitor extends EventEmitter {
         }
 
         this.changeDebounceTimer = setTimeout(async () => {
+            log.info('Performing comprehensive check after network change...');
+            
             // Perform comprehensive check after network change
-            await this.performComprehensiveCheck();
-
-            // Emit detailed change event
-            this.emit('network-change', {
-                ...data,
-                state: { ...this.state }
+            const checkResult = await this.performComprehensiveCheck();
+            
+            log.info('Comprehensive check completed after network change:', {
+                isOnline: checkResult.isOnline,
+                confidence: checkResult.confidence,
+                networkQuality: checkResult.networkQuality,
+                vpnActive: checkResult.vpnActive,
+                consecutiveFailures: checkResult.consecutiveFailures
             });
+
+            // Emit detailed change event with all state fields
+            const eventData = {
+                ...data,
+                state: { ...this.state },
+                checkResult: {
+                    isOnline: this.state.isOnline,
+                    confidence: this.state.confidence,
+                    networkQuality: this.state.networkQuality
+                }
+            };
+            
+            log.info('Emitting network-change event with data:', {
+                type: eventData.type,
+                hasState: !!eventData.state,
+                stateFields: Object.keys(eventData.state || {}),
+                isOnline: eventData.state?.isOnline
+            });
+            
+            this.emit('network-change', eventData);
         }, 500); // 500ms debounce
     }
 

@@ -62,7 +62,7 @@ async function initializeNetworkMonitor() {
         primaryInterface: initialState.primaryInterface,
         connectionType: initialState.connectionType,
         diagnostics: {
-            dnsResolvable: true,
+            dnsResolvable: initialState.isOnline, // Match online state
             internetReachable: initialState.isOnline,
             captivePortal: false,
             latency: 0
@@ -71,19 +71,55 @@ async function initializeNetworkMonitor() {
 
     // Listen to network events
     networkMonitor.on('network-change', (event) => {
-        log.info('Network change detected:', event);
+        log.info('Network change detected - detailed event data:', {
+            type: event.type,
+            hasState: !!event.state,
+            stateIsOnline: event.state?.isOnline,
+            stateConfidence: event.state?.confidence,
+            stateNetworkQuality: event.state?.networkQuality,
+            checkResult: event.checkResult,
+            analysis: event.analysis,
+            changes: event.changes?.length || 0
+        });
 
-        // Update centralized state
+        // Log the full state if present
         if (event.state) {
+            log.info('Network change - full state:', {
+                isOnline: event.state.isOnline,
+                connectionType: event.state.connectionType,
+                confidence: event.state.confidence,
+                networkQuality: event.state.networkQuality,
+                vpnActive: event.state.vpnActive,
+                lastCheck: event.state.lastCheck,
+                consecutiveFailures: event.state.consecutiveFailures,
+                networkInterfaces: event.state.networkInterfaces ? 
+                    `Map with ${event.state.networkInterfaces.size} interfaces` : 'undefined'
+            });
+            
+            // Update centralized state
+            log.info('Updating NetworkStateManager with new state...');
             networkStateManager.updateState(event.state);
+        } else {
+            log.warn('Network change event received without state object');
         }
 
         // State will be broadcast automatically by NetworkStateManager
     });
 
     networkMonitor.on('status-change', (event) => {
-        log.info('Network status change:', event);
+        log.info('Network status change - detailed:', {
+            wasOnline: event.wasOnline,
+            isOnline: event.isOnline,
+            transition: `${event.wasOnline ? 'online' : 'offline'} -> ${event.isOnline ? 'online' : 'offline'}`,
+            stateProvided: !!event.state,
+            stateDetails: event.state ? {
+                confidence: event.state.confidence,
+                networkQuality: event.state.networkQuality,
+                consecutiveFailures: event.state.consecutiveFailures
+            } : null
+        });
 
+        log.info('Updating NetworkStateManager with status change...');
         networkStateManager.updateState({
             isOnline: event.isOnline
         });
