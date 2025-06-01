@@ -278,7 +278,19 @@ function setupAutoUpdater() {
     });
 
     autoUpdater.on('error', (err) => {
-        log.error('Error in auto-updater:', err);
+        // Check if it's a network error
+        const isNetworkError = err.message && (
+            err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+            err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+            err.message.includes('net::ERR_CONNECTION_REFUSED')
+        );
+        
+        if (isNetworkError) {
+            log.info('Auto-updater network error:', err.message);
+        } else {
+            log.error('Error in auto-updater:', err);
+        }
+        
         // Reset all states on error
         global.updateCheckInProgress = false;
         global.updateDownloadInProgress = false;
@@ -287,11 +299,6 @@ function setupAutoUpdater() {
         if (mainWindow) {
             mainWindow.webContents.send('clear-update-checking-notification');
         }
-
-        // Handle network errors with a shorter retry time
-        const isNetworkError = err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
-            err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
-            err.message.includes('net::ERR_CONNECTION_REFUSED');
 
         if (isNetworkError) {
             log.info('Network error during update check, will retry in 15 minutes');
@@ -333,17 +340,41 @@ function setupAutoUpdater() {
 
     // Check for updates on startup (with delay to allow app to load fully)
     setTimeout(() => {
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Skipping initial update check - network is offline');
+            return;
+        }
+        
         log.info('Performing initial update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
-                log.error('Error in initial update check:', err);
-                log.error('Initial update check failed:', err);
+                // Only log as error if it's not a network error
+                const isNetworkError = err.message && (
+                    err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                    err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                    err.message.includes('net::ERR_CONNECTION_REFUSED')
+                );
+                
+                if (isNetworkError) {
+                    log.info('Initial update check failed due to network error:', err.message);
+                } else {
+                    log.error('Error in initial update check:', err);
+                }
             });
     }, 3000);
 
     // Set up periodic update checks (every 6 hours)
     const CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
     setInterval(() => {
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Skipping periodic update check - network is offline');
+            return;
+        }
+        
         // Check if we're already in the process of checking for updates
         if (global.updateCheckInProgress || global.updateDownloadInProgress) {
             log.info('Skipping periodic update check - another check/download already in progress');
@@ -353,8 +384,18 @@ function setupAutoUpdater() {
         log.info('Performing periodic update check...');
         autoUpdater.checkForUpdatesAndNotify()
             .catch(err => {
-                log.error('Error in periodic update check:', err);
-                log.error('Periodic update check failed:', err);
+                // Only log as error if it's not a network error
+                const isNetworkError = err.message && (
+                    err.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                    err.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                    err.message.includes('net::ERR_CONNECTION_REFUSED')
+                );
+                
+                if (isNetworkError) {
+                    log.info('Periodic update check failed due to network error:', err.message);
+                } else {
+                    log.error('Error in periodic update check:', err);
+                }
 
                 // Even if the check fails, we'll try again at the next interval
                 // No need to show error to user for routine background checks
@@ -668,21 +709,25 @@ function createTray() {
 
         // Define possible icon locations in priority order specifically for macOS Resources directory
         const iconLocations = [
-            // First check icon files we know exist from your paste.txt
+            // First check build directory icons
+            path.join(__dirname, '..', 'build', 'icon128.png'),
+            path.join(__dirname, '..', 'build', 'icon.png'),
+            
+            // Check renderer images directory (where files actually exist)
+            path.join(__dirname, 'renderer', 'images', 'icon32.png'),
+            path.join(__dirname, 'renderer', 'images', 'icon128.png'),
+            
+            // Check packaged app resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon128.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon.png'),
             path.join(process.resourcesPath, 'icon128.png'),
             path.join(process.resourcesPath, 'icon.png'),
 
-            // Then check in images subdirectory
-            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon16.png'),
+            // Check images subdirectory in resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon32.png'),
-            path.join(process.resourcesPath, 'images', 'icon16.png'),
+            path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon128.png'),
             path.join(process.resourcesPath, 'images', 'icon32.png'),
-
-            // Add any other possible locations
-            path.join(app.getAppPath(), 'renderer', 'images', 'icon16.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon16.png')
+            path.join(process.resourcesPath, 'images', 'icon128.png')
         ];
 
         // Try each location in order
@@ -1047,6 +1092,16 @@ function setupIPC() {
     ipcMain.on('check-for-updates', (event, isManual) => {
         log.info(`${isManual ? 'Manual' : 'Automatic'} update check requested via IPC`);
 
+        // Check network state before attempting update
+        const networkState = networkStateManager.getState();
+        if (!networkState.isOnline) {
+            log.info('Cannot check for updates - network is offline');
+            if (mainWindow) {
+                mainWindow.webContents.send('update-check-network-offline');
+            }
+            return;
+        }
+
         // First check if an update is already downloaded and ready
         if (global.updateDownloaded) {
             log.info('Update already downloaded, notifying client to show install prompt');
@@ -1078,7 +1133,18 @@ function setupIPC() {
         try {
             autoUpdater.checkForUpdates()
                 .catch(error => {
-                    log.error('autoUpdater.checkForUpdates() failed:', error);
+                    // Check if it's a network error
+                    const isNetworkError = error.message && (
+                        error.message.includes('net::ERR_INTERNET_DISCONNECTED') ||
+                        error.message.includes('net::ERR_NAME_NOT_RESOLVED') ||
+                        error.message.includes('net::ERR_CONNECTION_REFUSED')
+                    );
+                    
+                    if (isNetworkError) {
+                        log.info('Manual update check failed due to network error:', error.message);
+                    } else {
+                        log.error('autoUpdater.checkForUpdates() failed:', error);
+                    }
 
                     // IMPORTANT: Reset check state on error and notify client
                     global.updateCheckInProgress = false;
