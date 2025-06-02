@@ -332,8 +332,8 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
 
         // Get the current time counter value (floor of seconds since epoch / period)
         const counter = Math.floor(currentTimeSeconds / period);
-        log.debug(`Current time: ${timeUtils.newDate(currentTimeSeconds * 1000).toISOString()}`);
-        log.debug(`Counter value: ${counter} (period: ${period}s)`);
+        log.debug(`[${totpId}] Current time: ${timeUtils.newDate(currentTimeSeconds * 1000).toISOString()}`);
+        log.debug(`[${totpId}] Time counter: ${counter} (period: ${period}s, offset: ${timeOffset}s)`);
 
         // Convert counter to bytes (8 bytes, big-endian) per RFC 4226
         const counterBytes = new Uint8Array(8);
@@ -371,7 +371,7 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
 
             // Add leading zeros if necessary
             const result = code.toString().padStart(digits, '0');
-            log.debug(`[${totpId}] Generated TOTP code successfully`);
+            log.debug(`[${totpId}] Generated TOTP code: ${result} at counter: ${counter}`);
 
             return result;
         } catch (cryptoError) {
