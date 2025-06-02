@@ -18,6 +18,7 @@ import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
+import { useTheme } from './contexts/ThemeContext';
 const { createLogger } = require('./utils/logger');
 const log = createLogger('App');
 import { WebSocketProvider } from './contexts/WebSocketContext';
@@ -39,6 +40,7 @@ const AppComponent = () => {
     } = useSources();
 
     const { settings, saveSettings } = useSettings();
+    const { isDarkMode } = useTheme();
 
     const [settingsVisible, setSettingsVisible] = useState(false);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
@@ -88,6 +90,7 @@ const AppComponent = () => {
             }
         };
     }, [sources, refreshSource]);
+
 
     // Handle add source
     const handleAddSource = async (sourceData) => {
@@ -256,7 +259,7 @@ const AppComponent = () => {
     return (
         // Wrap the entire application with WebSocketProvider
         <WebSocketProvider>
-            <Layout className="app-container">
+            <Layout className={`app-container ${isDarkMode ? 'dark' : ''}`}>
                 <Header className="app-header">
                     <div className="logo-title">
                         <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />

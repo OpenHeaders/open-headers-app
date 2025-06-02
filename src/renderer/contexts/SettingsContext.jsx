@@ -12,7 +12,8 @@ const defaultSettings = {
     launchAtLogin: true,
     hideOnLaunch: true,
     showDockIcon: true,
-    showStatusBarIcon: true
+    showStatusBarIcon: true,
+    theme: 'auto' // auto, light, dark
 };
 
 export function SettingsProvider({ children }) {

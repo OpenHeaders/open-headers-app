@@ -300,13 +300,11 @@ const ContentViewer = ({ source, open, onClose }) => {
                     <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         {/* Updated indicator for filtered content */}
                         {isFilteredContent ? (
-                            <div style={{
-                                backgroundColor: '#f0f8ff',
+                            <div className="filter-indicator" style={{
                                 padding: '4px 8px',
                                 borderRadius: '4px',
                                 marginBottom: '8px',
-                                fontSize: '12px',
-                                color: '#0066cc'
+                                fontSize: '12px'
                             }}>
                                 <Text strong>JSON Filtered:</Text> {filterPath}
                             </div>
@@ -325,16 +323,14 @@ const ContentViewer = ({ source, open, onClose }) => {
                         </Button>
                     </div>
 
-                    <pre style={{
+                    <pre className="content-display" style={{
                         maxHeight: 300,
                         overflow: 'auto',
                         margin: 0,
-                        background: '#f5f5f7',
                         padding: 12,
                         fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
                         fontSize: 12,
                         borderRadius: 6,
-                        border: '1px solid #f0f0f0',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>
@@ -363,16 +359,14 @@ const ContentViewer = ({ source, open, onClose }) => {
                         </Button>
                     </div>
 
-                    <pre style={{
+                    <pre className="content-display" style={{
                         maxHeight: 300,
                         overflow: 'auto',
                         margin: 0,
-                        background: '#f5f5f7',
                         padding: 12,
                         fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
                         fontSize: 12,
                         borderRadius: 6,
-                        border: '1px solid #f0f0f0',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>
@@ -427,6 +421,7 @@ const ContentViewer = ({ source, open, onClose }) => {
             onCancel={onClose}
             width={700}
             destroyOnClose={false}
+            className="content-viewer-modal"
             footer={[
                 <Button key="close" onClick={onClose}>
                     Close
@@ -479,16 +474,14 @@ const ContentViewer = ({ source, open, onClose }) => {
                         </Button>
                     </div>
 
-                    <pre style={{
+                    <pre className="content-display" style={{
                         maxHeight: 300,
                         overflow: 'auto',
                         margin: 0,
-                        background: '#f5f5f7',
                         padding: 12,
                         fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
                         fontSize: 12,
                         borderRadius: 6,
-                        border: '1px solid #f0f0f0',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>

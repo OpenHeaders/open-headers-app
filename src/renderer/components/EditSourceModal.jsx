@@ -545,6 +545,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 </div>
             }
             open={open}
+            className="edit-source-modal"
             onCancel={handleModalCancel}
             width={800}
             footer={[
