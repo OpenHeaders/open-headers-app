@@ -192,7 +192,7 @@ export function useHttp() {
                     try {
                         const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
                         totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-                        log.debug(`Generated TOTP code for source ${sourceId}: ${totpCode} at ${new Date().toISOString()}`);
+                        log.debug(`Generated TOTP code for source ${sourceId} at ${new Date().toISOString()}`);
 
                         if (!totpCode || totpCode === 'ERROR') {
                             log.error(`Failed to generate TOTP code for source ${sourceId}`);
@@ -267,12 +267,8 @@ export function useHttp() {
                 // Make sure we don't include the TOTP secret in the actual request
                 delete formattedOptions.totpSecret;
 
-                // Log the actual request being made
-                log.debug(`Making HTTP request to ${url} with options:`, {
-                    method,
-                    headers: formattedOptions.headers,
-                    body: formattedOptions.body ? formattedOptions.body.substring(0, 100) + '...' : null
-                });
+                // Log the request being made (without sensitive data)
+                log.debug(`Making HTTP request: ${method} ${url}`);
 
                 // Make request with retry tracking
                 const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
