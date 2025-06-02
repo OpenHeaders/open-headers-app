@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { ConfigProvider, theme } from 'antd';
-import { showMessage } from '../utils/messageUtil';
+import { useSettings } from './SettingsContext';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ThemeContext');
@@ -17,13 +17,12 @@ export const THEME_MODES = {
 
 // Default theme settings
 const defaultThemeSettings = {
-    mode: THEME_MODES.AUTO, // auto, light, dark
     currentTheme: 'light' // actual theme being used
 };
 
 export function ThemeProvider({ children }) {
-    const [themeSettings, setThemeSettings] = useState(defaultThemeSettings);
-    const [loading, setLoading] = useState(true);
+    const { settings, saveSettings } = useSettings();
+    const [currentTheme, setCurrentTheme] = useState(defaultThemeSettings.currentTheme);
     const isMounted = useRef(true);
     const mediaQueryRef = useRef(null);
 
@@ -35,12 +34,9 @@ export function ThemeProvider({ children }) {
 
     // Handle system theme changes
     const handleSystemThemeChange = (e) => {
-        if (themeSettings.mode === THEME_MODES.AUTO && isMounted.current) {
+        if (settings.theme === THEME_MODES.AUTO && isMounted.current) {
             const systemTheme = e.matches ? 'dark' : 'light';
-            setThemeSettings(prev => ({
-                ...prev,
-                currentTheme: systemTheme
-            }));
+            setCurrentTheme(systemTheme);
             log.debug(`System theme changed to: ${systemTheme}`);
         }
     };
@@ -54,51 +50,25 @@ export function ThemeProvider({ children }) {
         return 'light'; // Default to light if matchMedia not supported
     };
 
-    // Load theme settings on mount
+    // Update theme when settings change
     useEffect(() => {
-        const loadThemeSettings = async () => {
-            try {
-                // Try to load saved theme settings
-                const savedSettings = await window.electronAPI.loadFromStorage('theme-settings.json');
-                const settings = JSON.parse(savedSettings);
-                
-                // Determine current theme based on mode
-                let currentTheme = settings.mode;
-                if (settings.mode === THEME_MODES.AUTO) {
-                    currentTheme = detectSystemTheme();
-                }
-                
-                if (isMounted.current) {
-                    setThemeSettings({
-                        mode: settings.mode,
-                        currentTheme
-                    });
-                }
-            } catch (error) {
-                // This is expected on first run when no theme settings exist
-                log.debug('No saved theme settings found, using system theme');
-                
-                // Fall back to system theme
-                const systemTheme = detectSystemTheme();
-                if (isMounted.current) {
-                    setThemeSettings({
-                        mode: THEME_MODES.AUTO,
-                        currentTheme: systemTheme
-                    });
-                }
-            } finally {
-                if (isMounted.current) {
-                    setLoading(false);
-                }
-            }
-        };
-
-        loadThemeSettings();
-    }, []);
+        if (!settings.theme) return;
+        
+        // Determine current theme based on mode
+        let newTheme = settings.theme;
+        if (settings.theme === THEME_MODES.AUTO) {
+            newTheme = detectSystemTheme();
+        }
+        
+        if (isMounted.current) {
+            setCurrentTheme(newTheme);
+            log.debug(`Theme mode: ${settings.theme}, current theme: ${newTheme}`);
+        }
+    }, [settings.theme]);
 
     // Set up media query listener after theme settings are loaded
     useEffect(() => {
-        if (window.matchMedia && themeSettings.mode === THEME_MODES.AUTO) {
+        if (window.matchMedia && settings.theme === THEME_MODES.AUTO) {
             const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
             mediaQueryRef.current = darkModeQuery;
             
@@ -110,11 +80,11 @@ export function ThemeProvider({ children }) {
                 darkModeQuery.removeEventListener('change', handleSystemThemeChange);
             };
         }
-    }, [themeSettings.mode]);
+    }, [settings.theme]);
 
     // Apply dark class to body element when theme changes
     useEffect(() => {
-        if (themeSettings.currentTheme === 'dark') {
+        if (currentTheme === 'dark') {
             document.body.classList.add('dark');
         } else {
             document.body.classList.remove('dark');
@@ -124,43 +94,40 @@ export function ThemeProvider({ children }) {
         return () => {
             document.body.classList.remove('dark');
         };
-    }, [themeSettings.currentTheme]);
+    }, [currentTheme]);
 
     // Save theme settings
-    const saveThemeSettings = async (mode) => {
+    const saveThemeMode = async (mode) => {
         try {
-            // Determine the current theme based on the new mode
-            let currentTheme = mode;
-            if (mode === THEME_MODES.AUTO) {
-                currentTheme = detectSystemTheme();
-            }
-
-            const newSettings = {
-                mode,
-                currentTheme
-            };
-
-            // Save to storage
-            await window.electronAPI.saveToStorage('theme-settings.json', JSON.stringify({ mode }));
+            // Update settings with new theme mode
+            const success = await saveSettings({
+                ...settings,
+                theme: mode
+            });
             
-            if (isMounted.current) {
-                setThemeSettings(newSettings);
-                log.debug(`Theme mode changed to: ${mode}, current theme: ${currentTheme}`);
+            if (success) {
+                // Update current theme if mode changed to/from auto
+                let newTheme = mode;
+                if (mode === THEME_MODES.AUTO) {
+                    newTheme = detectSystemTheme();
+                }
+                
+                if (isMounted.current) {
+                    setCurrentTheme(newTheme);
+                    log.debug(`Theme mode changed to: ${mode}, current theme: ${newTheme}`);
+                }
             }
             
-            return true;
+            return success;
         } catch (error) {
             log.error('Error saving theme settings:', error);
-            if (isMounted.current) {
-                showMessage('error', 'Failed to save theme settings');
-            }
             return false;
         }
     };
 
     // Get Ant Design theme config based on current theme
     const getAntdThemeConfig = () => {
-        const isDark = themeSettings.currentTheme === 'dark';
+        const isDark = currentTheme === 'dark';
         
         return {
             algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
@@ -258,12 +225,12 @@ export function ThemeProvider({ children }) {
 
     // Context value
     const value = {
-        themeMode: themeSettings.mode,
-        currentTheme: themeSettings.currentTheme,
-        loading,
-        saveThemeSettings,
-        isSystemTheme: themeSettings.mode === THEME_MODES.AUTO,
-        isDarkMode: themeSettings.currentTheme === 'dark'
+        themeMode: settings.theme || THEME_MODES.AUTO,
+        currentTheme: currentTheme,
+        loading: false,
+        saveThemeSettings: saveThemeMode,
+        isSystemTheme: settings.theme === THEME_MODES.AUTO,
+        isDarkMode: currentTheme === 'dark'
     };
 
     return (

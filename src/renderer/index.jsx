@@ -16,27 +16,27 @@ const root = createRoot(container);
 
 // Render the React application with React 18 API and Ant Design App wrapper
 root.render(
-    <ThemeProvider>
-        <App
-            message={{ maxCount: 5 }}
-            notification={{
-                top: 70,
-                duration: 3,
-                maxCount: 5,
-                placement: 'topRight'
-            }}
-        >
-            <MessageProvider>
-                {/* This initializer sets up the message API for use outside React components */}
-                <MessageInitializer />
+    <SettingsProvider>
+        <ThemeProvider>
+            <App
+                message={{ maxCount: 5 }}
+                notification={{
+                    top: 70,
+                    duration: 3,
+                    maxCount: 5,
+                    placement: 'topRight'
+                }}
+            >
+                <MessageProvider>
+                    {/* This initializer sets up the message API for use outside React components */}
+                    <MessageInitializer />
 
-                <SettingsProvider>
                     <SourceProvider>
                         {/* Note: WebSocketProvider is now inside App.jsx */}
                         <AppComponent />
                     </SourceProvider>
-                </SettingsProvider>
-            </MessageProvider>
-        </App>
-    </ThemeProvider>
+                </MessageProvider>
+            </App>
+        </ThemeProvider>
+    </SettingsProvider>
 );
