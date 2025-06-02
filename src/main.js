@@ -1862,6 +1862,7 @@ async function handleMakeHttpRequest(_, url, method, options = {}) {
                                 });
 
                                 requestBody = querystring.stringify(formData);
+                                log.info(`[${requestId}] Form data parsed with ${Object.keys(formData).length} fields`);
                             }
                         }
                         else if (typeof options.body === 'object' && options.body !== null) {

@@ -57,6 +57,7 @@ export function useHttp() {
             // Check if this is an error response
             if (jsonObj.error) {
                 log.debug('Detected error response, checking if we should bypass filter');
+                log.debug('Error response details:', jsonObj);
 
                 // Create a more user-friendly message for errors
                 let errorMessage = `Error: ${jsonObj.error}`;
@@ -191,6 +192,7 @@ export function useHttp() {
                     try {
                         const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
                         totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
+                        log.debug(`Generated TOTP code for source ${sourceId} at ${new Date().toISOString()}`);
 
                         if (!totpCode || totpCode === 'ERROR') {
                             log.error(`Failed to generate TOTP code for source ${sourceId}`);
@@ -264,6 +266,9 @@ export function useHttp() {
 
                 // Make sure we don't include the TOTP secret in the actual request
                 delete formattedOptions.totpSecret;
+
+                // Log the request being made (without sensitive data)
+                log.debug(`Making HTTP request: ${method} ${url}`);
 
                 // Make request with retry tracking
                 const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
