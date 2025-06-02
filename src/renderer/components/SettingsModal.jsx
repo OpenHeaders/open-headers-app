@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Form, Switch, Divider, Button, Row, Col, Typography, Space, Tooltip } from 'antd';
+import { Modal, Form, Switch, Divider, Button, Row, Col, Typography, Space, Tooltip, Select } from 'antd';
 import {
     LoginOutlined,
     EyeInvisibleOutlined,
     AppstoreOutlined,
-    MenuOutlined
+    MenuOutlined,
+    BgColorsOutlined,
+    SyncOutlined,
+    SunOutlined,
+    MoonOutlined
 } from '@ant-design/icons';
+import { useTheme, THEME_MODES } from '../contexts/ThemeContext';
 const { createLogger } = require('../utils/logger');
 const log = createLogger('SettingsModal');
 
@@ -18,14 +23,21 @@ const { Text } = Typography;
 const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const [form] = Form.useForm();
     const [formValues, setFormValues] = useState(settings || {});
+    const { themeMode } = useTheme();
 
     // When settings or visibility change, update form values
     useEffect(() => {
         if (open && settings) {
-            form.setFieldsValue(settings);
-            setFormValues(settings);
+            form.setFieldsValue({
+                ...settings,
+                theme: themeMode // Add current theme mode
+            });
+            setFormValues({
+                ...settings,
+                theme: themeMode
+            });
         }
-    }, [open, settings, form]);
+    }, [open, settings, form, themeMode]);
 
     // Track form value changes and enforce dependencies
     const handleValuesChange = (changedValues, allValues) => {
@@ -41,11 +53,13 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     // Handle form submission
     const handleSubmit = () => {
         form.validateFields()
-            .then(values => {
+            .then(async values => {
                 // Enforce dependency rule: if launchAtLogin is false, hideOnLaunch must be false
                 if (!values.launchAtLogin) {
                     values.hideOnLaunch = false;
                 }
+                
+                // Pass all values including theme to settings save
                 onSave(values);
             })
             .catch(info => {
@@ -110,6 +124,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
             open={open}
             onCancel={onCancel}
             width={500}
+            className="settings-modal"
             footer={[
                 <Button key="cancel" onClick={onCancel}>
                     Cancel
@@ -210,6 +225,54 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                     <Col span={8} style={{ textAlign: 'right' }}>
                         <Form.Item name="showStatusBarIcon" valuePropName="checked" noStyle>
                             <Switch />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Row style={getOptionStyle(true)} align="middle" justify="space-between">
+                    <Col span={16}>
+                        <div style={getLabelStyle(true)}>
+                            <BgColorsOutlined style={getIconStyle(true)} />
+                            <Space direction="vertical" size={0}>
+                                <span>Theme</span>
+                                <span style={getDescStyle(true)}>Choose your preferred theme</span>
+                            </Space>
+                        </div>
+                    </Col>
+                    <Col span={8} style={{ textAlign: 'right' }}>
+                        <Form.Item name="theme" noStyle>
+                            <Select 
+                                style={{ width: 120 }}
+                                options={[
+                                    { 
+                                        value: THEME_MODES.AUTO, 
+                                        label: (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <SyncOutlined style={{ fontSize: 12 }} />
+                                                <span>Auto</span>
+                                            </div>
+                                        )
+                                    },
+                                    { 
+                                        value: THEME_MODES.LIGHT, 
+                                        label: (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <SunOutlined style={{ fontSize: 12 }} />
+                                                <span>Light</span>
+                                            </div>
+                                        )
+                                    },
+                                    { 
+                                        value: THEME_MODES.DARK, 
+                                        label: (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <MoonOutlined style={{ fontSize: 12 }} />
+                                                <span>Dark</span>
+                                            </div>
+                                        )
+                                    }
+                                ]}
+                            />
                         </Form.Item>
                     </Col>
                 </Row>
