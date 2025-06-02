@@ -371,7 +371,7 @@ contextBridge.exposeInMainWorld('generateTOTP', async (secret, period = 30, digi
 
             // Add leading zeros if necessary
             const result = code.toString().padStart(digits, '0');
-            log.debug(`[${totpId}] Generated TOTP code: ${result} at counter: ${counter}`);
+            log.debug(`[${totpId}] Generated TOTP code successfully`);
 
             return result;
         } catch (cryptoError) {
