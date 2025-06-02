@@ -23,7 +23,7 @@ const { Text } = Typography;
 const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const [form] = Form.useForm();
     const [formValues, setFormValues] = useState(settings || {});
-    const { themeMode, saveThemeSettings } = useTheme();
+    const { themeMode } = useTheme();
 
     // When settings or visibility change, update form values
     useEffect(() => {
@@ -54,19 +54,13 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const handleSubmit = () => {
         form.validateFields()
             .then(async values => {
-                // Save theme setting separately
-                if (values.theme && values.theme !== themeMode) {
-                    await saveThemeSettings(values.theme);
-                }
-                
-                // Remove theme from values before passing to settings save
-                const { theme, ...settingsValues } = values;
-                
                 // Enforce dependency rule: if launchAtLogin is false, hideOnLaunch must be false
-                if (!settingsValues.launchAtLogin) {
-                    settingsValues.hideOnLaunch = false;
+                if (!values.launchAtLogin) {
+                    values.hideOnLaunch = false;
                 }
-                onSave(settingsValues);
+                
+                // Pass all values including theme to settings save
+                onSave(values);
             })
             .catch(info => {
                 log.debug('Validation failed:', info);
@@ -235,16 +229,12 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                     </Col>
                 </Row>
 
-                <Divider style={{ margin: '16px 0' }} />
-
-                <div style={sectionStyle}>Theme</div>
-
                 <Row style={getOptionStyle(true)} align="middle" justify="space-between">
                     <Col span={16}>
                         <div style={getLabelStyle(true)}>
                             <BgColorsOutlined style={getIconStyle(true)} />
                             <Space direction="vertical" size={0}>
-                                <span>Appearance</span>
+                                <span>Theme</span>
                                 <span style={getDescStyle(true)}>Choose your preferred theme</span>
                             </Space>
                         </div>
