@@ -1,0 +1,1139 @@
+// Dark theme overrides for the application
+// This file contains dark mode specific styles that override the default light theme
+
+// Dark theme variables
+@dark-bg-primary: #000000;
+@dark-bg-secondary: #1c1c1e;
+@dark-bg-elevated: #2c2c2e;
+@dark-text-primary: #ffffff;
+@dark-text-secondary: #98989d;
+@dark-border: #38383a;
+@dark-border-secondary: #48484a;
+
+// Apply dark theme to body directly
+body.dark {
+  background-color: @dark-bg-primary;
+  color: @dark-text-primary;
+}
+
+// Apply dark theme when the root has dark class
+.dark {
+  // Background colors
+  background-color: @dark-bg-primary;
+  color: @dark-text-primary;
+
+  // Force override Ant Design CSS variables
+  --ant-tabs-card-bg: @dark-bg-elevated !important;
+  --ant-card-bg: @dark-bg-elevated !important;
+
+
+  // App container
+  .app-container {
+    background-color: @dark-bg-primary;
+  }
+
+  // Header
+  .app-header {
+    background-color: @dark-bg-secondary;
+    box-shadow: 0 1px 0 @dark-border;
+
+    .logo-title {
+      .title-version {
+        h3 {
+          color: @dark-text-primary;
+        }
+      }
+    }
+  }
+
+  // Main content
+  .app-content {
+    background: @dark-bg-primary;
+  }
+
+  // Card styles
+  .ant-card {
+    background-color: @dark-bg-secondary;
+    border-color: @dark-border;
+
+    &-head {
+      border-bottom-color: @dark-border;
+      color: @dark-text-primary;
+    }
+
+    &-body {
+      color: @dark-text-primary;
+    }
+  }
+
+  // Form styles
+  .ant-form-item-label > label {
+    color: @dark-text-primary;
+  }
+
+  // Source form card
+  .source-form-card {
+    .ant-divider {
+      border-color: @dark-border;
+    }
+  }
+
+  // Sticky header
+  .source-form-sticky-header {
+    background: @dark-bg-secondary;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    .title {
+      color: @dark-text-primary;
+    }
+  }
+
+  // HTTP options with very high specificity
+  .http-options {
+    // Override the light theme's #fafafa background with exact selector
+    .ant-tabs-content {
+      background: @dark-bg-elevated !important;
+      padding: 8px !important;
+      border: 1px solid @dark-border !important;
+      border-radius: 0 0 6px 6px !important;
+    }
+
+    // Card tab content with maximum specificity
+    .ant-tabs-card > .ant-tabs-content-holder > .ant-tabs-content {
+      background: @dark-bg-elevated !important;
+      border: 1px solid @dark-border !important;
+      padding: 8px !important;
+    }
+
+    pre {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border-color: @dark-border !important;
+    }
+
+    // Response preview in tabs
+    .response-preview {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border-color: @dark-border !important;
+    }
+
+    // Form fields in HTTP options
+    .ant-form-item {
+      color: @dark-text-primary !important;
+    }
+  }
+
+  // Response preview
+  .response-preview-card {
+    background: @dark-bg-secondary !important;
+    
+    .ant-card-head {
+      background: @dark-bg-secondary !important;
+      border-bottom-color: @dark-border !important;
+    }
+
+    .ant-card-body {
+      background: @dark-bg-secondary !important;
+    }
+
+    // Tab styling inside response preview
+    .ant-tabs {
+      .ant-tabs-nav {
+        background: transparent !important;
+        
+        &::before {
+          border-bottom-color: @dark-border !important;
+        }
+      }
+
+      .ant-tabs-content {
+        background: @dark-bg-elevated !important;
+        border-color: @dark-border !important;
+      }
+    }
+    
+    .response-body, .response-raw {
+      background: @dark-bg-elevated !important;
+      border-color: @dark-border !important;
+      color: @dark-text-primary !important;
+    }
+
+    // Filtered response display
+    .filtered-response {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border-color: @dark-border !important;
+    }
+
+    // Pre/code blocks in response
+    pre {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border-color: @dark-border !important;
+    }
+
+    .response-headers {
+      .headers-table {
+        th {
+          background-color: @dark-bg-elevated;
+          color: @dark-text-primary;
+          border-bottom-color: @dark-border;
+        }
+
+        td {
+          border-bottom-color: @dark-border;
+          color: @dark-text-primary;
+        }
+
+        tr:hover td {
+          background-color: @dark-bg-elevated;
+        }
+      }
+
+      .no-headers {
+        color: @dark-text-secondary;
+      }
+    }
+
+    .filter-info {
+      color: #b37feb;
+    }
+  }
+
+  // Table styles
+  .source-table {
+    .ant-table {
+      background: @dark-bg-secondary;
+
+      .ant-table-thead > tr > th {
+        background: @dark-bg-elevated;
+        color: @dark-text-primary;
+        border-bottom-color: @dark-border;
+      }
+
+      .ant-table-tbody > tr > td {
+        border-bottom-color: @dark-border;
+        color: @dark-text-primary;
+      }
+
+      .ant-table-tbody > tr:hover > td {
+        background: @dark-bg-elevated;
+      }
+    }
+  }
+
+  // Source content cell - Override light theme #fafafa
+  .source-content-cell {
+    background: @dark-bg-elevated !important;
+    border-color: @dark-border !important;
+    color: @dark-text-primary !important;
+  }
+
+  // Refresh status
+  .refresh-status {
+    background: @dark-bg-elevated;
+    color: @dark-text-primary;
+
+    &.active {
+      background: rgba(10, 132, 255, 0.2);
+      color: #0a84ff;
+      border-color: #0a84ff;
+    }
+
+    &.error {
+      background: rgba(255, 77, 79, 0.2);
+      color: #ff4d4f;
+      border-color: #ff4d4f;
+    }
+  }
+
+  // Modal styles
+  .ant-modal-content {
+    background-color: @dark-bg-secondary;
+
+    .ant-modal-header {
+      background-color: @dark-bg-secondary;
+      border-bottom-color: @dark-border;
+
+      .ant-modal-title {
+        color: @dark-text-primary;
+      }
+    }
+
+    .ant-modal-body {
+      color: @dark-text-primary;
+    }
+
+    .ant-modal-footer {
+      background-color: @dark-bg-secondary;
+      border-top-color: @dark-border;
+    }
+  }
+
+  // Input styles
+  .ant-input,
+  .ant-select-selector,
+  .ant-textarea {
+    background-color: @dark-bg-elevated;
+    border-color: @dark-border-secondary;
+    color: @dark-text-primary;
+
+    &:hover,
+    &:focus {
+      border-color: #0a84ff;
+      background-color: @dark-bg-elevated;
+    }
+
+    &::placeholder {
+      color: @dark-text-secondary;
+    }
+  }
+
+  .ant-input-affix-wrapper {
+    background-color: @dark-bg-elevated;
+    border-color: @dark-border-secondary;
+
+    &:hover,
+    &:focus {
+      border-color: #0a84ff;
+    }
+  }
+
+  // Select dropdown
+  .ant-select-dropdown {
+    background-color: @dark-bg-elevated;
+    border-color: @dark-border;
+
+    .ant-select-item {
+      color: @dark-text-primary;
+
+      &-option-selected {
+        background-color: rgba(10, 132, 255, 0.2);
+      }
+
+      &-option-active {
+        background-color: @dark-bg-secondary;
+      }
+    }
+  }
+
+  // Button styles
+  .ant-btn {
+    &-default {
+      background-color: @dark-bg-elevated;
+      border-color: @dark-border-secondary;
+      color: @dark-text-primary;
+
+      &:hover {
+        background-color: @dark-bg-secondary;
+        border-color: #0a84ff;
+        color: #0a84ff;
+      }
+    }
+  }
+
+  // Switch styles
+  .ant-switch {
+    background-color: @dark-border-secondary;
+
+    &-checked {
+      background-color: #0a84ff;
+    }
+  }
+
+  // Divider
+  .ant-divider {
+    border-color: @dark-border;
+  }
+
+  // Tabs
+  .ant-tabs {
+    .ant-tabs-tab {
+      color: @dark-text-secondary;
+      background: transparent;
+
+      &:hover {
+        color: @dark-text-primary;
+      }
+
+      &-active {
+        color: #0a84ff;
+      }
+    }
+
+    .ant-tabs-ink-bar {
+      background-color: #0a84ff;
+    }
+
+    .ant-tabs-nav {
+      background: @dark-bg-secondary;
+      
+      &::before {
+        border-bottom-color: @dark-border;
+      }
+    }
+
+    .ant-tabs-content-holder {
+      background: @dark-bg-secondary;
+    }
+
+    // Fix tab content areas globally
+    .ant-tabs-content {
+      background: @dark-bg-elevated !important;
+      
+      .ant-tabs-tabpane {
+        background: transparent;
+      }
+    }
+
+    .ant-tabs-card {
+      .ant-tabs-content {
+        background: @dark-bg-elevated;
+      }
+
+      > .ant-tabs-nav {
+        .ant-tabs-tab {
+          background: @dark-bg-elevated;
+          border-color: @dark-border;
+
+          &-active {
+            background: @dark-bg-secondary;
+            border-bottom-color: @dark-bg-secondary;
+          }
+        }
+      }
+    }
+  }
+
+  // Tooltips
+  .ant-tooltip {
+    .ant-tooltip-inner {
+      background-color: @dark-bg-elevated;
+      color: @dark-text-primary;
+    }
+
+    .ant-tooltip-arrow-content {
+      background-color: @dark-bg-elevated;
+    }
+  }
+
+  // Message and notifications
+  .ant-message-notice-content {
+    background-color: @dark-bg-elevated;
+    color: @dark-text-primary;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .ant-notification-notice {
+    background-color: @dark-bg-elevated;
+    color: @dark-text-primary;
+
+    .ant-notification-notice-message {
+      color: @dark-text-primary;
+    }
+
+    .ant-notification-notice-description {
+      color: @dark-text-secondary;
+    }
+  }
+
+  // Tag styles
+  .ant-tag {
+    background-color: @dark-bg-elevated;
+    border-color: @dark-border;
+    color: @dark-text-primary;
+  }
+
+  // Status code colors in dark mode
+  .status-code {
+    &.status-2xx {
+      background-color: rgba(52, 199, 89, 0.2);
+      color: #30d158;
+    }
+
+    &.status-4xx,
+    &.status-5xx {
+      background-color: rgba(255, 69, 58, 0.2);
+      color: #ff453a;
+    }
+  }
+
+  // Code and pre elements
+  pre, code {
+    background-color: @dark-bg-elevated;
+    color: @dark-text-primary;
+  }
+
+  // Content viewer modal
+  .content-viewer-modal {
+    pre {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border-color: @dark-border !important;
+    }
+  }
+
+  // Edit Source Modal specific styles
+  .edit-source-modal {
+    .ant-modal-content {
+      background-color: @dark-bg-secondary;
+      color: @dark-text-primary;
+    }
+
+    // All form fields in the modal
+    .ant-form-item {
+      color: @dark-text-primary;
+    }
+
+    // HTTP options inside edit modal - MAXIMUM SPECIFICITY
+    .http-options {
+      // Override the exact selector from light theme
+      > .ant-tabs > .ant-tabs-content-holder > .ant-tabs-content {
+        background: @dark-bg-elevated !important;
+        padding: 8px !important;
+        border: 1px solid @dark-border !important;
+        border-radius: 0 0 6px 6px !important;
+      }
+
+      .ant-tabs-content {
+        background: @dark-bg-elevated !important;
+        border-color: @dark-border !important;
+      }
+
+      .ant-card {
+        background: @dark-bg-elevated !important;
+        border-color: @dark-border !important;
+
+        .ant-card-head {
+          background: @dark-bg-elevated !important;
+          border-bottom-color: @dark-border !important;
+        }
+
+        .ant-card-body {
+          background: @dark-bg-elevated !important;
+        }
+      }
+
+      pre {
+        background: @dark-bg-elevated !important;
+        color: @dark-text-primary !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    // Tab content backgrounds
+    .ant-tabs-tabpane {
+      background: transparent;
+    }
+
+    // Code/JSON display areas
+    .json-display, .response-display {
+      background: @dark-bg-elevated;
+      color: @dark-text-primary;
+      border-color: @dark-border;
+    }
+
+    // Response preview inside edit modal
+    .response-preview-card {
+      background: @dark-bg-secondary !important;
+      
+      .ant-card-body {
+        background: @dark-bg-secondary !important;
+      }
+
+      .response-body, .response-raw, pre {
+        background: @dark-bg-elevated !important;
+        color: @dark-text-primary !important;
+        border-color: @dark-border !important;
+      }
+    }
+
+    // Override all inline styles in this modal
+    div[style*="color: rgba(0, 0, 0, 0.45)"],
+    span[style*="color: rgba(0, 0, 0, 0.45)"] {
+      color: @dark-text-secondary !important;
+    }
+
+    div[style*="color: rgb(29, 29, 31)"],
+    span[style*="color: rgb(29, 29, 31)"] {
+      color: @dark-text-primary !important;
+    }
+  }
+
+  // Content Viewer Modal
+  .content-viewer-modal {
+    .ant-modal-content {
+      background-color: @dark-bg-secondary;
+      color: @dark-text-primary;
+    }
+
+    .content-display {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border: 1px solid @dark-border !important;
+    }
+
+    // All pre elements in content viewer
+    pre {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+      border: 1px solid @dark-border !important;
+    }
+
+    // Filter indicator
+    .filter-indicator {
+      background-color: rgba(10, 132, 255, 0.1) !important;
+      color: #0a84ff !important;
+    }
+  }
+
+  // Settings Modal text fix
+  .settings-modal {
+    .ant-modal-content {
+      color: @dark-text-primary;
+    }
+
+    .ant-form-item {
+      color: @dark-text-primary;
+    }
+
+    .ant-row {
+      color: @dark-text-primary;
+    }
+
+    // Settings labels and descriptions
+    span {
+      color: inherit;
+    }
+    
+    // Fix inline style colors
+    div[style*="color: #1d1d1f"],
+    span[style*="color: #1d1d1f"] {
+      color: @dark-text-primary !important;
+    }
+    
+    div[style*="color: #86868b"],
+    span[style*="color: #86868b"] {
+      color: @dark-text-secondary !important;
+    }
+    
+    // Fix description text colors
+    span[style*="color: rgba(0, 0, 0, 0.45)"] {
+      color: @dark-text-secondary !important;
+    }
+    
+    span[style*="color: rgba(0, 0, 0, 0.3)"] {
+      color: rgba(255, 255, 255, 0.3) !important;
+    }
+    
+    // Fix icon colors
+    .anticon {
+      &[style*="color: #0071e3"] {
+        color: #0a84ff !important;
+      }
+      
+      &[style*="color: #86868b"] {
+        color: @dark-text-secondary !important;
+      }
+    }
+  }
+
+  // About Modal
+  .about-modal {
+    .ant-modal-content {
+      color: @dark-text-primary;
+    }
+
+    p, span, div {
+      color: @dark-text-primary;
+    }
+
+    a {
+      color: #0a84ff;
+
+      &:hover {
+        color: #409eff;
+      }
+    }
+  }
+
+  // Dropdown menus
+  .ant-dropdown {
+    .ant-dropdown-menu {
+      background-color: @dark-bg-elevated;
+      border-color: @dark-border;
+
+      .ant-dropdown-menu-item {
+        color: @dark-text-primary;
+
+        &:hover {
+          background-color: @dark-bg-secondary;
+        }
+
+        &-divider {
+          background-color: @dark-border;
+        }
+      }
+    }
+  }
+
+  // All text elements default
+  p, span, label, .ant-typography {
+    color: @dark-text-primary;
+  }
+
+  // Override ALL elements with inline styles containing light colors
+  * {
+    &[style*="color: rgba(0, 0, 0, 0.45)"] {
+      color: @dark-text-secondary !important;
+    }
+
+    &[style*="color: rgba(0, 0, 0, 0.3)"] {
+      color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    &[style*="color: rgb(29, 29, 31)"] {
+      color: @dark-text-primary !important;
+    }
+
+    &[style*="color: rgb(134, 134, 139)"] {
+      color: @dark-text-secondary !important;
+    }
+
+    &[style*="background-color: rgb(240, 248, 255)"] {
+      background-color: rgba(10, 132, 255, 0.1) !important;
+    }
+
+    &[style*="color: rgb(0, 102, 204)"] {
+      color: #0a84ff !important;
+    }
+  }
+
+  // Code elements
+  code {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: @dark-text-primary !important;
+    padding: 2px 4px;
+    border-radius: 3px;
+  }
+
+  // Force all Ant components to have proper dark background
+  .ant-tabs-tabpane {
+    background: transparent !important;
+  }
+
+  // Force dark background on ALL tab content areas with very specific selectors
+  .ant-tabs-card > .ant-tabs-content-holder > .ant-tabs-content {
+    background: @dark-bg-elevated !important;
+    border: 1px solid @dark-border !important;
+    border-radius: 0 0 6px 6px !important;
+    
+    > .ant-tabs-tabpane {
+      background: transparent !important;
+    }
+  }
+
+  // Specific override for modal tabs
+  .ant-modal-body {
+    .ant-tabs-card {
+      .ant-tabs-content {
+        background: @dark-bg-elevated !important;
+        border-color: @dark-border !important;
+      }
+      
+      .ant-tabs-nav {
+        .ant-tabs-tab {
+          background: transparent;
+          border-color: @dark-border;
+          color: @dark-text-secondary;
+          
+          &.ant-tabs-tab-active {
+            background: @dark-bg-elevated !important;
+            border-bottom-color: @dark-bg-elevated !important;
+            color: @dark-text-primary;
+          }
+        }
+      }
+    }
+  }
+
+  // Code blocks and pre elements everywhere
+  pre, code, .ant-typography pre {
+    background: @dark-bg-elevated !important;
+    color: @dark-text-primary !important;
+    border-color: @dark-border !important;
+  }
+
+  // JSON viewer in modals
+  .json-viewer, .json-display {
+    background: @dark-bg-elevated !important;
+    color: @dark-text-primary !important;
+    
+    pre {
+      background: @dark-bg-elevated !important;
+      color: @dark-text-primary !important;
+    }
+  }
+
+  // Response viewer specific fixes
+  .response-content, .filtered-content {
+    background: @dark-bg-elevated !important;
+    color: @dark-text-primary !important;
+    border-color: @dark-border !important;
+  }
+
+  // Scrollbar styling for webkit browsers
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: @dark-bg-primary;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: @dark-border-secondary;
+    border-radius: 4px;
+
+    &:hover {
+      background: #58585a;
+    }
+  }
+}
+
+// Additional modal fixes with higher specificity
+.dark {
+  // Force modal content to use dark theme
+  .ant-modal-wrap {
+    .ant-modal {
+      .ant-modal-content {
+        background-color: @dark-bg-secondary !important;
+        color: @dark-text-primary !important;
+
+        .ant-modal-header {
+          background-color: @dark-bg-secondary !important;
+          border-bottom-color: @dark-border !important;
+          
+          .ant-modal-title {
+            color: @dark-text-primary !important;
+          }
+        }
+
+        .ant-modal-body {
+          background-color: @dark-bg-secondary !important;
+          color: @dark-text-primary !important;
+          
+          // All text elements in modal body
+          * {
+            color: inherit !important;
+          }
+        }
+
+        .ant-modal-footer {
+          background-color: @dark-bg-secondary !important;
+          border-top-color: @dark-border !important;
+        }
+      }
+    }
+  }
+
+  // Fix form labels in modals
+  .ant-modal {
+    .ant-form-item-label {
+      > label {
+        color: @dark-text-primary !important;
+      }
+    }
+    
+    // Fix all text, spans, and divs
+    span, div, p, label {
+      color: @dark-text-primary !important;
+    }
+  }
+
+  // Fix tab styling in modals
+  .ant-modal {
+    .ant-tabs {
+      &.ant-tabs-card {
+        .ant-tabs-tab {
+          background: transparent !important;
+          border-color: @dark-border !important;
+          color: @dark-text-secondary !important;
+          
+          &.ant-tabs-tab-active {
+            background: @dark-bg-elevated !important;
+            border-bottom-color: @dark-bg-elevated !important;
+            color: @dark-text-primary !important;
+          }
+        }
+        
+        .ant-tabs-content {
+          background: @dark-bg-elevated !important;
+          border: 1px solid @dark-border !important;
+          border-top: none !important;
+          
+          .ant-tabs-tabpane {
+            background: transparent !important;
+          }
+        }
+      }
+    }
+  }
+
+  // Override inline styles with very specific selectors
+  .ant-modal-wrap {
+    // Target all divs with light mode inline styles
+    div[style*="background-color: rgb(255, 255, 255)"],
+    div[style*="background-color: #ffffff"],
+    div[style*="background-color: white"],
+    div[style*="background: rgb(255, 255, 255)"],
+    div[style*="background: #ffffff"],
+    div[style*="background: white"] {
+      background-color: @dark-bg-secondary !important;
+    }
+    
+    // Target all elements with light mode text colors
+    *[style*="color: rgb(0, 0, 0)"],
+    *[style*="color: #000000"],
+    *[style*="color: black"] {
+      color: @dark-text-primary !important;
+    }
+  }
+
+  // Fix switch component in modals
+  .ant-modal {
+    .ant-switch {
+      background-color: @dark-border-secondary !important;
+      
+      &.ant-switch-checked {
+        background-color: #0a84ff !important;
+      }
+    }
+  }
+
+  // Fix any remaining white backgrounds in modals
+  .ant-modal-content {
+    * {
+      &[style*="background-color: #f5f5f7"],
+      &[style*="background-color: rgb(245, 245, 247)"],
+      &[style*="background: #f5f5f7"],
+      &[style*="background: rgb(245, 245, 247)"] {
+        background-color: @dark-bg-elevated !important;
+      }
+    }
+  }
+}
+
+// Aggressive dark mode fix - Maximum specificity
+body.dark {
+  // Force ALL modals to use dark theme
+  .ant-modal-mask {
+    background-color: rgba(0, 0, 0, 0.75) !important;
+  }
+  
+  .ant-modal-wrap .ant-modal {
+    * {
+      background-color: inherit !important;
+      color: inherit !important;
+    }
+    
+    .ant-modal-content {
+      background-color: #1c1c1e !important;
+      color: #ffffff !important;
+      
+      // Override any background that's not dark
+      [style*="background"] {
+        background-color: #1c1c1e !important;
+      }
+      
+      // Override any text that's not light
+      [style*="color"] {
+        color: #ffffff !important;
+      }
+      
+      // Input fields
+      input, textarea, .ant-input, .ant-textarea, .ant-select-selector {
+        background-color: #2c2c2e !important;
+        border-color: #48484a !important;
+        color: #ffffff !important;
+        
+        &::placeholder {
+          color: #98989d !important;
+        }
+      }
+      
+      // Tabs
+      .ant-tabs-tab {
+        background: transparent !important;
+        color: #98989d !important;
+        
+        &.ant-tabs-tab-active {
+          background: #2c2c2e !important;
+          color: #ffffff !important;
+        }
+      }
+      
+      .ant-tabs-content {
+        background: #2c2c2e !important;
+        padding: 16px !important;
+        
+        pre, code {
+          background: #2c2c2e !important;
+          color: #ffffff !important;
+        }
+      }
+      
+      // Cards
+      .ant-card {
+        background: #2c2c2e !important;
+        border-color: #38383a !important;
+        
+        .ant-card-body {
+          background: #2c2c2e !important;
+        }
+      }
+      
+      // Switches
+      .ant-switch {
+        background-color: #48484a !important;
+        
+        &.ant-switch-checked {
+          background-color: #0a84ff !important;
+        }
+      }
+    }
+  }
+}
+
+// Ultimate dark mode fix for Ant Design 5
+body.dark {
+  // App container and layout
+  #root, .ant-app {
+    background-color: @dark-bg-primary !important;
+    color: @dark-text-primary !important;
+  }
+
+  // Force modal root to be dark
+  .ant-modal-root {
+    .ant-modal-mask {
+      background-color: rgba(0, 0, 0, 0.75) !important;
+    }
+    
+    .ant-modal-wrap {
+      .ant-modal {
+        .ant-modal-content {
+          background-color: @dark-bg-secondary !important;
+          color: @dark-text-primary !important;
+          
+          .ant-modal-header,
+          .ant-modal-body,
+          .ant-modal-footer {
+            background-color: @dark-bg-secondary !important;
+            color: @dark-text-primary !important;
+          }
+        }
+      }
+    }
+  }
+
+  // Specific fixes for About Modal inline styles
+  .about-modal {
+    .ant-modal-body {
+      // Override the gradient background
+      background: @dark-bg-secondary !important;
+      
+      // Override inline styles with attribute selectors
+      &[style*="background: linear-gradient"] {
+        background: @dark-bg-secondary !important;
+      }
+    }
+
+    // Fix hardcoded text colors
+    .ant-typography {
+      &[style*="color: rgb(134, 134, 139)"] {
+        color: @dark-text-secondary !important;
+      }
+      
+      &[style*="color: rgb(29, 29, 31)"] {
+        color: @dark-text-primary !important;
+      }
+    }
+
+    // Fix close button background
+    .ant-btn {
+      &[style*="background: rgb(245, 245, 247)"] {
+        background: @dark-bg-elevated !important;
+        border-color: @dark-border !important;
+        color: @dark-text-primary !important;
+      }
+    }
+
+    // Ensure all text in about modal is visible
+    .about-content {
+      * {
+        color: inherit !important;
+      }
+      
+      .ant-typography {
+        color: @dark-text-primary !important;
+      }
+      
+      // Fix tab selection buttons
+      .ant-btn-primary {
+        background-color: #0a84ff !important;
+        border-color: #0a84ff !important;
+        color: #ffffff !important;
+        
+        &:hover {
+          background-color: #0051d5 !important;
+          border-color: #0051d5 !important;
+        }
+      }
+      
+      .ant-btn-text {
+        color: @dark-text-secondary !important;
+        
+        &:hover {
+          color: @dark-text-primary !important;
+        }
+      }
+    }
+  }
+  
+  // Fix dropdown menu icons
+  .ant-dropdown {
+    .ant-dropdown-menu {
+      .ant-dropdown-menu-item {
+        .ant-dropdown-menu-item-icon {
+          color: @dark-text-primary !important;
+        }
+        
+        .anticon {
+          color: @dark-text-primary !important;
+          margin-right: 8px;
+        }
+      }
+    }
+  }
+  
+  // Fix Select dropdown for theme options
+  .ant-select-dropdown {
+    .ant-select-item {
+      .anticon {
+        color: @dark-text-primary !important;
+      }
+      
+      .ant-space {
+        color: @dark-text-primary !important;
+      }
+      
+      &.ant-select-item-option-selected {
+        .anticon {
+          color: #0a84ff !important;
+        }
+      }
+    }
+  }
+}
