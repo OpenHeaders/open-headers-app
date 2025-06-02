@@ -77,8 +77,14 @@ export function SourceProvider({ children }) {
         }
 
         setSources(prev => {
-            // Check if source exists
-            const sourceExists = prev.some(s => s.sourceId === sourceId);
+            // Check if source exists - handle both string and number IDs
+            const sourceIdStr = String(sourceId);
+            const sourceIdNum = Number(sourceId);
+            const sourceExists = prev.some(s => 
+                s.sourceId === sourceId || 
+                String(s.sourceId) === sourceIdStr || 
+                (Number.isInteger(sourceIdNum) && s.sourceId === sourceIdNum)
+            );
 
             if (!sourceExists) {
                 debugLog(`Source ${sourceId} not found when updating content`);
@@ -86,7 +92,14 @@ export function SourceProvider({ children }) {
             }
 
             return prev.map(source => {
-                if (source.sourceId === sourceId) {
+                // Handle both string and number ID comparisons
+                const sourceIdStr = String(sourceId);
+                const sourceIdNum = Number(sourceId);
+                const isMatch = source.sourceId === sourceId || 
+                               String(source.sourceId) === sourceIdStr || 
+                               (Number.isInteger(sourceIdNum) && source.sourceId === sourceIdNum);
+                
+                if (isMatch) {
                     // Create updated source
                     const updatedSource = {
                         ...source,
@@ -670,7 +683,9 @@ export function SourceProvider({ children }) {
     // Refresh source - delegate to RefreshManager
     const refreshSource = async (sourceId, updatedSource = null) => {
         try {
-            const source = sources.find(s => s.sourceId === sourceId);
+            // Use the updatedSource if provided (for immediate refresh after update)
+            // Otherwise, find the source from current state
+            const source = updatedSource || sources.find(s => s.sourceId === sourceId);
             if (!source) {
                 debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
                 return false;

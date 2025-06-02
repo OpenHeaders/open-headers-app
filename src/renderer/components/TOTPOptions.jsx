@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
+import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col, message } from 'antd';
+import { CopyOutlined } from '@ant-design/icons';
 import timeManager from '../services/TimeManager';
 
 const { Text } = Typography;
@@ -19,6 +20,7 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
     const [error, setError] = useState(null);
     const [timeOffset, setTimeOffset] = useState(0); // Time offset in seconds
     const [showOffsetAdjustment, setShowOffsetAdjustment] = useState(false);
+    const [codeJustGenerated, setCodeJustGenerated] = useState(false);
 
     // Use a ref to track initialization
     const initialized = useRef(false);
@@ -67,6 +69,9 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                 setCode('ERROR');
             } else {
                 setCode(totpCode);
+                // Trigger animation for new code
+                setCodeJustGenerated(true);
+                setTimeout(() => setCodeJustGenerated(false), 300);
             }
         } catch (error) {
             setError(`Error: ${error.message}`);
@@ -80,30 +85,31 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
     useEffect(() => {
         if (!previewVisible) return;
 
-        // Initial code generation
-        generateTOTP();
+        // Function to calculate time remaining in current period
+        const calculateTimeRemaining = () => {
+            const secondsInPeriod = 30;
+            const currentSeconds = Math.floor(timeManager.now() / 1000) + timeOffset;
+            const secondsRemaining = secondsInPeriod - (currentSeconds % secondsInPeriod);
+            return secondsRemaining;
+        };
 
-        // Calculate seconds remaining in current period
-        const secondsInPeriod = 30;
-        const currentSeconds = Math.floor(timeManager.now() / 1000);
-        const secondsRemaining = secondsInPeriod - (currentSeconds % secondsInPeriod);
-        setTimeRemaining(secondsRemaining);
+        // Initial code generation and timer setup
+        generateTOTP();
+        setTimeRemaining(calculateTimeRemaining());
 
         // Set up interval for countdown and code regeneration
         const timer = setInterval(() => {
-            setTimeRemaining(prev => {
-                const newTime = prev - 1;
-                if (newTime <= 0) {
-                    // Generate new code when timer expires
-                    generateTOTP();
-                    return 30; // Reset to full period
-                }
-                return newTime;
-            });
-        }, 1000);
+            const remaining = calculateTimeRemaining();
+            setTimeRemaining(remaining);
+            
+            // When we hit exactly 30 seconds (new period), generate new code
+            if (remaining === 30) {
+                generateTOTP();
+            }
+        }, 100); // Update every 100ms for smoother countdown
 
         return () => clearInterval(timer);
-    }, [previewVisible, generateTOTP]);
+    }, [previewVisible, generateTOTP, timeOffset]);
 
     // Handle TOTP toggle
     const handleToggle = (checked) => {
@@ -260,25 +266,80 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                     {previewVisible && (
                         <div style={{
                             background: '#f5f5f7',
-                            padding: 8,
-                            borderRadius: 6,
-                            marginBottom: 8
+                            padding: 12,
+                            borderRadius: 8,
+                            marginBottom: 8,
+                            border: '1px solid #e8e8e8'
                         }}>
                             <div style={{
                                 display: 'flex',
                                 justifyContent: 'space-between',
-                                alignItems: 'center'
+                                alignItems: 'center',
+                                marginBottom: 8
                             }}>
-                                <Text style={{
-                                    fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                    fontSize: '1rem',
-                                    fontWeight: 'bold',
-                                    color: code === 'ERROR' ? '#ff4d4f' : 'inherit'
-                                }}>
-                                    {code}
-                                </Text>
-                                {code !== 'ERROR' && <Text type="secondary" style={{ fontSize: '12px' }}>({timeRemaining}s)</Text>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Text style={{
+                                        fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
+                                        fontSize: '1.5rem',
+                                        fontWeight: 'bold',
+                                        color: code === 'ERROR' ? '#ff4d4f' : '#1890ff',
+                                        letterSpacing: '0.1em',
+                                        cursor: code !== 'ERROR' ? 'pointer' : 'default',
+                                        transition: 'transform 0.3s ease',
+                                        transform: codeJustGenerated ? 'scale(1.1)' : 'scale(1)'
+                                    }}
+                                    onClick={() => {
+                                        if (code !== 'ERROR') {
+                                            navigator.clipboard.writeText(code);
+                                            message.success('Code copied to clipboard!');
+                                        }
+                                    }}>
+                                        {code}
+                                    </Text>
+                                    {code !== 'ERROR' && (
+                                        <CopyOutlined 
+                                            style={{ 
+                                                fontSize: '16px', 
+                                                color: '#8c8c8c', 
+                                                cursor: 'pointer' 
+                                            }}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(code);
+                                                message.success('Code copied to clipboard!');
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                                {code !== 'ERROR' && (
+                                    <div style={{ textAlign: 'center' }}>
+                                        <Text style={{ 
+                                            fontSize: '1.2rem', 
+                                            fontWeight: 'bold',
+                                            color: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a'
+                                        }}>
+                                            {timeRemaining}s
+                                        </Text>
+                                        <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
+                                            Time remaining
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                            {code !== 'ERROR' && (
+                                <div style={{
+                                    height: 4,
+                                    background: '#e8e8e8',
+                                    borderRadius: 2,
+                                    overflow: 'hidden'
+                                }}>
+                                    <div style={{
+                                        height: '100%',
+                                        background: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a',
+                                        width: `${(timeRemaining / 30) * 100}%`,
+                                        transition: 'width 0.1s linear, background 0.3s ease'
+                                    }} />
+                                </div>
+                            )}
                         </div>
                     )}
 

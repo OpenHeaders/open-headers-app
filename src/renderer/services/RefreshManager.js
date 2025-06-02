@@ -176,6 +176,12 @@ class RefreshManager {
       this.scheduler.scheduleSource(source).catch(err => {
         log.error(`Error rescheduling source ${sourceId}:`, err);
       });
+    } else {
+      // Even if interval hasn't changed, force recalculation of next refresh time
+      // This ensures the UI shows the correct "Refreshes in..." after save
+      this.scheduler.scheduleSource(source).catch(err => {
+        log.error(`Error updating schedule for source ${sourceId}:`, err);
+      });
     }
   }
   
@@ -218,7 +224,9 @@ class RefreshManager {
     
     // Update scheduler with refresh result
     if (result.success) {
-      this.scheduler.updateLastRefresh(sourceId, result.timestamp);
+      // Force recalculation for manual refreshes to ensure UI shows correct timing
+      const forceRecalculate = options.reason === 'manual';
+      this.scheduler.updateLastRefresh(sourceId, result.timestamp, forceRecalculate);
     }
     
     return result;

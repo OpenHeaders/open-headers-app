@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 const { createLogger } = require('../utils/logger');
+const timeManager = require('../services/TimeManager');
 const log = createLogger('useHttp');
 
 /**
@@ -192,7 +193,7 @@ export function useHttp() {
                     try {
                         const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
                         totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-                        log.debug(`Generated TOTP code for source ${sourceId} at ${new Date().toISOString()}`);
+                        log.debug(`Generated TOTP code for source ${sourceId} at ${timeManager.getDate().toISOString()}`);
 
                         if (!totpCode || totpCode === 'ERROR') {
                             log.error(`Failed to generate TOTP code for source ${sourceId}`);
