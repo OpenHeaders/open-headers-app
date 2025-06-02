@@ -278,8 +278,9 @@ export function SourceProvider({ children }) {
                                 });
                         }
                         else if (source.sourceType === 'env') {
+                            let content;
                             try {
-                                const content = await env.getVariable(source.sourcePath);
+                                content = await env.getVariable(source.sourcePath);
                                 if (isMounted.current) {
                                     updateSourceContent(validSourceId, content);
                                 }
@@ -292,7 +293,18 @@ export function SourceProvider({ children }) {
                         else if (source.sourceType === 'http') {
                             // Add to RefreshManager directly since it's already initialized
                             if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
-                                refreshManager.addSource(initializedSource);
+                                // Clean up any stale timing data before adding
+                                const cleanedSource = cleanupStaleTimingData(initializedSource);
+                                
+                                // Ensure lastRefresh is set if missing to prevent immediate refresh
+                                if (!cleanedSource.refreshOptions.lastRefresh) {
+                                    const now = timeManager.now();
+                                    cleanedSource.refreshOptions.lastRefresh = now;
+                                    cleanedSource.refreshOptions.nextRefresh = now + (cleanedSource.refreshOptions.interval * 60 * 1000);
+                                    debugLog(`Set initial refresh timing for HTTP source ${validSourceId} on load`);
+                                }
+                                
+                                refreshManager.addSource(cleanedSource);
                                 debugLog(`Added HTTP source ${validSourceId} to RefreshManager`);
                             }
                         }
@@ -444,9 +456,6 @@ export function SourceProvider({ children }) {
                 // Remove from RefreshManager
                 if (refreshManager.isInitialized) {
                     refreshManager.removeSource(sourceId);
-                } else {
-                    // Remove from pending sources if it's there
-                    pendingRefreshSources.current = pendingRefreshSources.current.filter(s => s.sourceId !== sourceId);
                 }
             }
 
@@ -524,33 +533,50 @@ export function SourceProvider({ children }) {
 
                     initialContent = result.content;
 
-                    // Update with all available data
+                    // Prepare update data
+                    const updateData = {
+                        originalResponse: result.originalResponse,
+                        headers: result.headers,
+                        rawResponse: result.rawResponse
+                    };
+
+                    if (sourceData.jsonFilter?.enabled === true) {
+                        updateData.isFiltered = true;
+                        updateData.filteredWith = sourceData.jsonFilter.path;
+                    }
+
+                    // Update with all available data including refresh timing
                     if (isMounted.current) {
-                        const updateData = {
-                            originalResponse: result.originalResponse,
-                            headers: result.headers,
-                            rawResponse: result.rawResponse
+                        const now = timeManager.now();
+                        const refreshData = {
+                            ...updateData,
+                            refreshOptions: {
+                                ...sourceData.refreshOptions,
+                                lastRefresh: now,
+                                nextRefresh: now + (sourceData.refreshOptions.interval * 60 * 1000)
+                            }
                         };
-
-                        if (sourceData.jsonFilter?.enabled === true) {
-                            updateData.isFiltered = true;
-                            updateData.filteredWith = sourceData.jsonFilter.path;
-                        }
-
-                        updateSourceContent(sourceId, initialContent, updateData);
+                        updateSourceContent(sourceId, initialContent, refreshData);
                     }
 
                     // Add to RefreshManager if refresh is enabled
                     if (sourceData.refreshOptions?.enabled && sourceData.refreshOptions?.interval > 0) {
+                        // Set lastRefresh to now to prevent immediate refresh
+                        const now = timeManager.now();
                         const sourceForManager = {
                             ...newSource,
                             sourceContent: initialContent,
-                            ...updateData
+                            ...updateData,
+                            refreshOptions: {
+                                ...newSource.refreshOptions,
+                                lastRefresh: now,
+                                nextRefresh: now + (sourceData.refreshOptions.interval * 60 * 1000)
+                            }
                         };
 
                         if (refreshManager.isInitialized) {
                             refreshManager.addSource(sourceForManager);
-                            debugLog(`Added source ${sourceId} to RefreshManager`);
+                            debugLog(`Added source ${sourceId} to RefreshManager with lastRefresh set to prevent immediate refresh`);
                         } else {
                             debugLog(`RefreshManager not initialized when adding source ${sourceId}`);
                         }
