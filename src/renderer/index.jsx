@@ -6,6 +6,7 @@ import { SourceProvider } from './contexts/SourceContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
+import { TotpProvider } from './contexts/TotpContext';
 import { MessageProvider } from './utils/MessageProvider';
 import { MessageInitializer } from './utils/messageUtil';
 import './App.less';
@@ -31,10 +32,12 @@ root.render(
                     {/* This initializer sets up the message API for use outside React components */}
                     <MessageInitializer />
 
-                    <SourceProvider>
-                        {/* Note: WebSocketProvider is now inside App.jsx */}
-                        <AppComponent />
-                    </SourceProvider>
+                    <TotpProvider>
+                        <SourceProvider>
+                            {/* Note: WebSocketProvider is now inside App.jsx */}
+                            <AppComponent />
+                        </SourceProvider>
+                    </TotpProvider>
                 </MessageProvider>
             </App>
         </ThemeProvider>

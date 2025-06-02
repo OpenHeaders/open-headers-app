@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
-import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, message } from 'antd';
+import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, message, Tooltip } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
 import { showMessage } from '../utils/messageUtil';
 import { createLogger } from '../utils/logger';
 import timeManager from '../services/TimeManager';
+import { useTotpState } from '../contexts/TotpContext';
 
 const log = createLogger('HttpOptions');
 
@@ -17,12 +18,27 @@ const { Text } = Typography;
  * HttpOptions component for configuring HTTP requests with compact layout
  * With integrated TOTP Authentication - now with ref forwarding and improved state persistence
  */
-const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTotpEnabled, initialTotpSecret }, ref) => {
+const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, initialTotpEnabled, initialTotpSecret, onTestingChange }, ref) => {
     // Component state
     const [contentType, setContentType] = useState('application/json');
     const [testResponseVisible, setTestResponseVisible] = useState(false);
     const [testResponseContent, setTestResponseContent] = useState('');
     const [testing, setTesting] = useState(false);
+    
+    // Generate a temporary source ID for new sources
+    const tempSourceIdRef = useRef(sourceId || `temp-${Date.now()}`);
+    const effectiveSourceId = sourceId || tempSourceIdRef.current;
+    
+    // Use TOTP context
+    const {
+        canUseTotpSecret,
+        getCooldownSeconds,
+        startTestingWithTotp,
+        endTestingWithTotp,
+        checkIfRequestUsesTotp,
+        trackTotpSecret,
+        untrackTotpSecret
+    } = useTotpState();
 
     // State for JSON filtering with ref for persistence
     const [jsonFilterEnabled, setJsonFilterEnabled] = useState(false);
@@ -39,25 +55,30 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
     const [rawResponse, setRawResponse] = useState(null);
 
-    // State for TOTP with refs for persistence
-    const [totpEnabled, setTotpEnabled] = useState(false);
-    const [totpSecret, setTotpSecret] = useState('');
+    // Simplified TOTP state - UI only, form is source of truth
     const [totpCode, setTotpCode] = useState('------');
     const [totpError, setTotpError] = useState(null);
     const [totpTesting, setTotpTesting] = useState(false);
     const [totpPreviewVisible, setTotpPreviewVisible] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const [codeJustGenerated, setCodeJustGenerated] = useState(false);
-    const totpEnabledRef = useRef(false);
-    const totpSecretRef = useRef('');
 
     const [isFormInitialized, setIsFormInitialized] = useState(false);
 
-    // Track last notified values to prevent notification loops
-    const lastNotifiedRef = useRef({ enabled: null, secret: null });
-
     // Store the callback in a ref to avoid dependency cycles
     const notifyParentRef = useRef(onTotpChange);
+
+    // Helper to get TOTP state from form (single source of truth)
+    const getTotpStateFromForm = useCallback(() => {
+        const formEnabled = form.getFieldValue('enableTOTP');
+        const formSecret = form.getFieldValue('totpSecret');
+        const requestOptionsTotpSecret = form.getFieldValue(['requestOptions', 'totpSecret']);
+        
+        const secret = formSecret || requestOptionsTotpSecret || '';
+        const enabled = Boolean(formEnabled && secret);
+        
+        return { enabled, secret };
+    }, [form]);
 
     // Custom hooks
     const http = useHttp();
@@ -91,105 +112,42 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         forceTotpState: (enabled, secret) => {
             log.debug(`[HttpOptions] forceTotpState called with enabled=${enabled}, secret=${secret ? "exists" : "none"}`);
 
-            // Update state and refs
-            setTotpEnabled(enabled);
-            totpEnabledRef.current = enabled;
-
-            if (secret) {
-                setTotpSecret(secret);
-                totpSecretRef.current = secret;
-            }
-
-            // Update form values as well
+            // Update form values - form is the single source of truth
             form.setFieldsValue({
                 enableTOTP: enabled,
-                totpSecret: secret
+                totpSecret: secret || ''
             });
 
-            // CRITICAL FIX: Always update requestOptions to match
-            const requestOptions = form.getFieldValue('requestOptions') || {};
+            // Always update requestOptions to match
+            const currentRequestOptions = form.getFieldValue('requestOptions') || {};
+            
+            const updatedRequestOptions = {
+                headers: currentRequestOptions.headers || [],
+                queryParams: currentRequestOptions.queryParams || [],
+                variables: currentRequestOptions.variables || [],
+                contentType: currentRequestOptions.contentType || 'application/json',
+                body: currentRequestOptions.body || '',
+                ...currentRequestOptions
+            };
 
             if (enabled && secret) {
-                // Add totpSecret to requestOptions
-                requestOptions.totpSecret = secret;
-                form.setFieldsValue({ requestOptions });
+                updatedRequestOptions.totpSecret = secret;
                 log.debug("[HttpOptions] Added TOTP secret to requestOptions via forceTotpState");
-            } else if (!enabled && requestOptions.totpSecret) {
-                // Remove totpSecret from requestOptions
-                delete requestOptions.totpSecret;
-                form.setFieldsValue({ requestOptions });
+            } else if (updatedRequestOptions.totpSecret) {
+                delete updatedRequestOptions.totpSecret;
                 log.debug("[HttpOptions] Removed TOTP secret from requestOptions via forceTotpState");
             }
-
-            // Update last notified values to prevent notification loop
-            lastNotifiedRef.current = { enabled, secret };
+            
+            form.setFieldsValue({ requestOptions: updatedRequestOptions });
 
             return true;
         },
 
-        // IMPROVED: More robust getTotpState method
+        // Simplified getTotpState using form as source of truth
         getTotpState: () => {
-            // First check the component state (most accurate for active UI)
-            const currentEnabledState = totpEnabled;
-            const currentSecretState = totpSecret;
-
-            log.debug(`[HttpOptions] getTotpState checking component state: enabled=${currentEnabledState}, secret=${currentSecretState ? "exists" : "none"}`);
-
-            // If component state is enabled and has a secret, use it
-            if (currentEnabledState && currentSecretState) {
-                log.debug(`[HttpOptions] getTotpState returning from component state: enabled=true, secret=exists`);
-                return {
-                    enabled: true,
-                    secret: currentSecretState
-                };
-            }
-
-            // Next check form values (these might be newer than component state in some cases)
-            const formEnabled = form.getFieldValue('enableTOTP');
-            const formSecret = form.getFieldValue('totpSecret');
-
-            log.debug(`[HttpOptions] getTotpState checking form values: enabled=${formEnabled}, secret=${formSecret ? "exists" : "none"}`);
-
-            // If form has enabled TOTP and has a secret, use it
-            if (formEnabled && formSecret) {
-                log.debug(`[HttpOptions] getTotpState returning from form values: enabled=true, secret=exists`);
-                return {
-                    enabled: true,
-                    secret: formSecret
-                };
-            }
-
-            // Check refs as a last resort (these preserve state across re-renders)
-            const refEnabled = totpEnabledRef.current;
-            const refSecret = totpSecretRef.current;
-
-            log.debug(`[HttpOptions] getTotpState checking refs: enabled=${refEnabled}, secret=${refSecret ? "exists" : "none"}`);
-
-            // If refs have TOTP enabled and a secret, use them
-            if (refEnabled && refSecret) {
-                log.debug(`[HttpOptions] getTotpState returning from refs: enabled=true, secret=exists`);
-                return {
-                    enabled: true,
-                    secret: refSecret
-                };
-            }
-
-            // Check requestOptions directly (for already saved/existing TOTP settings)
-            const requestOptions = form.getFieldValue('requestOptions') || {};
-            if (requestOptions.totpSecret) {
-                log.debug(`[HttpOptions] getTotpState found TOTP secret in requestOptions`);
-                return {
-                    enabled: true,
-                    secret: requestOptions.totpSecret
-                };
-            }
-
-            // If we get here, TOTP is not enabled or has no secret
-            log.debug(`[HttpOptions] getTotpState returning disabled state with no secret`);
-            return {
-                enabled: false,
-                secret: ''
-            };
+            const state = getTotpStateFromForm();
+            log.debug(`[HttpOptions] getTotpState returning: enabled=${state.enabled}, secret=${state.secret ? "exists" : "none"}`);
+            return state;
         },
 
         // Method to force sync form fields directly - especially for debugging
@@ -301,23 +259,29 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         }
     }));
 
-    // Initialize using props
+    // Initialize form with props when component mounts
     useEffect(() => {
         if (initialTotpEnabled !== undefined && initialTotpSecret) {
-            log.debug(`[HttpOptions] Initializing from props: enabled=${initialTotpEnabled}, secret=${initialTotpSecret ? "exists" : "none"}`);
-            setTotpEnabled(initialTotpEnabled);
-            totpEnabledRef.current = initialTotpEnabled;
+            log.debug(`[HttpOptions] Initializing form from props: enabled=${initialTotpEnabled}, secret=${initialTotpSecret ? "exists" : "none"}`);
+            
+            // Set form values directly - form is source of truth
+            form.setFieldsValue({
+                enableTOTP: initialTotpEnabled,
+                totpSecret: initialTotpSecret
+            });
 
-            setTotpSecret(initialTotpSecret);
-            totpSecretRef.current = initialTotpSecret;
-
-            // Update last notified values to prevent notification loop
-            lastNotifiedRef.current = {
-                enabled: initialTotpEnabled,
-                secret: initialTotpSecret
-            };
+            // Ensure requestOptions has the TOTP secret if enabled
+            const currentRequestOptions = form.getFieldValue('requestOptions') || {};
+            if (initialTotpEnabled && initialTotpSecret) {
+                form.setFieldsValue({
+                    requestOptions: {
+                        ...currentRequestOptions,
+                        totpSecret: initialTotpSecret
+                    }
+                });
+            }
         }
-    }, [initialTotpEnabled, initialTotpSecret]);
+    }, [initialTotpEnabled, initialTotpSecret, form]);
 
     // Force form field structure - this helps ensure the form fields are always properly structured
     useEffect(() => {
@@ -345,181 +309,92 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         }
     }, [form]);
 
-    // Initialize states from form values
+    // Initialize form structure and defaults
     useEffect(() => {
-        if (isFormInitialized) return; // Only run once
+        if (isFormInitialized) return;
 
         try {
-            // Get current form values
             const formValues = form.getFieldsValue(true);
 
-            // Ensure requestOptions has contentType
+            // Ensure basic form structure exists
             if (!formValues.requestOptions || !formValues.requestOptions.contentType) {
-                // Set a default contentType if it's missing
                 form.setFieldValue(['requestOptions', 'contentType'], 'application/json');
             }
 
-            log.debug("[HttpOptions] Initializing component from form values:", {
-                requestOptionsTotpSecret: formValues.requestOptions?.totpSecret ? "exists" : "none",
-                totpSecret: formValues.totpSecret ? "exists" : "none",
-                enableTOTP: formValues.enableTOTP,
-                jsonFilter: formValues.jsonFilter,
-                headers: formValues.requestOptions?.headers,
-                contentType: formValues.requestOptions?.contentType
-            });
-
-            // Fix missing headers if needed
-            if (formValues.requestOptions && !Array.isArray(formValues.requestOptions.headers)) {
-                log.debug("[HttpOptions] No headers array found in form, adding empty array");
-                formValues.requestOptions.headers = [];
+            if (!Array.isArray(formValues.requestOptions?.headers)) {
                 form.setFieldValue(['requestOptions', 'headers'], []);
             }
 
-            // Fix missing JSON filter if needed
+            if (!Array.isArray(formValues.requestOptions?.variables)) {
+                form.setFieldValue(['requestOptions', 'variables'], []);
+            }
+
             if (!formValues.jsonFilter) {
-                log.debug("[HttpOptions] No jsonFilter found in form, adding default");
-                formValues.jsonFilter = { enabled: false, path: '' };
                 form.setFieldValue('jsonFilter', { enabled: false, path: '' });
             }
 
-            // Initialize JSON filter state
-            if (formValues.jsonFilter) {
-                const isEnabled = !!formValues.jsonFilter.enabled;
+            // Initialize JSON filter state from form
+            const jsonFilter = form.getFieldValue('jsonFilter');
+            if (jsonFilter) {
+                const isEnabled = !!jsonFilter.enabled;
                 setJsonFilterEnabled(isEnabled);
                 jsonFilterEnabledRef.current = isEnabled;
 
-                // Always store the path in the ref, even if filter is disabled
-                if (formValues.jsonFilter.path) {
-                    jsonFilterPathRef.current = formValues.jsonFilter.path;
-                    log.debug(`[HttpOptions] Storing initial JSON filter path: ${formValues.jsonFilter.path}`);
-                }
-
-                log.debug(`[HttpOptions] Initialized JSON filter: enabled=${isEnabled}, path=${formValues.jsonFilter.path || '(empty)'}`);
-            }
-
-            // Initialize refresh state
-            if (formValues.refreshOptions?.enabled) {
-                const isEnabled = !!formValues.refreshOptions.enabled;
-                setRefreshEnabled(isEnabled);
-                refreshEnabledRef.current = isEnabled;
-
-                if (formValues.refreshOptions.type) {
-                    const typeValue = formValues.refreshOptions.type;
-                    setRefreshType(typeValue);
-                    refreshTypeRef.current = typeValue;
-                }
-
-                if (formValues.refreshOptions.interval) {
-                    const intervalValue = formValues.refreshOptions.interval;
-                    setCustomInterval(intervalValue);
-                    customIntervalRef.current = intervalValue;
-                }
-
-                log.debug("[HttpOptions] Initialized refresh options:", {
-                    enabled: isEnabled,
-                    type: formValues.refreshOptions.type,
-                    interval: formValues.refreshOptions.interval
-                });
-            }
-
-            // Initialize content type
-            if (formValues.requestOptions?.contentType) {
-                setContentType(formValues.requestOptions.contentType);
-            }
-
-            // IMPORTANT: Initialize TOTP state - FIXED PRIORITY ORDER
-            // First check if the TOTP secret exists in requestOptions (highest priority)
-            if (formValues.requestOptions?.totpSecret) {
-                log.debug("[HttpOptions] Found TOTP secret in requestOptions - setting enabled to TRUE:",
-                    formValues.requestOptions.totpSecret ? "exists" : "none");
-                setTotpSecret(formValues.requestOptions.totpSecret);
-                totpSecretRef.current = formValues.requestOptions.totpSecret;
-
-                setTotpEnabled(true);
-                totpEnabledRef.current = true;
-
-                // Update form fields to be consistent
-                form.setFieldValue('enableTOTP', true);
-                form.setFieldValue('totpSecret', formValues.requestOptions.totpSecret);
-
-                // Update lastNotified ref to match
-                lastNotifiedRef.current = {
-                    enabled: true,
-                    secret: formValues.requestOptions.totpSecret
-                };
-            }
-            // Then check for TOTP secret directly in form values
-            else if (formValues.totpSecret) {
-                log.debug("[HttpOptions] Setting TOTP secret from form field totpSecret:", formValues.totpSecret ? "exists" : "none");
-                setTotpSecret(formValues.totpSecret);
-                totpSecretRef.current = formValues.totpSecret;
-
-                // If we have a TOTP secret, we should also enable TOTP
-                if (formValues.totpSecret.trim() !== '') {
-                    setTotpEnabled(true);
-                    totpEnabledRef.current = true;
-                    form.setFieldValue('enableTOTP', true);
-
-                    // Update lastNotified ref to match
-                    lastNotifiedRef.current = {
-                        enabled: true,
-                        secret: formValues.totpSecret
-                    };
+                if (jsonFilter.path) {
+                    jsonFilterPathRef.current = jsonFilter.path;
                 }
             }
-            // Finally check enableTOTP field
-            else if (formValues.enableTOTP !== undefined) {
-                const shouldEnableTotp = !!formValues.enableTOTP;
-                log.debug("[HttpOptions] Setting TOTP enabled to:", shouldEnableTotp, "from enableTOTP field");
-                setTotpEnabled(shouldEnableTotp);
-                totpEnabledRef.current = shouldEnableTotp;
 
-                // Update lastNotified ref to match
-                lastNotifiedRef.current = {
-                    enabled: shouldEnableTotp,
-                    secret: formValues.totpSecret || ''
-                };
+            // Initialize refresh state from form
+            const refreshOptions = form.getFieldValue('refreshOptions');
+            if (refreshOptions?.enabled) {
+                setRefreshEnabled(refreshOptions.enabled);
+                refreshEnabledRef.current = refreshOptions.enabled;
+                
+                if (refreshOptions.type) {
+                    setRefreshType(refreshOptions.type);
+                    refreshTypeRef.current = refreshOptions.type;
+                }
+                
+                if (refreshOptions.interval) {
+                    setCustomInterval(refreshOptions.interval);
+                    customIntervalRef.current = refreshOptions.interval;
+                }
             }
 
-            // Mark as initialized to prevent running this again
+            // Initialize content type from form
+            const contentType = form.getFieldValue(['requestOptions', 'contentType']);
+            if (contentType) {
+                setContentType(contentType);
+            }
+
             setIsFormInitialized(true);
-
-            // Debug log
-            setTimeout(() => {
-                log.debug("[HttpOptions] Initialization complete, current state:", {
-                    enabled: totpEnabled,
-                    secret: totpSecret ? "[secret exists]" : "none",
-                    formEnableTOTP: form.getFieldValue('enableTOTP'),
-                    formTotpSecret: form.getFieldValue('totpSecret') ? "exists" : "none",
-                    requestOptionsTotpSecret: form.getFieldValue(['requestOptions', 'totpSecret']) ? "exists" : "none",
-                    jsonFilter: form.getFieldValue('jsonFilter'),
-                    jsonFilterEnabled: jsonFilterEnabled,
-                    jsonFilterPath: jsonFilterPathRef.current,
-                    headers: form.getFieldValue(['requestOptions', 'headers'])
-                });
-            }, 100);
+            log.debug("[HttpOptions] Form initialization complete");
         } catch (err) {
             log.error("Error initializing HttpOptions:", err);
         }
     }, [form, isFormInitialized]);
 
-    // Notify parent of TOTP changes with redundancy protection
+    // Notify parent of TOTP changes based on form values
+    const lastNotifiedRef = useRef({ enabled: false, secret: '' });
+    
     useEffect(() => {
-        if (notifyParentRef.current && isFormInitialized) {
-            // Only notify if the values have actually changed
-            if (lastNotifiedRef.current.enabled !== totpEnabled ||
-                lastNotifiedRef.current.secret !== totpSecret) {
+        if (!notifyParentRef.current || !isFormInitialized) return;
 
-                log.debug(`[HttpOptions] Notifying parent of TOTP change: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
-                notifyParentRef.current(totpEnabled, totpSecret);
-
-                // Update our reference to the last notified values
-                lastNotifiedRef.current = { enabled: totpEnabled, secret: totpSecret };
-            } else {
-                log.debug(`[HttpOptions] Skipping redundant notification: enabled=${totpEnabled}, secret=${totpSecret ? "exists" : "none"}`);
-            }
+        const { enabled, secret } = getTotpStateFromForm();
+        
+        // Only notify if values have changed
+        if (lastNotifiedRef.current.enabled !== enabled || lastNotifiedRef.current.secret !== secret) {
+            log.debug(`[HttpOptions] Notifying parent of TOTP change: enabled=${enabled}, secret=${secret ? "exists" : "none"}`);
+            notifyParentRef.current(enabled, secret);
+            lastNotifiedRef.current = { enabled, secret };
         }
-    }, [totpEnabled, totpSecret, isFormInitialized]);
+    }, [getTotpStateFromForm, isFormInitialized]);
+
+    // Update parent callback ref when it changes
+    useEffect(() => {
+        notifyParentRef.current = onTotpChange;
+    }, [onTotpChange]);
 
     // Helper function to get status text based on status code
     const getStatusText = (statusCode) => {
@@ -860,73 +735,84 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         }
     };
 
-    // Handle TOTP toggle with improved state persistence
+    // Handle TOTP toggle with form as source of truth
     const handleTotpToggle = (checked) => {
         log.debug("[HttpOptions] TOTP toggle changed to:", checked);
-
-        // Update both state and ref
-        setTotpEnabled(checked);
-        totpEnabledRef.current = checked;
 
         setTotpPreviewVisible(false);
         setTotpError(null);
 
-        // Update form values
+        // Update form values - form is source of truth
         form.setFieldsValue({ enableTOTP: checked });
 
-        // IMPORTANT FIX: Also update the requestOptions to ensure TOTP secret is stored correctly
-        const requestOptions = form.getFieldValue('requestOptions') || {};
+        // Update requestOptions to match
+        const currentRequestOptions = form.getFieldValue('requestOptions') || {};
+        const currentSecret = form.getFieldValue('totpSecret');
+        
+        const updatedRequestOptions = {
+            headers: currentRequestOptions.headers || [],
+            queryParams: currentRequestOptions.queryParams || [],
+            variables: currentRequestOptions.variables || [],
+            contentType: currentRequestOptions.contentType || 'application/json',
+            body: currentRequestOptions.body || '',
+            ...currentRequestOptions
+        };
 
-        if (!checked) {
-            // Keep the secret in memory even when disabled, don't clear it immediately
-            // This allows toggling without losing the secret
-            form.setFieldsValue({ totpSecret: totpSecretRef.current });
-
-            // But remove it from requestOptions if disabled
-            if (requestOptions.totpSecret) {
-                delete requestOptions.totpSecret;
-                form.setFieldsValue({ requestOptions });
-                log.debug("[HttpOptions] Removed TOTP secret from requestOptions");
-            }
-        } else if (totpSecretRef.current) {
-            // If we already have a secret, make sure it's in the form
-            form.setFieldsValue({ totpSecret: totpSecretRef.current });
-
-            // Also update requestOptions
-            requestOptions.totpSecret = totpSecretRef.current;
-            form.setFieldsValue({ requestOptions });
+        if (checked && currentSecret) {
+            // Add secret to requestOptions if enabled and secret exists
+            updatedRequestOptions.totpSecret = currentSecret;
             log.debug("[HttpOptions] Added TOTP secret to requestOptions");
+        } else if (!checked && updatedRequestOptions.totpSecret) {
+            // Remove secret from requestOptions if disabled
+            delete updatedRequestOptions.totpSecret;
+            log.debug("[HttpOptions] Removed TOTP secret from requestOptions");
         }
+        
+        form.setFieldsValue({ requestOptions: updatedRequestOptions });
     };
 
-    // Handle TOTP secret change with improved state persistence
+    // Handle TOTP secret change with form as source of truth
     const handleTotpSecretChange = (e) => {
         const newSecret = e.target.value;
         log.debug("[HttpOptions] TOTP secret changed to:", newSecret ? "exists" : "none");
 
-        // Update both state and ref
-        setTotpSecret(newSecret);
-        totpSecretRef.current = newSecret;
-
         setTotpPreviewVisible(false);
         setTotpError(null);
 
-        // Update form values
+        // Update form values - form is source of truth
         form.setFieldsValue({ totpSecret: newSecret });
 
-        // IMPORTANT FIX: Always update requestOptions if TOTP is enabled
-        if (totpEnabledRef.current) {
-            const requestOptions = form.getFieldValue('requestOptions') || {};
-            requestOptions.totpSecret = newSecret;
-            form.setFieldsValue({ requestOptions });
+        // Update requestOptions if TOTP is enabled
+        const isEnabled = form.getFieldValue('enableTOTP');
+        if (isEnabled) {
+            const currentRequestOptions = form.getFieldValue('requestOptions') || {};
+            
+            const updatedRequestOptions = {
+                headers: currentRequestOptions.headers || [],
+                queryParams: currentRequestOptions.queryParams || [],
+                variables: currentRequestOptions.variables || [],
+                contentType: currentRequestOptions.contentType || 'application/json',
+                body: currentRequestOptions.body || '',
+                ...currentRequestOptions
+            };
+
+            if (newSecret) {
+                updatedRequestOptions.totpSecret = newSecret;
+            } else if (updatedRequestOptions.totpSecret) {
+                delete updatedRequestOptions.totpSecret;
+            }
+            
+            form.setFieldsValue({ requestOptions: updatedRequestOptions });
             log.debug("[HttpOptions] Updated TOTP secret in requestOptions");
         }
     };
 
-    // Generate TOTP code
+    // Generate TOTP code using form values
     const generateTotpCode = async () => {
         try {
-            if (!totpSecret) {
+            const { secret } = getTotpStateFromForm();
+            
+            if (!secret) {
                 setTotpError('Please enter a secret key');
                 return;
             }
@@ -935,9 +821,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             setTotpTesting(true);
 
             // Normalize secret for better compatibility
-            const normalizedSecret = totpSecret.replace(/\s/g, '').replace(/=/g, '');
+            const normalizedSecret = secret.replace(/\s/g, '').replace(/=/g, '');
 
-            log.debug(`[HttpOptions] Generating TOTP with secret: ${normalizedSecret}`);
+            log.debug(`[HttpOptions] Generating TOTP with secret`);
 
             // Use the window.generateTOTP function
             const totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
@@ -962,7 +848,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
     // Test TOTP button handler
     const handleTestTotp = async () => {
-        if (!totpSecret) {
+        const { secret } = getTotpStateFromForm();
+        
+        if (!secret) {
             setTotpError('Please enter a secret key');
             setTotpCode('NO SECRET');
             return;
@@ -1004,7 +892,23 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         }, 100); // Update every 100ms for smoother countdown
 
         return () => clearInterval(timer);
-    }, [totpPreviewVisible, totpSecret]);
+    }, [totpPreviewVisible]); // Remove totpSecret dependency since we get it from form now
+
+    // Track TOTP source in context
+    useEffect(() => {
+        const { enabled, secret } = getTotpStateFromForm();
+        
+        if (enabled && secret && effectiveSourceId) {
+            trackTotpSecret(effectiveSourceId);
+        }
+        
+        // Cleanup on unmount
+        return () => {
+            if (effectiveSourceId) {
+                untrackTotpSecret(effectiveSourceId);
+            }
+        };
+    }, [getTotpStateFromForm, effectiveSourceId, trackTotpSecret, untrackTotpSecret]);
 
     // Format response for display - Professional format
     const formatResponseForDisplay = (responseJson) => {
@@ -1022,7 +926,16 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
     // Handle test request
     const handleTestRequest = async () => {
+        const { enabled: totpEnabled, secret: totpSecret } = getTotpStateFromForm();
+        
         try {
+            // Check TOTP cooldown first
+            if (totpEnabled && totpSecret && !canUseTotpSecret(effectiveSourceId)) {
+                const cooldownSeconds = getCooldownSeconds(effectiveSourceId);
+                showMessage('warning', `TOTP code was recently used. Please wait ${cooldownSeconds} seconds before making another request.`);
+                return;
+            }
+
             // Get current form values
             const values = form.getFieldsValue();
             if (!values.sourcePath) {
@@ -1081,7 +994,16 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
 
             // Show loading
             setTesting(true);
+            if (onTestingChange) {
+                onTestingChange(true);
+            }
             setTestResponseVisible(false);
+            
+            // Check if request uses TOTP and notify context
+            const usesTotp = checkIfRequestUsesTotp(url, values.sourceMethod || 'GET', values.requestOptions);
+            if (usesTotp && totpSecret && effectiveSourceId) {
+                startTestingWithTotp(effectiveSourceId);
+            }
 
             // Prepare request options with defaults to ensure complete structure
             const requestOptions = {
@@ -1167,6 +1089,7 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             if (totpEnabled && totpSecret) {
                 requestOptions.totpSecret = totpSecret;
                 log.debug("[HttpOptions] Adding TOTP secret to request");
+                // Note: TOTP usage is recorded by useHttp hook when the actual request is made
             }
 
             // Add JSON filter from form values - properly check both enabled flag and state
@@ -1199,7 +1122,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 url,
                 values.sourceMethod || 'GET',
                 requestOptions,
-                jsonFilter
+                jsonFilter,
+                effectiveSourceId
             );
 
             // Save the raw response for later use
@@ -1217,6 +1141,13 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
             showMessage('error', `Failed to test request: ${error.message}`);
         } finally {
             setTesting(false);
+            if (onTestingChange) {
+                onTestingChange(false);
+            }
+            // End TOTP testing if it was started
+            if (totpEnabled && totpSecret && effectiveSourceId) {
+                endTestingWithTotp(effectiveSourceId);
+            }
         }
     };
 
@@ -1238,15 +1169,41 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                     </Form.Item>
                 </Col>
                 <Col span={20}>
-                    <Button
-                        type="primary"
-                        onClick={handleTestRequest}
-                        loading={testing}
-                        size="small"
-                        style={{ marginTop: 24 }}
+                    <Form.Item
+                        noStyle
+                        shouldUpdate={(prevValues, currentValues) => 
+                            prevValues.enableTOTP !== currentValues.enableTOTP ||
+                            prevValues.totpSecret !== currentValues.totpSecret
+                        }
                     >
-                        Test Request
-                    </Button>
+                        {({ getFieldValue }) => {
+                            const isEnabled = getFieldValue('enableTOTP');
+                            const secret = getFieldValue('totpSecret');
+                            const hasCooldown = isEnabled && secret && !canUseTotpSecret(effectiveSourceId);
+                            
+                            return (
+                                <Tooltip
+                                    title={
+                                        testing ? "Test request in progress..." :
+                                        hasCooldown ? 
+                                            `TOTP code was recently used. Please wait ${getCooldownSeconds(effectiveSourceId)} seconds before making another request.` :
+                                            "Test the HTTP request with current settings"
+                                    }
+                                >
+                                    <Button
+                                        type="primary"
+                                        onClick={handleTestRequest}
+                                        loading={testing || hasCooldown}
+                                        disabled={hasCooldown}
+                                        size="small"
+                                        className="test-request-button"
+                                    >
+                                        Test Request
+                                    </Button>
+                                </Tooltip>
+                            );
+                        }}
+                    </Form.Item>
                 </Col>
             </Row>
 
@@ -1444,39 +1401,56 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                                         size="small"
                                         title="TOTP Authentication"
                                         extra={
-                                            <Switch
-                                                size="small"
-                                                checkedChildren="On"
-                                                unCheckedChildren="Off"
-                                                onChange={handleTotpToggle}
-                                                checked={totpEnabled}
-                                            />
+                                            <Form.Item
+                                                name="enableTOTP"
+                                                valuePropName="checked"
+                                                noStyle
+                                            >
+                                                <Switch
+                                                    size="small"
+                                                    checkedChildren="On"
+                                                    unCheckedChildren="Off"
+                                                    onChange={handleTotpToggle}
+                                                />
+                                            </Form.Item>
                                         }
                                         style={{ marginBottom: 8 }}
                                     >
-                                        {totpEnabled && (
-                                            <>
-                                                <div style={{ marginBottom: 16 }}>
-                                                    <Input
-                                                        placeholder="Enter TOTP secret key"
-                                                        onChange={handleTotpSecretChange}
-                                                        value={totpSecret}
-                                                        status={totpError ? "error" : ""}
-                                                        size="small"
-                                                        addonAfter={
-                                                            <Button
-                                                                type="link"
-                                                                size="small"
-                                                                onClick={handleTestTotp}
-                                                                style={{ padding: '0 4px' }}
-                                                                loading={totpTesting}
+                                        <Form.Item
+                                            noStyle
+                                            shouldUpdate={(prevValues, currentValues) => 
+                                                prevValues.enableTOTP !== currentValues.enableTOTP
+                                            }
+                                        >
+                                            {({ getFieldValue }) => {
+                                                const isEnabled = getFieldValue('enableTOTP');
+                                                return isEnabled ? (
+                                                    <>
+                                                        <div style={{ marginBottom: 16 }}>
+                                                            <Form.Item
+                                                                name="totpSecret"
+                                                                rules={[{ required: true, message: 'TOTP secret is required' }]}
                                                             >
-                                                                Test
-                                                            </Button>
-                                                        }
-                                                    />
-                                                    {totpError && <div style={{ color: '#ff4d4f', fontSize: 11, marginTop: 4 }}>{totpError}</div>}
-                                                </div>
+                                                                <Input
+                                                                    placeholder="Enter TOTP secret key"
+                                                                    onChange={handleTotpSecretChange}
+                                                                    status={totpError ? "error" : ""}
+                                                                    size="small"
+                                                                    addonAfter={
+                                                                        <Button
+                                                                            type="link"
+                                                                            size="small"
+                                                                            onClick={handleTestTotp}
+                                                                            style={{ padding: '0 4px' }}
+                                                                            loading={totpTesting}
+                                                                        >
+                                                                            Test
+                                                                        </Button>
+                                                                    }
+                                                                />
+                                                            </Form.Item>
+                                                            {totpError && <div style={{ color: '#ff4d4f', fontSize: 11, marginTop: 4 }}>{totpError}</div>}
+                                                        </div>
 
                                                 <div style={{ marginTop: 4, marginBottom: 4 }}>
                                                     <Text type="secondary" style={{ fontSize: 11 }}>
@@ -1567,8 +1541,39 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                                                 <div style={{ fontSize: 11, color: 'rgba(0, 0, 0, 0.45)' }}>
                                                     Use <code>_TOTP_CODE</code> in any URL, header, or body field
                                                 </div>
-                                            </>
-                                        )}
+
+                                                {/* TOTP Cooldown Warning */}
+                                                <Form.Item
+                                                    noStyle
+                                                    shouldUpdate={(prevValues, currentValues) => 
+                                                        prevValues.totpSecret !== currentValues.totpSecret
+                                                    }
+                                                >
+                                                    {({ getFieldValue }) => {
+                                                        const secret = getFieldValue('totpSecret');
+                                                        return secret && effectiveSourceId && !canUseTotpSecret(effectiveSourceId) ? (
+                                                            <div style={{
+                                                                marginTop: 8,
+                                                                padding: '8px 12px',
+                                                                background: '#fff7e6',
+                                                                border: '1px solid #ffd591',
+                                                                borderRadius: 4,
+                                                                fontSize: 12
+                                                            }}>
+                                                                <div style={{ color: '#fa8c16', fontWeight: 500 }}>
+                                                                    ⏱️ TOTP cooldown active: {getCooldownSeconds(effectiveSourceId)} seconds remaining
+                                                                </div>
+                                                                <div style={{ color: '#8c8c8c', fontSize: 11, marginTop: 2 }}>
+                                                                    Please wait before making another request with this source.
+                                                                </div>
+                                                            </div>
+                                                        ) : null;
+                                                    }}
+                                                </Form.Item>
+                                                    </>
+                                                ) : null;
+                                            }}
+                                        </Form.Item>
                                     </Card>
                                 </Col>
                                 <Col span={12}>
@@ -1580,7 +1585,6 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                                             <Form.Item
                                                 name={['refreshOptions', 'enabled']}
                                                 valuePropName="checked"
-                                                initialValue={false}
                                                 noStyle
                                             >
                                                 <Switch

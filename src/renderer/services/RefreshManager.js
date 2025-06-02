@@ -126,21 +126,19 @@ class RefreshManager {
     // Convert sourceId to string to ensure consistency
     const sourceId = String(source.sourceId);
     
-    // Check if refresh is enabled
-    if (!source.refreshOptions?.enabled || !source.refreshOptions?.interval) {
-      this.removeSource(sourceId);
-      return;
-    }
-    
-    // Store source data with string key
+    // Store source data with string key - ALL HTTP sources are stored for manual refresh
     this.sources.set(sourceId, source);
     
-    // Schedule the source
-    this.scheduler.scheduleSource(source).catch(err => {
-      log.error(`Error scheduling source ${sourceId}:`, err);
-    });
-    
-    log.debug(`Added source ${sourceId}`);
+    // Only schedule if auto-refresh is enabled
+    if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
+      // Schedule the source for auto-refresh
+      this.scheduler.scheduleSource(source).catch(err => {
+        log.error(`Error scheduling source ${sourceId}:`, err);
+      });
+      log.debug(`Added source ${sourceId} with auto-refresh enabled`);
+    } else {
+      log.debug(`Added source ${sourceId} for manual refresh only`);
+    }
   }
   
   /**
@@ -158,29 +156,35 @@ class RefreshManager {
       return;
     }
     
-    // Check if refresh settings changed
-    if (!source.refreshOptions?.enabled || !source.refreshOptions?.interval) {
-      this.removeSource(sourceId);
-      return;
-    }
-    
-    // Update source data
+    // Update source data - keep ALL HTTP sources for manual refresh
     this.sources.set(sourceId, source);
     
-    // Reschedule if interval changed
-    const oldInterval = existingSource.refreshOptions?.interval;
-    const newInterval = source.refreshOptions.interval;
+    // Handle scheduling based on refresh settings
+    const wasEnabled = existingSource.refreshOptions?.enabled && existingSource.refreshOptions?.interval > 0;
+    const isEnabled = source.refreshOptions?.enabled && source.refreshOptions?.interval > 0;
     
-    if (oldInterval !== newInterval) {
-      log.info(`Interval changed for ${sourceId}: ${oldInterval} -> ${newInterval}`);
+    if (!wasEnabled && isEnabled) {
+      // Auto-refresh was enabled
+      log.info(`Auto-refresh enabled for ${sourceId}`);
+      this.scheduler.scheduleSource(source).catch(err => {
+        log.error(`Error scheduling source ${sourceId}:`, err);
+      });
+    } else if (wasEnabled && !isEnabled) {
+      // Auto-refresh was disabled - remove from scheduler but keep in sources
+      log.info(`Auto-refresh disabled for ${sourceId}, keeping for manual refresh`);
+      this.scheduler.unscheduleSource(sourceId);
+    } else if (isEnabled) {
+      // Auto-refresh settings changed
+      const oldInterval = existingSource.refreshOptions?.interval;
+      const newInterval = source.refreshOptions.interval;
+      
+      if (oldInterval !== newInterval) {
+        log.info(`Interval changed for ${sourceId}: ${oldInterval} -> ${newInterval}`);
+      }
+      
+      // Always reschedule to ensure correct timing
       this.scheduler.scheduleSource(source).catch(err => {
         log.error(`Error rescheduling source ${sourceId}:`, err);
-      });
-    } else {
-      // Even if interval hasn't changed, force recalculation of next refresh time
-      // This ensures the UI shows the correct "Refreshes in..." after save
-      this.scheduler.scheduleSource(source).catch(err => {
-        log.error(`Error updating schedule for source ${sourceId}:`, err);
       });
     }
   }
