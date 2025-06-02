@@ -241,20 +241,28 @@ class NetworkAwareScheduler {
     // Check if already scheduled to prevent duplicates
     const existingSchedule = this.schedules.get(source.sourceId);
     if (existingSchedule) {
-      log.debug(`Source ${source.sourceId} already scheduled, updating schedule`);
+      log.debug(`Source ${source.sourceId} already scheduled, updating schedule`, {
+        existingLastRefresh: existingSchedule.lastRefresh,
+        existingNextRefresh: existingSchedule.nextRefresh,
+        existingHasBeenScheduled: existingSchedule.hasBeenScheduled,
+        newInterval: intervalMs
+      });
     }
     
     const schedule = {
       sourceId: String(source.sourceId), // Ensure sourceId is always a string
       intervalMs,
-      lastRefresh: source.refreshOptions?.lastRefresh ? timeManager.getDate(source.refreshOptions.lastRefresh).getTime() : null,
-      nextRefresh: null,
-      retryCount: 0,
+      // When updating an existing schedule, preserve its lastRefresh time
+      // This prevents the source from being incorrectly marked as "never refreshed"
+      lastRefresh: existingSchedule?.lastRefresh || 
+                   (source.refreshOptions?.lastRefresh ? timeManager.getDate(source.refreshOptions.lastRefresh).getTime() : null),
+      nextRefresh: existingSchedule?.nextRefresh || null, // Preserve next refresh if updating
+      retryCount: existingSchedule?.retryCount || 0, // Preserve retry count
       maxRetries: 3,
       backoffFactor: 2,
-      scheduledWhileOffline: false, // Track if initially scheduled while offline
-      hasBeenScheduled: existingSchedule ? true : false, // Track if this is first time scheduling
-      failureCount: 0, // Track consecutive failures
+      scheduledWhileOffline: existingSchedule?.scheduledWhileOffline || false, // Preserve offline state
+      hasBeenScheduled: true, // If we're updating, it has been scheduled
+      failureCount: existingSchedule?.failureCount || 0, // Preserve failure count
       maxConsecutiveFailures: 10, // Stop trying after 10 consecutive failures
       // Wall-clock alignment options
       alignToMinute: source.refreshOptions?.alignToMinute || false,
@@ -262,9 +270,25 @@ class NetworkAwareScheduler {
       alignToDay: source.refreshOptions?.alignToDay || false
     };
     
+    // Store the old interval before updating the schedule
+    const oldIntervalMs = existingSchedule?.intervalMs;
+    const intervalChanged = existingSchedule && oldIntervalMs !== intervalMs;
+    
     this.schedules.set(source.sourceId, schedule);
+    
+    // Log the new schedule state for debugging
+    if (existingSchedule) {
+      log.debug(`Updated schedule for source ${source.sourceId}`, {
+        lastRefresh: schedule.lastRefresh,
+        hasBeenScheduled: schedule.hasBeenScheduled,
+        intervalMs: schedule.intervalMs,
+        oldIntervalMs: oldIntervalMs,
+        intervalChanged: intervalChanged
+      });
+    }
+    
     const networkState = await window.electronAPI.getNetworkState();
-    await this.calculateNextRefresh(source.sourceId, networkState);
+    await this.calculateNextRefresh(source.sourceId, networkState, oldIntervalMs);
     // Note: No individual timer needed - master timer handles all schedules
     
     // Check if source is already overdue
@@ -273,7 +297,17 @@ class NetworkAwareScheduler {
     
     if (isOverdue) {
       const overdueBy = now - (schedule.lastRefresh + intervalMs);
-      if (!networkState.isOnline) {
+      // If interval changed, check if it was overdue with OLD interval
+      if (intervalChanged && oldIntervalMs) {
+        const wasOverdueWithOldInterval = (now - schedule.lastRefresh) > oldIntervalMs;
+        if (!wasOverdueWithOldInterval) {
+          log.info(`Source ${source.sourceId} appears overdue with new interval (${intervalMs}ms) but was not overdue with old interval (${oldIntervalMs}ms) - will use new interval starting from now`);
+        } else if (!networkState.isOnline) {
+          log.info(`Source ${source.sourceId} was overdue with old interval by ${Math.round(overdueBy / 1000)}s but network is offline - will refresh when network returns`);
+        } else {
+          log.info(`Source ${source.sourceId} was already overdue with old interval - overdue by ${Math.round(overdueBy / 1000)}s, will refresh immediately`);
+        }
+      } else if (!networkState.isOnline) {
         log.info(`Source ${source.sourceId} is overdue by ${Math.round(overdueBy / 1000)}s but network is offline - will refresh when network returns`);
       } else {
         log.info(`Scheduled overdue source ${source.sourceId} - overdue by ${Math.round(overdueBy / 1000)}s, will refresh immediately`);
@@ -298,8 +332,11 @@ class NetworkAwareScheduler {
   
   /**
    * Calculate next refresh time based on network conditions and alignment options
+   * @param {string} sourceId - The source ID
+   * @param {object} networkState - The network state (optional)
+   * @param {number} oldIntervalMs - The previous interval in ms (optional, used when interval changes)
    */
-  async calculateNextRefresh(sourceId, networkState = null) {
+  async calculateNextRefresh(sourceId, networkState = null, oldIntervalMs = null) {
     sourceId = String(sourceId); // Ensure sourceId is a string
     const schedule = this.schedules.get(sourceId);
     if (!schedule) return;
@@ -366,21 +403,41 @@ class NetworkAwareScheduler {
         // Check if this is during initial scheduling or was scheduled while offline
         const isInitialSchedule = !schedule.hasBeenScheduled || schedule.scheduledWhileOffline;
         
-        if (isInitialSchedule) {
-          // For initial schedule of overdue source, refresh immediately
+        // IMPORTANT: When updating a schedule (e.g., changing interval), we should NOT
+        // treat it as overdue just because the time since last refresh exceeds the NEW interval.
+        // The user expects the new interval to start from NOW, not retroactively.
+        // Only treat as overdue if it was already overdue with the OLD interval.
+        if (oldIntervalMs !== null && oldIntervalMs !== schedule.intervalMs) {
+          // Interval has changed - check if it was overdue with the OLD interval
+          const wasOverdueWithOldInterval = timeSinceLastRefresh > oldIntervalMs;
+          if (!wasOverdueWithOldInterval) {
+            // Not overdue with old interval, so start fresh with new interval
+            log.debug(`Source ${sourceId} interval changed from ${oldIntervalMs}ms to ${schedule.intervalMs}ms - starting new interval from now`);
+            // Don't treat as overdue - fall through to normal scheduling below
+          } else if (isInitialSchedule) {
+            // Was already overdue with old interval and is initial schedule
+            schedule.nextRefresh = now + 100; // 100ms delay to allow UI to settle
+            log.debug(`Source ${sourceId} was already overdue with old interval, scheduling immediate refresh`);
+            schedule.scheduledWhileOffline = false;
+            schedule.hasBeenScheduled = true;
+            return schedule.nextRefresh;
+          }
+        } else if (isInitialSchedule) {
+          // For initial schedule of overdue source (no interval change), refresh immediately
           schedule.nextRefresh = now + 100; // 100ms delay to allow UI to settle
           log.debug(`Source ${sourceId} is overdue ${schedule.scheduledWhileOffline ? '(was offline)' : '(initial load)'}, scheduling immediate refresh`);
           
           // Clear the offline flag and mark as scheduled
           schedule.scheduledWhileOffline = false;
           schedule.hasBeenScheduled = true;
+          return schedule.nextRefresh;
         } else {
           // For network recovery or other cases, add jitter to avoid thundering herd
           const jitter = Math.random() * 5000; // 0-5 seconds random jitter
           schedule.nextRefresh = now + 1000 + jitter; // 1-6 seconds from now
           log.debug(`Source ${sourceId} is overdue, scheduling soon with jitter`);
+          return schedule.nextRefresh;
         }
-        return schedule.nextRefresh;
       }
     }
     
@@ -388,7 +445,13 @@ class NetworkAwareScheduler {
     schedule.scheduledWhileOffline = false;
     
     // Calculate from last refresh or now
-    const baseTime = schedule.lastRefresh || now;
+    // If interval has changed, always calculate from now (user expects new interval to start now)
+    const intervalHasChanged = oldIntervalMs !== null && oldIntervalMs !== schedule.intervalMs;
+    const baseTime = intervalHasChanged ? now : (schedule.lastRefresh || now);
+    
+    if (intervalHasChanged) {
+      log.info(`Source ${sourceId} interval changed - calculating next refresh from current time`);
+    }
     
     // Use wall-clock alignment if configured
     if (schedule.alignToMinute || schedule.alignToHour || schedule.alignToDay) {
@@ -589,14 +652,14 @@ class NetworkAwareScheduler {
     // 3. The next refresh time wasn't already set
     if (reason !== 'scheduled' || refreshFailed || !schedule.nextRefresh) {
       // Recalculate for non-scheduled refreshes, failures, or if no next time set
-      await this.calculateNextRefresh(sourceId, networkStateAfterRefresh);
+      await this.calculateNextRefresh(sourceId, networkStateAfterRefresh, null);
     }
   }
   
   /**
    * Update last refresh time for a source
    */
-  updateLastRefresh(sourceId, timestamp = null) {
+  updateLastRefresh(sourceId, timestamp = null, forceRecalculate = false) {
     sourceId = String(sourceId); // Ensure sourceId is a string
     const schedule = this.schedules.get(sourceId);
     if (schedule) {
@@ -618,10 +681,12 @@ class NetworkAwareScheduler {
       schedule.failureCount = 0; // Reset failure count on successful refresh
       schedule.hasBeenScheduled = true; // Mark as having been scheduled
       
-      // Only recalculate if next refresh time is not set or is in the past
-      if (!schedule.nextRefresh || schedule.nextRefresh <= now) {
+      // Recalculate if:
+      // 1. forceRecalculate is true (e.g., after manual refresh following a save)
+      // 2. next refresh time is not set or is in the past
+      if (forceRecalculate || !schedule.nextRefresh || schedule.nextRefresh <= now) {
         // Don't await here to avoid blocking
-        this.calculateNextRefresh(sourceId).catch(err => {
+        this.calculateNextRefresh(sourceId, null, null).catch(err => {
           log.error(`Error recalculating refresh time for ${sourceId}:`, err);
         });
       }
@@ -720,7 +785,7 @@ class NetworkAwareScheduler {
         // Clear the flag first to prevent loops
         schedule.scheduledWhileOffline = false;
         // Recalculate with online state to trigger immediate refresh if overdue
-        await this.calculateNextRefresh(sourceId, networkState);
+        await this.calculateNextRefresh(sourceId, networkState, null);
       }
     }
     
@@ -774,7 +839,7 @@ class NetworkAwareScheduler {
         for (const { sourceId } of overdueSources) {
           if (this.schedules.has(sourceId)) {
             // Recalculate next refresh time if needed
-            this.calculateNextRefresh(sourceId, networkState).catch(err => {
+            this.calculateNextRefresh(sourceId, networkState, null).catch(err => {
               log.error(`Error rescheduling source ${sourceId} after catch-up:`, err);
             });
           }
@@ -792,7 +857,7 @@ class NetworkAwareScheduler {
     
     for (const sourceId of remainingSourceIds) {
       if (this.schedules.has(sourceId)) {
-        await this.calculateNextRefresh(sourceId, networkState);
+        await this.calculateNextRefresh(sourceId, networkState, null);
       }
     }
   }

@@ -183,6 +183,18 @@ const SourceTable = ({
             if (updatedSource) {
                 log.debug('Source updated successfully');
 
+                // Clear cached refresh display state to force immediate UI update
+                // This ensures the "Refreshes in..." text updates immediately after save
+                setRefreshDisplayStates(prev => {
+                    // Only update if the key exists to avoid unnecessary re-renders
+                    if (sourceData.sourceId in prev) {
+                        const { [sourceData.sourceId]: _, ...rest } = prev;
+                        log.debug(`Cleared refresh display cache for source ${sourceData.sourceId}`);
+                        return rest;
+                    }
+                    return prev;
+                });
+
                 // If immediate refresh is requested, trigger it
                 if (shouldRefreshNow) {
                     log.debug('Triggering immediate refresh after save...');
