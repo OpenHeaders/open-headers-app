@@ -3,6 +3,9 @@
 // Import Ant Design styles
 @import 'antd/dist/reset.css';
 
+// Custom variables
+@primary-color: #0071e3;
+
 // Layout styles
 .app-container {
   min-height: 100vh;
@@ -164,7 +167,7 @@
     font-size: 12px;
   }
 
-  .ant-tabs-content {
+  :where(.ant-tabs-content) {
     background: #fafafa;
     padding: 8px;
     border: 1px solid #f0f0f0;
@@ -258,7 +261,7 @@
     margin-bottom: 8px;
   }
 
-  .response-body, .response-raw {
+  :where(.response-body), :where(.response-raw) {
     max-height: 160px;
     padding: 8px;
     font-size: 11px;
@@ -285,7 +288,7 @@
         border-bottom: 1px solid #f0f0f0;
       }
 
-      th {
+      :where(th) {
         background-color: #fafafa;
         font-weight: 500;
       }
@@ -363,7 +366,7 @@
 }
 
 // Source content cell styles
-.source-content-cell {
+:where(.source-content-cell) {
   max-height: 80px;
   overflow: hidden;
   background: #fafafa;
@@ -454,6 +457,17 @@ code {
   }
 }
 
+// Fix Select component alignment for theme dropdown
+.settings-modal {
+  .ant-select {
+    // Ensure consistent padding for the selector
+    .ant-select-selector {
+      padding-left: 11px !important;
+      padding-right: 11px !important;
+    }
+  }
+}
+
 .ant-input-affix-wrapper {
   border-radius: 6px;
 }
@@ -493,4 +507,13 @@ code {
     white-space: pre-wrap;
     word-break: break-word;
   }
+
+  // Filter indicator
+  .filter-indicator {
+    background-color: #f0f8ff;
+    color: #0066cc;
+  }
 }
+
+// Import dark theme styles at the end to ensure higher specificity
+@import './App.dark.less';
