@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useTotpState } from '../contexts/TotpContext';
 const { createLogger } = require('../utils/logger');
 const timeManager = require('../services/TimeManager');
 const log = createLogger('useHttp');
@@ -8,6 +9,9 @@ const log = createLogger('useHttp');
  * All refresh management is now handled by RefreshManager
  */
 export function useHttp() {
+    // Use TOTP context
+    const { recordTotpUsage } = useTotpState();
+    
     /**
      * Parse JSON safely
      */
@@ -197,6 +201,9 @@ export function useHttp() {
 
                         if (!totpCode || totpCode === 'ERROR') {
                             log.error(`Failed to generate TOTP code for source ${sourceId}`);
+                        } else {
+                            // Record TOTP usage
+                            recordTotpUsage(sourceId, requestOptions.totpSecret, totpCode);
                         }
                     } catch (totpError) {
                         log.error(`Error generating TOTP code: ${totpError.message}`);
@@ -346,12 +353,12 @@ export function useHttp() {
 
         // Start the request process with retry capability
         return attemptRequest();
-    }, [parseJSON, applyJsonFilter, substituteVariables]);
+    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage]);
 
     /**
      * Test HTTP request (used for UI testing)
      */
-    const testRequest = useCallback(async (url, method, requestOptions, jsonFilter) => {
+    const testRequest = useCallback(async (url, method, requestOptions, jsonFilter, sourceId = null) => {
         try {
             // Store variables array explicitly and make a deep copy to avoid reference issues
             const variables = Array.isArray(requestOptions.variables)
@@ -374,6 +381,11 @@ export function useHttp() {
 
                     if (!totpCode || totpCode === 'ERROR') {
                         log.error(`Failed to generate TOTP code for test request`);
+                    } else {
+                        // Record TOTP usage for test request
+                        // Use provided sourceId or generate temporary one
+                        const effectiveSourceId = sourceId || `test-${Date.now()}`;
+                        recordTotpUsage(effectiveSourceId, requestOptions.totpSecret, totpCode);
                     }
                 } catch (totpError) {
                     log.error(`Error generating TOTP code for test: ${totpError.message}`);
@@ -489,7 +501,7 @@ export function useHttp() {
             log.error("Test request error:", error);
             throw error;
         }
-    }, [parseJSON, applyJsonFilter, substituteVariables]);
+    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage]);
 
     return {
         request,

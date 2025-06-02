@@ -331,6 +331,61 @@ body.dark {
         color: #0a84ff;
       }
     }
+
+    &-primary {
+      background-color: #0a84ff;
+      border-color: #0a84ff;
+      color: #ffffff;
+
+      &:hover:not(:disabled) {
+        background-color: #0051d5;
+        border-color: #0051d5;
+        color: #ffffff;
+      }
+
+      &:focus {
+        background-color: #0a84ff;
+        border-color: #0a84ff;
+        color: #ffffff;
+      }
+
+      &[disabled] {
+        background-color: rgba(10, 132, 255, 0.3);
+        border-color: rgba(10, 132, 255, 0.3);
+        color: rgba(255, 255, 255, 0.5);
+      }
+      
+      // Loading state
+      &.ant-btn-loading {
+        .ant-btn-loading-icon {
+          color: #ffffff !important;
+          
+          .anticon-loading {
+            color: #ffffff !important;
+          }
+          
+          // Remove the blue square overlay
+          &::before {
+            display: none !important;
+          }
+          
+          // Also hide during animation states
+          &.ant-btn-loading-icon-motion-enter,
+          &.ant-btn-loading-icon-motion-enter-active,
+          &.ant-btn-loading-icon-motion-leave,
+          &.ant-btn-loading-icon-motion-leave-active {
+            &::before {
+              display: none !important;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Test request button specific styling
+  .test-request-button {
+    margin-top: 24px;
   }
 
   // Switch styles
@@ -484,6 +539,23 @@ body.dark {
     // All form fields in the modal
     .ant-form-item {
       color: @dark-text-primary;
+    }
+
+    // Primary buttons in edit modal
+    .ant-btn-primary {
+      background-color: #0a84ff !important;
+      border-color: #0a84ff !important;
+      color: #ffffff !important;
+
+      &:hover:not(:disabled) {
+        background-color: #0051d5 !important;
+        border-color: #0051d5 !important;
+      }
+
+      &[disabled] {
+        background-color: rgba(10, 132, 255, 0.3) !important;
+        border-color: rgba(10, 132, 255, 0.3) !important;
+      }
     }
 
     // HTTP options inside edit modal - MAXIMUM SPECIFICITY
@@ -834,6 +906,85 @@ body.dark {
         .ant-modal-footer {
           background-color: @dark-bg-secondary !important;
           border-top-color: @dark-border !important;
+
+          // Primary buttons in modal footer
+          .ant-btn-primary {
+            background-color: #0a84ff !important;
+            border-color: #0a84ff !important;
+            color: #ffffff !important;
+
+            &:hover:not(:disabled) {
+              background-color: #0051d5 !important;
+              border-color: #0051d5 !important;
+            }
+
+            &[disabled], &.ant-btn-loading {
+              background-color: rgba(10, 132, 255, 0.3) !important;
+              border-color: rgba(10, 132, 255, 0.3) !important;
+              color: rgba(255, 255, 255, 0.5) !important;
+            }
+            
+            // Fix loading spinner color
+            .ant-btn-loading-icon {
+              color: #ffffff !important;
+              
+              .anticon {
+                color: #ffffff !important;
+              }
+              
+              svg {
+                color: #ffffff !important;
+              }
+              
+              // Hide the blue square overlay during loading animation
+              &.ant-btn-loading-icon-motion-enter,
+              &.ant-btn-loading-icon-motion-enter-active {
+                &::before {
+                  display: none !important;
+                }
+              }
+            }
+          }
+          
+          // Override buttons wrapped in tooltip with inline styles
+          .ant-tooltip-disabled-compatible-wrapper {
+            .ant-btn-primary {
+              background: #0a84ff !important;
+              background-color: #0a84ff !important;
+              border-color: #0a84ff !important;
+              
+              &[style] {
+                background: #0a84ff !important;
+                background-color: #0a84ff !important;
+                border-color: #0a84ff !important;
+              }
+            }
+          }
+          
+          // Fix all loading icons in modal footer
+          .anticon-loading {
+            color: #ffffff !important;
+            
+            &[style*="color: rgba(0, 0, 0"] {
+              color: #ffffff !important;
+            }
+          }
+          
+          // Remove blue square overlay from loading buttons in modal
+          .ant-btn-loading .ant-btn-loading-icon {
+            &::before {
+              display: none !important;
+              content: none !important;
+              opacity: 0 !important;
+            }
+            
+            &.ant-btn-loading-icon-motion-enter::before,
+            &.ant-btn-loading-icon-motion-enter-active::before {
+              display: none !important;
+              background: transparent !important;
+              opacity: 0 !important;
+            }
+          }
         }
       }
     }
@@ -933,6 +1084,80 @@ body.dark {
     background-color: rgba(0, 0, 0, 0.75) !important;
   }
   
+  
+  // Ultra-specific targeting for primary button loading icons based on the HTML structure
+  .ant-btn-primary.ant-btn-loading {
+    // Ensure button text color is correct
+    color: #ffffff !important;
+    
+    .ant-btn-icon.ant-btn-loading-icon {
+      // Force white color ONLY on the loading icon, not affecting button text
+      color: #ffffff !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      
+      // Remove all pseudo-elements
+      &::before,
+      &::after {
+        display: none !important;
+        content: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+      }
+      
+      // Target the span.anticon.anticon-loading.anticon-spin specifically
+      span.anticon.anticon-loading.anticon-spin {
+        color: #ffffff !important;
+        background: transparent !important;
+        background-color: transparent !important;
+        
+        &::before,
+        &::after {
+          display: none !important;
+          content: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+        }
+        
+        // Target the SVG and path with maximum specificity
+        svg[data-icon="loading"] {
+          color: #ffffff !important;
+          fill: #ffffff !important;
+          background: transparent !important;
+          background-color: transparent !important;
+          
+          &::before,
+          &::after {
+            display: none !important;
+            content: none !important;
+          }
+          
+          path {
+            fill: #ffffff !important;
+            color: #ffffff !important;
+            background: transparent !important;
+            background-color: transparent !important;
+            
+            &::before,
+            &::after {
+              display: none !important;
+              content: none !important;
+            }
+          }
+        }
+      }
+    }
+    
+    // Ensure button text spans don't get affected by our loading icon styles
+    > span:not(.ant-btn-icon) {
+      color: inherit !important;
+      background: transparent !important;
+      background-color: transparent !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
+    }
+  }
+  
   .ant-modal-wrap .ant-modal {
     * {
       background-color: inherit !important;
@@ -951,6 +1176,17 @@ body.dark {
       // Override any text that's not light
       [style*="color"] {
         color: #ffffff !important;
+      }
+      
+      // Force all primary buttons to be blue regardless of inline styles
+      .ant-btn-primary {
+        &[style] {
+          background: #0a84ff !important;
+          background-color: #0a84ff !important;
+          border: 1px solid #0a84ff !important;
+          border-color: #0a84ff !important;
+          color: #ffffff !important;
+        }
       }
       
       // Input fields
@@ -1015,6 +1251,28 @@ body.dark {
     color: @dark-text-primary !important;
   }
 
+  // Override inline styles on buttons
+  .ant-btn-primary {
+    &[style*="background: rgb(240, 240, 240)"] {
+      background: #0a84ff !important;
+    }
+    
+    &[style*="border-color: rgb(217, 217, 217)"] {
+      border-color: #0a84ff !important;
+    }
+    
+    // Fix loading icon color
+    .anticon[style*="color: rgba(0, 0, 0, 0.88)"] {
+      color: #ffffff !important;
+    }
+    
+    .ant-btn-loading-icon {
+      [style*="color: rgba(0, 0, 0"] {
+        color: #ffffff !important;
+      }
+    }
+  }
+
   // Force modal root to be dark
   .ant-modal-root {
     .ant-modal-mask {
@@ -1032,6 +1290,27 @@ body.dark {
           .ant-modal-footer {
             background-color: @dark-bg-secondary !important;
             color: @dark-text-primary !important;
+            
+            // Force primary buttons to be blue even with inline styles
+            .ant-btn-primary {
+              background: #0a84ff !important;
+              background-color: #0a84ff !important;
+              border-color: #0a84ff !important;
+              color: #ffffff !important;
+              
+              &:not([disabled]):hover {
+                background: #0051d5 !important;
+                background-color: #0051d5 !important;
+                border-color: #0051d5 !important;
+              }
+              
+              &[disabled], &.ant-btn-loading {
+                background: rgba(10, 132, 255, 0.3) !important;
+                background-color: rgba(10, 132, 255, 0.3) !important;
+                border-color: rgba(10, 132, 255, 0.3) !important;
+                color: rgba(255, 255, 255, 0.5) !important;
+              }
+            }
           }
         }
       }
