@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
-import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography } from 'antd';
-import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, message } from 'antd';
+import { PlusOutlined, MinusCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
 import { showMessage } from '../utils/messageUtil';
 import { createLogger } from '../utils/logger';
+import timeManager from '../services/TimeManager';
 
 const log = createLogger('HttpOptions');
 
@@ -45,6 +46,8 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
     const [totpError, setTotpError] = useState(null);
     const [totpTesting, setTotpTesting] = useState(false);
     const [totpPreviewVisible, setTotpPreviewVisible] = useState(false);
+    const [timeRemaining, setTimeRemaining] = useState(30);
+    const [codeJustGenerated, setCodeJustGenerated] = useState(false);
     const totpEnabledRef = useRef(false);
     const totpSecretRef = useRef('');
 
@@ -944,6 +947,9 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                 setTotpCode('ERROR');
             } else {
                 setTotpCode(totpCode);
+                // Trigger animation for new code
+                setCodeJustGenerated(true);
+                setTimeout(() => setCodeJustGenerated(false), 300);
             }
         } catch (error) {
             log.error('Error generating TOTP:', error);
@@ -965,6 +971,40 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
         setTotpPreviewVisible(true);
         await generateTotpCode();
     };
+
+    // Update timer and regenerate code when needed
+    useEffect(() => {
+        if (!totpPreviewVisible) return;
+
+        // Function to calculate time remaining in current period
+        const calculateTimeRemaining = () => {
+            const secondsInPeriod = 30;
+            const currentSeconds = Math.floor(timeManager.now() / 1000);
+            const secondsRemaining = secondsInPeriod - (currentSeconds % secondsInPeriod);
+            return secondsRemaining;
+        };
+
+        // Track the last period to avoid multiple regenerations
+        let lastPeriod = Math.floor(timeManager.now() / 1000 / 30);
+
+        // Initial timer setup
+        setTimeRemaining(calculateTimeRemaining());
+
+        // Set up interval for countdown and code regeneration
+        const timer = setInterval(() => {
+            const remaining = calculateTimeRemaining();
+            setTimeRemaining(remaining);
+            
+            // Check if we've entered a new 30-second period
+            const currentPeriod = Math.floor(timeManager.now() / 1000 / 30);
+            if (currentPeriod !== lastPeriod) {
+                lastPeriod = currentPeriod;
+                generateTotpCode();
+            }
+        }, 100); // Update every 100ms for smoother countdown
+
+        return () => clearInterval(timer);
+    }, [totpPreviewVisible, totpSecret]);
 
     // Format response for display - Professional format
     const formatResponseForDisplay = (responseJson) => {
@@ -1447,24 +1487,80 @@ const HttpOptions = forwardRef(({ form, onTestResponse, onTotpChange, initialTot
                                                 {totpPreviewVisible && (
                                                     <div style={{
                                                         background: '#f5f5f7',
-                                                        padding: 8,
-                                                        borderRadius: 6,
-                                                        marginBottom: 8
+                                                        padding: 12,
+                                                        borderRadius: 8,
+                                                        marginBottom: 8,
+                                                        border: '1px solid #e8e8e8'
                                                     }}>
                                                         <div style={{
                                                             display: 'flex',
                                                             justifyContent: 'space-between',
-                                                            alignItems: 'center'
+                                                            alignItems: 'center',
+                                                            marginBottom: 8
                                                         }}>
-                                                            <div style={{
-                                                                fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                                                fontSize: '1rem',
-                                                                fontWeight: 'bold',
-                                                                color: totpCode === 'ERROR' ? '#ff4d4f' : 'inherit'
-                                                            }}>
-                                                                {totpCode}
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                                <div style={{
+                                                                    fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
+                                                                    fontSize: '1.5rem',
+                                                                    fontWeight: 'bold',
+                                                                    color: totpCode === 'ERROR' ? '#ff4d4f' : '#1890ff',
+                                                                    letterSpacing: '0.1em',
+                                                                    cursor: totpCode !== 'ERROR' ? 'pointer' : 'default',
+                                                                    transition: 'transform 0.3s ease',
+                                                                    transform: codeJustGenerated ? 'scale(1.1)' : 'scale(1)'
+                                                                }}
+                                                                onClick={() => {
+                                                                    if (totpCode !== 'ERROR') {
+                                                                        navigator.clipboard.writeText(totpCode);
+                                                                        message.success('Code copied to clipboard!');
+                                                                    }
+                                                                }}>
+                                                                    {totpCode}
+                                                                </div>
+                                                                {totpCode !== 'ERROR' && (
+                                                                    <CopyOutlined 
+                                                                        style={{ 
+                                                                            fontSize: '16px', 
+                                                                            color: '#8c8c8c', 
+                                                                            cursor: 'pointer' 
+                                                                        }}
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(totpCode);
+                                                                            message.success('Code copied to clipboard!');
+                                                                        }}
+                                                                    />
+                                                                )}
                                                             </div>
+                                                            {totpCode !== 'ERROR' && (
+                                                                <div style={{ textAlign: 'center' }}>
+                                                                    <div style={{ 
+                                                                        fontSize: '1.2rem', 
+                                                                        fontWeight: 'bold',
+                                                                        color: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a'
+                                                                    }}>
+                                                                        {timeRemaining}s
+                                                                    </div>
+                                                                    <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
+                                                                        Time remaining
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                        {totpCode !== 'ERROR' && (
+                                                            <div style={{
+                                                                height: 4,
+                                                                background: '#e8e8e8',
+                                                                borderRadius: 2,
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                <div style={{
+                                                                    height: '100%',
+                                                                    background: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a',
+                                                                    width: `${(timeRemaining / 30) * 100}%`,
+                                                                    transition: 'width 0.1s linear, background 0.3s ease'
+                                                                }} />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
 
