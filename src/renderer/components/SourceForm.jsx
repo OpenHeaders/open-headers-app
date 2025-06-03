@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs } from 'antd';
+import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs, Tooltip } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useFileSystem } from '../hooks/useFileSystem';
 import HttpOptions from './HttpOptions';
 import { showMessage } from '../utils/messageUtil';
+import { useTotpState } from '../contexts/TotpContext';
 
 const { Option } = Select;
 
@@ -16,19 +17,44 @@ const SourceForm = ({ onAddSource }) => {
     const [filePath, setFilePath] = useState('');
     const [testResponse, setTestResponse] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [testing, setTesting] = useState(false);
     const [isSticky, setIsSticky] = useState(false);
     const [testResponseHeaders, setTestResponseHeaders] = useState(null);
     const [totpEnabled, setTotpEnabled] = useState(false);
     const [totpSecret, setTotpSecret] = useState('');
 
     const formCardRef = useRef(null);
+    const httpOptionsRef = useRef(null);
     const fileSystem = useFileSystem();
+    
+    // Use TOTP context
+    const {
+        canUseTotpSecret,
+        getCooldownSeconds,
+        trackTotpSecret,
+        untrackTotpSecret
+    } = useTotpState();
 
     // Handle TOTP changes from HttpOptions
     const handleTotpChange = (enabled, secret) => {
         setTotpEnabled(enabled);
         setTotpSecret(secret);
     };
+
+    // Since we don't have a sourceId for new sources, we'll use a temporary ID
+    const tempSourceIdRef = useRef(`new-source-${Date.now()}`);
+    
+    // Track TOTP source in context
+    useEffect(() => {
+        if (totpEnabled && totpSecret) {
+            trackTotpSecret(tempSourceIdRef.current);
+        }
+        
+        // Cleanup on unmount
+        return () => {
+            untrackTotpSecret(tempSourceIdRef.current);
+        };
+    }, [totpEnabled, totpSecret, trackTotpSecret, untrackTotpSecret]);
 
     // Setup scroll event listener to detect when to make header sticky
     useEffect(() => {
@@ -81,6 +107,14 @@ const SourceForm = ({ onAddSource }) => {
     const handleSubmit = async (values) => {
         try {
             setSubmitting(true);
+
+            // Check TOTP cooldown for HTTP sources
+            if (values.sourceType === 'http' && totpEnabled && totpSecret && !canUseTotpSecret(tempSourceIdRef.current)) {
+                const cooldownSeconds = getCooldownSeconds(tempSourceIdRef.current);
+                showMessage('warning', `TOTP code was recently used. Please wait ${cooldownSeconds} seconds before adding a new source.`);
+                setSubmitting(false);
+                return;
+            }
 
             // Check if JSON filter is enabled but missing a path
             if (values.jsonFilter?.enabled && !values.jsonFilter?.path) {
@@ -180,12 +214,27 @@ const SourceForm = ({ onAddSource }) => {
             const success = await onAddSource(sourceData);
 
             if (success) {
+                // Untrack TOTP source before resetting
+                untrackTotpSecret(tempSourceIdRef.current);
+                
                 // Reset form on success
                 form.resetFields();
                 setFilePath('');
                 setTestResponse(null);
+                setTestResponseHeaders(null);
                 setTotpEnabled(false);
                 setTotpSecret('');
+                
+                // Reset source type to default
+                setSourceType('file');
+                
+                // Force reset HttpOptions if it exists
+                if (httpOptionsRef.current && httpOptionsRef.current.forceTotpState) {
+                    httpOptionsRef.current.forceTotpState(false, '');
+                }
+                
+                // Generate new temporary sourceId for next use
+                tempSourceIdRef.current = `new-source-${Date.now()}`;
             }
         } catch (error) {
             showMessage('error', `Failed to add source: ${error.message}`);
@@ -250,16 +299,26 @@ const SourceForm = ({ onAddSource }) => {
 
     // Render the add button with appropriate icon based on submitting state
     const renderAddButton = () => (
-        <Button
-            type="primary"
-            htmlType="submit"
-            icon={submitting ? <LoadingOutlined /> : <PlusOutlined />}
-            onClick={() => form.submit()}
-            loading={submitting}
-            size="small"
+        <Tooltip
+            title={
+                testing ? "Please wait for the test request to complete" :
+                submitting ? "Adding source..." :
+                totpEnabled && totpSecret && !canUseTotpSecret(tempSourceIdRef.current) && sourceType === 'http' ? `TOTP cooldown active. Please wait ${getCooldownSeconds(tempSourceIdRef.current)} seconds.` :
+                "Add this source to your collection"
+            }
         >
-            {submitting ? 'Adding...' : 'Add Source'}
-        </Button>
+            <Button
+                type="primary"
+                htmlType="submit"
+                icon={<PlusOutlined />}
+                onClick={() => form.submit()}
+                loading={submitting || (totpEnabled && totpSecret && !canUseTotpSecret(tempSourceIdRef.current) && sourceType === 'http')}
+                disabled={testing || (totpEnabled && totpSecret && !canUseTotpSecret(tempSourceIdRef.current) && sourceType === 'http')}
+                size="small"
+            >
+                Add Source
+            </Button>
+        </Tooltip>
     );
 
     // Render the sticky header separately when in sticky mode
@@ -270,7 +329,9 @@ const SourceForm = ({ onAddSource }) => {
             <div className="source-form-sticky-header">
                 <div className="sticky-header-content">
                     <div className="title">Add Source</div>
-                    {renderAddButton()}
+                    <div style={{ marginLeft: '16px' }}>
+                        {renderAddButton()}
+                    </div>
                 </div>
             </div>
         );
@@ -345,9 +406,11 @@ const SourceForm = ({ onAddSource }) => {
                                 name="httpOptions"
                             >
                                 <HttpOptions
+                                    ref={httpOptionsRef}
                                     form={form}
                                     onTestResponse={handleTestResponse}
                                     onTotpChange={handleTotpChange}
+                                    onTestingChange={setTesting}
                                 />
                             </Form.Item>
                         </>

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col, message } from 'antd';
+import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import timeManager from '../services/TimeManager';
+import { useTheme } from '../contexts/ThemeContext';
+import { successMessage } from '../utils/messageUtil';
 
 const { Text } = Typography;
 
@@ -10,6 +12,9 @@ const { Text } = Typography;
  * Simplified version that avoids Form conflicts
  */
 const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChange }) => {
+    // Get current theme from context
+    const { isDarkMode } = useTheme();
+    
     // Component state
     const [enabled, setEnabled] = useState(initialEnabled);
     const [secret, setSecret] = useState(initialSecret);
@@ -265,11 +270,13 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
 
                     {previewVisible && (
                         <div style={{
-                            background: '#f5f5f7',
+                            background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f7',
                             padding: 12,
                             borderRadius: 8,
                             marginBottom: 8,
-                            border: '1px solid #e8e8e8'
+                            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e8e8e8'}`,
+                            backdropFilter: isDarkMode ? 'blur(10px)' : 'none',
+                            boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
                         }}>
                             <div style={{
                                 display: 'flex',
@@ -282,7 +289,7 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                                         fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
                                         fontSize: '1.5rem',
                                         fontWeight: 'bold',
-                                        color: code === 'ERROR' ? '#ff4d4f' : '#1890ff',
+                                        color: code === 'ERROR' ? '#ff4d4f' : (isDarkMode ? '#87ceeb' : '#1890ff'),
                                         letterSpacing: '0.1em',
                                         cursor: code !== 'ERROR' ? 'pointer' : 'default',
                                         transition: 'transform 0.3s ease',
@@ -291,7 +298,7 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                                     onClick={() => {
                                         if (code !== 'ERROR') {
                                             navigator.clipboard.writeText(code);
-                                            message.success('Code copied to clipboard!');
+                                            successMessage('Code copied to clipboard!');
                                         }
                                     }}>
                                         {code}
@@ -300,12 +307,12 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                                         <CopyOutlined 
                                             style={{ 
                                                 fontSize: '16px', 
-                                                color: '#8c8c8c', 
+                                                color: isDarkMode ? '#98989d' : '#8c8c8c', 
                                                 cursor: 'pointer' 
                                             }}
                                             onClick={() => {
                                                 navigator.clipboard.writeText(code);
-                                                message.success('Code copied to clipboard!');
+                                                successMessage('Code copied to clipboard!');
                                             }}
                                         />
                                     )}
@@ -319,7 +326,10 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                                         }}>
                                             {timeRemaining}s
                                         </Text>
-                                        <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
+                                        <div style={{ 
+                                            fontSize: '11px', 
+                                            color: isDarkMode ? '#98989d' : '#8c8c8c' 
+                                        }}>
                                             Time remaining
                                         </div>
                                     </div>
@@ -327,16 +337,20 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                             </div>
                             {code !== 'ERROR' && (
                                 <div style={{
-                                    height: 4,
-                                    background: '#e8e8e8',
-                                    borderRadius: 2,
-                                    overflow: 'hidden'
+                                    height: 8,
+                                    background: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#e8e8e8',
+                                    borderRadius: 4,
+                                    overflow: 'hidden',
+                                    boxShadow: isDarkMode ? 'inset 0 2px 4px rgba(0, 0, 0, 0.3)' : 'none'
                                 }}>
                                     <div style={{
                                         height: '100%',
-                                        background: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a',
+                                        background: timeRemaining <= 5 ? 
+                                            (isDarkMode ? 'linear-gradient(90deg, #ff6b6b 0%, #ff8787 100%)' : '#ff4d4f') : 
+                                            (isDarkMode ? 'linear-gradient(90deg, #90ee90 0%, #98fb98 100%)' : '#52c41a'),
                                         width: `${(timeRemaining / 30) * 100}%`,
-                                        transition: 'width 0.1s linear, background 0.3s ease'
+                                        transition: 'width 0.1s linear, background 0.3s ease',
+                                        boxShadow: isDarkMode ? (timeRemaining <= 5 ? '0 0 10px rgba(255, 107, 107, 0.8)' : '0 0 10px rgba(144, 238, 144, 0.8)') : 'none'
                                     }} />
                                 </div>
                             )}

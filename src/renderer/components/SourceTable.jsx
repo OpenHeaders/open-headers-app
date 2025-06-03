@@ -142,7 +142,7 @@ const SourceTable = ({
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [sources, refreshDisplayStates, refreshingSourceId]);
+    }, [sources, refreshingSourceId]); // Remove refreshDisplayStates from dependencies to avoid infinite loop
 
     // Clean up display states when sources change
     useEffect(() => {
