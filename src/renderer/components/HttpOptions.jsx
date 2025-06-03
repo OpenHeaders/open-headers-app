@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
-import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, message, Tooltip } from 'antd';
+import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, Tooltip } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
-import { showMessage } from '../utils/messageUtil';
+import { showMessage, successMessage } from '../utils/messageUtil';
 import { createLogger } from '../utils/logger';
 import timeManager from '../services/TimeManager';
 import { useTotpState } from '../contexts/TotpContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const log = createLogger('HttpOptions');
 
@@ -19,6 +20,9 @@ const { Text } = Typography;
  * With integrated TOTP Authentication - now with ref forwarding and improved state persistence
  */
 const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, initialTotpEnabled, initialTotpSecret, onTestingChange }, ref) => {
+    // Get current theme from context
+    const { isDarkMode } = useTheme();
+    
     // Component state
     const [contentType, setContentType] = useState('application/json');
     const [testResponseVisible, setTestResponseVisible] = useState(false);
@@ -1460,11 +1464,13 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
 
                                                 {totpPreviewVisible && (
                                                     <div style={{
-                                                        background: '#f5f5f7',
+                                                        background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f7',
                                                         padding: 12,
                                                         borderRadius: 8,
                                                         marginBottom: 8,
-                                                        border: '1px solid #e8e8e8'
+                                                        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e8e8e8'}`,
+                                                        backdropFilter: isDarkMode ? 'blur(10px)' : 'none',
+                                                        boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
                                                     }}>
                                                         <div style={{
                                                             display: 'flex',
@@ -1477,7 +1483,7 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                                     fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
                                                                     fontSize: '1.5rem',
                                                                     fontWeight: 'bold',
-                                                                    color: totpCode === 'ERROR' ? '#ff4d4f' : '#1890ff',
+                                                                    color: totpCode === 'ERROR' ? '#ff4d4f' : (isDarkMode ? '#87ceeb' : '#1890ff'),
                                                                     letterSpacing: '0.1em',
                                                                     cursor: totpCode !== 'ERROR' ? 'pointer' : 'default',
                                                                     transition: 'transform 0.3s ease',
@@ -1486,7 +1492,7 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                                 onClick={() => {
                                                                     if (totpCode !== 'ERROR') {
                                                                         navigator.clipboard.writeText(totpCode);
-                                                                        message.success('Code copied to clipboard!');
+                                                                        successMessage('Code copied to clipboard!');
                                                                     }
                                                                 }}>
                                                                     {totpCode}
@@ -1495,12 +1501,12 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                                     <CopyOutlined 
                                                                         style={{ 
                                                                             fontSize: '16px', 
-                                                                            color: '#8c8c8c', 
+                                                                            color: isDarkMode ? '#b8d4e3' : '#8c8c8c', 
                                                                             cursor: 'pointer' 
                                                                         }}
                                                                         onClick={() => {
                                                                             navigator.clipboard.writeText(totpCode);
-                                                                            message.success('Code copied to clipboard!');
+                                                                            successMessage('Code copied to clipboard!');
                                                                         }}
                                                                     />
                                                                 )}
@@ -1510,11 +1516,14 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                                     <div style={{ 
                                                                         fontSize: '1.2rem', 
                                                                         fontWeight: 'bold',
-                                                                        color: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a'
+                                                                        color: timeRemaining <= 5 ? '#ff6b6b' : (isDarkMode ? '#90ee90' : '#52c41a')
                                                                     }}>
                                                                         {timeRemaining}s
                                                                     </div>
-                                                                    <div style={{ fontSize: '11px', color: '#8c8c8c' }}>
+                                                                    <div style={{ 
+                                                                        fontSize: '11px', 
+                                                                        color: isDarkMode ? '#e0e0e0' : '#8c8c8c' 
+                                                                    }}>
                                                                         Time remaining
                                                                     </div>
                                                                 </div>
@@ -1522,23 +1531,30 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                         </div>
                                                         {totpCode !== 'ERROR' && (
                                                             <div style={{
-                                                                height: 4,
-                                                                background: '#e8e8e8',
-                                                                borderRadius: 2,
-                                                                overflow: 'hidden'
+                                                                height: 8,
+                                                                background: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#e8e8e8',
+                                                                borderRadius: 4,
+                                                                overflow: 'hidden',
+                                                                boxShadow: isDarkMode ? 'inset 0 2px 4px rgba(0, 0, 0, 0.3)' : 'none'
                                                             }}>
                                                                 <div style={{
                                                                     height: '100%',
-                                                                    background: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a',
+                                                                    background: timeRemaining <= 5 ? 
+                                                                        (isDarkMode ? 'linear-gradient(90deg, #ff6b6b 0%, #ff8787 100%)' : '#ff4d4f') : 
+                                                                        (isDarkMode ? 'linear-gradient(90deg, #90ee90 0%, #98fb98 100%)' : '#52c41a'),
                                                                     width: `${(timeRemaining / 30) * 100}%`,
-                                                                    transition: 'width 0.1s linear, background 0.3s ease'
+                                                                    transition: 'width 0.1s linear, background 0.3s ease',
+                                                                    boxShadow: isDarkMode ? (timeRemaining <= 5 ? '0 0 10px rgba(255, 107, 107, 0.8)' : '0 0 10px rgba(144, 238, 144, 0.8)') : 'none'
                                                                 }} />
                                                             </div>
                                                         )}
                                                     </div>
                                                 )}
 
-                                                <div style={{ fontSize: 11, color: 'rgba(0, 0, 0, 0.45)' }}>
+                                                <div style={{ 
+                                                    fontSize: 11, 
+                                                    color: isDarkMode ? '#98989d' : 'rgba(0, 0, 0, 0.45)' 
+                                                }}>
                                                     Use <code>_TOTP_CODE</code> in any URL, header, or body field
                                                 </div>
 
@@ -1702,7 +1718,11 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 Add Variable
                                             </Button>
                                         </Form.Item>
-                                        <div style={{ marginTop: 8, fontSize: 11, color: 'rgba(0, 0, 0, 0.45)' }}>
+                                        <div style={{ 
+                                            marginTop: 8, 
+                                            fontSize: 11, 
+                                            color: isDarkMode ? '#98989d' : 'rgba(0, 0, 0, 0.45)' 
+                                        }}>
                                             Use variables like <code>_VARIABLE_NAME</code> in URL, headers, query params, or body
                                         </div>
                                     </>
