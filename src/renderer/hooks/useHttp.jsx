@@ -149,12 +149,51 @@ export function useHttp() {
                 if (variable && variable.key && variable.value !== undefined) {
                     // Use regular expression with global flag for reliable replacement
                     const regex = new RegExp(variable.key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
+                    const before = result;
                     result = result.replace(regex, variable.value);
+                    
+                    // Debug logging for variable substitution
+                    if (before !== result) {
+                        log.debug(`Variable substitution: ${variable.key} -> ${variable.value.substring(0, 20)}...`);
+                    }
                 }
             });
         }
 
         return result;
+    }, []);
+
+    /**
+     * Convert colon-separated body format to URL-encoded format
+     */
+    const convertBodyToUrlEncoded = useCallback((bodyContent) => {
+        const formData = {};
+        const lines = bodyContent.split('\n');
+        
+        log.debug(`Converting body from colon-separated to URL-encoded. Input:`, bodyContent);
+        
+        lines.forEach(line => {
+            line = line.trim();
+            if (line === '') return;
+            
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > -1) {
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                if (key) {
+                    formData[key] = value;
+                    log.debug(`Parsed form field: ${key} = ${value.substring(0, 50)}...`);
+                }
+            }
+        });
+        
+        // Convert to URL-encoded format
+        const encoded = Object.entries(formData)
+            .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+            .join('&');
+        
+        log.debug(`Converted form data to URL-encoded format with ${Object.keys(formData).length} fields. Output:`, encoded);
+        return encoded;
     }, []);
 
     /**
@@ -260,7 +299,14 @@ export function useHttp() {
                     if (typeof bodyContent === 'string') {
                         // Apply variable substitution to body content
                         bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                        
+                        // Convert colon-separated format to URL-encoded format for form data
+                        if (requestOptions.contentType === 'application/x-www-form-urlencoded' && bodyContent.includes(':')) {
+                            bodyContent = convertBodyToUrlEncoded(bodyContent);
+                        }
+                        
                         formattedOptions.body = bodyContent;
+                        log.debug(`Request body after substitution:`, bodyContent.substring(0, 200) + '...');
                     } else {
                         formattedOptions.body = requestOptions.body;
                     }
@@ -277,6 +323,9 @@ export function useHttp() {
 
                 // Log the request being made (without sensitive data)
                 log.debug(`Making HTTP request: ${method} ${url}`);
+                log.debug(`Request headers being sent:`, formattedOptions.headers);
+                log.debug(`Request content type:`, formattedOptions.contentType);
+                log.debug(`Request body being sent:`, formattedOptions.body ? formattedOptions.body.substring(0, 200) + '...' : 'No body');
 
                 // Make request with retry tracking
                 const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
@@ -353,10 +402,13 @@ export function useHttp() {
 
         // Start the request process with retry capability
         return attemptRequest();
-    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage]);
+    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage, convertBodyToUrlEncoded]);
 
     /**
      * Test HTTP request (used for UI testing)
+     * Note: This method intentionally duplicates some logic from the main request method
+     * because it has different return behavior (raw JSON string vs parsed object)
+     * and doesn't include retry logic for UI testing
      */
     const testRequest = useCallback(async (url, method, requestOptions, jsonFilter, sourceId = null) => {
         try {
@@ -442,9 +494,21 @@ export function useHttp() {
             if (requestOptions.body) {
                 let bodyContent = requestOptions.body;
                 if (typeof bodyContent === 'string') {
+                    log.debug(`Test request body before substitution:`, bodyContent);
+                    
                     // Apply variable substitution to body content
                     bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                    
+                    log.debug(`Test request body after variable substitution:`, bodyContent);
+                    
+                    // Convert colon-separated format to URL-encoded format for form data
+                    if (requestOptions.contentType === 'application/x-www-form-urlencoded' && bodyContent.includes(':')) {
+                        log.debug(`Converting body format for content type:`, requestOptions.contentType);
+                        bodyContent = convertBodyToUrlEncoded(bodyContent);
+                    }
+                    
                     formattedOptions.body = bodyContent;
+                    log.debug(`Test request body final:`, bodyContent);
                 } else {
                     formattedOptions.body = requestOptions.body;
                 }
@@ -458,6 +522,12 @@ export function useHttp() {
 
             // Make sure we don't include the TOTP secret in the actual request
             delete formattedOptions.totpSecret;
+
+            log.debug(`Test request URL:`, url);
+            log.debug(`Test request method:`, method);
+            log.debug(`Test request headers being sent:`, formattedOptions.headers);
+            log.debug(`Test request content type:`, formattedOptions.contentType);
+            log.debug(`Test request body being sent:`, formattedOptions.body);
 
             const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
 
@@ -501,7 +571,7 @@ export function useHttp() {
             log.error("Test request error:", error);
             throw error;
         }
-    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage]);
+    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage, convertBodyToUrlEncoded]);
 
     return {
         request,
