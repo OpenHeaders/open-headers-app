@@ -15,8 +15,93 @@ const timeManager = require('./services/TimeManager');
 // Initialize standardized logger
 const { createLogger } = require('./utils/mainLogger');
 const log = createLogger('Main');
+
+// Check if this is development mode or multiple instances are allowed
+const isDevelopment = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+const allowMultipleInstances = process.argv.includes('--allow-multiple-instances');
+
+// SINGLETON INSTANCE LOCK - Prevent multiple instances (except in development)
+let gotTheLock = true;
+
+if (!isDevelopment && !allowMultipleInstances) {
+    gotTheLock = app.requestSingleInstanceLock();
+    
+    if (!gotTheLock) {
+        // Another instance is already running, quit this one
+        log.info('Another instance is already running, quitting this instance');
+        app.quit();
+        // Exit the process since we can't use return at module level
+        process.exit(0);
+    }
+} else {
+    log.info('Singleton lock bypassed:', isDevelopment ? 'development mode' : 'multiple instances allowed');
+}
+
+// Handle second instance attempts
+app.on('second-instance', (event, commandLine, workingDirectory) => {
+    log.info('Second instance attempted to start with args:', commandLine);
+    
+    // If we have a window, focus it
+    if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+            mainWindow.restore();
+        }
+        if (!mainWindow.isVisible()) {
+            mainWindow.show();
+        }
+        mainWindow.focus();
+        
+        // Flash the window to get user attention
+        if (process.platform === 'win32') {
+            mainWindow.flashFrame(true);
+            // Stop flashing after a short delay
+            setTimeout(() => {
+                if (mainWindow) mainWindow.flashFrame(false);
+            }, 1000);
+        }
+        
+        log.info('Brought existing instance to foreground');
+    }
+});
+
 log.info('App starting with args:', process.argv);
 log.info('App executable path:', process.execPath);
+log.info('Got singleton lock, proceeding as primary instance');
+
+// Handle uncaught exceptions and unhandled rejections to ensure lock cleanup
+process.on('uncaughtException', (error) => {
+    log.error('Uncaught exception:', error);
+    
+    // Try to release the singleton lock before crashing
+    if (gotTheLock && !isDevelopment) {
+        try {
+            app.releaseSingleInstanceLock();
+            log.info('Released singleton lock after uncaught exception');
+        } catch (e) {
+            log.error('Failed to release singleton lock:', e);
+        }
+    }
+    
+    // Exit with error code
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    log.error('Unhandled rejection at:', promise, 'reason:', reason);
+    
+    // Try to release the singleton lock before crashing
+    if (gotTheLock && !isDevelopment) {
+        try {
+            app.releaseSingleInstanceLock();
+            log.info('Released singleton lock after unhandled rejection');
+        } catch (e) {
+            log.error('Failed to release singleton lock:', e);
+        }
+    }
+    
+    // Exit with error code
+    process.exit(1);
+});
 
 // Globals
 let mainWindow;
@@ -1002,6 +1087,12 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
     isQuitting = true;
 
+    // Release singleton lock if we have it
+    if (gotTheLock && !isDevelopment) {
+        log.info('Releasing singleton lock on quit');
+        app.releaseSingleInstanceLock();
+    }
+
     // Clean up file watchers
     for (const watcher of fileWatchers.values()) {
         watcher.close();
@@ -1195,16 +1286,36 @@ function setupIPC() {
         global.updateDownloaded = false; // Reset the state
 
         try {
-            // Signal that we want to restart after update
-            autoUpdater.autoInstallOnAppQuit = true;
+            // Release the singleton lock before updating
+            if (gotTheLock && !isDevelopment) {
+                log.info('Releasing singleton lock for update...');
+                app.releaseSingleInstanceLock();
+                
+                // Give OS time to fully release the lock
+                // This helps prevent race conditions on slower systems
+                setTimeout(() => {
+                    // Signal that we want to restart after update
+                    autoUpdater.autoInstallOnAppQuit = true;
 
-            // Force quit with updated options
-            autoUpdater.quitAndInstall(false, true);
+                    // Force quit with updated options
+                    autoUpdater.quitAndInstall(false, true);
+                }, 100);
+            } else {
+                // No lock to release, proceed immediately
+                autoUpdater.autoInstallOnAppQuit = true;
+                autoUpdater.quitAndInstall(false, true);
+            }
 
             // Backup approach: If autoUpdater's quitAndInstall doesn't work,
             // force the app to quit after a short delay
             setTimeout(() => {
                 log.info('Forcing application quit for update...');
+                
+                // Make absolutely sure we release the lock
+                if (gotTheLock && !isDevelopment) {
+                    app.releaseSingleInstanceLock();
+                }
+                
                 app.exit(0);
             }, 1000);
         } catch (error) {
@@ -2017,4 +2128,4 @@ async function handleSetAutoLaunch(_, enable) {
     }
 }
 
-module.exports = { app, mainWindow };
+module.exports = { app, getMainWindow: () => mainWindow };

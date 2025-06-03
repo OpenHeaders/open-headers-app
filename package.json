@@ -1,7 +1,7 @@
 {
   "name": "open-headers",
-  "version": "2.11.0",
-  "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
+  "version": "2.12.0",
+  "description": "Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
   "main": "dist-webpack/main.js",
   "scripts": {
     "start": "electron .",
@@ -134,7 +134,7 @@
         "Categories": "Utility;Development;Network"
       },
       "synopsis": "Manage dynamic sources from files, environment variables, and HTTP endpoints",
-      "description": "Companion app for the Open Headers browser extension that manages dynamic sources from files, environment variables, and HTTP endpoints."
+      "description": "Open Headers - companion app for browser extension that manages dynamic sources from files, environment variables, and HTTP endpoints."
     },
     "deb": {
       "depends": [
