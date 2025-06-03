@@ -60,17 +60,35 @@ class NetworkMonitor extends EventEmitter {
     }
 
     createPlatformMonitor() {
-        const PlatformMonitors = require('./PlatformMonitors');
+        try {
+            const PlatformMonitors = require('./PlatformMonitors');
 
-        switch (process.platform) {
-            case 'darwin':
-                return new PlatformMonitors.MacOSNetworkMonitor();
-            case 'win32':
-                return new PlatformMonitors.WindowsNetworkMonitor();
-            case 'linux':
-                return new PlatformMonitors.LinuxNetworkMonitor();
-            default:
-                return new PlatformMonitors.GenericNetworkMonitor();
+            let monitor = null;
+            switch (process.platform) {
+                case 'darwin':
+                    monitor = new PlatformMonitors.MacOSNetworkMonitor();
+                    break;
+                case 'win32':
+                    monitor = new PlatformMonitors.WindowsNetworkMonitor();
+                    break;
+                case 'linux':
+                    monitor = new PlatformMonitors.LinuxNetworkMonitor();
+                    break;
+                default:
+                    monitor = new PlatformMonitors.GenericNetworkMonitor();
+                    break;
+            }
+            
+            // Verify the monitor has required methods
+            if (monitor && typeof monitor.start === 'function') {
+                return monitor;
+            } else {
+                log.error('Platform monitor missing required methods');
+                return null;
+            }
+        } catch (error) {
+            log.error('Failed to create platform monitor:', error);
+            return null;
         }
     }
 
@@ -83,16 +101,22 @@ class NetworkMonitor extends EventEmitter {
 
         // Start platform-specific monitoring
         if (this.platformMonitor) {
-            this.platformMonitor.on('network-change', (data) => {
-                log.debug('Platform-specific network change detected:', data);
-                this.handlePlatformNetworkChange(data);
-            });
+            try {
+                this.platformMonitor.on('network-change', (data) => {
+                    log.debug('Platform-specific network change detected:', data);
+                    this.handlePlatformNetworkChange(data);
+                });
 
-            this.platformMonitor.on('vpn-state', (data) => {
-                this.handleVPNStateChange(data);
-            });
+                this.platformMonitor.on('vpn-state', (data) => {
+                    this.handleVPNStateChange(data);
+                });
 
-            this.platformMonitor.start();
+                this.platformMonitor.start();
+            } catch (error) {
+                log.error('Error setting up platform monitor:', error);
+                // Continue without platform-specific monitoring
+                this.platformMonitor = null;
+            }
         }
 
         log.info('Monitoring started');

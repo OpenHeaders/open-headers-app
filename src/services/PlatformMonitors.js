@@ -381,47 +381,41 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
 
         const checkVPN = async () => {
             try {
-                // First check using scutil for native VPNs
-                const output = await this.executeCommand('scutil', ['--nc', 'list']);
-                const lines = output.split('\n');
-
+                // Windows VPN detection using PowerShell
+                const vpnCmd = `Get-VpnConnection | Where-Object {$_.ConnectionStatus -eq 'Connected'} | Select-Object -First 1 | ConvertTo-Json -Compress`;
+                const output = await this.executeCommand('powershell', ['-Command', vpnCmd]);
+                
                 let activeVPN = false;
                 let vpnName = null;
 
-                for (const line of lines) {
-                    if (line.includes('(Connected)')) {
-                        activeVPN = true;
-                        // Extract VPN name
-                        const match = line.match(/"([^"]+)"/);
-                        if (match) {
-                            vpnName = match[1];
+                if (output && output.trim() && output.trim() !== 'null') {
+                    try {
+                        const vpnInfo = JSON.parse(output);
+                        if (vpnInfo && vpnInfo.ConnectionStatus === 'Connected') {
+                            activeVPN = true;
+                            vpnName = vpnInfo.Name;
                         }
-                        break;
+                    } catch (parseError) {
+                        // JSON parse failed, ignore
                     }
                 }
 
-                // If no native VPN found, check interfaces for third-party VPNs
+                // Also check for third-party VPN adapters
                 if (!activeVPN) {
-                    // Check for active utun interfaces (used by NordVPN, ExpressVPN, etc.)
-                    const ifconfigOutput = await this.executeCommand('ifconfig');
-
-                    // Look for utun interfaces with inet addresses
-                    const utunMatches = ifconfigOutput.match(/utun\d+:.*\n(?:\s+.*\n)*?\s+inet\s+\d+\.\d+\.\d+\.\d+/g);
-
-                    if (utunMatches && utunMatches.length > 0) {
-                        activeVPN = true;
-                        // Extract the interface name
-                        const interfaceMatch = utunMatches[0].match(/^(utun\d+):/);
-                        if (interfaceMatch) {
-                            vpnName = interfaceMatch[1];
+                    const adapterCmd = `Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and ($_.InterfaceDescription -like '*VPN*' -or $_.InterfaceDescription -like '*TAP*' -or $_.Name -like '*VPN*')} | Select-Object -First 1 | ConvertTo-Json -Compress`;
+                    const adapterOutput = await this.executeCommand('powershell', ['-Command', adapterCmd]);
+                    
+                    if (adapterOutput && adapterOutput.trim() && adapterOutput.trim() !== 'null') {
+                        try {
+                            const adapterInfo = JSON.parse(adapterOutput);
+                            if (adapterInfo) {
+                                activeVPN = true;
+                                vpnName = adapterInfo.Name || adapterInfo.InterfaceDescription;
+                            }
+                        } catch (parseError) {
+                            // JSON parse failed, ignore
                         }
                     }
-                }
-
-                // Also check for IKEv2 VPNs
-                const ikev2Output = await this.executeCommand('scutil', ['--proxy']);
-                if (ikev2Output.includes('ProxyAutoConfigEnable : 1')) {
-                    activeVPN = true;
                 }
 
                 if (lastVPNState !== activeVPN || lastVPNInterface !== vpnName) {
@@ -435,8 +429,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                     lastVPNInterface = vpnName;
                 }
             } catch (e) {
-                // scutil might not be available or might fail
-                this.checkVPNInterfaces();
+                // PowerShell command failed, VPN detection not available
+                this.log.debug('VPN detection failed:', e.message);
             }
         };
 
