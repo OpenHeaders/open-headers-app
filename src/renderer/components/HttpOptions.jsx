@@ -1009,12 +1009,20 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                 startTestingWithTotp(effectiveSourceId);
             }
 
+            // Get content type from form
+            const formContentType = form.getFieldValue(['requestOptions', 'contentType']);
+            const contentType = formContentType || values.requestOptions?.contentType || 'application/json';
+            
+            log.debug("[HttpOptions] Content type from form:", formContentType);
+            log.debug("[HttpOptions] Content type from values:", values.requestOptions?.contentType);
+            log.debug("[HttpOptions] Final content type:", contentType);
+            
             // Prepare request options with defaults to ensure complete structure
             const requestOptions = {
                 queryParams: {},
-                headers: {},
+                headers: [],  // Keep as array initially for variable substitution
                 body: null,
-                contentType: values.requestOptions?.contentType || 'application/json',
+                contentType: contentType,
                 // CRITICAL: Include the variables array explicitly
                 variables: values.requestOptions.variables || []
             };
@@ -1050,28 +1058,20 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
             }
             log.debug("[HttpOptions] Query params after formatting:", requestOptions.queryParams);
 
-            // Process headers from array format to object
+            // CHANGED: Keep headers as array format for variable substitution
             log.debug("[HttpOptions] Full requestOptions from form:", JSON.stringify(values.requestOptions || {}, null, 2));
             log.debug("[HttpOptions] Headers from form:", values.requestOptions?.headers);
 
-            // Make sure to explicitly preserve headers in the request options
+            // CHANGED: Pass headers as array to preserve variable references
             if (Array.isArray(formHeaders) && formHeaders.length > 0) {
-                log.debug("[HttpOptions] Explicitly using headers from form field");
-                formHeaders.forEach(header => {
-                    if (header && header.key) {
-                        requestOptions.headers[header.key] = header.value || '';
-                        log.debug(`[HttpOptions] Added header from form: ${header.key} = ${header.value || ''}`);
-                    }
-                });
+                log.debug("[HttpOptions] Explicitly using headers from form field as array");
+                requestOptions.headers = JSON.parse(JSON.stringify(formHeaders)); // Deep copy
+                log.debug(`[HttpOptions] Added ${requestOptions.headers.length} headers as array`);
             } else if (values.requestOptions?.headers && Array.isArray(values.requestOptions.headers)) {
-                values.requestOptions.headers.forEach(header => {
-                    if (header && header.key) {
-                        requestOptions.headers[header.key] = header.value || '';
-                        log.debug(`[HttpOptions] Added header: ${header.key} = ${header.value || ''}`);
-                    }
-                });
+                requestOptions.headers = JSON.parse(JSON.stringify(values.requestOptions.headers));
+                log.debug(`[HttpOptions] Added headers from values as array`);
             }
-            log.debug("[HttpOptions] Headers after formatting:", requestOptions.headers);
+            log.debug("[HttpOptions] Headers after formatting (array):", requestOptions.headers);
 
             // CRITICAL FIX: Make sure variables are explicitly included in the requestOptions
             if (Array.isArray(formVariables) && formVariables.length > 0) {
@@ -1083,9 +1083,18 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
 
             // Add body if applicable
             if (['POST', 'PUT', 'PATCH'].includes(values.sourceMethod)) {
-                const requestBody = values.requestOptions?.body || null;
+                // Get body from form - it might be at the top level or in requestOptions
+                const formBody = form.getFieldValue(['requestOptions', 'body']);
+                const requestBody = formBody || values.requestOptions?.body || null;
+                
+                log.debug("[HttpOptions] Body from form field:", formBody);
+                log.debug("[HttpOptions] Body from values:", values.requestOptions?.body);
+                
                 if (requestBody) {
                     requestOptions.body = requestBody;
+                    log.debug("[HttpOptions] Added body to request options");
+                } else {
+                    log.debug("[HttpOptions] No body found for request");
                 }
             }
 
@@ -1117,7 +1126,7 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
             }
 
             log.debug("[HttpOptions] Final JSON Filter for test:", jsonFilter);
-            log.debug("[HttpOptions] Making test request with headers:", requestOptions.headers);
+            log.debug("[HttpOptions] Making test request with headers (array):", requestOptions.headers);
             log.debug("[HttpOptions] Making test request with query params:", requestOptions.queryParams);
             log.debug("[HttpOptions] Making test request with variables:", requestOptions.variables);
 
