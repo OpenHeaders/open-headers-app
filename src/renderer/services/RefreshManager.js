@@ -76,15 +76,20 @@ class RefreshManager {
    * Handle network state sync from main process
    */
   async handleNetworkStateSync(event) {
-    // Only log significant state changes
-    if (event.state && (!this.lastNetworkState || 
-        this.lastNetworkState.isOnline !== event.state.isOnline ||
-        this.lastNetworkState.networkQuality !== event.state.networkQuality)) {
-      log.debug('Network state updated', {
+    // Always log network state changes for debugging
+    log.info('Network state sync received', {
+      event: event,
+      state: event.state ? {
         online: event.state.isOnline,
-        quality: event.state.networkQuality
-      });
-    }
+        quality: event.state.networkQuality,
+        vpnActive: event.state.vpnActive,
+        confidence: event.state.confidence
+      } : null,
+      previousState: this.lastNetworkState ? {
+        online: this.lastNetworkState.isOnline,
+        quality: this.lastNetworkState.networkQuality
+      } : null
+    });
     
     this.lastNetworkState = event.state;
     

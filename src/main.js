@@ -146,6 +146,7 @@ async function initializeNetworkMonitor() {
     const initialState = await networkMonitor.initialize();
 
     // Update centralized network state
+    // Force immediate update on initialization
     networkStateManager.updateState({
         isOnline: initialState.isOnline,
         networkQuality: initialState.networkQuality,
@@ -190,7 +191,9 @@ async function initializeNetworkMonitor() {
             
             // Update centralized state
             log.info('Updating NetworkStateManager with new state...');
-            networkStateManager.updateState(event.state);
+            // Force immediate update on Windows to avoid debouncing issues
+            const immediate = process.platform === 'win32';
+            networkStateManager.updateState(event.state, immediate);
         } else {
             log.warn('Network change event received without state object');
         }
@@ -212,9 +215,11 @@ async function initializeNetworkMonitor() {
         });
 
         log.info('Updating NetworkStateManager with status change...');
+        // Force immediate update on Windows
+        const immediate = process.platform === 'win32';
         networkStateManager.updateState({
             isOnline: event.isOnline
-        });
+        }, immediate);
 
         // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {

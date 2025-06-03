@@ -215,6 +215,22 @@ class NetworkMonitor extends EventEmitter {
         let significantChange = false;
         let likelyOnline = false;
         let vpnDetected = false;
+        
+        // Check for critical interface removals (Windows specific)
+        let criticalInterfaceRemoved = false;
+        let hasNonVPNInterface = false;
+        
+        if (process.platform === 'win32') {
+            for (const change of changes) {
+                if (change.type === 'removed' && 
+                    (change.interface.toLowerCase().includes('ethernet') || 
+                     change.interface.toLowerCase().includes('wi-fi') ||
+                     change.interface.toLowerCase().includes('wireless'))) {
+                    criticalInterfaceRemoved = true;
+                    log.info(`Critical network interface removed on Windows: ${change.interface}`);
+                }
+            }
+        }
 
         // Check if we have any active non-internal interfaces
         for (const [name, addresses] of Object.entries(currentInterfaces)) {
@@ -223,18 +239,29 @@ class NetworkMonitor extends EventEmitter {
             );
 
             if (hasActiveIPv4) {
-                likelyOnline = true;
-
-                if (name.toLowerCase().includes('vpn') ||
+                const isVPN = name.toLowerCase().includes('vpn') ||
+                    name.toLowerCase().includes('nordlynx') ||
                     name.startsWith('utun') ||
                     name.startsWith('tun') ||
                     name.startsWith('tap') ||
                     name.startsWith('ppp') ||
-                    name.includes('ipsec')) {
+                    name.includes('ipsec');
+                
+                if (isVPN) {
                     vpnDetected = true;
                     log.debug(`VPN interface detected: ${name}`);
+                } else {
+                    hasNonVPNInterface = true;
                 }
             }
+        }
+        
+        // On Windows, if a critical interface was removed and only VPN remains, consider offline
+        if (process.platform === 'win32' && criticalInterfaceRemoved && !hasNonVPNInterface) {
+            likelyOnline = false;
+            log.info('Critical interface removed and only VPN remains - considering offline');
+        } else if (hasNonVPNInterface || (vpnDetected && !criticalInterfaceRemoved)) {
+            likelyOnline = true;
         }
 
         // Check changes for VPN interfaces being added/removed
@@ -278,6 +305,12 @@ class NetworkMonitor extends EventEmitter {
             }
         }
 
+        // Force offline if critical interface was removed on Windows
+        if (criticalInterfaceRemoved) {
+            likelyOnline = false;
+            significantChange = true;
+        }
+
         return {
             significantChange,
             likelyOnline,
@@ -291,17 +324,26 @@ class NetworkMonitor extends EventEmitter {
     async performComprehensiveCheck() {
         log.debug('Performing comprehensive network check...');
 
-        const checks = await Promise.allSettled([
-            this.checkBasicConnectivity(),
-            this.checkDNSResolution(),
-            this.checkMultipleEndpoints()
-        ]);
+        // Add a global timeout for the entire check
+        const timeoutPromise = new Promise((resolve) => {
+            setTimeout(() => {
+                log.warn('Comprehensive network check timed out');
+                resolve({
+                    basic: { success: false, reason: 'timeout' },
+                    dns: { success: false, reason: 'timeout' },
+                    endpoints: { success: false, reason: 'timeout' }
+                });
+            }, process.platform === 'win32' ? 5000 : 10000); // 5s on Windows, 10s elsewhere
+        });
 
-        const results = {
-            basic: checks[0].status === 'fulfilled' ? checks[0].value : { success: false },
-            dns: checks[1].status === 'fulfilled' ? checks[1].value : { success: false },
-            endpoints: checks[2].status === 'fulfilled' ? checks[2].value : { success: false }
-        };
+        const checksPromise = Promise.all([
+            this.checkBasicConnectivity().catch(e => ({ success: false, error: e.message })),
+            this.checkDNSResolution().catch(e => ({ success: false, error: e.message })),
+            this.checkMultipleEndpoints().catch(e => ({ success: false, error: e.message }))
+        ]).then(([basic, dns, endpoints]) => ({ basic, dns, endpoints }));
+
+        // Race between checks and timeout
+        const results = await Promise.race([checksPromise, timeoutPromise]);
 
         // Log comprehensive check results
         log.info('Comprehensive network check complete:', {
@@ -346,27 +388,33 @@ class NetworkMonitor extends EventEmitter {
     async checkBasicConnectivity() {
         // Use Electron's net module for basic connectivity
         return new Promise((resolve) => {
+            const timeout = process.platform === 'win32' ? 2000 : 3000;
             const request = net.request({
                 method: 'HEAD',
                 url: 'https://www.google.com/generate_204',
-                timeout: 3000
+                timeout: timeout
             });
 
             let resolved = false;
-            const handleResponse = (success) => {
+            const handleResponse = (success, reason) => {
                 if (!resolved) {
                     resolved = true;
-                    resolve({ success });
+                    resolve({ success, reason });
                 }
             };
 
             request.on('response', () => handleResponse(true));
             request.on('error', (error) => {
                 log.debug('Basic connectivity check failed:', error.message);
-                handleResponse(false);
+                handleResponse(false, error.message);
+            });
+            
+            request.on('timeout', () => {
+                log.debug('Basic connectivity check timed out');
+                handleResponse(false, 'timeout');
             });
 
-            setTimeout(() => handleResponse(false), 3500);
+            setTimeout(() => handleResponse(false, 'timeout'), timeout + 500);
             request.end();
         });
     }
@@ -412,13 +460,15 @@ class NetworkMonitor extends EventEmitter {
     }
 
     async checkMultipleEndpoints() {
+        // Use shorter timeouts on Windows for faster failure detection
+        const baseTimeout = process.platform === 'win32' ? 1500 : 3000;
         const endpoints = [
-            { url: 'https://www.google.com/generate_204', timeout: 3000, weight: 1.0 },
-            { url: 'https://connectivity-check.ubuntu.com', timeout: 3000, weight: 0.8 },
-            { url: 'http://captive.apple.com/hotspot-detect.html', timeout: 3000, weight: 0.8 },
-            { url: 'http://www.msftconnecttest.com/connecttest.txt', timeout: 3000, weight: 0.8 },
-            { url: 'https://1.1.1.1', timeout: 2000, weight: 0.6 },
-            { url: 'https://8.8.8.8', timeout: 2000, weight: 0.6 }
+            { url: 'https://www.google.com/generate_204', timeout: baseTimeout, weight: 1.0 },
+            { url: 'https://connectivity-check.ubuntu.com', timeout: baseTimeout, weight: 0.8 },
+            { url: 'http://captive.apple.com/hotspot-detect.html', timeout: baseTimeout, weight: 0.8 },
+            { url: 'http://www.msftconnecttest.com/connecttest.txt', timeout: baseTimeout, weight: 0.8 },
+            { url: 'https://1.1.1.1', timeout: baseTimeout / 2, weight: 0.6 },
+            { url: 'https://8.8.8.8', timeout: baseTimeout / 2, weight: 0.6 }
         ];
 
         const checks = endpoints.map(endpoint => this.checkEndpoint(endpoint));
@@ -583,6 +633,28 @@ class NetworkMonitor extends EventEmitter {
             changes: data.changes?.length || 0,
             analysis: data.analysis
         });
+
+        // If critical interface was removed on Windows and likely offline, immediately set offline
+        if (process.platform === 'win32' && data.analysis?.criticalInterfaceRemoved && !data.analysis?.likelyOnline) {
+            log.info('Critical interface removed on Windows and no other connectivity, immediately setting offline state');
+            const wasOnline = this.state.isOnline;
+            this.state.isOnline = false;
+            this.state.networkQuality = 'offline';
+            this.state.confidence = 0;
+            
+            // Emit immediate status change
+            this.emit('status-change', {
+                wasOnline,
+                isOnline: false,
+                state: { ...this.state }
+            });
+            
+            // Also emit network-change event
+            this.emit('network-change', {
+                ...data,
+                state: { ...this.state }
+            });
+        }
 
         // Debounce rapid changes
         if (this.changeDebounceTimer) {
