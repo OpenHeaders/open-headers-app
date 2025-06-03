@@ -103,6 +103,7 @@ const AppComponent = () => {
         } else {
             log.debug('Failed to add source');
         }
+        return success;
     };
 
     // Handle export

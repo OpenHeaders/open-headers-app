@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Form, Input, Select, Button, Space, Tabs, Row, Col, Checkbox } from 'antd';
+import { Modal, Form, Input, Select, Button, Space, Tabs, Row, Col, Checkbox, Tooltip } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
 import HttpOptions from './HttpOptions';
 import { showMessage } from '../utils/messageUtil';
 import timeManager from '../services/TimeManager';
+import { useTotpState } from '../contexts/TotpContext';
 const { createLogger } = require('../utils/logger');
 const log = createLogger('EditSourceModal');
 
@@ -17,6 +18,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     const [form] = Form.useForm();
     const [refreshNow, setRefreshNow] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [testing, setTesting] = useState(false);
     const [testResponse, setTestResponse] = useState(null);
     const [totpEnabled, setTotpEnabled] = useState(false);
     const [totpSecret, setTotpSecret] = useState('');
@@ -24,6 +26,14 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     const isMountedRef = useRef(true);
     const isInitializedRef = useRef(false);
     const httpOptionsRef = useRef(null);
+    
+    // Use TOTP context
+    const {
+        canUseTotpSecret,
+        getCooldownSeconds,
+        trackTotpSecret,
+        untrackTotpSecret
+    } = useTotpState();
 
     // Add ref to preserve form state across rerenders
     const formStateRef = useRef({
@@ -204,6 +214,20 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
         }
     };
 
+    // Track TOTP source in context
+    useEffect(() => {
+        if (source && source.sourceId && totpEnabled && totpSecret) {
+            trackTotpSecret(source.sourceId);
+        }
+        
+        // Cleanup on unmount
+        return () => {
+            if (source && source.sourceId) {
+                untrackTotpSecret(source.sourceId);
+            }
+        };
+    }, [source, totpEnabled, totpSecret, trackTotpSecret, untrackTotpSecret]);
+
     // Direct access to HttpOptions to force TOTP state
     const handleGetHttpOptionsRef = (instance) => {
         if (instance && !httpOptionsRef.current) {  // Only set the ref once
@@ -213,12 +237,12 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             if (source?.requestOptions?.totpSecret) {
                 log.debug('Directly setting TOTP in HttpOptions ref');
 
-                // Use a timeout to ensure HttpOptions is fully mounted
+                // Use a timeout to ensure HttpOptions is fully mounted and headers are set first
                 setTimeout(() => {
                     if (instance.forceTotpState) {
                         instance.forceTotpState(true, source.requestOptions.totpSecret);
                     }
-                }, 100);
+                }, 150);  // After headers are set
             }
 
             // If we have headers in the source, make sure they're properly set
@@ -226,23 +250,23 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 const headers = source.requestOptions.headers;
                 log.debug('Source has headers:', headers);
 
-                // Use a timeout to ensure HttpOptions is fully mounted
+                // Set headers first with shorter timeout
                 setTimeout(() => {
                     if (instance.forceHeadersState) {
                         instance.forceHeadersState(headers);
                     }
-                }, 200);  // Slightly longer timeout than the other force* calls
+                }, 50);  // Set headers first
             }
 
             // If we have JSON filter data, make sure it's set correctly in the HttpOptions
             if (source?.jsonFilter?.enabled && source?.jsonFilter?.path) {
 
-                // Use a timeout to ensure HttpOptions is fully mounted
+                // Use a timeout to ensure HttpOptions is fully mounted and after other settings
                 setTimeout(() => {
                     if (instance.forceJsonFilterState) {
                         instance.forceJsonFilterState(true, source.jsonFilter.path);
                     }
-                }, 150);
+                }, 200);  // After TOTP is set
             }
         }
     };
@@ -250,6 +274,13 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
     // Handle form submission
     const handleSubmit = async () => {
         try {
+            // Check TOTP cooldown if refresh is enabled
+            if (refreshNow && totpEnabled && totpSecret && source && source.sourceId && !canUseTotpSecret(source.sourceId)) {
+                const cooldownSeconds = getCooldownSeconds(source.sourceId);
+                showMessage('warning', `TOTP code was recently used. Please wait ${cooldownSeconds} seconds before saving with refresh enabled, or uncheck "Refresh immediately after saving".`);
+                return;
+            }
+
             // First manually check for JSON filter path
             const jsonFilter = form.getFieldValue('jsonFilter');
             if (jsonFilter?.enabled === true && !jsonFilter?.path) {
@@ -309,8 +340,11 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 }
 
 
-                // Store whether we should refresh now
-                const shouldRefreshNow = refreshNow;
+                // Determine if we should refresh after save:
+                // - Always refresh if auto-refresh is disabled
+                // - Respect checkbox value if auto-refresh is enabled
+                const autoRefreshEnabled = values.refreshOptions?.enabled || false;
+                const shouldRefreshNow = !autoRefreshEnabled || refreshNow;
 
                 // Prepare source data for update - preserve originalResponse if available
                 const sourceData = {
@@ -549,26 +583,40 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
             onCancel={handleModalCancel}
             width={800}
             footer={[
-                <Button key="cancel" onClick={handleCustomCancel} disabled={saving || refreshingSourceId === source.sourceId}>
-                    Cancel
-                </Button>,
-                <Button
-                    key="save"
-                    type="primary"
-                    onClick={handleSubmit}
-                    loading={saving || refreshingSourceId === source.sourceId}
+                <Tooltip 
+                    title={testing ? "Please wait for the test request to complete" : (saving || refreshingSourceId === source.sourceId) ? "Please wait for the current operation to complete" : ""}
+                    key="cancel-tooltip"
                 >
-                    {saving
-                        ? 'Saving...'
-                        : (refreshingSourceId === source.sourceId)
-                            ? (refreshNow ? 'Refreshing...' : 'Saving...')
-                            : 'Save'}
-                </Button>
+                    <Button 
+                        key="cancel" 
+                        onClick={handleCustomCancel} 
+                        disabled={saving || testing || refreshingSourceId === source.sourceId}
+                    >
+                        Cancel
+                    </Button>
+                </Tooltip>,
+                <Tooltip 
+                    title={testing ? "Please wait for the test request to complete" : 
+                           totpEnabled && totpSecret && source && source.sourceId && !canUseTotpSecret(source.sourceId) && refreshNow ? `TOTP cooldown active. Please wait ${getCooldownSeconds(source.sourceId)} seconds.` :
+                           (saving || refreshingSourceId === source.sourceId) ? "Saving changes..." : 
+                           "Save changes and refresh source data"}
+                    key="save-tooltip"
+                >
+                    <Button
+                        key="save"
+                        type="primary"
+                        onClick={handleSubmit}
+                        loading={saving || refreshingSourceId === source.sourceId || (totpEnabled && totpSecret && source && source.sourceId && !canUseTotpSecret(source.sourceId) && refreshNow)}
+                        disabled={testing || (totpEnabled && totpSecret && source && source.sourceId && !canUseTotpSecret(source.sourceId) && refreshNow)}
+                    >
+                        Save
+                    </Button>
+                </Tooltip>
             ]}
             destroyOnClose={false}
-            maskClosable={!saving && !(refreshingSourceId === source.sourceId)}
-            closable={!saving && !(refreshingSourceId === source.sourceId)}
-            keyboard={!saving && !(refreshingSourceId === source.sourceId)}
+            maskClosable={!saving && !testing && !(refreshingSourceId === source.sourceId)}
+            closable={!saving && !testing && !(refreshingSourceId === source.sourceId)}
+            keyboard={!saving && !testing && !(refreshingSourceId === source.sourceId)}
         >
             <Form
                 form={form}
@@ -625,21 +673,36 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                     <HttpOptions
                         ref={handleGetHttpOptionsRef}
                         form={form}
+                        sourceId={source.sourceId}
                         onTestResponse={handleTestResponse}
                         onTotpChange={handleTotpChange}
                         initialTotpEnabled={totpEnabled}
                         initialTotpSecret={totpSecret}
+                        onTestingChange={setTesting}
                     />
                 </Form.Item>
 
-                <Checkbox
-                    checked={refreshNow}
-                    onChange={handleRefreshNowChange}
-                    style={{ marginTop: 16 }}
-                    disabled={saving || refreshingSourceId === source.sourceId}
+                {/* Only show checkbox when auto-refresh is enabled */}
+                <Form.Item
+                    noStyle
+                    shouldUpdate={(prevValues, currentValues) => 
+                        prevValues.refreshOptions?.enabled !== currentValues.refreshOptions?.enabled
+                    }
                 >
-                    Refresh immediately after saving
-                </Checkbox>
+                    {({ getFieldValue }) => {
+                        const autoRefreshEnabled = getFieldValue(['refreshOptions', 'enabled']);
+                        return autoRefreshEnabled ? (
+                            <Checkbox
+                                checked={refreshNow}
+                                onChange={handleRefreshNowChange}
+                                style={{ marginTop: 16 }}
+                                disabled={saving || refreshingSourceId === source.sourceId}
+                            >
+                                Refresh immediately after saving
+                            </Checkbox>
+                        ) : null;
+                    }}
+                </Form.Item>
             </Form>
         </Modal>
     );

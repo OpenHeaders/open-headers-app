@@ -304,11 +304,12 @@ export function SourceProvider({ children }) {
                             }
                         }
                         else if (source.sourceType === 'http') {
-                            // Add to RefreshManager directly since it's already initialized
-                            if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
-                                // Clean up any stale timing data before adding
-                                const cleanedSource = cleanupStaleTimingData(initializedSource);
-                                
+                            // Add ALL HTTP sources to RefreshManager, not just auto-refresh enabled ones
+                            // RefreshManager will handle whether to auto-refresh internally
+                            const cleanedSource = cleanupStaleTimingData(initializedSource);
+                            
+                            // For sources with auto-refresh enabled, ensure timing is set
+                            if (cleanedSource.refreshOptions?.enabled && cleanedSource.refreshOptions?.interval > 0) {
                                 // Ensure lastRefresh is set if missing to prevent immediate refresh
                                 if (!cleanedSource.refreshOptions.lastRefresh) {
                                     const now = timeManager.now();
@@ -316,10 +317,10 @@ export function SourceProvider({ children }) {
                                     cleanedSource.refreshOptions.nextRefresh = now + (cleanedSource.refreshOptions.interval * 60 * 1000);
                                     debugLog(`Set initial refresh timing for HTTP source ${validSourceId} on load`);
                                 }
-                                
-                                refreshManager.addSource(cleanedSource);
-                                debugLog(`Added HTTP source ${validSourceId} to RefreshManager`);
                             }
+                            
+                            refreshManager.addSource(cleanedSource);
+                            debugLog(`Added HTTP source ${validSourceId} to RefreshManager`);
                         }
                     }
 
@@ -572,27 +573,27 @@ export function SourceProvider({ children }) {
                         updateSourceContent(sourceId, initialContent, refreshData);
                     }
 
-                    // Add to RefreshManager if refresh is enabled
-                    if (sourceData.refreshOptions?.enabled && sourceData.refreshOptions?.interval > 0) {
-                        // Set lastRefresh to now to prevent immediate refresh
-                        const now = timeManager.now();
-                        const sourceForManager = {
-                            ...newSource,
-                            sourceContent: initialContent,
-                            ...updateData,
-                            refreshOptions: {
-                                ...newSource.refreshOptions,
+                    // Add ALL HTTP sources to RefreshManager, not just auto-refresh enabled ones
+                    const now = timeManager.now();
+                    const sourceForManager = {
+                        ...newSource,
+                        sourceContent: initialContent,
+                        ...updateData,
+                        refreshOptions: {
+                            ...newSource.refreshOptions,
+                            // Set timing only if auto-refresh is enabled
+                            ...(sourceData.refreshOptions?.enabled && sourceData.refreshOptions?.interval > 0 ? {
                                 lastRefresh: now,
                                 nextRefresh: now + (sourceData.refreshOptions.interval * 60 * 1000)
-                            }
-                        };
-
-                        if (refreshManager.isInitialized) {
-                            refreshManager.addSource(sourceForManager);
-                            debugLog(`Added source ${sourceId} to RefreshManager with lastRefresh set to prevent immediate refresh`);
-                        } else {
-                            debugLog(`RefreshManager not initialized when adding source ${sourceId}`);
+                            } : {})
                         }
+                    };
+
+                    if (refreshManager.isInitialized) {
+                        refreshManager.addSource(sourceForManager);
+                        debugLog(`Added HTTP source ${sourceId} to RefreshManager${sourceData.refreshOptions?.enabled ? ' with auto-refresh timing' : ' for manual refresh capability'}`);
+                    } else {
+                        debugLog(`RefreshManager not initialized when adding source ${sourceId}`);
                     }
 
                     return true;
@@ -666,7 +667,17 @@ export function SourceProvider({ children }) {
                 };
 
                 if (refreshManager.isInitialized) {
-                    refreshManager.updateSource(updatedSourceForManager);
+                    // Check if source exists in RefreshManager first
+                    const sourceExists = refreshManager.sources.has(String(sourceData.sourceId));
+                    
+                    if (sourceExists) {
+                        // Update existing source
+                        refreshManager.updateSource(updatedSourceForManager);
+                    } else {
+                        // Source not found, add it to RefreshManager
+                        debugLog(`Source ${sourceData.sourceId} not found in RefreshManager, adding it now`);
+                        refreshManager.addSource(updatedSourceForManager);
+                    }
                 }
             }
 
