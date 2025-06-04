@@ -16,6 +16,7 @@ import SettingsModal from './components/SettingsModal';
 import AboutModal from './components/AboutModal';
 import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
+import NetworkStatus from './components/NetworkStatus';
 import { useSources } from './contexts/SourceContext';
 import { useSettings } from './contexts/SettingsContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -266,9 +267,12 @@ const AppComponent = () => {
                         <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
                         <div className="title-version">
                             <Title level={3}>Open Headers - Dynamic Sources</Title>
-                            {appVersion && (
-                                <Tag color="default" className="version-tag">v{appVersion}</Tag>
-                            )}
+                            <div className="version-info">
+                                {appVersion && (
+                                    <Tag color="default" className="version-tag">v{appVersion}</Tag>
+                                )}
+                                <NetworkStatus />
+                            </div>
                         </div>
                     </div>
 

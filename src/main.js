@@ -87,7 +87,13 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    log.error('Unhandled rejection at:', promise, 'reason:', reason);
+    // Log more details about the rejection
+    log.error('Unhandled rejection details:');
+    log.error('  Reason:', reason);
+    log.error('  Reason type:', typeof reason);
+    log.error('  Reason constructor:', reason?.constructor?.name);
+    log.error('  Promise:', promise);
+    log.error('  Stack trace:', reason?.stack || 'No stack trace available');
     
     // Try to release the singleton lock before crashing
     if (gotTheLock && !isDevelopment) {
@@ -140,6 +146,7 @@ async function initializeNetworkMonitor() {
     const initialState = await networkMonitor.initialize();
 
     // Update centralized network state
+    // Force immediate update on initialization
     networkStateManager.updateState({
         isOnline: initialState.isOnline,
         networkQuality: initialState.networkQuality,
@@ -184,7 +191,9 @@ async function initializeNetworkMonitor() {
             
             // Update centralized state
             log.info('Updating NetworkStateManager with new state...');
-            networkStateManager.updateState(event.state);
+            // Force immediate update on Windows to avoid debouncing issues
+            const immediate = process.platform === 'win32';
+            networkStateManager.updateState(event.state, immediate);
         } else {
             log.warn('Network change event received without state object');
         }
@@ -206,9 +215,11 @@ async function initializeNetworkMonitor() {
         });
 
         log.info('Updating NetworkStateManager with status change...');
+        // Force immediate update on Windows
+        const immediate = process.platform === 'win32';
         networkStateManager.updateState({
             isOnline: event.isOnline
-        });
+        }, immediate);
 
         // Additional legacy event for backward compatibility
         BrowserWindow.getAllWindows().forEach(window => {
@@ -953,13 +964,23 @@ function createTray() {
 function initializeWebSocket() {
     log.info('Initializing WebSocket service with both WS and WSS support...');
 
-    // Initialize with both WS and WSS support
-    webSocketService.initialize({
-        wsPort: 59210,   // Regular WebSocket port
-        wssPort: 59211   // Secure WebSocket port for Firefox
-    });
-
-    log.info('WebSocket services initialized on ports 59210 (WS) and 59211 (WSS)');
+    try {
+        // Initialize with both WS and WSS support
+        const result = webSocketService.initialize({
+            wsPort: 59210,   // Regular WebSocket port
+            wssPort: 59211   // Secure WebSocket port for Firefox
+        });
+        
+        if (result) {
+            log.info('WebSocket services initialized on ports 59210 (WS) and 59211 (WSS)');
+        } else {
+            log.error('WebSocket service initialization returned false');
+        }
+    } catch (error) {
+        log.error('Failed to initialize WebSocket service:', error);
+        // Don't crash the app if WebSocket fails to initialize
+        // The app can still function without WebSocket support
+    }
 }
 
 // App is ready
@@ -1001,7 +1022,12 @@ app.whenReady().then(async () => {
     setupNativeMonitoring();
 
     // Set up auto-updater
-    setupAutoUpdater();
+    try {
+        setupAutoUpdater();
+    } catch (error) {
+        log.error('Failed to set up auto-updater:', error);
+        // Don't crash the app if auto-updater fails
+    }
 
     // Handle macOS dock icon clicks
     app.on('activate', () => {

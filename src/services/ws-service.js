@@ -4,10 +4,17 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const crypto = require('crypto');
 const { createLogger } = require('../utils/mainLogger');
 const log = createLogger('WebSocketService');
+
+let selfsigned;
+try {
+    selfsigned = require('selfsigned');
+} catch (error) {
+    log.error('Failed to load selfsigned module:', error);
+    throw new Error('selfsigned module is required but not found. Please run npm install.');
+}
 
 /**
  * WebSocket service for communicating with browser extensions
@@ -121,8 +128,22 @@ class WebSocketService {
             this._configureWebSocketServer(this.wss, 'WS');
 
             // Start listening
-            this.httpServer.listen(this.wsPort, this.host, () => {
+            this.httpServer.listen(this.wsPort, this.host, (err) => {
+                if (err) {
+                    log.error('Failed to start WS server:', err);
+                    return;
+                }
                 log.info(`WebSocket server (WS) listening on ${this.host}:${this.wsPort}`);
+            });
+            
+            // Add error handler for HTTP server
+            this.httpServer.on('error', (error) => {
+                log.error('HTTP server error:', error);
+                if (error.code === 'EADDRINUSE') {
+                    log.error(`Port ${this.wsPort} is already in use`);
+                } else if (error.code === 'EACCES') {
+                    log.error(`Permission denied to bind to port ${this.wsPort}`);
+                }
             });
         } catch (error) {
             log.error('Error setting up WS server:', error);
@@ -237,9 +258,25 @@ class WebSocketService {
             this._configureWebSocketServer(this.secureWss, 'WSS');
 
             // Start listening
-            this.httpsServer.listen(this.wssPort, this.host, () => {
+            this.httpsServer.listen(this.wssPort, this.host, (err) => {
+                if (err) {
+                    log.error('Failed to start WSS server:', err);
+                    return;
+                }
                 log.info(`Secure WebSocket server (WSS) listening on ${this.host}:${this.wssPort}`);
-                log.info(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
+                if (this.certificatePaths && this.certificatePaths.fingerprint) {
+                    log.info(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
+                }
+            });
+            
+            // Add error handler for HTTPS server
+            this.httpsServer.on('error', (error) => {
+                log.error('HTTPS server error:', error);
+                if (error.code === 'EADDRINUSE') {
+                    log.error(`Port ${this.wssPort} is already in use`);
+                } else if (error.code === 'EACCES') {
+                    log.error(`Permission denied to bind to port ${this.wssPort}`);
+                }
             });
         } catch (error) {
             log.error('Error setting up WSS server:', error);
@@ -265,27 +302,53 @@ class WebSocketService {
 
             // Check if certificates already exist
             if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
-                log.info('Using existing certificate files');
+                log.info('Found existing certificate files, checking validity...');
 
-                // Calculate and store fingerprint
-                const cert = fs.readFileSync(certPath);
-                const fingerprint = this._calculateCertFingerprint(cert);
+                try {
+                    // Read the certificate
+                    const certPem = fs.readFileSync(certPath, 'utf8');
+                    const cert = fs.readFileSync(certPath);
+                    
+                    // Check if certificate is expired or will expire soon
+                    if (this._isCertificateExpiredOrExpiringSoon(certPem)) {
+                        log.info('Certificate is expired or expiring soon, regenerating...');
+                        // Delete old certificates
+                        fs.unlinkSync(keyPath);
+                        fs.unlinkSync(certPath);
+                        // Fall through to generation logic below
+                    } else {
+                        log.info('Using existing valid certificate files');
+                        
+                        // Calculate and store fingerprint
+                        const fingerprint = this._calculateCertFingerprint(cert);
 
-                // Store the paths
-                this.certificatePaths = {
-                    keyPath,
-                    certPath,
-                    fingerprint
-                };
+                        // Store the paths
+                        this.certificatePaths = {
+                            keyPath,
+                            certPath,
+                            fingerprint
+                        };
 
-                return { success: true };
+                        return { success: true };
+                    }
+                } catch (error) {
+                    log.error('Error checking certificate validity:', error);
+                    // If we can't check validity, regenerate to be safe
+                    log.info('Unable to verify certificate, regenerating...');
+                    try {
+                        fs.unlinkSync(keyPath);
+                        fs.unlinkSync(certPath);
+                    } catch (unlinkError) {
+                        // Ignore unlink errors
+                    }
+                }
             }
 
             // Certificates don't exist, generate them
             log.info('Certificate files not found, generating new ones...');
 
             try {
-                // Generate certificates using OpenSSL
+                // Generate certificates using selfsigned package
                 this._generateCertificates(certsDir, keyPath, certPath);
 
                 // Calculate and store fingerprint
@@ -299,6 +362,7 @@ class WebSocketService {
                     fingerprint
                 };
 
+                log.info(`Calculated fingerprint for new certificate: ${fingerprint}`);
                 return { success: true };
             } catch (genError) {
                 return {
@@ -329,7 +393,7 @@ class WebSocketService {
     }
 
     /**
-     * Generate SSL certificates using OpenSSL
+     * Generate SSL certificates using selfsigned package
      * @private
      * @param {string} certsDir - Directory to store certificates
      * @param {string} keyPath - Path for the key file
@@ -337,62 +401,73 @@ class WebSocketService {
      */
     _generateCertificates(certsDir, keyPath, certPath) {
         try {
-            // Generate private key
-            log.info('Generating private key...');
-            execSync(`openssl genrsa -out "${keyPath}" 2048`);
+            log.info('Generating self-signed certificate using selfsigned package...');
 
-            // Generate self-signed certificate
-            log.info('Generating self-signed certificate...');
-            execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 3650 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+            // Certificate attributes
+            const attrs = [
+                { name: 'commonName', value: 'localhost' },
+                { name: 'countryName', value: 'US' },
+                { shortName: 'ST', value: 'State' },
+                { name: 'localityName', value: 'City' },
+                { name: 'organizationName', value: 'OpenHeaders' },
+                { shortName: 'OU', value: 'Development' }
+            ];
+
+            // Certificate options with Subject Alternative Names for localhost
+            const options = {
+                keySize: 2048,
+                days: 365, // 1 year for browser extension compatibility
+                algorithm: 'sha256',
+                extensions: [
+                    {
+                        name: 'subjectAltName',
+                        altNames: [
+                            { type: 2, value: 'localhost' }, // DNS
+                            { type: 7, ip: '127.0.0.1' }     // IP
+                        ]
+                    },
+                    {
+                        name: 'keyUsage',
+                        keyCertSign: true,
+                        digitalSignature: true,
+                        nonRepudiation: true,
+                        keyEncipherment: true,
+                        dataEncipherment: true
+                    },
+                    {
+                        name: 'extKeyUsage',
+                        serverAuth: true,
+                        clientAuth: true
+                    }
+                ]
+            };
+
+            // Generate certificate
+            let pems;
+            try {
+                pems = selfsigned.generate(attrs, options);
+                
+                if (!pems || !pems.private || !pems.cert) {
+                    throw new Error('Certificate generation returned invalid data');
+                }
+            } catch (genError) {
+                log.error('Error during certificate generation:', genError);
+                throw genError;
+            }
+
+            // Write certificate and key files
+            fs.writeFileSync(keyPath, pems.private);
+            fs.writeFileSync(certPath, pems.cert);
 
             log.info('Successfully generated certificate files');
-        } catch (error) {
-            log.error('Failed to generate certificates with OpenSSL:', error.message);
-
-            // Try a different approach with different OpenSSL syntax for older versions
-            try {
-                log.info('Trying alternative certificate generation method...');
-
-                // Generate private key
-                execSync(`openssl genrsa -out "${keyPath}" 2048`);
-
-                // Generate CSR without SAN extension
-                const csrPath = path.join(certsDir, 'server.csr');
-                execSync(`openssl req -new -key "${keyPath}" -out "${csrPath}" -subj "/CN=localhost"`);
-
-                // Create openssl config file for SAN
-                const configPath = path.join(certsDir, 'openssl.cnf');
-                const configContent = `
-                [req]
-                distinguished_name = req_distinguished_name
-                req_extensions = v3_req
-                prompt = no
-                
-                [req_distinguished_name]
-                CN = localhost
-                
-                [v3_req]
-                subjectAltName = @alt_names
-                
-                [alt_names]
-                DNS.1 = localhost
-                IP.1 = 127.0.0.1
-                `;
-
-                fs.writeFileSync(configPath, configContent);
-
-                // Generate self-signed certificate with SAN
-                execSync(`openssl x509 -req -days 3650 -in "${csrPath}" -signkey "${keyPath}" -out "${certPath}" -extensions v3_req -extfile "${configPath}"`);
-
-                // Clean up temporary files
-                if (fs.existsSync(csrPath)) fs.unlinkSync(csrPath);
-                if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
-
-                log.info('Successfully generated certificate files with alternative method');
-            } catch (altError) {
-                log.error('Failed to generate certificates with alternative method:', altError.message);
-                throw new Error('Unable to generate certificates with either method');
+            
+            // Only log fingerprint if it exists
+            if (pems.fingerprint) {
+                log.info(`Certificate fingerprint from selfsigned: ${pems.fingerprint}`);
             }
+        } catch (error) {
+            log.error('Failed to generate certificates:', error.message);
+            throw new Error(`Unable to generate certificates: ${error.message}`);
         }
     }
 
@@ -404,9 +479,12 @@ class WebSocketService {
      */
     _calculateCertFingerprint(cert) {
         try {
+            // Ensure cert is a Buffer
+            const certBuffer = Buffer.isBuffer(cert) ? cert : Buffer.from(cert);
+            
             const fingerprint = crypto
                 .createHash('sha1')
-                .update(cert)
+                .update(certBuffer)
                 .digest('hex')
                 .match(/.{2}/g)
                 .join(':')
@@ -420,12 +498,65 @@ class WebSocketService {
     }
 
     /**
+     * Check if certificate is expired or expiring soon (within 30 days)
+     * @private
+     * @param {string} certPem - Certificate in PEM format
+     * @returns {boolean} - True if expired or expiring soon
+     */
+    _isCertificateExpiredOrExpiringSoon(certPem) {
+        try {
+            // Parse the certificate to extract validity dates
+            // Extract the certificate content between BEGIN and END markers
+            const certMatch = certPem.match(/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/);
+            if (!certMatch) {
+                log.error('Invalid certificate format');
+                return true; // Regenerate if invalid
+            }
+
+            // Since we generate certificates with 1-year validity,
+            // we can check the file modification time as a proxy
+            const certPath = this.certificatePaths?.certPath || path.join(this._getCertificatesDirectory(), 'server.cert');
+            const stats = fs.statSync(certPath);
+            const certAge = Date.now() - stats.mtime.getTime();
+            const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+            const elevenMonths = 11 * 30 * 24 * 60 * 60 * 1000; // ~330 days
+            
+            // Regenerate if older than 11 months (30 days before expiry)
+            if (certAge > elevenMonths) {
+                const ageInDays = Math.floor(certAge / (24 * 60 * 60 * 1000));
+                log.info(`Certificate is ${ageInDays} days old, will regenerate (expires after 365 days)`);
+                return true;
+            }
+            
+            // Also check if certificate will expire within 30 days
+            const oneYear = 365 * 24 * 60 * 60 * 1000;
+            const timeUntilExpiry = oneYear - certAge;
+            if (timeUntilExpiry < thirtyDays) {
+                const daysUntilExpiry = Math.floor(timeUntilExpiry / (24 * 60 * 60 * 1000));
+                log.info(`Certificate expires in ${daysUntilExpiry} days, will regenerate`);
+                return true;
+            }
+            
+            return false;
+        } catch (error) {
+            log.error('Error checking certificate expiration:', error);
+            // If we can't check, assume it needs renewal for safety
+            return true;
+        }
+    }
+
+    /**
      * Configure WebSocket server events
      * @private
      * @param {WebSocket.Server} server - The WebSocket server to configure
      * @param {string} serverType - Server type identifier (WS or WSS)
      */
     _configureWebSocketServer(server, serverType) {
+        // Add error handler for the server itself
+        server.on('error', (error) => {
+            log.error(`${serverType} server error:`, error);
+        });
+
         server.on('connection', (ws) => {
             log.info(`${serverType} client connected`);
 
@@ -460,16 +591,6 @@ class WebSocketService {
                 }
             });
         });
-
-        // Handle server errors
-        server.on('error', (error) => {
-            log.error(`${serverType} server error:`, error);
-
-            // Attempt to restart server after a delay
-            setTimeout(() => {
-                this._restartWebSocketServer(serverType);
-            }, 5000);
-        });
     }
 
     /**
@@ -491,14 +612,17 @@ class WebSocketService {
         if (ws.isInitialized) return; // Prevent duplicate initialization
 
         try {
+            // Ensure sources is an array
+            const sources = this.sources || [];
+            
             const message = JSON.stringify({
                 type: 'sourcesInitial',
-                sources: this.sources
+                sources: sources
             });
 
             ws.send(message);
             ws.isInitialized = true;
-            log.info(`Sent initial ${this.sources.length} source(s) to client`);
+            log.info(`Sent initial ${sources.length} source(s) to client`);
         } catch (error) {
             log.error('Error sending sources to client:', error);
         }
