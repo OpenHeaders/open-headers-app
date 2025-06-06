@@ -28,3 +28,7 @@ yarn-error.log*
 *.swo
 .DS_Store
 /CLAUDE.md
+certs/
+
+# Certificate base64 files
+*-base64.txt

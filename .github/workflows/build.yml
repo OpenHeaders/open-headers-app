@@ -122,6 +122,15 @@ jobs:
           SKIP_NOTARIZATION: ${{ !startsWith(github.ref, 'refs/tags/') }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Windows code signing setup (optional - only runs if secrets are present)
+      - name: Setup Windows code signing
+        if: matrix.os == 'windows-latest'
+        run: node scripts/certificates/generate-ci-cert.js
+        env:
+          CI: true
+          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
+          WINDOWS_CA_CERT_BASE64: ${{ secrets.WINDOWS_CA_CERT_BASE64 }}
+
       # Build for Windows
       - name: Build Windows
         if: matrix.os == 'windows-latest'
@@ -170,6 +179,13 @@ jobs:
           done
         shell: bash
 
+      # Copy CA certificate to dist for Windows builds
+      - name: Copy CA certificate
+        if: matrix.os == 'windows-latest'
+        run: |
+          cp build/certificates/open-headers-ca.crt dist/
+        shell: bash
+
       # Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -187,6 +203,7 @@ jobs:
             dist/*-builder-debug.yml
             dist/latest*
             dist/install-open-headers.sh
+            dist/*.crt
 
   release:
     needs: build
@@ -215,6 +232,7 @@ jobs:
           # Windows files first (for latest.yml)
           if [ -d "dist/windows-latest-artifacts" ]; then
             cp dist/windows-latest-artifacts/*.exe processed_files/
+            cp dist/windows-latest-artifacts/*.crt processed_files/ 2>/dev/null || echo "CA certificate not found"
             if [ -f "dist/windows-latest-artifacts/latest.yml" ]; then
               cp dist/windows-latest-artifacts/latest.yml processed_files/
               seen_files["latest.yml"]=1
@@ -281,6 +299,7 @@ jobs:
 
           ### Windows
           - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe) (.exe for Windows)
+          - [CA Certificate](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-ca.crt) (Required for trusting the signed app - see instructions below)
 
           ### Linux
           - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x64.AppImage) (.AppImage for any Linux distro)
@@ -296,7 +315,15 @@ jobs:
           ## 🚀 Installation & Startup
 
           ### Windows
-          - **Installation**: Run the installer
+          - **Certificate Installation** (Required for signed app):
+            1. Download the CA Certificate (open-headers-ca.crt) from above
+            2. Double-click the certificate file
+            3. Click "Install Certificate..."
+            4. Choose "Local Machine" (requires administrator privileges)
+            5. Select "Place all certificates in the following store"
+            6. Browse and select "Trusted Root Certification Authorities"
+            7. Click "Next" and "Finish"
+          - **App Installation**: Run the installer after installing the certificate
           - **Startup**: Access from Start menu or desktop shortcut
 
           ### macOS
