@@ -27,9 +27,9 @@ CA_PFX="$CERT_DIR/ca.pfx"
 COUNTRY="US"
 STATE="California"
 LOCALITY="San Francisco"
-ORGANIZATION="Open Headers"
+ORGANIZATION="OpenHeaders"
 ORGANIZATIONAL_UNIT="Development"
-COMMON_NAME="Open Headers Code Signing"
+COMMON_NAME="OpenHeaders Code Signing"
 EMAIL="contact@openheaders.io"
 
 # Create certificate directory
