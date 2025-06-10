@@ -1310,8 +1310,9 @@ if (!gotTheLock) {
                     return { success: false, error: 'Only HTTPS URLs are allowed' };
                 }
 
-                // Allow GitHub, Chrome Web Store, Microsoft Edge Add-ons, and Mozilla Add-ons
+                // Allow OpenHeaders website, GitHub, Chrome Web Store, Microsoft Edge Add-ons, and Mozilla Add-ons
                 const allowedDomains = [
+                    'openheaders.io',
                     'github.com',
                     'chromewebstore.google.com',
                     'microsoftedge.microsoft.com',

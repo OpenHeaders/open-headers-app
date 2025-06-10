@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Typography, Button, Space, Divider } from 'antd';
-import { GithubOutlined, CompassOutlined } from '@ant-design/icons';
+import { GlobalOutlined, CompassOutlined } from '@ant-design/icons';
 
 const { Title, Text, Link, Paragraph } = Typography;
 
@@ -117,8 +117,9 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                 {activeTab === 'about' ? (
                     <div className="tab-content">
                         <Button
-                            icon={<GithubOutlined />}
-                            onClick={() => openExternal('https://github.com/OpenHeaders/open-headers-app')}
+                            icon={<GlobalOutlined />}
+                            onClick={() => openExternal('https://openheaders.io')}
+                            type="primary"
                             style={{
                                 width: '100%',
                                 marginBottom: '12px',
@@ -126,7 +127,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                                 height: '36px'
                             }}
                         >
-                            View on GitHub
+                            Visit Website
                         </Button>
 
                         <Paragraph style={{
