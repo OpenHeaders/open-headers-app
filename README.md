@@ -21,6 +21,7 @@ A companion application for the Open Headers browser extension that manages dyna
 - 🔡 **HTTP Header Case Preservation**: Headers maintain their original capitalization for improved standards compliance
 - 📦 **Rich Response Support**: Properly handle any type of HTTP response content beyond just JSON
 - 🦊 **Firefox Support**: Added secure WebSocket (WSS) support for Firefox extension
+- 🪟 **Windows WSS Support**: Automatic SSL certificate generation on Windows without OpenSSL dependency
 - 📂 **Cross-Platform File Watching**: Improved file monitoring support across macOS, Windows, and Linux
 - 📦 **Debian Package Support**: Added native Debian package (.deb) distribution for Linux systems
 - 🔄 **Automatic Updates**: Built-in update system that checks for and installs new versions
