@@ -7,6 +7,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
 const { createLogger } = require('../utils/mainLogger');
+const CertificateGenerator = require('../utils/certificateGenerator');
 const log = createLogger('WebSocketService');
 
 /**
@@ -133,12 +134,12 @@ class WebSocketService {
      * Set up secure WebSocket server (WSS)
      * @private
      */
-    _setupWssServer() {
+    async _setupWssServer() {
         try {
             log.info(`Secure WebSocket server (WSS) starting on ${this.host}:${this.wssPort}`);
 
             // Ensure certificate files exist or create them
-            const certInfo = this._ensureCertificatesExist();
+            const certInfo = await this._ensureCertificatesExist();
             if (!certInfo.success) {
                 log.error('Failed to set up certificates for WSS server:', certInfo.error);
                 return;
@@ -249,9 +250,9 @@ class WebSocketService {
     /**
      * Ensure certificate files exist, or create them
      * @private
-     * @returns {Object} - Status object with success flag and error message if applicable
+     * @returns {Promise<Object>} - Status object with success flag and error message if applicable
      */
-    _ensureCertificatesExist() {
+    async _ensureCertificatesExist() {
         try {
             // Create certificates directory if needed
             const certsDir = this._getCertificatesDirectory();
@@ -262,19 +263,23 @@ class WebSocketService {
 
             const keyPath = path.join(certsDir, 'server.key');
             const certPath = path.join(certsDir, 'server.cert');
+            const certPathAlt = path.join(certsDir, 'server.crt');
 
-            // Check if certificates already exist
-            if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+            // Check if certificates already exist (try both .cert and .crt extensions)
+            if (fs.existsSync(keyPath) && (fs.existsSync(certPath) || fs.existsSync(certPathAlt))) {
                 log.info('Using existing certificate files');
+                
+                // Use whichever certificate file exists
+                const actualCertPath = fs.existsSync(certPath) ? certPath : certPathAlt;
 
                 // Calculate and store fingerprint
-                const cert = fs.readFileSync(certPath);
+                const cert = fs.readFileSync(actualCertPath);
                 const fingerprint = this._calculateCertFingerprint(cert);
 
                 // Store the paths
                 this.certificatePaths = {
                     keyPath,
-                    certPath,
+                    certPath: actualCertPath,
                     fingerprint
                 };
 
@@ -285,17 +290,20 @@ class WebSocketService {
             log.info('Certificate files not found, generating new ones...');
 
             try {
-                // Generate certificates using OpenSSL
-                this._generateCertificates(certsDir, keyPath, certPath);
+                // Generate certificates using cross-platform method
+                await this._generateCertificates(certsDir, keyPath, certPath);
 
+                // After generation, check which certificate file actually exists
+                const actualCertPath = fs.existsSync(certPath) ? certPath : certPathAlt;
+                
                 // Calculate and store fingerprint
-                const cert = fs.readFileSync(certPath);
+                const cert = fs.readFileSync(actualCertPath);
                 const fingerprint = this._calculateCertFingerprint(cert);
 
                 // Store the paths
                 this.certificatePaths = {
                     keyPath,
-                    certPath,
+                    certPath: actualCertPath,
                     fingerprint
                 };
 
@@ -329,70 +337,56 @@ class WebSocketService {
     }
 
     /**
-     * Generate SSL certificates using OpenSSL
+     * Generate SSL certificates using cross-platform method
      * @private
      * @param {string} certsDir - Directory to store certificates
      * @param {string} keyPath - Path for the key file
      * @param {string} certPath - Path for the certificate file
      */
-    _generateCertificates(certsDir, keyPath, certPath) {
+    async _generateCertificates(certsDir, keyPath, certPath) {
         try {
-            // Generate private key
-            log.info('Generating private key...');
-            execSync(`openssl genrsa -out "${keyPath}" 2048`);
+            // First try OpenSSL if available (for compatibility)
+            if (this._isOpenSSLAvailable()) {
+                try {
+                    log.info('OpenSSL detected, using it for certificate generation...');
+                    // Generate private key
+                    execSync(`openssl genrsa -out "${keyPath}" 2048`);
+                    // Generate self-signed certificate
+                    execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 397 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+                    log.info('Successfully generated certificate files with OpenSSL');
+                    return;
+                } catch (opensslError) {
+                    log.warn('OpenSSL command failed, falling back to Node.js implementation:', opensslError.message);
+                }
+            }
 
-            // Generate self-signed certificate
-            log.info('Generating self-signed certificate...');
-            execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 3650 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+            // Use cross-platform certificate generator
+            log.info('Using cross-platform certificate generator...');
+            const generator = new CertificateGenerator(log);
+            const result = await generator.generateCertificates(certsDir);
+            
+            if (!result || !result.keyPath || !result.certPath) {
+                throw new Error('Certificate generation failed');
+            }
 
             log.info('Successfully generated certificate files');
         } catch (error) {
-            log.error('Failed to generate certificates with OpenSSL:', error.message);
+            log.error('Failed to generate certificates:', error.message);
+            throw error;
+        }
+    }
 
-            // Try a different approach with different OpenSSL syntax for older versions
-            try {
-                log.info('Trying alternative certificate generation method...');
-
-                // Generate private key
-                execSync(`openssl genrsa -out "${keyPath}" 2048`);
-
-                // Generate CSR without SAN extension
-                const csrPath = path.join(certsDir, 'server.csr');
-                execSync(`openssl req -new -key "${keyPath}" -out "${csrPath}" -subj "/CN=localhost"`);
-
-                // Create openssl config file for SAN
-                const configPath = path.join(certsDir, 'openssl.cnf');
-                const configContent = `
-                [req]
-                distinguished_name = req_distinguished_name
-                req_extensions = v3_req
-                prompt = no
-                
-                [req_distinguished_name]
-                CN = localhost
-                
-                [v3_req]
-                subjectAltName = @alt_names
-                
-                [alt_names]
-                DNS.1 = localhost
-                IP.1 = 127.0.0.1
-                `;
-
-                fs.writeFileSync(configPath, configContent);
-
-                // Generate self-signed certificate with SAN
-                execSync(`openssl x509 -req -days 3650 -in "${csrPath}" -signkey "${keyPath}" -out "${certPath}" -extensions v3_req -extfile "${configPath}"`);
-
-                // Clean up temporary files
-                if (fs.existsSync(csrPath)) fs.unlinkSync(csrPath);
-                if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
-
-                log.info('Successfully generated certificate files with alternative method');
-            } catch (altError) {
-                log.error('Failed to generate certificates with alternative method:', altError.message);
-                throw new Error('Unable to generate certificates with either method');
-            }
+    /**
+     * Check if OpenSSL is available on the system
+     * @private
+     * @returns {boolean}
+     */
+    _isOpenSSLAvailable() {
+        try {
+            execSync('openssl version', { stdio: 'ignore' });
+            return true;
+        } catch (error) {
+            return false;
         }
     }
 
