@@ -3,15 +3,18 @@ const log = createLogger('RefreshManager');
 const NetworkAwareScheduler = require('./NetworkAwareScheduler');
 const RefreshCoordinator = require('./RefreshCoordinator');
 const timeManager = require('./TimeManager');
+const { ConcurrentMap } = require('../utils/ConcurrencyControl');
+const { RequestDeduplicator } = require('../utils/ConcurrencyControl');
+const { circuitBreakerManager } = require('../utils/CircuitBreaker');
 
 /**
- * RefreshManager - Simplified to focus only on coordinating refresh operations.
- * Delegates scheduling to NetworkAwareScheduler and execution coordination to RefreshCoordinator.
+ * Improved RefreshManager with proper type handling and concurrency control
+ * ALL sourceIds are converted to strings at entry points
  */
 class RefreshManager {
   constructor() {
     this.isInitialized = false;
-    this.sources = new Map(); // sourceId -> source data
+    this.sources = new ConcurrentMap('sources'); // Thread-safe source storage
     this.lastNetworkState = null;
     
     // Services
@@ -19,12 +22,26 @@ class RefreshManager {
     this.onUpdateCallback = null;
     this.scheduler = new NetworkAwareScheduler();
     this.coordinator = new RefreshCoordinator();
+    this.deduplicator = new RequestDeduplicator();
+    
+    // Event listeners cleanup
+    this.eventCleanup = [];
     
     // Bind methods
     this.refreshSource = this.refreshSource.bind(this);
     this.handleNetworkStateSync = this.handleNetworkStateSync.bind(this);
     this.handleSystemWake = this.handleSystemWake.bind(this);
     this.handleSystemSleep = this.handleSystemSleep.bind(this);
+  }
+  
+  /**
+   * Ensure sourceId is always a string
+   */
+  static normalizeSourceId(sourceId) {
+    if (sourceId === null || sourceId === undefined) {
+      throw new Error('Invalid sourceId: null or undefined');
+    }
+    return String(sourceId);
   }
   
   /**
@@ -44,7 +61,7 @@ class RefreshManager {
     
     // Get initial network state
     const networkState = await window.electronAPI.getNetworkState();
-    log.debug('Initialized');
+    log.debug('RefreshManager initialized');
     
     // Let scheduler know about initial network state
     await this.scheduler.handleNetworkChange(networkState);
@@ -59,15 +76,28 @@ class RefreshManager {
     if (typeof window !== 'undefined' && window.electronAPI) {
       // Network state sync from main process
       if (window.electronAPI.onNetworkStateSync) {
-        window.electronAPI.onNetworkStateSync(this.handleNetworkStateSync);
+        const networkHandler = this.handleNetworkStateSync;
+        window.electronAPI.onNetworkStateSync(networkHandler);
+        this.eventCleanup.push(() => {
+          // TODO: Add removeNetworkStateSync when available
+        });
       }
       
       // System events
       if (window.electronAPI.onSystemSuspend) {
-        window.electronAPI.onSystemSuspend(this.handleSystemSleep);
+        const suspendHandler = this.handleSystemSleep;
+        window.electronAPI.onSystemSuspend(suspendHandler);
+        this.eventCleanup.push(() => {
+          // TODO: Add removeSystemSuspend when available
+        });
       }
+      
       if (window.electronAPI.onSystemResume) {
-        window.electronAPI.onSystemResume(this.handleSystemWake);
+        const resumeHandler = this.handleSystemWake;
+        window.electronAPI.onSystemResume(resumeHandler);
+        this.eventCleanup.push(() => {
+          // TODO: Add removeSystemResume when available
+        });
       }
     }
   }
@@ -102,7 +132,7 @@ class RefreshManager {
     setTimeout(async () => {
       const networkState = await window.electronAPI.getNetworkState();
       if (networkState.isOnline) {
-        await this.scheduler.checkOverdueSources('system_wake');
+        await this.scheduler.checkOverdueSources();
       }
     }, 3000);
   }
@@ -112,29 +142,33 @@ class RefreshManager {
    */
   handleSystemSleep() {
     log.info('System sleep detected');
-    // Scheduler timers will be cleared automatically
+    // Scheduler will handle cleanup automatically
   }
   
   /**
    * Add a source to management
    */
-  addSource(source) {
+  async addSource(source) {
     if (!this.isInitialized || source.sourceType !== 'http') {
       return;
     }
     
-    // Convert sourceId to string to ensure consistency
-    const sourceId = String(source.sourceId);
+    // Normalize sourceId
+    const sourceId = RefreshManager.normalizeSourceId(source.sourceId);
     
-    // Store source data with string key - ALL HTTP sources are stored for manual refresh
-    this.sources.set(sourceId, source);
+    // Create normalized source object
+    const normalizedSource = {
+      ...source,
+      sourceId // Ensure sourceId is string
+    };
+    
+    // Store source data - ALL HTTP sources are stored for manual refresh
+    await this.sources.set(sourceId, normalizedSource);
     
     // Only schedule if auto-refresh is enabled
     if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
       // Schedule the source for auto-refresh
-      this.scheduler.scheduleSource(source).catch(err => {
-        log.error(`Error scheduling source ${sourceId}:`, err);
-      });
+      await this.scheduler.scheduleSource(normalizedSource);
       log.debug(`Added source ${sourceId} with auto-refresh enabled`);
     } else {
       log.debug(`Added source ${sourceId} for manual refresh only`);
@@ -144,96 +178,106 @@ class RefreshManager {
   /**
    * Update a source
    */
-  updateSource(source) {
+  async updateSource(source) {
     if (source.sourceType !== 'http') return;
     
-    // Convert sourceId to string to ensure consistency
-    const sourceId = String(source.sourceId);
-    const existingSource = this.sources.get(sourceId);
+    // Normalize sourceId
+    const sourceId = RefreshManager.normalizeSourceId(source.sourceId);
+    
+    // Create normalized source object
+    const normalizedSource = {
+      ...source,
+      sourceId // Ensure sourceId is string
+    };
+    
+    const existingSource = await this.sources.get(sourceId);
     
     if (!existingSource) {
-      this.addSource(source);
+      await this.addSource(normalizedSource);
       return;
     }
     
-    // Update source data - keep ALL HTTP sources for manual refresh
-    this.sources.set(sourceId, source);
+    // Update source data
+    await this.sources.set(sourceId, normalizedSource);
     
     // Handle scheduling based on refresh settings
     const wasEnabled = existingSource.refreshOptions?.enabled && existingSource.refreshOptions?.interval > 0;
-    const isEnabled = source.refreshOptions?.enabled && source.refreshOptions?.interval > 0;
+    const isEnabled = normalizedSource.refreshOptions?.enabled && normalizedSource.refreshOptions?.interval > 0;
     
     if (!wasEnabled && isEnabled) {
       // Auto-refresh was enabled
       log.info(`Auto-refresh enabled for ${sourceId}`);
-      this.scheduler.scheduleSource(source).catch(err => {
-        log.error(`Error scheduling source ${sourceId}:`, err);
-      });
+      await this.scheduler.scheduleSource(normalizedSource);
     } else if (wasEnabled && !isEnabled) {
-      // Auto-refresh was disabled - remove from scheduler but keep in sources
+      // Auto-refresh was disabled
       log.info(`Auto-refresh disabled for ${sourceId}, keeping for manual refresh`);
-      this.scheduler.unscheduleSource(sourceId);
+      await this.scheduler.unscheduleSource(sourceId);
     } else if (isEnabled) {
       // Auto-refresh settings changed
       const oldInterval = existingSource.refreshOptions?.interval;
-      const newInterval = source.refreshOptions.interval;
+      const newInterval = normalizedSource.refreshOptions.interval;
       
       if (oldInterval !== newInterval) {
         log.info(`Interval changed for ${sourceId}: ${oldInterval} -> ${newInterval}`);
       }
       
       // Always reschedule to ensure correct timing
-      this.scheduler.scheduleSource(source).catch(err => {
-        log.error(`Error rescheduling source ${sourceId}:`, err);
-      });
+      await this.scheduler.scheduleSource(normalizedSource);
     }
   }
   
   /**
    * Remove a source from management
    */
-  removeSource(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    if (!this.sources.has(sourceId)) return;
+  async removeSource(sourceId) {
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
     
-    this.sources.delete(sourceId);
-    this.scheduler.unscheduleSource(sourceId);
-    this.coordinator.cancelRefresh(sourceId);
+    if (!(await this.sources.has(sourceId))) return;
+    
+    await this.sources.delete(sourceId);
+    await this.scheduler.unscheduleSource(sourceId);
+    await this.coordinator.cancelRefresh(sourceId);
     
     log.debug(`Removed source ${sourceId}`);
   }
   
   /**
-   * Refresh a single source (called by scheduler or manually)
+   * Refresh a single source with deduplication
    */
   async refreshSource(sourceId, options = {}) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    const source = this.sources.get(sourceId);
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
+    
+    const source = await this.sources.get(sourceId);
     if (!source) {
       log.warn(`Source ${sourceId} not found`);
-      return false;
+      return { success: false, error: 'Source not found' };
     }
     
-    // Use coordinator to prevent overlapping refreshes
-    const result = await this.coordinator.executeRefresh(
-      sourceId,
-      async (id) => this.performRefresh(id, source),
-      {
-        ...options,
-        timeout: await this.getNetworkTimeout()
+    // Create deduplication key
+    const dedupKey = `refresh-${sourceId}`;
+    
+    // Use deduplicator to prevent duplicate refreshes
+    return this.deduplicator.execute(dedupKey, async () => {
+      // Use coordinator to manage execution
+      const result = await this.coordinator.executeRefresh(
+        sourceId,
+        async (id) => this.performRefresh(id, source),
+        {
+          ...options,
+          timeout: await this.getNetworkTimeout()
+        }
+      );
+      
+      // Update scheduler with refresh result
+      if (result.success) {
+        const forceRecalculate = options.reason === 'manual';
+        await this.scheduler.updateLastRefresh(sourceId, result.timestamp, forceRecalculate);
       }
-    );
-    
-    // Update scheduler with refresh result
-    if (result.success) {
-      // Force recalculation for manual refreshes to ensure UI shows correct timing
-      const forceRecalculate = options.reason === 'manual';
-      this.scheduler.updateLastRefresh(sourceId, result.timestamp, forceRecalculate);
-    }
-    
-    return result;
+      
+      return result;
+    });
   }
   
   /**
@@ -242,7 +286,7 @@ class RefreshManager {
   async performRefresh(sourceId, source) {
     const startTime = timeManager.now();
     
-    // Notify UI of refresh start (sourceId already converted to string)
+    // Notify UI of refresh start
     this.notifyUI(sourceId, null, {
       refreshStatus: {
         isRefreshing: true,
@@ -251,23 +295,42 @@ class RefreshManager {
     });
     
     try {
-      // Get network-aware timeout
-      const timeout = await this.getNetworkTimeout();
+      // Use circuit breaker for the HTTP request
+      const circuitBreaker = circuitBreakerManager.getBreaker(`http-${sourceId}`, {
+        failureThreshold: 3,
+        resetTimeout: 30000
+      });
       
-      // Perform HTTP request
-      const result = await this.httpService.request(
-        source.sourceId,
-        source.sourcePath,
-        source.sourceMethod,
-        {
-          ...source.requestOptions,
-          timeout
-        },
-        source.jsonFilter
-      );
+      const result = await circuitBreaker.execute(async () => {
+        // Get network-aware timeout
+        const timeout = await this.getNetworkTimeout();
+        
+        log.debug(`Performing HTTP request for source ${sourceId}`);
+        
+        // Perform HTTP request
+        const httpResult = await this.httpService.request(
+          source.sourceId,
+          source.sourcePath,
+          source.sourceMethod,
+          {
+            ...source.requestOptions,
+            timeout
+          },
+          source.jsonFilter
+        );
+        
+        log.debug(`HTTP request completed for source ${sourceId}`, {
+          hasContent: !!httpResult?.content,
+          hasOriginalResponse: !!httpResult?.originalResponse
+        });
+        
+        return httpResult;
+      });
       
-      // Get the next refresh time from scheduler
-      const refreshStatus = this.getRefreshStatus(sourceId);
+      // Calculate next refresh time based on the interval
+      const now = timeManager.now();
+      const intervalMs = source.refreshOptions?.interval ? source.refreshOptions.interval * 60 * 1000 : 0;
+      const nextRefresh = intervalMs > 0 ? now + intervalMs : undefined;
       
       // Update UI with result
       this.notifyUI(sourceId, result.content, {
@@ -275,17 +338,17 @@ class RefreshManager {
         headers: result.headers,
         refreshStatus: {
           isRefreshing: false,
-          lastRefresh: timeManager.now(),
+          lastRefresh: now,
           success: true
         },
         refreshOptions: {
           ...source.refreshOptions,
-          lastRefresh: timeManager.now(),
-          nextRefresh: refreshStatus.nextRefresh
+          lastRefresh: now,
+          nextRefresh: nextRefresh,
+          interval: source.refreshOptions?.interval
         }
       });
       
-      // Source refreshed successfully
       return result;
       
     } catch (error) {
@@ -337,8 +400,9 @@ class RefreshManager {
    * Manual refresh - bypasses schedule
    */
   async manualRefresh(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
+    
     log.info(`Manual refresh requested for ${sourceId}`);
     
     const result = await this.refreshSource(sourceId, {
@@ -351,13 +415,14 @@ class RefreshManager {
   }
   
   /**
-   * Refresh all sources
+   * Refresh all sources with proper rate limiting
    */
   async refreshAll(reason = 'manual_all') {
     log.info(`Refreshing all sources, reason: ${reason}`);
     
-    const refreshOperations = Array.from(this.sources.values()).map(source => ({
-      sourceId: source.sourceId,
+    const sources = await this.sources.entries();
+    const refreshOperations = sources.map(([sourceId, source]) => ({
+      sourceId,
       refreshFn: (id) => this.performRefresh(id, source)
     }));
     
@@ -370,15 +435,19 @@ class RefreshManager {
   }
   
   /**
-   * Get refresh status for a source
+   * Get refresh status for a source (async version)
    */
-  getRefreshStatus(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    const isRefreshing = this.coordinator.isRefreshing(sourceId);
-    const isOverdue = this.scheduler.isSourceOverdue(sourceId);
-    const stats = this.scheduler.getStatistics();
-    const schedule = stats.schedules.find(s => s.sourceId === sourceId);
+  async getRefreshStatusAsync(sourceId) {
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
+    
+    const isRefreshing = await this.coordinator.isRefreshing(sourceId);
+    const isOverdue = await this.scheduler.isSourceOverdue(sourceId);
+    const stats = await this.scheduler.getStatistics();
+    
+    // Find schedule info
+    const schedules = await this.scheduler.schedules.entries();
+    const schedule = schedules.find(([id]) => id === sourceId)?.[1];
     
     return {
       isRefreshing,
@@ -391,32 +460,81 @@ class RefreshManager {
   }
   
   /**
-   * Get time until next refresh in milliseconds
+   * Get time until next refresh for a source (synchronous for UI updates)
+   * Note: This method relies on the source data being passed from the UI
    */
-  getTimeUntilRefresh(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    const stats = this.scheduler.getStatistics();
-    const schedule = stats.schedules.find(s => s.sourceId === sourceId);
+  getTimeUntilRefresh(sourceId, sourceData = null) {
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
     
-    if (!schedule || !schedule.nextRefresh) {
+    // We don't store sources here, so we need the source data
+    // The UI should pass the source data for accurate timing
+    if (!sourceData) {
+      // Try to get from scheduler's schedule data
+      const schedules = this._cachedSchedules || new Map();
+      const schedule = schedules.get(sourceId);
+      if (schedule && schedule.nextRefresh) {
+        const now = timeManager.now();
+        return Math.max(0, schedule.nextRefresh - now);
+      }
+      return 0;
+    }
+    
+    if (!sourceData.refreshOptions?.enabled) {
+      return 0;
+    }
+    
+    // Get the next refresh time from the source data
+    const nextRefresh = sourceData.refreshOptions?.nextRefresh;
+    if (!nextRefresh) {
       return 0;
     }
     
     const now = timeManager.now();
-    const timeUntil = schedule.nextRefresh - now;
+    const timeRemaining = nextRefresh - now;
     
-    return Math.max(0, timeUntil);
+    return Math.max(0, timeRemaining);
   }
+  
+  /**
+   * Get refresh status for a source (synchronous version for UI)
+   * Returns cached data for performance
+   */
+  getRefreshStatus(sourceId) {
+    // Normalize sourceId
+    sourceId = RefreshManager.normalizeSourceId(sourceId);
+    
+    // Return cached status for synchronous UI updates
+    if (!this._statusCache) {
+      this._statusCache = new Map();
+    }
+    const cachedStatus = this._statusCache.get(sourceId);
+    if (cachedStatus) {
+      return cachedStatus;
+    }
+    
+    // Return default status
+    return {
+      isRefreshing: false,
+      isOverdue: false,
+      isPaused: false,
+      consecutiveErrors: 0
+    };
+  }
+  
   
   /**
    * Get overall statistics
    */
-  getStatistics() {
+  async getStatistics() {
     return {
-      scheduler: this.scheduler.getStatistics(),
-      coordinator: this.coordinator.getMetrics(),
-      totalSources: this.sources.size
+      scheduler: await this.scheduler.getStatistics(),
+      coordinator: await this.coordinator.getMetrics(),
+      totalSources: await this.sources.size(),
+      deduplicator: {
+        pendingRequests: await this.deduplicator.getPendingCount()
+      },
+      circuitBreakers: circuitBreakerManager.getAllStatus()
     };
   }
   
@@ -426,22 +544,26 @@ class RefreshManager {
   notifyUI(sourceId, content, additionalData = {}) {
     if (!this.onUpdateCallback) return;
     
-    // Note: sourceId is already a string at this point, but ensure consistency
-    this.onUpdateCallback(String(sourceId), content, additionalData);
+    // sourceId is already normalized
+    this.onUpdateCallback(sourceId, content, additionalData);
   }
   
   /**
    * Cleanup and destroy
    */
-  destroy() {
+  async destroy() {
     // Cancel all active operations
-    this.coordinator.destroy();
+    await this.coordinator.destroy();
     
     // Clear all schedules
-    this.scheduler.destroy();
+    await this.scheduler.destroy();
     
     // Clear sources
-    this.sources.clear();
+    await this.sources.clear();
+    
+    // Clean up event listeners
+    this.eventCleanup.forEach(cleanup => cleanup());
+    this.eventCleanup = [];
     
     // Clear callbacks
     this.httpService = null;
@@ -449,7 +571,7 @@ class RefreshManager {
     
     this.isInitialized = false;
     
-    log.debug('Destroyed');
+    log.debug('RefreshManager destroyed');
   }
 }
 

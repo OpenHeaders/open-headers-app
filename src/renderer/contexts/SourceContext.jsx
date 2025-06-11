@@ -1,4 +1,4 @@
-// SourceContext.jsx - FIXED to prevent broadcasting status-only updates
+// SourceContext.jsx - Using improved architecture with thread-safe operations
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useFileSystem } from '../hooks/useFileSystem';
@@ -13,6 +13,12 @@ const SourceContext = createContext();
 
 const { createLogger } = require('../utils/logger');
 const log = createLogger('SourceContext');
+
+// Log architecture version on initialization
+if (typeof window !== 'undefined') {
+  console.log('[SourceContext] Using improved architecture with thread-safe operations');
+  window.__OPEN_HEADERS_ARCHITECTURE__ = 'Improved';
+}
 
 // Wrapper for backward compatibility
 const debugLog = (message, data) => log.debug(message, data);
@@ -33,7 +39,7 @@ export function SourceProvider({ children }) {
     // Track current highest ID to avoid conflicts
     const highestIdRef = useRef(0);
 
-    // FIXED: More granular broadcast control - track suppression per update
+    // More granular broadcast control - track suppression per update
     const broadcastControl = useRef({
         updateCounter: 0,
         suppressedUpdates: new Set(), // Track which update IDs should be suppressed
@@ -46,15 +52,18 @@ export function SourceProvider({ children }) {
     const env = useEnv();
 
     // Helper for updating source content
-    // FIXED: Granular suppression tracking per update
+    // Granular suppression tracking per update
     const updateSourceContent = useCallback((sourceId, content, additionalData = {}) => {
+        // ALWAYS convert sourceId to string for consistency
+        sourceId = String(sourceId);
+        
         // Check if component is still mounted before updating state
         if (!isMounted.current) {
             log.debug(`Skipping update for source ${sourceId} - component is unmounted`);
             return;
         }
 
-        // FIXED: Generate unique update ID for granular suppression tracking
+        // Generate unique update ID for granular suppression tracking
         const updateId = ++broadcastControl.current.updateCounter;
         const isStatusOnly = additionalData.statusOnly === true;
         const isTimingOnlyUpdate = additionalData.updateTimingOnly === true && content === null;
@@ -70,21 +79,15 @@ export function SourceProvider({ children }) {
                 Object.keys(additionalData).map(key => key).join(', '));
         }
 
-        // FIXED: Track which specific updates should be suppressed
+        // Track which specific updates should be suppressed
         if (isStatusOnly) {
             broadcastControl.current.suppressedUpdates.add(updateId);
             log.debug(`Marking update #${updateId} for suppression (status-only update on source ${sourceId}`);
         }
 
         setSources(prev => {
-            // Check if source exists - handle both string and number IDs
-            const sourceIdStr = String(sourceId);
-            const sourceIdNum = Number(sourceId);
-            const sourceExists = prev.some(s => 
-                s.sourceId === sourceId || 
-                String(s.sourceId) === sourceIdStr || 
-                (Number.isInteger(sourceIdNum) && s.sourceId === sourceIdNum)
-            );
+            // sourceId is always string
+            const sourceExists = prev.some(s => String(s.sourceId) === sourceId);
 
             if (!sourceExists) {
                 debugLog(`Source ${sourceId} not found when updating content`);
@@ -92,20 +95,16 @@ export function SourceProvider({ children }) {
             }
 
             return prev.map(source => {
-                // Handle both string and number ID comparisons
-                const sourceIdStr = String(sourceId);
-                const sourceIdNum = Number(sourceId);
-                const isMatch = source.sourceId === sourceId || 
-                               String(source.sourceId) === sourceIdStr || 
-                               (Number.isInteger(sourceIdNum) && source.sourceId === sourceIdNum);
+                // Always compare as strings
+                const isMatch = String(source.sourceId) === sourceId;
                 
                 if (isMatch) {
                     // Create updated source
                     const updatedSource = {
                         ...source,
-                        // FIXED: Only update content if provided and not a status-only update
+                        // Only update content if provided and not a status-only update
                         sourceContent: (content !== null && !isStatusOnly) ? content : source.sourceContent,
-                        // FIXED: Store update ID for granular suppression checking
+                        // Store update ID for granular suppression checking
                         _lastUpdateId: updateId
                     };
 
@@ -129,7 +128,7 @@ export function SourceProvider({ children }) {
                         }
                     });
 
-                    // FIXED: Track content changes for broadcast control - only for content updates
+                    // Track content changes for broadcast control - only for content updates
                     if (content !== null && !isStatusOnly) {
                         const contentHash = JSON.stringify(content);
                         const lastHash = broadcastControl.current.lastContentHash.get(sourceId);
@@ -151,7 +150,7 @@ export function SourceProvider({ children }) {
         });
     }, []);
 
-    // FIXED: Check if specific update should be suppressed
+    // Check if specific update should be suppressed
     const shouldSuppressUpdate = useCallback((sourceId, source) => {
         const updateId = source?._lastUpdateId;
 
@@ -170,7 +169,7 @@ export function SourceProvider({ children }) {
         return shouldSuppress;
     }, []);
 
-    // FIXED: Expose granular suppression check to WebSocketContext
+    // Expose granular suppression check to WebSocketContext
     const shouldSuppressBroadcast = useCallback((sources) => {
         // Check if any of the sources have updates that should be suppressed
         for (const source of sources) {
@@ -193,14 +192,17 @@ export function SourceProvider({ children }) {
                 return;
             }
 
-            if (idMap.has(source.sourceId)) {
-                debugLog(`CRITICAL: Duplicate ID ${source.sourceId} found during ${operation}`, {
-                    original: idMap.get(source.sourceId),
+            // Always convert to string for comparison
+            const sourceIdStr = String(source.sourceId);
+
+            if (idMap.has(sourceIdStr)) {
+                debugLog(`CRITICAL: Duplicate ID ${sourceIdStr} found during ${operation}`, {
+                    original: idMap.get(sourceIdStr),
                     duplicate: source
                 });
                 hasValidation = false;
             } else {
-                idMap.set(source.sourceId, source);
+                idMap.set(sourceIdStr, source);
             }
         });
 
@@ -262,31 +264,32 @@ export function SourceProvider({ children }) {
                     for (const source of loadedSources) {
                         const validSourceId = Number(source.sourceId) || getUniqueSourceId();
 
+                        // Ensure sourceId is always string
                         const initializedSource = {
                             ...source,
-                            sourceId: validSourceId,
+                            sourceId: String(validSourceId),
                             sourceContent: source.sourceContent || 'Loading content...'
                         };
 
                         initializedSources.push(initializedSource);
 
-                        // FIXED: Initialize content hash tracking
+                        // Initialize content hash tracking
                         if (initializedSource.sourceContent) {
                             const contentHash = JSON.stringify(initializedSource.sourceContent);
-                            broadcastControl.current.lastContentHash.set(validSourceId, contentHash);
+                            broadcastControl.current.lastContentHash.set(initializedSource.sourceId, contentHash);
                         }
 
                         // Initialize based on type
                         if (source.sourceType === 'file') {
-                            fileSystem.watchFile(validSourceId, source.sourcePath)
+                            fileSystem.watchFile(initializedSource.sourceId, source.sourcePath)
                                 .then(content => {
                                     if (isMounted.current) {
-                                        updateSourceContent(validSourceId, content);
+                                        updateSourceContent(initializedSource.sourceId, content);
                                     }
                                 })
                                 .catch(error => {
                                     if (isMounted.current) {
-                                        updateSourceContent(validSourceId, `Error: ${error.message}`);
+                                        updateSourceContent(initializedSource.sourceId, `Error: ${error.message}`);
                                     }
                                 });
                         }
@@ -295,32 +298,34 @@ export function SourceProvider({ children }) {
                             try {
                                 content = await env.getVariable(source.sourcePath);
                                 if (isMounted.current) {
-                                    updateSourceContent(validSourceId, content);
+                                    updateSourceContent(initializedSource.sourceId, content);
                                 }
                             } catch (error) {
                                 if (isMounted.current) {
-                                    updateSourceContent(validSourceId, `Error: ${error.message}`);
+                                    updateSourceContent(initializedSource.sourceId, `Error: ${error.message}`);
                                 }
                             }
                         }
                         else if (source.sourceType === 'http') {
-                            // Add ALL HTTP sources to RefreshManager, not just auto-refresh enabled ones
-                            // RefreshManager will handle whether to auto-refresh internally
+                            // Add ALL HTTP sources to RefreshManager
                             const cleanedSource = cleanupStaleTimingData(initializedSource);
                             
-                            // For sources with auto-refresh enabled, ensure timing is set
+                            // For sources with auto-refresh enabled, preserve timing to allow overdue detection
                             if (cleanedSource.refreshOptions?.enabled && cleanedSource.refreshOptions?.interval > 0) {
-                                // Ensure lastRefresh is set if missing to prevent immediate refresh
-                                if (!cleanedSource.refreshOptions.lastRefresh) {
+                                // Only set initial timing if there's no history at all
+                                // This allows the scheduler to detect and handle overdue sources
+                                if (!cleanedSource.refreshOptions.lastRefresh && !source.refreshOptions?.lastRefresh) {
                                     const now = timeManager.now();
                                     cleanedSource.refreshOptions.lastRefresh = now;
                                     cleanedSource.refreshOptions.nextRefresh = now + (cleanedSource.refreshOptions.interval * 60 * 1000);
-                                    debugLog(`Set initial refresh timing for HTTP source ${validSourceId} on load`);
+                                    debugLog(`Set initial refresh timing for HTTP source ${initializedSource.sourceId} on load`);
+                                } else if (cleanedSource.refreshOptions.lastRefresh) {
+                                    debugLog(`Preserved refresh timing for HTTP source ${initializedSource.sourceId} - scheduler will check if overdue`);
                                 }
                             }
                             
-                            refreshManager.addSource(cleanedSource);
-                            debugLog(`Added HTTP source ${validSourceId} to RefreshManager`);
+                            await refreshManager.addSource(cleanedSource);
+                            debugLog(`Added HTTP source ${initializedSource.sourceId} to RefreshManager`);
                         }
                     }
 
@@ -365,10 +370,10 @@ export function SourceProvider({ children }) {
             return source;
         }
 
-        const now = timeManager.now(); // Use regular timestamp, not high-res time
+        const now = timeManager.now();
         const cleanedSource = { ...source };
 
-        // Check if the nextRefresh time is from a previous session (more than 5 minutes old)
+        // Check if the nextRefresh time is from a previous session
         if (source.refreshOptions.nextRefresh) {
             const timeDiff = now - source.refreshOptions.nextRefresh;
 
@@ -383,11 +388,12 @@ export function SourceProvider({ children }) {
                     intervalMinutes: source.refreshOptions.interval
                 });
 
-                // Remove stale timing data so RefreshManager can recalculate
+                // Keep lastRefresh but clear nextRefresh so scheduler can detect overdue
+                // This allows the scheduler to calculate if the source is overdue
                 cleanedSource.refreshOptions = {
                     ...source.refreshOptions,
-                    lastRefresh: null,
                     nextRefresh: null
+                    // Keep lastRefresh to allow overdue detection
                 };
             }
         }
@@ -411,7 +417,7 @@ export function SourceProvider({ children }) {
                 // Validate before saving
                 validateSourceIds(sources, 'before saving');
 
-                // FIXED: Clean sources before saving (remove internal update tracking)
+                // Clean sources before saving (remove internal update tracking)
                 const cleanedSources = sources.map(source => {
                     const { _lastUpdateId, ...cleanSource } = source;
                     return cleanSource;
@@ -438,10 +444,13 @@ export function SourceProvider({ children }) {
         };
     }, [sources, initialized, validateSourceIds]);
 
-    // FIXED: Clean up broadcast control tracking when source is removed
+    // Clean up broadcast control tracking when source is removed
     const removeSource = async (sourceId) => {
+        // Always convert to string
+        sourceId = String(sourceId);
+        
         try {
-            const source = sources.find(s => s.sourceId === sourceId);
+            const source = sources.find(s => String(s.sourceId) === sourceId);
             if (!source) {
                 debugLog(`Attempted to remove nonexistent source ${sourceId}`);
                 return false;
@@ -452,24 +461,24 @@ export function SourceProvider({ children }) {
             // Remove from state immediately for UI feedback
             if (isMounted.current) {
                 setSources(prev => {
-                    const updated = prev.filter(s => s.sourceId !== sourceId);
+                    const updated = prev.filter(s => String(s.sourceId) !== sourceId);
                     debugLog(`Source ${sourceId} removed, remaining sources: ${updated.length}`);
                     return updated;
                 });
                 needsSave.current = true;
             }
 
-            // FIXED: Clean up broadcast control tracking
+            // Clean up broadcast control tracking
             broadcastControl.current.lastContentHash.delete(sourceId);
 
             // Clean up based on source type
             if (source.sourceType === 'file') {
-                await fileSystem.unwatchFile(source.sourceId, source.sourcePath);
+                await fileSystem.unwatchFile(sourceId, source.sourcePath);
             }
             else if (source.sourceType === 'http') {
                 // Remove from RefreshManager
                 if (refreshManager.isInitialized) {
-                    refreshManager.removeSource(sourceId);
+                    await refreshManager.removeSource(sourceId);
                 }
             }
 
@@ -498,7 +507,9 @@ export function SourceProvider({ children }) {
                 return false;
             }
 
-            const sourceId = getUniqueSourceId();
+            const numericId = getUniqueSourceId();
+            // Always use string sourceId
+            const sourceId = String(numericId);
             debugLog(`Adding new source with ID ${sourceId}`);
 
             const newSource = {
@@ -573,7 +584,7 @@ export function SourceProvider({ children }) {
                         updateSourceContent(sourceId, initialContent, refreshData);
                     }
 
-                    // Add ALL HTTP sources to RefreshManager, not just auto-refresh enabled ones
+                    // Add ALL HTTP sources to RefreshManager
                     const now = timeManager.now();
                     const sourceForManager = {
                         ...newSource,
@@ -590,7 +601,7 @@ export function SourceProvider({ children }) {
                     };
 
                     if (refreshManager.isInitialized) {
-                        refreshManager.addSource(sourceForManager);
+                        await refreshManager.addSource(sourceForManager);
                         debugLog(`Added HTTP source ${sourceId} to RefreshManager${sourceData.refreshOptions?.enabled ? ' with auto-refresh timing' : ' for manual refresh capability'}`);
                     } else {
                         debugLog(`RefreshManager not initialized when adding source ${sourceId}`);
@@ -625,8 +636,9 @@ export function SourceProvider({ children }) {
     // Update source
     const updateSource = async (sourceData) => {
         try {
-            const sourceId = sourceData.sourceId;
-            const source = sources.find(s => s.sourceId === sourceId);
+            // Always convert to string
+            const sourceId = String(sourceData.sourceId);
+            const source = sources.find(s => String(s.sourceId) === sourceId);
 
             if (!source) {
                 debugLog(`Source ${sourceId} not found when updating`);
@@ -645,10 +657,11 @@ export function SourceProvider({ children }) {
             if (isMounted.current) {
                 setSources(prev => {
                     return prev.map(s => {
-                        if (s.sourceId === sourceId) {
+                        if (String(s.sourceId) === sourceId) {
                             return {
                                 ...s,
                                 ...sourceData,
+                                sourceId, // Ensure sourceId remains string
                                 sourceContent: s.sourceContent, // Preserve existing content
                                 jsonFilter: normalizedJsonFilter
                             };
@@ -663,21 +676,12 @@ export function SourceProvider({ children }) {
             if (sourceData.sourceType === 'http') {
                 const updatedSourceForManager = {
                     ...sourceData,
+                    sourceId, // Ensure string
                     jsonFilter: normalizedJsonFilter
                 };
 
                 if (refreshManager.isInitialized) {
-                    // Check if source exists in RefreshManager first
-                    const sourceExists = refreshManager.sources.has(String(sourceData.sourceId));
-                    
-                    if (sourceExists) {
-                        // Update existing source
-                        refreshManager.updateSource(updatedSourceForManager);
-                    } else {
-                        // Source not found, add it to RefreshManager
-                        debugLog(`Source ${sourceData.sourceId} not found in RefreshManager, adding it now`);
-                        refreshManager.addSource(updatedSourceForManager);
-                    }
+                    await refreshManager.updateSource(updatedSourceForManager);
                 }
             }
 
@@ -694,9 +698,12 @@ export function SourceProvider({ children }) {
     // Refresh source - delegate to RefreshManager
     const refreshSource = async (sourceId, updatedSource = null) => {
         try {
+            // Always convert to string
+            sourceId = String(sourceId);
+            
             // Use the updatedSource if provided (for immediate refresh after update)
             // Otherwise, find the source from current state
-            const source = updatedSource || sources.find(s => s.sourceId === sourceId);
+            const source = updatedSource || sources.find(s => String(s.sourceId) === sourceId);
             if (!source) {
                 debugLog(`Attempted to refresh nonexistent source ${sourceId}`);
                 return false;
@@ -755,7 +762,9 @@ export function SourceProvider({ children }) {
     // Update refresh options - delegated to RefreshManager
     const updateRefreshOptions = async (sourceId, options) => {
         try {
-            const source = sources.find(s => s.sourceId === sourceId);
+            // Always convert to string
+            sourceId = String(sourceId);
+            const source = sources.find(s => String(s.sourceId) === sourceId);
             if (!source || source.sourceType !== 'http') {
                 log.error(`Source not found or not HTTP: ${sourceId}`);
                 return false;
@@ -766,7 +775,7 @@ export function SourceProvider({ children }) {
             // Update local state
             if (isMounted.current) {
                 setSources(prev => prev.map(s => {
-                    if (s.sourceId === sourceId) {
+                    if (String(s.sourceId) === sourceId) {
                         return {
                             ...s,
                             refreshOptions: {
@@ -785,6 +794,7 @@ export function SourceProvider({ children }) {
             // Update RefreshManager
             const updatedSource = {
                 ...source,
+                sourceId, // Ensure string
                 refreshOptions: {
                     ...source.refreshOptions,
                     ...options,
@@ -793,7 +803,7 @@ export function SourceProvider({ children }) {
             };
 
             if (refreshManager.isInitialized) {
-                refreshManager.updateSource(updatedSource);
+                await refreshManager.updateSource(updatedSource);
             }
 
             // Handle immediate refresh if requested
@@ -1040,7 +1050,7 @@ export function SourceProvider({ children }) {
         exportSources,
         importSources,
         forceSave,
-        shouldSuppressBroadcast // FIXED: Expose granular broadcast control to WebSocketContext
+        shouldSuppressBroadcast // Expose granular broadcast control to WebSocketContext
     };
 
     return (

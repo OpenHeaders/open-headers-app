@@ -34,8 +34,9 @@ root.render(
 
                     <TotpProvider>
                         <SourceProvider>
-                            {/* Note: WebSocketProvider is now inside App.jsx */}
-                            <AppComponent />
+                            <WebSocketProvider>
+                                <AppComponent />
+                            </WebSocketProvider>
                         </SourceProvider>
                     </TotpProvider>
                 </MessageProvider>
