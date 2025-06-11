@@ -1,23 +1,42 @@
 const { createLogger } = require('../utils/logger');
 const log = createLogger('RefreshCoordinator');
 const timeManager = require('./TimeManager');
+const { ConcurrentMap, ConcurrentSet, Mutex } = require('../utils/ConcurrencyControl');
 
 /**
- * Coordinates refresh operations to prevent overlapping and conflicting operations.
- * Manages execution flow and ensures atomic operations.
+ * Improved RefreshCoordinator with proper queue limits and concurrency control
  */
 class RefreshCoordinator {
   constructor() {
-    this.activeRefreshes = new Map(); // sourceId -> refresh promise
-    this.refreshQueue = new Map(); // sourceId -> queue of pending refreshes
-    this.globalLock = null;
+    // Thread-safe data structures
+    this.activeRefreshes = new ConcurrentMap('activeRefreshes');
+    this.refreshQueue = new ConcurrentMap('refreshQueue');
+    this.queueMutex = new Mutex('queue');
+    
+    // Configuration
+    this.MAX_QUEUE_SIZE = 100; // Prevent unbounded queue growth
+    this.MAX_CONCURRENT_BATCH = 10; // Maximum concurrent batch operations
+    
+    // Metrics with proper initialization
     this.metrics = {
       totalRefreshes: 0,
       successfulRefreshes: 0,
       failedRefreshes: 0,
       skippedRefreshes: 0,
-      averageRefreshTime: 0
+      droppedFromQueue: 0,
+      averageRefreshTime: 0,
+      totalRefreshTime: 0
     };
+  }
+  
+  /**
+   * Normalize sourceId to string
+   */
+  static normalizeSourceId(sourceId) {
+    if (sourceId === null || sourceId === undefined) {
+      throw new Error('Invalid sourceId: null or undefined');
+    }
+    return String(sourceId);
   }
   
   /**
@@ -31,17 +50,17 @@ class RefreshCoordinator {
       reason = 'manual'
     } = options;
     
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
+    // Normalize sourceId
+    sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
     // Check if already refreshing
-    if (this.activeRefreshes.has(sourceId)) {
+    if (await this.activeRefreshes.has(sourceId)) {
       if (skipIfActive) {
         log.debug(`Skipping refresh for ${sourceId} - already active`);
         this.metrics.skippedRefreshes++;
         return { skipped: true, reason: 'already_active' };
       } else {
-        // Queue the refresh
+        // Queue the refresh with size limit check
         return this.queueRefresh(sourceId, refreshFn, options);
       }
     }
@@ -50,7 +69,11 @@ class RefreshCoordinator {
     const refreshOperation = this.createRefreshOperation(sourceId, refreshFn, timeout, reason);
     
     // Store active refresh
-    this.activeRefreshes.set(sourceId, refreshOperation);
+    await this.activeRefreshes.set(sourceId, {
+      startTime: timeManager.now(),
+      reason,
+      priority
+    });
     
     try {
       const result = await refreshOperation;
@@ -60,7 +83,7 @@ class RefreshCoordinator {
       this.metrics.failedRefreshes++;
       throw error;
     } finally {
-      this.activeRefreshes.delete(sourceId);
+      await this.activeRefreshes.delete(sourceId);
       
       // Process queued refreshes
       await this.processQueue(sourceId);
@@ -104,11 +127,14 @@ class RefreshCoordinator {
         };
       });
     
-    // Add timeout
+    // Add timeout with proper cleanup
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         reject(new Error(`Refresh timeout after ${timeout}ms`));
       }, timeout);
+      
+      // Clean up timeout when refresh completes
+      refreshPromise.finally(() => clearTimeout(timeoutId));
     });
     
     this.metrics.totalRefreshes++;
@@ -117,28 +143,41 @@ class RefreshCoordinator {
   }
   
   /**
-   * Queue a refresh operation
+   * Queue a refresh operation with size limits
    */
   async queueRefresh(sourceId, refreshFn, options) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
+    // Normalize sourceId
+    sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
-    if (!this.refreshQueue.has(sourceId)) {
-      this.refreshQueue.set(sourceId, []);
-    }
-    
-    const queue = this.refreshQueue.get(sourceId);
-    
-    return new Promise((resolve, reject) => {
-      queue.push({
-        refreshFn,
-        options,
-        resolve,
-        reject,
-        timestamp: timeManager.now()
-      });
+    return this.queueMutex.withLock(async () => {
+      let queue = await this.refreshQueue.get(sourceId);
+      if (!queue) {
+        queue = [];
+      }
       
-      log.debug(`Queued refresh for ${sourceId}, queue size: ${queue.length}`);
+      // Check queue size limit
+      if (queue.length >= this.MAX_QUEUE_SIZE) {
+        log.warn(`Queue full for ${sourceId}, dropping oldest request`);
+        const dropped = queue.shift();
+        if (dropped) {
+          dropped.reject(new Error('Dropped from queue - queue full'));
+          this.metrics.droppedFromQueue++;
+        }
+      }
+      
+      return new Promise((resolve, reject) => {
+        queue.push({
+          refreshFn,
+          options,
+          resolve,
+          reject,
+          timestamp: timeManager.now()
+        });
+        
+        this.refreshQueue.set(sourceId, queue);
+        
+        log.debug(`Queued refresh for ${sourceId}, queue size: ${queue.length}`);
+      });
     });
   }
   
@@ -146,17 +185,26 @@ class RefreshCoordinator {
    * Process queued refreshes for a source
    */
   async processQueue(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    const queue = this.refreshQueue.get(sourceId);
-    if (!queue || queue.length === 0) return;
+    // Normalize sourceId
+    sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
-    // Get next queued refresh
-    const next = queue.shift();
+    const next = await this.queueMutex.withLock(async () => {
+      const queue = await this.refreshQueue.get(sourceId);
+      if (!queue || queue.length === 0) return null;
+      
+      // Get next queued refresh
+      const next = queue.shift();
+      
+      if (queue.length === 0) {
+        await this.refreshQueue.delete(sourceId);
+      } else {
+        await this.refreshQueue.set(sourceId, queue);
+      }
+      
+      return next;
+    });
     
-    if (queue.length === 0) {
-      this.refreshQueue.delete(sourceId);
-    }
+    if (!next) return;
     
     // Execute queued refresh
     try {
@@ -181,19 +229,24 @@ class RefreshCoordinator {
       priority = 'high'
     } = options;
     
-    log.info(`Starting batch refresh for ${refreshOperations.length} sources`);
+    // Limit concurrent operations
+    const effectiveMaxConcurrent = Math.min(maxConcurrent, this.MAX_CONCURRENT_BATCH);
+    
+    log.info(`Starting batch refresh for ${refreshOperations.length} sources (max concurrent: ${effectiveMaxConcurrent})`);
     
     const results = [];
-    const chunks = this.chunkArray(refreshOperations, maxConcurrent);
+    const chunks = this.chunkArray(refreshOperations, effectiveMaxConcurrent);
     
     for (const chunk of chunks) {
-      const promises = chunk.map(({ sourceId, refreshFn }) =>
-        this.executeRefresh(sourceId, refreshFn, { priority, skipIfActive: false })
+      const promises = chunk.map(({ sourceId, refreshFn }) => {
+        const normalizedId = RefreshCoordinator.normalizeSourceId(sourceId);
+        
+        return this.executeRefresh(normalizedId, refreshFn, { priority, skipIfActive: false })
           .catch(error => {
             if (!continueOnError) throw error;
-            return { success: false, error: error.message, sourceId };
-          })
-      );
+            return { success: false, error: error.message, sourceId: normalizedId };
+          });
+      });
       
       const chunkResults = await Promise.all(promises);
       results.push(...chunkResults);
@@ -209,82 +262,54 @@ class RefreshCoordinator {
   }
   
   /**
-   * Acquire a global lock for critical operations
-   */
-  async acquireGlobalLock(operation, timeout = 5000) {
-    if (this.globalLock) {
-      log.warn(`Global lock already held by ${this.globalLock.operation}`);
-      
-      // Wait for lock with timeout
-      const startTime = timeManager.now();
-      while (this.globalLock && (timeManager.now() - startTime) < timeout) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      
-      if (this.globalLock) {
-        throw new Error(`Failed to acquire global lock after ${timeout}ms`);
-      }
-    }
-    
-    this.globalLock = {
-      operation,
-      timestamp: timeManager.now()
-    };
-    
-    log.debug(`Global lock acquired for ${operation}`);
-    
-    return {
-      release: () => {
-        if (this.globalLock && this.globalLock.operation === operation) {
-          this.globalLock = null;
-          log.debug(`Global lock released for ${operation}`);
-        }
-      }
-    };
-  }
-  
-  /**
    * Cancel active refresh for a source
    */
-  cancelRefresh(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
-    const activeRefresh = this.activeRefreshes.get(sourceId);
+  async cancelRefresh(sourceId) {
+    // Normalize sourceId
+    sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
+    
+    const activeRefresh = await this.activeRefreshes.get(sourceId);
     if (activeRefresh) {
-      // Note: We can't actually cancel the promise, but we can track it
-      log.warn(`Cannot cancel active refresh for ${sourceId} - will be ignored`);
+      log.warn(`Cannot cancel active refresh for ${sourceId} - will complete`);
       return false;
     }
     
     // Clear from queue
-    if (this.refreshQueue.has(sourceId)) {
-      const queue = this.refreshQueue.get(sourceId);
+    const queueCleared = await this.queueMutex.withLock(async () => {
+      const queue = await this.refreshQueue.get(sourceId);
+      if (!queue || queue.length === 0) return false;
+      
       queue.forEach(item => {
         item.reject(new Error('Refresh cancelled'));
       });
-      this.refreshQueue.delete(sourceId);
       
+      await this.refreshQueue.delete(sourceId);
       log.info(`Cancelled ${queue.length} queued refreshes for ${sourceId}`);
       return true;
-    }
+    });
     
-    return false;
+    return queueCleared;
   }
   
   /**
    * Cancel all active and queued refreshes
    */
-  cancelAll() {
+  async cancelAll() {
     // Cancel all queued refreshes
-    for (const [sourceId, queue] of this.refreshQueue) {
-      queue.forEach(item => {
-        item.reject(new Error('All refreshes cancelled'));
-      });
+    const allQueues = await this.refreshQueue.entries();
+    
+    for (const [sourceId, queue] of allQueues) {
+      if (queue && queue.length > 0) {
+        queue.forEach(item => {
+          item.reject(new Error('All refreshes cancelled'));
+        });
+      }
     }
-    this.refreshQueue.clear();
+    
+    await this.refreshQueue.clear();
     
     // Note active refreshes
-    const activeCount = this.activeRefreshes.size;
+    const activeCount = await this.activeRefreshes.size();
     if (activeCount > 0) {
       log.warn(`${activeCount} active refreshes will complete`);
     }
@@ -295,27 +320,32 @@ class RefreshCoordinator {
   /**
    * Check if a source is currently refreshing
    */
-  isRefreshing(sourceId) {
-    // Convert sourceId to string to ensure consistency
-    sourceId = String(sourceId);
+  async isRefreshing(sourceId) {
+    // Normalize sourceId
+    sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     return this.activeRefreshes.has(sourceId);
   }
   
   /**
    * Get active refresh count
    */
-  getActiveCount() {
-    return this.activeRefreshes.size;
+  async getActiveCount() {
+    return this.activeRefreshes.size();
   }
   
   /**
    * Get queued refresh count
    */
-  getQueuedCount() {
+  async getQueuedCount() {
+    const allQueues = await this.refreshQueue.entries();
     let total = 0;
-    for (const queue of this.refreshQueue.values()) {
-      total += queue.length;
+    
+    for (const [, queue] of allQueues) {
+      if (queue) {
+        total += queue.length;
+      }
     }
+    
     return total;
   }
   
@@ -323,19 +353,19 @@ class RefreshCoordinator {
    * Update metrics with new refresh duration
    */
   updateMetrics(duration) {
-    const totalDuration = this.metrics.averageRefreshTime * this.metrics.successfulRefreshes;
-    this.metrics.averageRefreshTime = (totalDuration + duration) / (this.metrics.successfulRefreshes + 1);
+    this.metrics.totalRefreshTime += duration;
+    this.metrics.averageRefreshTime = 
+      this.metrics.totalRefreshTime / (this.metrics.successfulRefreshes || 1);
   }
   
   /**
    * Get coordinator metrics
    */
-  getMetrics() {
+  async getMetrics() {
     return {
       ...this.metrics,
-      activeRefreshes: this.activeRefreshes.size,
-      queuedRefreshes: this.getQueuedCount(),
-      globalLockHeld: !!this.globalLock
+      activeRefreshes: await this.activeRefreshes.size(),
+      queuedRefreshes: await this.getQueuedCount()
     };
   }
   
@@ -348,7 +378,9 @@ class RefreshCoordinator {
       successfulRefreshes: 0,
       failedRefreshes: 0,
       skippedRefreshes: 0,
-      averageRefreshTime: 0
+      droppedFromQueue: 0,
+      averageRefreshTime: 0,
+      totalRefreshTime: 0
     };
   }
   
@@ -366,14 +398,26 @@ class RefreshCoordinator {
   /**
    * Cleanup and destroy
    */
-  destroy() {
-    this.cancelAll();
-    this.activeRefreshes.clear();
-    this.refreshQueue.clear();
-    this.globalLock = null;
+  async destroy() {
+    // Cancel all operations
+    await this.cancelAll();
+    
+    // Wait for active operations to complete
+    const activeCount = await this.activeRefreshes.size();
+    if (activeCount > 0) {
+      log.info(`Waiting for ${activeCount} active refreshes to complete`);
+      // Give them time to complete
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    // Clear all data
+    await this.activeRefreshes.clear();
+    await this.refreshQueue.clear();
+    
+    // Reset metrics
     this.resetMetrics();
     
-    log.debug('Destroyed');
+    log.debug('RefreshCoordinator destroyed');
   }
 }
 

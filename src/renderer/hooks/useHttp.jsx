@@ -2,24 +2,26 @@ import { useCallback } from 'react';
 import { useTotpState } from '../contexts/TotpContext';
 const { createLogger } = require('../utils/logger');
 const timeManager = require('../services/TimeManager');
+const { ErrorClassifier } = require('../utils/ErrorClassification');
+const { circuitBreakerManager } = require('../utils/CircuitBreaker');
 const log = createLogger('useHttp');
 
 /**
- * Custom hook for HTTP operations - Simplified version without refresh logic
- * All refresh management is now handled by RefreshManager
+ * Improved HTTP hook with error classification and circuit breaker
  */
 export function useHttp() {
     // Use TOTP context
     const { recordTotpUsage } = useTotpState();
     
     /**
-     * Parse JSON safely
+     * Parse JSON safely with better error messages
      */
     const parseJSON = useCallback((text) => {
         try {
             return JSON.parse(text);
         } catch (error) {
             log.error('Error parsing JSON:', error);
+            log.debug('Failed JSON content:', text?.substring(0, 200));
             return null;
         }
     }, []);
@@ -30,19 +32,14 @@ export function useHttp() {
     const applyJsonFilter = useCallback((body, jsonFilter) => {
         // Always normalize the filter object to ensure consistent behavior
         const normalizedFilter = {
-            enabled: jsonFilter?.enabled === true, // Use strict equality check
-            path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : '' // Only include path if enabled
+            enabled: jsonFilter?.enabled === true,
+            path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
         };
 
-        // Log normalized filter for debugging
-        log.debug('Applying JSON filter:',
-            JSON.stringify(normalizedFilter),
-            "to body:",
-            typeof body === 'string' ? body.substring(0, 100) + '...' : body);
+        log.debug('Applying JSON filter:', JSON.stringify(normalizedFilter));
 
         // Immediately return the original body if filter is not properly configured
         if (!normalizedFilter.enabled || !normalizedFilter.path) {
-            log.debug('JSON filter not enabled or no path specified, returning original body');
             return body;
         }
 
@@ -52,7 +49,6 @@ export function useHttp() {
             if (typeof body === 'string') {
                 jsonObj = parseJSON(body);
                 if (!jsonObj) {
-                    log.error('Failed to parse JSON body');
                     return body;
                 }
             } else {
@@ -61,9 +57,6 @@ export function useHttp() {
 
             // Check if this is an error response
             if (jsonObj.error) {
-                log.debug('Detected error response, checking if we should bypass filter');
-                log.debug('Error response details:', jsonObj);
-
                 // Create a more user-friendly message for errors
                 let errorMessage = `Error: ${jsonObj.error}`;
                 if (jsonObj.error_description) {
@@ -71,8 +64,6 @@ export function useHttp() {
                 } else if (jsonObj.message) {
                     errorMessage += ` - ${jsonObj.message}`;
                 }
-
-                // Return the error message instead of trying to apply the filter
                 return errorMessage;
             }
 
@@ -149,13 +140,7 @@ export function useHttp() {
                 if (variable && variable.key && variable.value !== undefined) {
                     // Use regular expression with global flag for reliable replacement
                     const regex = new RegExp(variable.key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-                    const before = result;
                     result = result.replace(regex, variable.value);
-                    
-                    // Debug logging for variable substitution
-                    if (before !== result) {
-                        log.debug(`Variable substitution: ${variable.key} -> ${variable.value.substring(0, 20)}...`);
-                    }
                 }
             });
         }
@@ -170,8 +155,6 @@ export function useHttp() {
         const formData = {};
         const lines = bodyContent.split('\n');
         
-        log.debug(`Converting body from colon-separated to URL-encoded. Input:`, bodyContent);
-        
         lines.forEach(line => {
             line = line.trim();
             if (line === '') return;
@@ -182,7 +165,6 @@ export function useHttp() {
                 const value = line.substring(colonIndex + 1).trim();
                 if (key) {
                     formData[key] = value;
-                    log.debug(`Parsed form field: ${key} = ${value.substring(0, 50)}...`);
                 }
             }
         });
@@ -192,12 +174,11 @@ export function useHttp() {
             .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
             .join('&');
         
-        log.debug(`Converted form data to URL-encoded format with ${Object.keys(formData).length} fields. Output:`, encoded);
         return encoded;
     }, []);
 
     /**
-     * Make HTTP request - Clean simplified version
+     * Make HTTP request with improved error handling and circuit breaker
      */
     const request = useCallback(async (
         sourceId,
@@ -206,372 +187,238 @@ export function useHttp() {
         requestOptions = {},
         jsonFilter = { enabled: false, path: '' }
     ) => {
-        // Track retry attempts
-        let retryAttempt = 0;
-        const MAX_CLIENT_RETRIES = 3;  // Increased retries for better reliability
+        // Normalize sourceId to string
+        sourceId = String(sourceId);
+        
+        // Use circuit breaker for this source
+        const circuitBreaker = circuitBreakerManager.getBreaker(`request-${sourceId}`, {
+            failureThreshold: 5,
+            resetTimeout: 60000
+        });
 
-        const attemptRequest = async () => {
-            try {
-                // Create a normalized jsonFilter object
-                const normalizedJsonFilter = {
-                    enabled: jsonFilter?.enabled === true,
-                    path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
-                };
+        return circuitBreaker.execute(async () => {
+            let retryAttempt = 0;
 
-                // Store variables array explicitly and make a deep copy
-                const variables = Array.isArray(requestOptions.variables)
-                    ? JSON.parse(JSON.stringify(requestOptions.variables))
-                    : [];
+            const attemptRequest = async () => {
+                try {
+                    // Create a normalized jsonFilter object
+                    const normalizedJsonFilter = {
+                        enabled: jsonFilter?.enabled === true,
+                        path: jsonFilter?.enabled === true ? (jsonFilter?.path || '') : ''
+                    };
 
-                // Format options
-                const formattedOptions = {
-                    ...requestOptions,
-                    headers: {},
-                    queryParams: {}
-                };
+                    // Store variables array explicitly and make a deep copy
+                    const variables = Array.isArray(requestOptions.variables)
+                        ? JSON.parse(JSON.stringify(requestOptions.variables))
+                        : [];
 
-                // Handle TOTP if present
-                let totpCode = null;
-                if (requestOptions.totpSecret) {
-                    try {
-                        const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
-                        totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-                        log.debug(`Generated TOTP code for source ${sourceId} at ${timeManager.getDate().toISOString()}`);
+                    // Format options
+                    const formattedOptions = {
+                        ...requestOptions,
+                        headers: {},
+                        queryParams: {}
+                    };
 
-                        if (!totpCode || totpCode === 'ERROR') {
-                            log.error(`Failed to generate TOTP code for source ${sourceId}`);
-                        } else {
+                    // Handle TOTP if present
+                    let totpCode = null;
+                    if (requestOptions.totpSecret) {
+                        try {
+                            const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
+                            totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
+
+                            if (!totpCode || totpCode === 'ERROR') {
+                                throw new Error('Failed to generate TOTP code');
+                            }
+
                             // Record TOTP usage
                             recordTotpUsage(sourceId, requestOptions.totpSecret, totpCode);
+                        } catch (totpError) {
+                            log.error(`Error generating TOTP code: ${totpError.message}`);
+                            throw totpError;
                         }
-                    } catch (totpError) {
-                        log.error(`Error generating TOTP code: ${totpError.message}`);
                     }
-                }
 
-                // Perform variable substitution in URL
-                let originalUrl = url;
-                if (url.includes('_TOTP_CODE') || variables.length > 0) {
-                    url = substituteVariables(url, variables, totpCode);
-                }
+                    // Perform variable substitution in URL
+                    if (url.includes('_TOTP_CODE') || variables.length > 0) {
+                        url = substituteVariables(url, variables, totpCode);
+                    }
 
-                // Process headers from array format to object
-                if (Array.isArray(requestOptions.headers)) {
-                    requestOptions.headers.forEach(header => {
-                        if (header && header.key) {
-                            let headerValue = header.value || '';
-                            // Apply variable substitution to header value
+                    // Process headers from array format to object
+                    if (Array.isArray(requestOptions.headers)) {
+                        requestOptions.headers.forEach(header => {
+                            if (header && header.key) {
+                                let headerValue = header.value || '';
+                                headerValue = substituteVariables(headerValue, variables, totpCode);
+                                formattedOptions.headers[header.key] = headerValue;
+                            }
+                        });
+                    } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
+                        Object.entries(requestOptions.headers).forEach(([key, value]) => {
+                            let headerValue = value || '';
                             headerValue = substituteVariables(headerValue, variables, totpCode);
-                            formattedOptions.headers[header.key] = headerValue;
-                        }
-                    });
-                } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                    Object.entries(requestOptions.headers).forEach(([key, value]) => {
-                        let headerValue = value || '';
-                        // Apply variable substitution to header value
-                        headerValue = substituteVariables(headerValue, variables, totpCode);
-                        formattedOptions.headers[key] = headerValue;
-                    });
-                }
-
-                // Process query params from array format to object
-                if (Array.isArray(requestOptions.queryParams)) {
-                    requestOptions.queryParams.forEach(param => {
-                        if (param && param.key) {
-                            let paramValue = param.value || '';
-                            // Apply variable substitution to param value
-                            paramValue = substituteVariables(paramValue, variables, totpCode);
-                            formattedOptions.queryParams[param.key] = paramValue;
-                        }
-                    });
-                } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                    Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
-                        let paramValue = value || '';
-                        // Apply variable substitution to param value
-                        paramValue = substituteVariables(paramValue, variables, totpCode);
-                        formattedOptions.queryParams[key] = paramValue;
-                    });
-                }
-
-                // Process body for variable substitution
-                if (requestOptions.body) {
-                    let bodyContent = requestOptions.body;
-                    if (typeof bodyContent === 'string') {
-                        // Apply variable substitution to body content
-                        bodyContent = substituteVariables(bodyContent, variables, totpCode);
-                        
-                        // Convert colon-separated format to URL-encoded format for form data
-                        if (requestOptions.contentType === 'application/x-www-form-urlencoded' && bodyContent.includes(':')) {
-                            bodyContent = convertBodyToUrlEncoded(bodyContent);
-                        }
-                        
-                        formattedOptions.body = bodyContent;
-                        log.debug(`Request body after substitution:`, bodyContent.substring(0, 200) + '...');
-                    } else {
-                        formattedOptions.body = requestOptions.body;
+                            formattedOptions.headers[key] = headerValue;
+                        });
                     }
-                }
 
-                // Copy other request options
-                formattedOptions.contentType = requestOptions.contentType || 'application/json';
+                    // Process query params from array format to object
+                    if (Array.isArray(requestOptions.queryParams)) {
+                        requestOptions.queryParams.forEach(param => {
+                            if (param && param.key) {
+                                let paramValue = param.value || '';
+                                paramValue = substituteVariables(paramValue, variables, totpCode);
+                                formattedOptions.queryParams[param.key] = paramValue;
+                            }
+                        });
+                    } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
+                        Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
+                            let paramValue = value || '';
+                            paramValue = substituteVariables(paramValue, variables, totpCode);
+                            formattedOptions.queryParams[key] = paramValue;
+                        });
+                    }
 
-                // Very important: preserve variables in the formatted options
-                formattedOptions.variables = variables;
+                    // Process body for variable substitution
+                    if (requestOptions.body) {
+                        let bodyContent = requestOptions.body;
+                        if (typeof bodyContent === 'string') {
+                            bodyContent = substituteVariables(bodyContent, variables, totpCode);
+                            
+                            // Convert colon-separated format to URL-encoded format for form data
+                            if (requestOptions.contentType === 'application/x-www-form-urlencoded' && bodyContent.includes(':')) {
+                                bodyContent = convertBodyToUrlEncoded(bodyContent);
+                            }
+                            
+                            formattedOptions.body = bodyContent;
+                        } else {
+                            formattedOptions.body = requestOptions.body;
+                        }
+                    }
 
-                // Make sure we don't include the TOTP secret in the actual request
-                delete formattedOptions.totpSecret;
+                    // Copy other request options
+                    formattedOptions.contentType = requestOptions.contentType || 'application/json';
+                    formattedOptions.variables = variables;
 
-                // Log the request being made (without sensitive data)
-                log.debug(`Making HTTP request: ${method} ${url}`);
-                log.debug(`Request headers being sent:`, formattedOptions.headers);
-                log.debug(`Request content type:`, formattedOptions.contentType);
-                log.debug(`Request body being sent:`, formattedOptions.body ? formattedOptions.body.substring(0, 200) + '...' : 'No body');
+                    // Make sure we don't include the TOTP secret in the actual request
+                    delete formattedOptions.totpSecret;
 
-                // Make request with retry tracking
-                const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
+                    // Log the request being made (without sensitive data)
+                    log.debug(`Making HTTP request: ${method} ${url}`);
 
-                // Process response
-                const response = parseJSON(responseJson);
-                if (!response) {
-                    throw new Error('Invalid response format');
-                }
+                    // Make request
+                    const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
 
-                // Extract body and headers
-                const bodyContent = response.body || '';
-                const headers = response.headers || {};
+                    // Process response
+                    const response = parseJSON(responseJson);
+                    if (!response) {
+                        throw new Error('Invalid response format');
+                    }
 
-                // Apply JSON filter if enabled - use normalized filter
-                let finalContent = bodyContent;
+                    // Check if we got an HTTP error status
+                    if (response.statusCode && response.statusCode >= 400) {
+                        const error = new Error(`HTTP ${response.statusCode} error`);
+                        error.statusCode = response.statusCode;
+                        error.response = response;
+                        throw error;
+                    }
 
-                // Use the normalized filter object
-                if (normalizedJsonFilter.enabled && normalizedJsonFilter.path && bodyContent) {
-                    finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
+                    // Extract body and headers
+                    const bodyContent = response.body || '';
+                    const headers = response.headers || {};
+
+                    // Apply JSON filter if enabled
+                    let finalContent = bodyContent;
+
+                    if (normalizedJsonFilter.enabled && normalizedJsonFilter.path && bodyContent) {
+                        finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
+
+                        return {
+                            content: finalContent,
+                            originalResponse: bodyContent,
+                            headers: headers,
+                            rawResponse: responseJson,
+                            filteredWith: normalizedJsonFilter.path,
+                            isFiltered: true
+                        };
+                    }
 
                     return {
                         content: finalContent,
                         originalResponse: bodyContent,
                         headers: headers,
-                        rawResponse: responseJson,
-                        filteredWith: normalizedJsonFilter.path,
-                        isFiltered: true
+                        rawResponse: responseJson
                     };
-                }
+                } catch (error) {
+                    log.error(`HTTP request error (attempt ${retryAttempt + 1}):`, error);
 
-                return {
-                    content: finalContent,
-                    originalResponse: bodyContent,
-                    headers: headers,
-                    rawResponse: responseJson
-                };
-            } catch (error) {
-                // Improved error handling with specific retry for network errors
-                log.error(`HTTP request error (attempt ${retryAttempt + 1}):`, error);
-
-                // Detect if this is a network error that could benefit from a retry
-                const isRetryableError =
-                    error.message.includes('ECONNRESET') ||
-                    error.message.includes('ETIMEDOUT') ||
-                    error.message.includes('ECONNREFUSED') ||
-                    error.message.includes('socket hang up') ||
-                    error.message.includes('network error') ||
-                    error.message.includes('DNS resolution failed') ||
-                    error.message.includes('Connection refused');
-
-                // Check if we should retry
-                if (isRetryableError && retryAttempt < MAX_CLIENT_RETRIES) {
-                    retryAttempt++;
-                    log.info(`Retrying request for source ${sourceId} (attempt ${retryAttempt + 1} of ${MAX_CLIENT_RETRIES + 1})`);
-
-                    // Calculate exponential backoff delay with jitter
-                    const backoffDelay = Math.min(
-                        2000 * Math.pow(2, retryAttempt - 1) + Math.random() * 1000,
-                        30000 // Max 30 seconds
+                    // Use error classifier to determine retry strategy
+                    const retryStrategy = ErrorClassifier.getRetryStrategy(
+                        error,
+                        error.statusCode || null,
+                        retryAttempt + 1
                     );
 
-                    log.debug(`Waiting ${Math.round(backoffDelay)}ms before retry`);
+                    if (retryStrategy.shouldRetry) {
+                        retryAttempt++;
+                        log.info(`Retrying request for source ${sourceId}`, {
+                            attempt: retryAttempt + 1,
+                            maxAttempts: retryStrategy.maxAttempts,
+                            delay: retryStrategy.delay,
+                            reason: retryStrategy.reason
+                        });
 
-                    // Wait and retry
-                    await new Promise(resolve => setTimeout(resolve, backoffDelay));
-                    return attemptRequest(); // Recursive retry
+                        // Wait with intelligent backoff
+                        await new Promise(resolve => setTimeout(resolve, retryStrategy.delay));
+                        return attemptRequest(); // Recursive retry
+                    }
+
+                    // If we've exhausted retries or it's not retryable, throw with context
+                    const enhancedError = new Error(
+                        `Request failed: ${error.message} (${retryStrategy.reason})`
+                    );
+                    enhancedError.originalError = error;
+                    enhancedError.retryStrategy = retryStrategy;
+                    enhancedError.statusCode = error.statusCode;
+                    
+                    throw enhancedError;
                 }
+            };
 
-                // If we've exhausted retries or it's not a retryable error, throw
-                throw error;
-            }
-        };
-
-        // Start the request process with retry capability
-        return attemptRequest();
+            // Start the request process
+            return attemptRequest();
+        });
     }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage, convertBodyToUrlEncoded]);
 
     /**
      * Test HTTP request (used for UI testing)
-     * Note: This method intentionally duplicates some logic from the main request method
-     * because it has different return behavior (raw JSON string vs parsed object)
-     * and doesn't include retry logic for UI testing
      */
     const testRequest = useCallback(async (url, method, requestOptions, jsonFilter, sourceId = null) => {
         try {
-            // Store variables array explicitly and make a deep copy to avoid reference issues
-            const variables = Array.isArray(requestOptions.variables)
-                ? JSON.parse(JSON.stringify(requestOptions.variables))
-                : [];
-
-            // Format options
-            const formattedOptions = {
-                ...requestOptions,
-                headers: {},
-                queryParams: {}
-            };
-
-            // Handle TOTP if present
-            let totpCode = null;
-            if (requestOptions.totpSecret) {
-                try {
-                    const normalizedSecret = requestOptions.totpSecret.replace(/\s/g, '').replace(/=/g, '');
-                    totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-
-                    if (!totpCode || totpCode === 'ERROR') {
-                        log.error(`Failed to generate TOTP code for test request`);
-                    } else {
-                        // Record TOTP usage for test request
-                        // Use provided sourceId or generate temporary one
-                        const effectiveSourceId = sourceId || `test-${Date.now()}`;
-                        recordTotpUsage(effectiveSourceId, requestOptions.totpSecret, totpCode);
-                    }
-                } catch (totpError) {
-                    log.error(`Error generating TOTP code for test: ${totpError.message}`);
-                }
-            }
-
-            // Perform variable substitution in URL
-            let originalUrl = url;
-            if (url.includes('_TOTP_CODE') || variables.length > 0) {
-                url = substituteVariables(url, variables, totpCode);
-            }
-
-            // Process headers from array format to object
-            if (Array.isArray(requestOptions.headers)) {
-                requestOptions.headers.forEach(header => {
-                    if (header && header.key) {
-                        let headerValue = header.value || '';
-                        // Apply variable substitution to header value
-                        headerValue = substituteVariables(headerValue, variables, totpCode);
-                        formattedOptions.headers[header.key] = headerValue;
-                    }
-                });
-            } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                Object.entries(requestOptions.headers).forEach(([key, value]) => {
-                    let headerValue = value || '';
-                    // Apply variable substitution to header value
-                    headerValue = substituteVariables(headerValue, variables, totpCode);
-                    formattedOptions.headers[key] = headerValue;
-                });
-            }
-
-            // Process query params properly
-            if (requestOptions.queryParams) {
-                if (Array.isArray(requestOptions.queryParams)) {
-                    requestOptions.queryParams.forEach(param => {
-                        if (param && param.key) {
-                            let paramValue = param.value || '';
-                            // Apply variable substitution to param value
-                            paramValue = substituteVariables(paramValue, variables, totpCode);
-                            formattedOptions.queryParams[param.key] = paramValue;
-                        }
-                    });
-                } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                    Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
-                        let paramValue = value || '';
-                        // Apply variable substitution to param value
-                        paramValue = substituteVariables(paramValue, variables, totpCode);
-                        formattedOptions.queryParams[key] = paramValue;
-                    });
-                }
-            }
-
-            // Process body for variable substitution
-            if (requestOptions.body) {
-                let bodyContent = requestOptions.body;
-                if (typeof bodyContent === 'string') {
-                    log.debug(`Test request body before substitution:`, bodyContent);
-                    
-                    // Apply variable substitution to body content
-                    bodyContent = substituteVariables(bodyContent, variables, totpCode);
-                    
-                    log.debug(`Test request body after variable substitution:`, bodyContent);
-                    
-                    // Convert colon-separated format to URL-encoded format for form data
-                    if (requestOptions.contentType === 'application/x-www-form-urlencoded' && bodyContent.includes(':')) {
-                        log.debug(`Converting body format for content type:`, requestOptions.contentType);
-                        bodyContent = convertBodyToUrlEncoded(bodyContent);
-                    }
-                    
-                    formattedOptions.body = bodyContent;
-                    log.debug(`Test request body final:`, bodyContent);
-                } else {
-                    formattedOptions.body = requestOptions.body;
-                }
-            }
-
-            // Copy other request options
-            formattedOptions.contentType = requestOptions.contentType || 'application/json';
-
-            // Very important: preserve variables in the formatted options for the request
-            formattedOptions.variables = variables;
-
-            // Make sure we don't include the TOTP secret in the actual request
-            delete formattedOptions.totpSecret;
-
-            log.debug(`Test request URL:`, url);
-            log.debug(`Test request method:`, method);
-            log.debug(`Test request headers being sent:`, formattedOptions.headers);
-            log.debug(`Test request content type:`, formattedOptions.contentType);
-            log.debug(`Test request body being sent:`, formattedOptions.body);
-
-            const responseJson = await window.electronAPI.makeHttpRequest(url, method, formattedOptions);
-
-            // Parse response to get body
-            const response = parseJSON(responseJson);
-            if (!response) {
-                return responseJson;
-            }
-
-            const bodyContent = response.body || '';
-            const headers = response.headers || {};
-
-            // If no JSON filter is enabled, return raw response
-            if (!jsonFilter || jsonFilter.enabled !== true || !jsonFilter.path) {
-                return responseJson;
-            }
-
-            // Apply filter if enabled
-            try {
-                if (!bodyContent) {
-                    return responseJson;
-                }
-
-                const filteredContent = applyJsonFilter(bodyContent, jsonFilter);
-
-                // Create new response with filtered content, original body, and headers
-                const filteredResponse = {
-                    ...response,
-                    body: filteredContent,
-                    filteredWith: jsonFilter.path,
-                    originalResponse: bodyContent,
-                    headers: headers
-                };
-
-                return JSON.stringify(filteredResponse, null, 2);
-            } catch (error) {
-                log.error("Error filtering test response:", error);
-                return responseJson;
-            }
+            // Normalize sourceId
+            const effectiveSourceId = sourceId ? String(sourceId) : `test-${Date.now()}`;
+            
+            // Use the main request method but catch errors for better UI display
+            const result = await request(effectiveSourceId, url, method, requestOptions, jsonFilter);
+            
+            // Convert result back to JSON string for UI display
+            return JSON.stringify({
+                statusCode: 200,
+                body: result.content,
+                headers: result.headers,
+                originalResponse: result.originalResponse,
+                filteredWith: result.filteredWith
+            }, null, 2);
         } catch (error) {
             log.error("Test request error:", error);
-            throw error;
+            
+            // Return error in a format the UI can display
+            return JSON.stringify({
+                error: error.message,
+                statusCode: error.statusCode || 0,
+                retryStrategy: error.retryStrategy,
+                details: error.originalError?.message
+            }, null, 2);
         }
-    }, [parseJSON, applyJsonFilter, substituteVariables, recordTotpUsage, convertBodyToUrlEncoded]);
+    }, [request]);
 
     return {
         request,

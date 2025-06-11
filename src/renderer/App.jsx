@@ -17,11 +17,11 @@ import AboutModal from './components/AboutModal';
 import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
 import { useSources } from './contexts/SourceContext';
+import { CircuitBreakerStatus } from './components/CircuitBreakerStatus';
 import { useSettings } from './contexts/SettingsContext';
 import { useTheme } from './contexts/ThemeContext';
 const { createLogger } = require('./utils/logger');
 const log = createLogger('App');
-import { WebSocketProvider } from './contexts/WebSocketContext';
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
@@ -258,9 +258,7 @@ const AppComponent = () => {
     ];
 
     return (
-        // Wrap the entire application with WebSocketProvider
-        <WebSocketProvider>
-            <Layout className={`app-container ${isDarkMode ? 'dark' : ''}`}>
+        <Layout className={`app-container ${isDarkMode ? 'dark' : ''}`}>
                 <Header className="app-header">
                     <div className="logo-title">
                         <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
@@ -310,8 +308,10 @@ const AppComponent = () => {
                 <UpdateNotification ref={updateNotificationRef} />
 
                 <TrayMenu />
+                
+                {/* Show circuit breaker status in development */}
+                <CircuitBreakerStatus />
             </Layout>
-        </WebSocketProvider>
     );
 };
 
