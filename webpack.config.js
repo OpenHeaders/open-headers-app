@@ -4,6 +4,10 @@ const CopyPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 const webpack = require('webpack');
+const dotenv = require('dotenv');
+
+// Load environment variables from .env file
+const env = dotenv.config().parsed || {};
 
 // Main process config
 const mainConfig = {
@@ -39,8 +43,7 @@ const mainConfig = {
         },
         alias: {
             'fsevents': false,
-            'chokidar': path.resolve(__dirname, 'node_modules/chokidar'),
-            'config': path.resolve(__dirname, 'config')
+            'chokidar': path.resolve(__dirname, 'node_modules/chokidar')
         }
     },
     externals: {
@@ -55,9 +58,7 @@ const mainConfig = {
     plugins: [
         new webpack.DefinePlugin({
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
-            // Add config path
-            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true)
         })
     ],
     optimization: {
@@ -111,8 +112,7 @@ const preloadConfig = {
             "fsevents": false
         },
         alias: {
-            'fsevents': false,
-            'config': path.resolve(__dirname, 'config')
+            'fsevents': false
         }
     },
     externals: {
@@ -127,9 +127,7 @@ const preloadConfig = {
     plugins: [
         new webpack.DefinePlugin({
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
-            // Add config path
-            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+            'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true)
         })
     ],
     optimization: {
@@ -231,9 +229,7 @@ const rendererConfig = {
             // Force production version of React
             'react': path.resolve('./node_modules/react'),
             'react-dom': path.resolve('./node_modules/react-dom'),
-            'scheduler': path.resolve('./node_modules/scheduler'),
-            // Add config directory alias
-            'config': path.resolve(__dirname, 'config')
+            'scheduler': path.resolve('./node_modules/scheduler')
         }
     },
     cache: {
@@ -250,8 +246,19 @@ const rendererConfig = {
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
             // Add explicit React production mode flag
             'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
-            // Add config path
-            'process.env.CONFIG_PATH': JSON.stringify(path.resolve(__dirname, 'config'))
+            // Add all environment variables from .env file
+            ...Object.keys(env).reduce((acc, key) => {
+                acc[`process.env.${key}`] = JSON.stringify(env[key]);
+                return acc;
+            }, {}),
+            // Also include runtime environment variables
+            'process.env.REACT_APP_ENHANCED_ERROR_LOGGING': JSON.stringify(process.env.REACT_APP_ENHANCED_ERROR_LOGGING || env.REACT_APP_ENHANCED_ERROR_LOGGING || 'false'),
+            'process.env.REACT_APP_SHOW_CIRCUIT_BREAKER_STATUS': JSON.stringify(process.env.REACT_APP_SHOW_CIRCUIT_BREAKER_STATUS || env.REACT_APP_SHOW_CIRCUIT_BREAKER_STATUS || 'false'),
+            'process.env.REACT_APP_MAX_CONCURRENT_REQUESTS': JSON.stringify(process.env.REACT_APP_MAX_CONCURRENT_REQUESTS || env.REACT_APP_MAX_CONCURRENT_REQUESTS || '10'),
+            'process.env.REACT_APP_ENABLE_REQUEST_DEDUP': JSON.stringify(process.env.REACT_APP_ENABLE_REQUEST_DEDUP || env.REACT_APP_ENABLE_REQUEST_DEDUP || 'true'),
+            'process.env.REACT_APP_CIRCUIT_BREAKER_FAILURE_THRESHOLD': JSON.stringify(process.env.REACT_APP_CIRCUIT_BREAKER_FAILURE_THRESHOLD || env.REACT_APP_CIRCUIT_BREAKER_FAILURE_THRESHOLD || '5'),
+            'process.env.REACT_APP_CIRCUIT_BREAKER_RESET_TIMEOUT': JSON.stringify(process.env.REACT_APP_CIRCUIT_BREAKER_RESET_TIMEOUT || env.REACT_APP_CIRCUIT_BREAKER_RESET_TIMEOUT || '60000'),
+            'process.env.REACT_APP_MAX_REFRESH_QUEUE_SIZE': JSON.stringify(process.env.REACT_APP_MAX_REFRESH_QUEUE_SIZE || env.REACT_APP_MAX_REFRESH_QUEUE_SIZE || '100')
         }),
         new NodePolyfillPlugin({
             includeAliases: ['global']
@@ -267,12 +274,6 @@ const rendererConfig = {
                 {
                     from: path.resolve(__dirname, 'src/renderer/images'),
                     to: path.resolve(__dirname, 'dist-webpack/renderer/images'),
-                    noErrorOnMissing: true
-                },
-                // Copy config directory files needed at runtime
-                {
-                    from: path.resolve(__dirname, 'config'),
-                    to: path.resolve(__dirname, 'dist-webpack/config'),
                     noErrorOnMissing: true
                 },
                 {

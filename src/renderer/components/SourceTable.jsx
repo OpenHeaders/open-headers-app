@@ -71,7 +71,7 @@ const SourceTable = ({
 
         // Check if manager reports errors
         if (refreshStatus?.consecutiveErrors > 0) {
-            return `Error (retrying in ${formatTimeRemaining(refreshManager.getTimeUntilRefresh(source.sourceId))})`;
+            return `Error (retrying in ${formatTimeRemaining(refreshManager.getTimeUntilRefresh(source.sourceId, source))})`;
         }
 
         // Use cached display state if available and recent
@@ -80,7 +80,7 @@ const SourceTable = ({
         }
 
         // Calculate from RefreshManager timing
-        const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId);
+        const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId, source);
         if (timeUntilRefresh > 0) {
             return `Refreshes in ${formatTimeRemaining(timeUntilRefresh)}`;
         }
@@ -111,11 +111,12 @@ const SourceTable = ({
                     if (refreshStatus?.isRefreshing || refreshingSourceId === source.sourceId) {
                         statusText = 'Refreshing...';
                     } else if (refreshStatus?.consecutiveErrors > 0) {
-                        const timeUntilRetry = refreshManager.getTimeUntilRefresh(source.sourceId);
+                        const timeUntilRetry = refreshManager.getTimeUntilRefresh(source.sourceId, source);
                         statusText = `Error (retrying in ${formatTimeRemaining(timeUntilRetry)})`;
                     } else {
                         // Calculate time remaining
-                        const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId);
+                        // Pass the source data to get accurate timing
+                        const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId, source);
                         if (timeUntilRefresh > 0) {
                             statusText = `Refreshes in ${formatTimeRemaining(timeUntilRefresh)}`;
                         } else {
