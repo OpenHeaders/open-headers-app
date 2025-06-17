@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useCallback, useRef} from 'react';
-import { Table, Button, Tag, Typography, Space, Modal, Popconfirm } from 'antd';
+import { Table, Button, Tag, Typography, Space, Modal, Popconfirm, theme } from 'antd';
 import {
     ReloadOutlined,
     DeleteOutlined,
@@ -33,6 +33,7 @@ const SourceTable = ({
     const [selectedSourceId, setSelectedSourceId] = useState(null);
     const [refreshingSourceId, setRefreshingSourceId] = useState(null);
     const [removingSourceId, setRemovingSourceId] = useState(null);
+    const { token } = theme.useToken();
 
     // Get the currently selected source from the latest sources array
     const selectedSource = selectedSourceId ?
@@ -387,7 +388,7 @@ const SourceTable = ({
             render: (path, record) => (
                 <Text
                     ellipsis={{ tooltip: path }}
-                    style={{ color: record.sourceType === 'http' ? '#0071e3' : 'inherit', fontSize: '12px' }}
+                    style={{ color: record.sourceType === 'http' ? token.colorLink : 'inherit', fontSize: '12px' }}
                 >
                     {path}
                 </Text>

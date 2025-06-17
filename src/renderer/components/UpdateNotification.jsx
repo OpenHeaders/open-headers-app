@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
-import { Button, App, Progress } from 'antd';
+import { Button, App, Progress, theme } from 'antd';
 import { DownloadOutlined, ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 import timeManager from '../services/TimeManager';
 const { createLogger } = require('../utils/logger');
@@ -14,6 +14,7 @@ const UpdateNotification = forwardRef((props, ref) => {
     const [manualCheckInProgress, setManualCheckInProgress] = useState(false);
     const [isInstalling, setIsInstalling] = useState(false);
     const [lastCheckTime, setLastCheckTime] = useState(0);
+    const { token } = theme.useToken();
 
     // Debug label for consistent logging
     const debugLabel = '[UpdateNotification Debug]';
@@ -535,7 +536,7 @@ const UpdateNotification = forwardRef((props, ref) => {
                         description: 'You are already using the latest version.',
                         duration: 4,
                         key: NOTIFICATION_KEYS.NOT_AVAILABLE,
-                        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                        icon: <CheckCircleOutlined style={{ color: token.colorSuccess }} />
                     });
                     // Reset state and pending flag
                     debugLog(`${debugLabel} Resetting state flags after showing notification`);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, Typography, Button, Space, Divider } from 'antd';
+import { Modal, Typography, Button, Space, Divider, theme } from 'antd';
 import { GlobalOutlined, CompassOutlined } from '@ant-design/icons';
 
 const { Title, Text, Link, Paragraph } = Typography;
@@ -9,6 +9,7 @@ const { Title, Text, Link, Paragraph } = Typography;
  */
 const AboutModal = ({ open, onClose, appVersion }) => {
     const [activeTab, setActiveTab] = useState('about');
+    const { token } = theme.useToken();
 
     // Helper function to open external links
     const openExternal = (url) => {
@@ -33,7 +34,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                     padding: '32px 24px',
                     textAlign: 'center',
                     borderRadius: '12px',
-                    background: 'linear-gradient(to bottom, #fafafa, #f5f5f5)'
+                    background: token.colorBgLayout
                 }
             }}
         >
@@ -48,7 +49,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                             width: 96,
                             height: 96,
                             borderRadius: '18px',
-                            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+                            boxShadow: token.boxShadow,
                             margin: '0 auto 16px',
                             display: 'block'
                         }}
@@ -61,7 +62,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                 </Title>
                 <Text style={{
                     fontSize: '14px',
-                    color: '#86868b',
+                    color: token.colorTextSecondary,
                     display: 'block',
                     marginBottom: '20px'
                 }}>
@@ -72,7 +73,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                 <Paragraph style={{
                     fontSize: '14px',
                     lineHeight: '1.5',
-                    color: '#1d1d1f',
+                    color: token.colorText,
                     maxWidth: '340px',
                     margin: '0 auto 24px'
                 }}>
@@ -132,7 +133,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
 
                         <Paragraph style={{
                             fontSize: '12px',
-                            color: '#86868b',
+                            color: token.colorTextSecondary,
                             margin: '24px 0 0'
                         }}>
                             © 2025 Open Headers
@@ -188,7 +189,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                         style={{
                             width: '100%',
                             borderRadius: '8px',
-                            background: '#f5f5f7'
+                            background: token.colorBgTextHover
                         }}
                     >
                         Close

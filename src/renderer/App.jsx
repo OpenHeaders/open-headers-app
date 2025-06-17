@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Layout, Typography, Button, Space, Dropdown, Tag, notification } from 'antd';
+import { Layout, Typography, Button, Space, Dropdown, Tag, notification, Tabs, Card, theme } from 'antd';
 import {
     SettingOutlined,
     ExportOutlined,
@@ -8,7 +8,10 @@ import {
     MenuOutlined,
     QuestionCircleOutlined,
     DownloadOutlined,
-    LoadingOutlined
+    LoadingOutlined,
+    PlayCircleOutlined,
+    DatabaseOutlined,
+    UploadOutlined
 } from '@ant-design/icons';
 import SourceForm from './components/SourceForm';
 import SourceTable from './components/SourceTable';
@@ -16,6 +19,8 @@ import SettingsModal from './components/SettingsModal';
 import AboutModal from './components/AboutModal';
 import UpdateNotification from './components/UpdateNotification';
 import TrayMenu from './components/TrayMenu';
+import RecordRecording from './components/RecordRecording';
+import RecordDetails from './components/RecordDetails';
 import { useSources } from './contexts/SourceContext';
 import { CircuitBreakerStatus } from './components/CircuitBreakerStatus';
 import { useSettings } from './contexts/SettingsContext';
@@ -25,9 +30,10 @@ const log = createLogger('App');
 import { showMessage } from './utils/messageUtil';
 
 const { Header, Content } = Layout;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const AppComponent = () => {
+    const { token } = theme.useToken();
     const {
         sources,
         addSource,
@@ -40,15 +46,17 @@ const AppComponent = () => {
     } = useSources();
 
     const { settings, saveSettings } = useSettings();
-    const { isDarkMode } = useTheme();
 
     const [settingsVisible, setSettingsVisible] = useState(false);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
+    const [activeTab, setActiveTab] = useState('sources');
+    const [currentRecord, setCurrentRecord] = useState(null);
     const [loading, setLoading] = useState({
         export: false,
         import: false
     });
     const [appVersion, setAppVersion] = useState('');
+    const [tabScrollPositions, setTabScrollPositions] = useState({});
 
     // Create a ref for the UpdateNotification component
     const updateNotificationRef = useRef(null);
@@ -68,6 +76,19 @@ const AppComponent = () => {
         };
 
         getAppVersion();
+
+        // Listen for records recording requests from extension
+        const unsubscribe = window.electronAPI.onOpenRecordRecording((data) => {
+            log.info('Received request to open record recording:', data);
+            setActiveTab('record-viewer');
+            if (data && data.record) {
+                setCurrentRecord(data.record);
+            }
+        });
+
+        return () => {
+            unsubscribe();
+        };
     }, []);
 
     // Handle file change events
@@ -116,11 +137,15 @@ const AppComponent = () => {
         try {
             setLoading(prev => ({ ...prev, export: true }));
 
+            // Generate filename with timestamp
+            const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+            const defaultFilename = `open-headers_sources_${timestamp}.json`;
+
             // Show save file dialog
             const filePath = await window.electronAPI.saveFileDialog({
                 title: 'Export Sources',
                 buttonLabel: 'Export',
-                defaultPath: 'open-headers_config.json',
+                defaultPath: defaultFilename,
                 filters: [
                     { name: 'JSON Files', extensions: ['json'] },
                     { name: 'All Files', extensions: ['*'] }
@@ -258,8 +283,11 @@ const AppComponent = () => {
     ];
 
     return (
-        <Layout className={`app-container ${isDarkMode ? 'dark' : ''}`}>
-                <Header className="app-header">
+        <Layout className="app-container" style={{ background: token.colorBgLayout }}>
+                <Header className="app-header" style={{ 
+                    background: token.colorBgContainer,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`
+                }}>
                     <div className="logo-title">
                         <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
                         <div className="title-version">
@@ -279,17 +307,75 @@ const AppComponent = () => {
                     </Space>
                 </Header>
 
-                <Content className="app-content">
-                    <div className="content-container">
-                        <SourceForm onAddSource={handleAddSource} />
-
-                        <SourceTable
-                            sources={sources}
-                            onRemoveSource={removeSource}
-                            onRefreshSource={refreshSource}
-                            onUpdateSource={updateSource}
-                        />
-                    </div>
+                <Content className="app-content" style={{ background: token.colorBgContainer }}>
+                    <Tabs
+                        activeKey={activeTab}
+                        onChange={(key) => {
+                            // Save current scroll position
+                            const currentContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
+                            if (currentContainer) {
+                                setTabScrollPositions(prev => ({
+                                    ...prev,
+                                    [activeTab]: currentContainer.scrollTop
+                                }));
+                            }
+                            setActiveTab(key);
+                            // Restore scroll position after tab change
+                            setTimeout(() => {
+                                const newContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
+                                if (newContainer && tabScrollPositions[key] !== undefined) {
+                                    newContainer.scrollTop = tabScrollPositions[key];
+                                }
+                            }, 0);
+                        }}
+                        className="app-tabs"
+                        type="card"
+                        style={{ height: '100%' }}
+                        items={[
+                            {
+                                key: 'sources',
+                                label: (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <DatabaseOutlined />
+                                        Sources
+                                    </span>
+                                ),
+                                children: (
+                                    <div className="content-container">
+                                        <SourceForm onAddSource={handleAddSource} />
+                                        <SourceTable
+                                            sources={sources}
+                                            onRemoveSource={removeSource}
+                                            onRefreshSource={refreshSource}
+                                            onUpdateSource={updateSource}
+                                        />
+                                    </div>
+                                )
+                            },
+                            {
+                                key: 'record-viewer',
+                                label: (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <PlayCircleOutlined />
+                                        Records
+                                    </span>
+                                ),
+                                children: (
+                                    <div className="content-container">
+                                        <RecordRecording 
+                                            record={currentRecord}
+                                            onRecordChange={setCurrentRecord}
+                                        />
+                                        {currentRecord && (
+                                            <RecordDetails
+                                                record={currentRecord}
+                                            />
+                                        )}
+                                    </div>
+                                )
+                            }
+                        ]}
+                    />
                 </Content>
 
                 <SettingsModal

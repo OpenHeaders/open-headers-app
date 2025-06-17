@@ -549,22 +549,29 @@ if (!gotTheLock) {
                 contextIsolation: true,
                 nodeIntegration: false,
                 sandbox: true,
-                webSecurity: true
+                webSecurity: true,
+                // Allow loading resources with CORS errors in recordings
+                webviewTag: false,
+                allowRunningInsecureContent: false
             },
             show: false // IMPORTANT: Always start hidden regardless of settings
         });
 
-        // Set CSP header
+        // Set CSP header - relaxed for Electron app to allow loading records from any source
         mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
             callback({
                 responseHeaders: {
                     ...details.responseHeaders,
                     'Content-Security-Policy': [
-                        "default-src 'self'; " +
-                        "script-src 'self'; " +
-                        "style-src 'self' 'unsafe-inline'; " +
-                        "img-src 'self' data:; " +
-                        "connect-src 'none';"  // Explicitly block all external connections from renderer
+                        "default-src 'self' http: https: data: blob: file:; " +
+                        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +  // rrweb needs eval
+                        "style-src 'self' 'unsafe-inline' http: https:; " +  // Allow external stylesheets
+                        "style-src-elem 'self' 'unsafe-inline' http: https:; " +  // Explicitly set style-src-elem
+                        "img-src 'self' data: blob: http: https:; " +  // Allow all image sources
+                        "font-src 'self' data: http: https:; " +
+                        "connect-src 'self' http: https: ws: wss: file:; " +
+                        "media-src 'self' blob: http: https:; " +  // For video/audio in recordings
+                        "frame-src 'self' http: https:;"  // For iframes in recordings
                     ]
                 }
             });
@@ -1063,6 +1070,10 @@ if (!gotTheLock) {
         ipcMain.handle('writeFile', handleWriteFile);
         ipcMain.handle('watchFile', handleWatchFile);
         ipcMain.handle('unwatchFile', handleUnwatchFile);
+
+        // Record recording operations
+        ipcMain.handle('openRecordFile', handleOpenRecordFile);
+        ipcMain.handle('getResourcePath', handleGetResourcePath);
 
         // Network connectivity check
         ipcMain.handle('checkNetworkConnectivity', async () => {
@@ -2051,6 +2062,45 @@ if (!gotTheLock) {
         } catch (err) {
             log.error('Error setting auto launch:', err);
             return { success: false, message: err.message };
+        }
+    }
+
+    async function handleOpenRecordFile(_, filePath) {
+        try {
+            const content = await fs.promises.readFile(filePath, 'utf8');
+            return content;
+        } catch (error) {
+            log.error('Error opening record file:', error);
+            throw error;
+        }
+    }
+
+    async function handleGetResourcePath(_, filename) {
+        try {
+            // Check in the app's resources directory first
+            const resourcePath = path.join(process.resourcesPath, 'app', 'resources', filename);
+            if (fs.existsSync(resourcePath)) {
+                return resourcePath;
+            }
+
+            // Check in the app's directory (for development)
+            const appPath = path.join(__dirname, '..', 'resources', filename);
+            if (fs.existsSync(appPath)) {
+                return appPath;
+            }
+
+            // Handle rrweb resources
+            if (filename.includes('lib/rrweb-player')) {
+                const rrwebPath = path.join(__dirname, 'renderer', filename);
+                if (fs.existsSync(rrwebPath)) {
+                    return rrwebPath;
+                }
+            }
+
+            throw new Error(`Resource not found: ${filename}`);
+        } catch (error) {
+            log.error('Error getting resource path:', error);
+            throw error;
         }
     }
 
