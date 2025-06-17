@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Badge, Tooltip, Card, Space, Typography, Progress, Tag } from 'antd';
+import { Badge, Tooltip, Card, Space, Typography, Progress, Tag, theme } from 'antd';
 import {
     CheckCircleOutlined,
     WarningOutlined,
@@ -16,6 +16,7 @@ const SHOW_STATUS = process.env.NODE_ENV === 'development' &&
 export function CircuitBreakerStatus() {
     const [breakers, setBreakers] = useState({});
     const [isExpanded, setIsExpanded] = useState(false);
+    const { token } = theme.useToken();
     
     useEffect(() => {
         if (!SHOW_STATUS || !window.circuitBreakerManager) {
@@ -58,9 +59,9 @@ export function CircuitBreakerStatus() {
                       overallHealth === 'warning' ? <WarningOutlined /> :
                       <CheckCircleOutlined />;
     
-    const healthColor = overallHealth === 'error' ? '#ff4d4f' :
-                       overallHealth === 'warning' ? '#faad14' :
-                       '#52c41a';
+    const healthColor = overallHealth === 'error' ? token.colorError :
+                       overallHealth === 'warning' ? token.colorWarning :
+                       token.colorSuccess;
     
     // Mini view (collapsed)
     if (!isExpanded) {
@@ -73,7 +74,7 @@ export function CircuitBreakerStatus() {
                         bottom: 50,
                         right: 10,
                         backgroundColor: healthColor,
-                        color: 'white',
+                        color: token.colorWhite,
                         padding: '6px 12px',
                         borderRadius: '4px',
                         cursor: 'pointer',
@@ -82,7 +83,7 @@ export function CircuitBreakerStatus() {
                         gap: '8px',
                         opacity: 0.9,
                         fontSize: '12px',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                        boxShadow: token.boxShadowSecondary,
                         zIndex: 1000
                     }}
                 >
@@ -115,7 +116,7 @@ export function CircuitBreakerStatus() {
                 width: 350,
                 maxHeight: 400,
                 overflow: 'auto',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                boxShadow: token.boxShadowSecondary,
                 zIndex: 1000
             }}
         >
@@ -158,7 +159,7 @@ export function CircuitBreakerStatus() {
                                     style={{ 
                                         marginBottom: 12,
                                         padding: 8,
-                                        backgroundColor: '#fafafa',
+                                        backgroundColor: token.colorBgLayout,
                                         borderRadius: 4
                                     }}
                                 >
@@ -176,7 +177,7 @@ export function CircuitBreakerStatus() {
                                                 percent={parseFloat(successRate)} 
                                                 size="small" 
                                                 showInfo={false}
-                                                strokeColor={parseFloat(successRate) > 80 ? '#52c41a' : '#faad14'}
+                                                strokeColor={parseFloat(successRate) > 80 ? token.colorSuccess : token.colorWarning}
                                             />
                                         </div>
                                     )}

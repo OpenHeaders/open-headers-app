@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
-import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, Tooltip } from 'antd';
+import { Tabs, Form, Input, Select, Button, Card, Space, Radio, InputNumber, Switch, Row, Col, Typography, Tooltip, theme, Alert, Progress } from 'antd';
 import { PlusOutlined, MinusCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { useHttp } from '../hooks/useHttp';
 import JsonFilter from './JsonFilter';
@@ -22,6 +22,7 @@ const { Text } = Typography;
 const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, initialTotpEnabled, initialTotpSecret, onTestingChange }, ref) => {
     // Get current theme from context
     const { isDarkMode } = useTheme();
+    const { token } = theme.useToken();
     
     // Component state
     const [contentType, setContentType] = useState('application/json');
@@ -1258,7 +1259,6 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 </Form.Item>
                                                 <MinusCircleOutlined
                                                     onClick={() => remove(name)}
-                                                    style={{ color: '#ff4d4f' }}
                                                 />
                                             </Space>
                                         ))}
@@ -1309,7 +1309,6 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 </Form.Item>
                                                 <MinusCircleOutlined
                                                     onClick={() => remove(name)}
-                                                    style={{ color: '#ff4d4f' }}
                                                 />
                                             </Space>
                                         ))}
@@ -1402,11 +1401,9 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                         )}
 
                                         {/* CHANGED: Replace success/secondary text with a more subtle indicator */}
-                                        <div style={{ fontSize: 11, color: 'rgba(0, 0, 0, 0.45)', marginTop: 4 }}>
-                                            <Text type="secondary">
-                                                {jsonFilterEnabled ? 'Filter will extract specific data from JSON response' : 'Full JSON response will be used'}
-                                            </Text>
-                                        </div>
+                                        <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                                            {jsonFilterEnabled ? 'Filter will extract specific data from JSON response' : 'Full JSON response will be used'}
+                                        </Text>
                                     </Card>
 
                                     {/* TOTP Authentication */}
@@ -1462,7 +1459,7 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                                     }
                                                                 />
                                                             </Form.Item>
-                                                            {totpError && <div style={{ color: '#ff4d4f', fontSize: 11, marginTop: 4 }}>{totpError}</div>}
+                                                            {totpError && <Text type="danger" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>{totpError}</Text>}
                                                         </div>
 
                                                 <div style={{ marginTop: 4, marginBottom: 4 }}>
@@ -1472,100 +1469,49 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 </div>
 
                                                 {totpPreviewVisible && (
-                                                    <div style={{
-                                                        background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f7',
-                                                        padding: 12,
-                                                        borderRadius: 8,
-                                                        marginBottom: 8,
-                                                        border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e8e8e8'}`,
-                                                        backdropFilter: isDarkMode ? 'blur(10px)' : 'none',
-                                                        boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
-                                                    }}>
-                                                        <div style={{
-                                                            display: 'flex',
-                                                            justifyContent: 'space-between',
-                                                            alignItems: 'center',
-                                                            marginBottom: 8
-                                                        }}>
-                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                                <div style={{
-                                                                    fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                                                    fontSize: '1.5rem',
-                                                                    fontWeight: 'bold',
-                                                                    color: totpCode === 'ERROR' ? '#ff4d4f' : (isDarkMode ? '#87ceeb' : '#1890ff'),
-                                                                    letterSpacing: '0.1em',
-                                                                    cursor: totpCode !== 'ERROR' ? 'pointer' : 'default',
-                                                                    transition: 'transform 0.3s ease',
-                                                                    transform: codeJustGenerated ? 'scale(1.1)' : 'scale(1)'
-                                                                }}
-                                                                onClick={() => {
-                                                                    if (totpCode !== 'ERROR') {
-                                                                        navigator.clipboard.writeText(totpCode);
-                                                                        successMessage('Code copied to clipboard!');
-                                                                    }
-                                                                }}>
-                                                                    {totpCode}
-                                                                </div>
-                                                                {totpCode !== 'ERROR' && (
-                                                                    <CopyOutlined 
+                                                    <Card size="small" style={{ marginBottom: 8 }}>
+                                                        <Space direction="vertical" style={{ width: '100%' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <Space>
+                                                                    <Text 
+                                                                        strong 
+                                                                        copyable={totpCode !== 'ERROR'}
                                                                         style={{ 
-                                                                            fontSize: '16px', 
-                                                                            color: isDarkMode ? '#b8d4e3' : '#8c8c8c', 
-                                                                            cursor: 'pointer' 
+                                                                            fontSize: '1.5rem',
+                                                                            fontFamily: 'monospace'
                                                                         }}
-                                                                        onClick={() => {
-                                                                            navigator.clipboard.writeText(totpCode);
-                                                                            successMessage('Code copied to clipboard!');
-                                                                        }}
-                                                                    />
+                                                                        type={totpCode === 'ERROR' ? 'danger' : undefined}
+                                                                    >
+                                                                        {totpCode}
+                                                                    </Text>
+                                                                </Space>
+                                                                {totpCode !== 'ERROR' && (
+                                                                    <div style={{ textAlign: 'center' }}>
+                                                                        <Text strong style={{ fontSize: '1.2rem' }} type={timeRemaining <= 5 ? 'danger' : 'success'}>
+                                                                            {timeRemaining}s
+                                                                        </Text>
+                                                                        <br />
+                                                                        <Text type="secondary" style={{ fontSize: '11px' }}>
+                                                                            Time remaining
+                                                                        </Text>
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                             {totpCode !== 'ERROR' && (
-                                                                <div style={{ textAlign: 'center' }}>
-                                                                    <div style={{ 
-                                                                        fontSize: '1.2rem', 
-                                                                        fontWeight: 'bold',
-                                                                        color: timeRemaining <= 5 ? '#ff6b6b' : (isDarkMode ? '#90ee90' : '#52c41a')
-                                                                    }}>
-                                                                        {timeRemaining}s
-                                                                    </div>
-                                                                    <div style={{ 
-                                                                        fontSize: '11px', 
-                                                                        color: isDarkMode ? '#e0e0e0' : '#8c8c8c' 
-                                                                    }}>
-                                                                        Time remaining
-                                                                    </div>
-                                                                </div>
+                                                                <Progress 
+                                                                    percent={(timeRemaining / 30) * 100} 
+                                                                    showInfo={false}
+                                                                    status={timeRemaining <= 5 ? 'exception' : 'success'}
+                                                                    size="small"
+                                                                />
                                                             )}
-                                                        </div>
-                                                        {totpCode !== 'ERROR' && (
-                                                            <div style={{
-                                                                height: 8,
-                                                                background: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#e8e8e8',
-                                                                borderRadius: 4,
-                                                                overflow: 'hidden',
-                                                                boxShadow: isDarkMode ? 'inset 0 2px 4px rgba(0, 0, 0, 0.3)' : 'none'
-                                                            }}>
-                                                                <div style={{
-                                                                    height: '100%',
-                                                                    background: timeRemaining <= 5 ? 
-                                                                        (isDarkMode ? 'linear-gradient(90deg, #ff6b6b 0%, #ff8787 100%)' : '#ff4d4f') : 
-                                                                        (isDarkMode ? 'linear-gradient(90deg, #90ee90 0%, #98fb98 100%)' : '#52c41a'),
-                                                                    width: `${(timeRemaining / 30) * 100}%`,
-                                                                    transition: 'width 0.1s linear, background 0.3s ease',
-                                                                    boxShadow: isDarkMode ? (timeRemaining <= 5 ? '0 0 10px rgba(255, 107, 107, 0.8)' : '0 0 10px rgba(144, 238, 144, 0.8)') : 'none'
-                                                                }} />
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                        </Space>
+                                                    </Card>
                                                 )}
 
-                                                <div style={{ 
-                                                    fontSize: 11, 
-                                                    color: isDarkMode ? '#98989d' : 'rgba(0, 0, 0, 0.45)' 
-                                                }}>
+                                                <Text type="secondary" style={{ fontSize: 11 }}>
                                                     Use <code>_TOTP_CODE</code> in any URL, header, or body field
-                                                </div>
+                                                </Text>
 
                                                 {/* TOTP Cooldown Warning */}
                                                 <Form.Item
@@ -1577,21 +1523,13 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                     {({ getFieldValue }) => {
                                                         const secret = getFieldValue('totpSecret');
                                                         return secret && effectiveSourceId && !canUseTotpSecret(effectiveSourceId) ? (
-                                                            <div style={{
-                                                                marginTop: 8,
-                                                                padding: '8px 12px',
-                                                                background: '#fff7e6',
-                                                                border: '1px solid #ffd591',
-                                                                borderRadius: 4,
-                                                                fontSize: 12
-                                                            }}>
-                                                                <div style={{ color: '#fa8c16', fontWeight: 500 }}>
-                                                                    ⏱️ TOTP cooldown active: {getCooldownSeconds(effectiveSourceId)} seconds remaining
-                                                                </div>
-                                                                <div style={{ color: '#8c8c8c', fontSize: 11, marginTop: 2 }}>
-                                                                    Please wait before making another request with this source.
-                                                                </div>
-                                                            </div>
+                                                            <Alert
+                                                                type="warning"
+                                                                message={`⏱️ TOTP cooldown active: ${getCooldownSeconds(effectiveSourceId)} seconds remaining`}
+                                                                style={{ marginTop: 8 }}
+                                                                description="Please wait before making another request with this source."
+                                                                showIcon={false}
+                                                            />
                                                         ) : null;
                                                     }}
                                                 </Form.Item>
@@ -1712,7 +1650,6 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 </Form.Item>
                                                 <MinusCircleOutlined
                                                     onClick={() => remove(name)}
-                                                    style={{ color: '#ff4d4f' }}
                                                 />
                                             </Space>
                                         ))}
@@ -1727,13 +1664,9 @@ const HttpOptions = forwardRef(({ form, sourceId, onTestResponse, onTotpChange, 
                                                 Add Variable
                                             </Button>
                                         </Form.Item>
-                                        <div style={{ 
-                                            marginTop: 8, 
-                                            fontSize: 11, 
-                                            color: isDarkMode ? '#98989d' : 'rgba(0, 0, 0, 0.45)' 
-                                        }}>
+                                        <Text type="secondary" style={{ marginTop: 8, fontSize: 11, display: 'block' }}>
                                             Use variables like <code>_VARIABLE_NAME</code> in URL, headers, query params, or body
-                                        </div>
+                                        </Text>
                                     </>
                                 )}
                             </Form.List>

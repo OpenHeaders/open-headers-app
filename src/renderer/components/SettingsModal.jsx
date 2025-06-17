@@ -8,7 +8,8 @@ import {
     BgColorsOutlined,
     SyncOutlined,
     SunOutlined,
-    MoonOutlined
+    MoonOutlined,
+    CompressOutlined
 } from '@ant-design/icons';
 import { useTheme, THEME_MODES } from '../contexts/ThemeContext';
 const { createLogger } = require('../utils/logger');
@@ -23,18 +24,20 @@ const { Text } = Typography;
 const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const [form] = Form.useForm();
     const [formValues, setFormValues] = useState(settings || {});
-    const { themeMode } = useTheme();
+    const { themeMode, isCompactMode } = useTheme();
 
     // When settings or visibility change, update form values
     useEffect(() => {
         if (open && settings) {
             form.setFieldsValue({
                 ...settings,
-                theme: themeMode // Add current theme mode
+                theme: themeMode, // Add current theme mode
+                compactMode: isCompactMode // Add current compact mode
             });
             setFormValues({
                 ...settings,
-                theme: themeMode
+                theme: themeMode,
+                compactMode: isCompactMode
             });
         }
     }, [open, settings, form, themeMode]);
@@ -71,7 +74,6 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const sectionStyle = {
         fontSize: 13,
         fontWeight: 600,
-        color: '#1d1d1f',
         marginBottom: 16,
         marginTop: 8,
     };
@@ -91,8 +93,8 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
-            transition: 'color 0.2s ease',
-            color: isActive ? '#1d1d1f' : '#86868b',
+            transition: 'opacity 0.2s ease',
+            opacity: isActive ? 1 : 0.6,
         };
     };
 
@@ -100,8 +102,8 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const getIconStyle = (isActive) => {
         return {
             marginRight: 8,
-            color: isActive ? '#0071e3' : '#86868b',
-            transition: 'color 0.2s ease',
+            transition: 'opacity 0.2s ease',
+            opacity: isActive ? 1 : 0.6,
         };
     };
 
@@ -109,9 +111,9 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
     const getDescStyle = (isActive) => {
         return {
             fontSize: 12,
-            color: isActive ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.3)',
             marginTop: 4,
-            transition: 'color 0.2s ease',
+            transition: 'opacity 0.2s ease',
+            opacity: isActive ? 0.65 : 0.45,
         };
     };
 
@@ -273,6 +275,23 @@ const SettingsModal = ({ open, settings, onCancel, onSave }) => {
                                     }
                                 ]}
                             />
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Row style={getOptionStyle(true)} align="middle" justify="space-between">
+                    <Col span={16}>
+                        <div style={getLabelStyle(formValues.compactMode)}>
+                            <CompressOutlined style={getIconStyle(formValues.compactMode)} />
+                            <Space direction="vertical" size={0}>
+                                <span>Compact mode</span>
+                                <span style={getDescStyle(formValues.compactMode)}>Reduce spacing for a more compact interface</span>
+                            </Space>
+                        </div>
+                    </Col>
+                    <Col span={8} style={{ textAlign: 'right' }}>
+                        <Form.Item name="compactMode" valuePropName="checked" noStyle>
+                            <Switch />
                         </Form.Item>
                     </Col>
                 </Row>

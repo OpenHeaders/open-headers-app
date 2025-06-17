@@ -261,7 +261,7 @@ const rendererConfig = {
             'process.env.REACT_APP_MAX_REFRESH_QUEUE_SIZE': JSON.stringify(process.env.REACT_APP_MAX_REFRESH_QUEUE_SIZE || env.REACT_APP_MAX_REFRESH_QUEUE_SIZE || '100')
         }),
         new NodePolyfillPlugin({
-            includeAliases: ['global']
+            includeAliases: ['global', 'Buffer', 'process']
         }),
         new HtmlWebpackPlugin({
             template: path.resolve(__dirname, 'src/renderer/index.html'),
@@ -284,6 +284,14 @@ const rendererConfig = {
                 {
                     from: path.resolve(__dirname, 'build/linux/install-open-headers.sh'),
                     to: path.resolve(__dirname, 'dist-webpack/install-open-headers.sh')
+                },
+                {
+                    from: path.resolve(__dirname, 'node_modules/rrweb-player/dist/rrweb-player.umd.cjs'),
+                    to: path.resolve(__dirname, 'dist-webpack/renderer/lib/rrweb-player.js')
+                },
+                {
+                    from: path.resolve(__dirname, 'node_modules/rrweb-player/dist/style.css'),
+                    to: path.resolve(__dirname, 'dist-webpack/renderer/lib/rrweb-player.css')
                 }
             ]
         })
