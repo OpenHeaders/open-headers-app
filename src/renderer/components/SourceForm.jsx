@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs, Tooltip } from 'antd';
+import { Card, Form, Select, Input, Button, Row, Col, Divider, Tabs, Tooltip, theme } from 'antd';
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useFileSystem } from '../hooks/useFileSystem';
 import HttpOptions from './HttpOptions';
@@ -22,6 +22,7 @@ const SourceForm = ({ onAddSource }) => {
     const [testResponseHeaders, setTestResponseHeaders] = useState(null);
     const [totpEnabled, setTotpEnabled] = useState(false);
     const [totpSecret, setTotpSecret] = useState('');
+    const { token } = theme.useToken();
 
     const formCardRef = useRef(null);
     const httpOptionsRef = useRef(null);
@@ -324,9 +325,12 @@ const SourceForm = ({ onAddSource }) => {
     // Render the sticky header separately when in sticky mode
     const renderStickyHeader = () => {
         if (!isSticky) return null;
-
+        
         return (
-            <div className="source-form-sticky-header">
+            <div className="source-form-sticky-header" style={{ 
+                background: token.colorBgContainer,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.09)'
+            }}>
                 <div className="sticky-header-content">
                     <div className="title">Add Source</div>
                     <div style={{ marginLeft: '16px' }}>
