@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Button, Space, Card, Typography } from 'antd';
+import { Button, Space, Card, Typography, theme } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -12,6 +12,7 @@ const JsonViewer = ({ source, onRefresh }) => {
     const filteredContent = source.sourceContent || '';
     const originalResponse = source.originalResponse || '';
     const jsonFilterPath = source.jsonFilter?.path || '';
+    const { token } = theme.useToken();
 
     // Use refs to track previous values for comparison
     const prevSourceIdRef = useRef(null);
@@ -84,7 +85,7 @@ const JsonViewer = ({ source, onRefresh }) => {
                         maxHeight: 200,
                         overflow: 'auto',
                         margin: 0,
-                        background: '#f5f5f7',
+                        background: token.colorBgLayout,
                         padding: 8,
                         fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
                         fontSize: 12,
@@ -102,7 +103,7 @@ const JsonViewer = ({ source, onRefresh }) => {
                         maxHeight: 300,
                         overflow: 'auto',
                         margin: 0,
-                        background: '#f5f5f7',
+                        background: token.colorBgLayout,
                         padding: 8,
                         fontFamily: '"SF Mono", Menlo, Monaco, Consolas, monospace',
                         fontSize: 12,

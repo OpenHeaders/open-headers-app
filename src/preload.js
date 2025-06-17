@@ -283,6 +283,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
         const subscription = () => callback();
         ipcRenderer.on('quitApp', subscription);
         return () => ipcRenderer.removeListener('quitApp', subscription);
+    },
+
+    // Records recording functionality
+    openRecordFile: (filePath) => ipcRenderer.invoke('openRecordFile', filePath),
+    getResourcePath: (filename) => ipcRenderer.invoke('getResourcePath', filename),
+    
+    // Record recording events from extension
+    onOpenRecordRecording: (callback) => {
+        const subscription = (_, data) => callback(data);
+        ipcRenderer.on('open-record-recording', subscription);
+        return () => ipcRenderer.removeListener('open-record-recording', subscription);
     }
 });
 

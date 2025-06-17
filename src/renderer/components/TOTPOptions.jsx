@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col } from 'antd';
+import { Card, Input, Switch, Typography, Button, Space, Slider, Row, Col, Progress } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import timeManager from '../services/TimeManager';
-import { useTheme } from '../contexts/ThemeContext';
 import { successMessage } from '../utils/messageUtil';
 
 const { Text } = Typography;
@@ -12,8 +11,6 @@ const { Text } = Typography;
  * Simplified version that avoids Form conflicts
  */
 const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChange }) => {
-    // Get current theme from context
-    const { isDarkMode } = useTheme();
     
     // Component state
     const [enabled, setEnabled] = useState(initialEnabled);
@@ -269,92 +266,44 @@ const TOTPOptions = ({ form, initialEnabled = false, initialSecret = '', onChang
                     {renderSecretTips()}
 
                     {previewVisible && (
-                        <div style={{
-                            background: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f7',
-                            padding: 12,
-                            borderRadius: 8,
-                            marginBottom: 8,
-                            border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : '#e8e8e8'}`,
-                            backdropFilter: isDarkMode ? 'blur(10px)' : 'none',
-                            boxShadow: isDarkMode ? '0 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
-                        }}>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: 8
-                            }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Text style={{
-                                        fontFamily: 'SF Mono, Menlo, Monaco, Consolas, monospace',
-                                        fontSize: '1.5rem',
-                                        fontWeight: 'bold',
-                                        color: code === 'ERROR' ? '#ff4d4f' : (isDarkMode ? '#87ceeb' : '#1890ff'),
-                                        letterSpacing: '0.1em',
-                                        cursor: code !== 'ERROR' ? 'pointer' : 'default',
-                                        transition: 'transform 0.3s ease',
-                                        transform: codeJustGenerated ? 'scale(1.1)' : 'scale(1)'
-                                    }}
-                                    onClick={() => {
-                                        if (code !== 'ERROR') {
-                                            navigator.clipboard.writeText(code);
-                                            successMessage('Code copied to clipboard!');
-                                        }
-                                    }}>
-                                        {code}
-                                    </Text>
-                                    {code !== 'ERROR' && (
-                                        <CopyOutlined 
+                        <Card size="small" style={{ marginBottom: 8 }}>
+                            <Space direction="vertical" style={{ width: '100%' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Space>
+                                        <Text 
+                                            strong 
+                                            copyable={code !== 'ERROR'}
                                             style={{ 
-                                                fontSize: '16px', 
-                                                color: isDarkMode ? '#98989d' : '#8c8c8c', 
-                                                cursor: 'pointer' 
+                                                fontSize: '1.5rem',
+                                                fontFamily: 'monospace'
                                             }}
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(code);
-                                                successMessage('Code copied to clipboard!');
-                                            }}
-                                        />
+                                            type={code === 'ERROR' ? 'danger' : undefined}
+                                        >
+                                            {code}
+                                        </Text>
+                                    </Space>
+                                    {code !== 'ERROR' && (
+                                        <div style={{ textAlign: 'center' }}>
+                                            <Text strong style={{ fontSize: '1.2rem' }} type={timeRemaining <= 5 ? 'danger' : 'success'}>
+                                                {timeRemaining}s
+                                            </Text>
+                                            <br />
+                                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                                                Time remaining
+                                            </Text>
+                                        </div>
                                     )}
                                 </div>
                                 {code !== 'ERROR' && (
-                                    <div style={{ textAlign: 'center' }}>
-                                        <Text style={{ 
-                                            fontSize: '1.2rem', 
-                                            fontWeight: 'bold',
-                                            color: timeRemaining <= 5 ? '#ff4d4f' : '#52c41a'
-                                        }}>
-                                            {timeRemaining}s
-                                        </Text>
-                                        <div style={{ 
-                                            fontSize: '11px', 
-                                            color: isDarkMode ? '#98989d' : '#8c8c8c' 
-                                        }}>
-                                            Time remaining
-                                        </div>
-                                    </div>
+                                    <Progress 
+                                        percent={(timeRemaining / 30) * 100} 
+                                        showInfo={false}
+                                        status={timeRemaining <= 5 ? 'exception' : 'success'}
+                                        size="small"
+                                    />
                                 )}
-                            </div>
-                            {code !== 'ERROR' && (
-                                <div style={{
-                                    height: 8,
-                                    background: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#e8e8e8',
-                                    borderRadius: 4,
-                                    overflow: 'hidden',
-                                    boxShadow: isDarkMode ? 'inset 0 2px 4px rgba(0, 0, 0, 0.3)' : 'none'
-                                }}>
-                                    <div style={{
-                                        height: '100%',
-                                        background: timeRemaining <= 5 ? 
-                                            (isDarkMode ? 'linear-gradient(90deg, #ff6b6b 0%, #ff8787 100%)' : '#ff4d4f') : 
-                                            (isDarkMode ? 'linear-gradient(90deg, #90ee90 0%, #98fb98 100%)' : '#52c41a'),
-                                        width: `${(timeRemaining / 30) * 100}%`,
-                                        transition: 'width 0.1s linear, background 0.3s ease',
-                                        boxShadow: isDarkMode ? (timeRemaining <= 5 ? '0 0 10px rgba(255, 107, 107, 0.8)' : '0 0 10px rgba(144, 238, 144, 0.8)') : 'none'
-                                    }} />
-                                </div>
-                            )}
-                        </div>
+                            </Space>
+                        </Card>
                     )}
 
                     {renderTimeSync()}

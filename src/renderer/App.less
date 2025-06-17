@@ -1,24 +1,21 @@
-// App.less - Main application styles - Refactored for compact UI only
+// App.less - Main application styles using Ant Design theme
 
 // Import Ant Design styles
 @import 'antd/dist/reset.css';
 
-// Custom variables
-@primary-color: #0071e3;
-
 // Layout styles
 .app-container {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-// Header styles
+// Header styles - let Ant Design handle the colors
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  background-color: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
   height: 64px;
   position: sticky;
   top: 0;
@@ -40,13 +37,11 @@
       align-items: center;
 
       h3 {
-        color: #1d1d1f;
-        margin: 0;
-        margin-right: 8px;
+        margin: 0 8px 0 0;
       }
 
       .version-tag {
-        margin-top: 3px; // Slight adjustment to align with title
+        margin-top: 3px;
         font-size: 12px;
         padding: 0 7px;
         font-weight: normal;
@@ -58,24 +53,64 @@
 
 // Main content styles
 .app-content {
-  padding: 24px;
-  background: #f5f5f7;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  .app-tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: inherit;
+    
+    .ant-tabs-nav {
+      margin-bottom: 0;
+      padding: 24px 24px 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 1000;  // Ensure main tabs stay on top
+      background: inherit;
+      
+      .ant-tabs-nav-wrap {
+        background: inherit;
+      }
+      
+      .ant-tabs-tab {
+        margin-right: 8px;
+        border-radius: 8px 8px 0 0;
+      }
+    }
+    
+    .ant-tabs-content {
+      height: 100%;
+    }
+    
+    .ant-tabs-content-holder {
+      flex: 1;
+      overflow: auto;
+    }
+    
+    .ant-tabs-tabpane {
+      height: 100%;
+    }
+  }
 
   .content-container {
-    padding-bottom: 40px; // Add extra padding at the bottom for scrolling
-    min-height: calc(100vh - 112px); // 100vh - (header height + padding)
+    padding: 24px;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
   }
 }
 
 // Card styles
 .ant-card {
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-
-  &-head {
-    border-bottom: 1px solid #f0f0f0;
-  }
 
   &-head-title {
     font-weight: 500;
@@ -110,7 +145,6 @@
     padding: 12px;
   }
 
-  // Remove excess spacing between form items
   .ant-form-item-label {
     padding-bottom: 4px;
 
@@ -125,15 +159,13 @@
   }
 }
 
-// Sticky source form header - only for the add button header
+// Sticky source form header - using theme tokens
 .source-form-sticky-header {
   position: fixed;
-  top: 64px; // Same as app-header height
+  top: 64px;
   left: 0;
   right: 0;
   z-index: 9;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: box-shadow 0.3s, transform 0.3s;
   padding: 0 24px;
   height: 48px;
@@ -151,12 +183,152 @@
     .title {
       font-size: 14px;
       font-weight: 500;
-      color: rgba(0, 0, 0, 0.85);
     }
   }
 }
 
-// HTTP options styles - compact only
+// Records viewer cards
+.record-info-card {
+  flex-shrink: 0;
+  
+  .ant-card-head {
+    .ant-card-head-title {
+      font-size: 14px;
+    }
+  }
+}
+
+.record-details-card {
+  height: 400px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  
+  .ant-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    background: inherit;
+    position: relative;
+    z-index: 1;
+  }
+}
+
+// Records viewer tabs styles
+.record-viewer-tabs {
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+  
+  .ant-tabs-nav {
+    margin: 0;
+    padding: 16px 16px 0 16px;
+    background: inherit;
+    
+    .ant-tabs-nav-wrap {
+      padding: 0;
+      background: inherit;
+    }
+    
+    .ant-tabs-tab {
+      padding: 8px 16px;
+      margin: 0 8px 0 0;
+      border-radius: 8px 8px 0 0;
+      
+      &:first-child {
+        margin-left: 0;
+      }
+      
+      &:last-child {
+        margin-right: 0;
+      }
+    }
+  }
+  
+  .ant-tabs-content {
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .ant-tabs-content-holder {
+    height: 100%;
+  }
+  
+  .ant-tabs-tabpane {
+    height: 100%;
+    padding: 0;
+  }
+  
+  // Custom scrollbar styling for tables
+  .ant-table-wrapper {
+    height: calc(100% - 32px); // Account for padding
+  }
+  
+  .ant-table {
+    .ant-table-container {
+      .ant-table-body,
+      .ant-table-content {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+        scrollbar-gutter: stable;
+      }
+    }
+  }
+}
+
+// Network tab side panel styles
+.network-side-panel {
+  display: flex;
+  flex-direction: column;
+  
+  .ant-tabs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    
+    .ant-tabs-nav {
+      flex-shrink: 0;
+    }
+    
+    .ant-tabs-content {
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .ant-tabs-content-holder {
+      height: 100%;
+    }
+    
+    .ant-tabs-tabpane {
+      height: 100%;
+    }
+  }
+}
+
+// Hide only the radio buttons in network tab
+.record-viewer-tabs {
+  .ant-table-selection-column {
+    width: 0 !important;
+    padding: 0 !important;
+    
+    .ant-radio-wrapper {
+      display: none !important;
+    }
+  }
+}
+
+
+
+
+
+// HTTP options styles
 .http-options {
   .ant-tabs-nav {
     margin-bottom: 8px;
@@ -168,9 +340,7 @@
   }
 
   :where(.ant-tabs-content) {
-    background: #fafafa;
     padding: 8px;
-    border: 1px solid #f0f0f0;
     border-radius: 0 0 6px 6px;
   }
 
@@ -229,31 +399,6 @@
       border-radius: 4px;
       font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
       white-space: nowrap;
-
-      &.status-1xx {
-        background-color: #e6f7ff;
-        color: #1890ff;
-      }
-
-      &.status-2xx {
-        background-color: #f6ffed;
-        color: #52c41a;
-      }
-
-      &.status-3xx {
-        background-color: #fff7e6;
-        color: #fa8c16;
-      }
-
-      &.status-4xx {
-        background-color: #fff2f0;
-        color: #ff4d4f;
-      }
-
-      &.status-5xx {
-        background-color: #fff1f0;
-        color: #ff4d4f;
-      }
     }
   }
 
@@ -267,10 +412,8 @@
     font-size: 11px;
     overflow: auto;
     margin: 0;
-    background: #fafafa;
     font-family: 'SF Mono', Menlo, Monaco, Consolas, monospace;
     border-radius: 6px;
-    border: 1px solid #f0f0f0;
     white-space: pre-wrap;
     word-break: break-word;
   }
@@ -285,16 +428,10 @@
       th, td {
         padding: 4px 6px;
         text-align: left;
-        border-bottom: 1px solid #f0f0f0;
       }
 
       :where(th) {
-        background-color: #fafafa;
         font-weight: 500;
-      }
-
-      tr:hover td {
-        background-color: #f5f5f5;
       }
 
       td:first-child {
@@ -304,7 +441,6 @@
     }
 
     .no-headers {
-      color: #999999;
       font-style: italic;
       padding: 12px;
       text-align: center;
@@ -312,7 +448,6 @@
   }
 
   .filter-info {
-    color: #722ed1;
     margin-bottom: 8px;
     font-style: italic;
     font-size: 11px;
@@ -335,13 +470,7 @@
     overflow: hidden;
 
     .ant-table-thead > tr > th {
-      background: #f5f5f7;
       font-weight: 500;
-      color: #1d1d1f;
-    }
-
-    .ant-table-tbody > tr > td {
-      border-bottom: 1px solid #f0f0f0;
     }
   }
 }
@@ -369,10 +498,8 @@
 :where(.source-content-cell) {
   max-height: 80px;
   overflow: hidden;
-  background: #fafafa;
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid #f0f0f0;
   font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-size: 12px;
   white-space: nowrap;
@@ -383,24 +510,10 @@
 // Refresh status styles
 .refresh-status {
   font-size: 12px;
-  color: rgba(0, 0, 0, 0.65);
-  background: #f5f5f5;
   padding: 4px 8px;
   border-radius: 4px;
   display: inline-block;
   min-width: 180px;
-
-  &.active {
-    background: #e6f7ff;
-    color: #1890ff;
-    border: 1px solid #91d5ff;
-  }
-
-  &.error {
-    background: #fff2f0;
-    color: #ff4d4f;
-    border: 1px solid #ffccc7;
-  }
 }
 
 // Code styles
@@ -412,7 +525,6 @@ code {
 // Toast notification styles
 .ant-message-notice-content {
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   padding: 12px 16px;
 }
 
@@ -420,14 +532,6 @@ code {
 .ant-modal-content {
   border-radius: 8px;
   overflow: hidden;
-
-  .ant-modal-header {
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .ant-modal-footer {
-    border-top: 1px solid #f0f0f0;
-  }
 }
 
 // Make modals more compact
@@ -450,17 +554,11 @@ code {
 .ant-select-selector,
 .ant-textarea {
   border-radius: 6px;
-
-  &:hover,
-  &:focus {
-    border-color: #0071e3;
-  }
 }
 
 // Fix Select component alignment for theme dropdown
 .settings-modal {
   .ant-select {
-    // Ensure consistent padding for the selector
     .ant-select-selector {
       padding-left: 11px !important;
       padding-right: 11px !important;
@@ -470,12 +568,6 @@ code {
 
 .ant-input-affix-wrapper {
   border-radius: 6px;
-}
-
-// Override Ant Design's default focus styles
-*:focus-visible {
-  outline: 2px solid #0071e3 !important;
-  outline-offset: 2px !important;
 }
 
 // Animations for page transitions
@@ -508,12 +600,6 @@ code {
     word-break: break-word;
   }
 
-  // Filter indicator
-  .filter-indicator {
-    background-color: #f0f8ff;
-    color: #0066cc;
-  }
+  // Filter indicator - removed hardcoded color
+  // Let components handle their own styling
 }
-
-// Import dark theme styles at the end to ensure higher specificity
-@import './App.dark.less';

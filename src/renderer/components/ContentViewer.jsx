@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton, Table } from 'antd';
+import { Modal, Card, Button, Typography, Space, Tabs, Divider, Skeleton, Table, theme } from 'antd';
 import { FileTextOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
 import { showMessage } from '../utils/messageUtil';
 
@@ -13,6 +13,7 @@ const ContentViewer = ({ source, open, onClose }) => {
     const [activeTab, setActiveTab] = useState('content');
     const [copyingContent, setCopyingContent] = useState(false);
     const [copyingJson, setCopyingJson] = useState(false);
+    const { token } = theme.useToken();
 
     // Store our own internal copy of content to avoid the intermediate "Refreshing..." state
     const [internalContent, setInternalContent] = useState(null);
@@ -397,7 +398,7 @@ const ContentViewer = ({ source, open, onClose }) => {
                         <div className="no-headers" style={{
                             padding: '20px 0',
                             textAlign: 'center',
-                            color: '#999',
+                            color: token.colorTextSecondary,
                             fontStyle: 'italic',
                             fontSize: 12
                         }}>
