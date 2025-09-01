@@ -1,0 +1,57 @@
+# Electron Builder config for Windows build without Git
+# This extends the base configuration from package.json
+appId: io.openheaders
+productName: OpenHeaders
+directories:
+  buildResources: build
+  output: dist
+files:
+  - dist-webpack/**/*
+asar: true
+compression: maximum
+afterSign: ./scripts/notarize.js
+afterPack: ./scripts/afterPackHook.js
+asarUnpack:
+  - dist-webpack/renderer/images/**/*
+npmRebuild: false
+nodeGypRebuild: false
+extends: null
+removePackageScripts: true
+win:
+  target: nsis
+  artifactName: "${productName}-${version}-Setup-NoGit.${ext}"
+  icon: build/icon.ico
+  forceCodeSigning: false
+  signtoolOptions:
+    certificateFile: ./certs/windows/code-signing.pfx
+    certificatePassword: ""
+    signingHashAlgorithms:
+      - sha256
+    rfc3161TimeStampServer: http://timestamp.digicert.com
+  # Override extraResources to exclude Git
+  extraResources:
+    - from: dev-app-update.yml
+      to: app-update.yml
+    - from: build
+      to: .
+      filter:
+        - "*.png"
+        - "*.ico"
+    - from: src/renderer/images
+      to: images
+      filter:
+        - "*.png"
+    - from: build/certificates
+      to: certificates
+      filter:
+        - "*.crt"
+    # Note: No portable Git resources
+nsis:
+  oneClick: true
+  perMachine: false
+  artifactName: "${productName}-${version}-Setup-NoGit.${ext}"
+  include: build/installer.nsh
+publish:
+  provider: github
+  owner: OpenHeaders
+  repo: open-headers-app

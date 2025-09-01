@@ -47,7 +47,8 @@ const mainConfig = {
         }
     },
     externals: {
-        'fsevents': 'empty'
+        'fsevents': 'empty',
+        '@openheaders/windows-foreground': 'commonjs @openheaders/windows-foreground'
     },
     cache: {
         type: 'filesystem',
@@ -71,7 +72,13 @@ const mainConfig = {
                     compress: {
                         drop_console: false,
                         drop_debugger: false,
-                        passes: 2
+                        passes: 2,
+                        pure_funcs: ['console.debug'],
+                        dead_code: true,
+                        unused: true
+                    },
+                    mangle: {
+                        safari10: true
                     }
                 }
             })
@@ -140,7 +147,13 @@ const preloadConfig = {
                     compress: {
                         drop_console: false,
                         drop_debugger: false,
-                        passes: 2
+                        passes: 2,
+                        pure_funcs: ['console.debug'],
+                        dead_code: true,
+                        unused: true
+                    },
+                    mangle: {
+                        safari10: true
                     }
                 }
             })
@@ -215,6 +228,13 @@ const rendererConfig = {
             {
                 test: /\.css$/,
                 use: ['style-loader', 'css-loader']
+            },
+            {
+                test: /\.(png|jpg|jpeg|gif|svg|ico)$/,
+                type: 'asset/resource',
+                generator: {
+                    filename: 'images/[name][ext]'
+                }
             }
         ]
     },
@@ -274,11 +294,6 @@ const rendererConfig = {
                 {
                     from: path.resolve(__dirname, 'src/renderer/images'),
                     to: path.resolve(__dirname, 'dist-webpack/renderer/images'),
-                    noErrorOnMissing: true
-                },
-                {
-                    from: path.resolve(__dirname, 'scripts/debian'),
-                    to: path.resolve(__dirname, 'dist-webpack/scripts/debian'),
                     noErrorOnMissing: true
                 },
                 {

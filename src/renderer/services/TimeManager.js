@@ -1,4 +1,4 @@
-const { createLogger } = require('../utils/logger');
+const { createLogger } = require('../utils/error-handling/logger');
 const log = createLogger('TimeManager');
 
 /**
@@ -49,6 +49,10 @@ class TimeManager {
       systemWakes: 0,
       startTime: initialTime
     };
+    
+    // Track recent OS wake event to avoid duplicate detection
+    this.recentOSWakeEvent = false;
+    this.osWakeEventTimeout = null;
   }
   
   /**
@@ -110,6 +114,29 @@ class TimeManager {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
+    }
+  }
+  
+  /**
+   * Pause monitoring (for system sleep)
+   * Unlike stopMonitoring, this is meant to be temporary
+   */
+  pauseMonitoring() {
+    log.info('Pausing time monitoring for system sleep');
+    this.stopMonitoring();
+  }
+  
+  /**
+   * Resume monitoring (after system wake)
+   */
+  resumeMonitoring() {
+    log.info('Resuming time monitoring after system wake');
+    if (!this.checkInterval && !this.isDestroyed) {
+      // Update our time tracking to current values to avoid false drift detection
+      this.lastWallTime = this.now();
+      this.lastMonotonicTime = this.getMonotonicTime();
+      // Resume monitoring
+      this.startMonitoring();
     }
   }
   
@@ -176,11 +203,12 @@ class TimeManager {
     }
     
     // 2. System wake detection (large monotonic jump)
-    // Use 5 minutes as threshold to avoid false positives from normal app delays
-    if (monotonicDelta > 300000) { // More than 5 minutes (was 30 seconds)
+    // Use 10 minutes as threshold and check for OS event to avoid duplicates
+    if (monotonicDelta > 600000 && !this.recentOSWakeEvent) { // More than 10 minutes
       events.push({
         type: this.EventType.SYSTEM_WAKE,
-        sleepDuration: monotonicDelta
+        sleepDuration: monotonicDelta,
+        source: 'time_check'
       });
       this.stats.systemWakes++;
     }
@@ -232,6 +260,16 @@ class TimeManager {
    */
   handleSystemWake() {
     log.info('System wake detected by OS event');
+    
+    // Mark that we received an OS wake event
+    this.recentOSWakeEvent = true;
+    if (this.osWakeEventTimeout) {
+      clearTimeout(this.osWakeEventTimeout);
+    }
+    // Clear the flag after 30 seconds
+    this.osWakeEventTimeout = setTimeout(() => {
+      this.recentOSWakeEvent = false;
+    }, 30000);
     
     // Reset time tracking to current values
     this.lastWallTime = this.now();
