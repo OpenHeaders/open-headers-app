@@ -1,46 +1,50 @@
 {
   "name": "open-headers",
-  "version": "2.12.0",
-  "description": "Companion app for Open Headers - Manages dynamic sources from files, environment variables, and HTTP endpoints",
+  "version": "3.0.0",
+  "description": "Record your browser workflow. Modify HTTP Traffic. Team Workspaces. Everything local.",
   "main": "dist-webpack/main.js",
   "scripts": {
+    "// Development //": "",
     "start": "electron .",
-    "predev": "cross-env NODE_ENV=development webpack --config webpack.config.js --mode development",
-    "dev": "cross-env NODE_ENV=development electron . --dev",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "dev:watch": "concurrently \"npm run webpack:dev --watch\" \"npm run dev\"",
+    
+    "// Webpack //": "",
     "webpack": "cross-env NODE_ENV=production webpack --config webpack.config.js",
-    "webpack:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js --mode development --watch",
-    "dev:react": "concurrently \"npm run webpack:dev\" \"npm run dev\"",
-    "prebuild": "cross-env NODE_ENV=production npm run webpack",
-    "build": "cross-env NODE_ENV=production electron-builder --dir",
-    "build:skip-notarize": "cross-env NODE_ENV=production SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder --dir",
-    "dist": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder",
-    "dist:win": "cross-env NODE_ENV=production npm run webpack && node scripts/check-windows-cert.js && cross-env electron-builder --win",
-    "dist:win:skip-publish": "cross-env NODE_ENV=production npm run webpack && node scripts/check-windows-cert.js && cross-env electron-builder --win --publish never",
-    "dist:mac": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac",
-    "dist:mac:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac --publish never",
-    "dist:mac:skip-notarize": "cross-env NODE_ENV=production SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder --mac",
-    "dist:linux": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64",
-    "dist:linux:app-image:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=AppImage",
-    "dist:linux:skip-publish": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --publish never",
-    "dist:linux:deb": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb",
-    "dist:linux:deb:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=deb",
-    "dist:linux:deb:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=deb",
-    "dist:linux:rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=rpm",
-    "dist:linux:rpm:x64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --config.linux.target=rpm",
-    "dist:linux:rpm:arm64": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --arm64 --config.linux.target=rpm",
-    "dist:macos:no-rpm": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --x64 --arm64 --config.linux.target=deb --config.linux.target=AppImage --publish never",
-    "dist:all": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder -mwl --x64 --arm64",
-    "dist:dev": "cross-env NODE_ENV=development SKIP_NOTARIZATION=true npm run webpack && cross-env SKIP_NOTARIZATION=true electron-builder",
-    "publish:mac": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --mac --publish always",
-    "publish:win": "cross-env NODE_ENV=production npm run webpack && node scripts/check-windows-cert.js && cross-env electron-builder --win --publish always",
-    "publish:linux": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder --linux --publish always",
-    "publish:all": "cross-env NODE_ENV=production npm run webpack && cross-env electron-builder -mwl --x64 --arm64 --publish always",
-    "cert:generate": "./scripts/certificates/generate-windows-cert.sh",
-    "cert:clean": "rm -rf certs/windows"
+    "webpack:dev": "cross-env NODE_ENV=development webpack --config webpack.config.js --mode development",
+    
+    "// Distribution //": "",
+    "predist": "npm run webpack",
+    "dist": "electron-builder --publish never",
+    "dist:all": "npm run predist && electron-builder -mwl --x64 --arm64 --publish never",
+    
+    "// Platform builds //": "",
+    "dist:mac": "npm run predist && electron-builder --mac --publish never",
+    "dist:mac:unsigned": "npm run predist && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never",
+    "dist:win": "npm run predist:win && electron-builder --win --publish never",
+    "dist:win:unsigned": "npm run predist:win && cross-env WIN_CSC_LINK='' electron-builder --win --publish never",
+    "dist:win:no-git": "npm run predist && electron-builder --win --config build/electron-builder-no-git.yml --publish never",
+    "dist:linux": "npm run predist && electron-builder --linux --x64 --arm64 --publish never",
+    "dist:linux:rpm:x64": "npm run predist && electron-builder --linux --x64 --config.linux.target=rpm --publish never",
+    "dist:linux:rpm:arm64": "npm run predist && electron-builder --linux --arm64 --config.linux.target=rpm --publish never",
+    
+    "// Windows Git //": "",
+    "predist:win": "npm run download-portable-git && npm run build:minimal-git",
+    "download-portable-git": "node build/download-portable-git.js",
+    "build:minimal-git": "node scripts/build-minimal-git.js",
+    
+    "// Cleanup //": "",
+    "clean": "rm -rf dist-webpack dist"
   },
   "build": {
     "appId": "io.openheaders",
     "productName": "OpenHeaders",
+    "protocols": [
+      {
+        "name": "OpenHeaders Protocol",
+        "schemes": ["openheaders"]
+      }
+    ],
     "directories": {
       "buildResources": "build",
       "output": "dist"
@@ -62,7 +66,8 @@
         "to": ".",
         "filter": [
           "*.png",
-          "*.ico"
+          "*.ico",
+          "*.svg"
         ]
       },
       {
@@ -81,25 +86,43 @@
       }
     ],
     "asarUnpack": [
-      "dist-webpack/renderer/images/**/*"
+      "dist-webpack/renderer/images/**/*",
+      "node_modules/@openheaders/windows-foreground/**/*",
+      "node_modules/@openheaders/**/*"
     ],
-    "npmRebuild": false,
+    "npmRebuild": true,
     "nodeGypRebuild": false,
+    "buildDependenciesFromSource": false,
+    "nativeRebuilder": "sequential",
+    "includeSubNodeModules": false,
     "extends": null,
     "removePackageScripts": true,
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "${productName}-${version}-Setup.${ext}",
+      "include": "build/installer.nsh",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": true,
+      "uninstallDisplayName": "OpenHeaders ${version}",
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true
+    },
     "win": {
       "target": "nsis",
       "artifactName": "${productName}-${version}-Setup.${ext}",
       "icon": "build/icon.ico",
       "forceCodeSigning": false,
-      "signtoolOptions": {
-        "certificateFile": "./certs/windows/code-signing.pfx",
-        "certificatePassword": "",
-        "signingHashAlgorithms": [
-          "sha256"
-        ],
-        "rfc3161TimeStampServer": "http://timestamp.digicert.com"
-      }
+      "extraResources": [
+        {
+          "from": "build/portable/MinimalGit",
+          "to": "git",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
     },
     "mac": {
       "category": "public.app-category.developer-tools",
@@ -115,7 +138,13 @@
       "extendInfo": {
         "CFBundleDisplayName": "Open Headers - Dynamic Sources",
         "CFBundleName": "OpenHeaders",
-        "CFBundleIdentifier": "io.openheaders"
+        "CFBundleIdentifier": "io.openheaders",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "OpenHeaders Protocol",
+            "CFBundleURLSchemes": ["openheaders"]
+          }
+        ]
       },
       "target": [
         {
@@ -149,10 +178,11 @@
         "Name": "OpenHeaders",
         "Comment": "Dynamic sources for Open Headers browser extension",
         "Terminal": false,
-        "Categories": "Utility;Development;Network"
+        "Categories": "Utility;Development;Network",
+        "MimeType": "x-scheme-handler/openheaders"
       },
-      "synopsis": "Manage dynamic sources from files, environment variables, and HTTP endpoints",
-      "description": "Companion app for the Open Headers browser extension that manages dynamic sources from files, environment variables, and HTTP endpoints."
+      "synopsis": "Record your browser workflow. Modify HTTP Traffic. Team Workspaces. Everything local.",
+      "description": "Record your browser workflow. Modify HTTP Traffic. Team Workspaces. Everything local."
     },
     "deb": {
       "depends": [
@@ -211,11 +241,6 @@
         "Categories": "Utility;Development;Network"
       }
     },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "artifactName": "${productName}-${version}-Setup.${ext}"
-    },
     "dmg": {
       "format": "ULFO",
       "writeUpdateInfo": false,
@@ -241,18 +266,26 @@
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "adm-zip": "^0.5.16",
     "antd": "^5.13.2",
     "auto-launch": "^5.0.6",
     "chokidar": "^3.5.3",
     "electron-is-dev": "^2.0.0",
     "electron-log": "^5.4.0",
     "electron-updater": "^6.6.2",
+    "http-proxy": "^1.18.1",
     "node-forge": "^1.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-window": "^1.8.11",
+    "react-window-infinite-loader": "^1.0.10",
     "rrweb": "^2.0.0-alpha.14",
     "rrweb-player": "^2.0.0-alpha.14",
+    "tar": "^7.4.3",
     "ws": "^8.16.0"
+  },
+  "optionalDependencies": {
+    "@openheaders/windows-foreground": "1.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
@@ -260,6 +293,13 @@
     "@babel/preset-react": "^7.23.3",
     "@electron/notarize": "^3.0.1",
     "@octokit/rest": "^21.1.1",
+    "@types/adm-zip": "^0.5.7",
+    "@types/auto-launch": "^5.0.5",
+    "@types/node": "^20.19.8",
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "@types/webpack": "^5.28.5",
+    "@types/webpack-env": "^1.18.8",
     "babel-loader": "^9.1.3",
     "bufferutil": "^4.0.8",
     "concurrently": "^8.2.2",
@@ -279,6 +319,6 @@
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   },
-  "author": "Daniel Tirzuman <github@tirzuman.com>",
+  "author": "Open Headers <contact@openheaders.io>",
   "license": "MIT"
 }

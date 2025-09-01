@@ -1,0 +1,103 @@
+/* VirtualizedTable.css - Styling for virtualized table to match Ant Design */
+
+.virtualized-table-container {
+  border: 1px solid #f0f0f0;
+  border-radius: 2px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.virtual-table-header {
+  background: #fafafa;
+  height: 54px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.virtual-table-header-cell {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  border-right: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.85);
+}
+
+.virtual-table-header-cell:last-child {
+  border-right: none;
+}
+
+.virtual-table-row {
+  background: #fff;
+  transition: background 0.3s;
+  cursor: pointer;
+}
+
+.virtual-table-row:hover {
+  background: #fafafa;
+}
+
+.virtual-table-row.selected {
+  background: #e6f7ff;
+}
+
+.virtual-table-cell {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  border-right: 1px solid #f0f0f0;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.virtual-table-cell:last-child {
+  border-right: none;
+}
+
+.selection-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.selection-cell input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Dark theme support */
+.dark .virtualized-table-container {
+  background: #141414;
+  border-color: #303030;
+}
+
+.dark .virtual-table-header {
+  background: #1f1f1f;
+}
+
+.dark .virtual-table-header-cell {
+  color: rgba(255, 255, 255, 0.85);
+  border-color: #303030;
+}
+
+.dark .virtual-table-row {
+  background: #141414;
+}
+
+.dark .virtual-table-row:hover {
+  background: #262626;
+}
+
+.dark .virtual-table-row.selected {
+  background: #177ddc33;
+}
+
+.dark .virtual-table-cell {
+  color: rgba(255, 255, 255, 0.65);
+  border-color: #303030;
+}

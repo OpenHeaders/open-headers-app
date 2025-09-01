@@ -1,0 +1,368 @@
+// WorkspaceSkeleton.less - Skeleton loading styles for workspace transitions
+
+.workspace-skeleton {
+  margin-bottom: 16px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  .skeleton-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    gap: 12px;
+
+    .ant-skeleton-avatar {
+      flex-shrink: 0;
+    }
+
+    .ant-skeleton-input {
+      flex: 1;
+    }
+
+    .ant-skeleton-button {
+      flex-shrink: 0;
+    }
+  }
+
+  .skeleton-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    gap: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .skeleton-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .skeleton-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// Source List Skeleton
+.source-list-skeleton {
+  .skeleton-item {
+    .ant-skeleton-avatar {
+      border-radius: 4px;
+    }
+  }
+}
+
+// Proxy Rules Skeleton
+.proxy-rules-skeleton {
+  .skeleton-table {
+    .skeleton-table-header {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr 1fr;
+      gap: 16px;
+      padding: 8px 0;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+      margin-bottom: 8px;
+    }
+
+    .skeleton-table-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 2fr 1fr;
+      gap: 16px;
+      padding: 12px 0;
+      align-items: center;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .skeleton-row-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+    }
+  }
+}
+
+// Environments Skeleton
+.environments-skeleton {
+  .skeleton-env-list {
+    .skeleton-env-item {
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.02);
+
+      .skeleton-env-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .skeleton-env-vars {
+        .skeleton-var-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Record Viewer Skeleton
+.record-viewer-skeleton {
+  min-height: 400px;
+
+  .skeleton-tabs {
+    display: flex;
+    gap: 8px;
+  }
+
+  .skeleton-timeline {
+    margin: 16px 0;
+    padding: 8px 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .skeleton-content {
+    display: flex;
+    gap: 16px;
+    min-height: 300px;
+
+    .skeleton-sidebar {
+      width: 200px;
+      flex-shrink: 0;
+
+      .skeleton-record-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+        &:last-child {
+          border-bottom: none;
+        }
+      }
+    }
+
+    .skeleton-main-content {
+      flex: 1;
+    }
+  }
+}
+
+// Header Rules Skeleton
+.header-rules-skeleton {
+  .skeleton-rule-item {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.02);
+
+    .skeleton-rule-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-rule-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-left: 32px; // Align with content after avatar
+    }
+  }
+}
+
+// Complete Workspace Skeleton Layout
+.complete-workspace-skeleton {
+  .skeleton-layout {
+    display: flex;
+    gap: 24px;
+    min-height: 70vh;
+
+    .skeleton-main-content {
+      flex: 1;
+    }
+
+    .skeleton-sidebar {
+      width: 320px;
+      flex-shrink: 0;
+    }
+  }
+}
+
+// Dark theme support
+[data-theme='dark'] {
+  .workspace-skeleton {
+    .skeleton-item {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  .proxy-rules-skeleton {
+    .skeleton-table {
+      .skeleton-table-header {
+        border-bottom-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .skeleton-table-row {
+        border-bottom-color: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  .environments-skeleton {
+    .skeleton-env-list {
+      .skeleton-env-item {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.02);
+      }
+    }
+  }
+
+  .record-viewer-skeleton {
+    .skeleton-timeline {
+      border-top-color: rgba(255, 255, 255, 0.1);
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .skeleton-content {
+      .skeleton-sidebar {
+        .skeleton-record-item {
+          border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+  }
+
+  .header-rules-skeleton {
+    .skeleton-rule-item {
+      border-color: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+}
+
+// Animation for skeleton loading
+.ant-skeleton {
+  .ant-skeleton-content {
+    .ant-skeleton-title,
+    .ant-skeleton-paragraph > li,
+    .ant-skeleton-input,
+    .ant-skeleton-avatar,
+    .ant-skeleton-button {
+      background: linear-gradient(90deg, 
+        rgba(0, 0, 0, 0.05) 25%, 
+        rgba(0, 0, 0, 0.02) 37%, 
+        rgba(0, 0, 0, 0.05) 63%
+      );
+      background-size: 400% 100%;
+      animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    }
+  }
+}
+
+[data-theme='dark'] {
+  .ant-skeleton {
+    .ant-skeleton-content {
+      .ant-skeleton-title,
+      .ant-skeleton-paragraph > li,
+      .ant-skeleton-input,
+      .ant-skeleton-avatar,
+      .ant-skeleton-button {
+        background: linear-gradient(90deg, 
+          rgba(255, 255, 255, 0.05) 25%, 
+          rgba(255, 255, 255, 0.02) 37%, 
+          rgba(255, 255, 255, 0.05) 63%
+        );
+      }
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .complete-workspace-skeleton {
+    .skeleton-layout {
+      flex-direction: column;
+
+      .skeleton-sidebar {
+        width: 100%;
+      }
+    }
+  }
+
+  .proxy-rules-skeleton {
+    .skeleton-table {
+      .skeleton-table-header,
+      .skeleton-table-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+    }
+  }
+
+  .record-viewer-skeleton {
+    .skeleton-content {
+      flex-direction: column;
+
+      .skeleton-sidebar {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .ant-skeleton {
+    .ant-skeleton-content {
+      .ant-skeleton-title,
+      .ant-skeleton-paragraph > li,
+      .ant-skeleton-input,
+      .ant-skeleton-avatar,
+      .ant-skeleton-button {
+        animation: none;
+      }
+    }
+  }
+
+  .workspace-skeleton {
+    transition: none;
+  }
+}

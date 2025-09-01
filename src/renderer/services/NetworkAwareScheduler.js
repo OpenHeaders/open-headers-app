@@ -1,42 +1,45 @@
-const { createLogger } = require('../utils/logger');
+const { createLogger } = require('../utils/error-handling/logger');
 const timeManager = require('./TimeManager');
-const { ConcurrentMap, ConcurrentSet, Semaphore } = require('../utils/ConcurrencyControl');
-const { circuitBreakerManager } = require('../utils/CircuitBreaker');
+const { ConcurrentMap, ConcurrentSet, Semaphore } = require('../utils/error-handling/ConcurrencyControl');
+const { adaptiveCircuitBreakerManager } = require('../utils/error-handling/AdaptiveCircuitBreaker');
+const { 
+    CIRCUIT_BREAKER_CONFIG, 
+    INITIAL_RETRY_CONFIG,
+    formatCircuitBreakerKey,
+    OVERDUE_RETRY_CONFIG, 
+    calculateDelayWithJitter 
+} = require('../constants/retryConfig');
 const log = createLogger('NetworkAwareScheduler');
 
 /**
- * Improved NetworkAwareScheduler with proper concurrency control
- * Uses individual timers instead of master timer for better efficiency
+ * NetworkAwareScheduler - Manages refresh scheduling with network awareness
  */
 class NetworkAwareScheduler {
   constructor() {
-    // Use thread-safe data structures
     this.schedules = new ConcurrentMap('schedules');
     this.activeRefreshes = new ConcurrentSet('activeRefreshes');
-    this.timers = new Map(); // Timer IDs by sourceId
+    this.timers = new Map();
     
-    // Concurrency control
-    this.refreshSemaphore = new Semaphore(10, 'refresh'); // Max 10 concurrent refreshes
-    this.overdueSemaphore = new Semaphore(3, 'overdue'); // Max 3 concurrent overdue checks
-    
-    // State
+    this.refreshSemaphore = new Semaphore(10, 'refresh');
+    this.overdueSemaphore = new Semaphore(3, 'overdue');
     this.refreshCallback = null;
-    this.networkOfflineTime = null;
+    this.scheduleUpdateCallback = null;
     this.lastNetworkState = { isOnline: true };
     this.isDestroyed = false;
+    this.isPaused = false;
     this.timeEventUnsubscribe = null;
     
-    // Configuration
-    this.MAX_CONCURRENT_REFRESHES = 10;
     this.OVERDUE_CHECK_INTERVAL = 30000; // 30 seconds
     this.overdueCheckTimer = null;
   }
 
+
   /**
    * Initialize the scheduler with a callback for refresh execution
    */
-  async initialize(refreshCallback) {
+  async initialize(refreshCallback, scheduleUpdateCallback = null) {
     this.refreshCallback = refreshCallback;
+    this.scheduleUpdateCallback = scheduleUpdateCallback;
     
     // Initialize TimeManager
     await timeManager.initialize();
@@ -53,14 +56,13 @@ class NetworkAwareScheduler {
   }
 
   /**
-   * Schedule a source for refresh with proper type conversion
+   * Schedule a source for refresh
    */
   async scheduleSource(source) {
     if (!source || !source.sourceId || source.sourceType !== 'http') {
       return;
     }
     
-    // ALWAYS convert sourceId to string at entry point
     const sourceId = String(source.sourceId);
     
     const intervalMs = this.parseInterval(source.refreshOptions?.interval);
@@ -69,13 +71,11 @@ class NetworkAwareScheduler {
       return;
     }
     
-    // Validate interval limits
     if (intervalMs < 10000 || intervalMs > 24 * 60 * 60 * 1000) {
       log.warn(`Invalid interval for source ${sourceId}: ${intervalMs}ms`);
       return;
     }
     
-    // Get existing schedule if any
     const existingSchedule = await this.schedules.get(sourceId);
     
     const schedule = {
@@ -90,18 +90,13 @@ class NetworkAwareScheduler {
       backoffFactor: 2,
       failureCount: 0,
       maxConsecutiveFailures: 10,
-      // Wall-clock alignment options
       alignToMinute: source.refreshOptions?.alignToMinute || false,
       alignToHour: source.refreshOptions?.alignToHour || false,
       alignToDay: source.refreshOptions?.alignToDay || false
     };
     
-    // Store schedule
     await this.schedules.set(sourceId, schedule);
-    
-    // Calculate next refresh time
-    const networkState = await window.electronAPI.getNetworkState();
-    await this.calculateAndScheduleNextRefresh(sourceId, networkState);
+    await this.calculateAndScheduleNextRefresh(sourceId);
     
     log.info(`Scheduled source ${sourceId} with interval ${intervalMs}ms`);
   }
@@ -112,13 +107,8 @@ class NetworkAwareScheduler {
   async unscheduleSource(sourceId) {
     sourceId = String(sourceId);
     
-    // Clear any existing timer
     this.clearSourceTimer(sourceId);
-    
-    // Remove from schedules
     await this.schedules.delete(sourceId);
-    
-    // Cancel any active refresh
     await this.activeRefreshes.delete(sourceId);
     
     log.debug(`Unscheduled source ${sourceId}`);
@@ -131,54 +121,99 @@ class NetworkAwareScheduler {
     sourceId = String(sourceId);
     
     const schedule = await this.schedules.get(sourceId);
-    if (!schedule) return;
+    if (!schedule) {
+      log.warn(`No schedule found for source ${sourceId} in calculateAndScheduleNextRefresh`);
+      return;
+    }
     
     if (!networkState) {
       networkState = await window.electronAPI.getNetworkState();
+      log.debug(`Fetched network state: isOnline=${networkState.isOnline}, quality=${networkState.networkQuality}`);
+    } else {
+      log.debug(`Using provided network state: isOnline=${networkState.isOnline}, quality=${networkState.networkQuality}`);
     }
     
     const now = timeManager.now();
     let nextRefreshTime;
     
-    // If offline, don't schedule timer but calculate next time
     if (!networkState.isOnline) {
       const baseTime = schedule.lastRefresh || now;
       nextRefreshTime = this.calculateAlignedTime(baseTime + schedule.intervalMs, schedule);
       schedule.nextRefresh = nextRefreshTime;
       await this.schedules.set(sourceId, schedule);
+      log.warn(`Source ${sourceId} offline (isOnline=${networkState.isOnline}), next refresh time set to ${nextRefreshTime} (no timer scheduled)`);
       return;
     }
     
-    // Check if source is overdue
-    if (schedule.lastRefresh) {
+    // Always check circuit breaker state first for retry logic
+    const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
+    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+    const circuitStatus = circuitBreaker.getStatus();
+    
+    // If circuit breaker has failures, handle retry timing
+    if (circuitStatus.failureCount > 0 || circuitBreaker.isOpen()) {
+      if (circuitBreaker.isOpen()) {
+        const timeUntilNextAttempt = circuitStatus.backoff.timeUntilNextAttempt;
+        
+        if (timeUntilNextAttempt > 0) {
+          nextRefreshTime = now + timeUntilNextAttempt;
+          log.info(`Source ${sourceId} circuit breaker is open, next attempt in ${timeUntilNextAttempt}ms`);
+        } else {
+          const delay = calculateDelayWithJitter(
+            OVERDUE_RETRY_CONFIG.circuitBreakerRetryDelay.base,
+            OVERDUE_RETRY_CONFIG.circuitBreakerRetryDelay.maxJitter
+          );
+          nextRefreshTime = now + delay;
+          log.info(`Source ${sourceId} circuit breaker timer expired, scheduling retry in ${delay}ms`);
+        }
+      } else {
+        // Circuit not open yet but has failures - use initial retry config
+        const delay = calculateDelayWithJitter(
+          INITIAL_RETRY_CONFIG.baseDelay,
+          INITIAL_RETRY_CONFIG.maxJitter
+        );
+        nextRefreshTime = now + delay;
+        log.info(`Source ${sourceId} has ${circuitStatus.failureCount} failures, scheduling retry in ${delay}ms`);
+      }
+    } else if (schedule.lastRefresh) {
       const timeSinceLastRefresh = now - schedule.lastRefresh;
       const isOverdue = timeSinceLastRefresh > schedule.intervalMs;
       
+      log.debug(`Source ${sourceId}: lastRefresh=${schedule.lastRefresh}, now=${now}, timeSince=${timeSinceLastRefresh}ms, interval=${schedule.intervalMs}ms, overdue=${isOverdue}`);
+      
       if (isOverdue) {
-        // Schedule immediate refresh with small delay
-        nextRefreshTime = now + 100 + Math.random() * 900; // 100-1000ms
-        log.debug(`Source ${sourceId} is overdue, scheduling immediate refresh`);
+        const delay = calculateDelayWithJitter(
+          OVERDUE_RETRY_CONFIG.minDelay,
+          OVERDUE_RETRY_CONFIG.maxJitter
+        );
+        nextRefreshTime = now + delay;
+        log.info(`Source ${sourceId} is overdue by ${timeSinceLastRefresh - schedule.intervalMs}ms, scheduling refresh with delay of ${delay}ms`);
       } else {
-        // Calculate normal next refresh
         const baseTime = schedule.lastRefresh;
         nextRefreshTime = this.calculateAlignedTime(baseTime + schedule.intervalMs, schedule);
+        log.debug(`Source ${sourceId} not overdue, next refresh at ${nextRefreshTime}`);
       }
     } else {
-      // Never refreshed - schedule immediately
       nextRefreshTime = now + 100;
+      log.info(`Source ${sourceId} never refreshed, scheduling immediate refresh`);
     }
     
-    // Ensure next refresh is in the future
     if (nextRefreshTime <= now) {
+      log.warn(`Next refresh time ${nextRefreshTime} is in the past, adjusting to ${now + 1000}`);
       nextRefreshTime = now + 1000;
     }
-    
-    // Update schedule
+
     schedule.nextRefresh = nextRefreshTime;
     await this.schedules.set(sourceId, schedule);
     
-    // Schedule timer
-    this.scheduleSourceTimer(sourceId, nextRefreshTime - now);
+    const delay = nextRefreshTime - now;
+    log.info(`Updated schedule for source ${sourceId}: nextRefresh=${nextRefreshTime}, delay=${delay}ms, existing timer: ${this.timers.has(sourceId)}`);
+    
+    if (this.scheduleUpdateCallback) {
+      this.scheduleUpdateCallback(sourceId, schedule);
+    }
+    
+    this.scheduleSourceTimer(sourceId, delay);
   }
 
   /**
@@ -199,15 +234,21 @@ class NetworkAwareScheduler {
    * Schedule a timer for a specific source
    */
   scheduleSourceTimer(sourceId, delay) {
-    // Clear existing timer
     this.clearSourceTimer(sourceId);
     
-    // Don't schedule if destroyed
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || this.isPaused) return;
     
-    // Schedule new timer
+    if (delay <= 0) {
+      log.warn(`Invalid delay ${delay}ms for source ${sourceId}, using minimum delay`);
+      delay = 100;
+    }
+    log.info(`Scheduling timer for source ${sourceId} with delay ${delay}ms`);
     const timerId = setTimeout(async () => {
-      if (this.isDestroyed) return;
+      log.info(`Timer fired for source ${sourceId}`);
+      if (this.isDestroyed || this.isPaused) {
+        log.warn(`Scheduler ${this.isDestroyed ? 'destroyed' : 'paused'}, skipping refresh for ${sourceId}`);
+        return;
+      }
       
       try {
         await this.triggerRefresh(sourceId, 'scheduled');
@@ -217,75 +258,61 @@ class NetworkAwareScheduler {
     }, delay);
     
     this.timers.set(sourceId, timerId);
+    log.debug(`Timer ${timerId} stored for source ${sourceId}`);
   }
 
-  /**
-   * Clear timer for a source
-   */
   clearSourceTimer(sourceId) {
     const timerId = this.timers.get(sourceId);
     if (timerId) {
+      log.debug(`Clearing timer ${timerId} for source ${sourceId}`);
       clearTimeout(timerId);
       this.timers.delete(sourceId);
     }
   }
 
   /**
-   * Trigger refresh for a source with proper concurrency control
+   * Trigger refresh for a source
    */
   async triggerRefresh(sourceId, reason = 'scheduled') {
     sourceId = String(sourceId);
     
     if (this.isDestroyed) return;
     
-    // Check if already refreshing
     if (await this.activeRefreshes.has(sourceId)) {
       log.debug(`Source ${sourceId} already refreshing, skipping`);
       return;
     }
     
-    // Get schedule
     const schedule = await this.schedules.get(sourceId);
     if (!schedule) {
       log.warn(`No schedule found for source ${sourceId}`);
       return;
     }
     
-    // Check failure count
-    if (schedule.failureCount >= schedule.maxConsecutiveFailures) {
-      log.warn(`Source ${sourceId} has failed ${schedule.failureCount} times, unscheduling`);
-      await this.unscheduleSource(sourceId);
-      return;
+    // Skip overdue triggers during HALF_OPEN to prevent duplicate test requests
+    if (reason === 'overdue') {
+      const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
+      const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+      const status = circuitBreaker.getStatus();
+      
+      if (status.state === 'HALF_OPEN') {
+        log.info(`Source ${sourceId} circuit breaker is HALF_OPEN, skipping ${reason} trigger to prevent duplicate test request`);
+        return;
+      }
     }
     
-    // Use circuit breaker
-    const circuitBreaker = circuitBreakerManager.getBreaker(`source-${sourceId}`, {
-      failureThreshold: 5,
-      resetTimeout: 60000
-    });
-    
     try {
-      await circuitBreaker.execute(async () => {
-        // Acquire semaphore permit
-        await this.refreshSemaphore.withPermit(async () => {
-          // Mark as active
-          await this.activeRefreshes.add(sourceId);
-          
-          try {
-            // Execute refresh
-            await this._performRefresh(sourceId, reason);
-          } finally {
-            // Always clean up
-            await this.activeRefreshes.delete(sourceId);
-          }
-        });
+      await this.refreshSemaphore.withPermit(async () => {
+        await this.activeRefreshes.add(sourceId);
+        
+        try {
+          await this._performRefresh(sourceId, reason);
+        } finally {
+          await this.activeRefreshes.delete(sourceId);
+        }
       });
     } catch (error) {
-      if (error.message.includes('Circuit breaker')) {
-        log.warn(`Circuit breaker open for source ${sourceId}`);
-      } else {
-        log.error(`Refresh failed for source ${sourceId}:`, error);
-      }
+      log.error(`Refresh failed for source ${sourceId}:`, error);
     }
   }
 
@@ -301,7 +328,6 @@ class NetworkAwareScheduler {
     try {
       const result = await this.refreshCallback(sourceId, { reason });
       
-      // Handle success
       if (result && result.success !== false) {
         await this.updateScheduleOnSuccess(sourceId);
       } else {
@@ -311,10 +337,6 @@ class NetworkAwareScheduler {
       await this.updateScheduleOnFailure(sourceId);
       throw error;
     }
-    
-    // Schedule next refresh
-    const networkState = await window.electronAPI.getNetworkState();
-    await this.calculateAndScheduleNextRefresh(sourceId, networkState);
   }
 
   /**
@@ -356,16 +378,15 @@ class NetworkAwareScheduler {
     this.lastNetworkState = networkState;
     
     if (!wasOffline || !isNowOnline) {
-      return; // Only care about offline -> online transition
+      return;
     }
     
     log.info('Network recovered from offline');
     
-    // Check all sources and reschedule
     const schedules = await this.schedules.entries();
     
-    for (const [sourceId, schedule] of schedules) {
-      await this.calculateAndScheduleNextRefresh(sourceId, networkState);
+    for (const [sourceId] of schedules) {
+      await this.calculateAndScheduleNextRefresh(sourceId);
     }
   }
 
@@ -373,11 +394,10 @@ class NetworkAwareScheduler {
    * Handle time events from TimeManager
    */
   handleTimeEvents(events) {
-    if (this.isDestroyed) return;
+    if (this.isDestroyed || this.isPaused) return;
     
     log.info('Time events detected', { count: events.length });
     
-    // Reschedule all sources on significant time changes
     this.rescheduleAllSources().catch(err => {
       log.error('Error rescheduling sources after time event:', err);
     });
@@ -388,10 +408,9 @@ class NetworkAwareScheduler {
    */
   async rescheduleAllSources() {
     const schedules = await this.schedules.entries();
-    const networkState = await window.electronAPI.getNetworkState();
-    
+
     for (const [sourceId] of schedules) {
-      await this.calculateAndScheduleNextRefresh(sourceId, networkState);
+      await this.calculateAndScheduleNextRefresh(sourceId);
     }
   }
 
@@ -400,49 +419,105 @@ class NetworkAwareScheduler {
    */
   async checkOverdueSources() {
     if (this.isDestroyed) return;
+
     
     await this.overdueSemaphore.withPermit(async () => {
       const now = timeManager.now();
       const schedules = await this.schedules.entries();
       const networkState = await window.electronAPI.getNetworkState();
       
+      
       if (!networkState.isOnline) return;
       
       const overdueSources = [];
       
       for (const [sourceId, schedule] of schedules) {
+        if (await this.activeRefreshes.has(sourceId)) {
+          log.debug(`Source ${sourceId} is already refreshing, skipping overdue check`);
+          continue;
+        }
+        
+        // Skip HALF_OPEN sources to prevent duplicate test requests
+        const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
+        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+        const status = circuitBreaker.getStatus();
+        if (status.state === 'HALF_OPEN') {
+          log.debug(`Source ${sourceId} circuit breaker is HALF_OPEN, skipping overdue check to prevent duplicate requests`);
+          continue;
+        }
+        
         if (!schedule.lastRefresh) {
+          log.debug(`Source ${sourceId} never refreshed, marking as overdue`);
           overdueSources.push({ sourceId, priority: 1 });
         } else {
           const expectedRefreshTime = schedule.lastRefresh + schedule.intervalMs;
           const overdueBy = now - expectedRefreshTime;
-          if (overdueBy > 60000) { // 1 minute buffer
+          log.debug(`Source ${sourceId}: lastRefresh=${schedule.lastRefresh}, intervalMs=${schedule.intervalMs}, overdueBy=${overdueBy}ms`);
+          if (overdueBy > OVERDUE_RETRY_CONFIG.overdueBuffer) {
+            log.debug(`Source ${sourceId} is overdue by ${overdueBy}ms`);
             overdueSources.push({ sourceId, overdueBy, priority: 2 });
           }
         }
       }
       
-      if (overdueSources.length > 0) {
-        log.info(`Found ${overdueSources.length} overdue sources`);
+      const sourcesWithOpenCircuits = [];
+      for (const [sourceId] of schedules) {
+        const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
+        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+        if (circuitBreaker.isOpen()) {
+          const status = circuitBreaker.getStatus();
+          const timeUntilNextAttempt = status.backoff.timeUntilNextAttempt;
+          
+          if (timeUntilNextAttempt <= 1000) {
+            log.info(`Circuit breaker for source ${sourceId} timer expired/expiring, adding to retry queue`);
+            sourcesWithOpenCircuits.push({ 
+              sourceId, 
+              priority: 0,
+              reason: 'circuit-breaker-retry'
+            });
+          }
+        }
+      }
+      
+      const allSourcesToRefresh = [...sourcesWithOpenCircuits, ...overdueSources];
+      
+      if (allSourcesToRefresh.length > 0) {
+        log.info(`Found ${allSourcesToRefresh.length} sources to refresh (${sourcesWithOpenCircuits.length} circuit retries, ${overdueSources.length} overdue)`);
         
         // Sort by priority and overdue time
-        overdueSources.sort((a, b) => {
+        allSourcesToRefresh.sort((a, b) => {
           if (a.priority !== b.priority) return a.priority - b.priority;
           return (b.overdueBy || 0) - (a.overdueBy || 0);
         });
         
-        // Trigger refreshes with rate limiting
-        for (let i = 0; i < Math.min(3, overdueSources.length); i++) {
-          const { sourceId } = overdueSources[i];
-          this.triggerRefresh(sourceId, 'overdue').catch(err => {
-            log.error(`Error refreshing overdue source ${sourceId}:`, err);
-          });
+        // Process in batches with rate limiting
+        const batchSize = 3;
+        const batchDelay = 5000;
+        
+        for (let i = 0; i < allSourcesToRefresh.length; i += batchSize) {
+          const batch = allSourcesToRefresh.slice(i, i + batchSize);
           
-          // Small delay between triggers
-          if (i < 2) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+          log.info(`Processing batch of ${batch.length} sources`);
+          
+          for (const item of batch) {
+            const { sourceId, reason } = item;
+            const jitter = Math.random() * 2000;
+            const currentSourceId = sourceId;
+            const currentReason = reason || 'overdue';
+            setTimeout(() => {
+              log.info(`Triggering refresh for source ${currentSourceId} (reason: ${currentReason})`);
+              this.triggerRefresh(currentSourceId, currentReason).catch(err => {
+                log.error(`Error refreshing source ${currentSourceId}:`, err);
+              });
+            }, Math.floor(jitter));
+          }
+          
+          if (i + batchSize < allSourcesToRefresh.length) {
+            log.debug(`Waiting ${batchDelay}ms before next batch`);
+            await new Promise(resolve => setTimeout(resolve, batchDelay));
           }
         }
+      } else {
       }
     });
   }
@@ -469,6 +544,32 @@ class NetworkAwareScheduler {
   }
 
   /**
+   * Pause all timers (for system sleep)
+   */
+  async pauseAllTimers() {
+    log.info('Pausing all refresh timers');
+    
+    this.isPaused = true;
+    
+    for (const [, timerId] of this.timers) {
+      clearTimeout(timerId);
+    }
+    this.timers.clear();
+    
+    this.stopOverdueCheck();
+  }
+
+  /**
+   * Resume after system sleep
+   */
+  async resumeAfterSleep() {
+    log.info('Resuming after system sleep');
+    
+    this.isPaused = false;
+    this.startOverdueCheck();
+  }
+
+  /**
    * Update last refresh time
    */
   async updateLastRefresh(sourceId, timestamp = null) {
@@ -480,9 +581,7 @@ class NetworkAwareScheduler {
     schedule.lastRefresh = timestamp || timeManager.now();
     await this.schedules.set(sourceId, schedule);
     
-    // Reschedule
-    const networkState = await window.electronAPI.getNetworkState();
-    await this.calculateAndScheduleNextRefresh(sourceId, networkState);
+    await this.calculateAndScheduleNextRefresh(sourceId);
   }
 
   /**
@@ -515,70 +614,35 @@ class NetworkAwareScheduler {
   }
 
   /**
-   * Get statistics
-   */
-  async getStatistics() {
-    const schedules = await this.schedules.entries();
-    const activeCount = await this.activeRefreshes.size();
-    
-    return {
-      totalScheduled: schedules.length,
-      activeRefreshes: activeCount,
-      semaphoreStats: this.refreshSemaphore.getStats(),
-      circuitBreakerStatus: circuitBreakerManager.getAllStatus()
-    };
-  }
-
-  /**
    * Clean up scheduler resources
    */
   async destroy() {
     this.isDestroyed = true;
     
-    // Stop overdue check
     this.stopOverdueCheck();
     
-    // Clear all timers
-    for (const [sourceId, timerId] of this.timers) {
+    for (const [, timerId] of this.timers) {
       clearTimeout(timerId);
     }
     this.timers.clear();
     
-    // Unsubscribe from time events
     if (this.timeEventUnsubscribe) {
       this.timeEventUnsubscribe();
       this.timeEventUnsubscribe = null;
     }
     
-    // Wait for active operations
     const activeCount = await this.activeRefreshes.size();
     if (activeCount > 0) {
       log.info(`Waiting for ${activeCount} active refreshes to complete`);
       await new Promise(resolve => setTimeout(resolve, 5000));
     }
     
-    // Clear data structures
     await this.schedules.clear();
     await this.activeRefreshes.clear();
     
     log.debug('Scheduler destroyed');
   }
 
-  /**
-   * Check if source is overdue
-   */
-  async isSourceOverdue(sourceId) {
-    sourceId = String(sourceId);
-    
-    const schedule = await this.schedules.get(sourceId);
-    if (!schedule) return false;
-    
-    if (!schedule.lastRefresh) return true;
-    
-    const now = timeManager.now();
-    const expectedRefreshTime = schedule.lastRefresh + schedule.intervalMs;
-    return (now - expectedRefreshTime) > 60000;
-  }
 }
 
 module.exports = NetworkAwareScheduler;

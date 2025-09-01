@@ -1,403 +1,385 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Layout, Typography, Button, Space, Dropdown, Tag, notification, Tabs, Card, theme } from 'antd';
-import {
-    SettingOutlined,
-    ExportOutlined,
-    ImportOutlined,
-    DownOutlined,
-    MenuOutlined,
-    QuestionCircleOutlined,
-    DownloadOutlined,
-    LoadingOutlined,
-    PlayCircleOutlined,
-    DatabaseOutlined,
-    UploadOutlined
-} from '@ant-design/icons';
-import SourceForm from './components/SourceForm';
-import SourceTable from './components/SourceTable';
-import SettingsModal from './components/SettingsModal';
-import AboutModal from './components/AboutModal';
-import UpdateNotification from './components/UpdateNotification';
-import TrayMenu from './components/TrayMenu';
-import RecordRecording from './components/RecordRecording';
-import RecordDetails from './components/RecordDetails';
-import { useSources } from './contexts/SourceContext';
-import { CircuitBreakerStatus } from './components/CircuitBreakerStatus';
-import { useSettings } from './contexts/SettingsContext';
-import { useTheme } from './contexts/ThemeContext';
-const { createLogger } = require('./utils/logger');
-const log = createLogger('App');
-import { showMessage } from './utils/messageUtil';
-
-const { Header, Content } = Layout;
-const { Title } = Typography;
+import React, { useState, useEffect, useCallback } from 'react';
+import { AppLayout } from './components/app/AppLayout';
+import { useExportImport } from './hooks/useExportImport';
+import { useAppEffects } from './hooks/app';
+import { useSourceRefresh } from './hooks/sources';
+import { useSources, useEnvironments, useWorkspaces, useCentralizedWorkspace } from './hooks/useCentralizedWorkspace';
+import { useSettings, useNavigation, useRefreshManager, useWorkspaceSwitch } from './contexts';
+import { useWorkspaceSwitchIntegration } from './hooks/useWorkspaceSwitchIntegration';
+import { showMessage } from './utils';
+import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
+import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
+import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
 
 const AppComponent = () => {
-    const { token } = theme.useToken();
+    // Core hooks
     const {
         sources,
         addSource,
         removeSource,
         refreshSource,
-        updateRefreshOptions,
         updateSource,
-        exportSources,
-        importSources
+        exportSources
     } = useSources();
-
+    
+    const { workspaces, activeWorkspaceId, createWorkspace, switchWorkspace } = useWorkspaces();
+    
+    // App initialization state
+    const { isReady } = useCentralizedWorkspace();
+    const [startupTimerCompleted, setStartupTimerCompleted] = useState(false);
+    
+    // Start minimum 1 second timer when React mounts
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setStartupTimerCompleted(true);
+        }, 1000);
+        
+        return () => clearTimeout(timer);
+    }, []);
+    
+    // Hide CSS overlay only when both app is ready AND minimum 1 second has passed
+    useEffect(() => {
+        if (isReady && startupTimerCompleted) {
+            const initialOverlay = document.getElementById('initial-loading-overlay');
+            if (initialOverlay) {
+                initialOverlay.classList.add('hidden');
+                // Remove it completely after fade animation
+                setTimeout(() => {
+                    initialOverlay.remove();
+                }, 300);
+            }
+        }
+    }, [isReady, startupTimerCompleted]);
+    
+    
+    // Workspace switching UX
+    const { switchState} = useWorkspaceSwitch();
+    useWorkspaceSwitchIntegration();
     const { settings, saveSettings } = useSettings();
-
+    const { 
+        environments, 
+        generateEnvironmentSchema, 
+        createEnvironment,
+        setVariable 
+    } = useEnvironments();
+    
+    // Navigation
+    const { navigate, clearAllHighlights, ACTIONS, TARGETS } = useNavigation();
+    
+    // Refresh Manager
+    const { removeSource: removeFromRefreshManager, manualRefresh } = useRefreshManager();
+    
+    // Component state
     const [settingsVisible, setSettingsVisible] = useState(false);
+    const [settingsInitialTab, setSettingsInitialTab] = useState(null);
+    const [settingsAction, setSettingsAction] = useState(null);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
-    const [activeTab, setActiveTab] = useState('sources');
+    const [activeTab, setActiveTab] = useState('record-viewer');
     const [currentRecord, setCurrentRecord] = useState(null);
-    const [loading, setLoading] = useState({
-        export: false,
-        import: false
-    });
+    const [recordPlaybackTime, setRecordPlaybackTime] = useState(0);
+    const [autoHighlight, setAutoHighlight] = useState(
+        settings?.autoHighlightTableEntries !== undefined ? settings.autoHighlightTableEntries : false
+    );
     const [appVersion, setAppVersion] = useState('');
     const [tabScrollPositions, setTabScrollPositions] = useState({});
+    
+    // Team workspace invite processing
+    const [inviteModalVisible, setInviteModalVisible] = useState(false);
+    const [inviteData, setInviteData] = useState(null);
+    
+    // Environment import data for protocol links
+    const [preloadedEnvData, setPreloadedEnvData] = useState(null);
 
-    // Create a ref for the UpdateNotification component
-    const updateNotificationRef = useRef(null);
-
-    // Get application version on component mount
+    // Update autoHighlight when settings change
     useEffect(() => {
-        // Try to get the app version from the electron API
-        const getAppVersion = async () => {
-            try {
-                if (window.electronAPI && window.electronAPI.getAppVersion) {
-                    const version = await window.electronAPI.getAppVersion();
-                    setAppVersion(version);
-                }
-            } catch (error) {
-                log.error('Failed to get app version:', error);
-            }
-        };
+        if (settings?.autoHighlightTableEntries !== undefined) {
+            setAutoHighlight(settings.autoHighlightTableEntries);
+        }
+    }, [settings?.autoHighlightTableEntries]);
 
-        getAppVersion();
+    // Import/Export hook
+    const {
+        loading,
+        exportModalVisible,
+        importModalVisible,
+        showExportModal,
+        showImportModal,
+        setExportModalVisible,
+        setImportModalVisible,
+        handleExport,
+        handleImport
+    } = useExportImport({
+        appVersion,
+        sources,
+        activeWorkspaceId,
+        exportSources,
+        removeSource,
+        workspaces,
+        createWorkspace,
+        switchWorkspace,
+        environments,
+        createEnvironment,
+        setVariable,
+        generateEnvironmentSchema
+    });
 
-        // Listen for records recording requests from extension
-        const unsubscribe = window.electronAPI.onOpenRecordRecording((data) => {
-            log.info('Received request to open record recording:', data);
-            setActiveTab('record-viewer');
-            if (data && data.record) {
-                setCurrentRecord(data.record);
-            }
-        });
+    // Source refresh hook
+    const { refreshSourceWithHttp, handleAddSource } = useSourceRefresh({
+        sources,
+        updateSource,
+        refreshSource,
+        manualRefresh,
+        addSource
+    });
 
-        return () => {
-            unsubscribe();
-        };
-    }, []);
+    // App effects hook
+    const { updateNotificationRef, handleCheckForUpdates } = useAppEffects({
+        setAppVersion,
+        setActiveTab,
+        setCurrentRecord,
+        refreshSource,
+        activeWorkspaceId,
+        navigate,
+        clearAllHighlights,
+        ACTIONS,
+        TARGETS,
+        setSettingsInitialTab,
+        setSettingsVisible,
+        setSettingsAction
+    });
 
-    // Handle file change events
+    // Clear highlights when main tab changes
     useEffect(() => {
-        const unsubscribe = window.electronAPI.onFileChanged((sourceId, content) => {
-            // File content has changed, update UI
-            log.debug('File changed event for sourceId:', sourceId, 'content:', content.substring(0, 50));
-            const updatedSource = sources.find(s => s.sourceId === sourceId);
-            if (updatedSource) {
-                log.debug('Source found, refreshing...');
-                refreshSource(sourceId);
-            } else {
-                log.debug('Source not found in list');
-            }
-        });
+        clearAllHighlights();
+    }, [activeTab, clearAllHighlights]);
 
-        return () => {
-            if (typeof unsubscribe === 'function') {
-                unsubscribe();
-            }
-        };
-    }, [sources, refreshSource]);
-
-
-    // Handle add source
-    const handleAddSource = async (sourceData) => {
-        log.debug('Adding source:', sourceData);
-        const success = await addSource(sourceData);
-        if (success) {
-            log.debug('Source added successfully');
-            log.debug('Current sources after add:', sources);
-            showMessage('success', 'Source added successfully');
-        } else {
-            log.debug('Failed to add source');
-        }
-        return success;
-    };
-
-    // Handle export
-    const handleExport = async () => {
-        if (sources.length === 0) {
-            showMessage('warning', 'No sources to export');
-            return;
-        }
-
-        try {
-            setLoading(prev => ({ ...prev, export: true }));
-
-            // Generate filename with timestamp
-            const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
-            const defaultFilename = `open-headers_sources_${timestamp}.json`;
-
-            // Show save file dialog
-            const filePath = await window.electronAPI.saveFileDialog({
-                title: 'Export Sources',
-                buttonLabel: 'Export',
-                defaultPath: defaultFilename,
-                filters: [
-                    { name: 'JSON Files', extensions: ['json'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-
-            if (!filePath) {
-                // User cancelled
-                return;
-            }
-
-            // Export sources
-            const success = await exportSources(filePath);
-            if (success) {
-                showMessage('success', `Successfully exported ${sources.length} source(s)`);
-            }
-        } catch (error) {
-            showMessage('error', `Error exporting sources: ${error.message}`);
-        } finally {
-            setLoading(prev => ({ ...prev, export: false }));
-        }
-    };
-
-    // Handle import
-    const handleImport = async () => {
-        try {
-            setLoading(prev => ({ ...prev, import: true }));
-
-            // Show open file dialog
-            const filePath = await window.electronAPI.openFileDialog();
-
-            if (!filePath) {
-                // User cancelled
-                return;
-            }
-
-            // Import sources
-            const result = await importSources(filePath);
-
-            if (result.success) {
-                showMessage('success', `Successfully imported ${result.count} source(s)`);
-            } else {
-                showMessage('warning', result.message || 'No sources were imported');
-            }
-        } catch (error) {
-            log.error('Error importing sources:', error);
-            showMessage('error', `Error importing sources: ${error.message}`);
-        } finally {
-            setLoading(prev => ({ ...prev, import: false }));
-        }
-    };
-
-    // Handle check for updates
-    const handleCheckForUpdates = () => {
-        if (updateNotificationRef.current?.checkForUpdates) {
-            // Pass true to indicate this is a manual check
-            updateNotificationRef.current.checkForUpdates(true);
-        } else {
-            // Only fall back to direct API call if the component method isn't available
-            window.electronAPI.checkForUpdates(true); // Pass true to indicate manual check
-
-            // Show loading notification only if we're not using the component method
-            const loadingIcon = <LoadingOutlined spin />;
-            notification.open({
-                message: 'Checking for Updates',
-                description: 'Looking for new versions…',
-                duration: 0,
-                key: 'checking-updates',
-                icon: loadingIcon
-            });
-        }
-    };
+    // Wrap removeSource to also remove from RefreshManager
+    const removeSourceWithRefresh = useCallback(async (sourceId) => {
+        // Remove from RefreshManager first
+        await removeFromRefreshManager(sourceId);
+        // Then remove from sources
+        return removeSource(sourceId);
+    }, [removeFromRefreshManager, removeSource]);
 
     // Handle settings
-    const handleOpenSettings = () => {
+    const handleOpenSettings = useCallback(() => {
         setSettingsVisible(true);
-    };
+    }, []);
 
-    const handleSettingsCancel = () => {
+    const handleSettingsCancel = useCallback(() => {
         setSettingsVisible(false);
-    };
+        setSettingsInitialTab(null); // Reset initial tab
+        setSettingsAction(null); // Reset action
+    }, []);
 
-    // Handle about modal
-    const handleOpenAbout = () => {
-        setAboutModalVisible(true);
-    };
-
-    const handleAboutCancel = () => {
-        setAboutModalVisible(false);
-    };
-
-    const handleSettingsSave = async (newSettings) => {
+    const handleSettingsSave = useCallback(async (newSettings) => {
         const success = await saveSettings(newSettings);
         if (success) {
             setSettingsVisible(false);
+            setSettingsInitialTab(null); // Reset initial tab
+            setSettingsAction(null); // Reset action
             showMessage('success', 'Settings saved successfully');
         }
-    };
+    }, [saveSettings]);
 
-    // Header actions menu items
-    const actionsMenuItems = [
-        {
-            key: 'export',
-            icon: <ExportOutlined />,
-            label: 'Export Sources',
-            onClick: handleExport
-        },
-        {
-            key: 'import',
-            icon: <ImportOutlined />,
-            label: 'Import Sources',
-            onClick: handleImport
-        },
-        {
-            type: 'divider'
-        },
-        {
-            key: 'check-updates',
-            icon: <DownloadOutlined />,
-            label: 'Check for Updates',
-            onClick: handleCheckForUpdates
-        },
-        {
-            key: 'settings',
-            icon: <SettingOutlined />,
-            label: 'Settings',
-            onClick: handleOpenSettings
-        },
-        {
-            key: 'about',
-            icon: <QuestionCircleOutlined />,
-            label: 'About',
-            onClick: handleOpenAbout
+    // Handle about modal
+    const handleOpenAbout = useCallback(() => {
+        setAboutModalVisible(true);
+    }, []);
+
+    const handleAboutCancel = useCallback(() => {
+        setAboutModalVisible(false);
+    }, []);
+
+    // Handle tab scroll positions
+    const handleTabScrollPositionChange = useCallback((tab, scrollTop) => {
+        setTabScrollPositions(prev => ({
+            ...prev,
+            [tab]: scrollTop
+        }));
+    }, []);
+
+    // Handle team workspace invite processing
+    const handleInviteSuccess = useCallback(() => {
+        setInviteModalVisible(false);
+        setInviteData(null);
+    }, []);
+
+    const handleInviteCancel = useCallback(() => {
+        setInviteModalVisible(false);
+        setInviteData(null);
+    }, []);
+
+    // Handle environment config import
+    const handleEnvironmentConfigImport = useCallback(async (envData) => {
+        console.log('=== ENVIRONMENT CONFIG IMPORT DEBUG ===');
+        console.log('Processing environment config import:', envData);
+        console.log('Current importModalVisible:', importModalVisible);
+        console.log('showImportModal function exists:', typeof showImportModal === 'function');
+        
+        if (envData) {
+            try {
+                // Store the environment data to be used by the import modal
+                console.log('Setting preloaded env data...');
+                setPreloadedEnvData(envData);
+                
+                // Switch to environments tab first
+                console.log('Switching to environments tab...');
+                setActiveTab('environments');
+                
+                // Add a small delay to ensure the UI is ready (especially on Windows)
+                console.log('Waiting 100ms before showing import modal...');
+                setTimeout(() => {
+                    // Show the import modal
+                    console.log('Calling showImportModal()...');
+                    showImportModal();
+                    console.log('showImportModal() called successfully');
+                }, 100);
+            } catch (error) {
+                console.error('Failed to process environment config:', error);
+                showMessage('error', `Failed to process environment configuration: ${error.message}`);
+            }
+        } else {
+            console.warn('handleEnvironmentConfigImport called with no data');
         }
-    ];
+    }, [showImportModal, importModalVisible]);
+
+    // Listen for team workspace invite events
+    useEffect(() => {
+        console.log('=== SETTING UP IPC LISTENERS IN APP.JSX ===');
+        console.log('window.electronAPI exists:', !!window.electronAPI);
+        console.log('onProcessTeamWorkspaceInvite exists:', typeof window.electronAPI?.onProcessTeamWorkspaceInvite);
+        console.log('onProcessEnvironmentConfigImport exists:', typeof window.electronAPI?.onProcessEnvironmentConfigImport);
+        
+        const handleTeamWorkspaceInvite = (inviteData) => {
+            try {
+                // Validate invite data
+                if (!inviteData.workspaceName || !inviteData.repoUrl) {
+                    throw new Error('Invalid invite data structure');
+                }
+
+                console.log('Processing team workspace invite:', inviteData);
+                setInviteData(inviteData);
+                setInviteModalVisible(true);
+
+                // Automatically switch to workspaces tab to show the invite modal
+                setActiveTab('workspaces');
+            } catch (error) {
+                console.error('Error processing invite:', error);
+                showMessage('error', `Invalid invite: ${error.message}`);
+            }
+        };
+
+        const handleErrorMessage = (errorData) => {
+            showMessage('error', errorData.message);
+        };
+
+
+        // Set up event listeners
+        const cleanupInviteListener = window.electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
+        const cleanupErrorListener = window.electronAPI?.onShowErrorMessage?.(handleErrorMessage);
+        const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData) => {
+            console.log('=== IPC EVENT RECEIVED ===');
+            console.log('App.jsx: Received environment config import event', envData);
+            console.log('window.electronAPI exists:', !!window.electronAPI);
+            console.log('onProcessEnvironmentConfigImport exists:', typeof window.electronAPI?.onProcessEnvironmentConfigImport);
+            handleEnvironmentConfigImport(envData);
+        });
+
+        // Signal to main process that renderer is ready for protocol messages
+        window.electronAPI?.signalRendererReady?.();
+        console.log('Signaled to main process that renderer is ready');
+
+        return () => {
+            // Cleanup listeners
+            if (cleanupInviteListener) {
+                cleanupInviteListener();
+            }
+            if (cleanupErrorListener) {
+                cleanupErrorListener();
+            }
+            if (cleanupEnvImportListener) {
+                cleanupEnvImportListener();
+            }
+        };
+    }, [handleEnvironmentConfigImport, setActiveTab]);
 
     return (
-        <Layout className="app-container" style={{ background: token.colorBgLayout }}>
-                <Header className="app-header" style={{ 
-                    background: token.colorBgContainer,
-                    borderBottom: `1px solid ${token.colorBorderSecondary}`
+        <>
+            {/* Main App Layout */}
+            {switchState.switching ? (
+                <div style={{ 
+                    position: 'relative',
+                    filter: 'blur(2px)',
+                    pointerEvents: 'none',
+                    opacity: 0.6,
+                    transition: 'all 0.3s ease'
                 }}>
-                    <div className="logo-title">
-                        <img src="./images/icon128.png" alt="Open Headers Logo" className="app-logo" />
-                        <div className="title-version">
-                            <Title level={3}>Open Headers - Dynamic Sources</Title>
-                            {appVersion && (
-                                <Tag color="default" className="version-tag">v{appVersion}</Tag>
-                            )}
-                        </div>
-                    </div>
-
-                    <Space>
-                        <Dropdown menu={{ items: actionsMenuItems }} trigger={['click']}>
-                            <Button icon={<MenuOutlined />}>
-                                Menu <DownOutlined />
-                            </Button>
-                        </Dropdown>
-                    </Space>
-                </Header>
-
-                <Content className="app-content" style={{ background: token.colorBgContainer }}>
-                    <Tabs
-                        activeKey={activeTab}
-                        onChange={(key) => {
-                            // Save current scroll position
-                            const currentContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
-                            if (currentContainer) {
-                                setTabScrollPositions(prev => ({
-                                    ...prev,
-                                    [activeTab]: currentContainer.scrollTop
-                                }));
-                            }
-                            setActiveTab(key);
-                            // Restore scroll position after tab change
-                            setTimeout(() => {
-                                const newContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
-                                if (newContainer && tabScrollPositions[key] !== undefined) {
-                                    newContainer.scrollTop = tabScrollPositions[key];
-                                }
-                            }, 0);
-                        }}
-                        className="app-tabs"
-                        type="card"
-                        style={{ height: '100%' }}
-                        items={[
-                            {
-                                key: 'sources',
-                                label: (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <DatabaseOutlined />
-                                        Sources
-                                    </span>
-                                ),
-                                children: (
-                                    <div className="content-container">
-                                        <SourceForm onAddSource={handleAddSource} />
-                                        <SourceTable
-                                            sources={sources}
-                                            onRemoveSource={removeSource}
-                                            onRefreshSource={refreshSource}
-                                            onUpdateSource={updateSource}
-                                        />
-                                    </div>
-                                )
-                            },
-                            {
-                                key: 'record-viewer',
-                                label: (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <PlayCircleOutlined />
-                                        Records
-                                    </span>
-                                ),
-                                children: (
-                                    <div className="content-container">
-                                        <RecordRecording 
-                                            record={currentRecord}
-                                            onRecordChange={setCurrentRecord}
-                                        />
-                                        {currentRecord && (
-                                            <RecordDetails
-                                                record={currentRecord}
-                                            />
-                                        )}
-                                    </div>
-                                )
-                            }
-                        ]}
-                    />
-                </Content>
-
-                <SettingsModal
-                    open={settingsVisible}
-                    settings={settings}
-                    onCancel={handleSettingsCancel}
-                    onSave={handleSettingsSave}
-                />
-
-                <AboutModal
-                    open={aboutModalVisible}
-                    onClose={handleAboutCancel}
+                    <CompleteWorkspaceSkeleton />
+                </div>
+            ) : (
+                <AppLayout
+                    // App state
                     appVersion={appVersion}
+                    activeTab={activeTab}
+                    tabScrollPositions={tabScrollPositions}
+                    settingsVisible={settingsVisible}
+                    settingsInitialTab={settingsInitialTab}
+                    settingsAction={settingsAction}
+                    aboutModalVisible={aboutModalVisible}
+                    exportModalVisible={exportModalVisible}
+                    importModalVisible={importModalVisible}
+                    currentRecord={currentRecord}
+                    recordPlaybackTime={recordPlaybackTime}
+                    autoHighlight={autoHighlight}
+                    loading={loading}
+                    settings={settings}
+                    sources={sources}
+                    // Event handlers
+                    onTabChange={setActiveTab}
+                    onTabScrollPositionChange={handleTabScrollPositionChange}
+                    onRecordChange={setCurrentRecord}
+                    onPlaybackTimeChange={setRecordPlaybackTime}
+                    onAutoHighlightChange={setAutoHighlight}
+                    onAddSource={handleAddSource}
+                    onRemoveSource={removeSourceWithRefresh}
+                    onRefreshSource={refreshSourceWithHttp}
+                    onUpdateSource={updateSource}
+                    onExport={showExportModal}
+                    onImport={showImportModal}
+                    onCheckForUpdates={handleCheckForUpdates}
+                    onOpenSettings={handleOpenSettings}
+                    onOpenAbout={handleOpenAbout}
+                    onSettingsCancel={handleSettingsCancel}
+                    onAboutCancel={handleAboutCancel}
+                    onSettingsSave={handleSettingsSave}
+                    onExportModalCancel={() => setExportModalVisible(false)}
+                    onImportModalCancel={() => {
+                        setImportModalVisible(false);
+                        setPreloadedEnvData(null); // Clear preloaded data
+                    }}
+                    onHandleExport={handleExport}
+                    onHandleImport={handleImport}
+                    preloadedEnvData={preloadedEnvData}
+                    // Refs
+                    updateNotificationRef={updateNotificationRef}
                 />
-
-                <UpdateNotification ref={updateNotificationRef} />
-
-                <TrayMenu />
-                
-                {/* Show circuit breaker status in development */}
-                <CircuitBreakerStatus />
-            </Layout>
+            )}
+            
+            {/* Workspace Switch Overlay */}
+            <WorkspaceSwitchOverlay
+                visible={switchState.switching}
+                targetWorkspace={switchState.targetWorkspace}
+            />
+            
+            {/* Team Workspace Invite Modal */}
+            <TeamWorkspaceAcceptInviteModal
+                visible={inviteModalVisible}
+                inviteData={inviteData}
+                onCancel={handleInviteCancel}
+                onSuccess={handleInviteSuccess}
+            />
+        </>
     );
 };
 
