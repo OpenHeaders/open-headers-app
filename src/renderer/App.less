@@ -10,26 +10,41 @@
   flex-direction: column;
 }
 
-// Header styles - let Ant Design handle the colors
+// Header styles
 .app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
-  height: 64px;
-  position: sticky;
+  height: 48px;
+  position: fixed;
   top: 0;
-  z-index: 10;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  /* stylelint-disable-next-line property-no-unknown */
+  -webkit-app-region: drag;
+  background-color: var(--ant-color-bg-layout);
+  border-bottom: 1px solid var(--ant-color-border);
+  isolation: isolate;
+
+  .ant-btn, .ant-dropdown, .window-controls {
+    /* stylelint-disable-next-line property-no-unknown */
+    -webkit-app-region: no-drag;
+  }
 
   .logo-title {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin: 0 auto;
+    justify-content: flex-start;
+
+    &.platform-darwin {
+      margin-left: 70px; /* Space for macOS traffic lights */
+    }
 
     .app-logo {
-      height: 32px;
-      margin-right: 16px;
+      height: 24px;
+      margin-right: 12px;
     }
 
     .title-version {
@@ -38,6 +53,8 @@
 
       h3 {
         margin: 0 8px 0 0;
+        font-size: 18px;
+        font-weight: 600;
       }
 
       .version-tag {
@@ -49,65 +66,129 @@
       }
     }
   }
+
+  .window-controls {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+
+    .window-control-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      margin-left: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      &.window-close-btn:hover {
+        background-color: #e81123;
+        color: white;
+      }
+    }
+  }
 }
 
-// Main content styles
 .app-content {
-  flex: 1;
+  position: fixed;
+  top: 48px;
+  bottom: 40px;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  overflow: auto;
 
   .app-tabs {
-    height: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     background: inherit;
-    
+
     .ant-tabs-nav {
       margin-bottom: 0;
       padding: 24px 24px 0 24px;
-      position: sticky;
+      position: sticky; /* Stick to content area top */
       top: 0;
-      z-index: 1000;  // Ensure main tabs stay on top
+      z-index: 1500; /* Below header but above content */
       background: inherit;
-      
+      flex-shrink: 0;
+
       .ant-tabs-nav-wrap {
         background: inherit;
       }
-      
+
       .ant-tabs-tab {
         margin-right: 8px;
         border-radius: 8px 8px 0 0;
       }
     }
-    
+
     .ant-tabs-content {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .ant-tabs-content-holder {
       height: 100%;
     }
-    
-    .ant-tabs-content-holder {
-      flex: 1;
-      overflow: auto;
-    }
-    
+
     .ant-tabs-tabpane {
       height: 100%;
+      overflow: auto;
     }
   }
 
   .content-container {
     padding: 24px;
-    height: 100%;
-    overflow: auto;
     display: flex;
     flex-direction: column;
-    position: relative;
-    z-index: 1;
   }
 }
 
-// Card styles
+.app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100; // Lower than dropdowns (1050) but above content
+  background-color: var(--ant-color-bg-layout);
+  border-top: 1px solid var(--ant-color-border);
+
+  .footer-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .footer-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1 1 auto;
+    }
+
+    .footer-right {
+      display: flex;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+  }
+}
+
+// Dark theme colors handled by CSS variables automatically
+
 .ant-card {
   border-radius: 8px;
   overflow: hidden;
@@ -159,16 +240,15 @@
   }
 }
 
-// Sticky source form header - using theme tokens
 .source-form-sticky-header {
   position: fixed;
-  top: 64px;
+  top: 48px;
   left: 0;
   right: 0;
-  z-index: 9;
+  z-index: 1000;
   transition: box-shadow 0.3s, transform 0.3s;
   padding: 0 24px;
-  height: 48px;
+  height: 35px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,16 +267,18 @@
   }
 }
 
-// Records viewer cards
 .record-info-card {
   flex-shrink: 0;
-  
+
   .ant-card-head {
     .ant-card-head-title {
       font-size: 14px;
     }
   }
 }
+
+// Remove all CSS-based highlight styles since we're using inline styles from JavaScript
+// The NavigationContext now applies the correct colors based on the theme
 
 .record-details-card {
   height: 400px;
@@ -205,7 +287,7 @@
   flex-direction: column;
   position: relative;
   z-index: 1;
-  
+
   .ant-card-body {
     flex: 1;
     display: flex;
@@ -218,58 +300,56 @@
   }
 }
 
-// Records viewer tabs styles
 .record-viewer-tabs {
   height: 400px;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 1;
-  
+
   .ant-tabs-nav {
     margin: 0;
     padding: 16px 16px 0 16px;
     background: inherit;
-    
+
     .ant-tabs-nav-wrap {
       padding: 0;
       background: inherit;
     }
-    
+
     .ant-tabs-tab {
       padding: 8px 16px;
       margin: 0 8px 0 0;
       border-radius: 8px 8px 0 0;
-      
+
       &:first-child {
         margin-left: 0;
       }
-      
+
       &:last-child {
         margin-right: 0;
       }
     }
   }
-  
+
   .ant-tabs-content {
     flex: 1;
     overflow: hidden;
   }
-  
+
   .ant-tabs-content-holder {
     height: 100%;
   }
-  
+
   .ant-tabs-tabpane {
     height: 100%;
     padding: 0;
   }
-  
-  // Custom scrollbar styling for tables
+
   .ant-table-wrapper {
-    height: calc(100% - 32px); // Account for padding
+    height: calc(100% - 32px);
   }
-  
+
   .ant-table {
     .ant-table-container {
       .ant-table-body,
@@ -282,53 +362,56 @@
   }
 }
 
-// Network tab side panel styles
 .network-side-panel {
   display: flex;
   flex-direction: column;
-  
+
   .ant-tabs {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    
+    min-height: 0;
+
     .ant-tabs-nav {
       flex-shrink: 0;
     }
-    
+
     .ant-tabs-content {
       flex: 1;
       overflow: hidden;
+      min-height: 0;
     }
-    
+
     .ant-tabs-content-holder {
       height: 100%;
     }
-    
+
     .ant-tabs-tabpane {
       height: 100%;
+      display: flex;
+      flex-direction: column;
+
+      > div {
+        flex: 1;
+        min-height: 0;
+      }
     }
   }
 }
 
-// Hide only the radio buttons in network tab
+/* Hide radio buttons in network tab */
 .record-viewer-tabs {
   .ant-table-selection-column {
     width: 0 !important;
     padding: 0 !important;
-    
+
     .ant-radio-wrapper {
       display: none !important;
     }
   }
 }
 
-
-
-
-
-// HTTP options styles
 .http-options {
   .ant-tabs-nav {
     margin-bottom: 8px;
@@ -514,6 +597,23 @@
   border-radius: 4px;
   display: inline-block;
   min-width: 180px;
+
+  // Circuit breaker open state styling
+  .anticon-exclamation-circle {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
 }
 
 // Code styles
@@ -522,7 +622,11 @@ code {
   font-family: 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 }
 
-// Toast notification styles
+/* Toast notifications - ensure they appear above header */
+.ant-message {
+  z-index: 10000;
+}
+
 .ant-message-notice-content {
   border-radius: 8px;
   padding: 12px 16px;
@@ -570,6 +674,51 @@ code {
   border-radius: 6px;
 }
 
+// Rules component nested tabs styling
+.content-container {
+  > .ant-tabs {
+    .ant-tabs-nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: inherit;
+      padding-top: 16px; // Add spacing from main tabs
+      padding-left: 40px; // Indent sub-tabs to the right
+      padding-right: 0;
+      margin-top: -24px;
+      padding-bottom: 0;
+      
+      // Add background for sticky behavior when scrolling
+      &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -24px;
+        right: -24px;
+        bottom: 0;
+        background: inherit;
+        z-index: -1;
+      }
+    }
+    
+    .ant-tabs-content {
+      padding-top: 16px; // Add some padding to content
+    }
+  }
+}
+
+[data-theme="dark"] {
+  .content-container {
+    > .ant-tabs {
+      .ant-tabs-nav {
+        &::after {
+          background: inherit;
+        }
+      }
+    }
+  }
+}
+
 // Animations for page transitions
 .fade-enter {
   opacity: 0;
@@ -599,7 +748,4 @@ code {
     white-space: pre-wrap;
     word-break: break-word;
   }
-
-  // Filter indicator - removed hardcoded color
-  // Let components handle their own styling
 }

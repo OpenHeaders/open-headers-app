@@ -1,0 +1,319 @@
+/* RecordViewer specific styles for timeline sync */
+
+/* Ensure table bodies have proper scrolling */
+.record-viewer-tabs .ant-table-body {
+  scroll-behavior: smooth;
+}
+
+/* Fix for tab content height to prevent overflow */
+.record-viewer-tabs .ant-tabs-content {
+  height: 100%;
+}
+
+.record-viewer-tabs .ant-tabs-content-holder {
+  height: 100%;
+}
+
+.record-viewer-tabs .ant-tabs-tabpane {
+  height: 100%;
+}
+
+/* Ensure network and console tabs fill available space */
+.record-viewer-tabs .network-tab,
+.record-viewer-tabs .console-tab,
+.record-viewer-tabs .storage-tab,
+.record-viewer-tabs .info-tab {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Fix Ant Design table height calculation */
+.record-viewer-tabs .ant-table-wrapper {
+  height: calc(100% - 32px); /* Account for padding */
+}
+
+.record-viewer-tabs .ant-table {
+  height: 100%;
+}
+
+.record-viewer-tabs .ant-table-container {
+  height: 100%;
+}
+
+/* Ensure table body doesn't overflow */
+.record-viewer-tabs .ant-table-body {
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important; /* Prevent horizontal scroll from border */
+}
+
+/* Error response styling for HTTP requests */
+.error-response {
+  padding: 12px;
+  background-color: #fff2f0;
+  border: 1px solid #ffccc7;
+  border-radius: 6px;
+  margin: 8px 0;
+}
+
+.error-title {
+  font-weight: 600;
+  color: #cf1322;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.error-message {
+  color: #a8071a;
+  margin-bottom: 8px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background-color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ffa39e;
+}
+
+.error-details {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #ffccc7;
+}
+
+.error-details-title {
+  font-weight: 500;
+  color: #cf1322;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.error-details-content {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 11px;
+  color: #8c8c8c;
+  background-color: #fff;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid #ffa39e;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.retry-info {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background-color: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 4px;
+}
+
+.retry-info-title {
+  font-weight: 500;
+  color: #d46b08;
+  margin-bottom: 2px;
+  font-size: 11px;
+}
+
+.retry-info-content {
+  color: #ad6800;
+  font-size: 11px;
+}
+
+.no-content {
+  color: #8c8c8c;
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+  background-color: #fafafa;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+}
+
+/* Duration display styling */
+.duration-display {
+  color: #8c8c8c;
+  font-size: 12px;
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+/* When details panel is open in network tab */
+.record-viewer-tabs .network-tab > div > div {
+  height: 100%;
+}
+
+/* Default future entries (greyed out) */
+.record-viewer-tabs .ant-table-tbody > tr.entry-future > td {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+/* Active entries (already reached in playback) */
+.record-viewer-tabs .ant-table-tbody > tr.entry-active > td {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+/* Current entry highlighting - subtle background without size changes */
+.record-viewer-tabs .ant-table-tbody > tr.entry-current {
+  position: relative;
+}
+
+/* Add a left border indicator for current entry using box-shadow (no layout impact) */
+.record-viewer-tabs .ant-table-tbody > tr.entry-current > td:first-child {
+  box-shadow: inset 3px 0 0 #1677ff;
+}
+
+/* Ensure table cells maintain their layout */
+.record-viewer-tabs .ant-table-tbody > tr > td {
+  position: relative;
+}
+
+/* Subtle background highlight for current row */
+.record-viewer-tabs .ant-table-tbody > tr.entry-current > td {
+  background-color: rgba(22, 119, 255, 0.04) !important;
+}
+
+/* Dark mode adjustments */
+.dark-mode .record-viewer-tabs .ant-table-tbody > tr.entry-current > td {
+  background-color: rgba(69, 132, 255, 0.06) !important;
+}
+
+.dark-mode .record-viewer-tabs .ant-table-tbody > tr.entry-current > td:first-child {
+  box-shadow: inset 3px 0 0 #4584ff;
+}
+
+/* Hover effects for interactive rows */
+.record-viewer-tabs .ant-table-tbody > tr.entry-future:hover > td {
+  opacity: 0.6;
+}
+
+/* Ensure table cells inside future rows are properly styled */
+.record-viewer-tabs .ant-table-tbody > tr.entry-future > td > * {
+  opacity: 1; /* Keep content fully visible, only the cell is faded */
+}
+
+/* Smooth transition for all rows */
+.record-viewer-tabs .ant-table-tbody > tr {
+  transition: background-color 0.3s ease;
+}
+
+/* Prevent width/padding transitions on cells that could cause misalignment */
+.record-viewer-tabs .ant-table-tbody > tr > td {
+  transition: opacity 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease !important;
+  /* Only allow specific transitions, no width/padding changes */
+}
+
+/* Fix for Ant Design tabs height calculation */
+.record-viewer-tabs {
+  display: flex;
+  flex-direction: column;
+}
+
+.record-viewer-tabs > .ant-tabs-nav {
+  flex-shrink: 0;
+}
+
+.record-viewer-tabs > .ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Ensure proper height for tab panels */
+.record-viewer-tabs .ant-tabs-tabpane-active {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Network tab specific fixes when details panel is open */
+.record-viewer-tabs .network-tab .ant-table-wrapper {
+  height: 100%;
+}
+
+.record-viewer-tabs .network-tab .ant-table {
+  height: 100%;
+}
+
+/* Ensure stable column widths in network tab */
+.record-viewer-tabs .network-tab .ant-table-thead > tr > th {
+  transition: none !important;
+}
+
+.record-viewer-tabs .network-tab .ant-table-tbody > tr > td {
+  transition: opacity 0.3s ease, background-color 0.3s ease !important;
+  /* Prevent other transitions that might cause layout shifts */
+}
+
+/* Fix column alignment by ensuring consistent padding */
+.record-viewer-tabs .network-tab .ant-table-cell {
+  padding: 8px !important;
+}
+
+/* Storage tab description cells */
+.record-viewer-tabs .storage-tab .ant-descriptions {
+  height: 100%;
+  overflow: auto;
+}
+
+/* Storage entry highlighting */
+.storage-tab .entry-active {
+  opacity: 1;
+}
+
+.storage-tab .entry-future {
+  opacity: 0.4;
+}
+
+.storage-tab .entry-current {
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+/* Storage type-specific row styling */
+.storage-localStorage {
+  border-left: 2px solid transparent;
+}
+
+.storage-sessionStorage {
+  border-left: 2px solid transparent;
+}
+
+.storage-cookie {
+  border-left: 2px solid transparent;
+}
+
+.storage-localStorage.entry-current {
+  border-left-color: #1890ff;
+}
+
+.storage-sessionStorage.entry-current {
+  border-left-color: #52c41a;
+}
+
+.storage-cookie.entry-current {
+  border-left-color: #fa8c16;
+}
+
+/* Network tab split view fixes */
+.record-viewer-tabs .network-tab > div > div {
+  display: flex;
+  height: 100%;
+}
+
+/* Override flex for empty state to allow proper centering */
+.record-viewer-tabs .network-tab > div > div.empty-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure table maintains layout when split view is active */
+.record-viewer-tabs .network-tab .ant-table-container {
+  /* Force table to recalculate layout */
+  will-change: transform;
+}
+
+/* Consistent cell padding across all states */
+.record-viewer-tabs .ant-table-cell {
+  box-sizing: border-box;
+  padding: 8px !important;
+}

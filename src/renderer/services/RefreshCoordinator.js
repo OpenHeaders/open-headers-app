@@ -1,7 +1,7 @@
-const { createLogger } = require('../utils/logger');
+const { createLogger } = require('../utils/error-handling/logger');
 const log = createLogger('RefreshCoordinator');
 const timeManager = require('./TimeManager');
-const { ConcurrentMap, ConcurrentSet, Mutex } = require('../utils/ConcurrencyControl');
+const { ConcurrentMap, Mutex } = require('../utils/error-handling/ConcurrencyControl');
 
 /**
  * Improved RefreshCoordinator with proper queue limits and concurrency control
@@ -15,7 +15,6 @@ class RefreshCoordinator {
     
     // Configuration
     this.MAX_QUEUE_SIZE = 100; // Prevent unbounded queue growth
-    this.MAX_CONCURRENT_BATCH = 10; // Maximum concurrent batch operations
     
     // Metrics with proper initialization
     this.metrics = {
@@ -219,47 +218,6 @@ class RefreshCoordinator {
     }
   }
   
-  /**
-   * Execute multiple refreshes with coordination
-   */
-  async executeBatch(refreshOperations, options = {}) {
-    const {
-      maxConcurrent = 5,
-      continueOnError = true,
-      priority = 'high'
-    } = options;
-    
-    // Limit concurrent operations
-    const effectiveMaxConcurrent = Math.min(maxConcurrent, this.MAX_CONCURRENT_BATCH);
-    
-    log.info(`Starting batch refresh for ${refreshOperations.length} sources (max concurrent: ${effectiveMaxConcurrent})`);
-    
-    const results = [];
-    const chunks = this.chunkArray(refreshOperations, effectiveMaxConcurrent);
-    
-    for (const chunk of chunks) {
-      const promises = chunk.map(({ sourceId, refreshFn }) => {
-        const normalizedId = RefreshCoordinator.normalizeSourceId(sourceId);
-        
-        return this.executeRefresh(normalizedId, refreshFn, { priority, skipIfActive: false })
-          .catch(error => {
-            if (!continueOnError) throw error;
-            return { success: false, error: error.message, sourceId: normalizedId };
-          });
-      });
-      
-      const chunkResults = await Promise.all(promises);
-      results.push(...chunkResults);
-    }
-    
-    log.info(`Batch refresh completed`, {
-      total: refreshOperations.length,
-      successful: results.filter(r => r.success).length,
-      failed: results.filter(r => !r.success).length
-    });
-    
-    return results;
-  }
   
   /**
    * Cancel active refresh for a source
@@ -275,7 +233,7 @@ class RefreshCoordinator {
     }
     
     // Clear from queue
-    const queueCleared = await this.queueMutex.withLock(async () => {
+    return await this.queueMutex.withLock(async () => {
       const queue = await this.refreshQueue.get(sourceId);
       if (!queue || queue.length === 0) return false;
       
@@ -287,8 +245,6 @@ class RefreshCoordinator {
       log.info(`Cancelled ${queue.length} queued refreshes for ${sourceId}`);
       return true;
     });
-    
-    return queueCleared;
   }
   
   /**
@@ -298,7 +254,7 @@ class RefreshCoordinator {
     // Cancel all queued refreshes
     const allQueues = await this.refreshQueue.entries();
     
-    for (const [sourceId, queue] of allQueues) {
+    for (const [, queue] of allQueues) {
       if (queue && queue.length > 0) {
         queue.forEach(item => {
           item.reject(new Error('All refreshes cancelled'));
@@ -326,28 +282,7 @@ class RefreshCoordinator {
     return this.activeRefreshes.has(sourceId);
   }
   
-  /**
-   * Get active refresh count
-   */
-  async getActiveCount() {
-    return this.activeRefreshes.size();
-  }
   
-  /**
-   * Get queued refresh count
-   */
-  async getQueuedCount() {
-    const allQueues = await this.refreshQueue.entries();
-    let total = 0;
-    
-    for (const [, queue] of allQueues) {
-      if (queue) {
-        total += queue.length;
-      }
-    }
-    
-    return total;
-  }
   
   /**
    * Update metrics with new refresh duration
@@ -357,18 +292,7 @@ class RefreshCoordinator {
     this.metrics.averageRefreshTime = 
       this.metrics.totalRefreshTime / (this.metrics.successfulRefreshes || 1);
   }
-  
-  /**
-   * Get coordinator metrics
-   */
-  async getMetrics() {
-    return {
-      ...this.metrics,
-      activeRefreshes: await this.activeRefreshes.size(),
-      queuedRefreshes: await this.getQueuedCount()
-    };
-  }
-  
+
   /**
    * Reset metrics
    */
@@ -384,16 +308,6 @@ class RefreshCoordinator {
     };
   }
   
-  /**
-   * Chunk array into smaller arrays
-   */
-  chunkArray(array, size) {
-    const chunks = [];
-    for (let i = 0; i < array.length; i += size) {
-      chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
-  }
   
   /**
    * Cleanup and destroy

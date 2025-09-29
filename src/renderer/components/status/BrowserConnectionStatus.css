@@ -1,0 +1,102 @@
+.browser-connection-status {
+    display: inline-block;
+}
+
+.connection-indicator {
+    cursor: pointer;
+    padding: 4px 12px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.connection-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.connection-text {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Tooltip Styles */
+.connection-tooltip {
+    max-width: 350px;
+}
+
+.server-status {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.connection-details {
+    margin-bottom: 12px;
+}
+
+.connection-details strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.browser-count {
+    margin-left: 12px;
+    padding: 4px 0;
+}
+
+.client-list {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.client-list strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.client-info {
+    margin-left: 12px;
+    padding: 4px 0;
+    font-size: 13px;
+}
+
+.more-clients {
+    margin-left: 12px;
+    margin-top: 4px;
+    font-style: italic;
+    color: #8c8c8c;
+    font-size: 12px;
+}
+
+.no-connections {
+    margin-top: 8px;
+    color: #8c8c8c;
+    font-style: italic;
+}
+
+/* Badge overrides */
+.browser-connection-status .ant-badge-count {
+    background-color: #52c41a;
+    box-shadow: 0 0 0 1px #fff;
+}
+
+.browser-connection-status .ant-badge-count-zero {
+    background-color: #d9d9d9;
+}
+
+/* Dark theme support */
+.dark .connection-indicator:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.dark .server-status,
+.dark .client-list {
+    border-color: #303030;
+}
+
+.dark .no-connections,
+.dark .more-clients {
+    color: #8c8c8c;
+}

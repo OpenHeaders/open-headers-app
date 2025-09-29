@@ -3,11 +3,96 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Open Headers - Dynamic Sources</title>
-    <meta name="description" content="Open Headers - Manage dynamic sources from files, environment variables, and HTTP endpoints" />
+    <title>Open Headers - Capture browser workflows. Modify HTTP Traffic. Team Workspaces. Everything local.</title>
+    <meta name="description" content="Open Headers - Capture browser workflows. Modify HTTP Traffic. Team Workspaces. Everything local." />
+    
+    <style>
+        /* Initial loading overlay - shows immediately before React loads */
+        #initial-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        #initial-loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .loading-content {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .app-icon {
+            width: 32px;
+            height: 32px;
+        }
+        
+        .loading-text-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #1890ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .loading-text {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 16px;
+            color: rgba(0, 0, 0, 0.85);
+            margin: 0;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Hide body content until React takes over */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+    </style>
+    
     <!-- Webpack will inject the bundled JS here -->
 </head>
 <body>
-<div id="root"></div>
+    <!-- Initial loading overlay that shows immediately -->
+    <div id="initial-loading-overlay">
+        <div class="loading-content">
+            <img src="./images/icon128.png" alt="Open Headers Logo" class="app-icon" />
+            <div class="loading-text-container">
+                <div class="spinner"></div>
+                <p class="loading-text">Loading OpenHeaders</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="root"></div>
 </body>
 </html>

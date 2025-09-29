@@ -22,6 +22,12 @@ async function notarizeApp(context) {
         return;
     }
 
+    // Check if code signing is disabled (unsigned build)
+    if (process.env.CSC_IDENTITY_AUTO_DISCOVERY === 'false') {
+        console.log('⏭️ Skipping notarization for unsigned build (CSC_IDENTITY_AUTO_DISCOVERY=false)');
+        return;
+    }
+
     // Check for all required environment variables
     const requiredEnvVars = {
         APPLE_ID: process.env.APPLE_ID,

@@ -86,7 +86,46 @@ jobs:
 
       # Install dependencies
       - name: Install dependencies
-        run: npm ci
+        run: |
+          # Use PAT if available for private packages, otherwise fall back to GITHUB_TOKEN
+          if [ -n "${{ secrets.PACKAGES_PAT }}" ]; then
+            echo "Using PACKAGES_PAT for authentication"
+            echo "@openheaders:registry=https://npm.pkg.github.com" >> ~/.npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_PAT }}" >> ~/.npmrc
+          else
+            echo "Using GITHUB_TOKEN for authentication (may not have package read permissions)"
+            echo "@openheaders:registry=https://npm.pkg.github.com" >> ~/.npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
+          fi
+          
+          npm ci --include=optional
+          
+          # Debug: Check if optional dependencies were installed
+          echo "=== Checking installed packages ==="
+          npm ls --depth=0 || true
+          
+          # Check if Windows-specific module was installed
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "=== Checking Windows-specific module ==="
+            npm ls @openheaders/windows-foreground || echo "Module not found in dependency tree"
+            
+            echo "=== Checking node_modules directory ==="
+            if [ -d "node_modules/@openheaders" ]; then
+              echo "Found @openheaders directory:"
+              ls -la node_modules/@openheaders/ || true
+            else
+              echo "@openheaders directory not found in node_modules"
+            fi
+            
+            if [ -d "node_modules/@openheaders/windows-foreground" ]; then
+              echo "Module directory contents:"
+              ls -la node_modules/@openheaders/windows-foreground/ || true
+            fi
+          fi
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGES_PAT: ${{ secrets.PACKAGES_PAT }}
 
       # Build webpack bundle
       - name: Build webpack bundle
@@ -114,7 +153,7 @@ jobs:
       # Build for macOS - skip RPM builds on macOS
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac:skip-publish
+        run: npm run dist:mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -122,28 +161,64 @@ jobs:
           SKIP_NOTARIZATION: ${{ !startsWith(github.ref, 'refs/tags/') }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Windows code signing setup (optional - only runs if secrets are present)
-      - name: Setup Windows code signing
-        if: matrix.os == 'windows-latest'
-        run: node scripts/certificates/generate-ci-cert.js
-        env:
-          CI: true
-          WINDOWS_CERT_PFX_BASE64: ${{ secrets.WINDOWS_CERT_PFX_BASE64 }}
-          WINDOWS_CA_CERT_BASE64: ${{ secrets.WINDOWS_CA_CERT_BASE64 }}
-
       # Build for Windows
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: npm run dist:win:skip-publish
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "Building Windows (will sign after build)"
+            npm run dist:win:unsigned
+          else
+            echo "Building Windows without signing (branch/PR)"
+            npm run dist:win:unsigned
+          fi
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Find the exact exe file name first
+      - name: Find Windows Executable
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        id: find-exe
+        run: |
+          $exeFile = Get-ChildItem -Path "dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
+          
+          if ($null -eq $exeFile) {
+            Write-Error "No Setup.exe file found in dist directory"
+            exit 1
+          }
+          
+          Write-Host "Found executable: $($exeFile.Name)"
+          Write-Host "Full path: $($exeFile.FullName)"
+          
+          # Output the filename for the next step
+          echo "EXE_FILENAME=$($exeFile.Name)" >> $env:GITHUB_OUTPUT
+        shell: pwsh
+
+      # Sign Windows executables with SSL.com eSigner using exact filename
+      - name: Sign Windows Executables
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        uses: sslcom/esigner-codesign@v1.3.1
+        with:
+          command: sign
+          username: ${{ secrets.ES_USERNAME }}
+          password: ${{ secrets.ES_PASSWORD }}
+          credential_id: ${{ secrets.CREDENTIAL_ID }}
+          totp_secret: ${{ secrets.ES_TOTP_SECRET }}
+          file_path: dist/${{ steps.find-exe.outputs.EXE_FILENAME }}
+          malware_block: true
+          override: true
+          environment_name: PROD
+          clean_logs: false
+          jvm_max_memory: 1024M
+          signing_method: v1
 
       # Build for Linux (including RPM packages)
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
           # Build all Linux targets (including RPM)
-          npm run dist:linux:skip-publish
+          npm run dist:linux
           
           # Verify RPM packages were built successfully
           if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5890FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#4A7FE8;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feFlood flood-color="#000000" flood-opacity="0.3"/>
+      <feComposite in2="offsetblur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background rounded square -->
+  <rect width="512" height="512" rx="80" fill="url(#bgGrad)"/>
+  
+  <!-- Simple, clean OH letters -->
+  <g fill="white" filter="url(#shadow)">
+    <!-- Letter O  -->
+    <path d="M 60 226 
+             A 100 100 0 0 1 160 126
+             A 100 100 0 0 1 260 226
+             A 100 100 0 0 1 160 326
+             A 100 100 0 0 1 60 226 Z
+             M 115 226
+             A 45 45 0 0 0 160 271
+             A 45 45 0 0 0 205 226
+             A 45 45 0 0 0 160 181
+             A 45 45 0 0 0 115 226 Z"/>
+    
+    <!-- Recording dot filling entire inner circle -->
+    <circle cx="160" cy="226" r="45" fill="#FF4444"/>
+    
+    <!-- Letter H with rounded corners -->
+    <rect x="302" y="136" width="50" height="180" rx="10" ry="10" />
+    <rect x="412" y="136" width="50" height="180" rx="10" ry="10" />
+    <rect x="302" y="206" width="160" height="40" rx="10" ry="10" />
+  </g>
+  
+  <!-- Smile line below OH -->
+  <path d="M 130 375 C 200 435, 352 435, 422 375" stroke="white" stroke-width="28" fill="none" stroke-linecap="round" filter="url(#shadow)"/>
+</svg>
