@@ -1,4 +1,4 @@
-const { createLogger } = require('../utils/logger');
+const { createLogger } = require('../utils/error-handling/logger');
 const timeManager = require('./TimeManager');
 
 const log = createLogger('TotpUsageTracker');
@@ -83,27 +83,6 @@ class TotpUsageTracker {
   }
   
   /**
-   * Get the time remaining until a source can use TOTP again
-   * @param {string} sourceId - The source ID
-   * @returns {number} Seconds remaining (0 if not in cooldown)
-   */
-  getRemainingCooldown(sourceId) {
-    const { remainingSeconds } = this.checkCooldown(sourceId);
-    return remainingSeconds;
-  }
-  
-  /**
-   * Clear cooldown for a specific source
-   * @param {string} sourceId - The source ID
-   */
-  clearCooldown(sourceId) {
-    if (sourceId) {
-      this.usageMap.delete(sourceId);
-      log.debug(`Cleared cooldown for source: ${sourceId}`);
-    }
-  }
-  
-  /**
    * Clean up expired entries
    */
   cleanup() {
@@ -132,28 +111,6 @@ class TotpUsageTracker {
       this.cleanupInterval = null;
       log.debug('Stopped TOTP cleanup interval - no more entries');
     }
-  }
-  
-  /**
-   * Get all active cooldowns (for debugging)
-   * @returns {Array<{ sourceId: string, remainingSeconds: number }>}
-   */
-  getActiveCooldowns() {
-    const now = timeManager.now();
-    const active = [];
-    
-    for (const [sourceId, usage] of this.usageMap.entries()) {
-      if (now < usage.cooldownUntil) {
-        const remainingMs = usage.cooldownUntil - now;
-        const remainingSeconds = Math.ceil(remainingMs / 1000);
-        active.push({
-          sourceId: sourceId,
-          remainingSeconds
-        });
-      }
-    }
-    
-    return active;
   }
   
   /**

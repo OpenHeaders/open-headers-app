@@ -1,0 +1,10 @@
+# Example .npmrc configuration for installing @openheaders packages
+# Copy this file to .npmrc and replace YOUR_GITHUB_TOKEN with your actual token
+
+@openheaders:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+
+# To get a GitHub token:
+# 1. Go to https://github.com/settings/tokens
+# 2. Generate a new token with 'read:packages' scope
+# 3. Replace YOUR_GITHUB_TOKEN above with your actual token
