@@ -6,6 +6,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { createLogger } = require('../../utils/mainLogger');
+const { DATA_FORMAT_VERSION } = require('../../config/version');
 
 const log = createLogger('ConfigFileValidator');
 
@@ -313,31 +314,31 @@ class ConfigFileValidator {
   createDefaultConfig(type, metadata = {}) {
     const defaults = {
       headers: {
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         headers: []
       },
       environments: {
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         environments: []
       },
       proxy: {
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         rules: []
       },
       rules: {
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         rules: []
       },
       metadata: {
         workspaceId: metadata.workspaceId || 'default',
         workspaceName: metadata.workspaceName || 'Default Workspace',
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         createdAt: new Date().toISOString(),
         configPaths: {}
       }
     };
 
-    return defaults[type] || { version: '3.0.0' };
+    return defaults[type] || { version: DATA_FORMAT_VERSION };
   }
 
   /**
