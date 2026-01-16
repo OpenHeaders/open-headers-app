@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Space, Typography, Button, message, theme } from 'antd';
 import { ImportOutlined, UploadOutlined } from '@ant-design/icons';
+import { DATA_FORMAT_VERSION } from '../../../../config/version.esm.js';
 
 import ImportFileSelector from './ImportFileSelector';
 import ImportFileAnalysis from './ImportFileAnalysis';
@@ -79,7 +80,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
         }
         
         return {
-            version: data.version || '3.0.0',
+            version: data.version || DATA_FORMAT_VERSION,
             hasEnvironmentSchema: !!data.environmentSchema,
             hasEnvironments: environmentCount > 0,
             hasSources: sourceCount > 0,

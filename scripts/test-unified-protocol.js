@@ -3,10 +3,12 @@
  * Usage: node test-unified-protocol.js
  */
 
+const { DATA_FORMAT_VERSION } = require('../src/config/version');
+
 // Test data for environment import
 const environmentImportData = {
     action: "environment-import",
-    version: "3.0.0",
+    version: DATA_FORMAT_VERSION,
     data: {
         environmentSchema: {
             API_URL: {
@@ -36,7 +38,7 @@ const environmentImportData = {
 // Test data for team invite
 const teamInviteData = {
     action: "team-invite",
-    version: "3.0.0",
+    version: DATA_FORMAT_VERSION,
     data: {
         workspaceName: "Test Team Workspace",
         repoUrl: "https://github.com/example/config-repo.git",

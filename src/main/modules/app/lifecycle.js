@@ -221,7 +221,7 @@ class AppLifecycle {
                     if (settings.showDockIcon === false) {
                         log.info('Hiding dock icon at startup based on settings');
                         app.dock.hide();
-                    } else if (settings.showDockIcon === true && !app.dock.isVisible()) {
+                    } else {
                         log.info('Showing dock icon at startup based on settings');
                         await app.dock.show();
                     }

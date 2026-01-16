@@ -227,14 +227,14 @@ class TrayManager {
         }
 
         // macOS dock icon management with window preservation
-        const mainWindow = windowManager.getMainWindow();
-        const wasWindowVisible = mainWindow && mainWindow.isVisible();
-
         if (process.platform === 'darwin') {
-            if (showDockIcon && !app.dock.isVisible()) {
+            const mainWindow = windowManager.getMainWindow();
+            const wasWindowVisible = mainWindow && mainWindow.isVisible();
+
+            if (showDockIcon) {
                 log.info('Showing dock icon');
                 app.dock.show();
-            } else if (!showDockIcon && app.dock.isVisible()) {
+            } else {
                 log.info('Hiding dock icon');
                 app.dock.hide();
 
@@ -242,7 +242,6 @@ class TrayManager {
                 if (mainWindow && wasWindowVisible) {
                     setTimeout(() => {
                         if (mainWindow) {
-                            // Use the enhanced focus helper for consistent Windows behavior
                             windowsFocusHelper.focusWindow(mainWindow);
                             log.info('Restoring window visibility after hiding dock icon');
                         }
