@@ -2,6 +2,7 @@
  * WorkspaceManager - Handles workspace CRUD operations and switching
  */
 const { createLogger } = require('../../utils/error-handling/logger');
+const { DATA_FORMAT_VERSION } = require('../../../config/version');
 const log = createLogger('WorkspaceManager');
 
 class WorkspaceManager {
@@ -36,7 +37,7 @@ class WorkspaceManager {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             metadata: {
-              version: '3.0.0',
+              version: DATA_FORMAT_VERSION,
               sourceCount: 0,
               ruleCount: 0,
               proxyRuleCount: 0
@@ -123,7 +124,7 @@ class WorkspaceManager {
       // Initialize metadata
       metadata: {
         ...workspace.metadata,
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         sourceCount: 0,
         ruleCount: 0,
         proxyRuleCount: 0

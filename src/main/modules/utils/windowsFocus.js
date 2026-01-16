@@ -108,12 +108,9 @@ class WindowsFocusHelper {
                 window.focus();
             }
         } else if (process.platform === 'darwin') {
-            // macOS: Simple approach works well
+            // macOS: Focus window without forcing dock visibility
+            // Dock visibility is controlled by user settings in trayManager
             window.focus();
-            const { app } = require('electron');
-            if (app.dock) {
-                app.dock.show();
-            }
         } else {
             // Linux and other platforms (including Windows without native module)
             window.focus();

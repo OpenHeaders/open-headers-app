@@ -1,9 +1,15 @@
 /**
  * Configuration and constants for the Export/Import system
- * 
+ *
  * This module centralizes all configuration options, constants, and shared
  * settings used across the export/import functionality.
  */
+
+import {
+  APP_VERSION,
+  DATA_FORMAT_VERSION,
+  SUPPORTED_DATA_VERSIONS
+} from '../../../../config/version.esm.js';
 
 /**
  * Export file format options
@@ -36,7 +42,8 @@ export const FILE_FILTERS = {
  * Default configuration values
  */
 export const DEFAULTS = {
-  APP_VERSION: '3.0.0',
+  APP_VERSION: APP_VERSION,
+  DATA_FORMAT_VERSION: DATA_FORMAT_VERSION,
   ENVIRONMENT_NAME: 'Default',
   WORKSPACE_TYPE: 'git',
   WORKSPACE_BRANCH: 'main',
@@ -91,6 +98,6 @@ export const VALIDATION_RULES = {
     SOURCE: ['sourceId', 'sourceType', 'sourcePath']
   },
   MAX_NAME_LENGTH: 255,
-  SUPPORTED_VERSIONS: ['1.0.0', '2.0.0', '3.0.0']
+  SUPPORTED_VERSIONS: SUPPORTED_DATA_VERSIONS
 };
 

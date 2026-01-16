@@ -2,6 +2,7 @@ const { app, shell, BrowserWindow } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { createLogger } = require('../../../../utils/mainLogger');
+const { DATA_FORMAT_VERSION } = require('../../../../config/version');
 const appLifecycle = require('../../app/lifecycle');
 const settingsHandlers = require('./settingsHandlers');
 const webSocketService = require('../../../../services/websocket/ws-service');
@@ -420,7 +421,7 @@ class WorkspaceHandlers {
             
             // Create invite data
             const inviteData = {
-                version: "3.0.0",
+                version: DATA_FORMAT_VERSION,
                 workspaceName: workspaceData.name,
                 description: workspaceData.description,
                 repoUrl: workspaceData.gitUrl,
@@ -441,7 +442,7 @@ class WorkspaceHandlers {
             // Create unified payload format
             const payload = {
                 action: "team-invite",
-                version: "3.0.0",
+                version: DATA_FORMAT_VERSION,
                 data: inviteData
             };
 
@@ -510,7 +511,7 @@ class WorkspaceHandlers {
             
             // Create environment data object (similar to export format)
             const envConfigData = {
-                version: "3.0.0"
+                version: DATA_FORMAT_VERSION
                 // Removed exportedAt to save space
             };
 
@@ -563,7 +564,7 @@ class WorkspaceHandlers {
             // Create unified payload format
             const payload = {
                 action: "environment-import",
-                version: "3.0.0",
+                version: DATA_FORMAT_VERSION,
                 data: envConfigData
             };
 

@@ -2,6 +2,7 @@
  * RulesManager - Manages header rules and proxy rules
  */
 const { createLogger } = require('../../utils/error-handling/logger');
+const { DATA_FORMAT_VERSION } = require('../../../config/version');
 const log = createLogger('RulesManager');
 
 class RulesManager {
@@ -33,7 +34,7 @@ class RulesManager {
   async saveRules(workspaceId, rules) {
     try {
       const rulesStorage = {
-        version: '3.0.0',
+        version: DATA_FORMAT_VERSION,
         rules,
         metadata: {
           totalRules: Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0),

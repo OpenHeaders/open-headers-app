@@ -1,6 +1,8 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { createLogger } = require('../../../utils/mainLogger');
+const { DATA_FORMAT_VERSION, isVersionCompatible: checkVersionCompatible } = require('../../../config/version');
 const windowsFocusHelper = require('../utils/windowsFocus');
 
 const log = createLogger('ProtocolHandler');
@@ -256,7 +258,7 @@ class ProtocolHandler {
         
         // Expand version
         if (payload.v === '3') {
-            payload.version = '3.0.0';
+            payload.version = DATA_FORMAT_VERSION;
         }
         
         // Expand data
@@ -362,9 +364,8 @@ class ProtocolHandler {
     }
     
     isVersionCompatible(version) {
-        // Simple version check - can be enhanced later
-        // For now, accept any 3.x.x version
-        return version && version.startsWith('3.');
+        // Use centralized version compatibility check
+        return checkVersionCompatible(version);
     }
     
     processTeamWorkspaceInvite(inviteData) {
@@ -466,6 +467,26 @@ class ProtocolHandler {
         windowsFocusHelper.focusWindow(window);
     }
 
+    /**
+     * Check if dock should be shown based on user settings
+     * @returns {boolean} True if dock should be shown
+     */
+    shouldShowDock() {
+        try {
+            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+            if (fs.existsSync(settingsPath)) {
+                const settingsData = fs.readFileSync(settingsPath, 'utf8');
+                const settings = JSON.parse(settingsData);
+                // Default to true if setting doesn't exist
+                return settings.showDockIcon !== false;
+            }
+        } catch (error) {
+            log.debug('Could not read dock settings:', error.message);
+        }
+        // Default to showing dock if we can't read settings
+        return true;
+    }
+
     handleProtocolError(message) {
         // Show error to user if window is available
         const windows = BrowserWindow.getAllWindows();
@@ -530,19 +551,20 @@ class ProtocolHandler {
         app.on('open-url', (event, url) => {
             event.preventDefault();
             log.info('Received protocol URL on macOS:', url);
-            
+
             // Bring application to foreground
             const windows = BrowserWindow.getAllWindows();
             if (windows.length > 0) {
                 const window = windows[0];
                 this.showAndFocusWindow(window);
-                if (app.dock) {
+                // Respect user's dock visibility setting
+                if (app.dock && this.shouldShowDock()) {
                     app.dock.show().catch(error => {
                         log.debug('Error showing dock:', error.message);
                     });
                 }
             }
-            
+
             this.handleProtocolUrl(url);
         });
 

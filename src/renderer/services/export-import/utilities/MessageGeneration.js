@@ -15,6 +15,7 @@
  */
 
 import { SUCCESS_MESSAGES, FILE_FORMATS } from '../core/ExportImportConfig.js';
+import { DATA_FORMAT_VERSION } from '../../../../config/version.esm.js';
 
 /**
  * Generates a success message for export operations
@@ -189,7 +190,7 @@ export function generateImportWarnings(importData, options) {
   const warnings = [];
 
   // Check for version compatibility
-  if (importData.version && importData.version !== '3.0.0') {
+  if (importData.version && importData.version !== DATA_FORMAT_VERSION) {
     warnings.push(`Import data is from version ${importData.version}, some features may not work correctly`);
   }
 
