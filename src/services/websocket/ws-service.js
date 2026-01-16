@@ -11,6 +11,7 @@ const atomicWriter = require('../../utils/atomicFileWriter');
 const CertificateGenerator = require('../../utils/certificateGenerator');
 const WSNetworkStateHandler = require('./ws-network-state');
 const windowsFocusHelper = require('../../main/modules/utils/windowsFocus');
+const { DATA_FORMAT_VERSION } = require('../../config/version');
 const log = createLogger('WebSocketService');
 
 /**
@@ -1055,7 +1056,7 @@ class WebSocketService {
                     type: 'rules-update',
                     data: {
                         rules: populatedRules,
-                        version: '3.0.0'
+                        version: DATA_FORMAT_VERSION
                     }
                 });
                 
@@ -1603,7 +1604,7 @@ class WebSocketService {
                     } catch (e) {
                         // If file doesn't exist, use the initial loaded rules structure
                         rulesStorage = {
-                            version: '3.0.0',
+                            version: DATA_FORMAT_VERSION,
                             rules: this.rules,
                             metadata: {}
                         };
@@ -1644,7 +1645,7 @@ class WebSocketService {
                                 totalRules: this.rules.header ? this.rules.header.length : 0,
                                 lastUpdated: new Date().toISOString()
                             },
-                            version: '3.0.0'
+                            version: DATA_FORMAT_VERSION
                         };
                         
                         window.webContents.executeJavaScript(`
@@ -1731,7 +1732,7 @@ class WebSocketService {
                     } catch (e) {
                         // If file doesn't exist, use the initial loaded rules structure
                         rulesStorage = {
-                            version: '3.0.0',
+                            version: DATA_FORMAT_VERSION,
                             rules: this.rules,
                             metadata: {}
                         };
@@ -1771,7 +1772,7 @@ class WebSocketService {
                                 totalRules: this.rules.header ? this.rules.header.length : 0,
                                 lastUpdated: new Date().toISOString()
                             },
-                            version: '3.0.0'
+                            version: DATA_FORMAT_VERSION
                         };
                         
                         window.webContents.executeJavaScript(`
@@ -1846,7 +1847,7 @@ class WebSocketService {
             type: 'rules-update',
             data: {
                 rules: populatedRules,
-                version: '3.0.0'
+                version: DATA_FORMAT_VERSION
             }
         });
         

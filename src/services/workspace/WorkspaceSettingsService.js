@@ -12,6 +12,7 @@ const fs = require('fs').promises;
 const { app } = require('electron');
 const { createLogger } = require('../../utils/mainLogger');
 const atomicWriter = require('../../utils/atomicFileWriter');
+const { DATA_FORMAT_VERSION } = require('../../config/version');
 
 const log = createLogger('WorkspaceSettingsService');
 
@@ -20,7 +21,7 @@ class WorkspaceSettingsService {
     this.settingsPath = path.join(app.getPath('userData'), 'workspaces.json');
     this.workspacesDir = path.join(app.getPath('userData'), 'workspaces');
     this.defaultSettings = {
-      version: '3.0.0',
+      version: DATA_FORMAT_VERSION,
       activeWorkspaceId: 'default-personal',
       workspaces: [
         {

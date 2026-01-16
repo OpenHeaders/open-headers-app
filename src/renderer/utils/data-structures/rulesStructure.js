@@ -1,9 +1,11 @@
 /**
  * Unified Rules Structure
- * 
+ *
  * This defines the structure for all rule types in the application.
  * Each rule type has its own properties but shares common fields.
  */
+
+import { DATA_FORMAT_VERSION } from '../../../config/version.esm.js';
 
 // Rule types enum
 export const RULE_TYPES = {
@@ -71,7 +73,7 @@ export const createRule = (type, data = {}) => {
 
 // Storage structure for all rules
 export const createRulesStorage = () => ({
-    version: '3.0.0',
+    version: DATA_FORMAT_VERSION,
     rules: {
         [RULE_TYPES.HEADER]: [],
         [RULE_TYPES.PAYLOAD]: [],

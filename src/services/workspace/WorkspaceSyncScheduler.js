@@ -1,5 +1,16 @@
 const { createLogger } = require('../../utils/mainLogger');
 const atomicWriter = require('../../utils/atomicFileWriter');
+const { DATA_FORMAT_VERSION } = require('../../config/version');
+const {
+  countNonEmptyEnvValues,
+  readFileWithAtomicWriter,
+  createBackupIfNeeded,
+  cleanupOldBackups,
+  extractVarData,
+  validateEnvironmentWrite,
+  ENV_FILE_READ_MAX_RETRIES
+} = require('./git/utils/EnvironmentSyncUtils');
+
 const log = createLogger('WorkspaceSyncScheduler');
 
 // Constants
@@ -11,6 +22,7 @@ const SHUTDOWN_TIMEOUT = 30000; // 30 seconds
 const SHUTDOWN_POLL_INTERVAL = 500; // 0.5 seconds
 const MAX_OFFLINE_DURATION = 30 * 60 * 1000; // 30 minutes before forcing retry
 const GIT_CONNECTIVITY_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const RESUME_SYNC_DELAY = 5000; // 5 seconds delay after network recovery to let system stabilize
 
 /**
  * Helper to broadcast message to all renderer windows
@@ -21,7 +33,7 @@ function broadcastToRenderers(channel, data, broadcaster = null) {
     broadcaster(channel, data);
     return;
   }
-  
+
   // Default Electron implementation
   const { BrowserWindow } = require('electron');
   BrowserWindow.getAllWindows().forEach(window => {
@@ -634,7 +646,7 @@ class WorkspaceSyncScheduler {
       if (data.rules) {
         // Ensure rules are in the correct format
         const rulesStorage = {
-          version: "3.0.0",
+          version: DATA_FORMAT_VERSION,
           rules: data.rules,
           metadata: {
             lastUpdated: new Date().toISOString(),
@@ -665,68 +677,103 @@ class WorkspaceSyncScheduler {
       
       // Import environments - handle both formats properly
       let environmentsToImport = null;
-      
-      // First, try to load existing environments
+
+      // Load existing environments using atomicWriter for proper coordination with any concurrent writes
+      // CRITICAL: We must distinguish between "file doesn't exist" (OK) and "file read failed" (ABORT)
       let existingEnvironments = {};
       let existingActiveEnvironment = null;
+      let existingEnvFileExists;
+      let existingEnvLoadFailed = false;
+      let existingEnvValueCount = 0;
+
+      const envPath = path.join(workspacePath, 'environments.json');
+
       try {
-        const envPath = path.join(workspacePath, 'environments.json');
-        const existingData = await fs.readFile(envPath, 'utf8');
-        const parsed = JSON.parse(existingData);
-        if (parsed.environments) {
-          existingEnvironments = parsed.environments;
+        // Use atomicWriter.readFile() via our retry wrapper for:
+        // - Coordination with write queue (waits for any active writes to complete)
+        // - File locking to prevent read during write
+        // - Retry logic for transient errors (EBUSY, EIO, EAGAIN, etc.)
+        const readResult = await readFileWithAtomicWriter(envPath);
+
+        existingEnvFileExists = readResult.exists;
+
+        if (readResult.exists && readResult.content) {
+          // File exists and was read successfully - parse it
+          const parsed = JSON.parse(readResult.content);
+
+          if (parsed.environments) {
+            existingEnvironments = parsed.environments;
+            existingEnvValueCount = countNonEmptyEnvValues(existingEnvironments);
+          }
+
+          // IMPORTANT: Preserve the active environment selection
+          if (parsed.activeEnvironment) {
+            existingActiveEnvironment = parsed.activeEnvironment;
+          }
+
+          log.info(`Loaded existing environments for workspace ${workspaceId} via atomicWriter:`, {
+            environmentCount: Object.keys(existingEnvironments).length,
+            variablesWithValues: existingEnvValueCount,
+            activeEnvironment: existingActiveEnvironment
+          });
+        } else {
+          // File doesn't exist - this is OK for new workspaces
+          log.info(`No existing environments file for workspace ${workspaceId}, will create new one`);
         }
-        // IMPORTANT: Preserve the active environment selection
-        if (parsed.activeEnvironment) {
-          existingActiveEnvironment = parsed.activeEnvironment;
-        }
-      } catch (error) {
-        // No existing environments, that's fine
+
+      } catch (readError) {
+        // CRITICAL: Failed to read file after retries (file exists but can't be read)
+        // This could be a transient error - we should NOT proceed and risk losing data
+        existingEnvLoadFailed = true;
+        existingEnvFileExists = true; // Assume file exists if we got an error (not ENOENT)
+        log.error(`CRITICAL: Failed to read existing environments for workspace ${workspaceId} after ${ENV_FILE_READ_MAX_RETRIES} retries:`, readError);
+        log.error(`Aborting environment import to prevent potential data loss. Error: ${readError.message}`);
       }
-      
-      // Check for environments in different formats
-      if (data.environments && typeof data.environments === 'object' && !data.environmentSchema) {
-        // Direct environments object with actual values - merge with existing
-        environmentsToImport = { ...existingEnvironments };
-        
-        // Override with values from Git (this allows sharing some values while keeping others local)
-        for (const [envName, envVars] of Object.entries(data.environments)) {
-          if (!environmentsToImport[envName]) {
-            environmentsToImport[envName] = {};
-          }
-          
-          // Merge variables, with Git values taking precedence ONLY if they have non-empty values
-          for (const [varName, varData] of Object.entries(typeof envVars === 'object' && envVars !== null ? /** @type {Record<string, unknown>} */ (envVars) : {})) {
-            // Extract the actual value from either string or object format
-            let gitValue = '';
-            let isSecret = false;
-            
-            if (typeof varData === 'string') {
-              gitValue = varData;
-            } else if (varData && typeof varData === 'object') {
-              gitValue = varData.value !== undefined ? varData.value : '';
-              isSecret = varData.isSecret || false;
+
+      // If we failed to load existing environments, skip environment import entirely
+      if (existingEnvLoadFailed) {
+        log.warn(`Skipping environment import for workspace ${workspaceId} - existing file could not be read`);
+        // Broadcast warning to UI
+        broadcastToRenderers('workspace-sync-warning', {
+          workspaceId,
+          warning: 'Environment sync skipped due to file read error. Your local environment values are preserved.',
+          timestamp: Date.now()
+        }, this.broadcaster);
+        // Continue with other imports (sources, rules, proxy) but skip environments
+        // Don't set environmentsToImport, so the write block will be skipped
+      }
+
+      // Only proceed with environment import if we either:
+      // 1. Successfully loaded existing environments, OR
+      // 2. The file doesn't exist (new workspace)
+      if (!existingEnvLoadFailed) {
+        // Check for environments in different formats
+        if (data.environments && typeof data.environments === 'object' && !data.environmentSchema) {
+          // Direct environments object with actual values - merge with existing
+          environmentsToImport = { ...existingEnvironments };
+
+          // Override with values from Git (this allows sharing some values while keeping others local)
+          for (const [envName, envVars] of Object.entries(data.environments)) {
+            if (!environmentsToImport[envName]) {
+              environmentsToImport[envName] = {};
             }
-            
-            // Check if Git has a non-empty value
-            const gitHasNonEmptyValue = gitValue !== '' && gitValue !== null && gitValue !== undefined;
-            
-            // Get existing local value if it exists
-            const existingVar = environmentsToImport[envName][varName];
-            
-            if (gitHasNonEmptyValue) {
-              // Git has a non-empty value, use it
-              environmentsToImport[envName][varName] = typeof varData === 'object' ? varData : { value: gitValue, isSecret: false };
-            } else if (!existingVar) {
-              // Variable doesn't exist locally, create it with empty value
-              // This is OK for initial setup
-              environmentsToImport[envName][varName] = { value: '', isSecret: isSecret };
+
+            // Merge variables, with Git values taking precedence ONLY if they have non-empty values
+            for (const [varName, varData] of Object.entries(typeof envVars === 'object' && envVars !== null ? /** @type {Record<string, unknown>} */ (envVars) : {})) {
+              const { value: gitValue, isSecret, hasNonEmptyValue: gitHasNonEmptyValue } = extractVarData(varData);
+              const existingVar = environmentsToImport[envName][varName];
+
+              if (gitHasNonEmptyValue) {
+                // Git has a non-empty value, use it
+                environmentsToImport[envName][varName] = typeof varData === 'object' ? varData : { value: gitValue, isSecret: false };
+              } else if (!existingVar) {
+                // Variable doesn't exist locally, create it with empty value
+                environmentsToImport[envName][varName] = { value: '', isSecret: isSecret };
+              }
+              // Otherwise, preserve existing local value (DO NOTHING)
             }
-            // Otherwise, preserve existing local value (DO NOTHING)
-            // This is the critical part - if Git has empty value and local has value, keep local
           }
-        }
-      } else if (data.environmentSchema && data.environmentSchema.environments) {
+        } else if (data.environmentSchema && data.environmentSchema.environments) {
         // Environment schema format - NEVER overwrite existing values with empty ones
         
         // Start with existing environments to preserve local values
@@ -797,20 +844,8 @@ class WorkspaceSyncScheduler {
             } else {
               // Environment exists, merge variables CAREFULLY
               for (const [varName, varData] of Object.entries(typeof envVars === 'object' && envVars !== null ? /** @type {Record<string, unknown>} */ (envVars) : {})) {
-                // Extract the actual value from either string or object format
-                let gitValue = '';
-                let isSecret = false;
-                
-                if (typeof varData === 'string') {
-                  gitValue = varData;
-                } else if (varData && typeof varData === 'object') {
-                  gitValue = varData.value !== undefined ? varData.value : '';
-                  isSecret = varData.isSecret || false;
-                }
-                
-                // Only override if Git has an actual non-empty value
-                const gitHasNonEmptyValue = gitValue !== '' && gitValue !== null && gitValue !== undefined;
-                
+                const { value: gitValue, isSecret, hasNonEmptyValue: gitHasNonEmptyValue } = extractVarData(varData);
+
                 if (gitHasNonEmptyValue) {
                   // Git has a non-empty value, use it
                   environmentsToImport[envName][varName] = typeof varData === 'object' ? varData : { value: gitValue, isSecret: false };
@@ -824,54 +859,91 @@ class WorkspaceSyncScheduler {
           }
         }
       }
-      
+      } // End of if (!existingEnvLoadFailed)
+
       if (environmentsToImport) {
-        // Create the proper environments.json structure
-        const environmentsData = {
-          environments: environmentsToImport,
-          // CRITICAL: Preserve the user's active environment selection!
-          // Only use first environment if there's no existing selection
-          activeEnvironment: existingActiveEnvironment || Object.keys(environmentsToImport)[0] || 'Default'
-        };
-        
-        const envPath = path.join(workspacePath, 'environments.json');
-        await atomicWriter.writeJson(envPath, environmentsData, { pretty: true });
-        
-        const envCount = Object.keys(environmentsToImport).length;
-        let varCount = 0;
-        for (const env of Object.values(environmentsToImport)) {
-          if (typeof env === 'object' && env !== null) {
-            varCount += Object.keys(/** @type {Record<string, unknown>} */ (env)).length;
-          }
+        // VALIDATION: Check if we're about to lose data
+        const newValueCount = countNonEmptyEnvValues(environmentsToImport);
+        const validation = validateEnvironmentWrite(existingEnvValueCount, newValueCount);
+
+        // Log potential data loss
+        if (!validation.safe || validation.shouldBackup) {
+          log.warn(`Potential data loss detected for workspace ${workspaceId}:`, {
+            existingValues: existingEnvValueCount,
+            newValues: newValueCount,
+            lossPercentage: `${validation.lossPercentage}%`,
+            shouldBackup: validation.shouldBackup,
+            shouldBlock: validation.shouldBlock
+          });
         }
-        
-        log.info(`Imported ${envCount} environment(s) with ${varCount} variables for workspace ${workspaceId}`);
-        
-        // Log details about what was preserved vs created
-        let preservedCount = 0;
-        let emptyCount = 0;
-        for (const env of Object.values(environmentsToImport)) {
-          if (typeof env === 'object' && env !== null) {
-            for (const varData of Object.values(/** @type {Record<string, unknown>} */ (env))) {
-              if (typeof varData === 'object' && varData !== null && varData.value) {
-                preservedCount++;
-              } else {
-                emptyCount++;
+
+        // Create backup if significant data loss detected
+        if (validation.shouldBackup && existingEnvFileExists) {
+          log.warn(`Creating backup before potentially destructive environment sync (${validation.lossPercentage}% value loss)`);
+          await createBackupIfNeeded(fs, envPath);
+        }
+
+        // Block write if it would result in complete data loss
+        if (validation.shouldBlock) {
+          log.error(`BLOCKED: Refusing to write environments with 0 values when existing file had ${existingEnvValueCount} values`);
+          log.error(`This appears to be a data corruption scenario. Skipping environment write for workspace ${workspaceId}`);
+          broadcastToRenderers('workspace-sync-warning', {
+            workspaceId,
+            warning: 'Environment sync blocked: Would have deleted all values. Your local data is preserved.',
+            timestamp: Date.now()
+          }, this.broadcaster);
+          // Skip the write
+        } else {
+          // Safe to proceed with write
+          // Create the proper environments.json structure
+          const environmentsData = {
+            environments: environmentsToImport,
+            // CRITICAL: Preserve the user's active environment selection!
+            // Only use first environment if there's no existing selection
+            activeEnvironment: existingActiveEnvironment || Object.keys(environmentsToImport)[0] || 'Default'
+          };
+
+          await atomicWriter.writeJson(envPath, environmentsData, { pretty: true });
+
+          // Cleanup old backups (keep only 3 most recent)
+          await cleanupOldBackups(fs, workspacePath, path, 3);
+
+          const envCount = Object.keys(environmentsToImport).length;
+          let varCount = 0;
+          for (const env of Object.values(environmentsToImport)) {
+            if (typeof env === 'object' && env !== null) {
+              varCount += Object.keys(/** @type {Record<string, unknown>} */ (env)).length;
+            }
+          }
+
+          log.info(`Imported ${envCount} environment(s) with ${varCount} variables for workspace ${workspaceId}`);
+
+          // Log details about what was preserved vs created
+          let preservedCount = 0;
+          let emptyCount = 0;
+          for (const env of Object.values(environmentsToImport)) {
+            if (typeof env === 'object' && env !== null) {
+              for (const varData of Object.values(/** @type {Record<string, unknown>} */ (env))) {
+                if (typeof varData === 'object' && varData !== null && varData.value) {
+                  preservedCount++;
+                } else {
+                  emptyCount++;
+                }
               }
             }
           }
-        }
-        if (preservedCount > 0) {
-          log.info(`Environment sync: ${preservedCount} variables with values preserved, ${emptyCount} empty variables`);
-        }
-        
-        // If this is the active workspace, notify renderer to reload environments
-        // This is important for initial sync after workspace creation
-        broadcastToRenderers('environments-structure-changed', {
-          workspaceId,
-          timestamp: Date.now()
-        }, this.broadcaster);
-      }
+          if (preservedCount > 0) {
+            log.info(`Environment sync: ${preservedCount} variables with values preserved, ${emptyCount} empty variables`);
+          }
+
+          // If this is the active workspace, notify renderer to reload environments
+          // This is important for initial sync after workspace creation
+          broadcastToRenderers('environments-structure-changed', {
+            workspaceId,
+            timestamp: Date.now()
+          }, this.broadcaster);
+        } // End of else block (safe to write)
+      } // End of if (environmentsToImport)
       
       // Notify WebSocket service to update browser extensions
       const webSocketService = require('../websocket/ws-service');
@@ -888,7 +960,7 @@ class WorkspaceSyncScheduler {
             type: 'rules-update',
             data: {
               rules: data.rules,
-              version: '3.0.0'
+              version: DATA_FORMAT_VERSION
             }
           });
         }
@@ -922,25 +994,53 @@ class WorkspaceSyncScheduler {
   }
   
   /**
-   * Resume all sync schedules (e.g., when network comes back online)
+   * Resume all sync schedules (e.g., when network comes back online or system resumes from sleep)
+   *
+   * IMPORTANT: We add a delay before syncing to let the system stabilize after:
+   * - Network recovery (WiFi reconnection, VPN reconnection)
+   * - System resume from sleep/hibernate
+   * - Network interface changes
+   *
+   * This prevents race conditions where file system or network might be in an
+   * inconsistent state immediately after these events.
    */
   async resumeAllSyncs() {
     // Clear offline time
     this.networkOfflineTime = null;
-    
+
     // Clear Git connectivity cache to force fresh checks
     this.gitConnectivityCache.clear();
     this.lastGitConnectivityCheck.clear();
-    
+
     // Only resume sync for the active workspace
     if (this.activeWorkspaceId && this.activeWorkspace) {
       if ((this.activeWorkspace.type === 'git' || this.activeWorkspace.type === 'team') && this.activeWorkspace.autoSync !== false) {
-        log.info(`Resuming sync for active workspace ${this.activeWorkspaceId}`);
-        
-        // Perform immediate sync check
-        this.performSync(this.activeWorkspaceId, this.activeWorkspace).catch(error => {
-          log.error(`Failed to sync workspace ${this.activeWorkspaceId} after network recovery:`, error);
-        });
+        log.info(`Scheduling sync for active workspace ${this.activeWorkspaceId} after ${RESUME_SYNC_DELAY}ms delay`);
+
+        // Add a delay to let the system stabilize after network recovery/sleep resume
+        // This is critical to prevent race conditions with file system operations
+        setTimeout(async () => {
+          try {
+            // Double-check we're still online before syncing
+            const networkState = await this.networkService.getState();
+            if (!networkState.isOnline) {
+              log.info(`Network went offline again, skipping deferred sync for ${this.activeWorkspaceId}`);
+              return;
+            }
+
+            // Verify the workspace is still active (user might have switched)
+            if (!this.activeWorkspaceId || !this.activeWorkspace) {
+              log.info(`No active workspace after delay, skipping deferred sync`);
+              return;
+            }
+
+            log.info(`Performing deferred sync for workspace ${this.activeWorkspaceId} after network recovery`);
+            await this.performSync(this.activeWorkspaceId, this.activeWorkspace);
+
+          } catch (error) {
+            log.error(`Failed to sync workspace ${this.activeWorkspaceId} after network recovery:`, error);
+          }
+        }, RESUME_SYNC_DELAY);
       }
     }
   }
