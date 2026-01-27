@@ -289,6 +289,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Determine release type based on tag pattern
+      # RC/beta/alpha tags create draft prereleases, stable tags create published releases
+      - name: Determine release type
+        id: release_type
+        run: |
+          TAG_NAME=${GITHUB_REF_NAME}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+          # Check if this is a prerelease (rc, beta, alpha)
+          if [[ "$TAG_NAME" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "is_draft=true" >> $GITHUB_OUTPUT
+            echo "release_label=🚧 Release Candidate" >> $GITHUB_OUTPUT
+            echo "::notice::Detected RC/Beta/Alpha release: $TAG_NAME - Creating DRAFT prerelease"
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "is_draft=false" >> $GITHUB_OUTPUT
+            echo "release_label=🎉 Stable Release" >> $GITHUB_OUTPUT
+            echo "::notice::Detected stable release: $TAG_NAME - Creating published release"
+          fi
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -364,9 +385,27 @@ jobs:
         id: generate_body
         run: |
           VERSION=${GITHUB_REF_NAME/v/}
-          cat > release_body.md << EOF
+          IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
+          RELEASE_LABEL="${{ steps.release_type.outputs.release_label }}"
+
+          # Add prerelease warning if applicable
+          if [ "$IS_PRERELEASE" = "true" ]; then
+            cat > release_body.md << EOF
+          > ⚠️ **This is a Release Candidate (RC) build for testing purposes.**
+          > It may contain bugs and is not recommended for production use.
+          > Please report any issues you encounter.
+
+          ## 📥 Download
+          Download the release candidate for your platform:
+          EOF
+          else
+            cat > release_body.md << EOF
           ## 📥 Download
           Download the latest version for your platform:
+          EOF
+          fi
+
+          cat >> release_body.md << EOF
 
           ### macOS
           - [Intel (x64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg) (.dmg for macOS)
@@ -416,12 +455,14 @@ jobs:
           EOF
 
       # Create release using processed files
+      # RC/beta/alpha tags create draft prereleases, stable tags create published releases
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          prerelease: false
+          draft: ${{ steps.release_type.outputs.is_draft == 'true' }}
+          prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
+          name: "${{ steps.release_type.outputs.release_label }} ${{ github.ref_name }}"
           files: processed_files/*
           fail_on_unmatched_files: false
           body_path: release_body.md

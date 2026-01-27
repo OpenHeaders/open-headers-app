@@ -7,15 +7,26 @@ const timeManager = require('../../../../services/core/TimeManager');
 const log = createLogger('SystemHandlers');
 const execAsync = promisify(exec);
 
+// Cache for timezone - it rarely changes, no need to spawn PowerShell every time
+let cachedTimezone = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 300000; // 5 minutes cache
+
 class SystemHandlers {
     async handleGetSystemTimezone() {
+        // Return cached value if still valid
+        const now = Date.now();
+        if (cachedTimezone && (now - cacheTimestamp) < CACHE_DURATION) {
+            return cachedTimezone;
+        }
+
         let timezone = null;
         let method = 'unknown';
 
         try {
             if (process.platform === 'darwin') {
                 try {
-                    const { stdout } = await execAsync('readlink /etc/localtime');
+                    const { stdout } = await execAsync('readlink /etc/localtime', { timeout: 3000 });
                     const match = stdout.trim().match(/zoneinfo\/(.+)$/);
                     if (match) {
                         timezone = match[1];
@@ -26,7 +37,7 @@ class SystemHandlers {
                 }
             } else if (process.platform === 'linux') {
                 try {
-                    const { stdout } = await execAsync('readlink /etc/localtime');
+                    const { stdout } = await execAsync('readlink /etc/localtime', { timeout: 3000 });
                     const match = stdout.trim().match(/zoneinfo\/(.+)$/);
                     if (match) {
                         timezone = match[1];
@@ -35,7 +46,7 @@ class SystemHandlers {
                 } catch {
                     // Try alternative method for distributions without symlinks
                     try {
-                        const { stdout } = await execAsync('cat /etc/timezone');
+                        const { stdout } = await execAsync('cat /etc/timezone', { timeout: 3000 });
                         timezone = stdout.trim();
                         method = 'etc_timezone';
                     } catch {
@@ -43,13 +54,24 @@ class SystemHandlers {
                     }
                 }
             } else if (process.platform === 'win32') {
-                try {
-                    const { stdout } = await execAsync('powershell -Command "Get-TimeZone | Select-Object -ExpandProperty Id"');
-                    // Map Windows timezone IDs to IANA standard
-                    timezone = this.mapWindowsToIANA(stdout.trim());
-                    method = 'powershell';
-                } catch {
-                    // Silently continue to fallback
+                // Use JavaScript Intl API first - it's instant and doesn't spawn processes
+                // This avoids the PowerShell process accumulation issue on Windows
+                timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (timezone) {
+                    method = 'intl_api';
+                } else {
+                    // Fallback to PowerShell only if Intl API fails (very rare)
+                    try {
+                        const { stdout } = await execAsync(
+                            'powershell -NoProfile -NonInteractive -Command "Get-TimeZone | Select-Object -ExpandProperty Id"',
+                            { timeout: 5000, windowsHide: true }
+                        );
+                        // Map Windows timezone IDs to IANA standard
+                        timezone = this.mapWindowsToIANA(stdout.trim());
+                        method = 'powershell';
+                    } catch {
+                        // Silently continue to fallback
+                    }
                 }
             }
         } catch (error) {
@@ -65,11 +87,17 @@ class SystemHandlers {
 
         const offset = timeManager.getDate().getTimezoneOffset();
 
-        return {
+        const result = {
             timezone,
             offset,
             method
         };
+
+        // Cache the result
+        cachedTimezone = result;
+        cacheTimestamp = now;
+
+        return result;
     }
 
     mapWindowsToIANA(windowsId) {
