@@ -150,10 +150,32 @@ jobs:
           mkdir -p dist
         shell: bash
 
-      # Build for macOS - skip RPM builds on macOS
+      # Detect if this is an RC/beta/alpha build for optimizations
+      - name: Detect RC build
+        id: detect_rc
+        run: |
+          if [[ "${{ github.ref_name }}" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
+            echo "is_rc=true" >> $GITHUB_OUTPUT
+            echo "::notice::Detected RC/beta/alpha build - enabling build optimizations"
+          else
+            echo "is_rc=false" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
+
+      # Build for macOS
+      # RC builds: arm64 only, DMG only (no zip/block maps), skip notarization = ~5 min
+      # Stable builds: both archs, DMG + zip with block maps, full notarization = ~20 min
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
+        run: |
+          if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
+            echo "🚀 RC build: arm64 only, DMG only, no notarization"
+            npx electron-builder --mac --arm64 --config.mac.target=dmg --publish never
+          else
+            echo "📦 Stable build: full build with both architectures"
+            npm run dist:mac
+          fi
+        shell: bash
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -165,39 +187,34 @@ jobs:
       - name: Build Windows
         if: matrix.os == 'windows-latest'
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "Building Windows (will sign after build)"
-            npm run dist:win:unsigned
-          else
-            echo "Building Windows without signing (branch/PR)"
-            npm run dist:win:unsigned
-          fi
+          echo "Building Windows (unsigned)"
+          npm run dist:win:unsigned
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Find the exact exe file name first
+      # Find the exact exe file name first (only for stable releases, not RC)
       - name: Find Windows Executable
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
         id: find-exe
         run: |
           $exeFile = Get-ChildItem -Path "dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
-          
+
           if ($null -eq $exeFile) {
             Write-Error "No Setup.exe file found in dist directory"
             exit 1
           }
-          
+
           Write-Host "Found executable: $($exeFile.Name)"
           Write-Host "Full path: $($exeFile.FullName)"
-          
+
           # Output the filename for the next step
           echo "EXE_FILENAME=$($exeFile.Name)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # Sign Windows executables with SSL.com eSigner using exact filename
+      # Sign Windows executables with SSL.com eSigner (only for stable releases, not RC)
       - name: Sign Windows Executables
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
         uses: sslcom/esigner-codesign@v1.3.1
         with:
           command: sign
@@ -213,28 +230,42 @@ jobs:
           jvm_max_memory: 1024M
           signing_method: v1
 
-      # Build for Linux (including RPM packages)
+      # Log that signing was skipped for RC
+      - name: Skip signing for RC
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc == 'true'
+        run: echo "⏭️ Skipping Windows code signing for RC build"
+
+      # Build for Linux
+      # RC builds: x64 only, AppImage + deb only (no RPM) = faster
+      # Stable builds: both archs, all targets including RPM
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          # Build all Linux targets (including RPM)
-          npm run dist:linux
-          
-          # Verify RPM packages were built successfully
-          if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-            echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
-            npm run dist:linux:rpm:x64
-            npm run dist:linux:rpm:arm64
-          
-            # Check again after explicit build attempt
-            if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-              echo "::error::Failed to build RPM packages even with explicit build"
-              exit 1
-            fi
+          if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
+            echo "🚀 RC build: x64 only, AppImage + deb (no RPM)"
+            npx electron-builder --linux --x64 --config.linux.target='["AppImage","deb"]' --publish never
           else
-            echo "RPM packages successfully built in main Linux build:"
-            find dist -name "*.rpm" -type f | xargs ls -la
+            echo "📦 Stable build: full build with both architectures and all targets"
+            # Build all Linux targets (including RPM)
+            npm run dist:linux
+
+            # Verify RPM packages were built successfully
+            if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
+              echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
+              npm run dist:linux:rpm:x64
+              npm run dist:linux:rpm:arm64
+
+              # Check again after explicit build attempt
+              if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
+                echo "::error::Failed to build RPM packages even with explicit build"
+                exit 1
+              fi
+            else
+              echo "RPM packages successfully built in main Linux build:"
+              find dist -name "*.rpm" -type f | xargs ls -la
+            fi
           fi
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -318,53 +349,57 @@ jobs:
       # Process and deduplicate artifacts before release
       - name: Process artifacts for release
         run: |
+          IS_RC="${{ steps.release_type.outputs.is_prerelease }}"
+
           # Create a temporary directory for processed files
           mkdir -p processed_files
-          
+
           # Track files we've seen to avoid duplicates
           declare -A seen_files
-          
+
           # Process the artifacts in a specific order to ensure correct files are used
           # Windows files first (for latest.yml)
           if [ -d "dist/windows-latest-artifacts" ]; then
-            cp dist/windows-latest-artifacts/*.exe processed_files/
+            cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
             cp dist/windows-latest-artifacts/*.crt processed_files/ 2>/dev/null || echo "CA certificate not found"
             if [ -f "dist/windows-latest-artifacts/latest.yml" ]; then
               cp dist/windows-latest-artifacts/latest.yml processed_files/
               seen_files["latest.yml"]=1
             fi
           fi
-          
+
           # Mac files second
           if [ -d "dist/macos-latest-artifacts" ]; then
-            cp dist/macos-latest-artifacts/*.dmg processed_files/
-            cp dist/macos-latest-artifacts/*.zip processed_files/
+            cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
+            # RC builds don't have zip files (no block maps)
+            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files (expected for RC)"
             if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ]; then
               cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
               seen_files["latest-mac.yml"]=1
             fi
           fi
-          
-          # Linux files last (RPM files come from Ubuntu runner only)
+
+          # Linux files last
           if [ -d "dist/ubuntu-latest-artifacts" ]; then
-            cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/
-            cp dist/ubuntu-latest-artifacts/*.deb processed_files/
+            cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/ 2>/dev/null || echo "No AppImage files"
+            cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || echo "No deb files"
             cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || echo "Installation script not found"
-          
-            # Explicitly copy RPM files - ensure they exist
+
+            # RPM files (only for stable releases, RC builds skip RPM)
             echo "Copying RPM files to processed_files"
-            find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \;
-          
-            # Check if RPM files were copied
-            RPM_COUNT=$(find processed_files -name "*.rpm" | wc -l)
+            find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
+
+            RPM_COUNT=$(find processed_files -name "*.rpm" 2>/dev/null | wc -l)
             echo "Found $RPM_COUNT RPM files in processed_files directory"
-          
-            # Fail if no RPM files found
-            if [ $RPM_COUNT -eq 0 ]; then
-              echo "::error::No RPM files found in artifacts"
+
+            # Only fail on missing RPM for stable releases, not RC
+            if [ "$IS_RC" != "true" ] && [ $RPM_COUNT -eq 0 ]; then
+              echo "::error::No RPM files found in artifacts (required for stable release)"
               exit 1
+            elif [ "$IS_RC" == "true" ] && [ $RPM_COUNT -eq 0 ]; then
+              echo "::notice::No RPM files (expected for RC build)"
             fi
-          
+
             # Continue with other files
             if [ -f "dist/ubuntu-latest-artifacts/latest-linux.yml" ] && [ -z "${seen_files[latest-linux.yml]}" ]; then
               cp dist/ubuntu-latest-artifacts/latest-linux.yml processed_files/
@@ -375,7 +410,7 @@ jobs:
               seen_files["latest-linux-arm64.yml"]=1
             fi
           fi
-          
+
           # List processed files
           echo "Files prepared for release:"
           ls -la processed_files/
