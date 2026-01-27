@@ -281,7 +281,7 @@
     "react-window-infinite-loader": "^1.0.10",
     "rrweb": "^2.0.0-alpha.14",
     "rrweb-player": "^2.0.0-alpha.14",
-    "tar": "^7.4.3",
+    "tar": "^7.5.4",
     "ws": "^8.16.0"
   },
   "optionalDependencies": {
@@ -322,6 +322,8 @@
   "author": "Open Headers <contact@openheaders.io>",
   "license": "MIT",
   "overrides": {
-    "node-abi": "^4.26.0"
+    "node-abi": "^4.26.0",
+    "lodash": "^4.17.23",
+    "tar": "^7.5.4"
   }
 }
