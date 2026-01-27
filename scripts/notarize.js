@@ -22,6 +22,14 @@ async function notarizeApp(context) {
         return;
     }
 
+    // Skip notarization for RC/beta/alpha builds (faster CI for testing)
+    const version = context.packager.appInfo.version;
+    if (version && /-(rc|beta|alpha)[.\d]*$/i.test(version)) {
+        console.log(`⏭️ Skipping notarization for pre-release version: ${version}`);
+        console.log('   (RC/beta/alpha builds skip notarization to speed up CI)');
+        return;
+    }
+
     // Check if code signing is disabled (unsigned build)
     if (process.env.CSC_IDENTITY_AUTO_DISCOVERY === 'false') {
         console.log('⏭️ Skipping notarization for unsigned build (CSC_IDENTITY_AUTO_DISCOVERY=false)');
