@@ -23,9 +23,14 @@ async function notarizeApp(context) {
     }
 
     // Skip notarization for RC/beta/alpha builds (faster CI for testing)
+    // Check both package version and git tag (GITHUB_REF_NAME in CI)
     const version = context.packager.appInfo.version;
-    if (version && /-(rc|beta|alpha)[.\d]*$/i.test(version)) {
-        console.log(`⏭️ Skipping notarization for pre-release version: ${version}`);
+    const gitTag = process.env.GITHUB_REF_NAME || '';
+    const isPreRelease = /-(rc|beta|alpha)[.\d]*$/i.test(version) || /-(rc|beta|alpha)[.\d]*$/i.test(gitTag);
+
+    if (isPreRelease) {
+        console.log(`⏭️ Skipping notarization for pre-release build`);
+        console.log(`   Version: ${version}, Git tag: ${gitTag || 'N/A'}`);
         console.log('   (RC/beta/alpha builds skip notarization to speed up CI)');
         return;
     }
