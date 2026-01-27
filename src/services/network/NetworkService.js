@@ -615,24 +615,67 @@ class NetworkService extends EventEmitter {
 
     /**
      * Parse nslookup output to extract IP addresses
+     * Handles both Windows and Unix output formats
      */
     parseNslookupOutput(stdout) {
         const lines = stdout.split('\n');
         const ips = [];
-        
+
         let foundAnswerSection = false;
+        let skipNextAddress = true; // Skip first Address line (DNS server) on Windows
+
         for (const line of lines) {
-            if (line.includes('answer:')) {
+            const trimmedLine = line.trim();
+
+            // Detect answer section (works for both "Non-authoritative answer:" and "answer:")
+            if (trimmedLine.toLowerCase().includes('answer')) {
                 foundAnswerSection = true;
-            } else if (foundAnswerSection && line.includes('Address:')) {
-                const ip = line.split('Address:')[1].trim();
-                if (ip && !ip.includes('#')) {
-                    ips.push(ip);
+                skipNextAddress = false; // After answer section, Address lines are results
+                continue;
+            }
+
+            if (foundAnswerSection) {
+                // Handle "Addresses:" (plural, Windows with multiple IPs)
+                if (trimmedLine.toLowerCase().startsWith('addresses:')) {
+                    const ip = trimmedLine.split(/addresses?:/i)[1]?.trim();
+                    if (ip && this.isValidIPv4(ip)) {
+                        ips.push(ip);
+                    }
+                    continue;
+                }
+
+                // Handle "Address:" or continuation lines with just IP
+                if (trimmedLine.toLowerCase().startsWith('address:')) {
+                    const ip = trimmedLine.split(/address:/i)[1]?.trim();
+                    // Filter out DNS server port notation (e.g., "8.8.8.8#53")
+                    if (ip && !ip.includes('#') && this.isValidIPv4(ip)) {
+                        ips.push(ip);
+                    }
+                    continue;
+                }
+
+                // Handle continuation lines (just IP addresses, indented)
+                if (this.isValidIPv4(trimmedLine)) {
+                    ips.push(trimmedLine);
                 }
             }
         }
-        
+
         return ips;
+    }
+
+    /**
+     * Validate IPv4 address format
+     */
+    isValidIPv4(str) {
+        if (!str) return false;
+        const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (!ipv4Regex.test(str)) return false;
+        const parts = str.split('.');
+        return parts.every(part => {
+            const num = parseInt(part, 10);
+            return num >= 0 && num <= 255;
+        });
     }
 
     /**
@@ -642,10 +685,14 @@ class NetworkService extends EventEmitter {
         const { exec } = require('child_process');
         const { promisify } = require('util');
         const execAsync = promisify(exec);
-        
-        const { stdout } = await execAsync(`nslookup -timeout=3 ${host} 8.8.8.8`);
+
+        // Add timeout to prevent hanging processes - 5 second timeout
+        const { stdout } = await execAsync(`nslookup -timeout=3 ${host} 8.8.8.8`, {
+            timeout: 5000,
+            windowsHide: true
+        });
         const ips = this.parseNslookupOutput(stdout);
-        
+
         if (ips.length > 0) {
             this.log.info(`DNS resolved via nslookup: ${host} -> ${ips.join(', ')}`);
             return ips;
@@ -685,22 +732,18 @@ class NetworkService extends EventEmitter {
         const { exec } = require('child_process');
         const { promisify } = require('util');
         const execAsync = promisify(exec);
-        
-        // Try PowerShell's Resolve-DnsName first (more reliable on Windows)
+
+        // Skip PowerShell Resolve-DnsName - it can hang and cause process accumulation
+        // Use nslookup directly as it's more reliable and doesn't require PowerShell startup overhead
+        // The Resolve-DnsName cmdlet was causing dozens of hanging powershell.exe processes
         try {
-            const { stdout } = await execAsync(`powershell -Command "Resolve-DnsName -Name ${host} -Type A -DnsOnly | Select-Object -ExpandProperty IPAddress"`);
-            const ips = stdout.trim().split('\n').filter(ip => ip && ip.match(/^\d+\.\d+\.\d+\.\d+$/));
-            
-            if (ips.length > 0) {
-                this.log.info(`DNS resolved via PowerShell Resolve-DnsName: ${host} -> ${ips.join(', ')}`);
-                return ips;
-            }
+            return await this.executeNslookup(host);
         } catch (error) {
-            this.log.debug(`PowerShell Resolve-DnsName failed for ${host}, trying nslookup`);
+            this.log.debug(`nslookup failed for ${host}: ${error.message}`);
+            // Final fallback to Node.js DNS resolver
+            const dns = require('dns').promises;
+            return await dns.resolve4(host);
         }
-        
-        // Fallback to nslookup
-        return await this.executeNslookup(host);
     }
     
     /**

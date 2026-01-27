@@ -56,15 +56,33 @@ class BasePlatformMonitor extends EventEmitter {
         this.intervals = [];
     }
 
-    executeCommand(command, args = []) {
+    executeCommand(command, args = [], timeoutMs = 5000) {
         return new Promise((resolve, reject) => {
-            exec(`${command} ${args.join(' ')}`, (error, stdout, stderr) => {
+            const childProcess = exec(`${command} ${args.join(' ')}`, { timeout: timeoutMs, windowsHide: true }, (error, stdout, stderr) => {
                 if (error) {
-                    reject(error);
+                    // If timeout, force kill the process
+                    if (error.killed) {
+                        reject(new Error(`Command timed out after ${timeoutMs}ms`));
+                    } else {
+                        reject(error);
+                    }
                 } else {
                     resolve(stdout.trim());
                 }
             });
+
+            // On Windows, ensure child processes are killed on timeout
+            if (process.platform === 'win32') {
+                setTimeout(() => {
+                    try {
+                        if (childProcess && !childProcess.killed) {
+                            childProcess.kill('SIGKILL');
+                        }
+                    } catch (e) {
+                        // Ignore kill errors
+                    }
+                }, timeoutMs + 500);
+            }
         });
     }
 }
@@ -202,8 +220,9 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
             checkVPN();
         }, 500);
 
-        // Regular checks - more frequent for better VPN detection
-        const interval = setInterval(checkVPN, 1000); // Check every second instead of 2 seconds
+        // Regular checks - reduced frequency to prevent excessive process spawning
+        // Changed from 1 second to 10 seconds for consistency with Windows
+        const interval = setInterval(checkVPN, 10000);
         this.intervals.push(interval);
     }
 
@@ -322,6 +341,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
     constructor() {
         super();
         this.log = createLogger('WindowsNetworkMonitor');
+        this.vpnCheckInProgress = false;
+        this.adapterMonitorActive = false;
     }
 
     start() {
@@ -330,11 +351,63 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         this.watchNetworkAdapters();
         this.watchVPNState();
         this.watchWiFiState();
-        this.monitorNetworkEvents();
+        // Disable WMI event monitor - it can hang and accumulate processes
+        // this.monitorNetworkEvents();
     }
 
     watchNetworkAdapters() {
-        // Monitor network adapter changes using PowerShell
+        // Use polling instead of persistent PowerShell process to avoid hangs
+        // The infinite loop PowerShell script was causing process accumulation
+        let lastState = null;
+
+        const checkAdapters = async () => {
+            if (this.adapterMonitorActive) {
+                return; // Skip if previous check still running
+            }
+            this.adapterMonitorActive = true;
+
+            try {
+                const output = await this.executeCommand('powershell', [
+                    '-NoProfile',
+                    '-NonInteractive',
+                    '-Command',
+                    'Get-NetAdapter -ErrorAction SilentlyContinue | Select-Object Name, Status, InterfaceDescription | ConvertTo-Json -Compress'
+                ], 5000);
+
+                if (output && (output.startsWith('[') || output.startsWith('{'))) {
+                    try {
+                        const adapters = JSON.parse(output);
+                        const currentState = JSON.stringify(adapters);
+
+                        if (lastState && lastState !== currentState) {
+                            this.log.info('Network adapter change detected');
+                            this.emit('network-change', {
+                                type: 'adapter-change',
+                                adapters
+                            });
+                        }
+
+                        lastState = currentState;
+                    } catch (e) {
+                        this.log.debug('JSON parsing error in adapter check:', e.message);
+                    }
+                }
+            } catch (e) {
+                this.log.debug('Adapter check failed:', e.message);
+            } finally {
+                this.adapterMonitorActive = false;
+            }
+        };
+
+        // Check every 10 seconds instead of using persistent process
+        checkAdapters();
+        const interval = setInterval(checkAdapters, 10000);
+        this.intervals.push(interval);
+    }
+
+    watchNetworkAdaptersLegacy() {
+        // DEPRECATED: This method used an infinite loop PowerShell script
+        // that caused process accumulation. Kept for reference only.
         const monitorScript = `
             $ErrorActionPreference = 'SilentlyContinue'
             while ($true) {
@@ -352,7 +425,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
 
         const startMonitor = () => {
             try {
-                const monitor = spawn('powershell', ['-Command', monitorScript]);
+                const monitor = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', monitorScript]);
                 let lastState = null;
                 let restartTimer = null;
 
@@ -428,17 +501,27 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         let initialCheckDone = false;
 
         const checkVPN = async () => {
+            // Prevent concurrent VPN checks - critical fix for process accumulation
+            if (this.vpnCheckInProgress) {
+                this.log.debug('Skipping VPN check - previous check still in progress');
+                return;
+            }
+            this.vpnCheckInProgress = true;
+
             try {
                 let activeVPN = false;
                 let vpnName = null;
                 let vpnDetails = {};
 
                 // First check using PowerShell to get VPN connections
+                // Added -NoProfile -NonInteractive for faster startup and no hangs
                 try {
                     const vpnOutput = await this.executeCommand('powershell', [
+                        '-NoProfile',
+                        '-NonInteractive',
                         '-Command',
                         'Get-VpnConnection | Where-Object {$_.ConnectionStatus -eq "Connected"} | Select-Object -First 1 | ConvertTo-Json -Compress'
-                    ]);
+                    ], 5000);
                     
                     if (vpnOutput && vpnOutput.trim()) {
                         try {
@@ -463,9 +546,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 if (!activeVPN) {
                     try {
                         const adapterOutput = await this.executeCommand('powershell', [
+                            '-NoProfile',
+                            '-NonInteractive',
                             '-Command',
                             'Get-NetAdapter | Where-Object {$_.InterfaceDescription -match "VPN|TAP|OpenVPN|NordVPN|ExpressVPN|Cisco|Fortinet|WireGuard" -and $_.Status -eq "Up"} | Select-Object -First 1 Name, InterfaceDescription | ConvertTo-Json -Compress'
-                        ]);
+                        ], 5000);
                         
                         if (adapterOutput && adapterOutput.trim()) {
                             try {
@@ -540,16 +625,20 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 }
             } catch (e) {
                 this.log.error('VPN check failed:', e.message);
-                // Fall back to checking network interfaces
-                this.checkVPNInterfaces();
+                // Note: checkVPNInterfaces() is not available on Windows
+                // The VPN check already has multiple fallbacks (Get-VpnConnection, Get-NetAdapter, rasdial)
+            } finally {
+                // Always reset the flag to allow next check
+                this.vpnCheckInProgress = false;
             }
         };
 
-        // Initial check
-        checkVPN();
+        // Initial check with delay to not block startup
+        setTimeout(checkVPN, 1000);
 
-        // Regular checks - more frequent for better VPN detection
-        const interval = setInterval(checkVPN, 1000); // Check every second instead of 2 seconds
+        // Regular checks - reduced frequency to prevent process accumulation
+        // Changed from 1 second to 10 seconds to prevent spawning too many PowerShell processes
+        const interval = setInterval(checkVPN, 10000);
         this.intervals.push(interval);
     }
 
