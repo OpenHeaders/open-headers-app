@@ -170,7 +170,7 @@ jobs:
         run: |
           if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
             echo "🚀 RC build: arm64 only, DMG only, no notarization"
-            npx electron-builder --mac --arm64 --config.mac.target=dmg --publish never
+            npx electron-builder --mac dmg --arm64 --publish never
           else
             echo "📦 Stable build: full build with both architectures"
             npm run dist:mac
@@ -243,7 +243,7 @@ jobs:
         run: |
           if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
             echo "🚀 RC build: x64 only, AppImage + deb (no RPM)"
-            npx electron-builder --linux --x64 --config.linux.target='["AppImage","deb"]' --publish never
+            npx electron-builder --linux appimage deb --x64 --publish never
           else
             echo "📦 Stable build: full build with both architectures and all targets"
             # Build all Linux targets (including RPM)
