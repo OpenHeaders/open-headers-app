@@ -339,15 +339,19 @@ const WorkspacesTable = ({
                 alignItems: 'center',
                 width: '100%'
             }}>
-                {/* Position 1: Sync button - Git workspaces only */}
+                {/* Position 1: Sync button - Active Git workspaces only */}
                 {isGitWorkspace ? (
-                    <Tooltip title="Sync manually now">
+                    <Tooltip title={isActiveWorkspace
+                        ? "Sync manually now"
+                        : "Switch to this workspace to sync manually"
+                    }>
                         <Button
                             type="text"
                             icon={<SyncOutlined />}
                             size="small"
                             onClick={() => onSyncWorkspace(record)}
                             loading={syncStatus[record.id]?.syncing}
+                            disabled={!isActiveWorkspace}
                         />
                     </Tooltip>
                 ) : (
