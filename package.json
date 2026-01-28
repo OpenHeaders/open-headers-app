@@ -1,7 +1,7 @@
 {
   "name": "open-headers",
-  "version": "3.1.1",
-  "description": "Record your browser workflow. Modify HTTP Traffic. Team Workspaces. Everything local.",
+  "version": "3.1.2",
+  "description": "OpenHeaders",
   "main": "dist-webpack/main.js",
   "scripts": {
     "// Development //": "",
