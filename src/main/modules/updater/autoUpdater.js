@@ -12,6 +12,7 @@ class AutoUpdaterManager {
         this.updateCheckInProgress = false;
         this.updateDownloadInProgress = false;
         this.updateDownloaded = false;
+        this.downloadedUpdateInfo = null; // Store downloaded update info for later retrieval
         this.networkErrorRetryTimer = null;
         this.NETWORK_RETRY_INTERVAL = 15 * 60 * 1000; // 15 minutes
         this.CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
@@ -68,6 +69,7 @@ class AutoUpdaterManager {
         autoUpdater.on('update-downloaded', (info) => {
             this.updateDownloadInProgress = false;
             this.updateDownloaded = true;
+            this.downloadedUpdateInfo = info; // Store for later retrieval
 
             windowManager.sendToWindow('update-downloaded', info);
         });
@@ -185,7 +187,8 @@ class AutoUpdaterManager {
             if (mainWindow) {
                 const isManualCheck = event.sender === mainWindow.webContents;
                 mainWindow.webContents.send('update-already-downloaded', {
-                    isManual: isManualCheck
+                    isManual: isManualCheck,
+                    info: this.downloadedUpdateInfo // Include stored update info
                 });
             }
             return;
@@ -245,6 +248,7 @@ class AutoUpdaterManager {
         const appLifecycle = require('../app/lifecycle');
         appLifecycle.setQuitting(true);
         this.updateDownloaded = false;
+        this.downloadedUpdateInfo = null;
 
         try {
             // Signal that we want to restart after update
