@@ -77,13 +77,13 @@ export const UpdateNotificationManager = ({
 
     /**
      * Show already checking notification
-     * @param {boolean} isDownloading - Whether download is in progress
+     * @param {boolean} isDownloading - Whether download/processing is in progress
      */
     const showAlreadyCheckingNotification = (isDownloading) => {
         notification.info({
-            message: isDownloading ? 'Download In Progress' : 'Check In Progress',
+            message: isDownloading ? 'Update In Progress' : 'Check In Progress',
             description: isDownloading
-                ? 'Already downloading the latest update'
+                ? 'Already processing the latest update'
                 : 'Already checking for updates',
             duration: 3,
             key: NOTIFICATION_KEYS.ALREADY_CHECKING
@@ -91,9 +91,9 @@ export const UpdateNotificationManager = ({
     };
 
     /**
-     * Show update available notification with download progress
+     * Show update available notification with processing progress
      * @param {Object} info - Update information
-     * @param {number} progress - Download progress (0-100)
+     * @param {number} progress - Processing progress (0-100)
      */
     const showUpdateAvailableNotification = (info, progress = 0) => {
         debugLog(`Showing update available notification for version ${info.version}`);
@@ -101,7 +101,7 @@ export const UpdateNotificationManager = ({
             message: 'Update Available',
             description: (
                 <div>
-                    <div>Version {info.version} is downloading...</div>
+                    <div>Version {info.version} is processing...</div>
                     <Progress percent={progress} status="active" />
                 </div>
             ),
@@ -111,12 +111,12 @@ export const UpdateNotificationManager = ({
     };
 
     /**
-     * Show download progress notification
-     * @param {number} percent - Download progress percentage
+     * Show update processing progress notification
+     * @param {number} percent - Processing progress percentage
      */
     const showDownloadProgressNotification = (percent) => {
         notification.info({
-            message: 'Downloading Update',
+            message: 'Processing Update',
             description: (
                 <div>
                     <Progress
