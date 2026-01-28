@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write  # This allows creating releases
+  packages: read   # This allows reading packages from GitHub Packages
 
 jobs:
   build:
