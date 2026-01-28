@@ -80,14 +80,20 @@ export const createUpdateEventHandlers = ({
 
     /**
      * Handle update already downloaded
-     * 
+     *
      * Called when the main process indicates that an update was already downloaded
      * in a previous session. This handles the timing to ensure proper user experience.
-     * 
-     * @param {boolean} isManual - Whether this was a manual check
+     *
+     * @param {Object} payload - Event payload containing isManual and info
      */
-    const handleUpdateAlreadyDownloaded = (isManual = false) => {
-        debugLog(`${debugLabel} Received "update-already-downloaded" event (manual check: ${isManual})`);
+    const handleUpdateAlreadyDownloaded = (payload = {}) => {
+        const { isManual = false, info = null } = payload;
+        debugLog(`${debugLabel} Received "update-already-downloaded" event (manual check: ${isManual}, version: ${info?.version})`);
+
+        // Update state with the info from main process if available
+        if (info) {
+            setState.setUpdateInfo(info);
+        }
 
         // Skip notification if in silent mode and this wasn't a manual check
         if (refs.inSilentCheckModeRef.current && !isManual && !state.manualCheckInProgress) {
@@ -105,18 +111,19 @@ export const createUpdateEventHandlers = ({
         if (remainingTime > 0) {
             debugLog(`${debugLabel} Delaying "update-already-downloaded" handling for ${remainingTime}ms`);
             setTimeout(() => {
-                showUpdateReadyNotification(isManual);
+                showUpdateReadyNotification(isManual, info);
             }, remainingTime);
         } else {
-            showUpdateReadyNotification(isManual);
+            showUpdateReadyNotification(isManual, info);
         }
     };
 
     /**
      * Show update ready notification with proper state management
      * @param {boolean} isManual - Whether this was a manual check
+     * @param {Object} info - Update info from main process (optional)
      */
-    const showUpdateReadyNotification = (isManual) => {
+    const showUpdateReadyNotification = (isManual, info = null) => {
         debugLog(`${debugLabel} Showing update ready notification`);
 
         // Clear checking notification
@@ -131,9 +138,9 @@ export const createUpdateEventHandlers = ({
         if (wasManualCheck || !state.updateDownloaded) {
             setState.setUpdateDownloaded(true);
 
-            // Get version info with fallback
-            const version = state.updateInfo ? state.updateInfo.version : '2.4.7';
-            
+            // Get version info: prefer passed info, then state, then 'Unknown'
+            const version = info?.version || state.updateInfo?.version || 'Unknown';
+
             // Show notification with version info
             notificationManager.showUpdateReadyNotification({ version });
         }
@@ -171,7 +178,7 @@ export const createUpdateEventHandlers = ({
 
         // Log progress less frequently
         if (percent % 20 === 0) {
-            debugLog(`Download progress: ${percent}%`);
+            debugLog(`Update progress: ${percent}%`);
         }
     };
 
