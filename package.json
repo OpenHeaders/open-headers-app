@@ -285,7 +285,7 @@
     "ws": "^8.16.0"
   },
   "optionalDependencies": {
-    "@openheaders/windows-foreground": "1.0.0"
+    "@openheaders/windows-foreground": "^1.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
