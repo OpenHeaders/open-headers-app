@@ -273,10 +273,11 @@ jobs:
         run: |
           # Create platform-specific subdirectory
           mkdir -p dist/${{ matrix.os }}
-          
+
           # Move files to platform-specific directories to avoid conflicts during download
           # This preserves original filenames required by electron-updater
-          find dist -type f -name "*.yml" -o -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" | while read file; do
+          # Note: .blockmap files are required for differential updates
+          find dist -type f \( -name "*.yml" -o -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.blockmap" \) | while read file; do
             filename=$(basename "$file")
             # Only copy files, don't move, to avoid breaking electron-builder paths
             cp "$file" "dist/${{ matrix.os }}/$filename"
@@ -299,6 +300,7 @@ jobs:
             dist/*.dmg
             dist/*.exe
             dist/*.zip
+            dist/*.blockmap
             dist/*.AppImage
             dist/*.deb
             dist/*.rpm
@@ -330,12 +332,10 @@ jobs:
           if [[ "$TAG_NAME" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "is_draft=true" >> $GITHUB_OUTPUT
-            echo "release_label=🚧 Release Candidate" >> $GITHUB_OUTPUT
             echo "::notice::Detected RC/Beta/Alpha release: $TAG_NAME - Creating DRAFT prerelease"
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
             echo "is_draft=false" >> $GITHUB_OUTPUT
-            echo "release_label=🎉 Stable Release" >> $GITHUB_OUTPUT
             echo "::notice::Detected stable release: $TAG_NAME - Creating published release"
           fi
 
@@ -360,6 +360,8 @@ jobs:
           if [ -d "dist/windows-latest-artifacts" ]; then
             cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
             cp dist/windows-latest-artifacts/*.crt processed_files/ 2>/dev/null || echo "CA certificate not found"
+            # Blockmap files for differential updates (if generated)
+            cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
             if [ -f "dist/windows-latest-artifacts/latest.yml" ]; then
               cp dist/windows-latest-artifacts/latest.yml processed_files/
               seen_files["latest.yml"]=1
@@ -371,6 +373,8 @@ jobs:
             cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
             # RC builds don't have zip files (no block maps)
             cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files (expected for RC)"
+            # Blockmap files for differential updates
+            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files (expected for RC)"
             if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ]; then
               cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
               seen_files["latest-mac.yml"]=1
@@ -495,7 +499,7 @@ jobs:
         with:
           draft: ${{ steps.release_type.outputs.is_draft == 'true' }}
           prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
-          name: "${{ steps.release_type.outputs.release_label }} ${{ github.ref_name }}"
+          name: "${{ github.ref_name }}"
           files: processed_files/*
           fail_on_unmatched_files: false
           body_path: release_body.md
