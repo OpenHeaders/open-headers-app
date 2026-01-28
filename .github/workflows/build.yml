@@ -228,10 +228,40 @@ jobs:
           jvm_max_memory: 1024M
           signing_method: v1
 
+      # Regenerate blockmap and update latest.yml after signing (signing changes the exe)
+      - name: Update latest.yml and blockmap after signing
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
+        run: |
+          EXE_PATH="dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
+          BLOCKMAP_PATH="${EXE_PATH}.blockmap"
+          LATEST_YML="dist/latest.yml"
+
+          echo "=== Regenerating blockmap for signed exe ==="
+
+          # Regenerate blockmap using electron-builder's app-builder
+          npx app-builder blockmap --input "$EXE_PATH" --output "$BLOCKMAP_PATH" --compression gzip
+          echo "Blockmap regenerated: $BLOCKMAP_PATH"
+
+          # Compute new SHA512 hash (base64 encoded)
+          NEW_SHA512=$(openssl dgst -sha512 -binary "$EXE_PATH" | base64 -w 0)
+          NEW_SIZE=$(stat -c%s "$EXE_PATH")
+
+          echo "Signed exe SHA512: $NEW_SHA512"
+          echo "Signed exe size: $NEW_SIZE"
+
+          # Update latest.yml with new hash and size
+          # Use sed to replace sha512 and size values
+          sed -i "s|sha512: [A-Za-z0-9+/=]*|sha512: $NEW_SHA512|g" "$LATEST_YML"
+          sed -i "s|size: [0-9]*|size: $NEW_SIZE|g" "$LATEST_YML"
+
+          echo "=== Updated latest.yml ==="
+          cat "$LATEST_YML"
+        shell: bash
+
       # Log that signing was skipped for RC
       - name: Skip signing for RC
         if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc == 'true'
-        run: echo "⏭️ Skipping Windows code signing for RC build"
+        run: echo "Skipping Windows code signing for RC build"
 
       # Build for Linux
       # RC builds: x64 only, AppImage + deb only (no RPM) = faster
