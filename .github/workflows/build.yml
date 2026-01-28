@@ -30,6 +30,12 @@ jobs:
           cache: npm
           cache-dependency-path: '**/package-lock.json'
 
+      # Install setuptools for Python 3.12+ compatibility (provides distutils for node-gyp)
+      - name: Install Python setuptools (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pip install setuptools
+        shell: bash
+
       # Install RPM tools on Linux runner only (using correct package name for Ubuntu)
       - name: Install RPM tools (Linux)
         if: matrix.os == 'ubuntu-latest'
