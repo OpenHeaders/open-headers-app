@@ -104,37 +104,39 @@ export function useWorkspaces() {
       if (!workspace) {
         throw new Error('Workspace not found');
       }
-      
+
       if (workspace.type !== 'git') {
         throw new Error('Only git-based workspaces can be synced');
       }
-      
-      // Update sync status
-      service.setState({ 
-        syncStatus: { ...syncStatus, [workspaceId]: { syncing: true } }
+
+      // Update sync status - use service.state.syncStatus to avoid stale closure issues
+      // when multiple workspaces are syncing concurrently
+      service.setState({
+        syncStatus: { ...service.state.syncStatus, [workspaceId]: { syncing: true } }
       }, ['syncStatus']);
-      
+
       // Call electron API to sync
       const result = await window.electronAPI.syncGitWorkspace(workspaceId);
-      
+
       if (result.success) {
-        // Update sync status with last sync time
-        service.setState({ 
-          syncStatus: { 
-            ...syncStatus, 
-            [workspaceId]: { 
-              syncing: false, 
+        // Update sync status with last sync time - use service.state.syncStatus
+        // to get current state and avoid overwriting other workspaces' sync status
+        service.setState({
+          syncStatus: {
+            ...service.state.syncStatus,
+            [workspaceId]: {
+              syncing: false,
               lastSync: new Date().toISOString(),
-              error: null 
+              error: null
             }
           }
         }, ['syncStatus']);
-        
+
         // Reload workspace data if it was the active one
         if (workspaceId === activeWorkspaceId) {
           await service.loadWorkspaceData(workspaceId);
         }
-        
+
         // Only show success message if not explicitly disabled
         if (options.silent !== true) {
           showMessage('success', 'Workspace synced successfully');
@@ -142,24 +144,25 @@ export function useWorkspaces() {
       } else {
         throw new Error(result.error || 'Sync failed');
       }
-      
+
       return result.success;
     } catch (error) {
-      // Update sync status with error
-      service.setState({ 
-        syncStatus: { 
-          ...syncStatus, 
-          [workspaceId]: { 
-            syncing: false, 
-            error: error.message 
+      // Update sync status with error - use service.state.syncStatus
+      // to get current state and avoid overwriting other workspaces' sync status
+      service.setState({
+        syncStatus: {
+          ...service.state.syncStatus,
+          [workspaceId]: {
+            syncing: false,
+            error: error.message
           }
         }
       }, ['syncStatus']);
-      
+
       showMessage('error', `Sync failed: ${error.message}`);
       return false;
     }
-  }, [service, workspaces, syncStatus, activeWorkspaceId]);
+  }, [service, workspaces, activeWorkspaceId]);
 
   const cloneWorkspaceToPersonal = useCallback(async (workspaceId, newName = null) => {
     try {
