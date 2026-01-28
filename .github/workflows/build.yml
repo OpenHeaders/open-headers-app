@@ -228,10 +228,65 @@ jobs:
           jvm_max_memory: 1024M
           signing_method: v1
 
+      # Regenerate blockmap and update latest.yml after signing (signing changes the exe)
+      - name: Update latest.yml and blockmap after signing
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
+        run: |
+          $exePath = "dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
+          $blockmapPath = "$exePath.blockmap"
+          $latestYmlPath = "dist/latest.yml"
+
+          Write-Host "=== Regenerating blockmap for signed exe ==="
+
+          # Find app-builder executable in node_modules
+          $appBuilder = "node_modules\app-builder-bin\win\x64\app-builder.exe"
+          if (-not (Test-Path $appBuilder)) {
+            # Try alternative path
+            $appBuilder = Get-ChildItem -Path "node_modules" -Recurse -Filter "app-builder.exe" | Select-Object -First 1 -ExpandProperty FullName
+          }
+
+          if ($appBuilder -and (Test-Path $appBuilder)) {
+            Write-Host "Using app-builder at: $appBuilder"
+            & $appBuilder blockmap --input $exePath --output $blockmapPath --compression gzip
+            Write-Host "Blockmap regenerated: $blockmapPath"
+          } else {
+            Write-Host "Warning: app-builder not found, skipping blockmap regeneration"
+          }
+
+          # Compute new SHA512 hash (base64 encoded)
+          $hash = Get-FileHash -Path $exePath -Algorithm SHA512
+          $hashBytes = [byte[]]::new($hash.Hash.Length / 2)
+          for ($i = 0; $i -lt $hash.Hash.Length; $i += 2) {
+            $hashBytes[$i / 2] = [Convert]::ToByte($hash.Hash.Substring($i, 2), 16)
+          }
+          $base64Hash = [Convert]::ToBase64String($hashBytes)
+
+          # Get new file size
+          $fileSize = (Get-Item $exePath).Length
+
+          Write-Host "Signed exe SHA512: $base64Hash"
+          Write-Host "Signed exe size: $fileSize"
+
+          # Read and update latest.yml
+          $content = Get-Content $latestYmlPath -Raw
+
+          # Update sha512 (appears twice in the file)
+          $content = $content -replace 'sha512: [A-Za-z0-9+/=]+', "sha512: $base64Hash"
+
+          # Update size
+          $content = $content -replace 'size: \d+', "size: $fileSize"
+
+          # Write back
+          Set-Content -Path $latestYmlPath -Value $content -NoNewline
+
+          Write-Host "=== Updated latest.yml ==="
+          Get-Content $latestYmlPath
+        shell: pwsh
+
       # Log that signing was skipped for RC
       - name: Skip signing for RC
         if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc == 'true'
-        run: echo "⏭️ Skipping Windows code signing for RC build"
+        run: echo "Skipping Windows code signing for RC build"
 
       # Build for Linux
       # RC builds: x64 only, AppImage + deb only (no RPM) = faster
