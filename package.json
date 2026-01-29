@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "OpenHeaders",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -133,7 +133,7 @@
       "forceCodeSigning": false,
       "darkModeSupport": true,
       "extendInfo": {
-        "CFBundleDisplayName": "Open Headers - Dynamic Sources",
+        "CFBundleDisplayName": "Open Headers",
         "CFBundleName": "OpenHeaders",
         "CFBundleIdentifier": "io.openheaders",
         "CFBundleURLTypes": [
@@ -175,7 +175,7 @@
       "maintainer": "Daniel Tirzuman <github@tirzuman.com>",
       "desktop": {
         "Name": "OpenHeaders",
-        "Comment": "Dynamic sources for Open Headers browser extension",
+        "Comment": "Open Headers",
         "Terminal": false,
         "Categories": "Utility;Development;Network",
         "MimeType": "x-scheme-handler/openheaders"
@@ -236,7 +236,7 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "desktop": {
         "Name": "OpenHeaders",
-        "Comment": "Dynamic sources for Open Headers browser extension",
+        "Comment": "Open Headers",
         "Categories": "Utility;Development;Network"
       }
     },

@@ -4,7 +4,6 @@ const fs = require('fs');
 const { createLogger } = require('../../../utils/mainLogger');
 const windowManager = require('../window/windowManager');
 const appLifecycle = require('../app/lifecycle');
-const windowsFocusHelper = require('../utils/windowsFocus');
 
 const log = createLogger('TrayManager');
 
@@ -238,12 +237,13 @@ class TrayManager {
                 log.info('Hiding dock icon');
                 app.dock.hide();
 
-                // Prevent window loss when dock icon is hidden
+                // Preserve window focus after hiding dock
+                // Note: Do NOT call window.show() here as it may cause macOS to re-show the dock
                 if (mainWindow && wasWindowVisible) {
                     setTimeout(() => {
-                        if (mainWindow) {
-                            windowsFocusHelper.focusWindow(mainWindow);
-                            log.info('Restoring window visibility after hiding dock icon');
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            mainWindow.focus();
+                            log.info('Restored window focus after hiding dock icon');
                         }
                     }, 100);
                 }
