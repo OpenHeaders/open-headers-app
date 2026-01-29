@@ -138,8 +138,8 @@ export const createUpdateEventHandlers = ({
         if (wasManualCheck || !state.updateDownloaded) {
             setState.setUpdateDownloaded(true);
 
-            // Get version info: prefer passed info, then state, then 'Unknown'
-            const version = info?.version || state.updateInfo?.version || 'Unknown';
+            // Get version info from passed info
+            const version = info?.version || 'Unknown';
 
             // Show notification with version info
             notificationManager.showUpdateReadyNotification({ version });
