@@ -21,7 +21,7 @@ const ConnectionProgressModal = ({
     // Start auto-close countdown when test completes
     useEffect(() => {
         if (!isTestingConnection && connectionProgress.length > 0 && testResult !== null) {
-            const delay = testResult.success ? 3000 : 10000; // 3s for success, 10s for error
+            const delay = testResult.success ? 2000 : 10000; // 2s for success, 10s for error
             const countdownInterval = 100; // Update every 100ms
             let remaining = delay;
 
