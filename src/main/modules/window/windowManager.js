@@ -145,6 +145,18 @@ class WindowManager {
                     } else {
                         log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
                     }
+
+                    // Apply dock visibility AFTER window is shown/hidden
+                    // macOS automatically shows dock when a window becomes visible,
+                    // so we must re-apply the user's dock preference after window visibility is set
+                    if (process.platform === 'darwin') {
+                        setTimeout(() => {
+                            // Lazy require to avoid circular dependency (trayManager imports windowManager)
+                            const trayManager = require('../tray/trayManager');
+                            trayManager.updateTray(settings);
+                            log.info('Applied dock visibility setting after window ready');
+                        }, 100);
+                    }
                 } else {
                     log.info('No settings file, showing window by default');
                     // Use the enhanced focus helper for consistent Windows behavior
