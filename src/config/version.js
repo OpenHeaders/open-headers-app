@@ -17,7 +17,7 @@
  *    - Allows importing data from older app versions
  */
 
-const APP_VERSION = '3.1.6';
+const APP_VERSION = '3.1.7';
 
 const DATA_FORMAT_VERSION = '3.0.0';
 
