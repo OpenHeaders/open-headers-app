@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "3.1.5",
+  "version": "3.1.6",
   "description": "OpenHeaders",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -133,7 +133,7 @@
       "forceCodeSigning": false,
       "darkModeSupport": true,
       "extendInfo": {
-        "CFBundleDisplayName": "Open Headers",
+        "CFBundleDisplayName": "OpenHeaders",
         "CFBundleName": "OpenHeaders",
         "CFBundleIdentifier": "io.openheaders",
         "CFBundleURLTypes": [
@@ -175,7 +175,7 @@
       "maintainer": "Daniel Tirzuman <github@tirzuman.com>",
       "desktop": {
         "Name": "OpenHeaders",
-        "Comment": "Open Headers",
+        "Comment": "OpenHeaders",
         "Terminal": false,
         "Categories": "Utility;Development;Network",
         "MimeType": "x-scheme-handler/openheaders"
@@ -236,7 +236,7 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "desktop": {
         "Name": "OpenHeaders",
-        "Comment": "Open Headers",
+        "Comment": "OpenHeaders",
         "Categories": "Utility;Development;Network"
       }
     },

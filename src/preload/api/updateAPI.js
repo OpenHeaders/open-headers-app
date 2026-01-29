@@ -20,12 +20,8 @@ const updateAPI = {
 
     onUpdateAlreadyDownloaded: (callback) => {
         const subscription = (_, data) => {
-            // Call the callback with isManual flag if available
-            if (data && data.isManual) {
-                callback(true); // Pass isManual flag to the callback
-            } else {
-                callback(false);
-            }
+            // Pass the full payload including isManual and info
+            callback(data || {});
         };
         ipcRenderer.on('update-already-downloaded', subscription);
         return () => ipcRenderer.removeListener('update-already-downloaded', subscription);
