@@ -3,7 +3,7 @@
  * See version.js for documentation.
  */
 
-export const APP_VERSION = '3.1.6';
+export const APP_VERSION = '3.1.7';
 
 export const DATA_FORMAT_VERSION = '3.0.0';
 
