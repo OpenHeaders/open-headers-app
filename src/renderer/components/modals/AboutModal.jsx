@@ -175,7 +175,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                                 margin: '0',
                                 marginTop: 'auto'
                             }}>
-                                © 2025 Open Headers
+                                © 2026 Open Headers
                             </Paragraph>
                         </div>
                     ) : (
