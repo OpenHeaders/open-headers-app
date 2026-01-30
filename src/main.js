@@ -5,7 +5,6 @@ const { createLogger } = require('./utils/mainLogger');
 // Core modules
 const appLifecycle = require('./main/modules/app/lifecycle');
 const windowManager = require('./main/modules/window/windowManager');
-const splashWindow = require('./main/modules/window/splashWindow');
 const trayManager = require('./main/modules/tray/trayManager');
 const networkHandlers = require('./main/modules/network/networkHandlers');
 const autoUpdater = require('./main/modules/updater/autoUpdater');
@@ -268,27 +267,14 @@ if (!gotTheLock) {
 
     // Initialize app when Electron is ready
     app.whenReady().then(async () => {
-        // Show splash screen immediately
-        splashWindow.show();
-        
         await appLifecycle.initializeApp();
-        
+
         await proxyHandlers.autoStartProxy();
-        
+
         setupIPC();
-        
+
         mainWindow = windowManager.createWindow();
-        
-        // Handle splash screen after window loads
-        mainWindow.webContents.once('did-finish-load', () => {
-            // Close splash screen after main window is ready
-            setTimeout(() => {
-                if (splashWindow.isVisible()) {
-                    splashWindow.close();
-                }
-            }, 500);
-        });
-        
+
         // Store window reference for protocol handler
         protocolHandler.setMainWindow(mainWindow);
         
