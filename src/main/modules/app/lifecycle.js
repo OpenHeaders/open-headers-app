@@ -83,6 +83,20 @@ class AppLifecycle {
             }
             
             await workspaceSyncScheduler.onWorkspaceSwitch(activeWorkspaceId);
+
+            // Start CLI API server (non-blocking — app works without it)
+            // Lazy require to avoid circular dependency (CliSetupHandler requires lifecycle)
+            try {
+                const CliApiService = require('../../../services/cli/CliApiService');
+                const CliSetupHandler = require('../../../services/cli/CliSetupHandler');
+                const cliApiService = new CliApiService();
+                const cliSetupHandler = new CliSetupHandler();
+                cliApiService.setSetupHandler(cliSetupHandler);
+                this.services.set('cliApiService', cliApiService);
+                await cliApiService.start();
+            } catch (error) {
+                log.warn('CLI API server failed to start (non-critical):', error.message);
+            }
         } catch (error) {
             log.error('Failed to initialize services:', error);
             throw error; // Re-throw to indicate critical failure
@@ -163,6 +177,16 @@ class AppLifecycle {
             watcher.close();
         }
 
+        // Stop CLI API server first (fast, deletes cli.json)
+        const cliApiService = this.services.get('cliApiService');
+        if (cliApiService) {
+            try {
+                await cliApiService.stop();
+            } catch (error) {
+                log.warn('Error stopping CLI API server:', error.message);
+            }
+        }
+
         const workspaceSyncScheduler = this.services.get('workspaceSyncScheduler');
         if (workspaceSyncScheduler) {
             try {
@@ -193,6 +217,10 @@ class AppLifecycle {
 
     getWorkspaceSyncScheduler() {
         return this.services.get('workspaceSyncScheduler');
+    }
+
+    getCliApiService() {
+        return this.services.get('cliApiService');
     }
 
     isQuittingApp() {

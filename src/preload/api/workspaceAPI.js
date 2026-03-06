@@ -42,6 +42,12 @@ const workspaceAPI = {
         return () => ipcRenderer.removeListener('workspace-data-updated', subscription);
     },
     
+    onCliWorkspaceJoined: (callback) => {
+        const subscription = (event, data) => callback(data);
+        ipcRenderer.on('cli-workspace-joined', subscription);
+        return () => ipcRenderer.removeListener('cli-workspace-joined', subscription);
+    },
+
     onEnvironmentsStructureChanged: (callback) => {
         const subscription = (event, data) => callback(data);
         ipcRenderer.on('environments-structure-changed', subscription);
