@@ -95,7 +95,7 @@ class NetworkService extends EventEmitter {
         this._doingInitialCheck = true;
         
         // Initial network check
-        this.log.info('Starting initial network check...');
+        this.log.debug('Starting initial network check...');
         const checkStartTime = timeManager.now();
         await this.checkNetworkState();
         const checkEndTime = timeManager.now();
@@ -105,7 +105,7 @@ class NetworkService extends EventEmitter {
         
         this.isInitialized = true;
         this.log.info('NetworkService initialized successfully');
-        this.log.info('Initialization complete, time elapsed:', timeManager.now() - this.initializationTime, 'ms');
+        this.log.debug('Initialization complete, time elapsed:', timeManager.now() - this.initializationTime, 'ms');
     }
 
     /**
@@ -159,7 +159,7 @@ class NetworkService extends EventEmitter {
         };
         scheduleNextQuickCheck();
         
-        this.log.info('Started adaptive monitoring for background operation');
+        this.log.debug('Started adaptive monitoring for background operation');
     }
     
     /**
@@ -404,7 +404,7 @@ class NetworkService extends EventEmitter {
             const isOnline = hasDNS || hasConnectivity;
             
             // Log comprehensive check results for debugging
-            this.log.info('COMPREHENSIVE CHECK COMPLETE:', {
+            this.log.debug('COMPREHENSIVE CHECK COMPLETE:', {
                 hasDNS,
                 hasConnectivity,
                 isOnline,
@@ -485,7 +485,7 @@ class NetworkService extends EventEmitter {
                     errorCode: result.errorCode
                 });
                 const fallbackResult = await this.checkEndpoint(this.connectivityEndpoints[1]);
-                this.log.info('QUICK CHECK: Fallback endpoint result', {
+                this.log.debug('QUICK CHECK: Fallback endpoint result', {
                     endpoint: this.connectivityEndpoints[1].name,
                     success: fallbackResult.success,
                     error: fallbackResult.error,
@@ -548,14 +548,14 @@ class NetworkService extends EventEmitter {
                     addresses: validAddresses,
                     type: this.getInterfaceType(name)
                 });
-                this.log.info(`Interface ${name}:`, {
+                this.log.debug(`Interface ${name}:`, {
                     type: this.getInterfaceType(name),
                     addresses: validAddresses.map(a => ({ address: a.address, netmask: a.netmask }))
                 });
             }
         }
         
-        this.log.info(`Found ${interfaces.size} active network interfaces`);
+        this.log.debug(`Found ${interfaces.size} active network interfaces`);
         return interfaces;
     }
 
@@ -563,20 +563,20 @@ class NetworkService extends EventEmitter {
      * Check DNS resolution
      */
     async checkDNSResolution() {
-        this.log.info('Starting DNS resolution checks for hosts:', this.dnsTestHosts);
+        this.log.debug('Starting DNS resolution checks for hosts:', this.dnsTestHosts);
         
         // Log current DNS servers
         try {
             const dnsServers = dns.getServers();
-            this.log.info('Current DNS servers:', dnsServers);
+            this.log.debug('Current DNS servers:', dnsServers);
         } catch (error) {
-            this.log.info('Could not get DNS servers:', error.message);
+            this.log.debug('Could not get DNS servers:', error.message);
         }
         
         const checkPromises = this.dnsTestHosts.map(async (host) => {
             try {
                 const start = timeManager.now();
-                this.log.info(`DNS check starting for: ${host}`);
+                this.log.debug(`DNS check starting for: ${host}`);
                 
                 let result;
                 
@@ -602,10 +602,10 @@ class NetworkService extends EventEmitter {
                 
                 const latency = timeManager.now() - start;
                 const ips = Array.isArray(result) ? result : [result];
-                this.log.info(`DNS check SUCCESS for ${host}: resolved to ${ips.join(', ')} in ${latency}ms`);
+                this.log.debug(`DNS check SUCCESS for ${host}: resolved to ${ips.join(', ')} in ${latency}ms`);
                 return { host, success: true, latency, ips };
             } catch (error) {
-                this.log.info(`DNS check FAILED for ${host}: ${error.message}`);
+                this.log.debug(`DNS check FAILED for ${host}: ${error.message}`);
                 return { host, success: false, error: error.message };
             }
         });
@@ -694,7 +694,7 @@ class NetworkService extends EventEmitter {
         const ips = this.parseNslookupOutput(stdout);
 
         if (ips.length > 0) {
-            this.log.info(`DNS resolved via nslookup: ${host} -> ${ips.join(', ')}`);
+            this.log.debug(`DNS resolved via nslookup: ${host} -> ${ips.join(', ')}`);
             return ips;
         }
         throw new Error('No IP addresses found');
@@ -714,7 +714,7 @@ class NetworkService extends EventEmitter {
             const ipMatch = stdout.match(/ip_address:\s*([\d.]+)/g);
             if (ipMatch && ipMatch.length > 0) {
                 const ips = ipMatch.map(match => match.replace(/ip_address:\s*/, ''));
-                this.log.info(`DNS resolved via dscacheutil: ${host} -> ${ips.join(', ')}`);
+                this.log.debug(`DNS resolved via dscacheutil: ${host} -> ${ips.join(', ')}`);
                 return ips;
             }
         } catch (error) {
@@ -760,7 +760,7 @@ class NetworkService extends EventEmitter {
             const parts = stdout.trim().split(/\s+/);
             if (parts.length > 0 && parts[0]) {
                 const ips = [parts[0]];
-                this.log.info(`DNS resolved via getent: ${host} -> ${ips.join(', ')}`);
+                this.log.debug(`DNS resolved via getent: ${host} -> ${ips.join(', ')}`);
                 return ips;
             }
         } catch (error) {
@@ -791,7 +791,7 @@ class NetworkService extends EventEmitter {
         const net = require('net');
         const start = timeManager.now();
         
-        this.log.info(`Checking connectivity to ${endpoint.name} (${endpoint.host}:${endpoint.port})`);
+        this.log.debug(`Checking connectivity to ${endpoint.name} (${endpoint.host}:${endpoint.port})`);
 
         return new Promise((resolve) => {
             const socket = new net.Socket();
@@ -803,7 +803,7 @@ class NetworkService extends EventEmitter {
                 connected = true;
                 const latency = timeManager.now() - start;
                 socket.destroy();
-                this.log.info(`Connectivity SUCCESS to ${endpoint.name}: connected in ${latency}ms`);
+                this.log.debug(`Connectivity SUCCESS to ${endpoint.name}: connected in ${latency}ms`);
                 resolve({ ...endpoint, success: true, latency });
             });
 
@@ -811,9 +811,9 @@ class NetworkService extends EventEmitter {
                 if (!connected) {
                     // EADDRNOTAVAIL often happens with VPNs - treat as network routing issue, not offline
                     if (error.code === 'EADDRNOTAVAIL') {
-                        this.log.info(`Connectivity BLOCKED by VPN/firewall to ${endpoint.name}: ${error.message}`);
+                        this.log.debug(`Connectivity BLOCKED by VPN/firewall to ${endpoint.name}: ${error.message}`);
                     } else {
-                        this.log.info(`Connectivity FAILED to ${endpoint.name}: ${error.message}`);
+                        this.log.debug(`Connectivity FAILED to ${endpoint.name}: ${error.message}`);
                     }
                     resolve({ ...endpoint, success: false, error: error.message, errorCode: error.code });
                 }
@@ -822,7 +822,7 @@ class NetworkService extends EventEmitter {
             socket.on('timeout', () => {
                 socket.destroy();
                 if (!connected) {
-                    this.log.info(`Connectivity TIMEOUT to ${endpoint.name} after 3000ms`);
+                    this.log.debug(`Connectivity TIMEOUT to ${endpoint.name} after 3000ms`);
                     resolve({ ...endpoint, success: false, error: 'Timeout' });
                 }
             });
@@ -830,7 +830,7 @@ class NetworkService extends EventEmitter {
             try {
                 socket.connect(endpoint.port, endpoint.host);
             } catch (error) {
-                this.log.info(`Connectivity ERROR to ${endpoint.name}: ${error.message}`);
+                this.log.debug(`Connectivity ERROR to ${endpoint.name}: ${error.message}`);
                 resolve({ ...endpoint, success: false, error: error.message });
             }
         });

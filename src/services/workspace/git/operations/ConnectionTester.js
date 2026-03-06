@@ -581,28 +581,39 @@ class ConnectionTester {
    */
   async checkGitHubWriteAccess(token, owner, repo) {
     return new Promise((resolve) => {
-      const https = require('https');
-      
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${owner}/${repo}`,
-        method: 'GET',
-        headers: {
-          'Authorization': `token ${token}`,
-          'User-Agent': 'OpenHeaders-App',
-          'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout: 10000
-      };
+      // Use Electron's net module instead of Node's https to respect system CA store
+      // (Node's https doesn't honor app.commandLine 'use-system-ca-store')
+      const { net } = require('electron');
 
-      const req = https.request(options, (res) => {
+      const request = net.request({
+        method: 'GET',
+        protocol: 'https:',
+        hostname: 'api.github.com',
+        path: `/repos/${owner}/${repo}`
+      });
+
+      request.setHeader('Authorization', `token ${token}`);
+      request.setHeader('User-Agent', 'OpenHeaders-App');
+      request.setHeader('Accept', 'application/vnd.github.v3+json');
+
+      const timeoutId = setTimeout(() => {
+        request.abort();
+        log.error('GitHub write access check timed out');
+        resolve({
+          hasAccess: false,
+          error: 'Timeout while checking repository permissions'
+        });
+      }, 10000);
+
+      request.on('response', (res) => {
         let data = '';
-        
+
         res.on('data', (chunk) => {
           data += chunk;
         });
-        
+
         res.on('end', () => {
+          clearTimeout(timeoutId);
           try {
             if (res.statusCode === 404) {
               resolve({
@@ -611,7 +622,7 @@ class ConnectionTester {
               });
               return;
             }
-            
+
             if (res.statusCode === 403) {
               resolve({
                 hasAccess: false,
@@ -619,7 +630,7 @@ class ConnectionTester {
               });
               return;
             }
-            
+
             if (res.statusCode !== 200) {
               resolve({
                 hasAccess: false,
@@ -627,10 +638,10 @@ class ConnectionTester {
               });
               return;
             }
-            
+
             const repoData = JSON.parse(data);
             const permissions = repoData.permissions;
-            
+
             if (!permissions) {
               // No permissions field means read-only access
               resolve({
@@ -656,7 +667,8 @@ class ConnectionTester {
         });
       });
 
-      req.on('error', (error) => {
+      request.on('error', (error) => {
+        clearTimeout(timeoutId);
         log.error('Failed to check GitHub write access:', error);
         resolve({
           hasAccess: false,
@@ -664,16 +676,7 @@ class ConnectionTester {
         });
       });
 
-      req.on('timeout', () => {
-        req.destroy();
-        log.error('GitHub write access check timed out');
-        resolve({
-          hasAccess: false,
-          error: 'Timeout while checking repository permissions'
-        });
-      });
-
-      req.end();
+      request.end();
     });
   }
 
@@ -684,60 +687,63 @@ class ConnectionTester {
    */
   async validateGitHubToken(token) {
     return new Promise((resolve) => {
-      const https = require('https');
-      
-      const options = {
-        hostname: 'api.github.com',
-        path: '/user',
-        method: 'GET',
-        headers: {
-          'Authorization': `token ${token}`,
-          'User-Agent': 'OpenHeaders-App',
-          'Accept': 'application/vnd.github.v3+json'
-        },
-        timeout: 10000
-      };
+      // Use Electron's net module instead of Node's https to respect system CA store
+      // (Node's https doesn't honor app.commandLine 'use-system-ca-store')
+      const { net } = require('electron');
 
-      const req = https.request(options, (res) => {
+      const request = net.request({
+        method: 'GET',
+        protocol: 'https:',
+        hostname: 'api.github.com',
+        path: '/user'
+      });
+
+      request.setHeader('Authorization', `token ${token}`);
+      request.setHeader('User-Agent', 'OpenHeaders-App');
+      request.setHeader('Accept', 'application/vnd.github.v3+json');
+
+      const timeoutId = setTimeout(() => {
+        request.abort();
+        log.error('GitHub token validation timed out');
+        resolve({ valid: true }); // Let git handle it
+      }, 10000);
+
+      request.on('response', (res) => {
         const statusCode = res.statusCode;
-        
+
         // Consume response data to free up memory
         res.on('data', () => {});
         res.on('end', () => {
+          clearTimeout(timeoutId);
           if (statusCode === 200) {
             resolve({ valid: true });
           } else if (statusCode === 401) {
-            resolve({ 
-              valid: false, 
-              error: 'Invalid GitHub access token. Please check your token is correct and not expired.' 
+            resolve({
+              valid: false,
+              error: 'Invalid GitHub access token. Please check your token is correct and not expired.'
             });
           } else if (statusCode === 403) {
-            resolve({ 
-              valid: false, 
-              error: 'GitHub API rate limit exceeded or token lacks required permissions.' 
+            resolve({
+              valid: false,
+              error: 'GitHub API rate limit exceeded or token lacks required permissions.'
             });
           } else {
-            resolve({ 
-              valid: false, 
-              error: `GitHub API returned unexpected status: ${statusCode}` 
+            resolve({
+              valid: false,
+              error: `GitHub API returned unexpected status: ${statusCode}`
             });
           }
         });
       });
 
-      req.on('error', (error) => {
+      request.on('error', (error) => {
+        clearTimeout(timeoutId);
         log.error('Failed to validate GitHub token:', error);
         // Network error - let the regular git command handle it
         resolve({ valid: true });
       });
 
-      req.on('timeout', () => {
-        req.destroy();
-        log.error('GitHub token validation timed out');
-        resolve({ valid: true }); // Let git handle it
-      });
-
-      req.end();
+      request.end();
     });
   }
 }
