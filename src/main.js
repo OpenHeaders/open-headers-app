@@ -277,6 +277,12 @@ if (!gotTheLock) {
 
         // Store window reference for protocol handler
         protocolHandler.setMainWindow(mainWindow);
+
+        // Pass window reference to CLI API service for renderer notifications
+        const cliApiService = appLifecycle.getCliApiService();
+        if (cliApiService) {
+            cliApiService.setMainWindow(mainWindow);
+        }
         
         trayManager.createTray();
         
@@ -303,6 +309,9 @@ if (!gotTheLock) {
         app.on('activate', () => {
             if (windowManager.getAllWindows().length === 0) {
                 mainWindow = windowManager.createWindow();
+                protocolHandler.setMainWindow(mainWindow);
+                const cliApi = appLifecycle.getCliApiService();
+                if (cliApi) cliApi.setMainWindow(mainWindow);
             } else {
                 windowManager.showWindow();
             }
