@@ -119,6 +119,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
       this.setupEnvironmentListener();
       this.setupSyncListener();
       this.setupRefreshListener();
+      this.setupCliJoinListener();
       
       // Start auto-save
       this.autoSaveManager.startAutoSave(() => this.saveAll());
@@ -1037,6 +1038,72 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.eventCleanup.push(() => {
       window.removeEventListener('workspace-data-refresh-needed', handleRefresh);
     });
+  }
+
+  /**
+   * Setup listener for CLI workspace join events
+   * When the CLI API creates and activates a workspace, the renderer must
+   * reload the workspace list from disk and switch to the new workspace.
+   */
+  setupCliJoinListener() {
+    if (!window.electronAPI?.onCliWorkspaceJoined) return;
+
+    const unsubscribe = window.electronAPI.onCliWorkspaceJoined(async (data) => {
+      const { workspaceId } = data;
+      log.info(`CLI workspace joined: ${workspaceId}, reloading workspace state`);
+
+      try {
+        const previousWorkspaceId = this.state.activeWorkspaceId;
+
+        // Pause auto-save to prevent writing empty state to old workspace
+        this.setState({ isWorkspaceSwitching: true });
+        this.autoSaveManager.setWorkspaceSwitching(true);
+
+        // Save any pending changes for the current workspace
+        await this.autoSaveManager.waitForSaves();
+        await this.saveAll();
+
+        // Notify RefreshManager to clean up sources
+        window.dispatchEvent(new CustomEvent('workspace-switching', {
+          detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
+        }));
+
+        // Clear current workspace data
+        await this.clearAllData();
+
+        // Reload workspace list from disk (CLI already saved the new workspace)
+        const workspaceConfig = await this.workspaceManager.loadWorkspaces();
+
+        // Update state with reloaded workspace list and new active ID
+        this.setState({
+          workspaces: workspaceConfig.workspaces,
+          activeWorkspaceId: workspaceConfig.activeWorkspaceId,
+          syncStatus: workspaceConfig.syncStatus
+        }, ['workspaces', 'activeWorkspaceId', 'syncStatus']);
+
+        // Load the new workspace data (sources, rules, proxy rules)
+        await this.loadWorkspaceData(workspaceConfig.activeWorkspaceId);
+
+        // Notify other renderer components about the switch
+        window.dispatchEvent(new CustomEvent('workspace-switched', {
+          detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
+        }));
+        window.dispatchEvent(new CustomEvent('workspace-data-applied', {
+          detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
+        }));
+
+        this.setState({ loading: false, isWorkspaceSwitching: false });
+        this.autoSaveManager.setWorkspaceSwitching(false);
+
+        log.info(`CLI workspace switch complete: ${previousWorkspaceId} → ${workspaceConfig.activeWorkspaceId}`);
+      } catch (error) {
+        log.error('Failed to handle CLI workspace join:', error);
+        this.setState({ isWorkspaceSwitching: false });
+        this.autoSaveManager.setWorkspaceSwitching(false);
+      }
+    });
+
+    this.eventCleanup.push(unsubscribe);
   }
 
   /**
