@@ -145,6 +145,54 @@ if (!gotTheLock) {
         ipcMain.handle('createBranch', gitHandlers.handleCreateBranch);
         ipcMain.handle('checkWritePermissions', gitHandlers.handleCheckWritePermissions);
         
+        // CLI API
+        ipcMain.handle('cli-api-status', () => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (!cliApiService) return { running: false, port: 59213, discoveryPath: '', token: '', startedAt: null, totalRequests: 0 };
+            return cliApiService.getStatus();
+        });
+        ipcMain.handle('cli-api-start', async (_event, port) => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+            try {
+                if (port) cliApiService.port = Number(port);
+                await cliApiService.start();
+                return { success: true, port: cliApiService.port };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        });
+        ipcMain.handle('cli-api-stop', async () => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+            try {
+                await cliApiService.stop();
+                return { success: true };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        });
+        ipcMain.handle('cli-api-get-logs', () => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (!cliApiService) return [];
+            return cliApiService.getLogs();
+        });
+        ipcMain.handle('cli-api-clear-logs', () => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (cliApiService) cliApiService.clearLogs();
+            return { success: true };
+        });
+        ipcMain.handle('cli-api-regenerate-token', async () => {
+            const cliApiService = appLifecycle.getCliApiService();
+            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+            try {
+                const token = await cliApiService.regenerateToken();
+                return { success: true, token };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
+        });
+
         // Workspace
         ipcMain.handle('deleteWorkspaceFolder', workspaceHandlers.handleDeleteWorkspaceFolder.bind(workspaceHandlers));
         ipcMain.handle('workspace-test-connection', workspaceHandlers.handleWorkspaceTestConnection.bind(workspaceHandlers));
