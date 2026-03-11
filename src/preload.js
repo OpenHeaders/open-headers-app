@@ -16,6 +16,7 @@ const proxyAPI = require('./preload/api/proxyAPI');
 const gitAPI = require('./preload/api/gitAPI');
 const workspaceAPI = require('./preload/api/workspaceAPI');
 const videoAPI = require('./preload/api/videoAPI');
+const cliAPI = require('./preload/api/cliAPI');
 
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -48,7 +49,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ...workspaceAPI,
     
     // Video recording
-    ...videoAPI
+    ...videoAPI,
+
+    // CLI API server
+    ...cliAPI
 });
 
 // TOTP generation helper
