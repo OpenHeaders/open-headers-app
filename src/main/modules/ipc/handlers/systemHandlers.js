@@ -205,6 +205,12 @@ class SystemHandlers {
         return mapping[windowsId] || windowsId;
     }
 
+    handleShowItemInFolder(_, filePath) {
+        if (filePath && typeof filePath === 'string') {
+            shell.showItemInFolder(filePath);
+        }
+    }
+
     async handleCheckScreenRecordingPermission() {
         try {
             // Screen recording permissions only required on macOS

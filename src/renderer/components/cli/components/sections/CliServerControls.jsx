@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { App, Card, Collapse, Segmented, Space, Switch, Typography, Tag, Button, InputNumber, Alert, Divider, Tooltip } from 'antd';
 import {
     PlayCircleOutlined, PauseCircleOutlined, InfoCircleOutlined,
-    CopyOutlined, ReloadOutlined
+    CopyOutlined, ReloadOutlined, FolderOpenOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -239,6 +239,9 @@ const CliServerControls = ({
                                 </Text>
                                 <Tooltip title="Copy path">
                                     <Button type="text" size="small" icon={<CopyOutlined />} onClick={handleCopyPath} />
+                                </Tooltip>
+                                <Tooltip title="Reveal in file manager">
+                                    <Button type="text" size="small" icon={<FolderOpenOutlined />} onClick={() => window.electronAPI.showItemInFolder(status.discoveryPath)} />
                                 </Tooltip>
                             </Space>
                         )}

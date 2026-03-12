@@ -195,7 +195,13 @@ class WorkspaceHandlers {
                     browserCounts: {},
                     clients: [],
                     wsServerRunning: false,
-                    wssServerRunning: false
+                    wssServerRunning: false,
+                    wsPort: 59210,
+                    wssPort: 59211,
+                    certificateFingerprint: null,
+                    certificatePath: null,
+                    certificateExpiry: null,
+                    certificateSubject: null
                 };
             }
             return webSocketService.getConnectionStatus();
@@ -207,8 +213,48 @@ class WorkspaceHandlers {
                 clients: [],
                 wsServerRunning: false,
                 wssServerRunning: false,
+                wsPort: 59210,
+                wssPort: 59211,
+                certificateFingerprint: null,
+                certificatePath: null,
                 error: error.message
             };
+        }
+    }
+
+    async handleWsCheckCertTrust() {
+        try {
+            if (!webSocketService) {
+                return { trusted: false, error: 'WebSocket service not available' };
+            }
+            return await webSocketService.checkCertificateTrust();
+        } catch (error) {
+            log.error('Error checking certificate trust:', error);
+            return { trusted: false, error: error.message };
+        }
+    }
+
+    async handleWsTrustCert() {
+        try {
+            if (!webSocketService) {
+                return { success: false, error: 'WebSocket service not available' };
+            }
+            return await webSocketService.trustCertificate();
+        } catch (error) {
+            log.error('Error trusting certificate:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    async handleWsUntrustCert() {
+        try {
+            if (!webSocketService) {
+                return { success: false, error: 'WebSocket service not available' };
+            }
+            return await webSocketService.untrustCertificate();
+        } catch (error) {
+            log.error('Error untrusting certificate:', error);
+            return { success: false, error: error.message };
         }
     }
 
