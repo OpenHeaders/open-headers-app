@@ -55,7 +55,7 @@ const ProxyServerControls = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Space>
                         <Title level={4} style={{ margin: 0 }}>Proxy Server</Title>
-                        <Tag color={proxyStatus.running ? 'default' : 'warning'}>
+                        <Tag color={proxyStatus.running ? 'success' : 'warning'}>
                             {proxyStatus.running ? `Running` : 'Stopped'}
                         </Tag>
                     </Space>
