@@ -6,17 +6,15 @@ import {
     ApiOutlined,
     ClusterOutlined,
     TeamOutlined,
-    DatabaseOutlined,
-    CodeOutlined
+    SettingOutlined
 } from '@ant-design/icons';
 import SourceForm from '../sources/SourceForm';
 import SourceTable from '../sources/SourceTable';
 import { WorkflowRecording, WorkflowDetails } from '../features/workflow-recording';
-import ProxyServer from '../proxy/ProxyServer';
-import CliServer from '../cli/CliServer';
 import Rules from '../rules/Rules';
 import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
+import ServerConfig from '../server-config/ServerConfig';
 
 export function AppTabs({
                             activeTab,
@@ -182,30 +180,16 @@ export function AppTabs({
             )
         },
         {
-            key: 'proxy-server',
+            key: 'server-config',
             label: (
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <DatabaseOutlined />
-          Proxy
-        </span>
+                    <SettingOutlined />
+                    Server Config
+                </span>
             ),
             children: (
                 <div className="content-container">
-                    <ProxyServer />
-                </div>
-            )
-        },
-        {
-            key: 'cli-server',
-            label: (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <CodeOutlined />
-          CLI
-        </span>
-            ),
-            children: (
-                <div className="content-container">
-                    <CliServer active={activeTab === 'cli-server'} />
+                    <ServerConfig activeParentTab={activeTab} />
                 </div>
             )
         }

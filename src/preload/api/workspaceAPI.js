@@ -3,6 +3,9 @@ const { ipcRenderer } = require('electron');
 const workspaceAPI = {
     // WebSocket status
     wsGetConnectionStatus: () => ipcRenderer.invoke('ws-get-connection-status'),
+    wsCheckCertTrust: () => ipcRenderer.invoke('ws-check-cert-trust'),
+    wsTrustCert: () => ipcRenderer.invoke('ws-trust-cert'),
+    wsUntrustCert: () => ipcRenderer.invoke('ws-untrust-cert'),
     
     // Core workspace operations
     initializeWorkspaceSync: (workspaceId) => ipcRenderer.invoke('initializeWorkspaceSync', workspaceId),
