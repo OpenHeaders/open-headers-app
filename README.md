@@ -2,6 +2,12 @@
 
 ![Open Headers Logo](./src/ui/images/icon128.png)
 
+[![Build and Release](https://github.com/OpenHeaders/open-headers-app/actions/workflows/build.yml/badge.svg)](https://github.com/OpenHeaders/open-headers-app/actions/workflows/build.yml)
+[![GitHub release](https://img.shields.io/github/v/release/OpenHeaders/open-headers-app)](https://github.com/OpenHeaders/open-headers-app/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/OpenHeaders/open-headers-app/total)](https://github.com/OpenHeaders/open-headers-app/releases)
+[![License: MIT](https://img.shields.io/github/license/OpenHeaders/open-headers-app)](LICENSE.md)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)]()
+
 Browser development toolkit for recording workflows, modifying HTTP traffic, and team collaboration.
 
 ## What it does

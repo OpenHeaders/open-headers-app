@@ -197,7 +197,7 @@ const CliServerControls = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Space>
                         <Title level={4} style={{ margin: 0 }}>CLI Server</Title>
-                        <Tag color={status.running ? 'default' : 'warning'}>
+                        <Tag color={status.running ? 'success' : 'warning'}>
                             {status.running ? 'Running' : 'Stopped'}
                         </Tag>
                     </Space>

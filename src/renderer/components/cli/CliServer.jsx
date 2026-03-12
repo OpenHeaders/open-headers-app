@@ -48,7 +48,7 @@ const CliServer = ({ active }) => {
                 onRegenerateToken={regenerateToken}
             />
 
-            {status.running && (
+            {(status.running || allLogs.length > 0) && (
                 <CliServerLogs
                     logs={logs}
                     allLogs={allLogs}

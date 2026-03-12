@@ -39,12 +39,12 @@ const CliServerLogs = ({
             title: 'Time',
             dataIndex: 'timestamp',
             key: 'timestamp',
-            width: 100,
+            width: 150,
             defaultSortOrder: 'descend',
             sorter: (a, b) => a.timestamp - b.timestamp,
             render: (ts) => {
                 const date = new Date(ts);
-                return <Text type="secondary" style={{ fontSize: 12 }}>{date.toLocaleTimeString('en-GB', { hour12: false })}</Text>;
+                return <Text type="secondary" style={{ fontSize: 12 }}>{date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</Text>;
             }
         },
         {
