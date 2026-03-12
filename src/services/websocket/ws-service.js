@@ -324,20 +324,50 @@ class WebSocketService {
 
             // Check if certificates already exist (try both .cert and .crt extensions)
             if (fs.existsSync(keyPath) && (fs.existsSync(certPath) || fs.existsSync(certPathAlt))) {
-                log.info('Using existing certificate files');
-                
-                // Use whichever certificate file exists
                 const actualCertPath = fs.existsSync(certPath) ? certPath : certPathAlt;
-
-                // Calculate and store fingerprint
                 const cert = fs.readFileSync(actualCertPath);
-                const fingerprint = this._calculateCertFingerprint(cert);
+                const { validTo } = this._parseCertificateInfo(cert);
 
-                // Store the paths
+                // Auto-renew if expiring within 30 days or already expired
+                const RENEWAL_THRESHOLD_DAYS = 30;
+                if (validTo) {
+                    const daysLeft = Math.ceil((new Date(validTo) - Date.now()) / (1000 * 60 * 60 * 24));
+                    if (daysLeft <= RENEWAL_THRESHOLD_DAYS) {
+                        log.info(`Certificate expires in ${daysLeft} days, auto-renewing...`);
+                        try {
+                            fs.unlinkSync(actualCertPath);
+                            fs.unlinkSync(keyPath);
+                            await this._generateCertificates(certsDir, keyPath, certPath);
+                            const newCertPath = fs.existsSync(certPath) ? certPath : certPathAlt;
+                            const newCert = fs.readFileSync(newCertPath);
+                            const fingerprint = this._calculateCertFingerprint(newCert);
+                            const info = this._parseCertificateInfo(newCert);
+                            this.certificatePaths = {
+                                keyPath,
+                                certPath: newCertPath,
+                                fingerprint,
+                                validTo: info.validTo,
+                                subject: info.subject
+                            };
+                            log.info('Certificate auto-renewed successfully');
+                            return { success: true, renewed: true };
+                        } catch (renewError) {
+                            log.warn('Certificate auto-renewal failed, using existing cert:', renewError.message);
+                            // Fall through to use existing cert
+                        }
+                    }
+                }
+
+                log.info('Using existing certificate files');
+                const fingerprint = this._calculateCertFingerprint(cert);
+                const { subject } = this._parseCertificateInfo(cert);
+
                 this.certificatePaths = {
                     keyPath,
                     certPath: actualCertPath,
-                    fingerprint
+                    fingerprint,
+                    validTo,
+                    subject
                 };
 
                 return { success: true };
@@ -352,16 +382,19 @@ class WebSocketService {
 
                 // After generation, check which certificate file actually exists
                 const actualCertPath = fs.existsSync(certPath) ? certPath : certPathAlt;
-                
-                // Calculate and store fingerprint
+
+                // Calculate and store fingerprint + metadata
                 const cert = fs.readFileSync(actualCertPath);
                 const fingerprint = this._calculateCertFingerprint(cert);
+                const { validTo, subject } = this._parseCertificateInfo(cert);
 
                 // Store the paths
                 this.certificatePaths = {
                     keyPath,
                     certPath: actualCertPath,
-                    fingerprint
+                    fingerprint,
+                    validTo,
+                    subject
                 };
 
                 return { success: true };
@@ -409,7 +442,7 @@ class WebSocketService {
                     // Generate private key
                     execSync(`openssl genrsa -out "${keyPath}" 2048`);
                     // Generate self-signed certificate
-                    execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 397 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
+                    execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 397 -subj "/O=OpenHeaders/CN=OpenHeaders localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
                     log.info('Successfully generated certificate files with OpenSSL');
                     return;
                 } catch (opensslError) {
@@ -455,18 +488,32 @@ class WebSocketService {
      */
     _calculateCertFingerprint(cert) {
         try {
-            const fingerprint = crypto
-                .createHash('sha1')
-                .update(cert)
-                .digest('hex')
-                .match(/.{2}/g)
-                .join(':')
-                .toUpperCase();
-
-            return fingerprint;
+            // Use X509Certificate to get the proper DER-based SHA-1 fingerprint
+            // This matches what OS tools (macOS security, Windows certutil) compute
+            const x509 = new crypto.X509Certificate(cert);
+            return x509.fingerprint.toUpperCase(); // "AB:CD:EF:..." format
         } catch (error) {
             log.error('Error calculating certificate fingerprint:', error);
             return 'UNKNOWN_FINGERPRINT';
+        }
+    }
+
+    /**
+     * Parse certificate metadata (expiry and subject)
+     * @private
+     * @param {Buffer} cert - Certificate buffer
+     * @returns {{validTo: string|null, subject: string|null}}
+     */
+    _parseCertificateInfo(cert) {
+        try {
+            const x509 = new crypto.X509Certificate(cert);
+            return {
+                validTo: new Date(x509.validTo).toISOString(),
+                subject: x509.subject || null
+            };
+        } catch (error) {
+            log.warn('Could not parse certificate info:', error.message);
+            return { validTo: null, subject: null };
         }
     }
 
@@ -600,8 +647,14 @@ class WebSocketService {
                     if (data.type === 'browserInfo' && data.browser) {
                         const client = this.connectedClients.get(clientId);
                         if (client) {
-                            client.browser = data.browser;
-                            client.browserVersion = data.version || client.browserVersion;
+                            // Prefer server-side UA detection over extension self-report
+                            // (e.g. Edge's extension reports 'chrome' due to detection order bug)
+                            if (client.browser === 'unknown') {
+                                client.browser = data.browser;
+                            }
+                            if (!client.browserVersion) {
+                                client.browserVersion = data.version || client.browserVersion;
+                            }
                             client.extensionVersion = data.extensionVersion;
                         }
                     }
@@ -2051,8 +2104,235 @@ class WebSocketService {
                 extensionVersion: client.extensionVersion
             })),
             wsServerRunning: this.wss !== null,
-            wssServerRunning: this.secureWss !== null
+            wssServerRunning: this.secureWss !== null,
+            wsPort: this.wsPort,
+            wssPort: this.wssPort,
+            certificateFingerprint: this.certificatePaths.fingerprint || null,
+            certificatePath: this.certificatePaths.certPath || null,
+            certificateExpiry: this.certificatePaths.validTo || null,
+            certificateSubject: this.certificatePaths.subject || null
         };
+    }
+
+    /**
+     * Check if the WSS certificate is trusted by the OS
+     * @returns {Promise<{trusted: boolean, error?: string}>}
+     */
+    async checkCertificateTrust() {
+        const certPath = this.certificatePaths.certPath;
+        if (!certPath || !fs.existsSync(certPath)) {
+            return { trusted: false, error: 'Certificate file not found' };
+        }
+
+        try {
+            const platform = process.platform;
+
+            if (platform === 'darwin') {
+                // macOS: check if our cert is present in a keychain by SHA-1 fingerprint
+                // We use find-certificate (presence check) because:
+                // - verify-cert gives false positives on some macOS versions
+                // - dump-trust-settings doesn't cover all trust mechanisms
+                // The cancelled-auth edge case (cert added without trust) is handled by
+                // cleaning up the partial cert in trustCertificate's catch block
+                const fingerprint = this.certificatePaths.fingerprint;
+                if (!fingerprint) return { trusted: false };
+                const sha1 = fingerprint.replace(/:/g, '').toUpperCase();
+                try {
+                    const output = execSync('security find-certificate -a -Z', { stdio: 'pipe', encoding: 'utf8' });
+                    return { trusted: output.includes(sha1) };
+                } catch {
+                    return { trusted: false };
+                }
+            }
+
+            if (platform === 'win32') {
+                // Windows: check user Root store for our cert's thumbprint
+                // certutil output format: "Cert Hash(sha1): ab cd ef 12 34 ..."
+                const fingerprint = this.certificatePaths.fingerprint;
+                if (!fingerprint) return { trusted: false };
+                const thumbprint = fingerprint.replace(/:/g, ' ').toLowerCase();
+                try {
+                    const output = execSync('certutil -store -user Root', { stdio: 'pipe', encoding: 'utf8' });
+                    return { trusted: output.toLowerCase().includes(thumbprint) };
+                } catch {
+                    return { trusted: false };
+                }
+            }
+
+            if (platform === 'linux') {
+                // Linux: check Chrome/Chromium NSS database
+                const nssDb = path.join(process.env.HOME || '', '.pki', 'nssdb');
+                try {
+                    execSync(`certutil -d sql:"${nssDb}" -L -n "OpenHeaders localhost"`, { stdio: 'pipe' });
+                    return { trusted: true };
+                } catch {
+                    return { trusted: false };
+                }
+            }
+
+            return { trusted: false, error: `Unsupported platform: ${platform}` };
+        } catch (error) {
+            log.error('Error checking certificate trust:', error);
+            return { trusted: false, error: error.message };
+        }
+    }
+
+    /**
+     * Trust the WSS certificate in the OS trust store
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async trustCertificate() {
+        const certPath = this.certificatePaths.certPath;
+        if (!certPath || !fs.existsSync(certPath)) {
+            return { success: false, error: 'Certificate file not found' };
+        }
+
+        try {
+            const platform = process.platform;
+            let result;
+
+            if (platform === 'darwin') {
+                // macOS: add to user's login keychain (prompts for fingerprint/password)
+                try {
+                    execSync(`security add-trusted-cert -r trustRoot -k ~/Library/Keychains/login.keychain-db "${certPath}"`, { stdio: 'pipe' });
+                    log.info('Certificate added to macOS login keychain');
+                    result = { success: true };
+                } catch (error) {
+                    // Cancelled auth may leave the cert in keychain without trust — clean it up
+                    // Note: no -t flag to avoid triggering a second auth prompt
+                    try {
+                        execSync(`security delete-certificate -c "OpenHeaders localhost" ~/Library/Keychains/login.keychain-db`, { stdio: 'pipe' });
+                        log.info('Cleaned up partially-added certificate after cancelled auth');
+                    } catch { /* cert wasn't added, nothing to clean */ }
+                    return { success: false, error: 'Authorization was cancelled' };
+                }
+            } else if (platform === 'win32') {
+                // Windows: add to user's personal root store (no admin needed, shows security dialog)
+                try {
+                    execSync(`certutil -addstore -user Root "${certPath}"`, { stdio: 'pipe' });
+                    log.info('Certificate added to Windows user Root store');
+                    result = { success: true };
+                } catch (error) {
+                    const msg = (error.message || '').toLowerCase();
+                    if (msg.includes('denied') || msg.includes('policy')) {
+                        return { success: false, error: 'Your organization\'s policy prevents adding certificates. Contact your IT administrator.' };
+                    }
+                    return { success: false, error: 'Failed to add certificate — please confirm the Windows security dialog when prompted' };
+                }
+            } else if (platform === 'linux') {
+                // Linux: add to Chrome/Chromium NSS database (no sudo needed)
+                const nssDb = path.join(process.env.HOME || '', '.pki', 'nssdb');
+                try {
+                    if (!fs.existsSync(nssDb)) {
+                        fs.mkdirSync(nssDb, { recursive: true });
+                        execSync(`certutil -d sql:"${nssDb}" -N --empty-password`, { stdio: 'pipe' });
+                    }
+                    try {
+                        execSync(`certutil -d sql:"${nssDb}" -D -n "OpenHeaders localhost"`, { stdio: 'pipe' });
+                    } catch { /* ignore */ }
+                    execSync(`certutil -d sql:"${nssDb}" -A -n "OpenHeaders localhost" -t "C,," -i "${certPath}"`, { stdio: 'pipe' });
+                    log.info('Certificate added to Linux NSS database');
+                    result = { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message || 'Failed to add certificate — ensure libnss3-tools is installed (apt install libnss3-tools)' };
+                }
+            } else {
+                return { success: false, error: `Unsupported platform: ${platform}` };
+            }
+
+            // Notify connected extensions so they can upgrade from WS to WSS
+            if (result.success) {
+                this._broadcastCertificateTrustChanged(true);
+            }
+
+            return result;
+        } catch (error) {
+            log.error('Error trusting certificate:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Remove the WSS certificate from the OS trust store
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async untrustCertificate() {
+        const certPath = this.certificatePaths.certPath;
+        if (!certPath || !fs.existsSync(certPath)) {
+            return { success: false, error: 'Certificate file not found' };
+        }
+
+        try {
+            const platform = process.platform;
+
+            if (platform === 'darwin') {
+                try {
+                    execSync(`security delete-certificate -c "OpenHeaders localhost" ~/Library/Keychains/login.keychain-db`, { stdio: 'pipe' });
+                    log.info('Certificate removed from macOS login keychain');
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                }
+            }
+
+            if (platform === 'win32') {
+                // Find and delete by CN from user Root store
+                try {
+                    execSync(`certutil -delstore -user Root "OpenHeaders localhost"`, { stdio: 'pipe' });
+                    log.info('Certificate removed from Windows user Root store');
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                }
+            }
+
+            if (platform === 'linux') {
+                const nssDb = path.join(process.env.HOME || '', '.pki', 'nssdb');
+                try {
+                    execSync(`certutil -d sql:"${nssDb}" -D -n "OpenHeaders localhost"`, { stdio: 'pipe' });
+                    log.info('Certificate removed from Linux NSS database');
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                }
+            }
+
+            return { success: false, error: `Unsupported platform: ${platform}` };
+        } catch (error) {
+            log.error('Error untrusting certificate:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Broadcast certificate trust status change to all connected extensions
+     * @private
+     * @param {boolean} trusted - Whether the certificate is now trusted
+     */
+    _broadcastCertificateTrustChanged(trusted) {
+        try {
+            const message = JSON.stringify({
+                type: 'certificateTrustChanged',
+                trusted
+            });
+
+            let clientCount = 0;
+            const sendToAll = (server) => {
+                if (!server) return;
+                server.clients.forEach(client => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(message);
+                        clientCount++;
+                    }
+                });
+            };
+
+            sendToAll(this.wss);
+            sendToAll(this.secureWss);
+            log.info(`Broadcasted certificate trust change to ${clientCount} extensions`);
+        } catch (error) {
+            log.error('Failed to broadcast certificate trust change:', error);
+        }
     }
 
     /**
