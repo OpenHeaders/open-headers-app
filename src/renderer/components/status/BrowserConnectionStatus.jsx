@@ -22,6 +22,7 @@ const BrowserConnectionStatus = () => {
         wssServerRunning: false
     });
     const [proxyStatus, setProxyStatus] = useState({ running: false, port: 59212 });
+    const [cliStatus, setCliStatus] = useState({ running: false, port: 59213 });
     const [isLoading, setIsLoading] = useState(true);
 
     // Browser icon mapping
@@ -74,15 +75,29 @@ const BrowserConnectionStatus = () => {
         }
     };
 
+    // Fetch CLI server status
+    const fetchCliStatus = async () => {
+        try {
+            if (window.electronAPI && window.electronAPI.cliApiStatus) {
+                const status = await window.electronAPI.cliApiStatus();
+                setCliStatus(status);
+            }
+        } catch (error) {
+            console.error('Failed to fetch CLI status:', error);
+        }
+    };
+
     useEffect(() => {
         // Initial fetch
         fetchConnectionStatus();
         fetchProxyStatus();
+        fetchCliStatus();
 
         // Set up periodic updates
         const interval = setInterval(() => {
             fetchConnectionStatus();
             fetchProxyStatus();
+            fetchCliStatus();
         }, 5000);
 
         // Listen for connection status updates from main process
@@ -129,6 +144,11 @@ const BrowserConnectionStatus = () => {
                     <div>
                         <Tag color={proxyStatus.running ? "green" : "red"}>
                             Proxy Server: {proxyStatus.running ? "Running" : "Stopped"}
+                        </Tag>
+                    </div>
+                    <div>
+                        <Tag color={cliStatus.running ? "green" : "red"}>
+                            CLI Server: {cliStatus.running ? "Running" : "Stopped"}
                         </Tag>
                     </div>
                 </Space>

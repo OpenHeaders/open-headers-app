@@ -40,7 +40,7 @@ class CertificateGenerator {
 
     const attrs = [{
       name: 'commonName',
-      value: 'localhost'
+      value: 'OpenHeaders localhost'
     }, {
       name: 'countryName',
       value: 'US'

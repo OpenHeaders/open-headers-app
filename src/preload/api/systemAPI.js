@@ -6,6 +6,7 @@ const systemAPI = {
     
     getAppVersion: () => ipcRenderer.invoke('getAppVersion'),
     openExternal: (url) => ipcRenderer.invoke('openExternal', url),
+    showItemInFolder: (filePath) => ipcRenderer.invoke('showItemInFolder', filePath),
     getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
     
     checkScreenRecordingPermission: () => ipcRenderer.invoke('checkScreenRecordingPermission'),
