@@ -48,8 +48,8 @@ export function AppTabs({
         onTabChange(key);
         setTimeout(() => {
             const newContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
-            if (newContainer && tabScrollPositions[key] !== undefined) {
-                newContainer.scrollTop = tabScrollPositions[key];
+            if (newContainer) {
+                newContainer.scrollTop = tabScrollPositions[key] || 0;
             }
         }, 0);
     };
