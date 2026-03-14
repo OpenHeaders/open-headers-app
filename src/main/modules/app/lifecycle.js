@@ -18,6 +18,7 @@ const log = createLogger('AppLifecycle');
 class AppLifecycle {
     constructor() {
         this.isQuitting = false;
+        this._cleanupDone = false;
         this.fileWatchers = new Map();
         this.services = new Map(); // Replace global variables with instance storage
     }
@@ -170,9 +171,27 @@ class AppLifecycle {
     }
 
     async beforeQuit() {
+        if (this._cleanupDone) return; // Prevent double cleanup (installUpdate + before-quit event)
+        this._cleanupDone = true;
         this.isQuitting = true;
         AppStateMachine.shutdown();
 
+        // Wrap cleanup in a timeout to prevent hanging on exit
+        // (e.g., a service.stop() waiting for connections that never drain)
+        await Promise.race([
+            this._performCleanup(),
+            new Promise(resolve => setTimeout(() => {
+                log.warn('Shutdown cleanup timed out after 5s, proceeding with exit');
+                resolve();
+            }, 5000))
+        ]);
+    }
+
+    /**
+     * Perform actual cleanup of all services and resources
+     * @private
+     */
+    async _performCleanup() {
         for (const watcher of this.fileWatchers.values()) {
             watcher.close();
         }
@@ -196,7 +215,7 @@ class AppLifecycle {
                 log.error('Error shutting down sync scheduler:', error);
             }
         }
-        
+
         try {
             await serviceRegistry.shutdownAll();
             log.info('All services shut down successfully');
@@ -221,6 +240,10 @@ class AppLifecycle {
 
     getCliApiService() {
         return this.services.get('cliApiService');
+    }
+
+    isCleanupDone() {
+        return this._cleanupDone;
     }
 
     isQuittingApp() {

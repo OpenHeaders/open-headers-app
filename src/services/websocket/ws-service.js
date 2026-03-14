@@ -162,16 +162,8 @@ class WebSocketService {
             // Configure WebSocket server events
             this._configureWebSocketServer(this.wss, 'WS');
 
-            // Add error handler for HTTP server
-            this.httpServer.on('error', (error) => {
-                log.error(`HTTP server error on port ${this.wsPort}:`, error);
-                if (error.code === 'EADDRINUSE') {
-                    log.error(`Port ${this.wsPort} is already in use`);
-                }
-            });
-
-            // Start listening
-            this.httpServer.listen(this.wsPort, this.host, () => {
+            // Start listening with retry (handles EADDRINUSE from Windows update race)
+            this._listenWithRetry(this.httpServer, this.wsPort, this.host, 'WS', () => {
                 log.info(`WebSocket server (WS) listening on ${this.host}:${this.wsPort}`);
             });
         } catch (error) {
@@ -286,16 +278,8 @@ class WebSocketService {
             // Configure WebSocket server events
             this._configureWebSocketServer(this.secureWss, 'WSS');
 
-            // Add error handler for HTTPS server
-            this.httpsServer.on('error', (error) => {
-                log.error(`HTTPS server error on port ${this.wssPort}:`, error);
-                if (error.code === 'EADDRINUSE') {
-                    log.error(`Port ${this.wssPort} is already in use`);
-                }
-            });
-
-            // Start listening
-            this.httpsServer.listen(this.wssPort, this.host, () => {
+            // Start listening with retry (handles EADDRINUSE from Windows update race)
+            this._listenWithRetry(this.httpsServer, this.wssPort, this.host, 'WSS', () => {
                 log.info(`Secure WebSocket server (WSS) listening on ${this.host}:${this.wssPort}`);
                 log.info(`Certificate fingerprint: ${this.certificatePaths.fingerprint}`);
             });
@@ -788,10 +772,13 @@ class WebSocketService {
         
         // Store the updated sources
         this.sources = sources;
-        
-        // Sync proxy service with new sources
-        this._syncProxyService();
-        
+
+        // NOTE: Don't call _syncProxyService() here — proxy is already updated by:
+        // - autoStartProxy (at startup)
+        // - BroadcastManager (during workspace init / switch)
+        // - handleWorkspaceSwitched IPC (during workspace switch)
+        // Calling it here caused duplicate proxy updates on every source broadcast.
+
         // Immediately broadcast to all connected clients
         this._broadcastSources();
         
@@ -2776,40 +2763,94 @@ class WebSocketService {
     }
 
     /**
-     * Close all WebSocket servers
+     * Close all WebSocket servers and release ports
      */
-    close() {
-        // Stop client cleanup
+    async close() {
+        // Stop client cleanup interval
         if (this.clientCleanupInterval) {
             clearInterval(this.clientCleanupInterval);
             this.clientCleanupInterval = null;
         }
 
-        // Clear connected clients
+        // Terminate all tracked WebSocket client connections
+        for (const [clientId, clientInfo] of this.connectedClients) {
+            try {
+                if (clientInfo.ws) clientInfo.ws.terminate();
+            } catch (err) { /* ignore during shutdown */ }
+        }
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
-        
-        // Close WS server
+
+        // Terminate any remaining clients tracked by WebSocket.Server
         if (this.wss) {
-            try {
-                this.wss.close();
-                if (this.httpServer) this.httpServer.close();
-                log.info(`WebSocket server (WS) on ${this.host}:${this.wsPort} closed`);
-            } catch (error) {
-                log.error('Error closing WS server:', error);
+            for (const client of this.wss.clients) {
+                try { client.terminate(); } catch (err) { /* ignore */ }
+            }
+        }
+        if (this.secureWss) {
+            for (const client of this.secureWss.clients) {
+                try { client.terminate(); } catch (err) { /* ignore */ }
             }
         }
 
-        // Close WSS server
-        if (this.secureWss) {
-            try {
-                this.secureWss.close();
-                if (this.httpsServer) this.httpsServer.close();
-                log.info(`Secure WebSocket server (WSS) on ${this.host}:${this.wssPort} closed`);
-            } catch (error) {
-                log.error('Error closing WSS server:', error);
+        // Close servers with timeout to ensure ports are released
+        const closeServer = (httpServer, wsServer, label) => {
+            if (!httpServer) return Promise.resolve();
+            return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    log.warn(`${label} close timed out after 2s, forcing`);
+                    resolve();
+                }, 2000);
+
+                // Close WebSocket server first (stops upgrade handling)
+                try { wsServer?.close(); } catch (e) { /* ignore */ }
+
+                // Then close HTTP server (releases port)
+                httpServer.close(() => {
+                    clearTimeout(timeout);
+                    log.info(`${label} server closed`);
+                    resolve();
+                });
+            });
+        };
+
+        await closeServer(this.httpServer, this.wss, 'WS');
+        await closeServer(this.httpsServer, this.secureWss, 'WSS');
+        log.info('All WebSocket servers closed');
+    }
+
+    /**
+     * Listen on a port with retry logic for EADDRINUSE.
+     * Handles the Windows auto-update race where the old process
+     * may not have released ports before the new process starts.
+     * @private
+     */
+    _listenWithRetry(server, port, host, label, onListening) {
+        const maxRetries = 5;
+        const retryDelay = 500;
+        let attempts = 0;
+
+        const retryHandler = (error) => {
+            if (error.code === 'EADDRINUSE' && attempts < maxRetries) {
+                attempts++;
+                log.warn(`${label} port ${port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
+                setTimeout(() => server.listen(port, host), retryDelay);
+            } else {
+                log.error(`${label} server error on port ${port}:`, error);
             }
-        }
+        };
+
+        server.on('error', retryHandler);
+
+        server.once('listening', () => {
+            server.removeListener('error', retryHandler);
+            if (attempts > 0) {
+                log.info(`${label} server bound to port ${port} after ${attempts} retries`);
+            }
+            if (onListening) onListening();
+        });
+
+        server.listen(port, host);
     }
 
     /**

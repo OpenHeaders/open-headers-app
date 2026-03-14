@@ -24,6 +24,7 @@ class ProxyService extends EventEmitter {
         this.server = null;
         this.port = 59212;
         this.isRunning = false;
+        this._connections = new Set(); // Track active connections for clean shutdown
         
         // Rule management
         this.ruleStore = new ProxyRuleStore();
@@ -126,15 +127,42 @@ class ProxyService extends EventEmitter {
                 this.handleRequest(req, res);
             });
 
-            // Start listening
+            // Track connections for clean shutdown (prevents server.close() from hanging)
+            this.server.on('connection', (socket) => {
+                this._connections.add(socket);
+                socket.once('close', () => this._connections.delete(socket));
+            });
+
+            // Start listening with retry (handles EADDRINUSE from Windows update race)
             await new Promise((resolve, reject) => {
-                this.server.listen(this.port, '127.0.0.1', () => {
+                let attempts = 0;
+                const maxRetries = 5;
+                const retryDelay = 500;
+
+                const retryHandler = (error) => {
+                    if (error.code === 'EADDRINUSE' && attempts < maxRetries) {
+                        attempts++;
+                        this.log.warn(`Proxy port ${this.port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
+                        setTimeout(() => this.server.listen(this.port, '127.0.0.1'), retryDelay);
+                    } else {
+                        this.server.removeListener('error', retryHandler);
+                        reject(error);
+                    }
+                };
+
+                this.server.on('error', retryHandler);
+
+                this.server.once('listening', () => {
+                    this.server.removeListener('error', retryHandler);
                     this.isRunning = true;
                     this.log.info(`Proxy server started on port ${this.port}`);
+                    if (attempts > 0) {
+                        this.log.info(`Proxy server bound after ${attempts} retries`);
+                    }
                     resolve();
                 });
-                
-                this.server.on('error', reject);
+
+                this.server.listen(this.port, '127.0.0.1');
             });
 
             return { success: true, port: this.port };
@@ -154,20 +182,34 @@ class ProxyService extends EventEmitter {
         }
 
         try {
-            await new Promise((resolve, reject) => {
+            // Destroy all active connections so server.close() completes immediately
+            // (without this, keep-alive connections block close() indefinitely on Windows)
+            for (const socket of this._connections) {
+                try { socket.destroy(); } catch (e) { /* ignore */ }
+            }
+            this._connections.clear();
+
+            await new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    this.log.warn('Proxy server close timed out after 2s, forcing');
+                    this.isRunning = false;
+                    resolve();
+                }, 2000);
+
                 this.server.close((err) => {
+                    clearTimeout(timeout);
                     if (err) {
-                        reject(err);
-                    } else {
-                        this.isRunning = false;
-                        resolve();
+                        this.log.warn('Proxy server close error:', err.message);
                     }
+                    this.isRunning = false;
+                    resolve();
                 });
             });
 
             return { success: true };
         } catch (error) {
             this.log.error('Failed to stop proxy server:', error);
+            this.isRunning = false;
             return { success: false, error: error.message };
         }
     }
