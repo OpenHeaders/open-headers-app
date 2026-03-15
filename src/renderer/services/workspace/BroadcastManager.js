@@ -12,13 +12,16 @@ class BroadcastManager {
   /**
    * Broadcast current state to WebSocket and proxy
    */
-  async broadcastState(sources, headerRules) {
+  async broadcastState(sources, headerRules, { includeWebSocket = false } = {}) {
     try {
-      // Update WebSocket with sources
-      if (this.electronAPI.updateWebSocketSources) {
+      // WebSocket source broadcasting is normally handled by WebSocketContext
+      // (with cleaning, debouncing, and change detection).
+      // However, during workspace switches WebSocketContext suppresses broadcasts,
+      // so the caller passes includeWebSocket: true in that case.
+      if (includeWebSocket && this.electronAPI.updateWebSocketSources) {
         this.electronAPI.updateWebSocketSources(sources);
       }
-      
+
       // Update proxy with header rules
       if (this.electronAPI.proxyUpdateHeaderRules) {
         await this.electronAPI.proxyUpdateHeaderRules(headerRules);

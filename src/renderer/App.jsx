@@ -244,6 +244,11 @@ const AppComponent = () => {
         }
     }, [showImportModal, importModalVisible]);
 
+    // Signal to main process that renderer is ready (once)
+    useEffect(() => {
+        window.electronAPI?.signalRendererReady?.();
+    }, []);
+
     // Listen for team workspace invite events
     useEffect(() => {
         console.log('=== SETTING UP IPC LISTENERS IN APP.JSX ===');
@@ -285,10 +290,6 @@ const AppComponent = () => {
             console.log('onProcessEnvironmentConfigImport exists:', typeof window.electronAPI?.onProcessEnvironmentConfigImport);
             handleEnvironmentConfigImport(envData);
         });
-
-        // Signal to main process that renderer is ready for protocol messages
-        window.electronAPI?.signalRendererReady?.();
-        console.log('Signaled to main process that renderer is ready');
 
         return () => {
             // Cleanup listeners

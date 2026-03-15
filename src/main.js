@@ -227,7 +227,9 @@ if (!gotTheLock) {
             app.quit();
         });
         ipcMain.on('restartApp', () => {
-            app.relaunch();
+            if (!autoUpdater.updateDownloaded) {
+                app.relaunch();
+            }
             app.quit();
         });
         
@@ -446,9 +448,30 @@ if (!gotTheLock) {
         log.info('No protocol URL found in initial argv');
     }
 
-    app.on('before-quit', async () => {
+    app.on('before-quit', (event) => {
+        // If cleanup already done (e.g., installUpdate called beforeQuit explicitly),
+        // let the quit proceed without blocking.
+        if (appLifecycle.isCleanupDone()) return;
+
+        // Prevent default quit — Electron doesn't await async handlers,
+        // so we hold the quit until servers are properly closed.
+        event.preventDefault();
+
         globalShortcuts.cleanup();
-        await appLifecycle.beforeQuit();
+        appLifecycle.beforeQuit().then(() => {
+            // Servers are closed, ports released.
+            // If an update was downloaded, install it now (after cleanup).
+            if (autoUpdater.updateDownloaded) {
+                autoUpdater.installUpdate();
+                // installUpdate calls quitAndInstall → app.exit, so we're done.
+                return;
+            }
+            // No update — just exit.
+            app.exit(0);
+        }).catch((err) => {
+            log.error('Cleanup failed during quit, forcing exit:', err);
+            app.exit(1);
+        });
     });
 }
 
