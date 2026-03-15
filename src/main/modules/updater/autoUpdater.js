@@ -276,7 +276,8 @@ class AutoUpdaterManager {
             log.error('Failed to install update:', error);
             this.updateDownloaded = true; // Reset back since install failed
 
-            // Show error dialog
+            // Show error dialog, then exit — services are already shut down
+            // and _cleanupDone=true, so the app is non-recoverable.
             const mainWindow = windowManager.getMainWindow();
             if (mainWindow) {
                 await dialog.showMessageBox(mainWindow, {
@@ -287,6 +288,7 @@ class AutoUpdaterManager {
                     buttons: ['OK']
                 });
             }
+            app.exit(1);
         }
     }
 }

@@ -227,7 +227,9 @@ if (!gotTheLock) {
             app.quit();
         });
         ipcMain.on('restartApp', () => {
-            app.relaunch();
+            if (!autoUpdater.updateDownloaded) {
+                app.relaunch();
+            }
             app.quit();
         });
         
@@ -466,6 +468,9 @@ if (!gotTheLock) {
             }
             // No update — just exit.
             app.exit(0);
+        }).catch((err) => {
+            log.error('Cleanup failed during quit, forcing exit:', err);
+            app.exit(1);
         });
     });
 }
