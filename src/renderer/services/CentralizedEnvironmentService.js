@@ -405,13 +405,10 @@ let serviceInstance = null;
 export function getCentralizedEnvironmentService() {
   if (!serviceInstance) {
     serviceInstance = new CentralizedEnvironmentService();
-    
-    // Auto-initialize on first access
-    serviceInstance.initialize().then(() => {
-      log.info('CentralizedEnvironmentService initialized successfully');
-    }).catch(error => {
-      log.error('Auto-initialization failed:', error);
-    });
+    // NOTE: No auto-initialize here. The service is initialized lazily by:
+    // - CentralizedWorkspaceService (passes workspaceId it already loaded)
+    // - EnvironmentProvider (via useEnvironmentCore)
+    // This avoids a redundant workspaces.json load on startup.
   }
   return serviceInstance;
 }

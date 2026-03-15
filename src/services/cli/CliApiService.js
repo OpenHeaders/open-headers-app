@@ -79,19 +79,43 @@ class CliApiService {
         return new Promise((resolve, reject) => {
             this.server = http.createServer((req, res) => this._handleRequest(req, res));
 
-            this.server.on('error', (err) => {
-                if (err.code === 'EADDRINUSE') {
-                    log.warn(`CLI API port ${this.port} is in use, skipping CLI API server`);
+            // Track connections for clean shutdown
+            this.server.on('connection', (socket) => {
+                if (!this._connections) this._connections = new Set();
+                this._connections.add(socket);
+                socket.once('close', () => this._connections?.delete(socket));
+            });
+
+            // Retry logic for EADDRINUSE (Windows update race)
+            let attempts = 0;
+            const maxRetries = 5;
+            const retryDelay = 500;
+
+            const retryHandler = (err) => {
+                if (err.code === 'EADDRINUSE' && attempts < maxRetries) {
+                    attempts++;
+                    log.warn(`CLI API port ${this.port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
+                    setTimeout(() => this.server.listen(this.port, CLI_HOST), retryDelay);
+                } else if (err.code === 'EADDRINUSE') {
+                    log.warn(`CLI API port ${this.port} still in use after ${maxRetries} retries, skipping`);
+                    this.server.removeListener('error', retryHandler);
                     resolve(); // Non-fatal — app works without CLI API
                 } else {
                     log.error('CLI API server error:', err);
+                    this.server.removeListener('error', retryHandler);
                     reject(err);
                 }
-            });
+            };
 
-            this.server.listen(this.port, CLI_HOST, async () => {
+            this.server.on('error', retryHandler);
+
+            this.server.once('listening', async () => {
+                this.server.removeListener('error', retryHandler);
                 this.startedAt = Date.now();
                 log.info(`CLI API server listening on ${CLI_HOST}:${this.port}`);
+                if (attempts > 0) {
+                    log.info(`CLI API server bound after ${attempts} retries`);
+                }
 
                 // Write discovery file only after server is confirmed listening
                 try {
@@ -112,6 +136,8 @@ class CliApiService {
 
                 resolve();
             });
+
+            this.server.listen(this.port, CLI_HOST);
         });
     }
 
@@ -123,17 +149,27 @@ class CliApiService {
         this.startedAt = null;
 
         if (this.server) {
+            // Destroy active connections so server.close() completes immediately
+            if (this._connections) {
+                for (const socket of this._connections) {
+                    try { socket.destroy(); } catch (e) { /* ignore */ }
+                }
+                this._connections.clear();
+            }
+
             return new Promise((resolve) => {
+                const timeout = setTimeout(() => {
+                    log.warn('CLI API server close timed out after 2s, forcing');
+                    this.server = null;
+                    resolve();
+                }, 2000);
+
                 this.server.close(() => {
+                    clearTimeout(timeout);
                     log.info('CLI API server stopped');
                     this.server = null;
                     resolve();
                 });
-                // Force close after 2 seconds
-                setTimeout(() => {
-                    this.server = null;
-                    resolve();
-                }, 2000);
             });
         }
     }
