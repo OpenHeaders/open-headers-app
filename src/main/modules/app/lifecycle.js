@@ -193,7 +193,7 @@ class AppLifecycle {
      */
     async _performCleanup() {
         for (const watcher of this.fileWatchers.values()) {
-            watcher.close();
+            try { watcher.close(); } catch (e) { /* ignore */ }
         }
 
         // Stop CLI API server first (fast, deletes cli.json)
