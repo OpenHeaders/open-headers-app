@@ -29,6 +29,12 @@ class AutoUpdaterManager {
         autoUpdater.allowDowngrade = false;
         autoUpdater.autoDownload = true;
         autoUpdater.allowPrerelease = false;
+        // Disable electron-updater's built-in auto-install-on-quit.
+        // It spawns the NSIS installer during before-quit BEFORE our async
+        // server cleanup finishes, causing EADDRINUSE on Windows.
+        // We handle update installation ourselves in main.js's before-quit handler,
+        // AFTER servers are properly closed.
+        autoUpdater.autoInstallOnAppQuit = false;
 
         this.logAppInfo();
         this.setupEventListeners();
@@ -244,31 +250,37 @@ class AutoUpdaterManager {
         }
     }
 
-    installUpdate() {
+    async installUpdate() {
         const appLifecycle = require('../app/lifecycle');
         appLifecycle.setQuitting(true);
         this.updateDownloaded = false;
         this.downloadedUpdateInfo = null;
 
         try {
-            // Signal that we want to restart after update
-            autoUpdater.autoInstallOnAppQuit = true;
+            // Close all servers BEFORE spawning the installer.
+            // On Windows, NSIS with runAfterFinish:true starts the new process
+            // immediately after install — if the old process still holds ports,
+            // the new process gets EADDRINUSE and the browser extension can't connect.
+            log.info('Performing pre-update server cleanup...');
+            await appLifecycle.beforeQuit();
+            log.info('Pre-update cleanup complete, installing update');
 
-            // Force quit with updated options
             autoUpdater.quitAndInstall(false, true);
 
-            // Backup approach: force the app to quit after a short delay
+            // Backup: force exit if quitAndInstall doesn't exit.
+            // Longer timeout since cleanup is already done above.
             setTimeout(() => {
                 app.exit(0);
-            }, 1000);
+            }, 3000);
         } catch (error) {
             log.error('Failed to install update:', error);
             this.updateDownloaded = true; // Reset back since install failed
 
-            // Show error dialog
+            // Show error dialog, then exit — services are already shut down
+            // and _cleanupDone=true, so the app is non-recoverable.
             const mainWindow = windowManager.getMainWindow();
             if (mainWindow) {
-                dialog.showMessageBox(mainWindow, {
+                await dialog.showMessageBox(mainWindow, {
                     type: 'error',
                     title: 'Update Error',
                     message: 'Failed to install update',
@@ -276,6 +288,7 @@ class AutoUpdaterManager {
                     buttons: ['OK']
                 });
             }
+            app.exit(1);
         }
     }
 }

@@ -102,19 +102,21 @@ class CentralizedWorkspaceService extends BaseStateManager {
       this.state.activeWorkspaceId = workspaceConfig.activeWorkspaceId;
       this.state.syncStatus = workspaceConfig.syncStatus;
       
-      // Ensure active workspace has data containers initialized
-      const activeWorkspace = this.state.workspaces.find(w => w.id === this.state.activeWorkspaceId);
-      if (activeWorkspace) {
-        const integrity = await this.validateWorkspaceIntegrity(this.state.activeWorkspaceId);
-        if (!integrity.isValid && integrity.missingFiles && integrity.missingFiles.length > 0) {
-          log.info(`Initializing missing data containers for workspace ${this.state.activeWorkspaceId}: ${integrity.missingFiles.join(', ')}`);
-          await this.initializeWorkspaceData(this.state.activeWorkspaceId);
-        }
-      }
-      
+      // NOTE: Skipping validateWorkspaceIntegrity here because it reads
+      // sources.json, rules.json, proxy-rules.json to check existence,
+      // and loadWorkspaceData() will read the same files next.
+      // All load methods (SourceManager, RulesManager) already handle missing
+      // files gracefully by returning empty defaults, so the integrity check
+      // is redundant during initial load.
+
+      // Initialize environment service with the workspace ID we already loaded
+      // (avoids a redundant workspaces.json read)
+      const envService = getCentralizedEnvironmentService();
+      await envService.initialize(this.state.activeWorkspaceId);
+
       // Load active workspace data
       await this.loadWorkspaceData(this.state.activeWorkspaceId);
-      
+
       // Setup listeners
       this.setupEnvironmentListener();
       this.setupSyncListener();
@@ -194,8 +196,12 @@ class CentralizedWorkspaceService extends BaseStateManager {
         lastDataLoad: new Date().toISOString()
       });
 
-      // Update WebSocket and proxy manager
-      await this.broadcastManager.broadcastState(sources, rules.header);
+      // Update proxy (and WebSocket during workspace switch, since WebSocketContext
+      // suppresses broadcasts while isWorkspaceSwitching is true).
+      // During initial load, WebSocketContext handles WS broadcasting with cleaning + debouncing.
+      await this.broadcastManager.broadcastState(sources, rules.header, {
+        includeWebSocket: this.state.isWorkspaceSwitching
+      });
       
       log.info(`Successfully loaded workspace data: ${sources.length} sources, ${totalRules} rules, ${proxyRules.length} proxy rules`);
     } catch (error) {

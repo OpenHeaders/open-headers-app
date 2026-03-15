@@ -64,9 +64,8 @@ export const useProxyServer = () => {
                 const parsed = JSON.parse(rulesData);
                 const headerRules = parsed.rules?.header || [];
                 setHeaderRules(headerRules);
-                
-                // Send header rules to proxy manager
-                await window.electronAPI.proxyUpdateHeaderRules(headerRules);
+                // NOTE: Don't re-send to proxy here — BroadcastManager already
+                // sends header rules during workspace load / switch.
             }
         } catch (error) {
             console.error('Failed to load header rules:', error);
