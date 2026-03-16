@@ -109,7 +109,7 @@ class WSRecordingHandler {
                 enabled: recordingHotkeyEnabled
             }));
 
-            log.debug('Sent recording hotkey to client:', recordingHotkey, 'enabled:', recordingHotkeyEnabled);
+            log.debug(`Sent recording hotkey to client: ${recordingHotkey}, enabled: ${recordingHotkeyEnabled}`);
         } catch (error) {
             log.error('Failed to send recording hotkey:', error);
         }
