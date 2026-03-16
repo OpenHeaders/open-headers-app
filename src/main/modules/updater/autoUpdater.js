@@ -179,7 +179,13 @@ class AutoUpdaterManager {
             });
     }
 
-    handleManualUpdateCheck(event, isManual) {
+    /**
+     * Trigger an update check with user feedback control.
+     * Pure business logic — no IPC dependency. Can be called from
+     * IPC handlers, app menu, tray menu, or any other context.
+     * @param {boolean} isManual - If true, errors are shown to the user
+     */
+    checkForUpdatesManual(isManual = true) {
         // Check network state
         const networkState = networkService.getState();
         if (!networkState.isOnline) {
@@ -189,14 +195,10 @@ class AutoUpdaterManager {
 
         // Check if update already downloaded
         if (this.updateDownloaded) {
-            const mainWindow = windowManager.getMainWindow();
-            if (mainWindow) {
-                const isManualCheck = event.sender === mainWindow.webContents;
-                mainWindow.webContents.send('update-already-downloaded', {
-                    isManual: isManualCheck,
-                    info: this.downloadedUpdateInfo // Include stored update info
-                });
-            }
+            windowManager.sendToWindow('update-already-downloaded', {
+                isManual,
+                info: this.downloadedUpdateInfo
+            });
             return;
         }
 
@@ -245,9 +247,17 @@ class AutoUpdaterManager {
             windowManager.sendToWindow('clear-update-checking-notification');
 
             if (isManual) {
-                event.reply('update-error', err.message);
+                windowManager.sendToWindow('update-error', err.message);
             }
         }
+    }
+
+    /**
+     * IPC handler for update checks from the renderer.
+     * Thin transport layer — delegates to checkForUpdatesManual().
+     */
+    handleManualUpdateCheck(_event, isManual) {
+        this.checkForUpdatesManual(isManual);
     }
 
     async installUpdate() {

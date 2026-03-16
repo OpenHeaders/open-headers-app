@@ -7,6 +7,7 @@ const systemAPI = {
     getAppVersion: () => ipcRenderer.invoke('getAppVersion'),
     openExternal: (url) => ipcRenderer.invoke('openExternal', url),
     showItemInFolder: (filePath) => ipcRenderer.invoke('showItemInFolder', filePath),
+    openAppPath: (pathKey) => ipcRenderer.invoke('openAppPath', pathKey),
     getSystemTimezone: () => ipcRenderer.invoke('getSystemTimezone'),
     
     checkScreenRecordingPermission: () => ipcRenderer.invoke('checkScreenRecordingPermission'),
@@ -55,6 +56,12 @@ const systemAPI = {
         const subscription = (_, data) => callback(data);
         ipcRenderer.on('navigate-to', subscription);
         return () => ipcRenderer.removeListener('navigate-to', subscription);
+    },
+
+    onTriggerUpdateCheck: (callback) => {
+        const subscription = () => callback();
+        ipcRenderer.on('trigger-update-check', subscription);
+        return () => ipcRenderer.removeListener('trigger-update-check', subscription);
     },
     
     onSystemSuspend: (callback) => {
