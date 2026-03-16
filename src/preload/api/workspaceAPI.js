@@ -84,17 +84,11 @@ const workspaceAPI = {
     
     // Environment config import processing
     onProcessEnvironmentConfigImport: (callback) => {
-        console.log('=== REGISTERING ENVIRONMENT IMPORT LISTENER ===');
         const subscription = (event, envData) => {
-            console.log('=== PRELOAD: RECEIVED ENVIRONMENT IMPORT EVENT ===');
-            console.log('Event:', event);
-            console.log('Data:', envData);
             callback(envData);
         };
         ipcRenderer.on('process-environment-config-import', subscription);
-        console.log('Environment import listener registered successfully');
         return () => {
-            console.log('Removing environment import listener');
             ipcRenderer.removeListener('process-environment-config-import', subscription);
         };
     }

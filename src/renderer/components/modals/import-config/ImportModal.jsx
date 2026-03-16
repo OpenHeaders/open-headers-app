@@ -136,7 +136,6 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
     
     // Handle preloaded environment data from protocol links
     useEffect(() => {
-        console.log('ImportModal: visible=', visible, 'preloadedEnvData=', preloadedEnvData);
         if (visible && preloadedEnvData) {
             // Process the preloaded environment data
             try {
@@ -357,8 +356,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
                     workspaceInfo: importWorkspace ? workspaceInfo : null
                 };
                 
-                // Call parent's onImport handler (this needs to be passed as prop)
-                if (onImport) onImport(importData);
+                // Call parent's onImport handler and wait for it to complete
+                if (onImport) await onImport(importData);
                 onClose();
                 return;
             }
@@ -435,13 +434,14 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
                 workspaceInfo: importWorkspace ? workspaceInfo : null
             };
             
-            // Call parent's onImport handler (this needs to be passed as prop)
-            if (onImport) onImport(importData);
-            
-            message.success('Configuration imported successfully!');
+            // Call parent's onImport handler and wait for it to complete
+            // ImportService handles its own success/info notifications
+            if (onImport) await onImport(importData);
+
             onClose();
         } catch (error) {
             console.error('Import failed:', error);
+            // Only show error here — ImportService already shows success/info
             message.error(`Failed to import configuration: ${error.message}`);
         } finally {
             setImporting(false);

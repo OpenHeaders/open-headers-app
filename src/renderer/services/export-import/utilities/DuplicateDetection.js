@@ -204,18 +204,27 @@ export function areHeaderModificationsEqual(headers1, headers2) {
 }
 
 /**
- * Checks if an environment variable already exists
+ * Checks if an environment variable already exists with a non-empty value.
+ * Variables that exist but have empty values (e.g. from schema imports) are
+ * NOT considered duplicates — they are placeholders waiting to be filled.
  * @param {string} varName - Variable name
  * @param {string} envName - Environment name
  * @param {Object} environments - Current environments object
- * @returns {boolean} - True if variable already exists
+ * @returns {boolean} - True if variable already exists with a non-empty value
  */
 export function isEnvironmentVariableDuplicate(varName, envName, environments) {
   if (!varName || !envName || !environments) {
     return false;
   }
 
-  return environments[envName] && environments[envName][varName] !== undefined;
+  if (!environments[envName] || environments[envName][varName] === undefined) {
+    return false;
+  }
+
+  // A variable with an empty value is just a schema placeholder, not a real duplicate
+  const existing = environments[envName][varName];
+  const existingValue = typeof existing === 'object' ? existing.value : existing;
+  return existingValue !== undefined && existingValue !== null && existingValue !== '';
 }
 
 /**

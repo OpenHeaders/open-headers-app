@@ -52,25 +52,9 @@ export function useExportImport(dependencies) {
   }, [services.exportService]);
 
   const showImportModal = useCallback(() => {
-    console.log('=== showImportModal CALLED ===');
-    console.log('services.importService exists:', !!services.importService);
-    console.log('Current importModalVisible state:', importModalVisible);
-    
-    if (!services.importService) {
-      log.error('Cannot show import modal: import service not available');
-      console.error('Cannot show import modal: import service not available');
-      console.error('services:', services);
-      console.error('dependencyValidation:', dependencyValidation);
-      return;
-    }
-    console.log('useExportImport: Setting import modal visible to true');
+    // Always show the modal — service availability is checked when user clicks Import
     setImportModalVisible(true);
-    
-    // Add a check to confirm the state was set
-    setTimeout(() => {
-      console.log('After 50ms, importModalVisible should be true');
-    }, 50);
-  }, [services.importService, importModalVisible, services, dependencyValidation]);
+  }, []);
 
   const hideExportModal = useCallback(() => {
     setExportModalVisible(false);
