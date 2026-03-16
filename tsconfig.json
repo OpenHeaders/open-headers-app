@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    /* Coexistence: let .ts and .js live side by side */
+    "allowJs": true,
+    "checkJs": false,
+
+    /* Start permissive — tighten per-directory as you convert */
+    "strict": false,
+
+    /* Output */
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    /* Emit is handled by webpack/babel — TS is for type-checking only */
+    "noEmit": true,
+
+    /* React JSX support */
+    "jsx": "react-jsx",
+
+    /* Paths */
+    "baseUrl": ".",
+    "outDir": "./dist-webpack",
+
+    /* Quality (non-strict checks you still want) */
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-webpack",
+    "build",
+    "scripts"
+  ]
+}
