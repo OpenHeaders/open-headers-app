@@ -210,9 +210,7 @@ class TrayManager {
         const showStatusBarIcon = Boolean(settings.showStatusBarIcon);
         const showDockIcon = Boolean(settings.showDockIcon);
 
-        log.info('Updating tray with settings:',
-            'showStatusBarIcon =', showStatusBarIcon,
-            'showDockIcon =', showDockIcon);
+        log.info(`Updating tray with settings: showStatusBarIcon=${showStatusBarIcon}, showDockIcon=${showDockIcon}`);
 
         // Manage system tray icon visibility
         if (this.tray && !showStatusBarIcon) {
