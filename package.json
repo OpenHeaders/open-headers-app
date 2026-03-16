@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "OpenHeaders",
   "main": "dist-webpack/main.js",
   "scripts": {
@@ -150,14 +150,6 @@
         {
           "target": "dmg",
           "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
             "arm64"
           ]
         }
