@@ -51,17 +51,18 @@ export function useEnvironmentOperations() {
       }
 
       await service.createEnvironment(newName);
-      
-      // Copy all variables to the new environment without switching to it
-      for (const [varName, variable] of Object.entries(sourceVars)) {
-        await service.setVariableInEnvironment(
-          varName, 
-          variable.value,
-          newName,  // Set in the new environment
-          variable.isSecret
-        );
+
+      // Batch copy all variables (single save + single IPC event)
+      const variablesToSet = Object.entries(sourceVars).map(([varName, variable]) => ({
+        name: varName,
+        value: variable.value,
+        isSecret: variable.isSecret
+      }));
+
+      if (variablesToSet.length > 0) {
+        await service.batchSetVariablesInEnvironment(newName, variablesToSet);
       }
-      
+
       showMessage('success', `Environment '${sourceEnv}' cloned to '${newName}'`);
       return true;
     } catch (error) {

@@ -12,10 +12,9 @@ import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler.js';
 import { WorkspaceHandler } from '../handlers/WorkspaceHandler.js';
 
 import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils.js';
-import { 
-  generateImportSuccessMessage, 
-  generateImportWarnings,
-  generateEnvironmentVariablesMessage
+import {
+  generateImportSuccessMessage,
+  generateImportWarnings
 } from '../utilities/MessageGeneration.js';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig.js';
@@ -218,17 +217,9 @@ export class ImportService {
     const hasImportedData = this._hasImportedData(importStats);
 
     if (hasImportedData) {
-      // Generate and show success message
+      // Generate and show success message (includes variable count)
       const successMessage = generateImportSuccessMessage(importStats, importOptions.isGitSync);
       showMessage('success', successMessage);
-
-      // Show environment variables message if any were created
-      if (importStats.variablesCreated > 0) {
-        const envMessage = generateEnvironmentVariablesMessage(importStats.variablesCreated);
-        if (envMessage) {
-          showMessage('info', envMessage);
-        }
-      }
 
       // Emit workspace data refresh event if needed
       if (importStats.environmentsImported > 0 || importStats.rulesImported.total > 0) {

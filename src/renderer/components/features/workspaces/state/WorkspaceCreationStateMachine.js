@@ -427,6 +427,31 @@ class WorkspaceCreationStateMachine {
                 [WORKSPACE_CREATION_EVENTS.ABORT_REQUESTED]: {
                     target: WORKSPACE_CREATION_STATES.CANCELLED,
                     action: (context) => ({ ...context, abortRequested: true })
+                },
+                // Async operations may complete after an error — absorb gracefully.
+                // WORKSPACE_CREATED still records rollback so the orphaned workspace gets cleaned up.
+                [WORKSPACE_CREATION_EVENTS.WORKSPACE_CREATED]: {
+                    target: WORKSPACE_CREATION_STATES.ERROR,
+                    action: (context, event) => ({
+                        ...context,
+                        workspaceId: event.payload.workspaceId,
+                        rollbackActions: [...context.rollbackActions, {
+                            type: 'delete_workspace',
+                            workspaceId: event.payload.workspaceId
+                        }]
+                    })
+                },
+                [WORKSPACE_CREATION_EVENTS.WORKSPACE_ACTIVATED]: {
+                    target: WORKSPACE_CREATION_STATES.ERROR
+                },
+                [WORKSPACE_CREATION_EVENTS.SYNC_COMPLETED]: {
+                    target: WORKSPACE_CREATION_STATES.ERROR
+                },
+                [WORKSPACE_CREATION_EVENTS.SYNC_INITIALIZED]: {
+                    target: WORKSPACE_CREATION_STATES.ERROR
+                },
+                [WORKSPACE_CREATION_EVENTS.INITIAL_COMMIT_COMPLETED]: {
+                    target: WORKSPACE_CREATION_STATES.ERROR
                 }
             },
             

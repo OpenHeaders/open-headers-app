@@ -179,9 +179,9 @@ export class EnvironmentsHandler {
       errors: []
     };
 
-    const { environments, createEnvironment, setVariable } = this.dependencies;
+    const { environments, createEnvironment } = this.dependencies;
     let environmentsToImport = environmentsData;
-    
+
     // Filter environments based on selection
     if (options.selectedEnvironments && options.selectedEnvironments.length > 0) {
       environmentsToImport = {};
@@ -199,24 +199,24 @@ export class EnvironmentsHandler {
           await createEnvironment(envName);
           log.debug(`Created new environment: ${envName}`);
         }
-        
-        // Import variables
+
+        // Collect variables to batch-import
+        const variablesToSet = [];
         for (const [varName, varData] of Object.entries(envVars)) {
           try {
             // Check for existing variables in merge mode
-            if (options.importMode === IMPORT_MODES.MERGE && 
+            if (options.importMode === IMPORT_MODES.MERGE &&
               isEnvironmentVariableDuplicate(varName, envName, environments)) {
               continue;
             }
-            
+
             // Handle both old format (direct value) and new format (object with value property)
             const value = typeof varData === 'object' ? (varData.value || '') : varData;
             const isSecret = typeof varData === 'object' ? (varData.isSecret || false) : false;
-            
-            await setVariable(varName, value, envName, isSecret);
-            stats.variablesCreated++;
+
+            variablesToSet.push({ name: varName, value, isSecret });
           } catch (error) {
-            log.error(`Failed to import variable ${varName} in environment ${envName}:`, error);
+            log.error(`Failed to prepare variable ${varName} in environment ${envName}:`, error);
             stats.errors.push({
               environment: envName,
               variable: varName,
@@ -224,7 +224,21 @@ export class EnvironmentsHandler {
             });
           }
         }
-        
+
+        // Batch-import all variables at once (single save + single IPC event)
+        if (variablesToSet.length > 0) {
+          try {
+            await this._batchCreateVariables(envName, variablesToSet);
+            stats.variablesCreated += variablesToSet.length;
+          } catch (error) {
+            log.error(`Failed to batch import variables in environment ${envName}:`, error);
+            stats.errors.push({
+              environment: envName,
+              error: `Batch import failed: ${error.message}`
+            });
+          }
+        }
+
         stats.environmentsImported++;
       } catch (error) {
         log.error(`Failed to import environment ${envName}:`, error);
@@ -391,29 +405,7 @@ export class EnvironmentsHandler {
    */
   async _batchCreateVariables(envName, variablesToSet) {
     const envService = getCentralizedEnvironmentService();
-    const currentState = envService.getState();
-    const environments = JSON.parse(JSON.stringify(currentState.environments));
-    
-    // Ensure environment exists
-    if (!environments[envName]) {
-      environments[envName] = {};
-    }
-    
-    // Add all variables at once
-    for (const varDef of variablesToSet) {
-      environments[envName][varDef.name] = {
-        value: varDef.value,
-        isSecret: varDef.isSecret,
-        updatedAt: new Date().toISOString()
-      };
-    }
-    
-    // Update state and save once
-    envService.setState({ environments });
-    await envService.saveEnvironments();
-    
-    // Dispatch event for all changes
-    this._emitEnvironmentVariablesChangedEvent(envName, environments[envName]);
+    await envService.batchSetVariablesInEnvironment(envName, variablesToSet);
   }
 
   /**

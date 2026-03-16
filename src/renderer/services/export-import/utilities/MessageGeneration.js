@@ -124,9 +124,11 @@ export function generateImportSuccessMessage(importStats, isGitSync = false) {
     messages.push(`${proxyRulesSkipped} duplicate proxy rule(s) skipped`);
   }
 
-  // Add environments info
+  // Add environments info (include variable count if available)
   if (environmentsImported > 0) {
-    messages.push(`${environmentsImported} environment(s)`);
+    const varCount = importStats.variablesCreated || 0;
+    const varSuffix = varCount > 0 ? ` with ${varCount} variable(s)` : '';
+    messages.push(`${environmentsImported} environment(s)${varSuffix}`);
   }
 
   // Add workspace info

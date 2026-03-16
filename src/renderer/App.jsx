@@ -212,62 +212,35 @@ const AppComponent = () => {
 
     // Handle environment config import
     const handleEnvironmentConfigImport = useCallback(async (envData) => {
-        console.log('=== ENVIRONMENT CONFIG IMPORT DEBUG ===');
-        console.log('Processing environment config import:', envData);
-        console.log('Current importModalVisible:', importModalVisible);
-        console.log('showImportModal function exists:', typeof showImportModal === 'function');
-        
         if (envData) {
             try {
-                // Store the environment data to be used by the import modal
-                console.log('Setting preloaded env data...');
                 setPreloadedEnvData(envData);
-                
-                // Switch to environments tab first
-                console.log('Switching to environments tab...');
                 setActiveTab('environments');
-                
-                // Add a small delay to ensure the UI is ready (especially on Windows)
-                console.log('Waiting 100ms before showing import modal...');
                 setTimeout(() => {
-                    // Show the import modal
-                    console.log('Calling showImportModal()...');
                     showImportModal();
-                    console.log('showImportModal() called successfully');
                 }, 100);
             } catch (error) {
                 console.error('Failed to process environment config:', error);
                 showMessage('error', `Failed to process environment configuration: ${error.message}`);
             }
-        } else {
-            console.warn('handleEnvironmentConfigImport called with no data');
         }
-    }, [showImportModal, importModalVisible]);
+    }, [showImportModal]);
 
     // Signal to main process that renderer is ready (once)
     useEffect(() => {
         window.electronAPI?.signalRendererReady?.();
     }, []);
 
-    // Listen for team workspace invite events
+    // Listen for team workspace invite and environment import events
     useEffect(() => {
-        console.log('=== SETTING UP IPC LISTENERS IN APP.JSX ===');
-        console.log('window.electronAPI exists:', !!window.electronAPI);
-        console.log('onProcessTeamWorkspaceInvite exists:', typeof window.electronAPI?.onProcessTeamWorkspaceInvite);
-        console.log('onProcessEnvironmentConfigImport exists:', typeof window.electronAPI?.onProcessEnvironmentConfigImport);
-        
         const handleTeamWorkspaceInvite = (inviteData) => {
             try {
-                // Validate invite data
                 if (!inviteData.workspaceName || !inviteData.repoUrl) {
                     throw new Error('Invalid invite data structure');
                 }
 
-                console.log('Processing team workspace invite:', inviteData);
                 setInviteData(inviteData);
                 setInviteModalVisible(true);
-
-                // Automatically switch to workspaces tab to show the invite modal
                 setActiveTab('workspaces');
             } catch (error) {
                 console.error('Error processing invite:', error);
@@ -279,15 +252,10 @@ const AppComponent = () => {
             showMessage('error', errorData.message);
         };
 
-
         // Set up event listeners
         const cleanupInviteListener = window.electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
         const cleanupErrorListener = window.electronAPI?.onShowErrorMessage?.(handleErrorMessage);
         const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData) => {
-            console.log('=== IPC EVENT RECEIVED ===');
-            console.log('App.jsx: Received environment config import event', envData);
-            console.log('window.electronAPI exists:', !!window.electronAPI);
-            console.log('onProcessEnvironmentConfigImport exists:', typeof window.electronAPI?.onProcessEnvironmentConfigImport);
             handleEnvironmentConfigImport(envData);
         });
 
