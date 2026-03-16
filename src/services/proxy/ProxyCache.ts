@@ -1,38 +1,60 @@
-const fs = require('fs').promises;
-const path = require('path');
-const crypto = require('crypto');
-const { app } = require('electron');
-const { createLogger } = require('../../utils/mainLogger');
-const atomicWriter = require('../../utils/atomicFileWriter');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import electron from 'electron';
+import mainLogger from '../../utils/mainLogger.js';
+import atomicWriter from '../../utils/atomicFileWriter.js';
+
+const { app } = electron;
+const { createLogger } = mainLogger;
+const fsPromises = fs.promises;
+
+export interface CacheMetadata {
+  url: string;
+  timestamp: number;
+  lastAccessed: number;
+  size: number;
+  headers: Record<string, string>;
+  contentType: string;
+  statusCode: number;
+}
+
+export interface CacheEntry {
+  data: Buffer;
+  headers: Record<string, string>;
+  contentType: string;
+  statusCode: number;
+}
+
+export interface CacheStats {
+  totalSize: number;
+  totalEntries: number;
+  maxCacheSize: number;
+  usage: number;
+}
 
 class ProxyCache {
-  constructor() {
-    this.log = createLogger('ProxyCache');
-    this.cacheDir = path.join(app.getPath('userData'), 'proxy-cache');
-    this.metadataPath = path.join(this.cacheDir, 'metadata.json');
-    this.metadata = new Map();
-    this.maxCacheSize = 500 * 1024 * 1024; // 500MB default
-    this.maxAge = 90 * 24 * 60 * 60 * 1000; // 90 days default
-  }
+  private log = createLogger('ProxyCache');
+  private cacheDir = '';
+  private metadataPath = '';
+  metadata: Map<string, CacheMetadata> = new Map();
+  maxCacheSize = 500 * 1024 * 1024; // 500MB
+  maxAge = 90 * 24 * 60 * 60 * 1000; // 90 days
 
-  async initialize() {
+  async initialize(): Promise<void> {
     try {
-      // Ensure cache directory exists
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      
-      // Load metadata
+      this.cacheDir = path.join(app.getPath('userData'), 'proxy-cache');
+      this.metadataPath = path.join(this.cacheDir, 'metadata.json');
+      await fsPromises.mkdir(this.cacheDir, { recursive: true });
       await this.loadMetadata();
-      
-      // Clean up old entries
       await this.cleanup();
-      
       this.log.info('Proxy cache initialized');
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error initializing cache:', error);
     }
   }
 
-  async loadMetadata() {
+  async loadMetadata(): Promise<void> {
     try {
       const entries = await atomicWriter.readJson(this.metadataPath);
       if (entries !== null) {
@@ -40,96 +62,85 @@ class ProxyCache {
       } else {
         this.metadata = new Map();
       }
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error loading cache metadata:', error);
       this.metadata = new Map();
     }
   }
 
-  async saveMetadata() {
+  async saveMetadata(): Promise<void> {
     try {
       const entries = Array.from(this.metadata.entries());
       await atomicWriter.writeJson(this.metadataPath, entries, { pretty: true });
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error saving cache metadata:', error);
     }
   }
 
-  getCacheKey(url, headers = {}) {
-    // Create a unique key based on URL and relevant headers
+  getCacheKey(url: string, headers: Record<string, string> = {}): string {
     const normalizedUrl = url.toLowerCase();
-    
-    // For static files (fonts, images, CSS, JS), don't include auth header in cache key
-    // This allows static resources to be cached once and reused regardless of auth
+
+    // For static files, don't include auth header in cache key
     const staticFileRegex = /\.(woff2?|ttf|otf|eot|png|jpg|jpeg|gif|webp|svg|ico|css|js|mjs)(\?|$)/i;
     const isStaticFile = staticFileRegex.test(normalizedUrl);
     const authHeader = isStaticFile ? '' : (headers.authorization || '');
-    
+
     const keyData = `${normalizedUrl}|${authHeader}`;
     return crypto.createHash('sha256').update(keyData).digest('hex');
   }
 
-  getCachePath(key) {
-    // Split key into subdirectories to avoid too many files in one directory
+  getCachePath(key: string): string {
     const subdir = key.substring(0, 2);
     return path.join(this.cacheDir, subdir, key);
   }
 
-  async get(url, headers = {}) {
+  async get(url: string, headers: Record<string, string> = {}): Promise<CacheEntry | null> {
     const key = this.getCacheKey(url, headers);
     const metadata = this.metadata.get(key);
-    
+
     if (!metadata) {
       return null;
     }
-    
-    // Check if expired
+
     const now = Date.now();
     if (now - metadata.timestamp > this.maxAge) {
       await this.remove(key);
       return null;
     }
-    
+
     try {
       const cachePath = this.getCachePath(key);
-      const data = await fs.readFile(cachePath);
-      
-      // Update last accessed time
+      const data = await fsPromises.readFile(cachePath);
+
       metadata.lastAccessed = now;
       this.metadata.set(key, metadata);
       await this.saveMetadata();
-      
+
       return {
         data,
         headers: metadata.headers,
         contentType: metadata.contentType,
         statusCode: metadata.statusCode
       };
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error reading from cache:', error);
       await this.remove(key);
       return null;
     }
   }
 
-  async set(url, data, options = {}) {
-    const { headers = {}, contentType, statusCode = 200 } = options;
+  async set(url: string, data: Buffer, options: { headers?: Record<string, string>; contentType?: string; statusCode?: number } = {}): Promise<void> {
+    const { headers = {}, contentType = '', statusCode = 200 } = options;
     const key = this.getCacheKey(url, headers);
-    
+
     try {
       const cachePath = this.getCachePath(key);
       const cacheDir = path.dirname(cachePath);
-      
-      // Ensure directory exists
-      await fs.mkdir(cacheDir, { recursive: true });
-      
-      // Write data to cache
-      // For binary cache data, use regular fs since it's not critical config
-      // and might be large binary data
-      await fs.writeFile(cachePath, data);
-      
-      // Update metadata
-      const metadata = {
+
+      await fsPromises.mkdir(cacheDir, { recursive: true });
+      await fsPromises.writeFile(cachePath, data);
+
+      const metadata: CacheMetadata = {
         url,
         timestamp: Date.now(),
         lastAccessed: Date.now(),
@@ -138,18 +149,17 @@ class ProxyCache {
         contentType,
         statusCode
       };
-      
+
       this.metadata.set(key, metadata);
       await this.saveMetadata();
-      
+
       this.log.debug(`Cached resource: ${url} (${data.length} bytes)`);
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error writing to cache:', error);
     }
   }
 
-  sanitizeHeaders(headers) {
-    // Store only relevant headers
+  sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
     const relevantHeaders = [
       'content-type',
       'content-encoding',
@@ -157,8 +167,8 @@ class ProxyCache {
       'etag',
       'last-modified'
     ];
-    
-    const sanitized = {};
+
+    const sanitized: Record<string, string> = {};
     for (const [key, value] of Object.entries(headers)) {
       if (relevantHeaders.includes(key.toLowerCase())) {
         sanitized[key] = value;
@@ -167,68 +177,60 @@ class ProxyCache {
     return sanitized;
   }
 
-  async remove(key) {
+  async remove(key: string): Promise<void> {
     try {
       const cachePath = this.getCachePath(key);
-      await fs.unlink(cachePath);
+      await fsPromises.unlink(cachePath);
       this.metadata.delete(key);
       await this.saveMetadata();
-    } catch (error) {
+    } catch (error: any) {
       if (error.code !== 'ENOENT') {
         this.log.error('Error removing cache entry:', error);
       }
     }
   }
 
-  async clear() {
+  async clear(): Promise<void> {
     try {
-      // Remove all cached files
-      await fs.rm(this.cacheDir, { recursive: true, force: true });
-      
-      // Recreate cache directory
-      await fs.mkdir(this.cacheDir, { recursive: true });
-      
-      // Clear metadata
+      await fsPromises.rm(this.cacheDir, { recursive: true, force: true });
+      await fsPromises.mkdir(this.cacheDir, { recursive: true });
       this.metadata.clear();
       await this.saveMetadata();
-      
       this.log.info('Cache cleared');
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error clearing cache:', error);
     }
   }
 
-  async cleanup() {
+  async cleanup(): Promise<void> {
     const now = Date.now();
     let totalSize = 0;
     const entries = Array.from(this.metadata.entries());
     const sortedEntries = entries.sort((a, b) => a[1].lastAccessed - b[1].lastAccessed);
-    
+
     for (const [key, metadata] of sortedEntries) {
-      // Remove expired entries
       if (now - metadata.timestamp > this.maxAge) {
         await this.remove(key);
         continue;
       }
-      
+
       totalSize += metadata.size || 0;
-      
-      // Remove oldest entries if cache is too large
+
       if (totalSize > this.maxCacheSize) {
         await this.remove(key);
       }
     }
   }
 
-  async getStats() {
+  async getStats(): Promise<CacheStats> {
     let totalSize = 0;
     let totalEntries = 0;
-    
+
     for (const metadata of this.metadata.values()) {
       totalSize += metadata.size || 0;
       totalEntries++;
     }
-    
+
     return {
       totalSize,
       totalEntries,
@@ -237,7 +239,7 @@ class ProxyCache {
     };
   }
 
-  async getCacheEntries() {
+  async getCacheEntries(): Promise<Array<{ key: string; url: string; size: number; timestamp: number; lastAccessed: number; contentType: string }>> {
     const entries = [];
     for (const [key, metadata] of this.metadata.entries()) {
       entries.push({
@@ -253,4 +255,5 @@ class ProxyCache {
   }
 }
 
-module.exports = ProxyCache;
+export { ProxyCache };
+export default ProxyCache;

@@ -25,12 +25,12 @@ const mainConfig = {
     module: {
         rules: [
             {
-                test: /\.js$/,
+                test: /\.(js|ts)$/,
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env'],
+                        presets: ['@babel/preset-env', '@babel/preset-typescript'],
                         cacheDirectory: true
                     }
                 }
@@ -38,6 +38,7 @@ const mainConfig = {
         ]
     },
     resolve: {
+        extensions: ['.ts', '.js'],
         fallback: {
             "fsevents": false
         },
@@ -102,12 +103,12 @@ const preloadConfig = {
     module: {
         rules: [
             {
-                test: /\.js$/,
+                test: /\.(js|ts)$/,
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env'],
+                        presets: ['@babel/preset-env', '@babel/preset-typescript'],
                         cacheDirectory: true
                     }
                 }
@@ -115,6 +116,7 @@ const preloadConfig = {
         ]
     },
     resolve: {
+        extensions: ['.ts', '.js'],
         fallback: {
             "fsevents": false
         },
@@ -182,12 +184,12 @@ const rendererConfig = {
     module: {
         rules: [
             {
-                test: /\.(js|jsx)$/,
+                test: /\.(js|jsx|ts|tsx)$/,
                 exclude: /node_modules/,
                 use: {
                     loader: 'babel-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-react'],
+                        presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'],
                         cacheDirectory: true
                     }
                 }
@@ -239,7 +241,7 @@ const rendererConfig = {
         ]
     },
     resolve: {
-        extensions: ['.js', '.jsx'],
+        extensions: ['.ts', '.tsx', '.js', '.jsx'],
         fallback: {
             "fsevents": false
         },

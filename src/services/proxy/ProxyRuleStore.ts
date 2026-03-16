@@ -1,36 +1,51 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { app } = require('electron');
-const { createLogger } = require('../../utils/mainLogger');
-const atomicWriter = require('../../utils/atomicFileWriter');
+import fs from 'fs';
+import path from 'path';
+import electron from 'electron';
+import mainLogger from '../../utils/mainLogger.js';
+import atomicWriter from '../../utils/atomicFileWriter.js';
+
+const { app } = electron;
+const { createLogger } = mainLogger;
+
+const fsPromises = fs.promises;
+
+export interface ProxyRule {
+  id: string;
+  enabled?: boolean;
+  headerRuleId?: string;
+  headerName?: string;
+  headerValue?: string;
+  isDynamic?: boolean;
+  sourceId?: string | number;
+  prefix?: string;
+  suffix?: string;
+  domains?: string[];
+  [key: string]: unknown;
+}
 
 class ProxyRuleStore {
-  constructor() {
-    this.log = createLogger('ProxyRuleStore');
-    this.currentWorkspaceId = null;
-    this.rules = [];
-  }
+  private log = createLogger('ProxyRuleStore');
+  currentWorkspaceId: string | null = null;
+  rules: ProxyRule[] = [];
 
   /**
-   * Set the current workspace ID for workspace-specific rule storage
+   * Set the current workspace ID for workspace-specific rule storage.
    */
-  setWorkspace(workspaceId) {
+  setWorkspace(workspaceId: string): void {
     this.currentWorkspaceId = workspaceId;
   }
 
   /**
-   * Get the workspace-specific rules path
+   * Get the workspace-specific rules path.
    */
-  getRulesPath() {
+  getRulesPath(): string {
     if (!this.currentWorkspaceId) {
-      // Fallback to global rules for backward compatibility
       return path.join(app.getPath('userData'), 'proxy-rules.json');
     }
-    // Store rules in workspace-specific directory
     return path.join(app.getPath('userData'), 'workspaces', this.currentWorkspaceId, 'proxy-rules.json');
   }
 
-  async load() {
+  async load(): Promise<void> {
     try {
       const rulesPath = this.getRulesPath();
       const rules = await atomicWriter.readJson(rulesPath);
@@ -41,27 +56,25 @@ class ProxyRuleStore {
         this.rules = [];
         this.log.debug('No proxy rules found, starting with empty set');
       }
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error loading proxy rules:', error);
       this.rules = [];
     }
   }
 
-  async save() {
+  async save(): Promise<void> {
     try {
       const rulesPath = this.getRulesPath();
-      // Ensure the workspace directory exists
       const dir = path.dirname(rulesPath);
-      await fs.mkdir(dir, { recursive: true });
-      
+      await fsPromises.mkdir(dir, { recursive: true });
       await atomicWriter.writeJson(rulesPath, this.rules, { pretty: true });
       this.log.debug(`Saved ${this.rules.length} proxy rules to ${rulesPath}`);
-    } catch (error) {
+    } catch (error: any) {
       this.log.error('Error saving proxy rules:', error);
     }
   }
 
-  async saveRule(rule) {
+  async saveRule(rule: ProxyRule): Promise<void> {
     const existingIndex = this.rules.findIndex(r => r.id === rule.id);
     if (existingIndex >= 0) {
       this.rules[existingIndex] = rule;
@@ -74,14 +87,15 @@ class ProxyRuleStore {
     await this.save();
   }
 
-  async deleteRule(ruleId) {
+  async deleteRule(ruleId: string): Promise<void> {
     this.rules = this.rules.filter(r => r.id !== ruleId);
     await this.save();
   }
 
-  getRules() {
+  getRules(): ProxyRule[] {
     return this.rules;
   }
 }
 
-module.exports = ProxyRuleStore;
+export { ProxyRuleStore };
+export default ProxyRuleStore;
