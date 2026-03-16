@@ -303,9 +303,9 @@ if (!gotTheLock) {
             }
             
             // The WebSocket service will re-broadcast rules with updated environment variables
-            webSocketService._broadcastRules();
+            webSocketService.broadcastRules();
         });
-        
+
         ipcMain.on('environment-variables-changed', (event, data) => {
             const webSocketService = require('./services/websocket/ws-service');
             const proxyService = require('./services/proxy/ProxyService');
@@ -315,7 +315,7 @@ if (!gotTheLock) {
                 proxyService.updateEnvironmentVariables(data.variables);
             }
             // The WebSocket service will re-broadcast rules with updated environment variables
-            webSocketService._broadcastRules();
+            webSocketService.broadcastRules();
         });
     }
 
