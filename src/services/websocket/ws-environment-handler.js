@@ -88,13 +88,7 @@ class WSEnvironmentHandler {
         try {
             const { ipcMain } = require('electron');
 
-            const handleEnvChange = () => {
-                try {
-                    this.loadEnvironmentVariables();
-                } catch (error) {
-                    log.warn('Failed to reload environment variables:', error);
-                }
-
+            const broadcastIfEnvVars = () => {
                 if (this.wsService.rules && this.wsService.rules.header) {
                     const hasEnvVars = this.wsService.rules.header.some(rule => rule.hasEnvVars);
                     if (hasEnvVars) {
@@ -103,12 +97,12 @@ class WSEnvironmentHandler {
                 }
             };
 
-            ipcMain.on('environment-variables-changed', () => {
-                this.syncProxyService();
-                handleEnvChange();
-            });
-            ipcMain.on('environment-switched', handleEnvChange);
-            ipcMain.on('workspace-switched', handleEnvChange);
+            // Proxy updates are handled by main.js IPC handlers;
+            // here we only re-broadcast rules to WebSocket clients when env vars affect them
+            ipcMain.on('environment-variables-changed', broadcastIfEnvVars);
+            ipcMain.on('environment-switched', broadcastIfEnvVars);
+            // workspace-switched is handled by sourceHandler.onWorkspaceSwitch()
+            // which loads fresh rules/sources and broadcasts — no need to duplicate here
 
             log.info('Environment change listener setup for WebSocket service');
         } catch (error) {

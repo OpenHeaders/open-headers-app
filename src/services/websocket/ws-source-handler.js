@@ -156,12 +156,9 @@ class WSSourceHandler {
                 const rulesStorage = JSON.parse(rulesData);
                 this.wsService.rules = rulesStorage.rules || {};
                 log.info(`Loaded ${Object.keys(this.wsService.rules).length} rule types from workspace ${workspaceId}`);
-                this.wsService.environmentHandler.syncProxyService();
-                this.wsService.ruleHandler.broadcastRules();
             } else {
                 log.info(`No rules found for workspace ${workspaceId}, using empty rules`);
                 this.wsService.rules = {};
-                this.wsService.ruleHandler.broadcastRules();
             }
 
             const sourcesPath = path.join(appDataPath, 'workspaces', workspaceId, 'sources.json');
@@ -169,13 +166,16 @@ class WSSourceHandler {
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
                 this.wsService.sources = JSON.parse(sourcesData) || [];
                 log.info(`Loaded ${this.wsService.sources.length} sources from workspace ${workspaceId}`);
-                this.wsService.environmentHandler.syncProxyService();
-                this.broadcastSources();
             } else {
                 log.info(`No sources found for workspace ${workspaceId}, using empty sources`);
                 this.wsService.sources = [];
-                this.broadcastSources();
             }
+
+            // Proxy is already configured by workspaceHandlers.handleWorkspaceSwitched()
+            // which loads env vars, sources, and rules for proxy before calling us.
+            // Here we only broadcast to WebSocket clients.
+            this.wsService.ruleHandler.broadcastRules();
+            this.broadcastSources();
         } catch (error) {
             log.error(`Error loading data for workspace ${workspaceId}:`, error);
             this.wsService.rules = {};
