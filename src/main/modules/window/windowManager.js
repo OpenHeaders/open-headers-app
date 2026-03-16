@@ -181,6 +181,29 @@ class WindowManager {
             return true;
         });
 
+        // Block navigation away from the app — prevents renderer compromise
+        // from escalating to arbitrary URL loading with preload context
+        this.mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+            const parsedUrl = new URL(navigationUrl);
+            if (parsedUrl.protocol !== 'file:') {
+                event.preventDefault();
+                log.warn('Blocked navigation to non-file URL:', navigationUrl);
+            }
+        });
+
+        // Whitelist permissions — only allow what the app actually needs
+        this.mainWindow.webContents.session.setPermissionRequestHandler(
+            (_webContents, permission, callback) => {
+                const allowedPermissions = ['media', 'display-capture', 'screen'];
+                if (allowedPermissions.includes(permission)) {
+                    callback(true);
+                } else {
+                    log.warn('Denied permission request:', permission);
+                    callback(false);
+                }
+            }
+        );
+
         // Redirect external links to default browser
         this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
             shell.openExternal(url).catch(err => {
