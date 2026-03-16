@@ -294,8 +294,10 @@ class WorkspaceSyncScheduler {
           // Check if anything actually changed by comparing with existing data
           hasChanges = await this.checkForDataChanges(workspaceId, result.data);
           
-          // Import data in the main process for background operation
-          await this.importSyncedData(workspaceId, result.data);
+          // Import data in the main process for background operation.
+          // Only broadcast to browser extensions when data actually changed —
+          // avoids redundant WS messages on every periodic sync.
+          await this.importSyncedData(workspaceId, result.data, { broadcastToExtensions: hasChanges });
           
           // Only notify renderer if there were actual changes
           if (hasChanges) {
@@ -575,7 +577,8 @@ class WorkspaceSyncScheduler {
    * Import synced configuration data into workspace
    * This runs in the main process to support background syncing
    */
-  async importSyncedData(workspaceId, data) {
+  async importSyncedData(workspaceId, data, options = {}) {
+    const { broadcastToExtensions = true } = options;
     try {
       const path = require('path');
       const fs = require('fs').promises;
@@ -950,24 +953,27 @@ class WorkspaceSyncScheduler {
         } // End of else block (safe to write)
       } // End of if (environmentsToImport)
       
-      // Notify WebSocket service to update browser extensions
-      const webSocketService = require('../websocket/ws-service');
-      if (webSocketService && webSocketService.updateSources) {
-        // Update sources — use mergedSources (which preserves local sourceContent)
-        // instead of data.sources (raw Git config without execution data).
-        if (mergedSources) {
-          webSocketService.updateSources(mergedSources);
-        }
-        
-        // Update rules
-        if (data.rules) {
-          webSocketService.updateSources({
-            type: 'rules-update',
-            data: {
-              rules: data.rules,
-              version: DATA_FORMAT_VERSION
-            }
-          });
+      // Notify WebSocket service to update browser extensions.
+      // Skip when nothing changed to avoid redundant messages on every periodic sync.
+      if (broadcastToExtensions) {
+        const webSocketService = require('../websocket/ws-service');
+        if (webSocketService && webSocketService.updateSources) {
+          // Update sources — use mergedSources (which preserves local sourceContent)
+          // instead of data.sources (raw Git config without execution data).
+          if (mergedSources) {
+            webSocketService.updateSources(mergedSources);
+          }
+
+          // Update rules
+          if (data.rules) {
+            webSocketService.updateSources({
+              type: 'rules-update',
+              data: {
+                rules: data.rules,
+                version: DATA_FORMAT_VERSION
+              }
+            });
+          }
         }
       }
       
