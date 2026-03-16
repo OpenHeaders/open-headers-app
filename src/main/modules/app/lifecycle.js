@@ -11,8 +11,7 @@ const WorkspaceSyncScheduler = require('../../../services/workspace/WorkspaceSyn
 const networkService = require('../../../services/network/NetworkService');
 const proxyService = require('../../../services/proxy/ProxyService');
 const webSocketService = require('../../../services/websocket/ws-service');
-const videoExportManager = require('../../../services/video/video-export-manager');
-
+require('../../../services/video/video-export-manager'); // Side-effect: registers IPC handlers in constructor
 const log = createLogger('AppLifecycle');
 
 class AppLifecycle {
@@ -61,7 +60,6 @@ class AppLifecycle {
             serviceRegistry.register('workspaceSettingsService', workspaceSettingsService, []);
             serviceRegistry.register('workspaceSyncScheduler', workspaceSyncScheduler, ['gitSyncService', 'workspaceSettingsService', 'networkService']);
             serviceRegistry.register('webSocketService', webSocketService, []);
-            serviceRegistry.register('videoExportManager', videoExportManager, []);
             
             await serviceRegistry.initializeAll();
             log.info('All services initialized successfully');
@@ -220,16 +218,6 @@ class AppLifecycle {
                 await cliApiService.stop();
             } catch (error) {
                 log.warn('Error stopping CLI API server:', error.message);
-            }
-        }
-
-        const workspaceSyncScheduler = this.services.get('workspaceSyncScheduler');
-        if (workspaceSyncScheduler) {
-            try {
-                await workspaceSyncScheduler.shutdown();
-                log.info('Workspace sync scheduler shut down');
-            } catch (error) {
-                log.error('Error shutting down sync scheduler:', error);
             }
         }
 
