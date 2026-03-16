@@ -32,6 +32,7 @@ class WebSocketService {
         this.clientInitializationLocks = new Map();
         this.rulesBroadcastTimer = null;
         this.lastRulesBroadcast = 0;
+        this._closing = false;
 
         // Handlers
         this.certificateHandler = new WSCertificateHandler(this);
@@ -214,11 +215,9 @@ class WebSocketService {
     }
 
     async close() {
+        this._closing = true;
         this.clientHandler.stopClientCleanup();
 
-        for (const [, info] of this.connectedClients) {
-            try { if (info.ws) info.ws.terminate(); } catch (e) { /* ignore */ }
-        }
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
 
@@ -266,6 +265,7 @@ class WebSocketService {
             this.clientHandler.broadcastConnectionStatus();
 
             ws.on('close', () => {
+                if (this._closing) return;
                 log.info(`${serverType} client disconnected`);
                 this.connectedClients.delete(clientId);
                 this.clientInitializationLocks.delete(clientId);
