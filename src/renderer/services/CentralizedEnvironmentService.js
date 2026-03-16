@@ -291,8 +291,54 @@ class CentralizedEnvironmentService {
       updatedEnvironments[environmentName]
     );
 
-    // Notify main process about environment variable changes
-    if (window.electronAPI && window.electronAPI.send) {
+    // Only notify main process if the changed environment is active —
+    // proxy and WebSocket broadcasts only care about active env vars
+    if (window.electronAPI && window.electronAPI.send && state.activeEnvironment === environmentName) {
+      window.electronAPI.send('environment-variables-changed', {
+        environment: environmentName,
+        variables: updatedEnvironments[environmentName]
+      });
+    }
+
+    return true;
+  }
+
+  /**
+   * Batch set multiple variables in a specific environment (single save + single IPC event)
+   */
+  async batchSetVariablesInEnvironment(environmentName, variables) {
+    const state = this.stateManager.getState();
+    // Deep copy to avoid mutations
+    const updatedEnvironments = JSON.parse(JSON.stringify(state.environments));
+
+    if (!updatedEnvironments[environmentName]) {
+      throw new Error(`Environment '${environmentName}' does not exist`);
+    }
+
+    for (const { name, value, isSecret } of variables) {
+      if (value === null || value === '') {
+        delete updatedEnvironments[environmentName][name];
+      } else {
+        updatedEnvironments[environmentName][name] = {
+          value,
+          isSecret: isSecret || false,
+          updatedAt: new Date().toISOString()
+        };
+      }
+    }
+
+    this.stateManager.setState({ environments: updatedEnvironments });
+    await this.saveEnvironments();
+
+    // Dispatch renderer event once for entire batch
+    this.eventManager.dispatchVariablesChanged(
+      environmentName,
+      updatedEnvironments[environmentName]
+    );
+
+    // Only notify main process if the changed environment is active —
+    // proxy and WebSocket broadcasts only care about active env vars
+    if (window.electronAPI && window.electronAPI.send && state.activeEnvironment === environmentName) {
       window.electronAPI.send('environment-variables-changed', {
         environment: environmentName,
         variables: updatedEnvironments[environmentName]

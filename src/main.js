@@ -270,9 +270,8 @@ if (!gotTheLock) {
         
         // Environment events - notify WebSocket service when environments change
         ipcMain.on('environment-switched', async (event, data) => {
-            const webSocketService = require('./services/websocket/ws-service');
             const proxyService = require('./services/proxy/ProxyService');
-            log.info('Environment switched, notifying services to re-broadcast rules');
+            log.info('Environment switched, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
                 proxyService.updateEnvironmentVariables(data.variables);
@@ -302,20 +301,17 @@ if (!gotTheLock) {
                 log.warn('Could not re-load sources after environment switch:', error.message);
             }
             
-            // The WebSocket service will re-broadcast rules with updated environment variables
-            webSocketService.broadcastRules();
+            // Rules re-broadcast is handled by ws-environment-handler's IPC listener
         });
 
         ipcMain.on('environment-variables-changed', (event, data) => {
-            const webSocketService = require('./services/websocket/ws-service');
             const proxyService = require('./services/proxy/ProxyService');
-            log.info('Environment variables changed, notifying services to re-broadcast rules');
+            log.info('Environment variables changed, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
                 proxyService.updateEnvironmentVariables(data.variables);
             }
-            // The WebSocket service will re-broadcast rules with updated environment variables
-            webSocketService.broadcastRules();
+            // Rules re-broadcast is handled by ws-environment-handler's IPC listener
         });
     }
 
@@ -379,12 +375,8 @@ if (!gotTheLock) {
         }
     });
     
-    // Handle protocol when app is not running (Windows)
-    app.on('open-url', (event, url) => {
-        event.preventDefault();
-        log.info('Received open-url event:', url);
-        protocolHandler.handleProtocolUrl(url);
-    });
+    // macOS open-url is handled by protocolHandler.setupProtocolHandlers()
+    // Windows protocol URLs arrive via second-instance or command line args below
 
     // Handle protocol URLs passed as command line arguments on first launch
     let protocolUrl = null;
