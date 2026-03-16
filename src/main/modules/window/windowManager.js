@@ -30,7 +30,8 @@ class WindowManager {
                 sandbox: true,
                 webSecurity: true,
                 webviewTag: false,
-                allowRunningInsecureContent: false
+                allowRunningInsecureContent: false,
+                devTools: process.argv.includes('--dev')
             },
             show: false,
             autoHideMenuBar: true,

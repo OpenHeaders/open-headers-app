@@ -57,6 +57,7 @@ const UpdateNotification = forwardRef((props, ref) => {
     const checkDebounceTimerRef = useRef(null);                 // Timer for debouncing check requests
     const inSilentCheckModeRef = useRef(false);                 // Whether current check is in silent mode
     const pendingNotificationRef = useRef(false);               // Whether a delayed notification is pending
+    const performUpdateCheckRef = useRef(null);                // Ref to latest performUpdateCheck (avoids stale closures)
 
     /**
      * Debug logging function with timestamp
@@ -176,6 +177,9 @@ const UpdateNotification = forwardRef((props, ref) => {
         }
     };
 
+    // Keep ref in sync with latest performUpdateCheck (for IPC listener closure)
+    performUpdateCheckRef.current = performUpdateCheck;
+
     // Expose imperative API - allows parent components to trigger update checks
     useImperativeHandle(ref, () => ({
         checkForUpdates: performUpdateCheck
@@ -191,9 +195,15 @@ const UpdateNotification = forwardRef((props, ref) => {
 
         const cleanupEventListeners = eventHandlers.setupEventListeners();
 
+        // Listen for external triggers (app menu, tray menu)
+        const unsubscribeTrigger = window.electronAPI.onTriggerUpdateCheck?.(() => {
+            performUpdateCheckRef.current?.(true);
+        }) || (() => {});
+
         // Return cleanup function - ensures proper cleanup on unmount
         return () => {
             cleanupEventListeners();
+            unsubscribeTrigger();
 
             // Clean up timers - prevents memory leaks
             if (checkDebounceTimerRef.current) {
