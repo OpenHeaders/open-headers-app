@@ -1,7 +1,8 @@
-const { systemPreferences, shell } = require('electron');
+const { app, systemPreferences, shell } = require('electron');
 const { exec } = require('child_process');
 const { promisify } = require('util');
-const { createLogger } = require('../../../../utils/mainLogger');
+const path = require('path');
+const { createLogger, getLogDirectory } = require('../../../../utils/mainLogger');
 const timeManager = require('../../../../services/core/TimeManager');
 
 const log = createLogger('SystemHandlers');
@@ -208,6 +209,35 @@ class SystemHandlers {
     handleShowItemInFolder(_, filePath) {
         if (filePath && typeof filePath === 'string') {
             shell.showItemInFolder(filePath);
+        }
+    }
+
+    async handleOpenAppPath(_, pathKey) {
+        try {
+            const pathMap = {
+                logs: getLogDirectory(),
+                userData: app.getPath('userData'),
+                settings: path.join(app.getPath('userData'), 'settings.json')
+            };
+
+            const targetPath = pathMap[pathKey];
+            if (!targetPath) {
+                return { success: false, error: `Unknown path key: ${pathKey}` };
+            }
+
+            if (pathKey === 'settings') {
+                shell.showItemInFolder(targetPath);
+            } else {
+                const errorMessage = await shell.openPath(targetPath);
+                if (errorMessage) {
+                    return { success: false, error: errorMessage };
+                }
+            }
+
+            return { success: true };
+        } catch (error) {
+            log.error('Error opening app path:', error);
+            return { success: false, error: error.message };
         }
     }
 

@@ -34,6 +34,7 @@ class AppLifecycle {
 
         AppStateMachine.settingsLoaded({});
         await this.setupFirstRun();
+        await this.applyStartupLogLevel();
         AppStateMachine.settingsReady();
         await this.initializeServices();
     }
@@ -139,7 +140,8 @@ class AppLifecycle {
                     developerMode: false,
                     videoRecording: false,
                     videoQuality: 'high',
-                    recordingHotkey: 'CommandOrControl+Shift+E'
+                    recordingHotkey: 'CommandOrControl+Shift+E',
+                    logLevel: 'info'
                 };
 
                 await atomicWriter.writeJson(settingsPath, defaultSettings, { pretty: true });
@@ -167,6 +169,21 @@ class AppLifecycle {
             }
         } catch (err) {
             log.error('Error during first run setup:', err);
+        }
+    }
+
+    async applyStartupLogLevel() {
+        try {
+            const settingsPath = this.getSettingsPath();
+            const data = await fs.promises.readFile(settingsPath, 'utf8');
+            const settings = JSON.parse(data);
+            if (settings.logLevel) {
+                const { setGlobalLogLevel } = require('../../../utils/mainLogger');
+                setGlobalLogLevel(settings.logLevel, true);
+                log.info(`Applied log level from settings: ${settings.logLevel}`);
+            }
+        } catch (err) {
+            // Ignore - will use default log level
         }
     }
 

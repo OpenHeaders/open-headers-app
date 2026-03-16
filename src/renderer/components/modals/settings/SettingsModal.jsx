@@ -1,11 +1,12 @@
 import React, {useEffect, useState} from 'react';
 import {Button, Modal, Tabs} from 'antd';
-import {DesktopOutlined, GlobalOutlined, SettingOutlined} from '@ant-design/icons';
+import {DesktopOutlined, GlobalOutlined, SettingOutlined, ToolOutlined} from '@ant-design/icons';
 import {useTheme} from '../../../contexts';
 
 import GeneralSettings from './GeneralSettings';
 import AppearanceSettings from './AppearanceSettings';
 import WorkflowSettings from './WorkflowSettings';
+import DeveloperSettings from './DeveloperSettings';
 import PermissionAlert from './PermissionAlert';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
@@ -364,7 +365,23 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
                     initialAction={initialAction}
                 />
             )
-        }
+        },
+        ...(formValues.developerMode ? [{
+            key: '4',
+            label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ToolOutlined />
+                    Developer
+                </span>
+            ),
+            children: (
+                <DeveloperSettings
+                    formValues={formValues}
+                    screenRecordingPermission={screenRecordingPermission}
+                    onChange={handleFieldChange}
+                />
+            )
+        }] : [])
     ];
 
     return (
@@ -372,7 +389,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             title="Settings"
             open={open}
             onCancel={onCancel}
-            width={500}
+            width={600}
             className="settings-modal"
             footer={[
                 <Button key="cancel" onClick={onCancel}>

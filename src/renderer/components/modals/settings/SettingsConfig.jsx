@@ -15,8 +15,14 @@ import {
     QuestionCircleOutlined,
     CodeOutlined,
     VideoCameraOutlined,
-    TrademarkCircleOutlined
+    TrademarkCircleOutlined,
+    FileTextOutlined,
+    CloseCircleOutlined,
+    WarningOutlined,
+    InfoCircleOutlined,
+    BugOutlined
 } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 import { THEME_MODES } from '../../../contexts';
 
 /**
@@ -70,6 +76,14 @@ export const getSettingsConfig = (formValues, screenRecordingPermission) => ({
             disabled: !formValues.launchAtLogin, // Disabled when auto-launch is off
             tooltip: !formValues.launchAtLogin ? "Enable 'Open at login' to use this option" : "",
             value: formValues.hideOnLaunch
+        },
+        {
+            // Developer mode shows technical debug information
+            icon: CodeOutlined,
+            title: "Developer mode",
+            description: "Show technical information and debug panels",
+            fieldName: "developerMode",
+            value: formValues.developerMode
         }
     ],
     // UI customization and visual appearance settings
@@ -146,14 +160,6 @@ export const getSettingsConfig = (formValues, screenRecordingPermission) => ({
             description: "Show helpful information panels throughout the app",
             fieldName: "tutorialMode",
             value: formValues.tutorialMode
-        },
-        {
-            // Developer mode shows technical debug information
-            icon: CodeOutlined,
-            title: "Developer mode",
-            description: "Show technical information and debug panels",
-            fieldName: "developerMode",
-            value: formValues.developerMode
         }
     ],
     // Recording and workflow-related settings
@@ -247,6 +253,71 @@ export const getSettingsConfig = (formValues, screenRecordingPermission) => ({
             disabled: !formValues.autoHighlightTableEntries, // Disabled when auto-highlight is off
             tooltip: !formValues.autoHighlightTableEntries ? "Enable 'Auto Highlight Table entries' to use this option" : "",
             value: formValues.autoScrollTableEntries
+        }
+    ],
+    developer: [
+        {
+            icon: FileTextOutlined,
+            title: "Log Level",
+            description: (
+                <>
+                    Control the verbosity of application logs{' '}
+                    <Tooltip
+                        overlayStyle={{ maxWidth: 340 }}
+                        title={
+                        <>
+                            <div style={{ marginBottom: 4, opacity: 0.75 }}>Each level includes all levels above it:</div>
+                            <div><strong>Error:</strong> <span style={{ opacity: 0.75 }}>Operation failures and exceptions</span></div>
+                            <div><strong>Warning:</strong> <span style={{ opacity: 0.75 }}>Anomalies, retries, and fallbacks</span></div>
+                            <div><strong>Info:</strong> <span style={{ opacity: 0.75 }}>Operational events and state changes</span></div>
+                            <div><strong>Debug:</strong> <span style={{ opacity: 0.75 }}>Detailed internals for troubleshooting</span></div>
+                        </>
+                    }>
+                        <QuestionCircleOutlined style={{ fontSize: 11, cursor: 'help' }} />
+                    </Tooltip>
+                </>
+            ),
+            fieldName: "logLevel",
+            type: "select",
+            value: formValues.logLevel || 'info',
+            options: [
+                {
+                    value: "error",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <CloseCircleOutlined style={{ fontSize: 12, color: '#ff4d4f' }} />
+                            <span>Error</span>
+                        </div>
+                    )
+                },
+                {
+                    value: "warn",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <WarningOutlined style={{ fontSize: 12, color: '#faad14' }} />
+                            <span>Warning</span>
+                        </div>
+                    )
+                },
+                {
+                    value: "info",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <InfoCircleOutlined style={{ fontSize: 12, color: '#1890ff' }} />
+                            <span>Info (Default)</span>
+                        </div>
+                    )
+                },
+                {
+                    value: "debug",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <BugOutlined style={{ fontSize: 12, color: '#52c41a' }} />
+                            <span>Debug</span>
+                        </div>
+                    )
+                }
+            ]
         }
     ]
 });

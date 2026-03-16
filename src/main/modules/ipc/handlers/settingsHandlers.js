@@ -39,6 +39,12 @@ class SettingsHandlers {
             // Apply settings
             trayManager.updateTray(settings);
 
+            // Apply log level if changed
+            if (settings.logLevel) {
+                const { setGlobalLogLevel } = require('../../../../utils/mainLogger');
+                setGlobalLogLevel(settings.logLevel);
+            }
+
             // Update global recording hotkey if changed
             if (settings.recordingHotkey || settings.hasOwnProperty('recordingHotkeyEnabled')) {
                 const globalShortcuts = require('../../shortcuts/globalShortcuts');
@@ -96,7 +102,8 @@ class SettingsHandlers {
                     developerMode: false,
                     videoRecording: false,
                     videoQuality: 'high',
-                    recordingHotkey: 'CommandOrControl+Shift+E'
+                    recordingHotkey: 'CommandOrControl+Shift+E',
+                    logLevel: 'info'
                 };
 
                 // Create settings file atomically

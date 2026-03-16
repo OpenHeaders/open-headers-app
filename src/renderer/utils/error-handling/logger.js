@@ -16,17 +16,31 @@ function getTimeManager() {
   return timeManager;
 }
 
+const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+
+// Initialize log level
+let currentLevel = LOG_LEVELS.info;
+try {
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isDevelopment) {
+    currentLevel = LOG_LEVELS.debug;
+  }
+} catch (e) {
+  // electronAPI not available yet
+}
+
+/**
+ * Set the global log level for all renderer loggers
+ * @param {string} level - One of 'error', 'warn', 'info', 'debug'
+ */
+function setGlobalLogLevel(level) {
+  if (LOG_LEVELS[level] !== undefined) {
+    currentLevel = LOG_LEVELS[level];
+  }
+}
+
 class Logger {
   constructor(component) {
     this.component = component;
-    // In renderer process, we can't access process.env directly
-    // Debug mode will be controlled via settings or determined by the app
-    this.debugMode = false;
-    
-    // Check if we're in development mode through electronAPI
-    if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isDevelopment) {
-      this.debugMode = true;
-    }
   }
 
   formatMessage(level, message, data) {
@@ -35,7 +49,7 @@ class Logger {
     // Use UTC ISO format for consistent timestamps across timezone changes
     const timestamp = now.toISOString().replace('T', ' ').substring(0, 23) + 'Z';
     const prefix = `[${timestamp}] [${level}] [${this.component}]`;
-    
+
     if (data !== undefined) {
       return { prefix, message, data };
     }
@@ -44,7 +58,7 @@ class Logger {
 
   log(level, message, data) {
     const formatted = this.formatMessage(level, message, data);
-    
+
     if (data !== undefined) {
       console.log(formatted.prefix, formatted.message, formatted.data);
     } else {
@@ -53,15 +67,17 @@ class Logger {
   }
 
   debug(message, data) {
-    if (!this.debugMode) return;
+    if (LOG_LEVELS.debug > currentLevel) return;
     this.log('DEBUG', message, data);
   }
 
   info(message, data) {
+    if (LOG_LEVELS.info > currentLevel) return;
     this.log('INFO', message, data);
   }
 
   warn(message, data) {
+    if (LOG_LEVELS.warn > currentLevel) return;
     const formatted = this.formatMessage('WARN', message, data);
     if (data !== undefined) {
       console.warn(formatted.prefix, formatted.message, formatted.data);
@@ -80,7 +96,7 @@ class Logger {
   }
 
   setDebugMode(enabled) {
-    this.debugMode = enabled;
+    setGlobalLogLevel(enabled ? 'debug' : 'info');
   }
 }
 
@@ -90,4 +106,4 @@ function createLogger(component) {
 }
 
 // Export for use in renderer process
-module.exports = { createLogger };
+module.exports = { createLogger, setGlobalLogLevel };
