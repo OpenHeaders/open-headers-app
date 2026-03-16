@@ -26,7 +26,15 @@ const systemAPI = {
     restartApp: () => ipcRenderer.send('restartApp'),
     
     send: (channel, ...args) => {
-        ipcRenderer.send(channel, ...args);
+        const allowedChannels = [
+            'workspace-switched',
+            'workspace-updated',
+            'environment-switched',
+            'environment-variables-changed'
+        ];
+        if (allowedChannels.includes(channel)) {
+            ipcRenderer.send(channel, ...args);
+        }
     },
     
     // Signal that renderer is ready to receive protocol messages
