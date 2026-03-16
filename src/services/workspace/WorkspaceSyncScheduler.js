@@ -586,10 +586,15 @@ class WorkspaceSyncScheduler {
       // Ensure workspace directory exists
       await fs.mkdir(workspacePath, { recursive: true });
       
+      // Track merged sources so the WebSocket broadcast (below) uses
+      // sources WITH local execution data (sourceContent, etc.) instead of
+      // the raw Git config sources which lack it.
+      let mergedSources = null;
+
       // Import sources - merge with existing to preserve local execution data
       if (data.sources && Array.isArray(data.sources)) {
         const sourcesPath = path.join(workspacePath, 'sources.json');
-        
+
         // Load existing sources to preserve local execution data
         let existingSources = [];
         try {
@@ -598,7 +603,7 @@ class WorkspaceSyncScheduler {
         } catch (error) {
           // No existing sources, that's fine
         }
-        
+
         // Create a map of existing sources by ID for quick lookup
         const existingSourcesMap = new Map();
         for (const source of existingSources) {
@@ -606,9 +611,9 @@ class WorkspaceSyncScheduler {
             existingSourcesMap.set(source.sourceId, source);
           }
         }
-        
+
         // Merge sources - use remote config but preserve local execution data
-        const mergedSources = data.sources.map(remoteSource => {
+        mergedSources = data.sources.map(remoteSource => {
           const existingSource = existingSourcesMap.get(remoteSource.sourceId);
           
           if (existingSource) {
@@ -948,10 +953,10 @@ class WorkspaceSyncScheduler {
       // Notify WebSocket service to update browser extensions
       const webSocketService = require('../websocket/ws-service');
       if (webSocketService && webSocketService.updateSources) {
-        // Update sources
-        if (data.sources) {
-          // For sources, pass the array directly
-          webSocketService.updateSources(data.sources);
+        // Update sources — use mergedSources (which preserves local sourceContent)
+        // instead of data.sources (raw Git config without execution data).
+        if (mergedSources) {
+          webSocketService.updateSources(mergedSources);
         }
         
         // Update rules
