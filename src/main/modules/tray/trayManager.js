@@ -34,6 +34,16 @@ class TrayManager {
                 },
                 { type: 'separator' },
                 {
+                    label: 'Settings',
+                    click: () => {
+                        windowManager.showWindow();
+                        setTimeout(() => {
+                            windowManager.sendToWindow('navigate-to', { tab: 'settings' });
+                        }, 300);
+                    }
+                },
+                { type: 'separator' },
+                {
                     label: 'Quit',
                     click: () => {
                         appLifecycle.setQuitting(true);

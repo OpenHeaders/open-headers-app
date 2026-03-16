@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { showMessage } from '../../utils'; // Import the utility
-import { createLogger } from '../../utils/error-handling/logger';
+import { createLogger, setGlobalLogLevel } from '../../utils/error-handling/logger';
 
 const log = createLogger('SettingsContext');
 
@@ -23,7 +23,8 @@ const defaultSettings = {
     compactMode: false,
     tutorialMode: true,
     developerMode: false,
-    recordingHotkey: 'CommandOrControl+Shift+E'
+    recordingHotkey: 'CommandOrControl+Shift+E',
+    logLevel: 'info'
 };
 
 export function SettingsProvider({ children }) {
@@ -45,6 +46,9 @@ export function SettingsProvider({ children }) {
                 const storedSettings = await window.electronAPI.getSettings();
                 if (isMounted.current) {
                     setSettings(storedSettings);
+                    if (storedSettings.logLevel) {
+                        setGlobalLogLevel(storedSettings.logLevel);
+                    }
                     setLoading(false);
                 }
             } catch (error) {
@@ -77,6 +81,11 @@ export function SettingsProvider({ children }) {
                 // Update local state
                 if (isMounted.current) {
                     setSettings(settingsToSave);
+                }
+
+                // Apply log level to renderer logger
+                if (settingsToSave.logLevel) {
+                    setGlobalLogLevel(settingsToSave.logLevel);
                 }
 
                 // Apply auto-launch setting

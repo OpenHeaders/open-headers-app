@@ -111,7 +111,7 @@ const SettingItem = forwardRef(({
                     />
                 ) : type === 'select' ? (
                     <Select
-                        style={{ width: 120 }}
+                        style={{ width: 160 }}
                         options={options}
                         value={value}
                         onChange={handleChange}

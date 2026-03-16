@@ -1,5 +1,5 @@
 // Electron main process
-const { app, ipcMain } = require('electron');
+const { app, ipcMain, Menu, shell } = require('electron');
 const { createLogger } = require('./utils/mainLogger');
 
 // Core modules
@@ -91,6 +91,7 @@ if (!gotTheLock) {
         ipcMain.handle('requestScreenRecordingPermission', systemHandlers.handleRequestScreenRecordingPermission);
         ipcMain.handle('getAppVersion', () => app.getVersion());
         ipcMain.handle('showItemInFolder', systemHandlers.handleShowItemInFolder.bind(systemHandlers));
+        ipcMain.handle('openAppPath', systemHandlers.handleOpenAppPath.bind(systemHandlers));
         
         // Global shortcuts
         const globalShortcuts = require('./main/modules/shortcuts/globalShortcuts');
@@ -335,6 +336,99 @@ if (!gotTheLock) {
         }
         
         trayManager.createTray();
+
+        // Custom application menu — applied on ALL platforms.
+        // Controls which keyboard shortcuts are available (no Reload, no DevTools).
+        // On Windows/Linux the menu bar is hidden (autoHideMenuBar) but shortcuts still work.
+        const isMac = process.platform === 'darwin';
+
+        const openSettings = () => {
+            windowManager.showWindow();
+            setTimeout(() => {
+                windowManager.sendToWindow('navigate-to', { tab: 'settings' });
+            }, 300);
+        };
+
+        const openUpdateCheck = () => {
+            windowManager.showWindow();
+            setTimeout(() => {
+                windowManager.sendToWindow('trigger-update-check');
+            }, 300);
+        };
+
+        const appMenuTemplate = [
+            // macOS app menu (About, Check for Updates, Settings, Services, Hide, Quit)
+            ...(isMac ? [{
+                label: app.getName(),
+                submenu: [
+                    { label: `About ${app.getName()}`, click: () => app.showAboutPanel() },
+                    { label: 'Check for Updates...', click: openUpdateCheck },
+                    { type: 'separator' },
+                    { label: 'Settings...', accelerator: 'Cmd+,', click: openSettings },
+                    { type: 'separator' },
+                    { role: 'services' },
+                    { type: 'separator' },
+                    { role: 'hide' },
+                    { role: 'hideOthers' },
+                    { role: 'unhide' },
+                    { type: 'separator' },
+                    { role: 'quit' }
+                ]
+            }] : []),
+            // File menu
+            {
+                label: 'File',
+                submenu: [
+                    ...(!isMac ? [
+                        { label: 'Settings', accelerator: 'Ctrl+,', click: openSettings },
+                        { label: 'Check for Updates...', click: openUpdateCheck },
+                        { type: 'separator' },
+                    ] : []),
+                    isMac ? { role: 'close' } : { role: 'quit' }
+                ]
+            },
+            // Edit menu (curated — no Substitutions, Speech, Writing Tools, etc.)
+            {
+                label: 'Edit',
+                submenu: [
+                    { role: 'undo' },
+                    { role: 'redo' },
+                    { type: 'separator' },
+                    { role: 'cut' },
+                    { role: 'copy' },
+                    { role: 'paste' },
+                    { role: 'selectAll' }
+                ]
+            },
+            // View menu (no Reload, Force Reload, or DevTools)
+            {
+                label: 'View',
+                submenu: [
+                    { role: 'resetZoom', label: 'Actual Size' },
+                    { role: 'zoomIn' },
+                    { role: 'zoomOut' },
+                    { type: 'separator' },
+                    { role: 'togglefullscreen' }
+                ]
+            },
+            // Window menu (standard)
+            { role: 'windowMenu' },
+            // Help menu
+            {
+                label: 'Help',
+                submenu: [
+                    {
+                        label: 'Documentation',
+                        click: () => shell.openExternal('https://openheaders.io')
+                    },
+                    {
+                        label: 'Report an Issue',
+                        click: () => shell.openExternal('https://github.com/OpenHeaders/open-headers-app/issues')
+                    }
+                ]
+            }
+        ];
+        Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate));
         
         await networkHandlers.initializeNetworkService();
         networkHandlers.setupNativeMonitoring();
