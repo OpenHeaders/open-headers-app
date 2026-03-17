@@ -111,7 +111,7 @@ export class SourcesHandler {
    * @returns {Promise<Object>} - Import result
    * @private
    */
-  async _importSingleSource(source: Record<string, unknown>, options: Record<string, unknown>) {
+  async _importSingleSource(source: Record<string, any>, options: Record<string, any>) {
     // Validate source structure
     const validation = validateSource(source);
     if (!validation.success) {
@@ -121,7 +121,7 @@ export class SourcesHandler {
     // Check for duplicates in merge mode
     if (options.importMode === IMPORT_MODES.MERGE) {
       const currentSources = this._getCurrentSources();
-      const isDuplicate = isSourceDuplicate(source, currentSources);
+      const isDuplicate = isSourceDuplicate(source as any, currentSources as any);
       
       if (isDuplicate) {
         log.debug(`Skipping duplicate source: ${source.sourceId}`);
@@ -232,13 +232,13 @@ export class SourcesHandler {
       return { total: 0, byType: {} };
     }
 
-    const stats = {
+    const stats: { total: number; byType: Record<string, number> } = {
       total: sources.length,
       byType: {}
     };
 
     sources.forEach(source => {
-      const type = source.sourceType || 'unknown';
+      const type = (source.sourceType as string) || 'unknown';
       stats.byType[type] = (stats.byType[type] || 0) + 1;
     });
 

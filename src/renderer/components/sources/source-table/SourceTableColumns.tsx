@@ -62,7 +62,7 @@ interface RefreshStatusInfo {
 }
 
 interface SourceTableColumnsParams {
-    token: Record<string, unknown>;
+    token: Record<string, any>;
     getRefreshStatusText: (record: SourceRecord) => string | RefreshStatusInfo;
     handleViewContent: (record: SourceRecord) => void;
     handleEditSource: (record: SourceRecord) => void;

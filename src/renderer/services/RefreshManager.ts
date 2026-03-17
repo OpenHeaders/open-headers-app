@@ -506,7 +506,7 @@ class RefreshManager {
             ...options,
             timeout: await this.getNetworkTimeout()
           }
-      );
+      ) as { success: boolean; [key: string]: any };
 
       if (result.success) {
         this.lastCacheUpdate = 0;
@@ -730,7 +730,7 @@ class RefreshManager {
       reason: 'manual',
       priority: 'high',
       skipIfActive: false
-    });
+    }) as { success: boolean; [key: string]: any };
 
     return result.success;
   }

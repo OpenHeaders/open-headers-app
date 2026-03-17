@@ -76,7 +76,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
      * Extract searchable fields from console record
      */
     const extractSearchableFields = (consoleRecord: ConsoleRecord) => {
-        const message = (consoleRecord as ConsoleRecord).args.map((arg: unknown) => formatConsoleArg(arg)).join(' ');
+        const message = (consoleRecord as ConsoleRecord).args.map((arg: unknown) => formatConsoleArg(arg as any)).join(' ');
         return [message];
     };
 
@@ -84,7 +84,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
      * Render console log message with actions
      */
     const renderMessage = (args: unknown[], consoleRecord: ConsoleRecord) => {
-        const message = args.map((arg: unknown) => formatConsoleArg(arg)).join(' ');
+        const message = args.map((arg: unknown) => formatConsoleArg(arg as any)).join(' ');
         const needsExpansion = message.length > 150;
         const displayMessage = needsExpansion ? message.substring(0, 150) + '...' : message;
 

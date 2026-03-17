@@ -19,12 +19,15 @@ interface UseEnvironmentCoreReturn extends EnvironmentCoreState {
  */
 export function useEnvironmentCore(): UseEnvironmentCoreReturn {
   const service = useMemo(() => getCentralizedEnvironmentService(), []);
-  const [state, setState] = useState<EnvironmentCoreState>(service.getState());
+  const [state, setState] = useState<EnvironmentCoreState>(() => service.getState() as EnvironmentCoreState);
 
 
   // Subscribe to service state changes
   useEffect(() => {
-    return service.subscribe(setState);
+    const unsubscribe = service.subscribe((newState: Record<string, any>) => {
+      setState(newState as EnvironmentCoreState);
+    });
+    return () => { unsubscribe(); };
   }, [service]);
 
   return {

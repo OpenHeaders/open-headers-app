@@ -24,9 +24,9 @@ import { ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-desig
  * @param {function} debugLog - Debug logging function
  */
 interface UpdateNotificationManagerProps {
-    notification: { open: (args: Record<string, unknown>) => void; info: (args: Record<string, unknown>) => void; success: (args: Record<string, unknown>) => void; error: (args: Record<string, unknown>) => void; destroy: (key: string) => void };
-    modal: { confirm: (args: Record<string, unknown>) => void };
-    token: { colorSuccess?: string; [key: string]: unknown };
+    notification: Record<string, any>;
+    modal: Record<string, any>;
+    token: Record<string, any>;
     isInstalling: boolean;
     setIsInstalling: (value: boolean) => void;
     debugLog: (message: string) => void;

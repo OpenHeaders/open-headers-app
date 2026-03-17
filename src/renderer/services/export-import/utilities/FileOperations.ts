@@ -118,7 +118,7 @@ export async function writeJsonFile(filePath: string, data: Record<string, unkno
  */
 export async function readJsonFile(filePath: string) {
   try {
-    const content = await window.electronAPI.readFile(filePath);
+    const content = await window.electronAPI.readFile(filePath, 'utf-8') as string;
     return JSON.parse(content);
   } catch (error) {
     throw new Error(`Failed to read file ${filePath}: ${error.message}`);

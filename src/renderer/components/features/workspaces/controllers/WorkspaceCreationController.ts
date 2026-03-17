@@ -28,7 +28,7 @@ class WorkspaceCreationController {
     private stateMachine: WorkspaceCreationStateMachine;
     private dependencies: WorkspaceCreationDependencies;
     private abortController: AbortController | null;
-    private listeners: Set<(stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) => void>;
+    private listeners: Set<(stateData: { state: string; context?: Record<string, any>; timestamp?: string }) => void>;
 
     constructor(dependencies: WorkspaceCreationDependencies) {
         this.stateMachine = new WorkspaceCreationStateMachine();
@@ -44,7 +44,7 @@ class WorkspaceCreationController {
         this.stateMachine.addListener(this.handleStateChange);
     }
 
-    async create(formData: Record<string, unknown>, options: Record<string, unknown> = {}) {
+    async create(formData: Record<string, any>, options: Record<string, any> = {}) {
         // Reset any existing operation
         this.reset();
         
@@ -119,22 +119,22 @@ class WorkspaceCreationController {
         this.stateMachine.transition(WORKSPACE_CREATION_EVENTS.WORKSPACE_ACTIVATED);
     }
 
-    async validateForm(formData: Record<string, unknown>) {
+    async validateForm(formData: Record<string, any>) {
         this.checkAborted();
-        
+
         // Validate required fields
         if (!formData.name?.trim()) {
             const error = new Error('Workspace name is required');
             this.stateMachine.setError(error);
             return;
         }
-        
+
         if (formData.type === 'team' && !formData.gitUrl?.trim()) {
             const error = new Error('Git repository URL is required for team workspaces');
             this.stateMachine.setError(error);
             return;
         }
-        
+
         // Validate Git URL format if provided
         if (formData.gitUrl) {
             try {
@@ -150,7 +150,7 @@ class WorkspaceCreationController {
         });
     }
 
-    async handleGitOperations(formData: Record<string, unknown>) {
+    async handleGitOperations(formData: Record<string, any>) {
         this.checkAborted();
         
         // Check Git status
@@ -219,7 +219,7 @@ class WorkspaceCreationController {
         }
     }
 
-    async testConnection(formData: Record<string, unknown>) {
+    async testConnection(formData: Record<string, any>) {
         this.checkAborted();
         
         try {
@@ -258,7 +258,7 @@ class WorkspaceCreationController {
         }
     }
 
-    async createWorkspace(formData: Record<string, unknown>) {
+    async createWorkspace(formData: Record<string, any>) {
         this.checkAborted();
         
         try {
@@ -295,7 +295,7 @@ class WorkspaceCreationController {
 
     // Removed handlePostCreation since initial commit is now done before workspace creation
 
-    async performInitialCommit(formData: Record<string, unknown>) {
+    async performInitialCommit(formData: Record<string, any>) {
         this.checkAborted();
         
         try {
@@ -377,7 +377,7 @@ class WorkspaceCreationController {
         // Cleanup resources if needed
     }
 
-    handleStateChange(stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) {
+    handleStateChange(stateData: { state: string; context?: Record<string, any>; timestamp?: string }) {
         const { state } = stateData;
         
         // Notify listeners
@@ -416,7 +416,7 @@ class WorkspaceCreationController {
         }
     }
 
-    addListener(listener: (stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) => void) {
+    addListener(listener: (stateData: { state: string; context?: Record<string, any>; timestamp?: string }) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }

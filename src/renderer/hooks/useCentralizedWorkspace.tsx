@@ -13,12 +13,13 @@ export function useCentralizedWorkspace() {
   const [state, setState] = useState(service.getState());
 
   useEffect(() => {
-    return service.subscribe((newState: any) => {
+    const unsubscribe = service.subscribe((newState: any) => {
       setState(newState);
 
       // Remove per-hook logging to avoid spam
       // Logging should be done in the service itself
     });
+    return () => { unsubscribe(); };
   }, [service]);
 
   return {

@@ -42,11 +42,17 @@ interface SyncEvent {
 }
 
 interface WorkspaceContextType {
-    createWorkspace: (data: WorkspaceData) => Promise<WorkspaceData | null>;
-    updateWorkspace: (id: string, data: WorkspaceData) => Promise<WorkspaceData | null>;
-    deleteWorkspace: (id: string) => Promise<boolean | null>;
-    getWorkspaces: () => Promise<WorkspaceData[]>;
-    [key: string]: unknown;
+    createWorkspace: (data: any) => Promise<any>;
+    updateWorkspace: (id: string, data: any) => Promise<any>;
+    deleteWorkspace: (id: string) => Promise<any>;
+    getWorkspaces?: () => Promise<WorkspaceData[]>;
+    workspaces?: any[];
+    switchWorkspace?: (id: string) => Promise<any>;
+    syncWorkspace?: (id: string, options?: any) => Promise<any>;
+    cloneWorkspaceToPersonal?: (id: string, newName?: string | null) => Promise<any>;
+    activeWorkspaceId?: string;
+    syncStatus?: Record<string, any>;
+    loading?: boolean;
 }
 
 interface ServiceAdapterDependencies {
@@ -276,12 +282,18 @@ class WorkspaceServiceAdapter {
     // to the newly created workspace
 
     async get(workspaceId: string) {
-        const workspaces = await this.workspaceContext.getWorkspaces();
-        return workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+        if (this.workspaceContext.getWorkspaces) {
+            const workspaces = await this.workspaceContext.getWorkspaces();
+            return workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+        }
+        return (this.workspaceContext.workspaces || []).find((w: WorkspaceData) => w.id === workspaceId);
     }
 
     async list() {
-        return await this.workspaceContext.getWorkspaces();
+        if (this.workspaceContext.getWorkspaces) {
+            return await this.workspaceContext.getWorkspaces();
+        }
+        return this.workspaceContext.workspaces || [];
     }
 }
 

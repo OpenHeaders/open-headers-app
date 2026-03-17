@@ -34,7 +34,7 @@ const { Text } = Typography;
  * @returns {React.ReactNode} Rendered component
  */
 interface WorkflowsTableProps {
-    onViewRecord: (record: Record<string, unknown>) => void;
+    onViewRecord: (record: Record<string, any>) => void;
     onRecordDeleted?: (recordId: string) => void;
 }
 
@@ -80,7 +80,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles record export via modal
      * @param {Object} record - Record to export
      */
-    const handleExport = (record: Record<string, unknown>) => {
+    const handleExport = (record: Record<string, any>) => {
         setSelectedRecord(record);
         setExportModalVisible(true);
     };
@@ -89,9 +89,9 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles JSON export completion
      * @param {Object} record - Record metadata being exported
      */
-    const handleExportJson = async (record: Record<string, unknown>) => {
+    const handleExportJson = async (record: Record<string, any>) => {
         try {
-            const timestamp = new Date(record.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
+            const timestamp = new Date(record.timestamp as string).toISOString().replace(/:/g, '-').split('.')[0];
             const filename = `open-headers_recording_${timestamp}.json`;
             
             // Show save dialog
@@ -108,12 +108,12 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             if (!filePath) return;
 
             // Load the actual recording data
-            const recordingData = await window.electronAPI.loadRecording(record.id);
-            
+            const recordingData = await window.electronAPI.loadRecording(record.id as string) as Record<string, any>;
+
             // Add tag and description to the recording data if they exist
             if (record.tag || record.description) {
                 recordingData.metadata = {
-                    ...recordingData.metadata,
+                    ...(recordingData.metadata as Record<string, any>),
                     tag: record.tag || null,
                     description: record.description || null
                 };
