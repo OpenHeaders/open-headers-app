@@ -4,8 +4,8 @@
  * Provides easy access to core services and configuration.
  */
 
-import { ExportService } from './ExportService.js';
-import { ImportService } from './ImportService.js';
+import { ExportService } from './ExportService';
+import { ImportService } from './ImportService';
 
 export { ExportService, ImportService };
-export * from './ExportImportConfig.js';
+export * from './ExportImportConfig';

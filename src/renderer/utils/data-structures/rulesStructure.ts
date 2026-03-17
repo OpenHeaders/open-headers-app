@@ -5,7 +5,7 @@
  * Each rule type has its own properties but shares common fields.
  */
 
-import { DATA_FORMAT_VERSION } from '../../../config/version.esm.js';
+import { DATA_FORMAT_VERSION } from '../../../config/version.esm';
 
 // Rule types enum
 export const RULE_TYPES = {

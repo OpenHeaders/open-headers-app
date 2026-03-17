@@ -13,7 +13,7 @@
  * - Support for validation warnings vs hard errors
  */
 
-import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig.js';
+import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig';
 
 /**
  * Validates the basic structure of import data

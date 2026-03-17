@@ -9,7 +9,7 @@ import {
   APP_VERSION,
   DATA_FORMAT_VERSION,
   SUPPORTED_DATA_VERSIONS
-} from '../../../../config/version.esm.js';
+} from '../../../../config/version.esm';
 
 /**
  * Export file format options

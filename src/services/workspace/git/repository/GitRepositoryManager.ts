@@ -5,7 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
 import { GitAuthenticator } from '../auth/GitAuthenticator';
 

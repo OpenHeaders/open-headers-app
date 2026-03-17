@@ -8,7 +8,7 @@ import path from 'path';
 import electron from 'electron';
 import child_process from 'child_process';
 import util from 'util';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from './GitExecutor';
 
 const { app } = electron;

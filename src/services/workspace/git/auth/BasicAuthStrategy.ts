@@ -2,7 +2,7 @@
  * BasicAuthStrategy - Handles basic username/password authentication for Git operations
  */
 
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 

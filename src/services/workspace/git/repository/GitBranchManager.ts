@@ -3,7 +3,7 @@
  * Manages branch creation, switching, merging, and deletion
  */
 
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
 
 const { createLogger } = mainLogger;

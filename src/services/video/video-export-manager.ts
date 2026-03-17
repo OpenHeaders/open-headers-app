@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { FFmpegManager } from './ffmpeg-manager';
 import { VideoConverter } from './video-converter';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { dialog, BrowserWindow, ipcMain, shell } = electron;
 const { createLogger } = mainLogger;

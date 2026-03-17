@@ -8,7 +8,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 
 // Core modules
 import GitInitializer from './core/GitInitializer';

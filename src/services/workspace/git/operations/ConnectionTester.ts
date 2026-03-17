@@ -4,7 +4,7 @@
  */
 
 import electron from 'electron';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import GitConnectionProgress from '../utils/GitConnectionProgress';
 
 const { net } = electron;

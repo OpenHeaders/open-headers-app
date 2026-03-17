@@ -1,6 +1,6 @@
 import electronUpdater from 'electron-updater';
 import electron from 'electron';
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
 

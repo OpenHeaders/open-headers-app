@@ -1,7 +1,7 @@
 import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 import windowsFocusHelper from '../utils/windowsFocus';
 
 const { BrowserWindow, shell, app } = electron;

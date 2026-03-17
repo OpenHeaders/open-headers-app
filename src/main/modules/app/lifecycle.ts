@@ -1,8 +1,8 @@
 import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../utils/mainLogger.js';
-import atomicWriter from '../../../utils/atomicFileWriter.js';
+import mainLogger from '../../../utils/mainLogger';
+import atomicWriter from '../../../utils/atomicFileWriter';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
 import serviceRegistry from '../../../services/core/ServiceRegistry';
 import GitSyncService from '../../../services/workspace/git/GitSyncService';

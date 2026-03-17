@@ -4,8 +4,8 @@
  */
 
 import WebSocket from 'ws';
-import mainLogger from '../../utils/mainLogger.js';
-import atomicWriter from '../../utils/atomicFileWriter.js';
+import mainLogger from '../../utils/mainLogger';
+import atomicWriter from '../../utils/atomicFileWriter';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSRecordingHandler');

@@ -15,14 +15,14 @@
  */
 
 // Validation utilities
-export * from './ValidationUtils.js';
+export * from './ValidationUtils';
 
 // File operation utilities  
-export * from './FileOperations.js';
+export * from './FileOperations';
 
 // Message generation utilities
-export * from './MessageGeneration.js';
+export * from './MessageGeneration';
 
 // Duplicate detection utilities
-export * from './DuplicateDetection.js';
+export * from './DuplicateDetection';
 

@@ -1,7 +1,7 @@
 import child_process from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { spawn } = child_process;
 const { createLogger } = mainLogger;

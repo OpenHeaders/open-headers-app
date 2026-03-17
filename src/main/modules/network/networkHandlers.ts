@@ -1,5 +1,5 @@
 import electron from 'electron';
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import webSocketService from '../../../services/websocket/ws-service';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';

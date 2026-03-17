@@ -6,9 +6,9 @@
  */
 
 import { getCentralizedEnvironmentService } from '../../../services/CentralizedEnvironmentService';
-import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utilities/ValidationUtils.js';
-import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection.js';
-import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig.js';
+import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utilities/ValidationUtils';
+import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
+import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('EnvironmentsHandler');

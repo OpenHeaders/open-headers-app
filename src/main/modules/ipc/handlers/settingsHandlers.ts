@@ -2,8 +2,8 @@ import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
 import AutoLaunch from 'auto-launch';
-import mainLogger from '../../../../utils/mainLogger.js';
-import atomicWriter from '../../../../utils/atomicFileWriter.js';
+import mainLogger from '../../../../utils/mainLogger';
+import atomicWriter from '../../../../utils/atomicFileWriter';
 import trayManager from '../../tray/trayManager';
 import webSocketService from '../../../../services/websocket/ws-service';
 

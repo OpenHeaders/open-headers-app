@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

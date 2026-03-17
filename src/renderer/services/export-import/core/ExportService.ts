@@ -5,19 +5,19 @@
  * handles file operations, and provides comprehensive error handling.
  */
 
-import { SourcesHandler } from '../handlers/SourcesHandler.js';
-import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler.js';
-import { RulesHandler } from '../handlers/RulesHandler.js';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler.js';
-import { WorkspaceHandler } from '../handlers/WorkspaceHandler.js';
+import { SourcesHandler } from '../handlers/SourcesHandler';
+import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
+import { RulesHandler } from '../handlers/RulesHandler';
+import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
+import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
 import { 
   generateTimestampedFilename, 
   handleSingleFileExport, 
   handleMultiFileExport 
-} from '../utilities/FileOperations.js';
-import { generateExportSuccessMessage } from '../utilities/MessageGeneration.js';
+} from '../utilities/FileOperations';
+import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
-import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig.js';
+import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('ExportService');

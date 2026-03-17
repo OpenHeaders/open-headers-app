@@ -5,9 +5,9 @@
  * including duplicate detection and validation specific to sources.
  */
 
-import { isSourceDuplicate } from '../utilities/DuplicateDetection.js';
-import { validateSource } from '../utilities/ValidationUtils.js';
-import { IMPORT_MODES } from '../core/ExportImportConfig.js';
+import { isSourceDuplicate } from '../utilities/DuplicateDetection';
+import { validateSource } from '../utilities/ValidationUtils';
+import { IMPORT_MODES } from '../core/ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('SourcesHandler');

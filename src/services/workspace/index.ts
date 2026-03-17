@@ -1,11 +1,11 @@
 // Workspace services exports
-import { WorkspaceSettingsService } from './WorkspaceSettingsService.js';
-import { WorkspaceSyncScheduler } from './WorkspaceSyncScheduler.js';
-import { detectAndValidateConfig } from './config-file-detector.js';
-import { parseConfigPath, getSearchPatterns, getPathErrorMessage } from './config-path-parser.js';
-import { GitAutoInstaller } from './git-auto-installer.js';
-import { GitConnectionProgress } from './git/utils/GitConnectionProgress.js';
-import GitSyncService from './git/GitSyncService.js';
+import { WorkspaceSettingsService } from './WorkspaceSettingsService';
+import { WorkspaceSyncScheduler } from './WorkspaceSyncScheduler';
+import { detectAndValidateConfig } from './config-file-detector';
+import { parseConfigPath, getSearchPatterns, getPathErrorMessage } from './config-path-parser';
+import { GitAutoInstaller } from './git-auto-installer';
+import { GitConnectionProgress } from './git/utils/GitConnectionProgress';
+import GitSyncService from './git/GitSyncService';
 
 export {
   WorkspaceSettingsService,

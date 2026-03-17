@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { calculateViewportScale } from '../utils/playerUtils.js';
+import { calculateViewportScale } from '../utils/playerUtils';
 import { createLogger } from '../../../../utils/error-handling/logger';
 
 const log = createLogger('usePlayerManager');

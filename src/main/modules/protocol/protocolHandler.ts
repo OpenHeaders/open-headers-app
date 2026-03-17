@@ -1,7 +1,7 @@
 import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION, isVersionCompatible as checkVersionCompatible } from '../../../config/version';
 import windowsFocusHelper from '../utils/windowsFocus';
 

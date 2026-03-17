@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

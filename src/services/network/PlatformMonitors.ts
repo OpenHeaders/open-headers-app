@@ -3,7 +3,7 @@ import child_process from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const { spawn, exec } = child_process;

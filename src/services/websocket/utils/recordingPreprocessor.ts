@@ -9,7 +9,7 @@
  * - Adding font-display: swap to prevent blocking
  */
 
-import mainLogger from '../../../utils/mainLogger.js';
+import mainLogger from '../../../utils/mainLogger';
 import http from 'http';
 import nodeUrl from 'url';
 

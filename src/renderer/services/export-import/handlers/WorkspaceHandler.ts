@@ -5,9 +5,9 @@
  * including Git integration, authentication data, and workspace creation.
  */
 
-import { validateWorkspaceConfig } from '../utilities/ValidationUtils.js';
-import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection.js';
-import { DEFAULTS } from '../core/ExportImportConfig.js';
+import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
+import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection';
+import { DEFAULTS } from '../core/ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('WorkspaceHandler');

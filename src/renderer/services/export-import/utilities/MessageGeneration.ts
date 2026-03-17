@@ -14,8 +14,8 @@
  * - Support for both regular imports and Git sync operations
  */
 
-import { SUCCESS_MESSAGES, FILE_FORMATS } from '../core/ExportImportConfig.js';
-import { DATA_FORMAT_VERSION } from '../../../../config/version.esm.js';
+import { SUCCESS_MESSAGES, FILE_FORMATS } from '../core/ExportImportConfig';
+import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 
 /**
  * Generates a success message for export operations

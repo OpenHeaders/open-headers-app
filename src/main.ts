@@ -1,6 +1,6 @@
 // Electron main process
 import electron from 'electron';
-import mainLogger from './utils/mainLogger.js';
+import mainLogger from './utils/mainLogger';
 
 const { app, ipcMain, Menu, shell } = electron;
 const { createLogger } = mainLogger;

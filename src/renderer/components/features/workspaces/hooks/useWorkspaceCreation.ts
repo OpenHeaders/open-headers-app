@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { App } from 'antd';
-import WorkspaceCreationController from '../controllers/WorkspaceCreationController.js';
-import { WORKSPACE_CREATION_STATES } from '../state/WorkspaceCreationStateMachine.js';
+import WorkspaceCreationController from '../controllers/WorkspaceCreationController';
+import { WORKSPACE_CREATION_STATES } from '../state/WorkspaceCreationStateMachine';
 
 const { createLogger } = require('../../../../utils/error-handling/logger');
 const log = createLogger('useWorkspaceCreation');

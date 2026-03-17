@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Space, Typography, Button, message, theme } from 'antd';
 import { ImportOutlined, UploadOutlined } from '@ant-design/icons';
-import { DATA_FORMAT_VERSION } from '../../../../config/version.esm.js';
+import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 
 import ImportFileSelector from './ImportFileSelector';
 import ImportFileAnalysis from './ImportFileAnalysis';
