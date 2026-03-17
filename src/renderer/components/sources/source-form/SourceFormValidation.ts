@@ -23,6 +23,28 @@
  * @since 3.0.0
  */
 
+import type { FormInstance } from 'antd';
+
+interface EnvironmentContext {
+    environmentsReady: boolean;
+    activeEnvironment: string;
+    getAllVariables: () => Record<string, string>;
+    resolveTemplate?: (text: string) => string;
+}
+
+interface ValidationError {
+    message: string;
+}
+
+interface SourceFormValues {
+    sourceType?: string;
+    jsonFilter?: {
+        enabled?: boolean;
+        path?: string;
+    };
+    [key: string]: unknown;
+}
+
 /**
  * Validates URL field for environment variables and TOTP patterns
  * 
@@ -41,7 +63,7 @@
  * const validation = validateUrlField(rule, 'https://{{API_URL}}/data', 'http', envContext, form);
  * validation.catch(error => console.log(error.message));
  */
-export const validateUrlField = (rule, value, sourceType, envContext, form) => {
+export const validateUrlField = (rule: unknown, value: string, sourceType: string, envContext: EnvironmentContext, form: FormInstance) => {
     // Skip validation for non-HTTP sources or empty values
     if (!value || sourceType !== 'http') return Promise.resolve();
     
@@ -133,7 +155,7 @@ export const validateUrlField = (rule, value, sourceType, envContext, form) => {
  * const error = validateEnvironmentVariables('{{API_KEY}}', envContext, 'Header value');
  * if (error) console.log(error.message);
  */
-export const validateEnvironmentVariables = (value, envContext, fieldName) => {
+export const validateEnvironmentVariables = (value: string, envContext: EnvironmentContext, fieldName: string): ValidationError | null => {
     // Check for environment variable pattern {{VAR}}
     const envVarMatches = value.match(/{{([^}]+)}}/g);
     if (envVarMatches) {
@@ -169,7 +191,7 @@ export const validateEnvironmentVariables = (value, envContext, fieldName) => {
  * const error = validateTotpPlaceholders('Bearer [[TOTP_CODE]]', form, 'Authorization header');
  * if (error) console.log(error.message);
  */
-export const validateTotpPlaceholders = (value, form, fieldName) => {
+export const validateTotpPlaceholders = (value: string, form: FormInstance, fieldName: string): ValidationError | null => {
     // Check for TOTP code pattern [[TOTP_CODE]]
     if (value.includes('[[TOTP_CODE]]')) {
         const requestOptions = form.getFieldValue('requestOptions') || {};
@@ -203,7 +225,7 @@ export const validateTotpPlaceholders = (value, form, fieldName) => {
  *   return;
  * }
  */
-export const validateHttpHeaders = (form, envContext) => {
+export const validateHttpHeaders = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
     // Get all headers from the form
     const headers = form.getFieldValue(['requestOptions', 'headers']);
     if (!headers || headers.length === 0) return null;
@@ -242,7 +264,7 @@ export const validateHttpHeaders = (form, envContext) => {
  * @param {Object} envContext - Environment context with variables and state
  * @returns {Object|null} Error object if validation fails, null if valid
  */
-export const validateQueryParameters = (form, envContext) => {
+export const validateQueryParameters = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
     // Get all query parameters from the form
     const queryParams = form.getFieldValue(['requestOptions', 'queryParams']);
     if (!queryParams || queryParams.length === 0) return null;
@@ -273,7 +295,7 @@ export const validateQueryParameters = (form, envContext) => {
  * @param {Object} envContext - Environment context with variables and state
  * @returns {Object|null} Error object if validation fails, null if valid
  */
-export const validateRequestBody = (form, envContext) => {
+export const validateRequestBody = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
     // Get request body from the form
     const body = form.getFieldValue(['requestOptions', 'body']);
     if (!body) return null;
@@ -292,7 +314,7 @@ export const validateRequestBody = (form, envContext) => {
  * @param {Object} envContext - Environment context with variables and state
  * @returns {Object|null} Error object if validation fails, null if valid
  */
-export const validateJsonFilterPath = (values, envContext) => {
+export const validateJsonFilterPath = (values: SourceFormValues, envContext: EnvironmentContext): ValidationError | null => {
     // Only validate if JSON filter is enabled and has a path
     if (!values.jsonFilter?.enabled || !values.jsonFilter?.path) return null;
     
@@ -314,7 +336,7 @@ export const validateJsonFilterPath = (values, envContext) => {
  * @param {Object} envContext - Environment context with variables and state
  * @returns {Object|null} Error object if validation fails, null if valid
  */
-export const validateTotpSecret = (form, envContext) => {
+export const validateTotpSecret = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
     // Get TOTP secret from form request options
     const requestOptions = form.getFieldValue('requestOptions') || {};
     const totpSecret = requestOptions.totpSecret;
@@ -344,7 +366,7 @@ export const validateTotpSecret = (form, envContext) => {
  *   return;
  * }
  */
-export const validateAllHttpFields = (form, values, envContext) => {
+export const validateAllHttpFields = (form: FormInstance, values: SourceFormValues, envContext: EnvironmentContext): ValidationError | null => {
     // Only validate HTTP sources
     if (values.sourceType !== 'http') return null;
     

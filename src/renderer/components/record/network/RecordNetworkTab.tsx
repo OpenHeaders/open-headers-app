@@ -34,7 +34,38 @@ import { createStandardTableProps } from '../shared';
 
 const { Text } = Typography;
 
-const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false }) => {
+interface NetworkRecord {
+    id: string;
+    url: string;
+    method: string;
+    status: number;
+    timestamp: number;
+    endTime?: number;
+    duration?: number;
+    size?: number;
+    responseSize?: number;
+    type?: string;
+    error?: boolean;
+    requestHeaders?: Record<string, string>;
+    responseHeaders?: Record<string, string>;
+    requestBody?: string | Record<string, unknown>;
+    responseBody?: string | Record<string, unknown>;
+    key?: string;
+}
+
+interface RecordData {
+    network: NetworkRecord[];
+    startTime?: number;
+}
+
+interface RecordNetworkTabProps {
+    record: RecordData;
+    viewMode: string;
+    activeTime: number;
+    autoHighlight?: boolean;
+}
+
+const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false }: RecordNetworkTabProps) => {
     const { token } = theme.useToken();
 
     // UI state
@@ -77,10 +108,10 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Filter data based on body filters
      */
-    const getFilteredData = (data) => {
+    const getFilteredData = (data: NetworkRecord[]) => {
         if (!isBodyFilterActive) return data;
 
-        return data.filter(req => {
+        return data.filter((req: NetworkRecord) => {
             const hasRequestBody = req.requestBody &&
                 (typeof req.requestBody === 'string' ? req.requestBody.trim() !== '' : Object.keys(req.requestBody).length > 0);
             const hasResponseBody = req.responseBody &&
@@ -100,12 +131,12 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Extract searchable fields from network record
      */
-    const extractSearchableFields = (networkRecord) => {
+    const extractSearchableFields = (networkRecord: NetworkRecord) => {
         const searchableFields = [networkRecord.url.toLowerCase()];
 
         // Add request headers
         if (networkRecord.requestHeaders) {
-            Object.entries(networkRecord.requestHeaders).forEach(([key, val]) => {
+            Object.entries(networkRecord.requestHeaders).forEach(([key, val]: [string, string]) => {
                 searchableFields.push(key.toLowerCase());
                 searchableFields.push(String(val).toLowerCase());
             });
@@ -113,7 +144,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
         // Add response headers
         if (networkRecord.responseHeaders) {
-            Object.entries(networkRecord.responseHeaders).forEach(([key, val]) => {
+            Object.entries(networkRecord.responseHeaders).forEach(([key, val]: [string, string]) => {
                 searchableFields.push(key.toLowerCase());
                 searchableFields.push(String(val).toLowerCase());
             });
@@ -145,9 +176,9 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'timestamp',
             key: 'timestamp',
             width: 100,
-            sorter: (a, b) => a.timestamp - b.timestamp,
-            defaultSortOrder: 'ascend',
-            render: (timestamp, networkRecord) => (
+            sorter: (a: NetworkRecord, b: NetworkRecord) => a.timestamp - b.timestamp,
+            defaultSortOrder: 'ascend' as const,
+            render: (timestamp: number, networkRecord: NetworkRecord) => (
                 <TimestampCell
                     timestamp={timestamp}
                     record={record}
@@ -220,7 +251,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             ellipsis: true,
             filteredValue: searchFilter.searchValue ? [searchFilter.searchValue] : null,
             onFilter: searchFilter.createFilterFunction(extractSearchableFields),
-            render: (url, networkRecord) => (
+            render: (url: string, networkRecord: NetworkRecord) => (
                 <NetworkRequestCell url={url} record={networkRecord} token={token} />
             )
         },
@@ -229,10 +260,10 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'status',
             key: 'status',
             width: 80,
-            sorter: (a, b) => (a.status || 0) - (b.status || 0),
+            sorter: (a: NetworkRecord, b: NetworkRecord) => (a.status || 0) - (b.status || 0),
             filters: statusValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.status,
-            onFilter: (value, networkRecord) => {
+            onFilter: (value: string, networkRecord: NetworkRecord) => {
                 if (networkRecord.error) return value === 'Failed';
                 if (!networkRecord.status) return value === 'Pending';
                 if (value === '2xx') return networkRecord.status >= 200 && networkRecord.status < 300;
@@ -241,7 +272,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 if (value === '5xx') return networkRecord.status >= 500;
                 return String(networkRecord.status) === value;
             },
-            render: (status, networkRecord) => (
+            render: (status: number, networkRecord: NetworkRecord) => (
                 <NetworkStatusCell status={status} record={networkRecord} token={token} />
             )
         },
@@ -250,22 +281,22 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'method',
             key: 'method',
             width: 80,
-            sorter: (a, b) => a.method.localeCompare(b.method),
+            sorter: (a: NetworkRecord, b: NetworkRecord) => a.method.localeCompare(b.method),
             filters: methodValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.method,
-            onFilter: (value, networkRecord) => networkRecord.method === value,
-            render: (method) => <Text style={{ fontSize: '12px' }}>{method}</Text>
+            onFilter: (value: string, networkRecord: NetworkRecord) => networkRecord.method === value,
+            render: (method: string) => <Text style={{ fontSize: '12px' }}>{method}</Text>
         },
         {
             title: 'Type',
             dataIndex: 'type',
             key: 'type',
             width: selectedRequest ? 80 : 100,
-            sorter: (a, b) => getTypeFromRecord(a).localeCompare(getTypeFromRecord(b)),
+            sorter: (a: NetworkRecord, b: NetworkRecord) => getTypeFromRecord(a).localeCompare(getTypeFromRecord(b)),
             filters: typeValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.type,
-            onFilter: (value, filterRecord) => getTypeFromRecord(filterRecord) === value,
-            render: (type, networkRecord) => (
+            onFilter: (value: string, filterRecord: NetworkRecord) => getTypeFromRecord(filterRecord) === value,
+            render: (type: string, networkRecord: NetworkRecord) => (
                 <Text style={{ fontSize: '12px' }}>{getTypeFromRecord(networkRecord)}</Text>
             )
         },
@@ -274,8 +305,8 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'size',
             key: 'size',
             width: 100,
-            align: 'right',
-            render: (size, networkRecord) => {
+            align: 'right' as const,
+            render: (size: number, networkRecord: NetworkRecord) => {
                 const bytes = size || networkRecord.responseSize || 0;
                 return <Text style={{ fontSize: '12px' }}>{formatBytes(bytes)}</Text>;
             }
@@ -285,8 +316,8 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'duration',
             key: 'time',
             width: 100,
-            align: 'right',
-            render: (duration, networkRecord) => {
+            align: 'right' as const,
+            render: (duration: number, networkRecord: NetworkRecord) => {
                 const ms = duration || (networkRecord.endTime - networkRecord.timestamp) || 0;
                 return <Text style={{ fontSize: '12px' }}>{formatMilliseconds(ms)}</Text>;
             }
@@ -296,15 +327,15 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     // Format and filter table data with unique keys (only if we have data)
     const unfilteredData = hasNoData ? [] : record.network
         .slice()
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .map((item, index) => ({
+        .sort((a: NetworkRecord, b: NetworkRecord) => a.timestamp - b.timestamp)
+        .map((item: NetworkRecord, index: number) => ({
             ...item,
             key: `network-${item.id || item.url}-${item.timestamp}-${index}`
         }));
     const tableDataSource = getFilteredData(unfilteredData);
 
     // Table change handler
-    const handleTableChange = (pagination, filters) => {
+    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
         setNetworkFilters({
             status: filters.status || [],
             method: filters.method || [],
@@ -313,7 +344,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     };
 
     // Row class name generator
-    const generateRowClassName = (networkRecord) => {
+    const generateRowClassName = (networkRecord: NetworkRecord) => {
         return timeHighlight.getRowClassName(networkRecord, record.network);
     };
 
@@ -334,14 +365,14 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 tableDataSource.findIndex(req => req.id === selectedRequestId) >= 0 ?
                     [tableDataSource.findIndex(req => req.id === selectedRequestId)] : []
                 : [],
-            onSelect: (record, selected, selectedRows, nativeEvent) => {
+            onSelect: (_record: NetworkRecord, _selected: boolean, _selectedRows: NetworkRecord[], nativeEvent: { stopPropagation?: () => void }) => {
                 nativeEvent?.stopPropagation?.();
             },
             hideSelectAll: true,
             columnWidth: 0,
             columnTitle: ''
         },
-        onRow: (networkRecord) => ({
+        onRow: (networkRecord: NetworkRecord) => ({
             onClick: () => {
                 if (selectedRequestId === networkRecord.id) {
                     setSelectedRequestId(null);

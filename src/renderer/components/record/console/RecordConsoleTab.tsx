@@ -23,7 +23,26 @@ import { createSearchableColumnHeader, createStandardTableProps, createCopyButto
 
 const { Text } = Typography;
 
-const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false }) => {
+interface ConsoleRecord {
+    timestamp: number;
+    level: string;
+    args: unknown[];
+    key?: string;
+}
+
+interface RecordData {
+    console: ConsoleRecord[];
+    startTime?: number;
+}
+
+interface RecordConsoleTabProps {
+    record: RecordData;
+    viewMode: string;
+    activeTime: number;
+    autoHighlight?: boolean;
+}
+
+const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false }: RecordConsoleTabProps) => {
     const { token } = theme.useToken();
     const { message: messageApi } = App.useApp();
 
@@ -48,7 +67,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Show detailed console log modal
      */
-    const showConsoleModal = (timestamp, level, message) => {
+    const showConsoleModal = (timestamp: number, level: string, message: string) => {
         setSelectedConsoleLog({ timestamp, level, message });
         setConsoleModalVisible(true);
     };

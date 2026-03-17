@@ -13,6 +13,57 @@ import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentsHandler');
 
+interface EnvironmentSchema {
+  environments: Record<string, Record<string, unknown>>;
+  variableDefinitions: Record<string, Record<string, unknown>>;
+}
+
+interface ExportOptions {
+  environmentOption: string;
+  selectedEnvironments?: string[];
+}
+
+interface ImportOptions {
+  importMode?: string;
+  selectedItems: { environments?: boolean };
+  selectedEnvironments?: string[];
+  isGitSync?: boolean;
+}
+
+interface ImportData {
+  environmentSchema?: EnvironmentSchema;
+  environments?: Record<string, Record<string, EnvironmentVariableData>>;
+}
+
+interface EnvironmentVariableData {
+  value?: string;
+  isSecret?: boolean;
+  [key: string]: unknown;
+}
+
+interface ImportStats {
+  environmentsImported: number;
+  variablesCreated: number;
+  errors: Array<{ environment?: string; variable?: string; error: string }>;
+}
+
+interface VariableToSet {
+  name: string;
+  value: string;
+  isSecret: boolean;
+}
+
+interface VariableDefinition {
+  name: string;
+  isSecret?: boolean;
+  [key: string]: unknown;
+}
+
+interface EnvironmentData {
+  environments?: Record<string, Record<string, EnvironmentVariableData>>;
+  environmentSchema?: EnvironmentSchema;
+}
+
 /**
  * Environments Handler Class
  * Manages export and import operations for environment configurations
@@ -31,7 +82,7 @@ export class EnvironmentsHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Environment data or null if not selected
    */
-  async exportEnvironments(options) {
+  async exportEnvironments(options: ExportOptions) {
     const { environmentOption, selectedEnvironments } = options;
     
     if (environmentOption === 'none') {
@@ -63,7 +114,7 @@ export class EnvironmentsHandler {
    * @returns {Object} - Schema export data
    * @private
    */
-  _exportEnvironmentSchema(fullSchema, selectedEnvironments) {
+  _exportEnvironmentSchema(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
     let schema = fullSchema;
     
     if (selectedEnvironments && selectedEnvironments.length > 0) {
@@ -72,7 +123,7 @@ export class EnvironmentsHandler {
         variableDefinitions: fullSchema.variableDefinitions
       };
       
-      selectedEnvironments.forEach(envName => {
+      selectedEnvironments.forEach((envName: string) => {
         if (fullSchema.environments[envName]) {
           schema.environments[envName] = fullSchema.environments[envName];
         }
@@ -90,24 +141,24 @@ export class EnvironmentsHandler {
    * @returns {Object} - Full environment export data
    * @private
    */
-  _exportFullEnvironments(fullSchema, selectedEnvironments) {
+  _exportFullEnvironments(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
     const { environments } = this.dependencies;
     let exportEnvironments = environments;
     let schema = fullSchema;
     
     if (selectedEnvironments && selectedEnvironments.length > 0) {
       exportEnvironments = {};
-      selectedEnvironments.forEach(envName => {
+      selectedEnvironments.forEach((envName: string) => {
         if (environments[envName]) {
           exportEnvironments[envName] = environments[envName];
         }
       });
-      
+
       schema = {
         environments: {},
         variableDefinitions: fullSchema.variableDefinitions
       };
-      selectedEnvironments.forEach(envName => {
+      selectedEnvironments.forEach((envName: string) => {
         if (fullSchema.environments[envName]) {
           schema.environments[envName] = fullSchema.environments[envName];
         }
@@ -130,7 +181,7 @@ export class EnvironmentsHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importEnvironments(importData, options) {
+  async importEnvironments(importData: ImportData, options: ImportOptions) {
     const stats = {
       environmentsImported: 0,
       variablesCreated: 0,
@@ -175,7 +226,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Import statistics
    * @private
    */
-  async _importFullEnvironments(environmentsData, options) {
+  async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariableData>>, options: ImportOptions) {
     const stats = {
       environmentsImported: 0,
       variablesCreated: 0,
@@ -188,7 +239,7 @@ export class EnvironmentsHandler {
     // Filter environments based on selection
     if (options.selectedEnvironments && options.selectedEnvironments.length > 0) {
       environmentsToImport = {};
-      options.selectedEnvironments.forEach(envName => {
+      options.selectedEnvironments.forEach((envName: string) => {
         if (environmentsData[envName]) {
           environmentsToImport[envName] = environmentsData[envName];
         }
@@ -262,7 +313,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Import statistics
    * @private
    */
-  async _importEnvironmentSchema(schemaData, options) {
+  async _importEnvironmentSchema(schemaData: EnvironmentSchema, options: ImportOptions) {
     const stats = {
       environmentsImported: 0,
       variablesCreated: 0,
@@ -286,7 +337,7 @@ export class EnvironmentsHandler {
     // Filter environments based on selection
     if (options.selectedEnvironments && options.selectedEnvironments.length > 0) {
       environmentsToProcess = {};
-      options.selectedEnvironments.forEach(envName => {
+      options.selectedEnvironments.forEach((envName: string) => {
         if (schemaData.environments[envName]) {
           environmentsToProcess[envName] = schemaData.environments[envName];
         }
@@ -352,7 +403,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Creation statistics
    * @private
    */
-  async _createVariablesFromSchema(envName, variableDefinitions) {
+  async _createVariablesFromSchema(envName: string, variableDefinitions: VariableDefinition[]) {
     const stats = {
       variablesCreated: 0,
       errors: []
@@ -406,7 +457,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _batchCreateVariables(envName, variablesToSet) {
+  async _batchCreateVariables(envName: string, variablesToSet: VariableToSet[]) {
     const envService = getCentralizedEnvironmentService();
     await envService.batchSetVariablesInEnvironment(envName, variablesToSet);
   }
@@ -417,7 +468,7 @@ export class EnvironmentsHandler {
    * @param {Object} variables - Updated variables
    * @private
    */
-  _emitEnvironmentVariablesChangedEvent(envName, variables) {
+  _emitEnvironmentVariablesChangedEvent(envName: string, variables: Record<string, unknown>) {
     try {
       window.dispatchEvent(new CustomEvent(EVENTS.ENVIRONMENT_VARIABLES_CHANGED, {
         detail: { 
@@ -435,7 +486,7 @@ export class EnvironmentsHandler {
    * @param {Object} environmentData - Environment data object
    * @returns {Object} - Statistics object
    */
-  getEnvironmentStatistics(environmentData) {
+  getEnvironmentStatistics(environmentData: EnvironmentData) {
     const stats = {
       environments: 0,
       totalVariables: 0,
@@ -474,7 +525,7 @@ export class EnvironmentsHandler {
    * @param {Object} environmentData - Environment data to validate
    * @returns {Object} - Validation result
    */
-  validateEnvironmentsForExport(environmentData) {
+  validateEnvironmentsForExport(environmentData: EnvironmentData) {
     if (!environmentData || typeof environmentData !== 'object') {
       return {
         success: false,

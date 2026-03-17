@@ -7,7 +7,24 @@
 
 import React from 'react';
 import { Button, Tooltip } from 'antd';
+import type { ColumnType, TableProps } from 'antd/es/table';
 import { SearchOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
+
+interface ThemeToken {
+    colorPrimary: string;
+    colorTextSecondary: string;
+    [key: string]: unknown;
+}
+
+interface MessageApi {
+    success: (content: string) => void;
+    error: (content: string) => void;
+}
+
+interface TableRecord {
+    timestamp: number;
+    [key: string]: unknown;
+}
 
 /**
  * Create a standard timestamp column configuration
@@ -15,12 +32,12 @@ import { SearchOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
  * @param {number} width - Column width
  * @returns {Object} Column configuration
  */
-export const createTimestampColumn = (timestampRenderer, width = 120) => ({
+export const createTimestampColumn = (timestampRenderer: (value: number) => React.ReactNode, width = 120) => ({
     title: 'Timestamp',
     dataIndex: 'timestamp',
     key: 'timestamp',
     width,
-    sorter: (a, b) => a.timestamp - b.timestamp,
+    sorter: (a: TableRecord, b: TableRecord) => a.timestamp - b.timestamp,
     defaultSortOrder: 'ascend',
     render: timestampRenderer
 });
@@ -35,11 +52,11 @@ export const createTimestampColumn = (timestampRenderer, width = 120) => ({
  * @returns {JSX.Element} Column header with search button
  */
 export const createSearchableColumnHeader = (
-    title, 
-    isSearchActive, 
-    onSearchToggle, 
+    title: string,
+    isSearchActive: boolean,
+    onSearchToggle: () => void,
     searchTooltip = 'Search',
-    token
+    token: ThemeToken
 ) => {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -75,11 +92,11 @@ export const createSearchableColumnHeader = (
  * @returns {Object} Complete table props
  */
 export const createStandardTableProps = (
-    dataSource,
-    columns,
-    onTableChange,
-    rowClassNameGenerator,
-    additionalProps = {}
+    dataSource: TableRecord[],
+    columns: ColumnType<TableRecord>[],
+    onTableChange: TableProps<TableRecord>['onChange'],
+    rowClassNameGenerator: (record: TableRecord) => string,
+    additionalProps: Record<string, unknown> = {}
 ) => ({
     dataSource,
     columns,
@@ -101,7 +118,7 @@ export const createStandardTableProps = (
  * @param {string} successMessage - Success message
  * @returns {JSX.Element} Copy button
  */
-export const createCopyButton = (text, messageApi, successMessage = 'Copied to clipboard') => {
+export const createCopyButton = (text: string, messageApi: MessageApi, successMessage = 'Copied to clipboard') => {
     return (
         <Tooltip title="Copy">
             <Button
@@ -128,7 +145,7 @@ export const createCopyButton = (text, messageApi, successMessage = 'Copied to c
  * @param {string} tooltip - Tooltip text
  * @returns {JSX.Element} View button
  */
-export const createViewButton = (onClick, tooltip = 'View details') => {
+export const createViewButton = (onClick: () => void, tooltip = 'View details') => {
     return (
         <Tooltip title={tooltip}>
             <Button
@@ -149,11 +166,11 @@ export const createViewButton = (onClick, tooltip = 'View details') => {
  * @param {string} keyField - Field to use as React key (default: index)
  * @returns {Array} Formatted data with keys
  */
-export const formatTableData = (data, sortField = 'timestamp', keyField) => {
+export const formatTableData = (data: TableRecord[], sortField = 'timestamp', keyField?: string) => {
     return data
         .slice()
-        .sort((a, b) => a[sortField] - b[sortField])
-        .map((item, index) => ({
+        .sort((a: TableRecord, b: TableRecord) => (a[sortField] as number) - (b[sortField] as number))
+        .map((item: TableRecord, index: number) => ({
             ...item,
             key: keyField ? item[keyField] : index
         }));

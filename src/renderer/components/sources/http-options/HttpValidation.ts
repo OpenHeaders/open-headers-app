@@ -22,8 +22,45 @@
  */
 
 import { createLogger } from '../../../utils/error-handling/logger';
+import type { FormInstance } from 'antd';
 
 const log = createLogger('HttpValidation');
+
+interface EnvironmentContext {
+    environmentsReady: boolean;
+    activeEnvironment: string;
+    getAllVariables: () => Record<string, string>;
+    resolveTemplate: (text: string) => string;
+}
+
+interface VariableValidationResult {
+    valid: boolean;
+    error?: string;
+}
+
+interface FieldValidationResult {
+    valid: boolean;
+    error?: string;
+    fieldPath?: (string | number)[];
+}
+
+interface ValidationError {
+    message: string;
+}
+
+interface HttpHeader {
+    key?: string;
+    value?: string;
+}
+
+interface QueryParam {
+    key?: string;
+    value?: string;
+}
+
+interface HttpFormValues {
+    [key: string]: unknown;
+}
 
 /**
  * Validates if environment variables and TOTP placeholders exist and are properly configured
@@ -43,7 +80,7 @@ const log = createLogger('HttpValidation');
  *   console.error(result.error);
  * }
  */
-export const validateVariableExists = (value, envContext, form) => {
+export const validateVariableExists = (value: string, envContext: EnvironmentContext, form: FormInstance): VariableValidationResult => {
     if (!value) return { valid: true };
     
     // Skip validation if environments aren't ready yet
@@ -102,7 +139,7 @@ export const validateVariableExists = (value, envContext, form) => {
  * const resolved = resolveAllVariables('{{BASE_URL}}/api/v1', envContext);
  * // Returns: "https://api.example.com/api/v1"
  */
-export const resolveAllVariables = (text, envContext) => {
+export const resolveAllVariables = (text: string, envContext: EnvironmentContext): string => {
     if (!text) return text;
     
     // If environments aren't ready, return text as-is
@@ -133,7 +170,7 @@ export const resolveAllVariables = (text, envContext) => {
  *   { validator: (rule, value) => validateUrlField(rule, value, envContext, form) }
  * ]
  */
-export const validateUrlField = (rule, value, envContext, form) => {
+export const validateUrlField = (rule: unknown, value: string, envContext: EnvironmentContext, form: FormInstance) => {
     if (!value) return Promise.resolve();
     
     const result = validateVariableExists(value, envContext, form);
@@ -162,7 +199,7 @@ export const validateUrlField = (rule, value, envContext, form) => {
  * ];
  * const result = validateHttpHeaders(headers, envContext, form);
  */
-export const validateHttpHeaders = (headers, envContext, form) => {
+export const validateHttpHeaders = (headers: HttpHeader[], envContext: EnvironmentContext, form: FormInstance): FieldValidationResult => {
     if (!Array.isArray(headers)) return { valid: true };
     
     for (const [index, header] of headers.entries()) {
@@ -199,7 +236,7 @@ export const validateHttpHeaders = (headers, envContext, form) => {
  * ];
  * const result = validateQueryParameters(queryParams, envContext, form);
  */
-export const validateQueryParameters = (queryParams, envContext, form) => {
+export const validateQueryParameters = (queryParams: QueryParam[], envContext: EnvironmentContext, form: FormInstance): FieldValidationResult => {
     if (!Array.isArray(queryParams)) return { valid: true };
     
     for (const [index, param] of queryParams.entries()) {
@@ -233,7 +270,7 @@ export const validateQueryParameters = (queryParams, envContext, form) => {
  * const body = '{"token": "{{API_TOKEN}}", "code": "[[TOTP_CODE]]"}';
  * const result = validateRequestBody(body, envContext, form);
  */
-export const validateRequestBody = (body, envContext, form) => {
+export const validateRequestBody = (body: string, envContext: EnvironmentContext, form: FormInstance): FieldValidationResult => {
     if (!body) return { valid: true };
     
     const result = validateVariableExists(body, envContext, form);
@@ -262,7 +299,7 @@ export const validateRequestBody = (body, envContext, form) => {
  * @example
  * const result = validateJsonFilterPath('{{ROOT_PATH}}.data.items', envContext, form);
  */
-export const validateJsonFilterPath = (path, envContext, form) => {
+export const validateJsonFilterPath = (path: string, envContext: EnvironmentContext, form: FormInstance): FieldValidationResult => {
     if (!path) return { valid: true };
     
     const result = validateVariableExists(path, envContext, form);
@@ -296,7 +333,7 @@ export const validateJsonFilterPath = (path, envContext, form) => {
  *   return;
  * }
  */
-export const validateAllHttpFields = (form, values, envContext) => {
+export const validateAllHttpFields = (form: FormInstance, values: HttpFormValues, envContext: EnvironmentContext): ValidationError | null => {
     // Validate headers
     const headers = form.getFieldValue(['requestOptions', 'headers']);
     if (headers && headers.length > 0) {

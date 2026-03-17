@@ -134,7 +134,7 @@ const HeaderRules = () => {
         loadRules().catch(error => log.error('Failed to load rules:', error));
         
         // Listen for import events
-        const handleRulesImported = (event) => {
+        const handleRulesImported = (event: Event) => {
             log.info('Header rules imported, reloading:', event.detail);
             loadRules().catch(error => log.error('Failed to reload rules:', error));
         };
@@ -223,7 +223,7 @@ const HeaderRules = () => {
     };
 
     // Save rules to storage and sync to extension
-    const saveRules = useCallback(async (newRules) => {
+    const saveRules = useCallback(async (newRules: Record<string, unknown>[]) => {
         try {
             // Load existing rules storage or create new one
             let rulesStorage;
@@ -275,7 +275,7 @@ const HeaderRules = () => {
     }, []);
 
     // Handle add/edit rule (generic header rule)
-    const handleSaveRule = async (ruleData) => {
+    const handleSaveRule = async (ruleData: Record<string, unknown>) => {
         try {
             let newRules;
             if (editingRule) {
@@ -310,7 +310,7 @@ const HeaderRules = () => {
     // Handle add/edit cookie rule
 
     // Handle delete rule
-    const handleDeleteRule = useCallback(async (ruleId) => {
+    const handleDeleteRule = useCallback(async (ruleId: string) => {
         try {
             // Find the rule to get its name for the message
             const rule = rulesRef.current.find(r => r.id === ruleId);
@@ -326,7 +326,7 @@ const HeaderRules = () => {
     }, []);
 
     // Handle toggle rule
-    const handleToggleRule = useCallback(async (ruleId, enabled) => {
+    const handleToggleRule = useCallback(async (ruleId: string, enabled: boolean) => {
         try {
             const newRules = rulesRef.current.map(rule => 
                 rule.id === ruleId ? { ...rule, isEnabled: enabled } : rule
@@ -345,7 +345,7 @@ const HeaderRules = () => {
     }, []);
 
     // Helper function to truncate long values
-    const truncateValue = (value, maxLength = 40) => {
+    const truncateValue = (value: string, maxLength: number = 40) => {
         if (!value || value.length <= maxLength) return value;
         
         const prefixLength = 30;
@@ -361,7 +361,7 @@ const HeaderRules = () => {
     };
 
     // Get dynamic value info for a rule including environment variable resolution
-    const getDynamicValueInfo = (rule) => {
+    const getDynamicValueInfo = (rule: Record<string, unknown>) => {
         const result = {
             actualValue: '',
             sourceInfo: '',
@@ -488,9 +488,9 @@ const HeaderRules = () => {
             title: 'Type',
             key: 'type',
             width: 180,
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
-                
+
                 return (
                     <Space size={4} direction="vertical" align="start">
                         <Space size={4}>
@@ -560,15 +560,15 @@ const HeaderRules = () => {
             dataIndex: 'tag',
             key: 'tag',
             width: 80,
-            render: (tag) => tag || '-', // Display dash when no tag is set
+            render: (tag: string) => tag || '-', // Display dash when no tag is set
         },
         {
             title: 'Source',
             key: 'source',
             width: 200,
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
-                
+
                 if (!record.isDynamic) {
                     return (
                         <Text
@@ -637,8 +637,8 @@ const HeaderRules = () => {
             dataIndex: 'headerName',
             key: 'headerName',
             width: 160,
-            sorter: (a, b) => a.headerName.localeCompare(b.headerName),
-            render: (text, record) => {
+            sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => (a.headerName as string).localeCompare(b.headerName as string),
+            render: (text: string, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType && record.isEnabled;
                 
@@ -696,11 +696,11 @@ const HeaderRules = () => {
             dataIndex: 'headerValue',
             key: 'value',
             width: 200,
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType;
 
-                let tooltipMessage = null;
+                let tooltipMessage: string | null = null;
                 let textColor = undefined;
                 let icon = null;
 
@@ -769,8 +769,8 @@ const HeaderRules = () => {
             dataIndex: 'domains',
             key: 'domains',
             width: 140,
-            sorter: (a, b) => a.domains.join(',').localeCompare(b.domains.join(',')),
-            render: (domains, record) => {
+            sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => (a.domains as string[]).join(',').localeCompare((b.domains as string[]).join(',')),
+            render: (domains: string[], record: Record<string, unknown>) => {
                 // Check if rule has missing dependencies
                 const info = getDynamicValueInfo(record);
                 const hasMissingDeps = info.activationState === 'waiting_for_deps';
@@ -781,7 +781,7 @@ const HeaderRules = () => {
                 
                 if (record.hasEnvVars && envContext.environmentsReady) {
                     const variables = envContext.getAllVariables();
-                    resolvedDomains = domains.flatMap(domain => {
+                    resolvedDomains = domains.flatMap((domain: string) => {
                         if (domain && domain.includes('{{')) {
                             const preview = getResolvedPreview(domain, variables);
                             // Check if domain has unresolved variables
@@ -796,12 +796,12 @@ const HeaderRules = () => {
                     });
                 } else if (!envContext.environmentsReady) {
                     // Environment not ready, keep original domains
-                    hasUnresolvedVars = domains.some(d => d && d.includes('{{'));
+                    hasUnresolvedVars = domains.some((d: string) => d && d.includes('{{'));
                 }
                 
                 return (
                     <Space direction="vertical" size={1}>
-                        {resolvedDomains.slice(0, 1).map((domain, index) => {
+                        {resolvedDomains.slice(0, 1).map((domain: string, index: number) => {
                             const isTruncated = domain.length > 18;
                             const displayDomain = isTruncated ? `${domain.substring(0, 18)}...` : domain;
                             const isUnresolved = domain.includes('{{') && domain.includes('}}');
@@ -839,10 +839,10 @@ const HeaderRules = () => {
             key: 'status',
             width: 80,
             align: 'center',
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
                 const isWaitingForDeps = info.activationState === 'waiting_for_deps';
-                
+
                 return (
                     <Tooltip title={isWaitingForDeps ? 'Cannot enable - missing environment variables' : undefined}>
                         <Switch
@@ -861,9 +861,9 @@ const HeaderRules = () => {
             width: 120,
             align: 'center',
             fixed: 'right',
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, unknown>) => {
                 const info = getDynamicValueInfo(record);
-                
+
                 const handleCopyValue = async () => {
                     try {
                         await navigator.clipboard.writeText(info.actualValue);

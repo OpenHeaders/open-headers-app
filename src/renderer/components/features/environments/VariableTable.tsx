@@ -40,16 +40,47 @@ interface VariableMetadata {
     isSecret: boolean;
 }
 
+interface VariableRecord {
+    key: string;
+    name: string;
+    value: string;
+    isSecret: boolean;
+    usedIn: string[];
+    missing?: boolean;
+}
+
+interface HeaderRuleEntry {
+    id: string;
+    headerName?: string;
+}
+
+interface SourceEntry {
+    sourceId: string;
+    sourceName?: string;
+    name?: string;
+}
+
+interface RulesMap {
+    header?: HeaderRuleEntry[];
+    [key: string]: unknown;
+}
+
+interface JwtModalData {
+    variableName: string;
+    value: string;
+    isSecret: boolean;
+}
+
 interface VariableTableProps {
     variablesWithMetadata: Record<string, VariableMetadata>;
     missingVariables: string[];
     variableUsage: Record<string, string[]>;
-    sources: any[];
-    rules: any;
-    onAddVariable: (...args: any[]) => void;
-    onEditVariable: (...args: any[]) => void;
+    sources: SourceEntry[];
+    rules: RulesMap;
+    onAddVariable: (...args: unknown[]) => void;
+    onEditVariable: (key: string, row: Record<string, unknown>) => Promise<void>;
     onDeleteVariable: (name: string) => void;
-    form: any;
+    form: ReturnType<typeof Form.useForm>[0];
 }
 
 const VariableTable = ({
@@ -64,22 +95,22 @@ const VariableTable = ({
   form
 }: VariableTableProps) => {
   const [editingKey, setEditingKey] = useState('');
-  const [showSensitive, setShowSensitive] = useState({});
+  const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
   const [jwtModalVisible, setJwtModalVisible] = useState(false);
-  const [jwtModalData, setJwtModalData] = useState(null);
+  const [jwtModalData, setJwtModalData] = useState<JwtModalData | null>(null);
 
   /**
    * Checks if a record is currently being edited
    * @param {Object} record - Table record
    * @returns {boolean} True if record is being edited
    */
-  const isEditing = (record) => record.key === editingKey;
+  const isEditing = (record: VariableRecord) => record.key === editingKey;
 
   /**
    * Starts editing a record
    * @param {Object} record - Record to edit
    */
-  const edit = (record) => {
+  const edit = (record: VariableRecord) => {
     // Check if the value is a JWT token
     if (record.value && isJWT(record.value)) {
       // Open JWT editor modal for JWT tokens
@@ -118,7 +149,7 @@ const VariableTable = ({
    * Saves the edited record
    * @param {string} key - Record key
    */
-  const save = async (key) => {
+  const save = async (key: string) => {
     try {
       const row = await form.validateFields();
       await onEditVariable(key, row);
@@ -141,7 +172,7 @@ const VariableTable = ({
    * Toggles visibility of sensitive variable values
    * @param {string} varName - Variable name
    */
-  const toggleSensitive = (varName) => {
+  const toggleSensitive = (varName: string) => {
     setShowSensitive(prev => ({
       ...prev,
       [varName]: !prev[varName]
@@ -153,7 +184,7 @@ const VariableTable = ({
    * @param {string} value - Value to copy
    * @param {string} varName - Variable name for feedback
    */
-  const copyToClipboard = async (value, varName) => {
+  const copyToClipboard = async (value: string, varName: string) => {
     try {
       await navigator.clipboard.writeText(value || '');
       showMessage('success', `Variable "${varName}" value copied to clipboard`);
@@ -167,7 +198,7 @@ const VariableTable = ({
    * @param {string} newToken - New JWT token value
    * @param {boolean} isSecret - Whether the variable should be secret
    */
-  const handleJwtSave = async (newToken, isSecret) => {
+  const handleJwtSave = async (newToken: string, isSecret: boolean) => {
     if (jwtModalData) {
       await onEditVariable(jwtModalData.variableName, {
         name: jwtModalData.variableName,
@@ -199,7 +230,7 @@ const VariableTable = ({
    * @param {Object} record - Record data
    * @returns {React.ReactNode} Rendered value
    */
-  const renderVariableValue = (value, record) => {
+  const renderVariableValue = (value: string, record: VariableRecord) => {
     const editable = isEditing(record);
     if (editable) return value;
     
@@ -253,11 +284,11 @@ const VariableTable = ({
     
     if (isDomainVariable && hasCommas) {
       // Split by comma and create tags
-      const domains = value.split(',').map(domain => domain.trim()).filter(domain => domain);
+      const domains = value.split(',').map((domain: string) => domain.trim()).filter((domain: string) => domain);
       
       return (
         <Space wrap>
-          {domains.map((domain, index) => (
+          {domains.map((domain: string, index: number) => (
             <Tag key={index} color="default">
               {domain}
             </Tag>
@@ -313,10 +344,10 @@ const VariableTable = ({
    * @param {Array} usedIn - Array of source IDs
    * @returns {React.ReactNode} Rendered usage info
    */
-  const renderUsageInfo = (usedIn) => (
+  const renderUsageInfo = (usedIn: string[]) => (
     <Space wrap>
       {usedIn && usedIn.length > 0 ? (
-        usedIn.map(sourceId => {
+        usedIn.map((sourceId: string) => {
           // Check if this is a rule identifier
           if (sourceId.startsWith('rule-')) {
             const ruleId = sourceId.substring(5); // Remove 'rule-' prefix
@@ -324,7 +355,7 @@ const VariableTable = ({
             
             // Try to find the actual rule to get its name
             if (rules && rules.header) {
-              const rule = rules.header.find(r => r.id === ruleId);
+              const rule = rules.header.find((r: HeaderRuleEntry) => r.id === ruleId);
               if (rule) {
                 ruleName = rule.headerName || `Header Rule`;
               }
@@ -357,7 +388,7 @@ const VariableTable = ({
    * @param {Object} record - Record data
    * @returns {React.ReactNode} Rendered actions
    */
-  const renderActions = (record) => {
+  const renderActions = (record: VariableRecord) => {
     const editable = isEditing(record);
     
     if (editable) {
@@ -439,7 +470,7 @@ const VariableTable = ({
       key: 'name',
       width: '25%',
       editable: true,
-      render: (name, record) => {
+      render: (name: string, record: VariableRecord) => {
         const editable = isEditing(record);
         const isJwtToken = record.value && isJWT(record.value);
         const isDomainVariable = name.toLowerCase().includes('domain');
@@ -482,7 +513,7 @@ const VariableTable = ({
       key: 'isSecret',
       width: '15%',
       editable: true,
-      render: (isSecret) => (
+      render: (isSecret: boolean) => (
         <Tag color="default">
           {isSecret ? 'Secret' : 'Default'}
         </Tag>
@@ -499,7 +530,7 @@ const VariableTable = ({
       title: 'Actions',
       key: 'actions',
       width: '10%',
-      render: (_, record) => renderActions(record)
+      render: (_: unknown, record: VariableRecord) => renderActions(record)
     }
   ];
 
@@ -511,7 +542,7 @@ const VariableTable = ({
     
     return {
       ...col,
-      onCell: (record) => ({
+      onCell: (record: VariableRecord) => ({
         record,
         inputType: col.dataIndex === 'isSecret' ? 'radio' : 
                    (col.dataIndex === 'value') ? 'dynamic' : 'text',

@@ -27,7 +27,38 @@ import { createStandardTableProps } from '../shared';
 
 const { Text } = Typography;
 
-const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false }) => {
+interface StorageRecord {
+    timestamp: number;
+    type: string;
+    action: string;
+    name: string;
+    domain: string;
+    url?: string;
+    value?: unknown;
+    oldValue?: unknown;
+    metadata?: {
+        url?: string;
+        initial?: boolean;
+        httpOnly?: boolean;
+        secure?: boolean;
+        sameSite?: string;
+    };
+    key?: string;
+}
+
+interface RecordData {
+    storage: StorageRecord[];
+    startTime?: number;
+}
+
+interface RecordStorageTabProps {
+    record: RecordData;
+    viewMode: string;
+    activeTime: number;
+    autoHighlight?: boolean;
+}
+
+const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false }: RecordStorageTabProps) => {
     const { token } = theme.useToken();
     const { message: messageApi } = App.useApp();
 
@@ -55,7 +86,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Show storage detail modal
      */
-    const showValueModal = (entry) => {
+    const showValueModal = (entry: StorageRecord) => {
         setSelectedEntry(entry);
         setValueModalVisible(true);
     };
@@ -63,7 +94,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Extract searchable fields from storage record
      */
-    const extractSearchableFields = (storageRecord) => {
+    const extractSearchableFields = (storageRecord: StorageRecord) => {
         return [
             storageRecord.name.toLowerCase(),
             storageRecord.domain.toLowerCase(),
@@ -80,9 +111,9 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
             dataIndex: 'timestamp',
             key: 'timestamp',
             width: 120,
-            sorter: (a, b) => a.timestamp - b.timestamp,
-            defaultSortOrder: 'ascend',
-            render: (timestamp, storageRecord) => (
+            sorter: (a: StorageRecord, b: StorageRecord) => a.timestamp - b.timestamp,
+            defaultSortOrder: 'ascend' as const,
+            render: (timestamp: number, storageRecord: StorageRecord) => (
                 <TimestampCell
                     timestamp={timestamp}
                     record={record}
@@ -102,8 +133,8 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'Cookie', value: 'cookie' }
             ],
             filteredValue: typeFilter,
-            onFilter: (value, record) => record.type === value,
-            render: (type) => <StorageTypeCell type={type} />
+            onFilter: (value: string, record: StorageRecord) => record.type === value,
+            render: (type: string) => <StorageTypeCell type={type} />
         },
         {
             title: 'Action',
@@ -116,8 +147,8 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'Clear', value: 'clear' }
             ],
             filteredValue: actionFilter,
-            onFilter: (value, record) => record.action === value,
-            render: (action, record) => <StorageActionCell action={action} record={record} />
+            onFilter: (value: string, record: StorageRecord) => record.action === value,
+            render: (action: string, record: StorageRecord) => <StorageActionCell action={action} record={record} />
         },
         {
             title: (
@@ -206,7 +237,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
             ellipsis: true,
             filteredValue: searchFilter.searchValue ? [searchFilter.searchValue] : null,
             onFilter: searchFilter.createFilterFunction(extractSearchableFields),
-            render: (name) => (
+            render: (name: string) => (
                 <Text code style={{ fontSize: '12px' }}>
                     {name === '*' ? '<all keys>' : name}
                 </Text>
@@ -215,7 +246,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
         {
             title: 'Change',
             key: 'change',
-            render: (_, record) => (
+            render: (_: unknown, record: StorageRecord) => (
                 <StorageChangeCell
                     record={record}
                     onViewDetails={showValueModal}
@@ -232,10 +263,10 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
             ellipsis: true,
             filters: Array.from(new Set(record.storage.map(item => item.domain)))
                 .sort()
-                .map(domain => ({ text: domain, value: domain })),
+                .map((domain: string) => ({ text: domain, value: domain })),
             filteredValue: domainFilter,
-            onFilter: (value, record) => record.domain === value,
-            render: (domain, record) => (
+            onFilter: (value: string, record: StorageRecord) => record.domain === value,
+            render: (domain: string, record: StorageRecord) => (
                 <Text style={{ fontSize: '12px', opacity: 0.8, cursor: 'help' }} title={record.url || record.metadata?.url || 'URL not available'}>
                     {domain}
                 </Text>
@@ -254,7 +285,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'None', value: 'none' }
             ],
             filteredValue: attributeFilter,
-            onFilter: (value, record) => {
+            onFilter: (value: string, record: StorageRecord) => {
                 switch(value) {
                     case 'initial':
                         return record.metadata?.initial === true;
@@ -272,29 +303,29 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                         return false;
                 }
             },
-            render: (_, record) => <StorageAttributesCell record={record} />
+            render: (_: unknown, record: StorageRecord) => <StorageAttributesCell record={record} />
         }
     ];
 
     // Format table data with unique keys
     const tableData = record.storage
         .slice()
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .map((item, index) => ({
+        .sort((a: StorageRecord, b: StorageRecord) => a.timestamp - b.timestamp)
+        .map((item: StorageRecord, index: number) => ({
             ...item,
             key: `${item.type}-${item.name}-${item.timestamp}-${index}`
         }));
 
     // Table change handler
-    const handleTableChange = (pagination, filters) => {
-        setTypeFilter(filters.type || []);
-        setActionFilter(filters.action || []);
-        setDomainFilter(filters.domain || []);
-        setAttributeFilter(filters.attributes || []);
+    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
+        setTypeFilter((filters.type || []) as string[]);
+        setActionFilter((filters.action || []) as string[]);
+        setDomainFilter((filters.domain || []) as string[]);
+        setAttributeFilter((filters.attributes || []) as string[]);
     };
 
     // Row class name generator
-    const generateRowClassName = (storageRecord) => {
+    const generateRowClassName = (storageRecord: StorageRecord) => {
         const baseClass = `storage-${storageRecord.type}`;
         return timeHighlight.getRowClassName(storageRecord, record.storage, baseClass);
     };

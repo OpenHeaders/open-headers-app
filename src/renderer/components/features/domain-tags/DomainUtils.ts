@@ -15,6 +15,8 @@
  * @since 3.0.0
  */
 
+import type React from 'react';
+
 /**
  * Removes a domain from the tags array
  * 
@@ -29,8 +31,8 @@
  * const newDomains = removeDomain(['a.com', 'b.com', 'c.com'], 'b.com');
  * // Returns: ['a.com', 'c.com']
  */
-export const removeDomain = (domains, domainToRemove) => {
-    return domains.filter(domain => domain !== domainToRemove);
+export const removeDomain = (domains: string[], domainToRemove: string): string[] => {
+    return domains.filter((domain: string) => domain !== domainToRemove);
 };
 
 /**
@@ -47,7 +49,7 @@ export const removeDomain = (domains, domainToRemove) => {
  * const updated = addDomains(['a.com'], ['b.com', 'a.com', 'c.com']);
  * // Returns: ['a.com', 'b.com', 'c.com']
  */
-export const addDomains = (currentDomains, newDomains) => {
+export const addDomains = (currentDomains: string[], newDomains: string[] | string): string[] => {
     const domainsToAdd = Array.isArray(newDomains) ? newDomains : [newDomains];
     return [...new Set([...currentDomains, ...domainsToAdd])];
 };
@@ -66,7 +68,7 @@ export const addDomains = (currentDomains, newDomains) => {
  * const handleClose = createTagCloseHandler(domains, setDomains);
  * handleClose('example.com'); // Removes example.com from domains
  */
-export const createTagCloseHandler = (domains, onChange) => (domainToRemove) => {
+export const createTagCloseHandler = (domains: string[], onChange: ((tags: string[]) => void) | undefined) => (domainToRemove: string) => {
     const newTags = removeDomain(domains, domainToRemove);
     onChange?.(newTags);
 };
@@ -96,13 +98,16 @@ export const createTagCloseHandler = (domains, onChange) => (domainToRemove) => 
 export const createTagEditHandlers = ({
     setEditIndex,
     setEditValue
+}: {
+    setEditIndex: (index: number) => void;
+    setEditValue: (value: string) => void;
 }) => {
-    const handleEdit = (index, tag) => {
+    const handleEdit = (index: number, tag: string) => {
         setEditIndex(index);
         setEditValue(tag);
     };
 
-    const handleEditChange = (e) => {
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEditValue(e.target.value);
     };
 
@@ -113,7 +118,7 @@ export const createTagEditHandlers = ({
         setEditValue('');
     };
 
-    const handleEditKeyDown = (e) => {
+    const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             handleEditConfirm();
         } else if (e.key === 'Escape') {
@@ -142,7 +147,7 @@ export const createTagEditHandlers = ({
  * @example
  * focusInput(inputRef, 100); // Focus input after 100ms
  */
-export const focusInput = (inputRef, delay = 0) => {
+export const focusInput = (inputRef: React.RefObject<HTMLInputElement | null>, delay = 0) => {
     setTimeout(() => {
         try {
             inputRef.current?.focus();
@@ -166,7 +171,7 @@ export const focusInput = (inputRef, delay = 0) => {
  * const showInput = createShowInputHandler(setVisible, inputRef);
  * showInput(); // Shows input and focuses it
  */
-export const createShowInputHandler = (setInputVisible, inputRef) => () => {
+export const createShowInputHandler = (setInputVisible: (visible: boolean) => void, inputRef: React.RefObject<HTMLInputElement | null>) => () => {
     setInputVisible(true);
     focusInput(inputRef);
 };
@@ -185,7 +190,7 @@ export const createShowInputHandler = (setInputVisible, inputRef) => () => {
  * formatDomainCount(1, 'copied'); // '1 domain copied'
  * formatDomainCount(5, 'added');  // '5 domains added'
  */
-export const formatDomainCount = (count, action = 'domain') => {
+export const formatDomainCount = (count: number, action = 'domain') => {
     const plural = count !== 1 ? 's' : '';
     return `${count} ${action}${plural}`;
 };
@@ -206,7 +211,7 @@ export const formatDomainCount = (count, action = 'domain') => {
  * const width = calculateInputWidth('example.com', 100, 300);
  * // Returns appropriate width for the domain length
  */
-export const calculateInputWidth = (content, minWidth = 80, maxWidth = 400, charWidth = 8) => {
+export const calculateInputWidth = (content: string | undefined, minWidth = 80, maxWidth = 400, charWidth = 8) => {
     const calculatedWidth = (content?.length || 0) * charWidth + 20;
     return Math.min(maxWidth, Math.max(minWidth, calculatedWidth));
 };
@@ -224,7 +229,7 @@ export const calculateInputWidth = (content, minWidth = 80, maxWidth = 400, char
  * const result = validateDomainArray(['a.com', '', 'a.com', 'b.com']);
  * // Returns: { valid: false, issues: ['duplicates', 'empty'] }
  */
-export const validateDomainArray = (domains) => {
+export const validateDomainArray = (domains: string[]) => {
     const issues = [];
     
     // Check for duplicates
@@ -234,12 +239,12 @@ export const validateDomainArray = (domains) => {
     }
     
     // Check for empty values
-    if (domains.some(domain => !domain || !domain.trim())) {
+    if (domains.some((domain: string) => !domain || !domain.trim())) {
         issues.push('empty');
     }
     
     // Check for invalid characters (basic check)
-    if (domains.some(domain => typeof domain !== 'string')) {
+    if (domains.some((domain: string) => typeof domain !== 'string')) {
         issues.push('invalid_type');
     }
     
@@ -247,6 +252,6 @@ export const validateDomainArray = (domains) => {
         valid: issues.length === 0,
         issues,
         duplicateCount: domains.length - unique.size,
-        emptyCount: domains.filter(d => !d || !d.trim()).length
+        emptyCount: domains.filter((d: string) => !d || !d.trim()).length
     };
 };

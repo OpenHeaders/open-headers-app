@@ -78,7 +78,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Override setState to handle dirty flags
    */
-  setState(updates, changedKeys = []) {
+  setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
     // Mark as dirty if data changed
     if (changedKeys.includes('sources')) this.autoSaveManager.markDirty('sources');
     if (changedKeys.includes('rules')) this.autoSaveManager.markDirty('rules');
@@ -159,7 +159,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Load all data for a workspace
    */
-  async loadWorkspaceData(workspaceId) {
+  async loadWorkspaceData(workspaceId: string) {
     if (this.loadPromises.has(workspaceId)) {
       return this.loadPromises.get(workspaceId);
     }
@@ -174,7 +174,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     }
   }
 
-  async _doLoadWorkspaceData(workspaceId) {
+  async _doLoadWorkspaceData(workspaceId: string) {
     log.info(`Loading data for workspace: ${workspaceId}`);
     
     try {
@@ -223,7 +223,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Switch to a different workspace with progress tracking
    */
-  async switchWorkspace(workspaceId, progressCallback = null) {
+  async switchWorkspace(workspaceId: string, progressCallback: ((step: string, progress: number, label: string, isGitOperation: boolean) => void) | null = null) {
     if (this.state.activeWorkspaceId === workspaceId) {
       log.debug(`Already in workspace ${workspaceId}`);
       return;
@@ -242,7 +242,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
       this.autoSaveManager.setWorkspaceSwitching(true);
       
       // Progress tracking helper
-      const updateProgress = (step, progress, label, isGitOperation = false) => {
+      const updateProgress = (step: string, progress: number, label: string, isGitOperation: boolean = false) => {
         if (progressCallback) {
           progressCallback(step, progress, label, isGitOperation);
         }
@@ -458,7 +458,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a new source
    */
-  async addSource(sourceData) {
+  async addSource(sourceData: Record<string, unknown>) {
     const sources = [...this.state.sources];
     const newSource = await this.sourceManager.addSource(sources, sourceData);
     
@@ -486,7 +486,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update a source
    */
-  async updateSource(sourceId, updates) {
+  async updateSource(sourceId: string, updates: Record<string, unknown>) {
     let updatedSource = null;
     const sources = this.state.sources.map(source => {
       if (source.sourceId === String(sourceId)) {
@@ -533,7 +533,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update source activation state
    */
-  updateSourceActivation(sourceId, activate) {
+  updateSourceActivation(sourceId: string, activate: boolean) {
     const sources = this.state.sources.map(source => {
       if (source.sourceId === String(sourceId)) {
         const updated = {
@@ -561,7 +561,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Remove a source
    */
-  async removeSource(sourceId) {
+  async removeSource(sourceId: string) {
     const sources = this.state.sources.filter(source => 
       source.sourceId !== String(sourceId)
     );
@@ -578,7 +578,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update source content
    */
-  async updateSourceContent(sourceId, content) {
+  async updateSourceContent(sourceId: string, content: string) {
     await this.updateSource(sourceId, { sourceContent: content });
   }
 
@@ -587,7 +587,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a header rule
    */
-  async addHeaderRule(ruleData) {
+  async addHeaderRule(ruleData: Record<string, unknown>) {
     const rules = this.rulesManager.addHeaderRule(this.state.rules, ruleData);
     this.setState({ rules }, ['rules']);
     
@@ -602,7 +602,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update a header rule
    */
-  async updateHeaderRule(ruleId, updates) {
+  async updateHeaderRule(ruleId: string, updates: Record<string, unknown>) {
     const rules = this.rulesManager.updateHeaderRule(this.state.rules, ruleId, updates);
     this.setState({ rules }, ['rules']);
     
@@ -617,7 +617,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Remove a header rule
    */
-  async removeHeaderRule(ruleId) {
+  async removeHeaderRule(ruleId: string) {
     const rules = this.rulesManager.removeHeaderRule(this.state.rules, ruleId);
     this.setState({ rules }, ['rules']);
     
@@ -634,7 +634,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a proxy rule
    */
-  async addProxyRule(ruleData) {
+  async addProxyRule(ruleData: Record<string, unknown>) {
     const proxyRules = [...this.state.proxyRules, ruleData];
     this.setState({ proxyRules }, ['proxyRules']);
     
@@ -650,7 +650,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Remove a proxy rule
    */
-  async removeProxyRule(ruleId) {
+  async removeProxyRule(ruleId: string) {
     const rule = this.state.proxyRules.find(r => r.id === ruleId);
     const proxyRules = this.state.proxyRules.filter(r => r.id !== ruleId);
     this.setState({ proxyRules }, ['proxyRules']);
@@ -671,7 +671,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Create a new workspace with full initialization and auto-switch
    */
-  async createWorkspace(workspace) {
+  async createWorkspace(workspace: Record<string, unknown>) {
     try {
       log.info(`Starting workspace creation: ${workspace.id} (${workspace.type})`);
       
@@ -702,7 +702,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Initialize data containers for a new workspace
    */
-  async initializeWorkspaceData(workspaceId) {
+  async initializeWorkspaceData(workspaceId: string) {
     try {
       log.info(`Initializing data containers for workspace: ${workspaceId}`);
       
@@ -729,7 +729,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update workspace metadata
    */
-  async updateWorkspaceMetadata(workspaceId, metadata) {
+  async updateWorkspaceMetadata(workspaceId: string, metadata: Record<string, unknown>) {
     try {
       const workspaces = this.state.workspaces.map(w => 
         w.id === workspaceId 
@@ -750,7 +750,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update an existing workspace
    */
-  async updateWorkspace(workspaceId, updates) {
+  async updateWorkspace(workspaceId: string, updates: Record<string, unknown>) {
     try {
       // Validate workspace exists
       const existingWorkspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
@@ -795,7 +795,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Delete a workspace
    */
-  async deleteWorkspace(workspaceId) {
+  async deleteWorkspace(workspaceId: string) {
     try {
       if (workspaceId === 'default-personal') {
         throw new Error('Cannot delete default personal workspace');
@@ -822,7 +822,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Copy workspace data
    */
-  async copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId) {
+  async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string) {
     try {
       log.info(`Copying workspace data: ${sourceWorkspaceId} → ${targetWorkspaceId}`);
       await this.workspaceManager.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
@@ -840,7 +840,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update target workspace metadata after data copy
    */
-  async updateTargetWorkspaceMetadata(workspaceId) {
+  async updateTargetWorkspaceMetadata(workspaceId: string) {
     try {
       // Load data to get accurate counts
       const [sources, rules, proxyRules] = await Promise.all([
@@ -865,7 +865,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Validate workspace integrity
    */
-  async validateWorkspaceIntegrity(workspaceId) {
+  async validateWorkspaceIntegrity(workspaceId: string) {
     try {
       const workspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
       
@@ -920,7 +920,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Wait for service to be ready
    */
-  async waitForReady(timeout = 10000) {
+  async waitForReady(timeout: number = 10000) {
     const startTime = Date.now();
 
     while (!this.isReady()) {
@@ -981,7 +981,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Setup workspace sync listener
    */
   setupSyncListener() {
-    const unsubscribe = this.syncManager.setupSyncListener((data) => {
+    const unsubscribe = this.syncManager.setupSyncListener((data: Record<string, unknown>) => {
       const currentSyncStatus: Record<string, any> = { ...(this.state.syncStatus as Record<string, any>) };
       
       if (data.success) {
@@ -1041,7 +1041,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Setup refresh listener
    */
   setupRefreshListener() {
-    const handleRefresh = async (event) => {
+    const handleRefresh = async (event: Event) => {
       const workspaceId = event.detail?.workspaceId;
       if (workspaceId && workspaceId === this.state.activeWorkspaceId) {
         log.info('Received workspace data refresh request');
@@ -1064,7 +1064,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   setupCliJoinListener() {
     if (!window.electronAPI?.onCliWorkspaceJoined) return;
 
-    const unsubscribe = window.electronAPI.onCliWorkspaceJoined(async (data) => {
+    const unsubscribe = window.electronAPI.onCliWorkspaceJoined(async (data: { workspaceId: string }) => {
       const { workspaceId } = data;
       log.info(`CLI workspace joined: ${workspaceId}, reloading workspace state`);
 
@@ -1149,7 +1149,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
 }
 
 // Create singleton instance
-let serviceInstance = null;
+let serviceInstance: CentralizedWorkspaceService | null = null;
 
 export function getCentralizedWorkspaceService() {
   if (!serviceInstance) {

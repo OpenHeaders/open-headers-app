@@ -55,7 +55,34 @@ const EXPIRATION_PRESETS = [
     { label: 'Session', value: 'session', unit: null }
 ];
 
-const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
+interface CookieRuleInitialValues {
+    headerValue?: string;
+    cookieName?: string;
+    cookieValue?: string;
+    tag?: string;
+    domains?: string[];
+    isDynamic?: boolean;
+    sourceId?: string;
+    prefix?: string;
+    suffix?: string;
+    isResponse?: boolean;
+    isEnabled?: boolean;
+}
+
+interface CookieRuleModalProps {
+    visible: boolean;
+    onCancel: () => void;
+    onSave: (ruleData: Record<string, unknown>) => void;
+    initialValues: CookieRuleInitialValues | null;
+}
+
+interface ExpirationPreset {
+    label: string;
+    value: number | string;
+    unit: string | null;
+}
+
+const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRuleModalProps) => {
     const [form] = Form.useForm();
     const { sources } = useSources();
     const envContext = useEnvironments();
@@ -180,7 +207,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Build cookie value string
-    const buildCookieValue = (values, isDynamic = false) => {
+    const buildCookieValue = (values: Record<string, string | number | boolean | undefined>, isDynamic = false) => {
         let cookieString;
         
         // Build name=value part
@@ -231,7 +258,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Validate field environment variables
-    const validateFieldEnvVars = (fieldName, value) => {
+    const validateFieldEnvVars = (fieldName: string, value: string) => {
         if (!value || !envContext.environmentsReady) return null;
         
         const variables = envContext.getAllVariables();
@@ -311,7 +338,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Validation rules
-    const validateCookieName = (_, value) => {
+    const validateCookieName = (_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Cookie name is required');
         }
@@ -330,7 +357,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
         return Promise.resolve();
     };
 
-    const validateCookieValue = (_, value) => {
+    const validateCookieValue = (_: unknown, value: string) => {
         if (valueType === 'static' && (!value || !value.trim())) {
             return Promise.reject('Cookie value is required');
         }
@@ -345,7 +372,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Validation for prefix/suffix
-    const validatePrefixSuffix = (fieldName) => (_, value) => {
+    const validatePrefixSuffix = (fieldName: string) => (_: unknown, value: string) => {
         if (!value) return Promise.resolve(); // Optional fields
         
         const envValidation = validateFieldEnvVars(fieldName, value);
@@ -357,7 +384,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Handle expiration preset selection
-    const handleExpirationPreset = (preset) => {
+    const handleExpirationPreset = (preset: ExpirationPreset) => {
         if (preset.value === 'session') {
             setExpirationMode('session');
             form.setFieldsValue({ maxAge: undefined, expires: undefined });
@@ -421,7 +448,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
                         rules={[{ validator: validateCookieName }]}
                         extra={envVarValidation.cookieName?.hasVars && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                <InfoCircleOutlined /> Uses environment variables: {envVarValidation.cookieName.usedVars.map(v => `{{${v}}}`).join(', ')}
+                                <InfoCircleOutlined /> Uses environment variables: {envVarValidation.cookieName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                             </Text>
                         )}
                     >
@@ -813,13 +840,13 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
                                 const variables = envContext.getAllVariables();
                                 const invalidDomains = [];
                                 
-                                value.forEach((domain, index) => {
+                                value.forEach((domain: string, index: number) => {
                                     const validation = validateEnvironmentVariables(domain, variables);
                                     if (validation.hasVars && !validation.isValid) {
                                         invalidDomains.push(`${domain} (${formatMissingVariables(validation.missingVars)})`);
                                     }
                                 });
-                                
+
                                 if (invalidDomains.length > 0) {
                                     return Promise.reject(`Invalid domains: ${invalidDomains.join(', ')}`);
                                 }
@@ -830,11 +857,11 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
                     }]}
                     style={{ marginBottom: 20 }}
                 >
-                    <DomainTags 
-                        onValidate={(domains) => {
+                    <DomainTags
+                        onValidate={(domains: string[]) => {
                             if (envContext.environmentsReady) {
                                 const variables = envContext.getAllVariables();
-                                const validations = domains.map(domain => 
+                                const validations = domains.map((domain: string) =>
                                     validateEnvironmentVariables(domain, variables)
                                 );
                                 setDomainValidation(validations);
@@ -860,7 +887,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
                                     
                                     return (
                                         <Text key={field} type={validation.isValid ? "secondary" : "danger"}>
-                                            • {fieldLabel} uses: {validation.usedVars.map(v => `{{${v}}}`).join(', ')}
+                                            • {fieldLabel} uses: {validation.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                                             {!validation.isValid && ` (missing: ${validation.missingVars.join(', ')})`}
                                         </Text>
                                     );

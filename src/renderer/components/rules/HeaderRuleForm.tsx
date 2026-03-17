@@ -78,15 +78,35 @@ const FORBIDDEN_HEADERS = [
 ];
 
 // Normalize header name
-const normalizeHeaderName = (name) => {
+const normalizeHeaderName = (name: string): string => {
     if (!name) return '';
     return name.split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join('-');
 };
 
 
-const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
+interface HeaderRuleInitialValues {
+    headerName?: string;
+    headerValue?: string;
+    tag?: string;
+    domains?: string[];
+    isDynamic?: boolean;
+    sourceId?: string;
+    prefix?: string;
+    suffix?: string;
+    isResponse?: boolean;
+    isEnabled?: boolean;
+}
+
+interface HeaderRuleFormProps {
+    visible: boolean;
+    onCancel: () => void;
+    onSave: (ruleData: Record<string, unknown>) => void;
+    initialValues: HeaderRuleInitialValues | null;
+}
+
+const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRuleFormProps) => {
     const [form] = Form.useForm();
     const { sources } = useSources();
     const envContext = useEnvironments();
@@ -167,7 +187,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
     };
 
     // Helper function to validate environment variables in a field
-    const validateFieldEnvVars = (fieldName, value) => {
+    const validateFieldEnvVars = (fieldName: string, value: string) => {
         if (!value || !envContext.environmentsReady) return null;
         
         const variables = envContext.getAllVariables();
@@ -230,7 +250,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
         return allValid;
     };
 
-    const validateHeaderName = (_, value) => {
+    const validateHeaderName = (_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Header name is required');
         }
@@ -261,7 +281,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
         return Promise.resolve();
     };
 
-    const validateHeaderValue = (_, value) => {
+    const validateHeaderValue = (_: unknown, value: string) => {
         if (valueType === 'static' && (!value || !value.trim())) {
             return Promise.reject('Header value is required');
         }
@@ -276,7 +296,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
     };
     
     // Add validation for prefix/suffix
-    const validatePrefixSuffix = (fieldName) => (_, value) => {
+    const validatePrefixSuffix = (fieldName: string) => (_: unknown, value: string) => {
         if (!value) return Promise.resolve(); // Optional fields
         
         const envValidation = validateFieldEnvVars(fieldName, value);
@@ -327,7 +347,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
                         rules={[{ validator: validateHeaderName }]}
                         extra={envVarValidation.headerName?.hasVars && (
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                <InfoCircleOutlined /> Uses environment variables: {envVarValidation.headerName.usedVars.map(v => `{{${v}}}`).join(', ')}
+                                <InfoCircleOutlined /> Uses environment variables: {envVarValidation.headerName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                             </Text>
                         )}
                     >
@@ -537,28 +557,28 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
                                 const variables = envContext.getAllVariables();
                                 const invalidDomains = [];
                                 
-                                value.forEach((domain, index) => {
+                                value.forEach((domain: string, index: number) => {
                                     const validation = validateEnvironmentVariables(domain, variables);
                                     if (validation.hasVars && !validation.isValid) {
                                         invalidDomains.push(`${domain} (${formatMissingVariables(validation.missingVars)})`);
                                     }
                                 });
-                                
+
                                 if (invalidDomains.length > 0) {
                                     return Promise.reject(`Invalid domains: ${invalidDomains.join(', ')}`);
                                 }
                             }
-                            
+
                             return Promise.resolve();
                         }
                     }]}
                     style={{ marginBottom: 20 }}
                 >
-                    <DomainTags 
-                        onValidate={(domains) => {
+                    <DomainTags
+                        onValidate={(domains: string[]) => {
                             if (envContext.environmentsReady) {
                                 const variables = envContext.getAllVariables();
-                                const validations = domains.map(domain => 
+                                const validations = domains.map((domain: string) =>
                                     validateEnvironmentVariables(domain, variables)
                                 );
                                 setDomainValidation(validations);
@@ -614,7 +634,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
                                     
                                     return (
                                         <Text key={field} type={validation.isValid ? "secondary" : "danger"}>
-                                            • {fieldLabel} uses: {validation.usedVars.map(v => `{{${v}}}`).join(', ')}
+                                            • {fieldLabel} uses: {validation.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                                             {!validation.isValid && ` (missing: ${validation.missingVars.join(', ')})`}
                                         </Text>
                                     );

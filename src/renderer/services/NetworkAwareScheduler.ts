@@ -11,6 +11,43 @@ import {
 } from '../constants/retryConfig';
 const log = createLogger('NetworkAwareScheduler');
 
+interface NetworkState {
+    isOnline: boolean;
+    networkQuality?: string;
+}
+
+interface ScheduleEntry {
+    sourceId: string;
+    intervalMs: number;
+    lastRefresh: number | null;
+    nextRefresh: number | null;
+    retryCount: number;
+    maxRetries: number;
+    backoffFactor: number;
+    failureCount: number;
+    maxConsecutiveFailures: number;
+    alignToMinute: boolean;
+    alignToHour: boolean;
+    alignToDay: boolean;
+}
+
+interface RefreshSource {
+    sourceId: string;
+    sourceType: string;
+    refreshOptions?: {
+        interval?: string | number;
+        lastRefresh?: string | number;
+        alignToMinute?: boolean;
+        alignToHour?: boolean;
+        alignToDay?: boolean;
+    };
+}
+
+interface TimeEvent {
+    type: string;
+    [key: string]: unknown;
+}
+
 /**
  * NetworkAwareScheduler - Manages refresh scheduling with network awareness
  */
@@ -51,7 +88,7 @@ class NetworkAwareScheduler {
   /**
    * Initialize the scheduler with a callback for refresh execution
    */
-  async initialize(refreshCallback, scheduleUpdateCallback = null) {
+  async initialize(refreshCallback: (sourceId: string, options?: Record<string, unknown>) => Promise<unknown>, scheduleUpdateCallback: ((sourceId: string, schedule: ScheduleEntry) => void) | null = null) {
     this.refreshCallback = refreshCallback;
     this.scheduleUpdateCallback = scheduleUpdateCallback;
     
@@ -59,7 +96,7 @@ class NetworkAwareScheduler {
     await timeManager.initialize();
     
     // Subscribe to time events
-    this.timeEventUnsubscribe = timeManager.addListener((events) => {
+    this.timeEventUnsubscribe = timeManager.addListener((events: TimeEvent[]) => {
       this.handleTimeEvents(events);
     });
     
@@ -72,7 +109,7 @@ class NetworkAwareScheduler {
   /**
    * Schedule a source for refresh
    */
-  async scheduleSource(source) {
+  async scheduleSource(source: RefreshSource) {
     if (!source || !source.sourceId || source.sourceType !== 'http') {
       return;
     }
@@ -118,7 +155,7 @@ class NetworkAwareScheduler {
   /**
    * Unschedule a source
    */
-  async unscheduleSource(sourceId) {
+  async unscheduleSource(sourceId: string) {
     sourceId = String(sourceId);
     
     this.clearSourceTimer(sourceId);
@@ -131,7 +168,7 @@ class NetworkAwareScheduler {
   /**
    * Calculate next refresh time and schedule timer
    */
-  async calculateAndScheduleNextRefresh(sourceId, networkState = null) {
+  async calculateAndScheduleNextRefresh(sourceId: string, networkState: NetworkState | null = null) {
     sourceId = String(sourceId);
     
     const schedule = await this.schedules.get(sourceId);
@@ -233,7 +270,7 @@ class NetworkAwareScheduler {
   /**
    * Calculate wall-clock aligned time if needed
    */
-  calculateAlignedTime(targetTime, schedule) {
+  calculateAlignedTime(targetTime: number, schedule: ScheduleEntry) {
     if (schedule.alignToMinute || schedule.alignToHour || schedule.alignToDay) {
       return timeManager.getNextAlignedTime(schedule.intervalMs, targetTime, {
         alignToMinute: schedule.alignToMinute,
@@ -247,7 +284,7 @@ class NetworkAwareScheduler {
   /**
    * Schedule a timer for a specific source
    */
-  scheduleSourceTimer(sourceId, delay) {
+  scheduleSourceTimer(sourceId: string, delay: number) {
     this.clearSourceTimer(sourceId);
     
     if (this.isDestroyed || this.isPaused) return;
@@ -275,7 +312,7 @@ class NetworkAwareScheduler {
     log.debug(`Timer ${timerId} stored for source ${sourceId}`);
   }
 
-  clearSourceTimer(sourceId) {
+  clearSourceTimer(sourceId: string) {
     const timerId = this.timers.get(sourceId);
     if (timerId) {
       log.debug(`Clearing timer ${timerId} for source ${sourceId}`);
@@ -287,7 +324,7 @@ class NetworkAwareScheduler {
   /**
    * Trigger refresh for a source
    */
-  async triggerRefresh(sourceId, reason = 'scheduled') {
+  async triggerRefresh(sourceId: string, reason = 'scheduled') {
     sourceId = String(sourceId);
     
     if (this.isDestroyed) return;
@@ -333,7 +370,7 @@ class NetworkAwareScheduler {
   /**
    * Perform the actual refresh
    */
-  async _performRefresh(sourceId, reason) {
+  async _performRefresh(sourceId: string, reason: string) {
     const schedule = await this.schedules.get(sourceId);
     if (!schedule || !this.refreshCallback) return;
     
@@ -356,7 +393,7 @@ class NetworkAwareScheduler {
   /**
    * Update schedule on successful refresh
    */
-  async updateScheduleOnSuccess(sourceId) {
+  async updateScheduleOnSuccess(sourceId: string) {
     const schedule = await this.schedules.get(sourceId);
     if (!schedule) return;
     
@@ -370,7 +407,7 @@ class NetworkAwareScheduler {
   /**
    * Update schedule on failed refresh
    */
-  async updateScheduleOnFailure(sourceId) {
+  async updateScheduleOnFailure(sourceId: string) {
     const schedule = await this.schedules.get(sourceId);
     if (!schedule) return;
     
@@ -383,7 +420,7 @@ class NetworkAwareScheduler {
   /**
    * Handle network state change
    */
-  async handleNetworkChange(networkState) {
+  async handleNetworkChange(networkState: NetworkState) {
     if (this.isDestroyed) return;
     
     const wasOffline = !this.lastNetworkState.isOnline;
@@ -407,7 +444,7 @@ class NetworkAwareScheduler {
   /**
    * Handle time events from TimeManager
    */
-  handleTimeEvents(events) {
+  handleTimeEvents(events: TimeEvent[]) {
     if (this.isDestroyed || this.isPaused) return;
     
     log.info('Time events detected', { count: events.length });
@@ -586,7 +623,7 @@ class NetworkAwareScheduler {
   /**
    * Update last refresh time
    */
-  async updateLastRefresh(sourceId, timestamp = null) {
+  async updateLastRefresh(sourceId: string, timestamp: number | null = null) {
     sourceId = String(sourceId);
     
     const schedule = await this.schedules.get(sourceId);
@@ -601,7 +638,7 @@ class NetworkAwareScheduler {
   /**
    * Parse refresh interval to milliseconds
    */
-  parseInterval(interval) {
+  parseInterval(interval: string | number | undefined | null): number | null {
     if (!interval || interval === 'never') return null;
     
     if (typeof interval === 'number') {
