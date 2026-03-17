@@ -1,10 +1,8 @@
-import electronUpdater from 'electron-updater';
+import { autoUpdater } from 'electron-updater';
 import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
-
-const { autoUpdater } = electronUpdater;
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('AutoUpdater');
