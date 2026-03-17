@@ -14,13 +14,21 @@ const { Text, Title } = Typography;
  * @param {function} onIncludeWorkspaceChange - Handler for workspace inclusion changes
  * @param {function} onIncludeCredentialsChange - Handler for credentials inclusion changes
  */
-const WorkspaceConfigCard = ({ 
+interface WorkspaceConfigCardProps {
+    isGitWorkspace: boolean;
+    includeWorkspace: boolean;
+    includeCredentials: boolean;
+    onIncludeWorkspaceChange: (checked: boolean) => void;
+    onIncludeCredentialsChange: (checked: boolean) => void;
+}
+
+const WorkspaceConfigCard = ({
     isGitWorkspace,
     includeWorkspace,
     includeCredentials,
     onIncludeWorkspaceChange,
     onIncludeCredentialsChange
-}) => {
+}: WorkspaceConfigCardProps) => {
     // Don't render if not a Git workspace
     if (!isGitWorkspace) {
         return null;

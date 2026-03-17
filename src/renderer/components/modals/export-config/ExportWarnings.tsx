@@ -11,12 +11,19 @@ import { WarningOutlined, InfoCircleOutlined } from '@ant-design/icons';
  * @param {boolean} includeCredentials - Whether authentication credentials are included
  * @param {string} exportPurpose - Export purpose ('team' or 'backup')
  */
-const ExportWarnings = ({ 
-    environmentOption, 
-    includeWorkspace, 
-    includeCredentials, 
-    exportPurpose 
-}) => {
+interface ExportWarningsProps {
+    environmentOption: string;
+    includeWorkspace: boolean;
+    includeCredentials: boolean;
+    exportPurpose: string;
+}
+
+const ExportWarnings = ({
+    environmentOption,
+    includeWorkspace,
+    includeCredentials,
+    exportPurpose
+}: ExportWarningsProps) => {
     // Determine if security warning should be shown for sensitive data
     const showSecurityWarning = (environmentOption === 'full' || (includeWorkspace && includeCredentials));
     

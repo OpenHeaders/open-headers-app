@@ -8,7 +8,14 @@ const { Text } = Typography;
  * ImportFileAnalysis component for displaying file analysis results
  * Shows file information, statistics, and validation results
  */
-const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo }) => {
+interface ImportFileAnalysisProps {
+    fileInfo: { version?: string; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; [key: string]: unknown } | null;
+    envFileData: { variableCount?: number; environmentCount?: number; [key: string]: unknown } | null;
+    hasAnyData: boolean;
+    combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number };
+}
+
+const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo }: ImportFileAnalysisProps) => {
     if (!fileInfo && !envFileData) {
         return null;
     }

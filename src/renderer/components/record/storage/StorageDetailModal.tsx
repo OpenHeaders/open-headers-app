@@ -18,7 +18,14 @@ import { getTypeColor, getActionColor, formatValue } from './StorageUtils';
 
 const { Text } = Typography;
 
-const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }) => {
+interface StorageDetailModalProps {
+    visible: boolean;
+    selectedEntry: { name: string; domain?: string; url?: string; timestamp?: number; type?: string; action?: string; value?: string; oldValue?: string; newValue?: string; path?: string; expires?: string; httpOnly?: boolean; secure?: boolean; sameSite?: string; metadata?: { maxAge?: number | string; expires?: string; httpOnly?: boolean; secure?: boolean; sameSite?: string; [key: string]: unknown }; [key: string]: unknown } | null;
+    onClose: () => void;
+    messageApi: { success: (msg: string) => void; error: (msg: string) => void };
+}
+
+const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: StorageDetailModalProps) => {
     const { token } = theme.useToken();
 
     if (!selectedEntry) return null;

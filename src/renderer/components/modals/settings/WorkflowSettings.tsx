@@ -30,7 +30,14 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {Object} screenRecordingPermission - Screen recording permission state
  * @param {function} onChange - Callback function for handling setting changes
  */
-const WorkflowSettings = ({ formValues, screenRecordingPermission, onChange, initialAction }) => {
+interface WorkflowSettingsProps {
+    formValues: Record<string, unknown>;
+    screenRecordingPermission: { hasPermission: boolean; canRequest: boolean } | null;
+    onChange: (fieldName: string, value: unknown) => void;
+    initialAction: { action: string } | null;
+}
+
+const WorkflowSettings = ({ formValues, screenRecordingPermission, onChange, initialAction }: WorkflowSettingsProps) => {
     // Get settings configuration for workflows section
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
     const hotkeyRef = useRef(null);

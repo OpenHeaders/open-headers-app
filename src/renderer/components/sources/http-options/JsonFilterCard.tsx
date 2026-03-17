@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { Card, Form, Input, Switch, Typography } from 'antd';
+import type { FormInstance } from 'antd';
 
 const { Text } = Typography;
 
@@ -29,12 +30,19 @@ const { Text } = Typography;
  * @param {Object} props.form - Form instance for field access
  * @returns {JSX.Element} JSON filter card component
  */
-const JsonFilterCard = ({ 
-    jsonFilterEnabled, 
-    handleJsonFilterToggle, 
-    validateVariableExists, 
-    form 
-}) => {
+interface JsonFilterCardProps {
+    jsonFilterEnabled: boolean;
+    handleJsonFilterToggle: (checked: boolean) => void;
+    validateVariableExists: (value: string) => { valid: boolean; error?: string };
+    form: FormInstance;
+}
+
+const JsonFilterCard = ({
+    jsonFilterEnabled,
+    handleJsonFilterToggle,
+    validateVariableExists,
+    form
+}: JsonFilterCardProps) => {
     return (
         <Card 
             size="small" 
