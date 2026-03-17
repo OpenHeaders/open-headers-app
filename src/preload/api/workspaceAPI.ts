@@ -11,6 +11,7 @@ const workspaceAPI = {
     // Core workspace operations
     initializeWorkspaceSync: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('initializeWorkspaceSync', workspaceId),
     deleteWorkspace: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deleteWorkspace', workspaceId),
+    deleteWorkspaceFolder: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deleteWorkspaceFolder', workspaceId),
     syncWorkspace: (workspaceId: string, options: unknown): Promise<unknown> => ipcRenderer.invoke('workspace-sync', workspaceId, options),
 
     // Workspace management operations

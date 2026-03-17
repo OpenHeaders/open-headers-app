@@ -95,21 +95,7 @@ describe('IPC Contract', () => {
         });
 
         it('every main handle() has a matching preload invoke()', () => {
-            // Known gaps: handlers registered in main but preload API not yet created
-            // These are partially-wired features — the backend exists but the bridge is missing
-            const knownGaps = [
-                'deleteWorkspaceFolder',       // handler exists, no preload API
-                'proxy-set-strict-ssl',         // SSL/cert management: backend wired, UI bridge missing
-                'proxy-add-trusted-certificate',
-                'proxy-remove-trusted-certificate',
-                'proxy-add-certificate-exception',
-                'proxy-remove-certificate-exception',
-                'proxy-get-certificate-info',
-                'export-video',                 // registered by VideoExportManager, no preload API
-            ];
-            const unusedHandlers = [...mainHandleChannels].filter(
-                ch => !preloadInvokeChannels.has(ch) && !knownGaps.includes(ch)
-            );
+            const unusedHandlers = [...mainHandleChannels].filter(ch => !preloadInvokeChannels.has(ch));
             expect(unusedHandlers, `Main handlers with no preload caller: ${unusedHandlers.join(', ')}`).toEqual([]);
         });
 

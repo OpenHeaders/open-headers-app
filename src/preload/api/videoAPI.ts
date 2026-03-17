@@ -25,6 +25,7 @@ const videoAPI = {
     checkFFmpeg: (): Promise<unknown> => ipcRenderer.invoke('check-ffmpeg'),
     downloadFFmpeg: (): Promise<unknown> => ipcRenderer.invoke('download-ffmpeg'),
     convertVideo: (inputPath: string, outputPath: string): Promise<unknown> => ipcRenderer.invoke('convert-video', inputPath, outputPath),
+    exportVideo: (recordingPath: string): Promise<unknown> => ipcRenderer.invoke('export-video', recordingPath),
 
     onFFmpegDownloadProgress: (callback: (data: unknown) => void): (() => void) => {
         const subscription = (_: unknown, data: unknown) => callback(data);
