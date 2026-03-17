@@ -1,6 +1,7 @@
 import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
+import zlib from 'zlib';
 import mainLogger from '../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION, isVersionCompatible as checkVersionCompatible } from '../../../config/version';
 import windowsFocusHelper from '../utils/windowsFocus';
@@ -150,7 +151,6 @@ class ProtocolHandler {
             let decodedPayload: any;
 
             try {
-                const zlib = require('zlib');
                 let decompressed: Buffer;
 
                 if (compressionType === 'base85') {

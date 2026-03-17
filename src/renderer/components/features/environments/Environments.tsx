@@ -17,7 +17,7 @@ import { CreateEnvironmentModal, AddVariableModal } from './EnvironmentModals';
 import { MissingVariablesAlert, TutorialInfo, VariableUsageSummary } from './EnvironmentInfo';
 import { generateUniqueEnvironmentName } from './EnvironmentUtils';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('Environments');
 
 /**

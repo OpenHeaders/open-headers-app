@@ -1,5 +1,7 @@
 // Electron main process
 import electron from 'electron';
+import fs from 'fs';
+import path from 'path';
 import mainLogger from './utils/mainLogger';
 
 const { app, ipcMain, Menu, shell } = electron;
@@ -97,9 +99,8 @@ if (!gotTheLock) {
         ipcMain.handle('openAppPath', systemHandlers.handleOpenAppPath.bind(systemHandlers));
 
         // Global shortcuts
-        const globalShortcutsMod = require('./main/modules/shortcuts/globalShortcuts').default;
-        ipcMain.handle('disableRecordingHotkey', () => globalShortcutsMod.disableHotkey());
-        ipcMain.handle('enableRecordingHotkey', () => globalShortcutsMod.enableHotkey());
+        ipcMain.handle('disableRecordingHotkey', () => globalShortcuts.disableHotkey());
+        ipcMain.handle('enableRecordingHotkey', () => globalShortcuts.enableHotkey());
 
         // Network
         ipcMain.handle('checkNetworkConnectivity', networkHandlers.checkNetworkConnectivity);
@@ -245,6 +246,7 @@ if (!gotTheLock) {
 
         // Runtime updates
         ipcMain.on('updateWebSocketSources', (event: any, sources: any[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const webSocketService = require('./services/websocket/ws-service').default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
@@ -257,11 +259,13 @@ if (!gotTheLock) {
         });
 
         ipcMain.on('proxy-update-source', (_: any, sourceId: string, value: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const proxyService = require('./services/proxy/ProxyService').default;
             proxyService.updateSource(sourceId, value);
         });
 
         ipcMain.on('proxy-update-sources', (_: any, sources: any[]) => {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const proxyService = require('./services/proxy/ProxyService').default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
@@ -274,6 +278,7 @@ if (!gotTheLock) {
 
         // Environment events - notify WebSocket service when environments change
         ipcMain.on('environment-switched', async (event: any, data: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const proxyService = require('./services/proxy/ProxyService').default;
             log.info('Environment switched, notifying proxy service');
             // Update proxy service with new environment variables
@@ -283,18 +288,14 @@ if (!gotTheLock) {
 
             // Re-load sources since they might have environment-dependent values
             try {
-                const fs = require('fs').promises;
-                const path = require('path');
-                const { app } = require('electron');
-
                 // Get current workspace
                 const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
-                const workspacesData = await fs.readFile(workspacesPath, 'utf8');
+                const workspacesData = await fs.promises.readFile(workspacesPath, 'utf8');
                 const { activeWorkspaceId } = JSON.parse(workspacesData);
 
                 if (activeWorkspaceId) {
                     const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
-                    const sourcesData = await fs.readFile(sourcesPath, 'utf8');
+                    const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
                     const sources = JSON.parse(sourcesData);
                     if (Array.isArray(sources)) {
                         proxyService.updateSources(sources);
@@ -309,6 +310,7 @@ if (!gotTheLock) {
         });
 
         ipcMain.on('environment-variables-changed', (event: any, data: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const proxyService = require('./services/proxy/ProxyService').default;
             log.info('Environment variables changed, notifying proxy service');
             // Update proxy service with new environment variables
@@ -441,8 +443,11 @@ if (!gotTheLock) {
         // Initialize global shortcuts
         await globalShortcuts.initialize(app);
 
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { AppStateMachine } = require('./services/core/AppStateMachine');
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const proxyService = require('./services/proxy/ProxyService').default;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const webSocketService = require('./services/websocket/ws-service').default;
 
         AppStateMachine.serversReady({

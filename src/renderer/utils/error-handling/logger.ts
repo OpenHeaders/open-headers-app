@@ -5,13 +5,17 @@
 
 // Lazy-load timeManager to avoid circular dependencies
 let _timeManager: { getDate: (ts?: number | null) => Date } | null = null;
+let _timeManagerLoading = false;
 function getTimeManager() {
-  if (!_timeManager && typeof require !== 'undefined') {
-    try {
-      _timeManager = require('../../services/TimeManager').default;
-    } catch (e) {
+  if (!_timeManager && !_timeManagerLoading) {
+    _timeManagerLoading = true;
+    import('../../services/TimeManager').then(mod => {
+      _timeManager = mod.default;
+    }).catch(() => {
       // TimeManager not available yet, use Date directly
-    }
+    }).finally(() => {
+      _timeManagerLoading = false;
+    });
   }
   return _timeManager;
 }
@@ -107,4 +111,4 @@ export function createLogger(component: string) {
   return new Logger(component);
 }
 
-// Note: ESM exports above. Files using require() should be migrated to import.
+// ESM exports above.

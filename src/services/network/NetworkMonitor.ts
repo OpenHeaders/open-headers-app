@@ -172,6 +172,7 @@ class NetworkMonitor extends EventEmitter {
     }
 
     createPlatformMonitor(): EventEmitter & { start(): void; stop(): void; removeAllListeners(): any } {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const PlatformMonitors = require('./PlatformMonitors');
 
         switch (process.platform) {

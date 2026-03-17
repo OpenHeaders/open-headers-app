@@ -1,7 +1,6 @@
 import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { theme } from 'antd';
-
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('NavigationContext');
 
 interface NavigationIntent {

@@ -1,6 +1,12 @@
+import electron from 'electron';
+import fs from 'fs';
+import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import proxyService from '../../../../services/proxy/ProxyService';
 import settingsHandlers from './settingsHandlers';
+
+const { app } = electron;
+const fsPromises = fs.promises;
 
 const { createLogger } = mainLogger;
 const log = createLogger('ProxyHandlers');
@@ -22,18 +28,15 @@ class ProxyHandlers {
 
                 // Load environment variables for the current workspace
                 try {
-                    const { app } = require('electron');
-                    const fs = require('fs').promises;
-                    const path = require('path');
 
                     // Get current workspace from settings
                     const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
-                    const workspacesData = await fs.readFile(workspacesPath, 'utf8');
+                    const workspacesData = await fsPromises.readFile(workspacesPath, 'utf8');
                     const { activeWorkspaceId } = JSON.parse(workspacesData);
 
                     if (activeWorkspaceId) {
                         const envPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'environments.json');
-                        const envData = await fs.readFile(envPath, 'utf8');
+                        const envData = await fsPromises.readFile(envPath, 'utf8');
                         const { environments, activeEnvironment } = JSON.parse(envData);
                         const activeVars = environments[activeEnvironment] || {};
                         // Extract just the values from the environment variable objects
@@ -49,7 +52,7 @@ class ProxyHandlers {
                         // Load sources for the current workspace
                         try {
                             const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
-                            const sourcesData = await fs.readFile(sourcesPath, 'utf8');
+                            const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
                             const sources = JSON.parse(sourcesData);
                             if (Array.isArray(sources)) {
                                 proxyService.updateSources(sources);
@@ -62,7 +65,7 @@ class ProxyHandlers {
                         // Load header rules for the current workspace
                         try {
                             const rulesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'rules.json');
-                            const rulesData = await fs.readFile(rulesPath, 'utf8');
+                            const rulesData = await fsPromises.readFile(rulesPath, 'utf8');
                             const rulesStorage = JSON.parse(rulesData);
                             if (rulesStorage.rules && rulesStorage.rules.header) {
                                 proxyService.updateHeaderRules(rulesStorage.rules.header);
@@ -262,7 +265,7 @@ class ProxyHandlers {
             if (settings.pendingVideoRecording && process.platform === 'darwin') {
                 log.info('Found pending video recording enable request, checking permission...');
 
-                const systemHandlers = require('./systemHandlers');
+                const systemHandlers = (await import('./systemHandlers')).default;
                 const permissionCheck = await systemHandlers.handleCheckScreenRecordingPermission();
                 if (permissionCheck.success && permissionCheck.hasPermission) {
                     log.info('Screen recording permission granted, enabling video recording feature');

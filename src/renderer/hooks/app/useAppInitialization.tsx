@@ -6,7 +6,7 @@
 
 import { useEffect } from 'react';
 import { convertNewRecordingFormat } from '../../utils/formatters/recordConverter';
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useAppInitialization');
 
 interface UseAppInitializationDeps {

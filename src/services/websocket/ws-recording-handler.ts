@@ -3,9 +3,14 @@
  * Manages video recording lifecycle and workflow save from browser extensions
  */
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const WebSocket = require('ws');
+import electron from 'electron';
+import fs from 'fs';
+import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import { preprocessRecordingForSave } from './utils/recordingPreprocessor';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSRecordingHandler');
@@ -37,7 +42,7 @@ class WSRecordingHandler {
      */
     async initializeVideoCaptureService(): Promise<void> {
         try {
-            const { VideoCaptureService } = require('../video/video-capture-service');
+            const { VideoCaptureService } = await import('../video/video-capture-service');
             this.videoCaptureService = new VideoCaptureService();
             await this.videoCaptureService!.initialize(this.wsService.appDataPath);
             log.info('Video capture service initialized');
@@ -52,16 +57,14 @@ class WSRecordingHandler {
      */
     async sendVideoRecordingState(ws: any): Promise<void> {
         try {
-            const electron = require('electron');
             const { app } = electron;
-            const fs = require('fs').promises;
-            const path = require('path');
+            const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             let settings: any = {};
 
             try {
-                const settingsData = await fs.readFile(settingsPath, 'utf8');
+                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
                 settings = JSON.parse(settingsData);
             } catch (error) {
                 log.debug('Settings file not found, using defaults');
@@ -101,16 +104,14 @@ class WSRecordingHandler {
      */
     async sendRecordingHotkey(ws: any): Promise<void> {
         try {
-            const electron = require('electron');
             const { app } = electron;
-            const fs = require('fs').promises;
-            const path = require('path');
+            const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             let settings: any = {};
 
             try {
-                const settingsData = await fs.readFile(settingsPath, 'utf8');
+                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
                 settings = JSON.parse(settingsData);
             } catch (error) {
                 log.debug('Settings file not found, using defaults');
@@ -154,7 +155,6 @@ class WSRecordingHandler {
      */
     notifyRecordingProcessing(recordId: string, metadata: any): void {
         try {
-            const electron = require('electron');
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
 
@@ -187,7 +187,6 @@ class WSRecordingHandler {
      */
     notifyRecordingProgress(recordId: string, stage: string, progress: number, details: any = {}): void {
         try {
-            const electron = require('electron');
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
 
@@ -211,14 +210,11 @@ class WSRecordingHandler {
      */
     async handleSaveRecording(recordingData: any): Promise<{ success: boolean; recordId?: string; metadata?: any; error?: string }> {
         try {
-            const electron = require('electron');
             const { app } = electron;
-            const fs = require('fs').promises;
-            const path = require('path');
-            const { preprocessRecordingForSave } = require('./utils/recordingPreprocessor');
+            const fsPromises = fs.promises;
 
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
-            await fs.mkdir(recordingsPath, { recursive: true });
+            await fsPromises.mkdir(recordingsPath, { recursive: true });
 
             const originalRecordId = recordingData.record?.metadata?.recordId;
             const recordId = originalRecordId || `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -234,7 +230,7 @@ class WSRecordingHandler {
             }
 
             const recordingDir = path.join(recordingsPath, recordId);
-            await fs.mkdir(recordingDir, { recursive: true });
+            await fsPromises.mkdir(recordingDir, { recursive: true });
 
             let processedRecordingData: any;
             let hasProcessedVersion = false;
@@ -247,7 +243,7 @@ class WSRecordingHandler {
 
                 let proxyPort: number | null = null;
                 try {
-                    const proxyService = require('../proxy/ProxyService').default;
+                    const { default: proxyService } = await import('../proxy/ProxyService');
                     if (proxyService && proxyService.isRunning) {
                         proxyPort = proxyService.port;
                         log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);
@@ -306,7 +302,7 @@ class WSRecordingHandler {
             let hasVideo = false;
             const videoMetaPath = path.join(recordingsPath, recordId, 'video-metadata.json');
             try {
-                await fs.access(videoMetaPath);
+                await fsPromises.access(videoMetaPath);
                 hasVideo = true;
                 log.info(`Found existing video recording for ${recordId}`);
             } catch (error) {
@@ -334,8 +330,7 @@ class WSRecordingHandler {
             this.notifyRecordingProgress(recordId, 'complete', 100);
 
             try {
-                const electron2 = require('electron');
-                const { BrowserWindow } = electron2;
+                const { BrowserWindow } = electron;
                 const windows = BrowserWindow.getAllWindows();
                 windows.forEach((window: any) => {
                     if (window && !window.isDestroyed()) {
@@ -362,16 +357,14 @@ class WSRecordingHandler {
      */
     async handleStartSyncRecording(ws: any, data: any): Promise<void> {
         try {
-            const electron = require('electron');
             const { app } = electron;
-            const fs = require('fs').promises;
-            const path = require('path');
+            const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             let videoRecordingEnabled = false;
 
             try {
-                const settingsData = await fs.readFile(settingsPath, 'utf8');
+                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(settingsData);
                 videoRecordingEnabled = settings.videoRecording || false;
             } catch (error) {
@@ -418,16 +411,14 @@ class WSRecordingHandler {
      */
     async handleStopSyncRecording(ws: any, data: any): Promise<void> {
         try {
-            const electron = require('electron');
             const { app } = electron;
-            const fs = require('fs').promises;
-            const path = require('path');
+            const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             let videoRecordingEnabled = false;
 
             try {
-                const settingsData = await fs.readFile(settingsPath, 'utf8');
+                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(settingsData);
                 videoRecordingEnabled = settings.videoRecording || false;
             } catch (error) {

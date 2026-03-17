@@ -5,8 +5,7 @@ import mainLogger from '../../utils/mainLogger';
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
 
-const configValidator = require('../../utils/configValidator').default;
-const { analyzeConfigFile } = configValidator;
+import { analyzeConfigFile } from '../../utils/configValidator';
 
 // Type definitions
 interface ValidationResultDetails {
@@ -69,7 +68,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
           ...(envData.environments && { environments: envData.environments })
         };
 
-        const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData));
+        const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
         if (validationResult.valid) {
           return {
             success: true,
@@ -99,7 +98,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
     if (searchPatterns.configFiles.length > 0) {
       const configPath = path.join(repoDir, searchPatterns.configFiles[0]);
       const content = await fs.promises.readFile(configPath, 'utf8');
-      const validationResult: ValidationResultDetails = await analyzeConfigFile(content);
+      const validationResult: ValidationResultDetails = await analyzeConfigFile(content) as any;
       if (validationResult.valid) {
         return {
           success: true,
@@ -242,7 +241,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
       ...(envData.environments && { environments: envData.environments })
     };
 
-    const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData));
+    const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
     if (validationResult.valid) {
       return {
         success: true,
@@ -262,7 +261,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
   } else if (foundConfigFile) {
     // Single file format
     const content = await fs.promises.readFile(path.join(repoDir, foundConfigFile), 'utf8');
-    const validationResult: ValidationResultDetails = await analyzeConfigFile(content);
+    const validationResult: ValidationResultDetails = await analyzeConfigFile(content) as any;
     if (validationResult.valid) {
       const message = foundConfigFile !== searchPatterns.configFiles[0]
         ? `Connection successful! Found configuration file (${foundConfigFile}) with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`

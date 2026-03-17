@@ -3,17 +3,16 @@
  * Manages rule broadcasting, dynamic value population, and toggle from extensions
  */
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const WebSocket = require('ws');
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import { DATA_FORMAT_VERSION } from '../../config/version';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSRuleHandler');
-
-const versionConfig = require('../../config/version').default;
-const { DATA_FORMAT_VERSION } = versionConfig;
 
 interface HeaderRule {
     id: string | number;
@@ -320,8 +319,7 @@ class WSRuleHandler {
         this.broadcastRules();
 
         try {
-            const electron = require('electron');
-            const { BrowserWindow } = electron;
+            const { BrowserWindow } = await import('electron');
             const windows = BrowserWindow.getAllWindows();
             windows.forEach((window: any) => {
                 if (window && !window.isDestroyed()) {

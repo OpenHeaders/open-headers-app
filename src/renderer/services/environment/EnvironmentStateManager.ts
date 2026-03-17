@@ -40,7 +40,7 @@ class EnvironmentStateManager extends BaseStateManager {
   /**
    * Get current state (immutable copy)
    */
-  getState() {
+  getState(): Record<string, any> {
     return {
       ...this.state,
       environments: { ...this.state.environments }

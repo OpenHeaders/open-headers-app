@@ -43,13 +43,13 @@ class SettingsHandlers {
 
             // Apply log level if changed
             if (settings.logLevel) {
-                const { setGlobalLogLevel } = require('../../../../utils/mainLogger');
+                const { setGlobalLogLevel } = await import('../../../../utils/mainLogger');
                 setGlobalLogLevel(settings.logLevel);
             }
 
             // Update global recording hotkey if changed
             if (settings.recordingHotkey || settings.hasOwnProperty('recordingHotkeyEnabled')) {
-                const globalShortcuts = require('../../shortcuts/globalShortcuts').default;
+                const globalShortcuts = (await import('../../shortcuts/globalShortcuts')).default;
 
                 // Update hotkey if it changed
                 if (settings.recordingHotkey) {

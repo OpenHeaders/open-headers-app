@@ -81,7 +81,7 @@ class GlobalShortcuts {
             log.info('Recording hotkey pressed');
 
             // Send message to WebSocket service to notify extension
-            const webSocketService = require('../../../services/websocket/ws-service').default;
+            const webSocketService = (await import('../../../services/websocket/ws-service')).default;
 
             // Check if WebSocket is connected
             if (!webSocketService.isConnected()) {

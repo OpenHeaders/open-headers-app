@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from 'react';
 import { showMessage } from '../../utils/ui/messageUtil';
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useWorkspaceSync');
 
 // Minimum time between sync notifications (in milliseconds)

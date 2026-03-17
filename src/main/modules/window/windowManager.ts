@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
 import windowsFocusHelper from '../utils/windowsFocus';
+import appLifecycle from '../app/lifecycle';
 
 const { BrowserWindow, shell, app } = electron;
 const { createLogger } = mainLogger;
@@ -160,9 +161,9 @@ class WindowManager {
                     // macOS automatically shows dock when a window becomes visible,
                     // so we must re-apply the user's dock preference after window visibility is set
                     if (process.platform === 'darwin') {
-                        setTimeout(() => {
-                            // Lazy require to avoid circular dependency (trayManager imports windowManager)
-                            const trayManager = require('../tray/trayManager').default;
+                        setTimeout(async () => {
+                            // Lazy import to avoid circular dependency (trayManager imports windowManager)
+                            const trayManager = (await import('../tray/trayManager')).default;
                             trayManager.updateTray(settings);
                             log.info('Applied dock visibility setting after window ready');
                         }, 100);
@@ -181,7 +182,6 @@ class WindowManager {
 
         // Hide to system tray instead of closing unless app is quitting
         this.mainWindow.on('close', (event: any) => {
-            const appLifecycle = require('../app/lifecycle').default;
             if (!appLifecycle.isQuittingApp()) {
                 event.preventDefault();
                 this.mainWindow.hide();

@@ -2,7 +2,7 @@ import { showMessage } from '../../../utils';
 import { validateAllFormFields } from './form-validation';
 import timeManager from '../../../services/TimeManager';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('FormSubmissionHandler');
 
 /**

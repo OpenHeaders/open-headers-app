@@ -9,7 +9,7 @@ import { isSourceDuplicate } from '../utilities/DuplicateDetection';
 import { validateSource } from '../utilities/ValidationUtils';
 import { IMPORT_MODES } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SourcesHandler');
 
 /**

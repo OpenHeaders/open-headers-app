@@ -8,7 +8,7 @@
 import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
 
 /**

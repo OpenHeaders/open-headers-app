@@ -44,6 +44,7 @@ class AtomicFileWriter {
   async cleanupStaleLocks(): Promise<void> {
     try {
       // This runs async in background, don't await
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const electron = require('electron');
       const { app } = electron;
       if (!app || !app.getPath) return; // Not in Electron context

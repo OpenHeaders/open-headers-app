@@ -18,10 +18,12 @@ let log: LoggerLike;
 try {
   // Try renderer logger first
   if (typeof window !== 'undefined' && (window as any).electronAPI) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const rendererLogger = require('../renderer/utils/error-handling/logger');
     log = rendererLogger.createLogger('ConfigValidator');
   } else {
     // Fall back to main logger
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const mainLogger = require('./mainLogger');
     log = mainLogger.createLogger('ConfigValidator');
   }
@@ -176,13 +178,13 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
  * Validate Git workspace configuration
  */
 async function validateGitWorkspaceConfig(configPath: string, envPath?: string): Promise<ValidationResult> {
-  const fs = require('fs').promises;
+  const { promises: fsPromises } = await import('fs');
 
   try {
     log.info('Validating Git workspace config:', { configPath, envPath });
 
     // Read and validate main config file
-    const configContent: string = await fs.readFile(configPath, 'utf8');
+    const configContent: string = await fsPromises.readFile(configPath, 'utf8');
     const configResult = await analyzeConfigFile(configContent, false, !!envPath);
 
     if (!configResult.valid) {
@@ -195,7 +197,7 @@ async function validateGitWorkspaceConfig(configPath: string, envPath?: string):
     let envResult: AnalysisResult | null = null;
     if (envPath) {
       // Read and validate environment file
-      const envContent: string = await fs.readFile(envPath, 'utf8');
+      const envContent: string = await fsPromises.readFile(envPath, 'utf8');
       envResult = await analyzeConfigFile(envContent, true, true);
 
       if (!envResult.valid) {

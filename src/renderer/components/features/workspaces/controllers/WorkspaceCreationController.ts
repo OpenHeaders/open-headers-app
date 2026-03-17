@@ -9,7 +9,7 @@ import WorkspaceCreationStateMachine, {
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
 
-const { createLogger } = require('../../../../utils/error-handling/logger');
+import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceCreationController');
 
 interface WorkspaceCreationDependencies {

@@ -3,12 +3,12 @@
 import React, { createContext, useEffect, useRef } from 'react';
 import { useSources } from '../../hooks/workspace';
 import timeManager from '../../services/TimeManager';
+import { createLogger } from '../../utils/error-handling/logger';
+import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
 
 // Note: This provider only exists to sync sources to ws-service via side effects
 // The context value is empty and no components consume it
 const WebSocketContext = createContext({});
-
-const { createLogger } = require('../../utils/error-handling/logger');
 const log = createLogger('WebSocketContext');
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
@@ -164,7 +164,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         if (!sources || !Array.isArray(sources) || !(window as any).electronAPI?.updateWebSocketSources) return;
 
         // Check if we should suppress broadcasting during workspace switching
-        const workspaceService = require('../../services/CentralizedWorkspaceService').getCentralizedWorkspaceService();
+        const workspaceService = getCentralizedWorkspaceService();
         const isWorkspaceSwitching = workspaceService?.getState?.()?.isWorkspaceSwitching || false;
 
         if (isWorkspaceSwitching) {

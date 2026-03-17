@@ -1,6 +1,6 @@
 // Export all validation utilities
 // Re-export from shared location
-const { analyzeConfigFile, validateGitWorkspaceConfig, readAndValidateMultiFileConfig } = require('../../../utils/configValidator');
+import { analyzeConfigFile, validateGitWorkspaceConfig, readAndValidateMultiFileConfig } from '../../../utils/configValidator';
 
 export {
   analyzeConfigFile,

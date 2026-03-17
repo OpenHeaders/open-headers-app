@@ -4,7 +4,7 @@ import timeManager from '../../../services/TimeManager';
 import { UpdateNotificationManager } from './UpdateNotificationManager';
 import { createUpdateEventHandlers } from './UpdateEventHandlers';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('UpdateNotification');
 
 /**
