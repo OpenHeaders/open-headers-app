@@ -28,26 +28,32 @@ import { HeadersTable } from './HeadersTable';
 
 const { Text } = Typography;
 
+interface ContentTabsSource {
+    sourceType?: string;
+    isFiltered?: boolean;
+    filteredWith?: string | null;
+    jsonFilter?: { enabled?: boolean; path?: string };
+    [key: string]: unknown;
+}
+
+interface ContentTabsProps {
+    activeTab: string;
+    onTabChange: (key: string) => void;
+    source: ContentTabsSource;
+    internalContent: string | null;
+    internalOriginalResponse: string | null;
+    responseHeaders: Record<string, string> | null;
+    copyingContent: boolean;
+    copyingJson: boolean;
+    onCopyContent: (content: string) => void;
+    onCopyJson: (content: string) => void;
+}
+
 /**
  * ContentTabs component for displaying tabbed source content interface
- * 
+ *
  * Dynamically generates tabs based on available source data and provides
  * specialized display for each content type with appropriate formatting.
- * 
- * @param {Object} props - Component props
- * @param {string} props.activeTab - Currently active tab key
- * @param {Function} props.onTabChange - Tab change handler function
- * @param {Object} props.source - Source object containing response data
- * @param {string} props.internalContent - Processed/filtered content state
- * @param {string} props.internalOriginalResponse - Raw response content state
- * @param {Object} props.responseHeaders - Extracted HTTP headers object
- * @param {boolean} props.copyingContent - Content copy operation state
- * @param {boolean} props.copyingJson - JSON copy operation state
- * @param {Function} props.onCopyContent - Content copy handler function
- * @param {Function} props.onCopyJson - JSON copy handler function
- * @returns {React.Component} Rendered tabbed interface component
- * @example
- * <ContentTabs activeTab="content" onTabChange={setTab} source={sourceData} ... />
  */
 export function ContentTabs({
     activeTab,
@@ -60,7 +66,7 @@ export function ContentTabs({
     copyingJson,
     onCopyContent,
     onCopyJson
-}) {
+}: ContentTabsProps) {
     const isHttpSource = source?.sourceType === 'http';
     const hasOriginalResponse = !!internalOriginalResponse;
     

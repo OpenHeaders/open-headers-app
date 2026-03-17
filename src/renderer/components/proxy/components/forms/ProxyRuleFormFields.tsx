@@ -1,5 +1,6 @@
 import React from 'react';
 import { Form, Input, Select, Radio, Space, Typography, Tag } from 'antd';
+import type { FormInstance } from 'antd';
 import { LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import DomainTags from '../../../features/domain-tags';
 import { getSourceIcon, formatSourceDisplay } from '../../utils';
@@ -7,9 +8,50 @@ import { getSourceIcon, formatSourceDisplay } from '../../utils';
 const { Text } = Typography;
 const { Option } = Select;
 
+interface HeaderTypeSelectorProps {
+    headerType: string;
+    setHeaderType: (type: string) => void;
+    form: FormInstance;
+}
+
+interface HeaderRule {
+    id: string;
+    headerName: string;
+    isEnabled: boolean;
+    isDynamic?: boolean;
+    domains?: string[];
+}
+
+interface ExistingHeaderRuleSelectorProps {
+    headerRules: HeaderRule[];
+}
+
+interface SourceItem {
+    sourceId: string;
+    sourceType?: string;
+    sourceTag?: string;
+    sourcePath?: string;
+    [key: string]: unknown;
+}
+
+interface CustomHeaderConfigProps {
+    validateHeaderName: (_: unknown, value: string) => Promise<void>;
+    valueType: string;
+    setValueType: (type: string) => void;
+    sources: SourceItem[] | null;
+}
+
+interface StaticValueInputProps {
+    validateHeaderValue: (_: unknown, value: string) => Promise<void>;
+}
+
+interface DynamicValueConfigProps {
+    sources: SourceItem[] | null;
+}
+
 /**
  * ProxyRuleFormFields - Form field components for proxy rule configuration
- * 
+ *
  * Modular form field components that can be composed to create proxy rule forms.
  * Provides reusable field components for different aspects of proxy rule configuration.
  */
@@ -17,7 +59,7 @@ const { Option } = Select;
 /**
  * Header Type Selector - Choose between custom header or existing rule reference
  */
-export const HeaderTypeSelector = ({ headerType, setHeaderType, form }) => (
+export const HeaderTypeSelector: React.FC<HeaderTypeSelectorProps> = ({ headerType, setHeaderType, form }) => (
     <Form.Item name="headerType" initialValue="custom" style={{ marginBottom: 16 }}>
         <Radio.Group 
             value={headerType}
@@ -46,7 +88,7 @@ export const HeaderTypeSelector = ({ headerType, setHeaderType, form }) => (
 /**
  * Existing Header Rule Selector - Dropdown for selecting existing header rules
  */
-export const ExistingHeaderRuleSelector = ({ headerRules }) => (
+export const ExistingHeaderRuleSelector: React.FC<ExistingHeaderRuleSelectorProps> = ({ headerRules }) => (
     <Form.Item
         name="headerRuleId"
         rules={[{ required: true, message: 'Please select a header rule' }]}
@@ -105,7 +147,7 @@ export const ExistingHeaderRuleSelector = ({ headerRules }) => (
 /**
  * Custom Header Configuration - Fields for custom header name and value type
  */
-export const CustomHeaderConfig = ({ validateHeaderName, valueType, setValueType, sources }) => (
+export const CustomHeaderConfig: React.FC<CustomHeaderConfigProps> = ({ validateHeaderName, valueType, setValueType, sources }) => (
     <Space.Compact block style={{ marginBottom: 12 }}>
         <Form.Item
             name="headerName"
@@ -140,7 +182,7 @@ export const CustomHeaderConfig = ({ validateHeaderName, valueType, setValueType
 /**
  * Static Value Input - Simple text input for static header values
  */
-export const StaticValueInput = ({ validateHeaderValue }) => (
+export const StaticValueInput: React.FC<StaticValueInputProps> = ({ validateHeaderValue }) => (
     <Form.Item
         name="headerValue"
         rules={[{ validator: validateHeaderValue }]}
@@ -155,7 +197,7 @@ export const StaticValueInput = ({ validateHeaderValue }) => (
 /**
  * Dynamic Value Configuration - Source selector and prefix/suffix inputs
  */
-export const DynamicValueConfig = ({ sources }) => (
+export const DynamicValueConfig: React.FC<DynamicValueConfigProps> = ({ sources }) => (
     <>
         <Form.Item
             name="sourceId"

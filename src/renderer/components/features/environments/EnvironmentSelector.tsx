@@ -19,20 +19,26 @@ import EnvironmentShareModal from '../../modals/EnvironmentShareModal';
 const { Option } = Select;
 const { Text } = Typography;
 
+interface ThemeToken {
+  colorWarning: string;
+}
+
+interface EnvironmentSelectorProps {
+  environments: Record<string, Record<string, unknown>>;
+  activeEnvironment: string;
+  sources: Array<Record<string, unknown>>;
+  onEnvironmentSwitch: (envName: string) => void;
+  onCreateEnvironment: () => void;
+  onCopyEnvironment: (envName: string) => void;
+  onDeleteEnvironment: (envName: string) => void;
+  onAddVariable: () => void;
+  theme: ThemeToken;
+}
+
 /**
  * EnvironmentSelector component for managing and switching environments
- * @param {Object} props - Component props
- * @param {Object} props.environments - Available environments
- * @param {string} props.activeEnvironment - Currently active environment
- * @param {Array} props.sources - Source configurations for variable checking
- * @param {Function} props.onEnvironmentSwitch - Callback for environment switching
- * @param {Function} props.onCreateEnvironment - Callback to show create modal
- * @param {Function} props.onCopyEnvironment - Callback to copy environment
- * @param {Function} props.onDeleteEnvironment - Callback to delete environment
- * @param {Function} props.onAddVariable - Callback to show add variable modal
- * @param {Object} props.theme - Ant Design theme token
  */
-const EnvironmentSelector = ({
+const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
   environments,
   activeEnvironment,
   sources,
@@ -48,7 +54,7 @@ const EnvironmentSelector = ({
    * Handles environment switching with missing variable validation
    * @param {string} targetEnv - Target environment name
    */
-  const handleEnvironmentSwitch = (targetEnv) => {
+  const handleEnvironmentSwitch = (targetEnv: string) => {
     const targetVars = environments[targetEnv] || {};
     const missingVars = checkMissingVariables(sources, targetVars);
     

@@ -22,12 +22,66 @@
  * @since 3.0.0
  */
 
+import type { FormInstance } from 'antd';
 import { createLogger } from '../../../utils/error-handling/logger';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateVariableExists } from './HttpValidation';
 import timeManager from '../../../services/TimeManager';
 
 const log = createLogger('HttpUtils');
+
+interface TotpState {
+    enabled: boolean;
+    secret: string;
+}
+
+interface TotpToggleParams {
+    setTotpPreviewVisible: (visible: boolean) => void;
+    setTotpError: (error: string | null) => void;
+    form: FormInstance;
+}
+
+interface TotpCodeGeneratorParams {
+    getTotpStateFromForm: () => TotpState;
+    resolveAllVariables: (text: string) => string;
+    setTotpError: (error: string | null) => void;
+    setTotpTesting: (testing: boolean) => void;
+    setTotpCode: (code: string) => void;
+}
+
+interface TotpTestHandlerParams {
+    getTotpStateFromForm: () => TotpState;
+    validateVariableExists: (secret: string) => { valid: boolean; error?: string };
+    setTotpError: (error: string | null) => void;
+    setTotpCode: (code: string) => void;
+    setTotpPreviewVisible: (visible: boolean) => void;
+    generateTotpCode: () => Promise<void>;
+}
+
+interface TotpTimerEffectParams {
+    totpPreviewVisible: boolean;
+    setTimeRemaining: (time: number) => void;
+    generateTotpCode: () => Promise<void>;
+}
+
+interface TotpTrackingEffectParams {
+    getTotpStateFromForm: () => TotpState;
+    testSourceId: string;
+    trackTotpSecret: (sourceId: string) => void;
+    untrackTotpSecret: (sourceId: string) => void;
+}
+
+interface EnvironmentChangeEffectParams {
+    form: FormInstance;
+    envContext: { environmentsReady: boolean };
+    isFormInitializedRef: React.MutableRefObject<boolean>;
+}
+
+interface ImperativeHandleParams {
+    form: FormInstance;
+    getTotpStateFromForm: () => TotpState;
+    isFormInitializedRef: React.MutableRefObject<boolean>;
+}
 
 /**
  * Creates TOTP state management from form values
@@ -42,7 +96,7 @@ const log = createLogger('HttpUtils');
  * const getTotpStateFromForm = createTotpStateHelper(form);
  * const { enabled, secret } = getTotpStateFromForm();
  */
-export const createTotpStateHelper = (form) => () => {
+export const createTotpStateHelper = (form: FormInstance) => (): TotpState => {
     const formEnabled = form.getFieldValue('enableTOTP');
     const formSecret = form.getFieldValue('totpSecret');
     const requestOptionsTotpSecret = form.getFieldValue(['requestOptions', 'totpSecret']);
@@ -69,7 +123,7 @@ export const createTotpToggleHandler = ({
     setTotpPreviewVisible,
     setTotpError,
     form
-}) => (checked) => {
+}: TotpToggleParams) => (checked: boolean) => {
     setTotpPreviewVisible(false);
     setTotpError(null);
 
@@ -115,7 +169,7 @@ export const createTotpSecretHandler = ({
     setTotpPreviewVisible,
     setTotpError,
     form
-}) => (e) => {
+}: TotpToggleParams) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const newSecret = e.target.value;
     setTotpPreviewVisible(false);
     setTotpError(null);
@@ -166,7 +220,7 @@ export const createTotpCodeGenerator = ({
     setTotpError,
     setTotpTesting,
     setTotpCode
-}) => async () => {
+}: TotpCodeGeneratorParams) => async () => {
     try {
         const { secret } = getTotpStateFromForm();
         
@@ -196,7 +250,7 @@ export const createTotpCodeGenerator = ({
         }
     } catch (error) {
         log.error('Error generating TOTP:', error);
-        setTotpError(`Error: ${error.message}`);
+        setTotpError(`Error: ${(error as Error).message}`);
         setTotpCode('ERROR');
     } finally {
         setTotpTesting(false);
@@ -225,7 +279,7 @@ export const createTotpTestHandler = ({
     setTotpCode,
     setTotpPreviewVisible,
     generateTotpCode
-}) => async () => {
+}: TotpTestHandlerParams) => async () => {
     const { secret } = getTotpStateFromForm();
     
     if (!secret) {
@@ -238,7 +292,7 @@ export const createTotpTestHandler = ({
     const validation = validateVariableExists(secret);
     if (!validation.valid) {
         showMessage('error', validation.error);
-        setTotpError(validation.error);
+        setTotpError(validation.error ?? null);
         setTotpCode('VAR ERROR');
         return;
     }
@@ -263,7 +317,7 @@ export const createTotpTimerEffect = ({
     totpPreviewVisible,
     setTimeRemaining,
     generateTotpCode
-}) => () => {
+}: TotpTimerEffectParams) => () => {
     if (!totpPreviewVisible) return;
 
     // Function to calculate time remaining in current period
@@ -313,7 +367,7 @@ export const createTotpTrackingEffect = ({
     testSourceId,
     trackTotpSecret,
     untrackTotpSecret
-}) => () => {
+}: TotpTrackingEffectParams) => () => {
     const { enabled, secret } = getTotpStateFromForm();
     
     if (enabled && secret && testSourceId) {
@@ -344,7 +398,7 @@ export const createEnvironmentChangeEffect = ({
     form,
     envContext,
     isFormInitializedRef
-}) => () => {
+}: EnvironmentChangeEffectParams) => () => {
     // Only validate if environments are ready and form is initialized
     if (!envContext.environmentsReady || !isFormInitializedRef.current || !form) return;
 
@@ -413,9 +467,9 @@ export const createImperativeHandleMethods = ({
     form,
     getTotpStateFromForm,
     isFormInitializedRef
-}) => ({
+}: ImperativeHandleParams) => ({
     // Method to force TOTP state directly
-    forceTotpState: (enabled, secret) => {
+    forceTotpState: (enabled: boolean, secret: string) => {
 
         // Update form values - form is the single source of truth
         form.setFieldsValue({
@@ -452,7 +506,7 @@ export const createImperativeHandleMethods = ({
     },
 
     // Method to force headers state
-    forceHeadersState: (headers) => {
+    forceHeadersState: (headers: Array<{ key?: string; value?: string }>) => {
 
         // Update form values
         if (Array.isArray(headers) && headers.length > 0) {

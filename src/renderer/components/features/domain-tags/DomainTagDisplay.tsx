@@ -18,7 +18,54 @@
 
 import React from 'react';
 import { Tag, Input, Tooltip, theme } from 'antd';
+import type { InputRef } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
+
+interface DomainValidation {
+    isValid: boolean;
+    missingVars?: string[];
+}
+
+interface DomainTagProps {
+    tag: string;
+    index: number;
+    isEditing: boolean;
+    editValue: string;
+    onEdit: (index: number, tag: string) => void;
+    onEditChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onEditConfirm: () => void;
+    onEditKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onClose: (tag: string) => void;
+    editInputRef: React.Ref<InputRef>;
+    validation?: DomainValidation;
+}
+
+interface InputValidation {
+    isValid: boolean;
+    message?: string;
+}
+
+interface DomainTagsContainerProps {
+    domains: string[];
+    inputVisible: boolean;
+    inputValue: string;
+    editIndex: number;
+    editValue: string;
+    onTagEdit: (index: number, tag: string) => void;
+    onTagEditChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onTagEditConfirm: () => void;
+    onTagEditKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    onTagClose: (tag: string) => void;
+    onShowInput: () => void;
+    onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onInputPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+    onInputConfirm: () => void;
+    onInputKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+    inputRef: React.Ref<InputRef>;
+    editInputRef: React.Ref<InputRef>;
+    validationResults?: DomainValidation[];
+    currentInputValidation?: InputValidation;
+}
 
 /**
  * Individual domain tag component with editing support
@@ -48,7 +95,7 @@ import { CloseOutlined } from '@ant-design/icons';
  *   onClose={handleClose}
  * />
  */
-export const DomainTag = ({
+export const DomainTag: React.FC<DomainTagProps> = ({
     tag,
     index,
     isEditing,
@@ -168,7 +215,7 @@ export const DomainTag = ({
  * @param {Object} props.editInputRef - Reference for edit input element
  * @returns {JSX.Element} Domain tags container component
  */
-export const DomainTagsContainer = ({
+export const DomainTagsContainer: React.FC<DomainTagsContainerProps> = ({
     domains,
     inputVisible,
     inputValue,

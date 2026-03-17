@@ -16,9 +16,40 @@
 
 import React from 'react';
 import { Row, Col } from 'antd';
+import type { FormInstance } from 'antd';
 import JsonFilterCard from './JsonFilterCard';
 import TotpAuthCard from './TotpAuthCard';
 import AutoRefreshCard from './AutoRefreshCard';
+
+interface HttpOptionsTabProps {
+    // JSON Filter props
+    jsonFilterEnabled: boolean;
+    handleJsonFilterToggle: (enabled: boolean) => void;
+    validateVariableExists: (value: string) => { valid: boolean; error?: string };
+    form: FormInstance;
+
+    // TOTP props
+    handleTotpToggle: (checked: boolean) => void;
+    handleTotpSecretChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleTestTotp: () => Promise<void>;
+    totpError: string | null;
+    totpTesting: boolean;
+    totpPreviewVisible: boolean;
+    totpCode: string;
+    timeRemaining: number;
+    testSourceId: string;
+    canUseTotpSecret: (sourceId: string) => boolean;
+    getCooldownSeconds: (sourceId: string) => number;
+
+    // Auto-refresh props
+    refreshEnabled: boolean;
+    handleRefreshToggle: (checked: boolean) => void;
+    refreshType: string;
+    handleRefreshTypeChange: (e: { target: { value: string } }) => void;
+    customInterval: number;
+    handlePresetIntervalChange: (value: number) => void;
+    handleCustomIntervalChange: (value: number) => void;
+}
 
 /**
  * HTTP Options tab component combining various configuration cards
@@ -48,13 +79,13 @@ import AutoRefreshCard from './AutoRefreshCard';
  * @param {Function} props.handleCustomIntervalChange - Custom interval change handler
  * @returns {JSX.Element} HTTP options tab component
  */
-const HttpOptionsTab = ({
+const HttpOptionsTab: React.FC<HttpOptionsTabProps> = ({
     // JSON Filter props
     jsonFilterEnabled,
     handleJsonFilterToggle,
     validateVariableExists,
     form,
-    
+
     // TOTP props
     handleTotpToggle,
     handleTotpSecretChange,
@@ -67,7 +98,7 @@ const HttpOptionsTab = ({
     testSourceId,
     canUseTotpSecret,
     getCooldownSeconds,
-    
+
     // Auto-refresh props
     refreshEnabled,
     handleRefreshToggle,

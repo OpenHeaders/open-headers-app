@@ -23,11 +23,34 @@
  */
 
 import React from 'react';
+import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './HttpValidation';
 import { createLogger } from '../../../utils/error-handling/logger';
 
 const log = createLogger('HttpTesting');
+
+interface TotpState {
+    enabled: boolean;
+    secret: string;
+}
+
+interface HttpTestHandlerParams {
+    form: FormInstance;
+    getTotpStateFromForm: () => TotpState;
+    getCooldownSeconds: (sourceId: string) => number;
+    checkIfRequestUsesTotp: (url: string, method: string, requestOptions: Record<string, unknown>) => boolean;
+    envContext: Record<string, unknown>;
+    http: { testRequest: (url: string, method: string, requestOptions: Record<string, any>, jsonFilter: { enabled: boolean; path: string }, sourceId: string, progressCallback: ((progress: number) => void) | null, cleanupCallback: (() => void) | null) => Promise<string> };
+    setTesting: (testing: boolean) => void;
+    onTestingChange?: (testing: boolean) => void;
+    setTestResponseContent: (content: Record<string, unknown>) => void;
+    setTestResponseVisible: (visible: boolean) => void;
+    setRawResponse: (response: string) => void;
+    onTestResponse?: (response: string) => void;
+    effectiveSourceId: string;
+    testSourceId: string;
+}
 
 /**
  * HTTP status code to descriptive text mapping
@@ -35,7 +58,7 @@ const log = createLogger('HttpTesting');
  * Comprehensive mapping of HTTP status codes to their standard
  * descriptive text for better user understanding of response status.
  */
-const STATUS_TEXTS = {
+const STATUS_TEXTS: Record<number, string> = {
     // 1xx - Informational
     100: 'Continue',
     101: 'Switching Protocols',
@@ -122,7 +145,7 @@ const STATUS_TEXTS = {
  * const statusText = getStatusText(404);
  * // Returns: "Not Found"
  */
-export const getStatusText = (statusCode) => {
+export const getStatusText = (statusCode: number): string => {
     return STATUS_TEXTS[statusCode] || 'Unknown Status';
 };
 
@@ -140,8 +163,10 @@ export const getStatusText = (statusCode) => {
  * @example
  * const formatted = formatContentByType(jsonData, { 'content-type': 'application/json' });
  */
-export const formatContentByType = (content, headers) => {
+export const formatContentByType = (content: unknown, headers: Record<string, string> | null): React.ReactNode => {
     if (content === null || content === undefined) return "No content";
+
+    const contentStr = typeof content === 'string' ? content : String(content);
 
     try {
         // Check content type from headers
@@ -160,7 +185,7 @@ export const formatContentByType = (content, headers) => {
                 );
             } catch (e) {
                 // If JSON parsing fails, display as plain text
-                return <pre>{content || "(empty response)"}</pre>;
+                return <pre>{contentStr || "(empty response)"}</pre>;
             }
         }
 
@@ -168,7 +193,7 @@ export const formatContentByType = (content, headers) => {
         if (contentType.includes('html')) {
             return (
                 <div className="formatted-html">
-                    <code>{content}</code>
+                    <code>{contentStr}</code>
                 </div>
             );
         }
@@ -177,15 +202,15 @@ export const formatContentByType = (content, headers) => {
         if (contentType.includes('xml')) {
             return (
                 <div className="formatted-xml">
-                    {content}
+                    {contentStr}
                 </div>
             );
         }
 
         // Plain text or other types
-        return <pre>{content || "(empty response)"}</pre>;
+        return <pre>{contentStr || "(empty response)"}</pre>;
     } catch (error) {
-        return <pre>{content || "(empty response)"}</pre>;
+        return <pre>{contentStr || "(empty response)"}</pre>;
     }
 };
 
@@ -202,7 +227,7 @@ export const formatContentByType = (content, headers) => {
  * const formatted = formatResponseForDisplay(responseString);
  * console.log(formatted.statusCode, formatted.body);
  */
-export const formatResponseForDisplay = (responseJson) => {
+export const formatResponseForDisplay = (responseJson: string): Record<string, unknown> => {
     try {
         return JSON.parse(responseJson);
     } catch (error) {
@@ -260,7 +285,7 @@ export const createHttpTestHandler = ({
     onTestResponse,
     effectiveSourceId,
     testSourceId
-}) => async (sourcePath = null, sourceMethod = null, progressCallback = null, cleanupCallback = null) => {
+}: HttpTestHandlerParams) => async (sourcePath: string | null = null, sourceMethod: string | null = null, progressCallback: ((progress: number) => void) | null = null, cleanupCallback: (() => void) | null = null) => {
     const { enabled: totpEnabled, secret: totpSecret } = getTotpStateFromForm();
     
     try {
@@ -365,7 +390,7 @@ export const createHttpTestHandler = ({
             onTestResponse(response);
         }
     } catch (error) {
-        showMessage('error', `Failed to test request: ${error.message}`);
+        showMessage('error', `Failed to test request: ${(error as Error).message}`);
     } finally {
         setTesting(false);
         if (onTestingChange) {
@@ -388,7 +413,7 @@ export const createHttpTestHandler = ({
  * @param {Object} values - Form values
  * @returns {Object} Prepared request options
  */
-const prepareRequestOptions = (form, values): Record<string, any> => {
+const prepareRequestOptions = (form: FormInstance, values: Record<string, any>): Record<string, any> => {
     // Get content type from form
     const formContentType = form.getFieldValue(['requestOptions', 'contentType']);
     const contentType = formContentType || values.requestOptions?.contentType || 'application/json';
@@ -410,7 +435,7 @@ const prepareRequestOptions = (form, values): Record<string, any> => {
             }
         });
     } else if (values.requestOptions?.queryParams && Array.isArray(values.requestOptions.queryParams)) {
-        values.requestOptions.queryParams.forEach(param => {
+        (values.requestOptions.queryParams as Array<{ key?: string; value?: string }>).forEach(param => {
             if (param && param.key) {
                 requestOptions.queryParams[param.key] = param.value || '';
             }
@@ -447,7 +472,7 @@ const prepareRequestOptions = (form, values): Record<string, any> => {
  * @param {Object} values - Form values
  * @returns {Object} JSON filter configuration
  */
-const prepareJsonFilter = (values) => {
+const prepareJsonFilter = (values: Record<string, any>): { enabled: boolean; path: string } => {
     const jsonFilterForRequest = { enabled: false, path: '' };
 
     // Check if jsonFilter is enabled in the form

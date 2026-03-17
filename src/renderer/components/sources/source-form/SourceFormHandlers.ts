@@ -21,8 +21,70 @@
  * @since 3.0.0
  */
 
+import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './SourceFormValidation';
+
+interface SourceTypeChangeParams {
+    setSourceType: (value: string) => void;
+    setFilePath: (path: string) => void;
+    setTotpEnabled: (enabled: boolean) => void;
+    setTotpSecret: (secret: string) => void;
+    untrackTotpSecret: (sourceId: string) => void;
+    form: FormInstance;
+    testSourceId: string;
+}
+
+interface FileBrowseParams {
+    fileSystem: { selectFile: () => Promise<string | null> };
+    setFilePath: (path: string) => void;
+    form: FormInstance;
+}
+
+interface TotpChangeParams {
+    setTotpEnabled: (enabled: boolean) => void;
+    setTotpSecret: (secret: string) => void;
+}
+
+interface HttpOptionsRef {
+    forceTotpState?: (enabled: boolean, secret: string) => void;
+}
+
+interface FormSubmissionParams {
+    setSubmitting: (submitting: boolean) => void;
+    form: FormInstance;
+    envContext: Record<string, unknown>;
+    onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+    untrackTotpSecret: (sourceId: string) => void;
+    testSourceId: string;
+    refs: {
+        httpOptionsRef: React.MutableRefObject<HttpOptionsRef | null>;
+        tempSourceIdRef: React.MutableRefObject<string>;
+    };
+    stateSetters: {
+        setFilePath: (path: string) => void;
+        setTotpEnabled: (enabled: boolean) => void;
+        setTotpSecret: (secret: string) => void;
+        setSourceType: (type: string) => void;
+    };
+    log: { debug: (message: string, data?: unknown) => void; error: (message: string, data?: unknown) => void };
+}
+
+interface SuccessfulSubmissionParams {
+    untrackTotpSecret: (sourceId: string) => void;
+    testSourceId: string;
+    form: FormInstance;
+    refs: {
+        httpOptionsRef: React.MutableRefObject<HttpOptionsRef | null>;
+        tempSourceIdRef: React.MutableRefObject<string>;
+    };
+    stateSetters: {
+        setFilePath: (path: string) => void;
+        setTotpEnabled: (enabled: boolean) => void;
+        setTotpSecret: (secret: string) => void;
+        setSourceType: (type: string) => void;
+    };
+}
 
 /**
  * Creates source type change handler
@@ -48,7 +110,7 @@ export const createSourceTypeChangeHandler = ({
     untrackTotpSecret,
     form,
     testSourceId
-}) => (value) => {
+}: SourceTypeChangeParams) => (value: string) => {
     // Update source type state
     setSourceType(value);
     
@@ -83,7 +145,7 @@ export const createFileBrowseHandler = ({
     fileSystem,
     setFilePath,
     form
-}) => async () => {
+}: FileBrowseParams) => async () => {
     try {
         // Open file selection dialog
         const selectedPath = await fileSystem.selectFile();
@@ -93,7 +155,7 @@ export const createFileBrowseHandler = ({
             form.setFieldsValue({ sourcePath: selectedPath });
         }
     } catch (error) {
-        showMessage('error', `Failed to select file: ${error.message}`);
+        showMessage('error', `Failed to select file: ${(error as Error).message}`);
     }
 };
 
@@ -111,7 +173,7 @@ export const createFileBrowseHandler = ({
 export const createTotpChangeHandler = ({
     setTotpEnabled,
     setTotpSecret
-}) => (enabled, secret) => {
+}: TotpChangeParams) => (enabled: boolean, secret: string) => {
     setTotpEnabled(enabled);
     setTotpSecret(secret);
 };
@@ -124,7 +186,7 @@ export const createTotpChangeHandler = ({
  * 
  * @returns {Function} Test response handler
  */
-export const createTestResponseHandler = () => (response) => {
+export const createTestResponseHandler = () => (response: unknown) => {
     // Test response is handled by HttpOptions component
     // This callback exists for potential future use and debugging
     console.debug('Test response received:', response);
@@ -158,7 +220,7 @@ export const createFormSubmissionHandler = ({
     refs,
     stateSetters,
     log
-}) => async (values) => {
+}: FormSubmissionParams) => async (values: Record<string, any>) => {
     try {
         setSubmitting(true);
 
@@ -200,7 +262,7 @@ export const createFormSubmissionHandler = ({
             });
         }
     } catch (error) {
-        showMessage('error', `Failed to add source: ${error.message}`);
+        showMessage('error', `Failed to add source: ${(error as Error).message}`);
     } finally {
         setSubmitting(false);
     }
@@ -217,7 +279,7 @@ export const createFormSubmissionHandler = ({
  * @param {Object} log - Logger instance
  * @returns {Object} Prepared source data
  */
-const prepareSourceData = (values, form, log) => {
+const prepareSourceData = (values: Record<string, any>, form: FormInstance, log: { debug: (message: string, data?: unknown) => void }) => {
     // Prepare basic source data
     const sourceData: Record<string, any> = {
         sourceType: values.sourceType,
@@ -285,7 +347,7 @@ const handleSuccessfulSubmission = async ({
     form,
     refs,
     stateSetters
-}) => {
+}: SuccessfulSubmissionParams) => {
     // Untrack TOTP source before resetting
     untrackTotpSecret(testSourceId);
     

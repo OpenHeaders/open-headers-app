@@ -4,22 +4,41 @@ import { DeleteOutlined, ReloadOutlined, DownloadOutlined, FilterOutlined, InfoC
 
 const { Title, Text } = Typography;
 
+interface LogEntry {
+    timestamp: number;
+    method: string;
+    path: string;
+    userAgent?: string;
+    clientProcess?: string;
+    duration?: number;
+    statusCode: number;
+    errorMessage?: string;
+    bodySummary?: Record<string, unknown>;
+}
+
+interface FilterUpdate {
+    method?: string | null;
+    endpoint?: string;
+    status?: string | null;
+}
+
+interface CliServerLogsProps {
+    logs: LogEntry[];
+    allLogs: LogEntry[];
+    filterMethod: string | null;
+    filterEndpoint: string;
+    filterStatus: string | null;
+    onSetFilters: (filters: FilterUpdate) => void;
+    onClearFilters: () => void;
+    onClearLogs: () => void;
+    onExportLogs: () => void;
+    onRefresh: () => void;
+}
+
 /**
  * CliServerLogs - Displays recent CLI API request logs with filtering and export
- *
- * @param {Array} logs - Filtered log entries to display
- * @param {Array} allLogs - All unfiltered log entries (for count display)
- * @param {string|null} filterMethod - Current method filter
- * @param {string} filterEndpoint - Current endpoint search filter
- * @param {string|null} filterStatus - Current status filter ('success' | 'error' | null)
- * @param {function} onSetFilters - Callback to update filter values
- * @param {function} onClearFilters - Callback to clear all filters
- * @param {function} onClearLogs - Callback to clear logs
- * @param {function} onExportLogs - Callback to export logs as JSON
- * @param {function} onRefresh - Callback to refresh logs
- * @returns {JSX.Element} CLI server logs section
  */
-const CliServerLogs = ({
+const CliServerLogs: React.FC<CliServerLogsProps> = ({
     logs,
     allLogs,
     filterMethod,
@@ -32,7 +51,7 @@ const CliServerLogs = ({
     onRefresh
 }) => {
     const hasActiveFilters = filterMethod || filterEndpoint || filterStatus;
-    const [expandedRowKeys, setExpandedRowKeys] = useState([]);
+    const [expandedRowKeys, setExpandedRowKeys] = useState<React.Key[]>([]);
 
     const columns = [
         {
@@ -41,8 +60,8 @@ const CliServerLogs = ({
             key: 'timestamp',
             width: 150,
             defaultSortOrder: 'descend' as const,
-            sorter: (a, b) => a.timestamp - b.timestamp,
-            render: (ts) => {
+            sorter: (a: LogEntry, b: LogEntry) => a.timestamp - b.timestamp,
+            render: (ts: number) => {
                 const date = new Date(ts);
                 return <Text type="secondary" style={{ fontSize: 12 }}>{date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</Text>;
             }
@@ -52,7 +71,7 @@ const CliServerLogs = ({
             dataIndex: 'method',
             key: 'method',
             width: 80,
-            render: (method) => (
+            render: (method: string) => (
                 <Tag color={method === 'GET' ? 'blue' : 'green'}>{method}</Tag>
             )
         },
@@ -61,18 +80,18 @@ const CliServerLogs = ({
             dataIndex: 'path',
             key: 'path',
             width: 200,
-            render: (path) => <Text code style={{ fontSize: 12 }}>{path}</Text>
+            render: (path: string) => <Text code style={{ fontSize: 12 }}>{path}</Text>
         },
         {
             title: 'Client',
             dataIndex: 'userAgent',
             key: 'userAgent',
             width: 160,
-            render: (ua) => {
+            render: (ua: string | undefined) => {
                 if (!ua) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
                 let label = ua;
                 // Trim trailing .0 segments from version strings (e.g. 145.0.0.0 → 145)
-                const trimVer = (v) => v.replace(/(\.0)+$/, '');
+                const trimVer = (v: string) => v.replace(/(\.0)+$/, '');
                 // Extract short browser/client identifier from UA string
                 if (ua.includes('PowerShell/')) { const m = ua.match(/(?:Windows)?PowerShell\/(\d+\.\d+)/); label = m ? `PowerShell/${m[1]}` : 'PowerShell'; }
                 else if (ua.includes('Edg/')) { const m = ua.match(/Edg\/([\d.]+)/); label = m ? `Edge/${trimVer(m[1])}` : 'Edge'; }
@@ -99,7 +118,7 @@ const CliServerLogs = ({
             dataIndex: 'clientProcess',
             key: 'clientProcess',
             width: 120,
-            render: (proc) => {
+            render: (proc: string | undefined) => {
                 if (!proc) return <Text type="secondary" style={{ fontSize: 12 }}>—</Text>;
                 const parts = proc.split(' → ');
                 const label = parts.length > 1 ? parts[0] : proc.split(' (')[0];
@@ -117,7 +136,7 @@ const CliServerLogs = ({
             dataIndex: 'duration',
             key: 'duration',
             width: 80,
-            render: (ms) => (
+            render: (ms: number | undefined) => (
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     {ms != null ? `${ms}ms` : '—'}
                 </Text>
@@ -128,16 +147,16 @@ const CliServerLogs = ({
             dataIndex: 'statusCode',
             key: 'statusCode',
             width: 80,
-            render: (code) => {
+            render: (code: number) => {
                 const color = code >= 200 && code < 300 ? 'success' : code >= 400 ? 'error' : 'warning';
                 return <Tag color={color}>{code}</Tag>;
             }
         }
     ];
 
-    const getRowKey = (record, index) => `${record.timestamp}-${index}`;
+    const getRowKey = (record: LogEntry, index: number | undefined) => `${record.timestamp}-${index}`;
 
-    const toggleRowExpand = (key) => {
+    const toggleRowExpand = (key: string) => {
         setExpandedRowKeys(prev =>
             prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
         );
@@ -145,8 +164,8 @@ const CliServerLogs = ({
 
     const expandable = {
         expandedRowKeys,
-        onExpandedRowsChange: (keys) => setExpandedRowKeys(keys),
-        expandedRowRender: (record) => {
+        onExpandedRowsChange: (keys: readonly React.Key[]) => setExpandedRowKeys(keys as React.Key[]),
+        expandedRowRender: (record: LogEntry) => {
             const details = [];
             if (record.errorMessage) {
                 details.push(
@@ -184,7 +203,7 @@ const CliServerLogs = ({
             }
             return <Space direction="vertical" size={4}>{details}</Space>;
         },
-        rowExpandable: (record) => !!(record.errorMessage || record.bodySummary || record.clientProcess)
+        rowExpandable: (record: LogEntry) => !!(record.errorMessage || record.bodySummary || record.clientProcess)
     };
 
     return (
@@ -282,7 +301,7 @@ const CliServerLogs = ({
                         size: 'small'
                     }}
                     expandable={expandable}
-                    onRow={(record, index) => {
+                    onRow={(record: LogEntry, index: number | undefined) => {
                         const expandable = !!(record.errorMessage || record.bodySummary || record.clientProcess);
                         return {
                             onClick: () => expandable && toggleRowExpand(getRowKey(record, index)),

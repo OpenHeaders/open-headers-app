@@ -13,6 +13,7 @@ import {
     Switch,
     Divider
 } from 'antd';
+import type { FormInstance } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
@@ -35,7 +36,26 @@ const EXPIRATION_PRESETS = [
     { label: '1 Year', value: 365, unit: 'days' }
 ];
 
-const CookieAttributes = ({
+interface ExpirationPreset {
+    label: string;
+    value: number;
+    unit: string;
+}
+
+interface CookieAttributesProps {
+    headerType: string;
+    expirationMode: string;
+    setExpirationMode: (mode: string) => void;
+    sameSite: string;
+    setSameSite: (value: string) => void;
+    secure: boolean;
+    setSecure: (checked: boolean) => void;
+    httpOnly: boolean;
+    setHttpOnly: (checked: boolean) => void;
+    form: FormInstance;
+}
+
+const CookieAttributes: React.FC<CookieAttributesProps> = ({
     headerType,
     expirationMode,
     setExpirationMode,
@@ -48,7 +68,7 @@ const CookieAttributes = ({
     form
 }) => {
     // Handle expiration preset selection
-    const handleExpirationPreset = (preset) => {
+    const handleExpirationPreset = (preset: ExpirationPreset) => {
         setExpirationMode('maxAge');
         const seconds = preset.unit === 'hours' 
             ? preset.value * 3600 
