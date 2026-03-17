@@ -141,7 +141,7 @@ class WebSocketService {
         let count = 0;
         const send = (server: any | null) => {
             if (!server) return;
-            server.clients.forEach((client) => {
+            server.clients.forEach((client: { readyState: number; send: (msg: string) => void }) => {
                 if (client.readyState === WS.OPEN) {
                     try { client.send(message); count++; }
                     catch (e) { log.error('Error broadcasting to client:', e); }

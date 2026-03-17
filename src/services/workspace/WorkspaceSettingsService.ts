@@ -204,13 +204,9 @@ class WorkspaceSettingsService {
 
       // Add workspace
       const newWorkspace: Workspace = {
-        id: workspace.id,
-        name: workspace.name,
-        type: workspace.type,
-        description: workspace.description,
+        ...workspace, // Keep any additional properties
         isDefault: workspace.isDefault || false,
         createdAt: new Date().toISOString(),
-        ...workspace // Keep any additional properties
       };
       settings.workspaces.push(newWorkspace);
 

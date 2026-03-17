@@ -62,11 +62,12 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         const envData = JSON.parse(envContent) as Record<string, unknown>;
 
         // Merge environment data into config
-        const combinedData: Record<string, unknown> = {
-          ...configData,
-          ...(envData.environmentSchema && { environmentSchema: envData.environmentSchema }),
-          ...(envData.environments && { environments: envData.environments })
-        };
+        const combinedData: Record<string, unknown> = Object.assign(
+          {},
+          configData,
+          envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {},
+          envData.environments ? { environments: envData.environments } : {}
+        );
 
         const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
         if (validationResult.valid) {
@@ -235,11 +236,12 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
     const configData = JSON.parse(configContent) as Record<string, unknown>;
     const envData = JSON.parse(envContent) as Record<string, unknown>;
 
-    const combinedData: Record<string, unknown> = {
-      ...configData,
-      ...(envData.environmentSchema && { environmentSchema: envData.environmentSchema }),
-      ...(envData.environments && { environments: envData.environments })
-    };
+    const combinedData: Record<string, unknown> = Object.assign(
+      {},
+      configData,
+      envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {},
+      envData.environments ? { environments: envData.environments } : {}
+    );
 
     const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
     if (validationResult.valid) {

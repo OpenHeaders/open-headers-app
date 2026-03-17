@@ -110,6 +110,10 @@ class VideoExportManager {
             return { success: false, error: 'No video file' };
         }
 
+        if (!window) {
+            return { success: false, error: 'No focused window available' };
+        }
+
         // Show format selection dialog
         const result = await dialog.showMessageBox(window, {
             type: 'question',

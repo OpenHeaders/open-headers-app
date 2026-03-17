@@ -12,6 +12,7 @@ import {
   validateEnvironmentWrite,
   ENV_FILE_READ_MAX_RETRIES
 } from './git/utils/EnvironmentSyncUtils';
+import type { VarData } from './git/utils/EnvironmentSyncUtils';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
@@ -858,7 +859,7 @@ class WorkspaceSyncScheduler {
 
           if (parsed.environments) {
             existingEnvironments = parsed.environments;
-            existingEnvValueCount = countNonEmptyEnvValues(existingEnvironments);
+            existingEnvValueCount = countNonEmptyEnvValues(existingEnvironments as Record<string, Record<string, VarData | string>>);
           }
 
           // IMPORTANT: Preserve the active environment selection
@@ -1019,7 +1020,7 @@ class WorkspaceSyncScheduler {
 
       if (environmentsToImport) {
         // VALIDATION: Check if we're about to lose data
-        const newValueCount = countNonEmptyEnvValues(environmentsToImport);
+        const newValueCount = countNonEmptyEnvValues(environmentsToImport as Record<string, Record<string, VarData | string>> | null);
         const validation = validateEnvironmentWrite(existingEnvValueCount, newValueCount);
 
         // Log potential data loss
