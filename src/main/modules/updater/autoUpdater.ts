@@ -269,7 +269,7 @@ class AutoUpdaterManager {
     }
 
     async installUpdate() {
-        const appLifecycle = require('../app/lifecycle');
+        const appLifecycle = require('../app/lifecycle').default;
         appLifecycle.setQuitting(true);
         this.updateDownloaded = false;
         this.downloadedUpdateInfo = null;

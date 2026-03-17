@@ -122,7 +122,7 @@ class WSEnvironmentHandler {
      */
     syncProxyService(): void {
         try {
-            const proxyService = require('../proxy/ProxyService');
+            const proxyService = require('../proxy/ProxyService').default;
 
             const envVars = this.loadEnvironmentVariables();
             if (envVars) {

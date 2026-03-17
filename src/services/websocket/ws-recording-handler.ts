@@ -37,7 +37,7 @@ class WSRecordingHandler {
      */
     async initializeVideoCaptureService(): Promise<void> {
         try {
-            const VideoCaptureService = require('../video/video-capture-service');
+            const { VideoCaptureService } = require('../video/video-capture-service');
             this.videoCaptureService = new VideoCaptureService();
             await this.videoCaptureService!.initialize(this.wsService.appDataPath);
             log.info('Video capture service initialized');
@@ -247,7 +247,7 @@ class WSRecordingHandler {
 
                 let proxyPort: number | null = null;
                 try {
-                    const proxyService = require('../proxy/ProxyService');
+                    const proxyService = require('../proxy/ProxyService').default;
                     if (proxyService && proxyService.isRunning) {
                         proxyPort = proxyService.port;
                         log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);

@@ -97,7 +97,7 @@ if (!gotTheLock) {
         ipcMain.handle('openAppPath', systemHandlers.handleOpenAppPath.bind(systemHandlers));
 
         // Global shortcuts
-        const globalShortcutsMod = require('./main/modules/shortcuts/globalShortcuts');
+        const globalShortcutsMod = require('./main/modules/shortcuts/globalShortcuts').default;
         ipcMain.handle('disableRecordingHotkey', () => globalShortcutsMod.disableHotkey());
         ipcMain.handle('enableRecordingHotkey', () => globalShortcutsMod.enableHotkey());
 
@@ -245,7 +245,7 @@ if (!gotTheLock) {
 
         // Runtime updates
         ipcMain.on('updateWebSocketSources', (event: any, sources: any[]) => {
-            const webSocketService = require('./services/websocket/ws-service');
+            const webSocketService = require('./services/websocket/ws-service').default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
                 log.info(`Main: Sources with content: ${sources.filter((s: any) => s.sourceContent).length}`);
@@ -257,12 +257,12 @@ if (!gotTheLock) {
         });
 
         ipcMain.on('proxy-update-source', (_: any, sourceId: string, value: any) => {
-            const proxyService = require('./services/proxy/ProxyService');
+            const proxyService = require('./services/proxy/ProxyService').default;
             proxyService.updateSource(sourceId, value);
         });
 
         ipcMain.on('proxy-update-sources', (_: any, sources: any[]) => {
-            const proxyService = require('./services/proxy/ProxyService');
+            const proxyService = require('./services/proxy/ProxyService').default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
             }
@@ -274,7 +274,7 @@ if (!gotTheLock) {
 
         // Environment events - notify WebSocket service when environments change
         ipcMain.on('environment-switched', async (event: any, data: any) => {
-            const proxyService = require('./services/proxy/ProxyService');
+            const proxyService = require('./services/proxy/ProxyService').default;
             log.info('Environment switched, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
@@ -309,7 +309,7 @@ if (!gotTheLock) {
         });
 
         ipcMain.on('environment-variables-changed', (event: any, data: any) => {
-            const proxyService = require('./services/proxy/ProxyService');
+            const proxyService = require('./services/proxy/ProxyService').default;
             log.info('Environment variables changed, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
@@ -442,8 +442,8 @@ if (!gotTheLock) {
         await globalShortcuts.initialize(app);
 
         const { AppStateMachine } = require('./services/core/AppStateMachine');
-        const proxyService = require('./services/proxy/ProxyService');
-        const webSocketService = require('./services/websocket/ws-service');
+        const proxyService = require('./services/proxy/ProxyService').default;
+        const webSocketService = require('./services/websocket/ws-service').default;
 
         AppStateMachine.serversReady({
             proxy: proxyService.getStatus(),
