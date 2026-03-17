@@ -177,7 +177,7 @@ const preloadConfig = {
 const rendererConfig = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'web', // Changed from 'electron-renderer' to 'web' to avoid node polyfills
-    entry: './src/renderer/index.jsx',
+    entry: './src/renderer/index.tsx',
     performance: {
         hints: false, // Disable performance warnings
     },
