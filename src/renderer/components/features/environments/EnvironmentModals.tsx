@@ -22,7 +22,14 @@ const { TextArea } = Input;
  * @param {Function} props.onOk - Confirm callback
  * @param {Object} props.form - Ant Design form instance
  */
-export const CreateEnvironmentModal = ({ visible, onCancel, onOk, form }) => (
+interface ModalProps {
+    visible: boolean;
+    onCancel: () => void;
+    onOk: () => void;
+    form: any;
+}
+
+export const CreateEnvironmentModal = ({ visible, onCancel, onOk, form }: ModalProps) => (
   <Modal
     title="Create New Environment"
     open={visible}
@@ -49,7 +56,7 @@ export const CreateEnvironmentModal = ({ visible, onCancel, onOk, form }) => (
  * @param {Function} props.onOk - Confirm callback
  * @param {Object} props.form - Ant Design form instance
  */
-export const AddVariableModal = ({ visible, onCancel, onOk, form }) => (
+export const AddVariableModal = ({ visible, onCancel, onOk, form }: ModalProps) => (
   <Modal
     title="Add Variable"
     open={visible}

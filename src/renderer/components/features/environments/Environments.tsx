@@ -105,9 +105,9 @@ const Environments = () => {
     
     // Add usage from rules
     if (rules && rules.header) {
-      rules.header.forEach(rule => {
+      rules.header.forEach((rule: Record<string, any>) => {
         if (rule.hasEnvVars && rule.envVars) {
-          rule.envVars.forEach(varName => {
+          rule.envVars.forEach((varName: string) => {
             if (!usage[varName]) {
               usage[varName] = [];
             }
@@ -134,7 +134,7 @@ const Environments = () => {
    * Listens for environment schema updates from team workspace sync
    */
   useEffect(() => {
-    const handleSchemaUpdate = (event) => {
+    const handleSchemaUpdate = (event: CustomEvent) => {
       const { requiredVariables } = event.detail;
       if (requiredVariables && requiredVariables.length > 0) {
         showMessage('info', 

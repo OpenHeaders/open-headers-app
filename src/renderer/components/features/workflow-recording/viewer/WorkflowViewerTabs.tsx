@@ -28,6 +28,17 @@ import { TAB_KEYS, DEFAULT_TAB_STYLES } from './WorkflowViewerTypes';
  * @param {Function} props.onTabChange - Tab change handler
  * @returns {React.ReactNode} Rendered tabs
  */
+interface WorkflowViewerTabsProps {
+    record: any;
+    viewMode: string;
+    activeTime: number;
+    autoHighlight: boolean;
+    autoScroll: boolean;
+    onAutoHighlightChange: (value: boolean) => void;
+    onAutoScrollChange: (value: boolean) => void;
+    onTabChange: (key: string) => void;
+}
+
 const WorkflowViewerTabs = ({
                               record,
                               viewMode,
@@ -37,7 +48,7 @@ const WorkflowViewerTabs = ({
                               onAutoHighlightChange,
                               onAutoScrollChange,
                               onTabChange
-                            }) => {
+                            }: WorkflowViewerTabsProps) => {
   const tabItems = [
     {
       key: TAB_KEYS.CONSOLE,

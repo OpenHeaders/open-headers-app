@@ -30,7 +30,7 @@ import { showMessage } from '../../../utils/ui/messageUtil';
  * @param {Array} domains - Array of domain strings to copy
  * @returns {Function} Copy handler function
  */
-export const createCopyAllHandler = (domains) => async () => {
+export const createCopyAllHandler = (domains: string[]) => async () => {
     if (domains.length === 0) {
         showMessage('warning', 'No domains to copy');
         return;
@@ -56,7 +56,7 @@ export const createCopyAllHandler = (domains) => async () => {
  * @param {Function} onChange - Domain change callback function
  * @returns {Function} Delete handler function
  */
-export const createDeleteAllHandler = (domains, onChange) => () => {
+export const createDeleteAllHandler = (domains: string[], onChange: (domains: string[]) => void) => () => {
     if (domains.length === 0) {
         showMessage('warning', 'No domains to delete');
         return;
@@ -83,7 +83,12 @@ export const createDeleteAllHandler = (domains, onChange) => () => {
  *   onChange={handleDomainsChange}
  * />
  */
-export const DomainActionButtons = ({ domains, onChange }) => {
+interface DomainActionButtonsProps {
+    domains: string[];
+    onChange: (domains: string[]) => void;
+}
+
+export const DomainActionButtons = ({ domains, onChange }: DomainActionButtonsProps) => {
     // Don't render buttons if no domains exist
     if (domains.length === 0) {
         return null;
@@ -145,7 +150,13 @@ export const DomainActionButtons = ({ domains, onChange }) => {
  *   helpComponent={<DomainInputHelp />}
  * />
  */
-export const DomainActionsHeader = ({ domains, onChange, helpComponent }) => {
+interface DomainActionsHeaderProps {
+    domains: string[];
+    onChange: (domains: string[]) => void;
+    helpComponent: React.ReactNode;
+}
+
+export const DomainActionsHeader = ({ domains, onChange, helpComponent }: DomainActionsHeaderProps) => {
     return (
         <div style={{
             display: 'flex',

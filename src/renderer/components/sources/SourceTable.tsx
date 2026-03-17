@@ -58,12 +58,19 @@ const log = createLogger('SourceTable');
  * @component
  * @since 3.0.0
  */
+interface SourceTableProps {
+    sources: any[];
+    onRemoveSource: (sourceId: string) => Promise<any>;
+    onRefreshSource: (sourceId: string, updatedSource?: any) => Promise<any>;
+    onUpdateSource: (sourceId: string, updates: Record<string, any>) => any;
+}
+
 const SourceTable = ({
                          sources,
                          onRemoveSource,
                          onRefreshSource,
                          onUpdateSource
-                     }) => {
+                     }: SourceTableProps) => {
     // State management for refresh display timing and caching
     // Separate from content to avoid unnecessary re-renders
     const [refreshDisplayStates, setRefreshDisplayStates] = useState({});

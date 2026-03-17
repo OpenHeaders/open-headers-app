@@ -37,7 +37,11 @@ const getBrowserDisplay = (browser) => {
  * @param {Object} status - Connection status containing clients array
  * @returns {JSX.Element} Connected clients table
  */
-const ConnectionsClientTable = ({ status }) => {
+interface ConnectionsClientTableProps {
+    status: Record<string, any>;
+}
+
+const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
     const clients = status.clients || [];
 
     const columns = [
@@ -45,7 +49,7 @@ const ConnectionsClientTable = ({ status }) => {
             title: 'Browser',
             key: 'browser',
             width: 180,
-            render: (_, record) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const { name, icon } = getBrowserDisplay(record.browser);
                 const version = trimVersion(record.browserVersion);
                 return (
@@ -63,7 +67,7 @@ const ConnectionsClientTable = ({ status }) => {
             dataIndex: 'extensionVersion',
             key: 'extensionVersion',
             width: 100,
-            render: (ver) => (
+            render: (ver: string) => (
                 <Text type="secondary" style={{ fontSize: 12 }}>
                     {ver || '-'}
                 </Text>
@@ -74,7 +78,7 @@ const ConnectionsClientTable = ({ status }) => {
             dataIndex: 'platform',
             key: 'platform',
             width: 100,
-            render: (platform) => {
+            render: (platform: string) => {
                 if (!platform || platform === 'unknown') return <Text type="secondary" style={{ fontSize: 12 }}>-</Text>;
                 const labels = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
                 return <Text type="secondary" style={{ fontSize: 12 }}>{labels[platform] || platform}</Text>;
@@ -85,7 +89,7 @@ const ConnectionsClientTable = ({ status }) => {
             dataIndex: 'connectionType',
             key: 'connectionType',
             width: 80,
-            render: (type) => (
+            render: (type: string) => (
                 <Tag color={type === 'WSS' ? 'green' : 'blue'}>{type}</Tag>
             )
         }

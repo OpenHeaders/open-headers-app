@@ -4,6 +4,15 @@ import { CheckCircleOutlined, LoadingOutlined, CloseCircleOutlined, SyncOutlined
 
 const { Text } = Typography;
 
+interface WorkspaceCreationProgressModalProps {
+    visible: boolean;
+    state: string;
+    progress: Record<string, any> | null;
+    progressMessage: string;
+    error: Record<string, any> | string | null;
+    onClose: () => void;
+}
+
 const WorkspaceCreationProgressModal = ({
     visible,
     state,
@@ -11,8 +20,8 @@ const WorkspaceCreationProgressModal = ({
     progressMessage,
     error,
     onClose
-}) => {
-    const renderStepIcon = (stepNumber) => {
+}: WorkspaceCreationProgressModalProps) => {
+    const renderStepIcon = (stepNumber: any) => {
         if (!progress) return null;
         
         const currentStep = progress.step;
@@ -134,7 +143,7 @@ const WorkspaceCreationProgressModal = ({
                 {error && (
                     <Alert
                         message="Creation Failed"
-                        description={error.message || error}
+                        description={typeof error === 'object' ? (error as any).message : error}
                         type="error"
                         showIcon
                         icon={<CloseCircleOutlined />}
