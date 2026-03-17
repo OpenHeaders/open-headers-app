@@ -107,7 +107,13 @@ export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChang
  *   onSubmit={() => form.submit()}
  * />
  */
-export const AddSourceButton = ({ submitting, testing, onSubmit }) => {
+interface AddSourceButtonProps {
+    submitting: boolean;
+    testing: boolean;
+    onSubmit: (e: React.MouseEvent<HTMLElement>) => void;
+}
+
+export const AddSourceButton = ({ submitting, testing, onSubmit }: AddSourceButtonProps) => {
     return (
         <Button
             type="primary"
@@ -145,7 +151,12 @@ export const AddSourceButton = ({ submitting, testing, onSubmit }) => {
  *   addButton={<AddSourceButton {...buttonProps} />}
  * />
  */
-export const StickyHeader = ({ isVisible, addButton }) => {
+interface StickyHeaderProps {
+    isVisible: boolean;
+    addButton: React.ReactNode;
+}
+
+export const StickyHeader = ({ isVisible, addButton }: StickyHeaderProps) => {
     if (!isVisible) return null;
     
     return (

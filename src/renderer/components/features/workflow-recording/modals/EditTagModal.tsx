@@ -19,14 +19,23 @@ const { Text } = Typography;
  * @param {Function} props.onSave - Callback when saving tag
  * @param {Function} props.onCancel - Callback when canceling
  */
-const EditTagModal = ({ 
-    visible, 
+interface EditTagModalProps {
+    visible: boolean;
+    recordId: string;
+    recordUrl: string;
+    currentTag: string | Record<string, any>;
+    onSave: (...args: any[]) => Promise<any>;
+    onCancel: () => void;
+}
+
+const EditTagModal = ({
+    visible,
     recordId,
     recordUrl,
-    currentTag, 
-    onSave, 
-    onCancel 
-}) => {
+    currentTag,
+    onSave,
+    onCancel
+}: EditTagModalProps) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 

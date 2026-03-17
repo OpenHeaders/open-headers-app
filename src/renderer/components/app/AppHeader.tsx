@@ -16,6 +16,15 @@ import {
 const { Header } = Layout;
 const { Title } = Typography;
 
+interface AppHeaderProps {
+  onExport: () => void;
+  onImport: () => void;
+  onCheckForUpdates: () => void;
+  onOpenSettings: () => void;
+  onOpenAbout: () => void;
+  theme: Record<string, any>;
+}
+
 export function AppHeader({
   onExport,
   onImport,
@@ -23,7 +32,7 @@ export function AppHeader({
   onOpenSettings,
   onOpenAbout,
   theme
-}) {
+}: AppHeaderProps) {
   const actionsMenuItems: any[] = [
     {
       key: 'export',

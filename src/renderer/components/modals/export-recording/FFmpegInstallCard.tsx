@@ -33,15 +33,25 @@ const { Text } = Typography;
  * @param {function} onDownloadProgressChange - Handler for download progress changes
  * @param {function} onDownloadSizeChange - Handler for download size changes
  */
-const FFmpegInstallCard = ({ 
-    onFFmpegInstalled, 
-    installStatus, 
-    downloadProgress, 
+interface FFmpegInstallCardProps {
+    onFFmpegInstalled: () => void;
+    installStatus: string;
+    downloadProgress: number;
+    downloadSize: { downloaded: number; total: number };
+    onInstallStatusChange: (status: string) => void;
+    onDownloadProgressChange: (progress: number) => void;
+    onDownloadSizeChange: React.Dispatch<React.SetStateAction<{ downloaded: number; total: number }>>;
+}
+
+const FFmpegInstallCard = ({
+    onFFmpegInstalled,
+    installStatus,
+    downloadProgress,
     downloadSize,
     onInstallStatusChange,
     onDownloadProgressChange,
     onDownloadSizeChange
-}) => {
+}: FFmpegInstallCardProps) => {
     /**
      * Verify FFmpeg installation
      */

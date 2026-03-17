@@ -36,7 +36,7 @@ interface RecordPlayerProps {
     onPlaybackTimeChange?: (time: number) => void;
     processRecordForProxy?: (...args: any[]) => any;
     createConsoleOverrides?: () => any;
-    onPlayingStateChange?: (playing: boolean) => void;
+    onPlayingStateChange?: (...args: any[]) => void;
     autoHighlight?: boolean;
     showAllWorkflowsButton?: boolean;
     onShowAllWorkflows?: () => void;

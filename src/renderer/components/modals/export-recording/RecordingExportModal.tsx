@@ -47,7 +47,7 @@ interface RecordingExportModalProps {
     visible: boolean;
     onCancel: () => void;
     record: Record<string, any> | null;
-    onExportJson: (recording: Record<string, any>) => void;
+    onExportJson: (...args: any[]) => void;
 }
 
 const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: RecordingExportModalProps) => {

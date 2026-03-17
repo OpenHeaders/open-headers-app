@@ -18,13 +18,21 @@ import { formatRelativeTimeWithSmallMs, format24HTimeWithMs } from '../../../uti
 
 const { Text } = Typography;
 
-const ConsoleLogModal = ({ 
-    visible, 
-    selectedLog, 
-    record, 
-    onClose, 
-    messageApi 
-}) => {
+interface ConsoleLogModalProps {
+    visible: boolean;
+    selectedLog: Record<string, any> | null;
+    record: Record<string, any> | null;
+    onClose: () => void;
+    messageApi: Record<string, any>;
+}
+
+const ConsoleLogModal = ({
+    visible,
+    selectedLog,
+    record,
+    onClose,
+    messageApi
+}: ConsoleLogModalProps) => {
     const { useToken } = theme;
     const { token } = useToken();
 
