@@ -3,24 +3,33 @@
  * Manages environment variable loading, template resolution, and proxy sync
  */
 
-const fs = require('fs');
-const path = require('path');
-const { createLogger } = require('../../utils/mainLogger');
+import fs from 'fs';
+import path from 'path';
+import mainLogger from '../../utils/mainLogger.js';
 
+const { createLogger } = mainLogger;
 const log = createLogger('WSEnvironmentHandler');
 
+interface WSServiceLike {
+    appDataPath: string | null;
+    rules: any;
+    sources: any[];
+    ruleHandler: { broadcastRules(): void };
+}
+
 class WSEnvironmentHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
     }
 
     /**
      * Load environment variables from workspace files
-     * @returns {Object}
      */
-    loadEnvironmentVariables() {
+    loadEnvironmentVariables(): Record<string, string> {
         try {
-            const workspacesPath = path.join(this.wsService.appDataPath, 'workspaces.json');
+            const workspacesPath = path.join(this.wsService.appDataPath!, 'workspaces.json');
             let activeWorkspaceId = 'default-personal';
 
             if (fs.existsSync(workspacesPath)) {
@@ -30,7 +39,7 @@ class WSEnvironmentHandler {
                     activeWorkspaceId = workspaces.activeWorkspaceId;
                 }
 
-                const environmentsPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'environments.json');
+                const environmentsPath = path.join(this.wsService.appDataPath!, 'workspaces', activeWorkspaceId, 'environments.json');
 
                 if (fs.existsSync(environmentsPath)) {
                     const envData = fs.readFileSync(environmentsPath, 'utf8');
@@ -40,8 +49,8 @@ class WSEnvironmentHandler {
                     const environments = environmentsData.environments || {};
 
                     if (environments[activeEnvironment]) {
-                        const variables = {};
-                        Object.entries(environments[activeEnvironment]).forEach(([key, data]) => {
+                        const variables: Record<string, string> = {};
+                        Object.entries(environments[activeEnvironment]).forEach(([key, data]: [string, any]) => {
                             variables[key] = typeof data === 'object' ? data.value : data;
                         });
                         return variables;
@@ -60,16 +69,13 @@ class WSEnvironmentHandler {
 
     /**
      * Resolve template with environment variables
-     * @param {string} template
-     * @param {Object} variables
-     * @returns {string}
      */
-    resolveTemplate(template, variables) {
+    resolveTemplate(template: string, variables: Record<string, string>): string {
         if (!template || typeof template !== 'string') {
             return template;
         }
 
-        return template.replace(/\{\{([^}]+)\}\}/g, (match, varName) => {
+        return template.replace(/\{\{([^}]+)\}\}/g, (match: string, varName: string) => {
             const trimmedVarName = varName.trim();
             const value = variables[trimmedVarName];
 
@@ -84,13 +90,14 @@ class WSEnvironmentHandler {
     /**
      * Setup environment change listener
      */
-    setupEnvironmentListener() {
+    setupEnvironmentListener(): void {
         try {
-            const { ipcMain } = require('electron');
+            const electron = require('electron');
+            const { ipcMain } = electron;
 
             const broadcastIfEnvVars = () => {
                 if (this.wsService.rules && this.wsService.rules.header) {
-                    const hasEnvVars = this.wsService.rules.header.some(rule => rule.hasEnvVars);
+                    const hasEnvVars = this.wsService.rules.header.some((rule: any) => rule.hasEnvVars);
                     if (hasEnvVars) {
                         this.wsService.ruleHandler.broadcastRules();
                     }
@@ -105,7 +112,7 @@ class WSEnvironmentHandler {
             // which loads fresh rules/sources and broadcasts — no need to duplicate here
 
             log.info('Environment change listener setup for WebSocket service');
-        } catch (error) {
+        } catch (error: any) {
             log.warn('Could not setup environment listener:', error.message);
         }
     }
@@ -113,7 +120,7 @@ class WSEnvironmentHandler {
     /**
      * Synchronize proxy service with current state (env vars, rules, sources)
      */
-    syncProxyService() {
+    syncProxyService(): void {
         try {
             const proxyService = require('../proxy/ProxyService');
 
@@ -135,4 +142,5 @@ class WSEnvironmentHandler {
     }
 }
 
-module.exports = WSEnvironmentHandler;
+export { WSEnvironmentHandler };
+export default WSEnvironmentHandler;

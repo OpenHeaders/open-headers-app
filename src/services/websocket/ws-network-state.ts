@@ -3,11 +3,38 @@
  * Manages network state broadcasting to WebSocket clients
  */
 
-const { createLogger } = require('../../utils/mainLogger');
+import mainLogger from '../../utils/mainLogger.js';
+
+const { createLogger } = mainLogger;
 const log = createLogger('WSNetworkState');
 
+interface NetworkState {
+    isOnline: boolean;
+    networkQuality: string;
+    vpnActive?: boolean;
+    connectionType?: string;
+    lastUpdate: number;
+}
+
+interface NetworkStateEvent {
+    newState?: NetworkState;
+}
+
+interface NetworkServiceLike {
+    getState(): NetworkState | null;
+    on(event: string, cb: (event: NetworkStateEvent) => void): void;
+}
+
+interface WSServiceLike {
+    wss: any;
+    secureWss: any;
+}
+
 class WSNetworkStateHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+    currentNetworkState: NetworkState;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
         this.currentNetworkState = {
             isOnline: true,
@@ -19,7 +46,7 @@ class WSNetworkStateHandler {
     /**
      * Initialize network state handling
      */
-    initialize(networkService) {
+    initialize(networkService: NetworkServiceLike): void {
         if (!networkService) {
             log.warn('NetworkService not provided, network state updates will not be available');
             return;
@@ -32,7 +59,7 @@ class WSNetworkStateHandler {
         }
 
         // Subscribe to network state changes
-        networkService.on('state-changed', (event) => {
+        networkService.on('state-changed', (event: NetworkStateEvent) => {
             if (event && event.newState) {
                 this.updateNetworkState(event.newState);
             }
@@ -44,7 +71,7 @@ class WSNetworkStateHandler {
     /**
      * Update the current network state and broadcast to clients
      */
-    updateNetworkState(state) {
+    updateNetworkState(state: Partial<NetworkState> | null): void {
         if (!state || typeof state !== 'object') {
             log.warn('Invalid network state received:', state);
             return;
@@ -66,7 +93,7 @@ class WSNetworkStateHandler {
     /**
      * Broadcast current network state to all connected WebSocket clients
      */
-    broadcastNetworkState() {
+    broadcastNetworkState(): void {
         if (!this.wsService) {
             return;
         }
@@ -83,7 +110,7 @@ class WSNetworkStateHandler {
 
         // Send to WS clients
         if (this.wsService.wss && this.wsService.wss.clients) {
-            this.wsService.wss.clients.forEach((client) => {
+            this.wsService.wss.clients.forEach((client: any) => {
                 if (client.readyState === 1) { // WebSocket.OPEN
                     try {
                         client.send(message);
@@ -97,7 +124,7 @@ class WSNetworkStateHandler {
 
         // Send to WSS clients
         if (this.wsService.secureWss && this.wsService.secureWss.clients) {
-            this.wsService.secureWss.clients.forEach((client) => {
+            this.wsService.secureWss.clients.forEach((client: any) => {
                 if (client.readyState === 1) { // WebSocket.OPEN
                     try {
                         client.send(message);
@@ -117,14 +144,14 @@ class WSNetworkStateHandler {
     /**
      * Get current network state
      */
-    getCurrentState() {
+    getCurrentState(): NetworkState {
         return { ...this.currentNetworkState };
     }
 
     /**
      * Send initial network state to a newly connected client
      */
-    sendInitialState(ws) {
+    sendInitialState(ws: any): void {
         if (!ws || ws.readyState !== 1) {
             return;
         }
@@ -146,4 +173,5 @@ class WSNetworkStateHandler {
     }
 }
 
-module.exports = WSNetworkStateHandler;
+export { WSNetworkStateHandler };
+export default WSNetworkStateHandler;

@@ -3,13 +3,63 @@
  * Manages client initialization, heartbeat, cleanup, and connection status
  */
 
-const WebSocket = require('ws');
-const { createLogger } = require('../../utils/mainLogger');
+import WebSocket from 'ws';
+import mainLogger from '../../utils/mainLogger.js';
 
+const { createLogger } = mainLogger;
 const log = createLogger('WSClientHandler');
 
+interface BrowserInfo {
+    browser: string;
+    version: string;
+    platform: string;
+}
+
+interface ClientInfo {
+    id: string;
+    connectionType: string;
+    browser: string;
+    browserVersion: string;
+    platform: string;
+    userAgent: string;
+    connectedAt: Date;
+    lastActivity: Date;
+    extensionVersion?: string;
+}
+
+interface InitLock {
+    status: 'initializing' | 'initialized';
+    promise: Promise<boolean> | null;
+}
+
+interface WSServiceLike {
+    connectedClients: Map<string, ClientInfo>;
+    clientInitializationLocks: Map<string, InitLock>;
+    wss: any;
+    secureWss: any;
+    wsPort: number;
+    wssPort: number;
+    sourceHandler: { sendSourcesToClient(ws: any): Promise<void> };
+    ruleHandler: { sendRulesToClient(ws: any): Promise<void> };
+    recordingHandler: { sendVideoRecordingState(ws: any): Promise<void> };
+    networkStateHandler: { sendInitialState(ws: any): void } | null;
+    certificateHandler: {
+        certificatePaths: {
+            fingerprint: string | null;
+            certPath: string | null;
+            validTo: string | null;
+            subject: string | null;
+        };
+    };
+}
+
 class WSClientHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+    clientCleanupInterval: ReturnType<typeof setInterval> | null;
+    maxClientInactivity: number;
+    cleanupIntervalTime: number;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
         this.clientCleanupInterval = null;
         this.maxClientInactivity = 5 * 60 * 1000; // 5 minutes
@@ -18,10 +68,8 @@ class WSClientHandler {
 
     /**
      * Initialize client with proper locking to prevent race conditions
-     * @param {WebSocket} ws
-     * @param {string} clientId
      */
-    async initializeClient(ws, clientId) {
+    async initializeClient(ws: any, clientId: string): Promise<void> {
         const existingLock = this.wsService.clientInitializationLocks.get(clientId);
         if (existingLock) {
             if (existingLock.status === 'initializing') {
@@ -34,8 +82,9 @@ class WSClientHandler {
             }
         }
 
-        let resolveInit, rejectInit;
-        const initPromise = new Promise((resolve, reject) => {
+        let resolveInit!: (value: boolean) => void;
+        let rejectInit!: (reason: any) => void;
+        const initPromise = new Promise<boolean>((resolve, reject) => {
             resolveInit = resolve;
             rejectInit = reject;
         });
@@ -75,11 +124,9 @@ class WSClientHandler {
 
     /**
      * Parse browser information from user agent string
-     * @param {string} userAgent
-     * @returns {Object}
      */
-    parseBrowserInfo(userAgent) {
-        const browserInfo = {
+    parseBrowserInfo(userAgent: string): BrowserInfo {
+        const browserInfo: BrowserInfo = {
             browser: 'unknown',
             version: '',
             platform: 'unknown'
@@ -116,12 +163,11 @@ class WSClientHandler {
 
     /**
      * Get current connection status and connected clients
-     * @returns {Object}
      */
-    getConnectionStatus() {
+    getConnectionStatus(): Record<string, any> {
         const clients = Array.from(this.wsService.connectedClients.values());
 
-        const browserCounts = {};
+        const browserCounts: Record<string, number> = {};
         clients.forEach(client => {
             const browser = client.browser || 'unknown';
             browserCounts[browser] = (browserCounts[browser] || 0) + 1;
@@ -154,17 +200,18 @@ class WSClientHandler {
     /**
      * Broadcast connection status to all renderer windows
      */
-    broadcastConnectionStatus() {
+    broadcastConnectionStatus(): void {
         try {
-            const { BrowserWindow } = require('electron');
+            const electron = require('electron');
+            const { BrowserWindow } = electron;
             const status = this.getConnectionStatus();
 
-            BrowserWindow.getAllWindows().forEach(window => {
+            BrowserWindow.getAllWindows().forEach((window: any) => {
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('ws-connection-status-changed', status);
                 }
             });
-        } catch (error) {
+        } catch (error: any) {
             log.debug('Could not broadcast connection status:', error.message);
         }
     }
@@ -172,7 +219,7 @@ class WSClientHandler {
     /**
      * Start periodic client cleanup
      */
-    startClientCleanup() {
+    startClientCleanup(): void {
         if (this.clientCleanupInterval) {
             clearInterval(this.clientCleanupInterval);
         }
@@ -187,7 +234,7 @@ class WSClientHandler {
     /**
      * Stop periodic client cleanup
      */
-    stopClientCleanup() {
+    stopClientCleanup(): void {
         if (this.clientCleanupInterval) {
             clearInterval(this.clientCleanupInterval);
             this.clientCleanupInterval = null;
@@ -196,11 +243,10 @@ class WSClientHandler {
 
     /**
      * Clean up stale client connections
-     * @private
      */
-    _cleanupStaleClients() {
+    _cleanupStaleClients(): void {
         const now = Date.now();
-        const staleClients = [];
+        const staleClients: Array<{ clientId: string; clientInfo: ClientInfo; inactiveTime: number }> = [];
 
         for (const [clientId, clientInfo] of this.wsService.connectedClients) {
             const lastActivity = clientInfo.lastActivity?.getTime() || clientInfo.connectedAt.getTime();
@@ -215,10 +261,10 @@ class WSClientHandler {
 
         log.info(`Found ${staleClients.length} stale clients to clean up`);
 
-        staleClients.forEach(({ clientId, clientInfo, inactiveTime }) => {
+        staleClients.forEach(({ clientId, inactiveTime }) => {
             log.info(`Cleaning up stale client ${clientId} (inactive for ${Math.round(inactiveTime / 1000)}s)`);
 
-            const closeClient = (server) => {
+            const closeClient = (server: any): boolean => {
                 if (!server) return false;
                 for (const client of server.clients) {
                     if (client.clientId === clientId && client.readyState === WebSocket.OPEN) {
@@ -243,11 +289,11 @@ class WSClientHandler {
     /**
      * Perform heartbeat check on all clients
      */
-    performHeartbeat() {
-        const pingClients = (server) => {
+    performHeartbeat(): void {
+        const pingClients = (server: any) => {
             if (!server) return;
 
-            server.clients.forEach((client) => {
+            server.clients.forEach((client: any) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.isAlive = false;
                     client.ping(() => {});
@@ -259,9 +305,9 @@ class WSClientHandler {
         pingClients(this.wsService.secureWss);
 
         setTimeout(() => {
-            const terminateDeadClients = (server) => {
+            const terminateDeadClients = (server: any) => {
                 if (!server) return;
-                server.clients.forEach((client) => {
+                server.clients.forEach((client: any) => {
                     if (!client.isAlive && client.readyState === WebSocket.OPEN) {
                         log.info(`Terminating dead client: ${client.clientId}`);
                         client.terminate();
@@ -275,4 +321,5 @@ class WSClientHandler {
     }
 }
 
-module.exports = WSClientHandler;
+export { WSClientHandler };
+export default WSClientHandler;
