@@ -36,3 +36,5 @@ certs/
 # Certificate base64 files
 *-base64.txt
 /build/portable/
+test-results/
+.e2e-userdata/
