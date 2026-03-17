@@ -9,9 +9,9 @@
  * - Environments and Variables
  */
 
-const { createLogger } = require('../utils/error-handling/logger');
-const { getCentralizedEnvironmentService } = require('./CentralizedEnvironmentService');
-const {
+import { createLogger } from '../utils/error-handling/logger';
+import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
+import {
   BaseStateManager,
   WorkspaceManager,
   SourceManager,
@@ -19,14 +19,24 @@ const {
   AutoSaveManager,
   SyncManager,
   BroadcastManager
-} = require('./workspace');
+} from './workspace';
 
 const log = createLogger('CentralizedWorkspaceService');
 
 class CentralizedWorkspaceService extends BaseStateManager {
+  workspaceManager: InstanceType<typeof WorkspaceManager>;
+  sourceManager: InstanceType<typeof SourceManager>;
+  rulesManager: InstanceType<typeof RulesManager>;
+  autoSaveManager: InstanceType<typeof AutoSaveManager>;
+  syncManager: InstanceType<typeof SyncManager>;
+  broadcastManager: InstanceType<typeof BroadcastManager>;
+  initPromise: Promise<unknown> | null;
+  loadPromises: Map<string, Promise<unknown>>;
+  eventCleanup: Array<() => void>;
+
   constructor() {
     super('CentralizedWorkspaceService');
-    
+
     // Initialize state
     this.state = {
       // Core state
@@ -50,12 +60,12 @@ class CentralizedWorkspaceService extends BaseStateManager {
     };
     
     // Initialize managers
-    this.workspaceManager = new WorkspaceManager(window.electronAPI);
-    this.sourceManager = new SourceManager(window.electronAPI, getCentralizedEnvironmentService());
-    this.rulesManager = new RulesManager(window.electronAPI, window.electronAPI);
+    this.workspaceManager = new WorkspaceManager(window.electronAPI as any);
+    this.sourceManager = new SourceManager(window.electronAPI as any, getCentralizedEnvironmentService());
+    this.rulesManager = new RulesManager(window.electronAPI as any, window.electronAPI as any);
     this.autoSaveManager = new AutoSaveManager();
-    this.syncManager = new SyncManager(window.electronAPI);
-    this.broadcastManager = new BroadcastManager(window.electronAPI);
+    this.syncManager = new SyncManager(window.electronAPI as any);
+    this.broadcastManager = new BroadcastManager(window.electronAPI as any);
     
     // Other properties
     this.initPromise = null;
@@ -188,11 +198,11 @@ class CentralizedWorkspaceService extends BaseStateManager {
       this.autoSaveManager.markClean('proxyRules');
 
       // Update workspace metadata with actual counts
-      const totalRules = Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+      const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
       await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: sources.length,
+        sourceCount: (sources as any[]).length,
         ruleCount: totalRules,
-        proxyRuleCount: proxyRules.length,
+        proxyRuleCount: (proxyRules as any[]).length,
         lastDataLoad: new Date().toISOString()
       });
 
@@ -582,7 +592,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -597,7 +607,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -612,7 +622,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -839,7 +849,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         this.rulesManager.loadProxyRules(workspaceId)
       ]);
       
-      const totalRules = Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+      const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
       
       await this.updateWorkspaceMetadata(workspaceId, {
         sourceCount: sources.length,
@@ -972,15 +982,15 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   setupSyncListener() {
     const unsubscribe = this.syncManager.setupSyncListener((data) => {
-      const currentSyncStatus = { ...this.state.syncStatus };
+      const currentSyncStatus: Record<string, any> = { ...(this.state.syncStatus as Record<string, any>) };
       
       if (data.success) {
         // Only update lastSync if it's explicitly provided (meaning actual sync happened with changes)
-        const statusUpdate = {
+        const statusUpdate: Record<string, any> = {
           syncing: false,
           error: null
         };
-        
+
         // Only update lastSync and commit info if provided
         if (data.timestamp) {
           statusUpdate.lastSync = new Date(data.timestamp).toISOString();

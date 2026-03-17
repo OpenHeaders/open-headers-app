@@ -3,7 +3,7 @@
  * Provides functions for detecting, extracting, and validating environment variables
  */
 
-const { createLogger } = require('../error-handling/logger');
+import { createLogger } from '../error-handling/logger';
 const log = createLogger('EnvironmentVariableValidation');
 
 /**
@@ -16,7 +16,7 @@ const ENV_VAR_PATTERN = /\{\{([^}]+)\}\}/g;
  * @param {string} text - Text to extract variables from
  * @returns {Array<string>} Array of variable names (without the {{ }})
  */
-export function extractEnvironmentVariables(text) {
+export function extractEnvironmentVariables(text: string | null | undefined): string[] {
     if (!text || typeof text !== 'string') {
         return [];
     }
@@ -39,7 +39,7 @@ export function extractEnvironmentVariables(text) {
  * @param {string} text - Text to check
  * @returns {boolean} True if contains environment variables
  */
-export function hasEnvironmentVariables(text) {
+export function hasEnvironmentVariables(text: string | null | undefined): boolean {
     if (!text || typeof text !== 'string') {
         return false;
     }
@@ -52,7 +52,7 @@ export function hasEnvironmentVariables(text) {
  * @param {Object} rule - Header rule object
  * @returns {Array<string>} Array of all variable names used in the rule
  */
-export function extractVariablesFromRule(rule) {
+export function extractVariablesFromRule(rule: Record<string, any>): string[] {
     const variables = [];
     
     // Check header name
@@ -92,7 +92,7 @@ export function extractVariablesFromRule(rule) {
  * @param {Object} availableVars - Available variables object
  * @returns {Array<string>} Array of missing variable names
  */
-export function findMissingVariables(requiredVars, availableVars) {
+export function findMissingVariables(requiredVars: string[] | null, availableVars: Record<string, string | null | undefined> | null): string[] {
     if (!Array.isArray(requiredVars) || !availableVars) {
         return requiredVars || [];
     }
@@ -110,7 +110,7 @@ export function findMissingVariables(requiredVars, availableVars) {
  * @param {Object} availableVars - Available variables object
  * @returns {Object} Validation result { isValid, missingVars, usedVars }
  */
-export function validateEnvironmentVariables(text, availableVars) {
+export function validateEnvironmentVariables(text: string | null | undefined, availableVars: Record<string, string | null | undefined> | null) {
     const usedVars = extractEnvironmentVariables(text);
     const missingVars = findMissingVariables(usedVars, availableVars);
     
@@ -128,8 +128,8 @@ export function validateEnvironmentVariables(text, availableVars) {
  * @param {Object} availableVars - Available variables object
  * @returns {Object} Validation result with details for each field
  */
-export function validateRuleEnvironmentVariables(rule, availableVars) {
-    const results = {
+export function validateRuleEnvironmentVariables(rule: Record<string, any>, availableVars: Record<string, string | null | undefined> | null) {
+    const results: { isValid: boolean; missingVars: string[]; fieldValidation: Record<string, any>; totalVarsUsed: number } = {
         isValid: true,
         missingVars: [],
         fieldValidation: {},
@@ -193,7 +193,7 @@ export function validateRuleEnvironmentVariables(rule, availableVars) {
  * @param {Object} options - Resolution options
  * @returns {string} Text with variables resolved
  */
-export function resolveEnvironmentVariables(text, variables, options = {}) {
+export function resolveEnvironmentVariables(text: string | null | undefined, variables: Record<string, string | null | undefined>, options: { keepUnresolved?: boolean; placeholderPrefix?: string } = {}) {
     if (!text || typeof text !== 'string') {
         return text;
     }
@@ -225,7 +225,7 @@ export function resolveEnvironmentVariables(text, variables, options = {}) {
  * @param {Object} options - Resolution options
  * @returns {Object} Rule with resolved variables
  */
-export function resolveRuleEnvironmentVariables(rule, variables, options = {}) {
+export function resolveRuleEnvironmentVariables(rule: Record<string, any>, variables: Record<string, string | null | undefined>, options: { keepUnresolved?: boolean; placeholderPrefix?: string } = {}) {
     const resolvedRule = { ...rule };
     
     // Resolve header name
@@ -264,7 +264,7 @@ export function resolveRuleEnvironmentVariables(rule, variables, options = {}) {
  * @param {Object} availableVars - Available variables object
  * @returns {Object} Result { shouldApply, reason, missingVars }
  */
-export function checkRuleActivation(rule, availableVars) {
+export function checkRuleActivation(rule: Record<string, any>, availableVars: Record<string, string | null | undefined> | null) {
     // Skip disabled rules
     if (!rule.isEnabled) {
         return {
@@ -299,7 +299,7 @@ export function checkRuleActivation(rule, availableVars) {
  * @param {Array<string>} missingVars - Array of missing variable names
  * @returns {string} Formatted string for display
  */
-export function formatMissingVariables(missingVars) {
+export function formatMissingVariables(missingVars: string[] | null): string {
     if (!missingVars || missingVars.length === 0) {
         return '';
     }
@@ -317,7 +317,7 @@ export function formatMissingVariables(missingVars) {
  * @param {Object} variables - Available variables
  * @returns {Object} Preview object { text, hasMissing, missingCount }
  */
-export function getResolvedPreview(text, variables) {
+export function getResolvedPreview(text: string | null | undefined, variables: Record<string, string | null | undefined>) {
     if (!text) {
         return { text: '', hasMissing: false, missingCount: 0 };
     }

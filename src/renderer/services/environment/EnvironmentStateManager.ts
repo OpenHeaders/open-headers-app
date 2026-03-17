@@ -1,14 +1,18 @@
 /**
  * EnvironmentStateManager - Manages environment state and listeners
  */
-const BaseStateManager = require('../workspace/BaseStateManager');
-const { createLogger } = require('../../utils/error-handling/logger');
+import BaseStateManager from '../workspace/BaseStateManager';
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentStateManager');
 
 class EnvironmentStateManager extends BaseStateManager {
+  initPromise: Promise<unknown> | null;
+  loadPromises: Map<string, Promise<unknown>>;
+  hasLoadedInitialData: boolean;
+
   constructor() {
     super('EnvironmentStateManager');
-    
+
     // Initialize environment-specific state
     this.state = {
       currentWorkspaceId: 'default-personal',
@@ -18,7 +22,7 @@ class EnvironmentStateManager extends BaseStateManager {
       isReady: false,
       error: null
     };
-    
+
     this.initPromise = null;
     this.loadPromises = new Map(); // Track load promises per workspace
     this.hasLoadedInitialData = false; // Track if we've loaded data at least once
@@ -129,4 +133,4 @@ class EnvironmentStateManager extends BaseStateManager {
   }
 }
 
-module.exports = EnvironmentStateManager;
+export default EnvironmentStateManager;

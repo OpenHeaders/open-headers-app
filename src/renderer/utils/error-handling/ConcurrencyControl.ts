@@ -1,4 +1,4 @@
-const { createLogger } = require('./logger');
+import { createLogger } from './logger';
 const log = createLogger('ConcurrencyControl');
 
 /**
@@ -20,8 +20,8 @@ class Mutex {
    * Acquire the mutex
    * @returns {Promise<() => void>} Release function
    */
-  async acquire() {
-    return new Promise(resolve => {
+  async acquire(): Promise<() => void> {
+    return new Promise<() => void>(resolve => {
       const tryAcquire = () => {
         if (!this.locked) {
           this.locked = true;
@@ -46,7 +46,7 @@ class Mutex {
     this.locked = false;
     
     if (this.queue.length > 0) {
-      const next = this.queue.shift();
+      const next = this.queue.shift()!;
       // Use setTimeout(0) instead of process.nextTick for browser compatibility
       setTimeout(next, 0);
     }
@@ -57,7 +57,7 @@ class Mutex {
    * @param {Function} fn Function to execute
    * @returns {Promise<any>} Result of the function
    */
-  async withLock(fn) {
+  async withLock<T>(fn: () => T | Promise<T>): Promise<T> {
     const release = await this.acquire();
     try {
       return await fn();
@@ -87,8 +87,8 @@ class Semaphore {
    * Acquire a semaphore permit
    * @returns {Promise<() => void>} Release function
    */
-  async acquire() {
-    return new Promise(resolve => {
+  async acquire(): Promise<() => void> {
+    return new Promise<() => void>(resolve => {
       const tryAcquire = () => {
         if (this.current < this.maxConcurrent) {
           this.current++;
@@ -113,7 +113,7 @@ class Semaphore {
     this.current--;
     
     if (this.queue.length > 0) {
-      const next = this.queue.shift();
+      const next = this.queue.shift()!;
       // Use setTimeout(0) instead of process.nextTick for browser compatibility
       setTimeout(next, 0);
     }
@@ -124,7 +124,7 @@ class Semaphore {
    * @param {Function} fn Function to execute
    * @returns {Promise<any>} Result of the function
    */
-  async withPermit(fn) {
+  async withPermit<T>(fn: () => T | Promise<T>): Promise<T> {
     const release = await this.acquire();
     try {
       return await fn();
@@ -297,10 +297,4 @@ class RequestDeduplicator {
   }
 }
 
-module.exports = {
-  Mutex,
-  Semaphore,
-  ConcurrentMap,
-  ConcurrentSet,
-  RequestDeduplicator
-};
+export { Mutex, Semaphore, ConcurrentMap, ConcurrentSet, RequestDeduplicator };

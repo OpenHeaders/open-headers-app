@@ -1,14 +1,14 @@
-const { createLogger } = require('../utils/error-handling/logger');
-const timeManager = require('./TimeManager');
-const { ConcurrentMap, ConcurrentSet, Semaphore } = require('../utils/error-handling/ConcurrencyControl');
-const { adaptiveCircuitBreakerManager } = require('../utils/error-handling/AdaptiveCircuitBreaker');
-const { 
-    CIRCUIT_BREAKER_CONFIG, 
+import { createLogger } from '../utils/error-handling/logger';
+import timeManager from './TimeManager';
+import { ConcurrentMap, ConcurrentSet, Semaphore } from '../utils/error-handling/ConcurrencyControl';
+import { adaptiveCircuitBreakerManager } from '../utils/error-handling/AdaptiveCircuitBreaker';
+import {
+    CIRCUIT_BREAKER_CONFIG,
     INITIAL_RETRY_CONFIG,
     formatCircuitBreakerKey,
-    OVERDUE_RETRY_CONFIG, 
-    calculateDelayWithJitter 
-} = require('../constants/retryConfig');
+    OVERDUE_RETRY_CONFIG,
+    calculateDelayWithJitter
+} from '../constants/retryConfig';
 const log = createLogger('NetworkAwareScheduler');
 
 /**
@@ -659,4 +659,4 @@ class NetworkAwareScheduler {
 
 }
 
-module.exports = NetworkAwareScheduler;
+export default NetworkAwareScheduler;

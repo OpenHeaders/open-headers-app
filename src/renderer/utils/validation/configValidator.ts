@@ -5,7 +5,7 @@
  * Used by Import modal and Git workspace validation
  */
 
-const { createLogger } = require('../error-handling/logger');
+import { createLogger } from '../error-handling/logger';
 const log = createLogger('ConfigValidator');
 
 /**
@@ -219,10 +219,10 @@ function validateConfigStructure(data) {
 async function validateGitWorkspaceConfig(content, filePath) {
   try {
     // First, use the standard config validation
-    const validationResult = await analyzeConfigFile(content, false, false);
-    
+    const validationResult = await analyzeConfigFile(content, false, false) as Record<string, any>;
+
     // Check if config has any data (workspace alone is not enough)
-    const hasData = validationResult.sourceCount > 0 || 
+    const hasData = validationResult.sourceCount > 0 ||
                     validationResult.ruleCount > 0 || 
                     validationResult.proxyRuleCount > 0 || 
                     validationResult.environmentCount > 0 ||
@@ -268,8 +268,8 @@ async function validateGitWorkspaceConfig(content, filePath) {
  * @returns {Object} Combined configuration object
  */
 async function readAndValidateMultiFileConfig(readFile, basePath) {
-  let config = {};
-  let validationResults = {
+  let config: Record<string, any> = {};
+  let validationResults: Record<string, any> = {
     mainFile: null,
     envFile: null
   };
@@ -337,14 +337,4 @@ async function readAndValidateMultiFileConfig(readFile, basePath) {
   }
 }
 
-// Export functions for both CommonJS and ES modules
-module.exports = {
-  analyzeConfigFile,
-  validateGitWorkspaceConfig,
-  readAndValidateMultiFileConfig
-};
-
-// Also export as named exports for ES modules
-module.exports.analyzeConfigFile = analyzeConfigFile;
-module.exports.validateGitWorkspaceConfig = validateGitWorkspaceConfig;
-module.exports.readAndValidateMultiFileConfig = readAndValidateMultiFileConfig;
+export { analyzeConfigFile, validateGitWorkspaceConfig, readAndValidateMultiFileConfig };

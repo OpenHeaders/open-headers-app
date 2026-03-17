@@ -1,12 +1,20 @@
 /**
  * Workspace modules exports
  */
-module.exports = {
-  BaseStateManager: require('./BaseStateManager'),
-  WorkspaceManager: require('./WorkspaceManager'),
-  SourceManager: require('./SourceManager'),
-  RulesManager: require('./RulesManager'),
-  AutoSaveManager: require('./AutoSaveManager'),
-  SyncManager: require('./SyncManager'),
-  BroadcastManager: require('./BroadcastManager')
+import BaseStateManager from './BaseStateManager';
+import WorkspaceManager from './WorkspaceManager';
+import SourceManager from './SourceManager';
+import RulesManager from './RulesManager';
+import AutoSaveManager from './AutoSaveManager';
+import SyncManager from './SyncManager';
+import BroadcastManager from './BroadcastManager';
+
+export {
+  BaseStateManager,
+  WorkspaceManager,
+  SourceManager,
+  RulesManager,
+  AutoSaveManager,
+  SyncManager,
+  BroadcastManager
 };

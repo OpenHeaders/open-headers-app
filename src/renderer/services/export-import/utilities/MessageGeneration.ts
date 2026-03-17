@@ -28,7 +28,7 @@ import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
  * @param {Array<string>} filePaths - Paths of files that were written
  * @returns {string} - Formatted success message
  */
-export function generateExportSuccessMessage(options, exportedData, filePaths) {
+export function generateExportSuccessMessage(options: Record<string, any>, exportedData: Record<string, any>, filePaths: string[]) {
   const { selectedItems, fileFormat, environmentOption, includeWorkspace, includeCredentials } = options;
   const exportedItems = [];
 
@@ -39,7 +39,7 @@ export function generateExportSuccessMessage(options, exportedData, filePaths) {
 
   // Add rules info
   if (selectedItems.rules && exportedData.rules) {
-    const totalRules = Object.values(exportedData.rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(exportedData.rules).reduce((sum: number, ruleArray: any) => sum + ruleArray.length, 0);
     exportedItems.push(`${totalRules} rule(s)`);
   }
 
@@ -82,7 +82,7 @@ export function generateExportSuccessMessage(options, exportedData, filePaths) {
  * @param {boolean} isGitSync - Whether this was a Git sync operation
  * @returns {string} - Formatted success message
  */
-export function generateImportSuccessMessage(importStats, isGitSync = false) {
+export function generateImportSuccessMessage(importStats: Record<string, any>, isGitSync = false) {
   const {
     sourcesImported = 0,
     sourcesSkipped = 0,
@@ -107,7 +107,7 @@ export function generateImportSuccessMessage(importStats, isGitSync = false) {
   // Add rules info
   if (rulesImported.total > 0) {
     const ruleDetails = Object.entries(rulesImported)
-      .filter(([type, count]) => type !== 'total' && count > 0)
+      .filter(([type, count]) => type !== 'total' && (count as number) > 0)
       .map(([type, count]) => `${count} ${type}`)
       .join(', ');
     messages.push(`${rulesImported.total} rule(s) (${ruleDetails})`);
@@ -153,7 +153,7 @@ export function generateImportSuccessMessage(importStats, isGitSync = false) {
  * @param {Object} importStats - Statistics about what was imported
  * @returns {string} - Detailed summary for logging
  */
-export function generateImportSummary(importStats) {
+export function generateImportSummary(importStats: Record<string, any>) {
   const {
     sourcesImported = 0,
     sourcesSkipped = 0,
@@ -188,7 +188,7 @@ export function generateImportSummary(importStats) {
  * @param {Object} options - Import options
  * @returns {string|null} - Warning message or null if no warnings
  */
-export function generateImportWarnings(importData, options) {
+export function generateImportWarnings(importData: Record<string, any>, options: Record<string, any>) {
   const warnings = [];
 
   // Check for version compatibility
@@ -199,7 +199,7 @@ export function generateImportWarnings(importData, options) {
   // Check for large datasets
   const totalItems = (importData.sources?.length || 0) + 
                     (importData.proxyRules?.length || 0) + 
-                    (Object.values(importData.rules || {}).reduce((sum, rules) => sum + rules.length, 0));
+                    (Object.values(importData.rules || {}).reduce((sum: number, rules: any) => sum + rules.length, 0));
   
   if (totalItems > 100) {
     warnings.push(`Large dataset detected (${totalItems} items), import may take longer than usual`);
@@ -251,7 +251,7 @@ export function generateEnvironmentVariablesMessage(count, environmentNames = []
  * @param {Object} context - Additional context about the operation
  * @returns {string} - Formatted error message
  */
-export function generateErrorMessage(error, operation, context = {}) {
+export function generateErrorMessage(error: Error, operation: string, context: Record<string, any> = {}) {
   const baseMessage = operation === 'export' 
     ? 'Error exporting data' 
     : 'Error importing data';
@@ -287,7 +287,7 @@ export function generateErrorMessage(error, operation, context = {}) {
  * @param {string} itemType - Type of items being processed
  * @returns {string} - Progress message
  */
-export function generateProgressMessage(operation, current, total, itemType = 'items') {
+export function generateProgressMessage(operation: string, current: number, total: number, itemType = 'items') {
   const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
   return `${operation} ${itemType}: ${current}/${total} (${percentage}%)`;
 }

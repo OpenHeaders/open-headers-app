@@ -1,10 +1,12 @@
 /**
  * TemplateResolver - Resolves variable templates in strings
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('TemplateResolver');
 
 class TemplateResolver {
+  variablePattern: RegExp;
+
   constructor() {
     // Match {{variable}} pattern
     this.variablePattern = /\{\{(\w+)\}\}/g;
@@ -13,7 +15,7 @@ class TemplateResolver {
   /**
    * Resolve template with variables
    */
-  resolveTemplate(template, variables, options = {}) {
+  resolveTemplate(template: string | null, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
     if (!template || typeof template !== 'string') {
       return template;
     }
@@ -97,14 +99,14 @@ class TemplateResolver {
       return obj.map(item => this.resolveObject(item, variables, options));
     }
 
-    const resolved = {};
-    const allMissingVars = [];
+    const resolved: Record<string, any> = {};
+    const allMissingVars: string[] = [];
 
     Object.entries(obj).forEach(([key, value]) => {
       if (typeof value === 'string') {
         const result = this.resolveTemplate(value, variables, options);
         resolved[key] = typeof result === 'string' ? result : result.resolved;
-        if (result.missingVars) {
+        if (typeof result !== 'string' && result.missingVars) {
           allMissingVars.push(...result.missingVars);
         }
       } else if (typeof value === 'object') {
@@ -139,4 +141,4 @@ class TemplateResolver {
   }
 }
 
-module.exports = TemplateResolver;
+export default TemplateResolver;

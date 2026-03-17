@@ -69,15 +69,15 @@ import {
 /**
  * HttpOptions component for configuring HTTP requests with modular architecture
  */
-const HttpOptions = forwardRef(({ 
-    form, 
-    sourceId, 
-    onTestResponse, 
-    onTotpChange, 
-    initialTotpEnabled, 
-    initialTotpSecret, 
-    onTestingChange 
-}, ref) => {
+const HttpOptions = forwardRef(({
+    form,
+    sourceId,
+    onTestResponse,
+    onTotpChange,
+    initialTotpEnabled,
+    initialTotpSecret,
+    onTestingChange
+}: Record<string, any>, ref) => {
     // Get contexts
     const envContext = useEnvironments();
     const http = useHttp();

@@ -17,7 +17,9 @@ const log = createLogger('SourcesHandler');
  * Manages export and import operations for source configurations
  */
 export class SourcesHandler {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
   }
 

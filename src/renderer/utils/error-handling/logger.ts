@@ -4,24 +4,24 @@
  */
 
 // Lazy-load timeManager to avoid circular dependencies
-let timeManager = null;
+let _timeManager: { getDate: (ts?: number | null) => Date } | null = null;
 function getTimeManager() {
-  if (!timeManager && typeof require !== 'undefined') {
+  if (!_timeManager && typeof require !== 'undefined') {
     try {
-      timeManager = require('../../services/TimeManager');
+      _timeManager = require('../../services/TimeManager');
     } catch (e) {
       // TimeManager not available yet, use Date directly
     }
   }
-  return timeManager;
+  return _timeManager;
 }
 
-const LOG_LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+const LOG_LEVELS: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 3 };
 
 // Initialize log level
 let currentLevel = LOG_LEVELS.info;
 try {
-  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isDevelopment) {
+  if (typeof window !== 'undefined' && (window as any).electronAPI && (window as any).electronAPI.isDevelopment) {
     currentLevel = LOG_LEVELS.debug;
   }
 } catch (e) {
@@ -32,18 +32,20 @@ try {
  * Set the global log level for all renderer loggers
  * @param {string} level - One of 'error', 'warn', 'info', 'debug'
  */
-function setGlobalLogLevel(level) {
+export function setGlobalLogLevel(level: string) {
   if (LOG_LEVELS[level] !== undefined) {
     currentLevel = LOG_LEVELS[level];
   }
 }
 
 class Logger {
-  constructor(component) {
+  component: string;
+
+  constructor(component: string) {
     this.component = component;
   }
 
-  formatMessage(level, message, data) {
+  formatMessage(level: string, message: string, data?: unknown) {
     const tm = getTimeManager();
     const now = tm ? tm.getDate() : new Date();
     // Use UTC ISO format for consistent timestamps across timezone changes
@@ -53,10 +55,10 @@ class Logger {
     if (data !== undefined) {
       return { prefix, message, data };
     }
-    return { prefix, message };
+    return { prefix, message, data: undefined };
   }
 
-  log(level, message, data) {
+  log(level: string, message: string, data?: unknown) {
     const formatted = this.formatMessage(level, message, data);
 
     if (data !== undefined) {
@@ -66,17 +68,17 @@ class Logger {
     }
   }
 
-  debug(message, data) {
+  debug(message: string, data?: unknown) {
     if (LOG_LEVELS.debug > currentLevel) return;
     this.log('DEBUG', message, data);
   }
 
-  info(message, data) {
+  info(message: string, data?: unknown) {
     if (LOG_LEVELS.info > currentLevel) return;
     this.log('INFO', message, data);
   }
 
-  warn(message, data) {
+  warn(message: string, data?: unknown) {
     if (LOG_LEVELS.warn > currentLevel) return;
     const formatted = this.formatMessage('WARN', message, data);
     if (data !== undefined) {
@@ -86,7 +88,7 @@ class Logger {
     }
   }
 
-  error(message, data) {
+  error(message: string, data?: unknown) {
     const formatted = this.formatMessage('ERROR', message, data);
     if (data !== undefined) {
       console.error(formatted.prefix, formatted.message, formatted.data);
@@ -95,15 +97,14 @@ class Logger {
     }
   }
 
-  setDebugMode(enabled) {
+  setDebugMode(enabled: boolean) {
     setGlobalLogLevel(enabled ? 'debug' : 'info');
   }
 }
 
 // Factory function to create logger instances
-function createLogger(component) {
+export function createLogger(component: string) {
   return new Logger(component);
 }
 
-// Export for use in renderer process
-module.exports = { createLogger, setGlobalLogLevel };
+// Note: ESM exports above. Files using require() should be migrated to import.

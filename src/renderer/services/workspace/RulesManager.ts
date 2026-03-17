@@ -1,12 +1,26 @@
 /**
  * RulesManager - Manages header rules and proxy rules
  */
-const { createLogger } = require('../../utils/error-handling/logger');
-const { DATA_FORMAT_VERSION } = require('../../../config/version');
+import { createLogger } from '../../utils/error-handling/logger';
+import { DATA_FORMAT_VERSION } from '../../../config/version';
 const log = createLogger('RulesManager');
 
+interface StorageAPI {
+  loadFromStorage: (...args: any[]) => Promise<any>;
+  saveToStorage: (...args: any[]) => Promise<any>;
+}
+
+interface RulesElectronAPI {
+  updateWebSocketSources?: (...args: any[]) => void;
+  proxySaveRule?: (...args: any[]) => Promise<any>;
+  proxyDeleteRule?: (...args: any[]) => Promise<any>;
+}
+
 class RulesManager {
-  constructor(storageAPI, electronAPI) {
+  storageAPI: StorageAPI;
+  electronAPI: RulesElectronAPI;
+
+  constructor(storageAPI: StorageAPI, electronAPI: RulesElectronAPI) {
     this.storageAPI = storageAPI;
     this.electronAPI = electronAPI;
   }
@@ -147,4 +161,4 @@ class RulesManager {
   }
 }
 
-module.exports = RulesManager;
+export default RulesManager;

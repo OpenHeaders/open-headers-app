@@ -68,8 +68,8 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
     const [sameSite, setSameSite] = useState('Lax');
     const [secure, setSecure] = useState(false);
     const [httpOnly, setHttpOnly] = useState(false);
-    const [envVarValidation, setEnvVarValidation] = useState({});
-    const [domainValidation, setDomainValidation] = useState([]);
+    const [envVarValidation, setEnvVarValidation] = useState<Record<string, any>>({});
+    const [domainValidation, setDomainValidation] = useState<any[]>([]);
     const [cookiePath, setCookiePath] = useState('/');
     const formRef = useRef(null);
 
@@ -128,15 +128,27 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }) => {
         }
     }, [visible, initialValues, form]);
 
+    interface ParsedCookieValue {
+        name: string;
+        value: string;
+        path: string;
+        sameSite: string;
+        secure: boolean;
+        httpOnly: boolean;
+        expirationMode: string;
+        maxAge?: number;
+        expires?: string;
+    }
+
     // Parse cookie value from Set-Cookie header
-    const parseCookieValue = (cookieString) => {
+    const parseCookieValue = (cookieString: string | undefined): Partial<ParsedCookieValue> => {
         if (!cookieString) return {};
-        
+
         const parts = cookieString.split(';').map(p => p.trim());
         const [nameValue, ...attributes] = parts;
         const [name, value] = nameValue.split('=');
-        
-        const result = {
+
+        const result: ParsedCookieValue = {
             name: name || '',
             value: value || '',
             path: '/',

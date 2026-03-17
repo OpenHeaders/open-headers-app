@@ -1,10 +1,12 @@
 /**
  * EnvironmentEventManager - Manages environment-related events
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentEventManager');
 
 class EnvironmentEventManager {
+  listeners: Array<(() => void) | (() => void)>;
+
   constructor() {
     this.listeners = [];
   }
@@ -141,4 +143,4 @@ class EnvironmentEventManager {
   }
 }
 
-module.exports = EnvironmentEventManager;
+export default EnvironmentEventManager;

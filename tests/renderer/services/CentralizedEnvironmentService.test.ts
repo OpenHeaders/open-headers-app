@@ -20,7 +20,7 @@ vi.mock('../../../src/renderer/utils/error-handling/logger', () => ({
 
 // Mock BaseStateManager (required by EnvironmentStateManager)
 vi.mock('../../../src/renderer/services/workspace/BaseStateManager', () => {
-  return class {
+  return { default: class {
     listeners: Set<any>;
     state: any;
     log: any;
@@ -46,7 +46,7 @@ vi.mock('../../../src/renderer/services/workspace/BaseStateManager', () => {
       this.notifyListeners(changedKeys);
     }
     cleanup() { this.listeners.clear(); }
-  };
+  } };
 });
 
 // Import the CJS sub-managers

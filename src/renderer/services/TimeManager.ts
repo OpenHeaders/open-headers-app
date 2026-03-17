@@ -1,4 +1,4 @@
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('TimeManager');
 
 /**
@@ -485,4 +485,5 @@ class TimeManager {
 }
 
 // Export singleton instance
-module.exports = new TimeManager();
+const timeManagerInstance = new TimeManager();
+export default timeManagerInstance;

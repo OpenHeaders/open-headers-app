@@ -1,5 +1,5 @@
-const { createLogger } = require('../utils/error-handling/logger');
-const timeManager = require('./TimeManager');
+import { createLogger } from '../utils/error-handling/logger';
+import timeManager from './TimeManager';
 
 const log = createLogger('TotpUsageTracker');
 
@@ -148,4 +148,5 @@ class TotpUsageTracker {
 }
 
 // Export singleton instance
-module.exports = new TotpUsageTracker();
+const totpUsageTracker = new TotpUsageTracker();
+export default totpUsageTracker;

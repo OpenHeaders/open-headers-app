@@ -344,11 +344,11 @@ export class ImportService {
    * @returns {Object} - Comprehensive import statistics
    */
   getImportStatistics(importStats: Record<string, any>) {
-    const stats = {
+    const stats: Record<string, any> = {
       totalImported: 0,
       totalSkipped: 0,
       totalErrors: importStats.errors ? importStats.errors.length : 0,
-      dataTypes: {}
+      dataTypes: {} as Record<string, any>
     };
 
     // Sources statistics

@@ -17,7 +17,9 @@ const log = createLogger('WorkspaceHandler');
  * Manages export and import operations for workspace configurations
  */
 export class WorkspaceHandler {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
   }
 
@@ -35,7 +37,7 @@ export class WorkspaceHandler {
     }
 
     try {
-      const workspaceData = {
+      const workspaceData: Record<string, any> = {
         name: currentWorkspace.name,
         description: currentWorkspace.description,
         type: currentWorkspace.type || DEFAULTS.WORKSPACE_TYPE,
@@ -132,7 +134,7 @@ export class WorkspaceHandler {
     }
     
     // Prepare workspace object
-    const workspace = {
+    const workspace: Record<string, any> = {
       id: this._generateWorkspaceId(),
       name: workspaceName,
       description: workspaceInfo.description || '',

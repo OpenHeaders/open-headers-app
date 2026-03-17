@@ -59,7 +59,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             if (rule) {
                 // Initialize form with existing rule data
                 const isReference = !!rule.headerRuleId;
-                const formValues = {
+                const formValues: Record<string, any> = {
                     name: rule.name,
                     headerType: isReference ? 'reference' : 'custom',
                     headerRuleId: rule.headerRuleId || undefined,
@@ -102,7 +102,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             }
 
             // Build rule data based on header type
-            let ruleData = {
+            let ruleData: Record<string, any> = {
                 name: values.name,
                 enabled: rule?.enabled !== false
             };

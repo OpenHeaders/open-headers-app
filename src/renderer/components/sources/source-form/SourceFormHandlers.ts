@@ -219,7 +219,7 @@ export const createFormSubmissionHandler = ({
  */
 const prepareSourceData = (values, form, log) => {
     // Prepare basic source data
-    const sourceData = {
+    const sourceData: Record<string, any> = {
         sourceType: values.sourceType,
         sourcePath: values.sourcePath,
         sourceTag: values.sourceTag || ''

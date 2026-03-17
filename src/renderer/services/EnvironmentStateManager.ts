@@ -3,10 +3,21 @@
  * This ensures environment variables are never lost during component remounts or race conditions
  */
 
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('EnvironmentStateManager');
 
+interface WorkspaceState {
+  environments: Record<string, Record<string, unknown>>;
+  activeEnvironment: string;
+  loaded: boolean;
+}
+
 class EnvironmentStateManager {
+  environments: Record<string, Record<string, unknown>>;
+  activeEnvironment: string;
+  workspaceStates: Record<string, WorkspaceState>;
+  initialized: boolean;
+
   constructor() {
     this.environments = {};
     this.activeEnvironment = 'Personal';
@@ -137,4 +148,4 @@ const environmentStateManager = new EnvironmentStateManager();
 // Freeze the instance to prevent modification
 Object.freeze(environmentStateManager);
 
-module.exports = environmentStateManager;
+export default environmentStateManager;

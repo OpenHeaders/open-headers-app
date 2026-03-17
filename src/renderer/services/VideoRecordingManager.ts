@@ -2,6 +2,9 @@
  * Video Recording Manager for handling native WebM recording in renderer process
  */
 class VideoRecordingManager {
+    activeRecordings: Map<string, Record<string, any>>;
+    settings: Record<string, any> | null;
+
     constructor() {
         this.activeRecordings = new Map();
         this.settings = null;
@@ -75,7 +78,7 @@ class VideoRecordingManager {
 
             // Get the video stream without forcing dimensions
             // This will capture at the native resolution of the source
-            const stream = await navigator.mediaDevices.getUserMedia({
+            const stream = await (navigator.mediaDevices.getUserMedia as (constraints: any) => Promise<MediaStream>)({
                 video: {
                     mandatory: {
                         chromeMediaSource: 'desktop',
@@ -119,7 +122,7 @@ class VideoRecordingManager {
                 ultra: 20000000      // 20 Mbps (was 8)
             };
 
-            const bitrate = qualityPresets[videoQuality] || qualityPresets.high;
+            const bitrate = qualityPresets[videoQuality as keyof typeof qualityPresets] || qualityPresets.high;
             console.log(`[VideoRecordingManager] Using video quality: ${videoQuality} (${bitrate / 1000000} Mbps)`);
 
             // Log final video track settings after constraints
@@ -156,16 +159,7 @@ class VideoRecordingManager {
             const mediaRecorder = new MediaRecorder(stream, {
                 mimeType,
                 videoBitsPerSecond: bitrate,
-                // Note: Don't use bitsPerSecond when audio: false, it causes audio bitrate warnings
-                // Some browsers support these experimental options
-                videoConstraints: {
-                    mandatory: {
-                        // Force high quality encoding
-                        googCpuOveruseDetection: false, // Don't reduce quality for CPU
-                        googScreencastMinBitrate: Math.floor(bitrate * 0.8), // Min 80% of target
-                    }
-                }
-            });
+              } as MediaRecorderOptions);
 
             const chunks = [];
 
@@ -317,8 +311,8 @@ class VideoRecordingManager {
 const videoRecordingManager = new VideoRecordingManager();
 
 // Attach to window for debugging/console access if needed
-if (typeof window !== 'undefined' && window.videoRecordingManager === undefined) {
-    window.videoRecordingManager = videoRecordingManager;
+if (typeof window !== 'undefined' && (window as any).videoRecordingManager === undefined) {
+    (window as any).videoRecordingManager = videoRecordingManager;
 }
 
 // Service runs automatically via side-effect import - no export needed

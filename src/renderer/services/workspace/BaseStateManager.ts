@@ -1,10 +1,15 @@
 /**
  * BaseStateManager - Base class for state management with listeners
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 
 class BaseStateManager {
-  constructor(serviceName) {
+  serviceName: string;
+  log: ReturnType<typeof createLogger>;
+  listeners: Set<(state: Record<string, any>, changedKeys: string[]) => void>;
+  state: Record<string, any>;
+
+  constructor(serviceName: string) {
     this.serviceName = serviceName;
     this.log = createLogger(serviceName);
     this.listeners = new Set();
@@ -59,4 +64,4 @@ class BaseStateManager {
   }
 }
 
-module.exports = BaseStateManager;
+export default BaseStateManager;

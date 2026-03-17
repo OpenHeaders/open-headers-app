@@ -1,11 +1,21 @@
 /**
  * BroadcastManager - Handles broadcasting state to WebSocket and proxy
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('BroadcastManager');
 
+interface BroadcastElectronAPI {
+  updateWebSocketSources?: (...args: any[]) => void;
+  proxyUpdateHeaderRules?: (...args: any[]) => Promise<any>;
+  proxyUpdateSources?: (...args: any[]) => void;
+  proxyUpdateSource?: (...args: any[]) => void;
+  proxyClearRules?: () => Promise<any>;
+}
+
 class BroadcastManager {
-  constructor(electronAPI) {
+  electronAPI: BroadcastElectronAPI;
+
+  constructor(electronAPI: BroadcastElectronAPI) {
     this.electronAPI = electronAPI;
   }
 
@@ -61,4 +71,4 @@ class BroadcastManager {
   }
 }
 
-module.exports = BroadcastManager;
+export default BroadcastManager;
