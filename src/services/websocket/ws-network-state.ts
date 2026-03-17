@@ -3,7 +3,7 @@
  * Manages network state broadcasting to WebSocket clients
  */
 
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSNetworkState');

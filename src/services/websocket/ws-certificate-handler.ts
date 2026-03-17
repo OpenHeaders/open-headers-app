@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
 import crypto from 'crypto';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { execSync } = child_process;
 const { createLogger } = mainLogger;
@@ -190,7 +190,7 @@ class WSCertificateHandler {
             }
 
             log.info('Using cross-platform certificate generator...');
-            const CertificateGenerator = require('../../utils/certificateGenerator.js');
+            const CertificateGenerator = require('../../utils/certificateGenerator');
             const generator = new CertificateGenerator(log);
             const result = await generator.generateCertificates(certsDir);
 

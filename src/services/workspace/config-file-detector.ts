@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');

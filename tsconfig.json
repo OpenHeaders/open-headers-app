@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    /* Coexistence: let .ts and .js live side by side */
-    "allowJs": true,
+    /* No more .js files — pure TypeScript codebase */
+    "allowJs": false,
     "checkJs": false,
 
-    /* Start permissive — tighten per-directory as you convert */
+    /* Start permissive — tighten per-directory over time */
     "strict": false,
 
     /* Output */
@@ -24,7 +24,7 @@
     "baseUrl": ".",
     "outDir": "./dist-webpack",
 
-    /* Quality (non-strict checks you still want) */
+    /* Quality */
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },

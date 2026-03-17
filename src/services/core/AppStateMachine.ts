@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 import timeManager from './TimeManager';
 
 const { createLogger } = mainLogger;

@@ -5,7 +5,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;

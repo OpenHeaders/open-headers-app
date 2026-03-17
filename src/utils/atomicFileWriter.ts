@@ -12,7 +12,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { createLogger } from './mainLogger.js';
+import { createLogger } from './mainLogger';
 
 const log = createLogger('AtomicFileWriter');
 

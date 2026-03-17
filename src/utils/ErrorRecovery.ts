@@ -1,4 +1,4 @@
-import { createLogger } from './mainLogger.js';
+import { createLogger } from './mainLogger';
 import electron from 'electron';
 const { net, dialog } = electron;
 

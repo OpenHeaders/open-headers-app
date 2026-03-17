@@ -5,7 +5,7 @@ import path from 'path';
 import child_process from 'child_process';
 import AdmZip from 'adm-zip';
 import * as tar from 'tar';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 
 const { app, dialog } = electron;
 const { exec } = child_process;

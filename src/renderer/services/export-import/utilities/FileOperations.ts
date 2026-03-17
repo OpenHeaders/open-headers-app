@@ -14,7 +14,7 @@
  * - Path manipulation utilities
  */
 
-import { FILE_FILTERS, ERROR_MESSAGES } from '../core/ExportImportConfig.js';
+import { FILE_FILTERS, ERROR_MESSAGES } from '../core/ExportImportConfig';
 
 /**
  * Generates a timestamp-based filename for exports

@@ -1,6 +1,6 @@
 import electron from 'electron';
 import querystring from 'querystring';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import networkService from '../../../../services/network/NetworkService';
 import timeManager from '../../../../services/core/TimeManager';
 

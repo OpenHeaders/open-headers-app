@@ -5,19 +5,19 @@
  * handles file parsing, validation, and provides comprehensive error handling.
  */
 
-import { SourcesHandler } from '../handlers/SourcesHandler.js';
-import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler.js';
-import { RulesHandler } from '../handlers/RulesHandler.js';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler.js';
-import { WorkspaceHandler } from '../handlers/WorkspaceHandler.js';
+import { SourcesHandler } from '../handlers/SourcesHandler';
+import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
+import { RulesHandler } from '../handlers/RulesHandler';
+import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
+import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
 
-import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils.js';
+import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils';
 import {
   generateImportSuccessMessage,
   generateImportWarnings
-} from '../utilities/MessageGeneration.js';
+} from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
-import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig.js';
+import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('ImportService');

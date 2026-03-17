@@ -1,7 +1,7 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION } from '../../../../config/version';
 import appLifecycle from '../../app/lifecycle';
 import settingsHandlers from './settingsHandlers';

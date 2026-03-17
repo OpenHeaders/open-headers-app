@@ -3,7 +3,7 @@
  * Provides user-friendly error messages and recovery suggestions
  */
 
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 

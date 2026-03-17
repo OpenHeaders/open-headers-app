@@ -4,7 +4,7 @@ import url from 'url';
 import { EventEmitter } from 'events';
 import tls from 'tls';
 import crypto from 'crypto';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 import { ProxyCache } from './ProxyCache';
 import { ProxyRuleStore } from './ProxyRuleStore';
 import type { ProxyRule } from './ProxyRuleStore';

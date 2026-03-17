@@ -5,9 +5,9 @@
  * including complex duplicate detection based on URL patterns and headers.
  */
 
-import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection.js';
-import { validateProxyRule } from '../utilities/ValidationUtils.js';
-import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig.js';
+import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
+import { validateProxyRule } from '../utilities/ValidationUtils';
+import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 
 const { createLogger } = require('../../../utils/error-handling/logger');
 const log = createLogger('ProxyRulesHandler');

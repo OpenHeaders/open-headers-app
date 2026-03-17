@@ -39,9 +39,6 @@ const mainConfig = {
     },
     resolve: {
         extensions: ['.ts', '.js'],
-        extensionAlias: {
-            '.js': ['.ts', '.js'],
-        },
         fallback: {
             "fsevents": false
         },
@@ -120,9 +117,6 @@ const preloadConfig = {
     },
     resolve: {
         extensions: ['.ts', '.js'],
-        extensionAlias: {
-            '.js': ['.ts', '.js'],
-        },
         fallback: {
             "fsevents": false
         },
@@ -248,9 +242,6 @@ const rendererConfig = {
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx'],
-        extensionAlias: {
-            '.js': ['.ts', '.js'],
-        },
         fallback: {
             "fsevents": false
         },

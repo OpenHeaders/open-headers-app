@@ -3,7 +3,7 @@ import WebSocket from 'ws';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 import { WSNetworkStateHandler } from './ws-network-state';
 import { WSCertificateHandler } from './ws-certificate-handler';
 import { WSRecordingHandler } from './ws-recording-handler';

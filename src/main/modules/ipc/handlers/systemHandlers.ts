@@ -2,7 +2,7 @@ import electron from 'electron';
 import child_process from 'child_process';
 import util from 'util';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import timeManager from '../../../../services/core/TimeManager';
 
 const { app, systemPreferences, shell } = electron;

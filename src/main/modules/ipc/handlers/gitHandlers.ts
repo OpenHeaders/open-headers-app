@@ -1,5 +1,5 @@
 import electron from 'electron';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import appLifecycle from '../../app/lifecycle';
 
 const { BrowserWindow } = electron;

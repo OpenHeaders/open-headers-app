@@ -3,7 +3,7 @@
  * Handles different authentication strategies for Git operations
  */
 
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 import TokenAuthStrategy from './TokenAuthStrategy';
 import SSHAuthStrategy from './SSHAuthStrategy';
 import BasicAuthStrategy from './BasicAuthStrategy';

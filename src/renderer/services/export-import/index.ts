@@ -6,24 +6,24 @@
  */
 
 // Core Services
-export { ExportService } from './core/ExportService.js';
-export { ImportService } from './core/ImportService.js';
+export { ExportService } from './core/ExportService';
+export { ImportService } from './core/ImportService';
 
 // Configuration and Constants
-export * from './core/ExportImportConfig.js';
+export * from './core/ExportImportConfig';
 
 // Handlers
-export { SourcesHandler } from './handlers/SourcesHandler.js';
-export { ProxyRulesHandler } from './handlers/ProxyRulesHandler.js';
-export { RulesHandler } from './handlers/RulesHandler.js';
-export { EnvironmentsHandler } from './handlers/EnvironmentsHandler.js';
-export { WorkspaceHandler } from './handlers/WorkspaceHandler.js';
+export { SourcesHandler } from './handlers/SourcesHandler';
+export { ProxyRulesHandler } from './handlers/ProxyRulesHandler';
+export { RulesHandler } from './handlers/RulesHandler';
+export { EnvironmentsHandler } from './handlers/EnvironmentsHandler';
+export { WorkspaceHandler } from './handlers/WorkspaceHandler';
 
 // Utilities
-export * from './utilities/ValidationUtils.js';
-export * from './utilities/FileOperations.js';
-export * from './utilities/MessageGeneration.js';
-export * from './utilities/DuplicateDetection.js';
+export * from './utilities/ValidationUtils';
+export * from './utilities/FileOperations';
+export * from './utilities/MessageGeneration';
+export * from './utilities/DuplicateDetection';
 
 
 /**
@@ -33,8 +33,8 @@ export * from './utilities/DuplicateDetection.js';
  */
 export function createExportImportServices(dependencies) {
   // Import locally to avoid warnings about import usage
-  const { ExportService } = require('./core/ExportService.js');
-  const { ImportService } = require('./core/ImportService.js');
+  const { ExportService } = require('./core/ExportService');
+  const { ImportService } = require('./core/ImportService');
   
   return {
     exportService: new ExportService(dependencies),

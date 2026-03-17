@@ -16,21 +16,11 @@ Module._resolveFilename = function (request, parent, isMain, options) {
     try {
         return originalResolve.call(this, request, parent, isMain, options);
     } catch (err) {
-        if (err.code === 'MODULE_NOT_FOUND') {
-            // When a .js import fails, try .ts (handles converted files)
-            if (request.endsWith('.js')) {
-                try {
-                    return originalResolve.call(this, request.replace(/\.js$/, '.ts'), parent, isMain, options);
-                } catch (_) { /* fall through */ }
-            }
-            // When extensionless import fails, try .ts then .js
-            if (!request.match(/\.\w+$/)) {
-                for (const ext of ['.ts', '.js']) {
-                    try {
-                        return originalResolve.call(this, request + ext, parent, isMain, options);
-                    } catch (_) { /* try next */ }
-                }
-            }
+        // When extensionless import fails, try .ts
+        if (err.code === 'MODULE_NOT_FOUND' && !request.match(/\.\w+$/)) {
+            try {
+                return originalResolve.call(this, request + '.ts', parent, isMain, options);
+            } catch (_) { /* fall through */ }
         }
         throw err;
     }

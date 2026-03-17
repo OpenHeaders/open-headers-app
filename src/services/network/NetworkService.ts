@@ -4,7 +4,7 @@ import dns from 'dns';
 import net from 'net';
 import child_process from 'child_process';
 import util from 'util';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';
 
 const { createLogger } = mainLogger;

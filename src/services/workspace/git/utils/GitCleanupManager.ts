@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { exec } = child_process;

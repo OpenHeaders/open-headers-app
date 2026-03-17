@@ -2,8 +2,8 @@ import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
 import chokidar from 'chokidar';
-import mainLogger from '../../../../utils/mainLogger.js';
-import atomicWriter from '../../../../utils/atomicFileWriter.js';
+import mainLogger from '../../../../utils/mainLogger';
+import atomicWriter from '../../../../utils/atomicFileWriter';
 import windowManager from '../../window/windowManager';
 import appLifecycle from '../../app/lifecycle';
 

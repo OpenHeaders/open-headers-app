@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger.js';
+import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';
 
 const { BrowserWindow } = electron;

@@ -5,7 +5,7 @@
 
 import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../../utils/mainLogger.js';
+import mainLogger from '../../../../utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;

@@ -1,8 +1,8 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger.js';
-import atomicWriter from '../../../../utils/atomicFileWriter.js';
+import mainLogger from '../../../../utils/mainLogger';
+import atomicWriter from '../../../../utils/atomicFileWriter';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

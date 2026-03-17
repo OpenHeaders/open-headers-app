@@ -1,5 +1,4 @@
-import mainLogger from '../../../utils/mainLogger.js';
-// Note: .js extension resolves to .ts via webpack extensionAlias
+import mainLogger from '../../../utils/mainLogger';
 import type { BrowserWindow } from 'electron';
 
 const { createLogger } = mainLogger;
