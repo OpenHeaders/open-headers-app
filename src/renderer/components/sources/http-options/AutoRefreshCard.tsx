@@ -37,7 +37,7 @@ interface AutoRefreshCardProps {
     refreshEnabled: boolean;
     handleRefreshToggle: (checked: boolean) => void;
     refreshType: string;
-    handleRefreshTypeChange: (e: { target: { value: string } }) => void;
+    handleRefreshTypeChange: (e: { target: { value?: string } }) => void;
     customInterval: number;
     handlePresetIntervalChange: (value: number) => void;
     handleCustomIntervalChange: (value: number | null) => void;

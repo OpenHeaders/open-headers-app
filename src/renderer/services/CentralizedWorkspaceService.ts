@@ -676,21 +676,21 @@ class CentralizedWorkspaceService extends BaseStateManager {
       log.info(`Starting workspace creation: ${workspace.id} (${workspace.type})`);
       
       // Create workspace with enhanced validation
-      const newWorkspace = await this.workspaceManager.createWorkspace(this.state.workspaces, workspace);
-      
+      const newWorkspace = await this.workspaceManager.createWorkspace(this.state.workspaces, workspace) as Record<string, any>;
+
       // Add to workspaces list
       const workspaces = [...this.state.workspaces, newWorkspace];
       this.setState({ workspaces }, ['workspaces']);
-      
+
       // Initialize data containers for the new workspace
       await this.initializeWorkspaceData(newWorkspace.id);
-      
+
       // Save workspaces configuration
       await this.saveWorkspaces();
-      
+
       // Auto-switch to the newly created workspace
       await this.switchWorkspace(newWorkspace.id);
-      
+
       log.info(`Successfully created and switched to workspace: ${newWorkspace.id}`);
       return newWorkspace;
     } catch (error) {

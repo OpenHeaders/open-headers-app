@@ -19,8 +19,9 @@ interface EnvironmentSchema {
 }
 
 interface ExportOptions {
-  environmentOption: string;
+  environmentOption?: string;
   selectedEnvironments?: string[];
+  [key: string]: any;
 }
 
 interface ImportOptions {

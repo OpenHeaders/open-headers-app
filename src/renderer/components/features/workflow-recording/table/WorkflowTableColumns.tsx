@@ -30,16 +30,17 @@ import {
 /**
  * Component that displays timestamp with live updating relative time
  */
-const TimestampCell = ({ timestamp }: { timestamp: string }) => {
-  const [relativeTime, setRelativeTime] = useState(formatTimeAgo(timestamp));
+const TimestampCell = ({ timestamp }: { timestamp: string | number }) => {
+  const ts = typeof timestamp === 'string' ? new Date(timestamp).getTime() : timestamp;
+  const [relativeTime, setRelativeTime] = useState(formatTimeAgo(ts));
 
   useEffect(() => {
     // Update immediately
-    setRelativeTime(formatTimeAgo(timestamp));
+    setRelativeTime(formatTimeAgo(ts));
 
     // Update every second
     const interval = setInterval(() => {
-      setRelativeTime(formatTimeAgo(timestamp));
+      setRelativeTime(formatTimeAgo(ts));
     }, 1000);
 
     return () => clearInterval(interval);

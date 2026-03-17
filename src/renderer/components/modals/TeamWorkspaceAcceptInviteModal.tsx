@@ -14,7 +14,7 @@ const { Text } = Typography;
 
 interface TeamWorkspaceAcceptInviteModalProps {
     visible: boolean;
-    inviteData: Record<string, unknown> | null;
+    inviteData: Record<string, any> | null;
     onCancel: () => void;
     onSuccess?: () => void;
 }
@@ -274,7 +274,7 @@ const TeamWorkspaceAcceptInviteModal = ({
             
             unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress?.();
             
-            progressUnsubscribeRef.current = services.gitService.onProgress?.((event: { type: string; data: Record<string, unknown> }) => {
+            progressUnsubscribeRef.current = services.gitService.onProgress?.((event: { type: string; data: Record<string, any> }) => {
                 if (event.type === 'git-connection') {
                     setConnectionProgress(event.data.summary || []);
                 }

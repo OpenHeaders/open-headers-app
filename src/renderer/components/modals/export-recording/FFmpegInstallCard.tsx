@@ -69,7 +69,7 @@ const FFmpegInstallCard = ({
                 }
             } else {
                 // Legacy format - just a number 0-1
-                onDownloadProgressChange(Math.round(progress * 100));
+                onDownloadProgressChange(Math.round(Number(progress) * 100));
             }
         });
         

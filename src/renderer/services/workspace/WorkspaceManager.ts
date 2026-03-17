@@ -66,7 +66,7 @@ class WorkspaceManager {
   /**
    * Save workspaces configuration
    */
-  async saveWorkspaces(config: { workspaces: Record<string, unknown>[]; activeWorkspaceId: string; syncStatus: Record<string, unknown> }) {
+  async saveWorkspaces(config: { workspaces: Record<string, any>[]; activeWorkspaceId: string; syncStatus: Record<string, any> }) {
     try {
       await this.storageAPI.saveToStorage('workspaces.json', JSON.stringify({
         workspaces: config.workspaces,
@@ -82,9 +82,9 @@ class WorkspaceManager {
   /**
    * Create a new workspace with enhanced validation
    */
-  async createWorkspace(workspaces: Array<Record<string, unknown>>, workspace: Record<string, unknown>) {
+  async createWorkspace(workspaces: Array<Record<string, any>>, workspace: Record<string, any>) {
     // Validate workspace ID uniqueness
-    if (workspaces.some((w: Record<string, unknown>) => w.id === workspace.id)) {
+    if (workspaces.some((w: Record<string, any>) => w.id === workspace.id)) {
       throw new Error(`Workspace with ID ${workspace.id} already exists`);
     }
 
@@ -113,7 +113,7 @@ class WorkspaceManager {
       if (!workspace.gitUrl) {
         throw new Error('Git workspace must have a gitUrl');
       }
-      
+
       // Validate git URL format
       const gitUrlPattern = /^(https?:\/\/|git@|ssh:\/\/)/;
       if (!gitUrlPattern.test(workspace.gitUrl)) {
@@ -121,8 +121,11 @@ class WorkspaceManager {
       }
     }
 
-    const newWorkspace = {
+    const newWorkspace: Record<string, any> = {
       ...workspace,
+      id: workspace.id,
+      name: workspace.name,
+      type: workspace.type,
       createdAt: workspace.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       // Ensure proper defaults based on type
@@ -131,7 +134,7 @@ class WorkspaceManager {
       isTeam: workspace.type === 'team' || workspace.type === 'git',
       // Initialize metadata
       metadata: {
-        ...workspace.metadata,
+        ...(workspace.metadata as Record<string, any>),
         version: DATA_FORMAT_VERSION,
         sourceCount: 0,
         ruleCount: 0,
@@ -146,8 +149,8 @@ class WorkspaceManager {
   /**
    * Validate workspace exists
    */
-  validateWorkspaceExists(workspaces: Array<Record<string, unknown>>, workspaceId: string) {
-    const workspace = workspaces.find((w: Record<string, unknown>) => w.id === workspaceId);
+  validateWorkspaceExists(workspaces: Array<Record<string, any>>, workspaceId: string) {
+    const workspace = workspaces.find((w: Record<string, any>) => w.id === workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }

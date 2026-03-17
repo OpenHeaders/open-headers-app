@@ -41,7 +41,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }) => {
     };
     
     // State management
-    const [mode, setMode] = useState(getInitialMode());
+    const [mode, setMode] = useState<'generic' | 'cookie'>(getInitialMode());
     const [headerType, setHeaderType] = useState('request');
     const [valueType, setValueType] = useState('static');
     const [envVarValidation, setEnvVarValidation] = useState({});
@@ -135,7 +135,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }) => {
     }, [visible, initialValues, form]);
 
     // Handle mode switch
-    const handleModeSwitch = (newMode) => {
+    const handleModeSwitch = (newMode: 'generic' | 'cookie') => {
         // Save current values that are common
         const commonValues = {
             tag: form.getFieldValue('tag'),

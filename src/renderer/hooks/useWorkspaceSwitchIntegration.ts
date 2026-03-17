@@ -48,11 +48,11 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
                 const workspace = switchState.targetWorkspace || currentWorkspace;
                 const icon = workspace?.type === 'git' ? React.createElement(TeamOutlined) : React.createElement(UserOutlined);
 
-                showMessage('success', (
+                showMessage('success',
                     React.createElement('span', null,
                         'Switched to ', icon, ' ', workspaceName
-                    )
-                ));
+                    ) as unknown as string
+                );
             }, remainingTime + 150); // Wait for overlay to hide + small buffer
         };
 

@@ -28,7 +28,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of proxy rules or null if not selected
    */
-  async exportProxyRules(options: { selectedItems: Record<string, boolean>; [key: string]: unknown }) {
+  async exportProxyRules(options: Record<string, any>) {
     const { selectedItems } = options;
     
     if (!selectedItems.proxyRules) {
@@ -186,9 +186,9 @@ export class ProxyRulesHandler {
       
       for (const rule of existingRules) {
         try {
-          await window.electronAPI.proxyDeleteRule(rule.id);
+          await window.electronAPI.proxyDeleteRule((rule as Record<string, any>).id);
         } catch (error) {
-          log.warn(`Failed to delete proxy rule ${rule.id}:`, error);
+          log.warn(`Failed to delete proxy rule ${(rule as Record<string, any>).id}:`, error);
         }
       }
     } catch (error) {

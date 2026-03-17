@@ -12,10 +12,10 @@ interface ElectronAPI {
   isDevelopment: boolean;
 
   // File operations
-  openFileDialog: () => Promise<string | null>;
+  openFileDialog: (options?: Record<string, unknown>) => Promise<string | null>;
   saveFileDialog: (options: Record<string, unknown>) => Promise<string | null>;
-  readFile: (filePath: string, encoding: string) => Promise<string | Buffer>;
-  writeFile: (filePath: string, content: string) => Promise<void>;
+  readFile: (filePath: string, encoding?: string) => Promise<string | Buffer>;
+  writeFile: (filePath: string, content: string | Buffer) => Promise<void>;
   watchFile: (sourceId: string, filePath: string) => Promise<string>;
   unwatchFile: (filePath: string) => Promise<boolean>;
   getAppPath: () => Promise<string>;
@@ -49,6 +49,7 @@ interface ElectronAPI {
     diagnostics: { dnsResolvable: boolean; internetReachable: boolean; captivePortal: boolean; latency: number };
     lastUpdate: number;
     version: number;
+    confidence?: number;
   }>;
   makeHttpRequest: (url: string, method: string, options?: Record<string, unknown>) => Promise<string>;
 
@@ -119,14 +120,14 @@ interface ElectronAPI {
   wsUntrustCert: () => Promise<{ success: boolean; error?: string }>;
 
   // Git
-  testGitConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; message?: string }>;
-  getGitStatus: () => Promise<{ isInstalled: boolean; error?: string; user?: { name?: string } }>;
+  testGitConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: unknown; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
+  getGitStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } }>;
   installGit: () => Promise<{ success: boolean; message?: string; error?: string }>;
   syncGitWorkspace: (config: unknown) => Promise<{ success: boolean; error?: string }>;
   cleanupGitRepo: (gitUrl: string) => Promise<{ success: boolean; error?: string }>;
-  commitConfiguration: (config: unknown) => Promise<{ success: boolean; error?: string }>;
-  createBranch: (config: unknown) => Promise<{ success: boolean; error?: string }>;
-  checkWritePermissions: (config: unknown) => Promise<{ success: boolean; error?: string }>;
+  commitConfiguration: (config: unknown) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: unknown; files?: string[]; noChanges?: boolean; message?: string }>;
+  createBranch: (config: unknown) => Promise<{ success: boolean; error?: string; message?: string }>;
+  checkWritePermissions: (config: unknown) => Promise<{ success: boolean; error?: string; details?: unknown }>;
 
   // CLI API
   cliApiStatus: () => Promise<{
@@ -151,15 +152,19 @@ interface ElectronAPI {
   generateEnvironmentConfigLink: (environmentData: unknown) => Promise<{ success: boolean; envConfigData?: Record<string, unknown>; links?: { appLink: string; webLink: string; dataSize: number }; error?: string }>;
 
   // Video
-  checkFFmpeg: () => Promise<unknown>;
+  checkFFmpeg: () => Promise<{ available: boolean } | boolean>;
   downloadFFmpeg: () => Promise<unknown>;
-  convertVideo: (inputPath: string, outputPath: string) => Promise<unknown>;
+  convertVideo: (inputPath: string, outputPath: string) => Promise<{ success: boolean; error?: string }>;
   sendVideoRecordingStarted: (channel: string, result: unknown) => void;
   sendVideoRecordingStopped: (channel: string, result: unknown) => void;
 
   // Window management
   showMainWindow: () => void;
   hideMainWindow: () => void;
+  minimizeWindow: () => void;
+  maximizeWindow: () => void;
+  closeWindow: () => void;
+  quitApp: () => void;
   send: (channel: string, ...args: unknown[]) => void;
 
   // Updates
@@ -172,48 +177,48 @@ interface ElectronAPI {
   cleanupTempFiles: (...args: unknown[]) => void;
 
   // Event listeners (return cleanup function)
-  onNavigateTo: (callback: (data: unknown) => void) => (() => void);
+  onNavigateTo: (callback: (data: Record<string, any>) => void) => (() => void);
   onShowApp: (callback: () => void) => (() => void);
   onHideApp: (callback: () => void) => (() => void);
   onQuitApp: (callback: () => void) => (() => void);
   onTriggerUpdateCheck: (callback: () => void) => (() => void);
   onSystemSuspend: (callback: () => void) => (() => void);
   onSystemResume: (callback: () => void) => (() => void);
-  onNetworkStateSync: (callback: (data: unknown) => void) => (() => void);
-  onRecordingReceived: (callback: (data: unknown) => void) => (() => void);
-  onRecordingProgress: (callback: (data: unknown) => void) => (() => void);
-  onRecordingProcessing: (callback: (data: unknown) => void) => (() => void);
-  onRecordingDeleted: (callback: (data: unknown) => void) => (() => void);
-  onRecordingMetadataUpdated: (callback: (data: unknown) => void) => (() => void);
-  onOpenRecordRecording: (callback: (data: unknown) => void) => (() => void);
-  onStartVideoRecording: (callback: (data: unknown) => void) => (() => void);
-  onStopVideoRecording: (callback: (data: unknown) => void) => (() => void);
-  onVideoConversionProgress: (callback: (data: unknown) => void) => (() => void);
-  onFFmpegDownloadProgress: (callback: (data: unknown) => void) => (() => void);
-  onFFmpegInstallStatus: (callback: (data: unknown) => void) => (() => void);
-  onGitConnectionProgress: (callback: (data: unknown) => void) => (() => void);
-  onGitCommitProgress: (callback: (data: unknown) => void) => (() => void);
-  onGitInstallProgress: (callback: (data: unknown) => void) => (() => void);
-  onFileChanged: (callback: (data: unknown) => void) => (() => void);
-  onWorkspaceDataUpdated: (callback: (data: unknown) => void) => (() => void);
-  onWorkspaceSyncProgress: (callback: (data: unknown) => void) => (() => void);
-  onWorkspaceSyncCompleted: (callback: (data: unknown) => void) => (() => void);
-  onWorkspaceSyncStarted: (callback: (data: unknown) => void) => (() => void);
-  onCliWorkspaceJoined: (callback: (data: unknown) => void) => (() => void);
-  onEnvironmentsStructureChanged: (callback: (data: unknown) => void) => (() => void);
-  onEnvironmentVariablesChanged: (callback: (data: unknown) => void) => (() => void);
-  onWsConnectionStatusChanged: (callback: (data: unknown) => void) => (() => void);
-  onUpdateAvailable: (callback: (data: unknown) => void) => (() => void);
-  onUpdateNotAvailable: (callback: (data: unknown) => void) => (() => void);
-  onUpdateDownloaded: (callback: (data: unknown) => void) => (() => void);
-  onUpdateAlreadyDownloaded: (callback: (data: unknown) => void) => (() => void);
-  onUpdateError: (callback: (data: unknown) => void) => (() => void);
-  onUpdateProgress: (callback: (data: unknown) => void) => (() => void);
-  onUpdateCheckAlreadyInProgress: (callback: (data: unknown) => void) => (() => void);
+  onNetworkStateSync: (callback: (data: Record<string, any>) => void) => (() => void);
+  onRecordingReceived: (callback: (data: Record<string, any>) => void) => (() => void);
+  onRecordingProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onRecordingProcessing: (callback: (data: Record<string, any>) => void) => (() => void);
+  onRecordingDeleted: (callback: (data: Record<string, any>) => void) => (() => void);
+  onRecordingMetadataUpdated: (callback: (data: Record<string, any>) => void) => (() => void);
+  onOpenRecordRecording: (callback: (data: Record<string, any>) => void) => (() => void);
+  onStartVideoRecording: (callback: (data: Record<string, any>) => void) => (() => void);
+  onStopVideoRecording: (callback: (data: Record<string, any>) => void) => (() => void);
+  onVideoConversionProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onFFmpegDownloadProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onFFmpegInstallStatus: (callback: (data: Record<string, any>) => void) => (() => void);
+  onGitConnectionProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onGitCommitProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onGitInstallProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onFileChanged: (callback: (data: Record<string, any>) => void) => (() => void);
+  onWorkspaceDataUpdated: (callback: (data: Record<string, any>) => void) => (() => void);
+  onWorkspaceSyncProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onWorkspaceSyncCompleted: (callback: (data: Record<string, any>) => void) => (() => void);
+  onWorkspaceSyncStarted: (callback: (data: Record<string, any>) => void) => (() => void);
+  onCliWorkspaceJoined: (callback: (data: Record<string, any>) => void) => (() => void);
+  onEnvironmentsStructureChanged: (callback: (data: Record<string, any>) => void) => (() => void);
+  onEnvironmentVariablesChanged: (callback: (data: Record<string, any>) => void) => (() => void);
+  onWsConnectionStatusChanged: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateAvailable: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateNotAvailable: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateDownloaded: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateAlreadyDownloaded: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateError: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateProgress: (callback: (data: Record<string, any>) => void) => (() => void);
+  onUpdateCheckAlreadyInProgress: (callback: (data: Record<string, any>) => void) => (() => void);
   onClearUpdateCheckingNotification: (callback: () => void) => (() => void);
-  onProcessTeamWorkspaceInvite?: (callback: (data: unknown) => void) => (() => void);
-  onShowErrorMessage?: (callback: (data: unknown) => void) => (() => void);
-  onProcessEnvironmentConfigImport?: (callback: (data: unknown) => void) => (() => void);
+  onProcessTeamWorkspaceInvite?: (callback: (data: Record<string, any>) => void) => (() => void);
+  onShowErrorMessage?: (callback: (data: Record<string, any>) => void) => (() => void);
+  onProcessEnvironmentConfigImport?: (callback: (data: Record<string, any>) => void) => (() => void);
 
   // Renderer lifecycle
   signalRendererReady?: () => void;

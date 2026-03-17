@@ -66,7 +66,7 @@ export const getProviderIcon = (url: string) => {
  * @param {string} authType - Selected authentication type
  * @returns {Object} Prepared authentication data
  */
-export const prepareAuthData = async (values: Record<string, string>, authType: string) => {
+export const prepareAuthData = async (values: Record<string, any>, authType: string) => {
     let authData = {};
     
     switch (authType) {
@@ -81,7 +81,7 @@ export const prepareAuthData = async (values: Record<string, string>, authType: 
             let sshKeyContent = '';
             if (values.sshKeySource === 'file' && values.sshKeyPath) {
                 try {
-                    sshKeyContent = await window.electronAPI.readFile(values.sshKeyPath);
+                    sshKeyContent = await window.electronAPI.readFile(values.sshKeyPath, 'utf-8') as string;
                 } catch (error) {
                     throw new Error(`Failed to read SSH key file: ${error.message}`);
                 }

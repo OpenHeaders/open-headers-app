@@ -61,7 +61,7 @@ class TemplateResolver {
       return [];
     }
 
-    const variables = new Set();
+    const variables = new Set<string>();
     let match;
     
     // Reset regex lastIndex
@@ -90,9 +90,9 @@ class TemplateResolver {
   /**
    * Resolve template in an object recursively
    */
-  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
+  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}): any {
     if (!obj || typeof obj !== 'object') {
-      return this.resolveTemplate(obj, variables, options);
+      return this.resolveTemplate(obj as string, variables, options);
     }
 
     if (Array.isArray(obj)) {
@@ -124,7 +124,7 @@ class TemplateResolver {
    */
   validateVariables(template: string | null, variables: Record<string, string>) {
     const required = this.extractVariables(template);
-    const missing = required.filter(varName => !variables.hasOwnProperty(varName));
+    const missing = required.filter(varName => !variables.hasOwnProperty(varName as string));
     
     return {
       isValid: missing.length === 0,

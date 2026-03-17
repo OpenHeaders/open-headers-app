@@ -30,7 +30,7 @@ export const useVideoLoader = (record, viewMode) => {
                 // Check if recording has video
                 const recordings = await window.electronAPI.loadRecordings();
                 const currentRecording = recordings.find(r => r.id === record.metadata.recordId);
-                setHasVideo(currentRecording?.hasVideo || false);
+                setHasVideo(!!(currentRecording as Record<string, any>)?.hasVideo);
             } catch (error) {
                 log.error('Error checking video availability:', error);
                 setHasVideo(false);

@@ -236,8 +236,8 @@ export class ImportService {
         metadata: importData.rulesMetadata
       };
       const rulesStats = await this.rulesHandler.importRules(rulesData, importOptions);
-      allStats.rulesImported = rulesStats.imported;
-      allStats.rulesSkipped = rulesStats.skipped;
+      allStats.rulesImported = { total: 0, ...rulesStats.imported };
+      allStats.rulesSkipped = { total: 0, ...rulesStats.skipped };
       allStats.errors.push(...rulesStats.errors);
     }
 

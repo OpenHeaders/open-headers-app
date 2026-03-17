@@ -199,7 +199,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }) => {
             
             // Listen for download progress
             const unsubscribe = window.electronAPI.onFFmpegDownloadProgress((progress) => {
-                setDownloadProgress(Math.round(progress * 100));
+                setDownloadProgress(Math.round(Number(progress) * 100));
             });
             
             try {
@@ -216,7 +216,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }) => {
         
         // Listen for conversion progress
         const unsubscribe = window.electronAPI.onVideoConversionProgress((progress) => {
-            setConversionProgress(Math.round(progress * 100));
+            setConversionProgress(Math.round(Number(progress) * 100));
         });
         
         try {

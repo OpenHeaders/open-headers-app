@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback } from 'react';
  * @returns {Object} Connection status and client data
  */
 export const useConnectionsServer = ({ active = false } = {}) => {
-    const [status, setStatus] = useState({
+    const [status, setStatus] = useState<Record<string, any>>({
         totalConnections: 0,
         browserCounts: {},
         clients: [],
