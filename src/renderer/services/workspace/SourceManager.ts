@@ -1,11 +1,24 @@
 /**
  * SourceManager - Manages HTTP, File, and Environment sources
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('SourceManager');
 
+interface StorageAPI {
+  loadFromStorage: (...args: any[]) => Promise<any>;
+  saveToStorage: (...args: any[]) => Promise<any>;
+}
+
+interface EnvironmentService {
+  waitForReady: (timeout: number) => Promise<boolean>;
+  getAllVariables: () => Record<string, string>;
+}
+
 class SourceManager {
-  constructor(storageAPI, environmentService) {
+  storageAPI: StorageAPI;
+  environmentService: EnvironmentService;
+
+  constructor(storageAPI: StorageAPI, environmentService: EnvironmentService) {
     this.storageAPI = storageAPI;
     this.environmentService = environmentService;
   }
@@ -237,4 +250,4 @@ class SourceManager {
   }
 }
 
-module.exports = SourceManager;
+export default SourceManager;

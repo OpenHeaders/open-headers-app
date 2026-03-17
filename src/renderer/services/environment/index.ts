@@ -1,10 +1,16 @@
 /**
  * Environment modules exports
  */
-module.exports = {
-  EnvironmentStateManager: require('./EnvironmentStateManager'),
-  EnvironmentStorageManager: require('./EnvironmentStorageManager'),
-  EnvironmentVariableManager: require('./EnvironmentVariableManager'),
-  TemplateResolver: require('./TemplateResolver'),
-  EnvironmentEventManager: require('./EnvironmentEventManager')
+import EnvironmentStateManager from './EnvironmentStateManager';
+import EnvironmentStorageManager from './EnvironmentStorageManager';
+import EnvironmentVariableManager from './EnvironmentVariableManager';
+import TemplateResolver from './TemplateResolver';
+import EnvironmentEventManager from './EnvironmentEventManager';
+
+export {
+  EnvironmentStateManager,
+  EnvironmentStorageManager,
+  EnvironmentVariableManager,
+  TemplateResolver,
+  EnvironmentEventManager
 };

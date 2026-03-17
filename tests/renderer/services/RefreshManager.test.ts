@@ -205,8 +205,7 @@ describe('RefreshManager', () => {
     });
 
     it('returns positive time from cached schedule', () => {
-      // Use real time since timeManager.now() in the source returns Date.now()
-      const realNow = Date.now();
+      const realNow = _now;
       refreshManager._cachedSchedules.set('s1', {
         nextRefresh: realNow + 30000,
       });
@@ -223,7 +222,7 @@ describe('RefreshManager', () => {
     });
 
     it('returns time from sourceData.refreshOptions.nextRefresh when no cached schedule', () => {
-      const realNow = Date.now();
+      const realNow = _now;
       const sourceData = {
         refreshOptions: {
           enabled: true,
@@ -236,11 +235,10 @@ describe('RefreshManager', () => {
     });
 
     it('returns 0 when nextRefresh is in the past (from sourceData)', () => {
-      const realNow = Date.now();
       const sourceData = {
         refreshOptions: {
           enabled: true,
-          nextRefresh: realNow - 100, // slightly past, within 1s buffer
+          nextRefresh: _now - 100, // slightly past, within 1s buffer
         },
       };
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);

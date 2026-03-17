@@ -1,12 +1,20 @@
 /**
  * WorkspaceManager - Handles workspace CRUD operations and switching
  */
-const { createLogger } = require('../../utils/error-handling/logger');
-const { DATA_FORMAT_VERSION } = require('../../../config/version');
+import { createLogger } from '../../utils/error-handling/logger';
+import { DATA_FORMAT_VERSION } from '../../../config/version';
 const log = createLogger('WorkspaceManager');
 
+interface StorageAPI {
+  loadFromStorage: (...args: any[]) => Promise<any>;
+  saveToStorage: (...args: any[]) => Promise<any>;
+  deleteDirectory: (...args: any[]) => Promise<any>;
+}
+
 class WorkspaceManager {
-  constructor(storageAPI) {
+  storageAPI: StorageAPI;
+
+  constructor(storageAPI: StorageAPI) {
     this.storageAPI = storageAPI;
   }
 
@@ -192,4 +200,4 @@ class WorkspaceManager {
   }
 }
 
-module.exports = WorkspaceManager;
+export default WorkspaceManager;

@@ -1,7 +1,7 @@
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('RefreshCoordinator');
-const timeManager = require('./TimeManager');
-const { ConcurrentMap, Mutex } = require('../utils/error-handling/ConcurrencyControl');
+import timeManager from './TimeManager';
+import { ConcurrentMap, Mutex } from '../utils/error-handling/ConcurrencyControl';
 
 /**
  * Improved RefreshCoordinator with proper queue limits and concurrency control
@@ -349,4 +349,4 @@ class RefreshCoordinator {
   }
 }
 
-module.exports = RefreshCoordinator;
+export default RefreshCoordinator;

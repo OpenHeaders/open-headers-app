@@ -18,7 +18,10 @@ const log = createLogger('EnvironmentsHandler');
  * Manages export and import operations for environment configurations
  */
 export class EnvironmentsHandler {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+  activeWorkspaceId: string;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
     this.activeWorkspaceId = dependencies.activeWorkspaceId;
   }
@@ -112,7 +115,7 @@ export class EnvironmentsHandler {
     }
 
     const envCount = Object.keys(exportEnvironments).length;
-    const totalVars = Object.values(exportEnvironments).reduce((sum, env) => sum + Object.keys(env).length, 0);
+    const totalVars = Object.values(exportEnvironments).reduce((sum: number, env: any) => sum + Object.keys(env).length, 0);
     log.info(`Exporting ${envCount} environments with ${totalVars} total variables`);
     
     return {
@@ -322,7 +325,7 @@ export class EnvironmentsHandler {
           // Convert object variableDefinitions to array format for processing
           const variableDefsArray = Object.entries(schemaData.variableDefinitions).map(([name, def]) => ({
             name,
-            ...def
+            ...(def as Record<string, any>)
           }));
           const schemaStats = await this._createVariablesFromSchema(envName, variableDefsArray);
           stats.variablesCreated += schemaStats.variablesCreated;

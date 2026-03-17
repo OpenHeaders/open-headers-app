@@ -1,11 +1,18 @@
 /**
  * SyncManager - Handles workspace synchronization
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('SyncManager');
 
+interface SyncElectronAPI {
+  onWorkspaceSyncCompleted?: (callback: (data: Record<string, any>) => void) => (() => void);
+  loadFromStorage: (...args: any[]) => Promise<any>;
+}
+
 class SyncManager {
-  constructor(electronAPI) {
+  electronAPI: SyncElectronAPI;
+
+  constructor(electronAPI: SyncElectronAPI) {
     this.electronAPI = electronAPI;
   }
 
@@ -15,7 +22,7 @@ class SyncManager {
   async waitForInitialSync(workspaceId, timeoutMs = 30000) {
     log.info(`[SyncManager] Waiting for initial sync of workspace ${workspaceId}...`);
     
-    return new Promise((resolve, reject) => {
+    return new Promise<void>((resolve, reject) => {
       let unsubscribe;
       let checkInterval;
       let syncReceived = false;
@@ -127,4 +134,4 @@ class SyncManager {
   }
 }
 
-module.exports = SyncManager;
+export default SyncManager;

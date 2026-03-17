@@ -86,7 +86,7 @@ export const createUpdateEventHandlers = ({
      *
      * @param {Object} payload - Event payload containing isManual and info
      */
-    const handleUpdateAlreadyDownloaded = (payload = {}) => {
+    const handleUpdateAlreadyDownloaded = (payload: { isManual?: boolean; info?: any } = {}) => {
         const { isManual = false, info = null } = payload;
         debugLog(`${debugLabel} Received "update-already-downloaded" event (manual check: ${isManual}, version: ${info?.version})`);
 

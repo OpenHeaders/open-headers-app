@@ -1,5 +1,5 @@
 // Build header value based on mode and type
-export const buildHeaderValue = (values, mode, valueType) => {
+export const buildHeaderValue = (values: Record<string, any>, mode: string, valueType: string) => {
     if (mode === 'cookie') {
         return buildCookieValue(values, valueType === 'dynamic');
     }
@@ -7,7 +7,7 @@ export const buildHeaderValue = (values, mode, valueType) => {
 };
 
 // Parse header value based on mode
-export const parseHeaderValue = (headerValue, mode) => {
+export const parseHeaderValue = (headerValue: string | undefined, mode: string): Record<string, any> => {
     if (mode === 'cookie') {
         return parseCookieValue(headerValue);
     }
@@ -15,7 +15,7 @@ export const parseHeaderValue = (headerValue, mode) => {
 };
 
 // Build cookie value string
-const buildCookieValue = (values, isDynamic = false) => {
+const buildCookieValue = (values: Record<string, any>, isDynamic = false) => {
     let cookieString;
     
     // Build name=value part
@@ -74,14 +74,14 @@ const buildCookieValue = (values, isDynamic = false) => {
 };
 
 // Parse cookie value from Set-Cookie header
-const parseCookieValue = (cookieString) => {
+const parseCookieValue = (cookieString: string | undefined): Record<string, any> => {
     if (!cookieString) return {};
-    
+
     const parts = cookieString.split(';').map(p => p.trim());
     const [nameValue, ...attributes] = parts;
     const [name, value] = (nameValue || '').split('=');
-    
-    const result = {
+
+    const result: Record<string, any> = {
         name: name || '',
         value: value || '',
         path: '/',

@@ -3,7 +3,7 @@ import { Alert, Space, Typography } from 'antd';
 
 const { Text } = Typography;
 
-const EnvVarInfo = ({ envVarValidation, mode }) => {
+const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<string, any>; mode: string }) => {
     // Check if there are any environment variables used
     const hasEnvVars = Object.keys(envVarValidation).some(key => {
         const val = envVarValidation[key];

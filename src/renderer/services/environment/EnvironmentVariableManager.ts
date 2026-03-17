@@ -1,7 +1,7 @@
 /**
  * EnvironmentVariableManager - Manages environment variables and operations
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentVariableManager');
 
 class EnvironmentVariableManager {
@@ -10,9 +10,9 @@ class EnvironmentVariableManager {
   /**
    * Get all variables for an environment
    */
-  getAllVariables(environments, activeEnvironment) {
+  getAllVariables(environments: Record<string, Record<string, any>>, activeEnvironment: string) {
     const envVars = environments[activeEnvironment] || {};
-    const result = {};
+    const result: Record<string, string> = {};
 
     Object.entries(envVars).forEach(([key, variable]) => {
       // Variables are always stored as objects with value property
@@ -103,7 +103,7 @@ class EnvironmentVariableManager {
   /**
    * Export environment variables in a specific format
    */
-  exportEnvironment(environments, environmentName, format = 'json') {
+  exportEnvironment(environments: Record<string, Record<string, any>>, environmentName: string, format = 'json') {
     const env = environments[environmentName];
     if (!env) {
       throw new Error(`Environment '${environmentName}' does not exist`);
@@ -133,8 +133,8 @@ class EnvironmentVariableManager {
   /**
    * Import environment variables from different formats
    */
-  importEnvironment(data, format = 'json') {
-    const variables = {};
+  importEnvironment(data: string, format = 'json') {
+    const variables: Record<string, any> = {};
 
     switch (format) {
       case 'json':
@@ -178,4 +178,4 @@ class EnvironmentVariableManager {
   }
 }
 
-module.exports = EnvironmentVariableManager;
+export default EnvironmentVariableManager;

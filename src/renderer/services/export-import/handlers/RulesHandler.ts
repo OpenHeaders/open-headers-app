@@ -16,7 +16,10 @@ const log = createLogger('RulesHandler');
  * Manages export and import operations for application rules
  */
 export class RulesHandler {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+  activeWorkspaceId: string;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
     this.activeWorkspaceId = dependencies.activeWorkspaceId;
   }
@@ -81,7 +84,7 @@ export class RulesHandler {
       return stats;
     }
 
-    const totalRulesToImport = Object.values(rulesToImport.rules).reduce((sum, rules) => sum + rules.length, 0);
+    const totalRulesToImport = Object.values(rulesToImport.rules).reduce((sum: number, rules: any) => sum + rules.length, 0);
     log.info(`Starting import of ${totalRulesToImport} rules in ${options.importMode} mode`);
 
     try {
@@ -111,7 +114,7 @@ export class RulesHandler {
 
       // Update metadata
       existingRulesStorage.metadata.totalRules = Object.values(existingRulesStorage.rules)
-        .reduce((sum, rules) => sum + rules.length, 0);
+        .reduce((sum: number, rules: any) => sum + rules.length, 0);
       existingRulesStorage.metadata.lastUpdated = new Date().toISOString();
 
       // Save the updated rules

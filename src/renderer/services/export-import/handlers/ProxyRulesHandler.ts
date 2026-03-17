@@ -17,7 +17,9 @@ const log = createLogger('ProxyRulesHandler');
  * Manages export and import operations for proxy rule configurations
  */
 export class ProxyRulesHandler {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
   }
 
@@ -259,10 +261,10 @@ export class ProxyRulesHandler {
       };
     }
 
-    const stats = {
+    const stats: Record<string, any> = {
       total: rules.length,
       withHeaders: 0,
-      patterns: [],
+      patterns: [] as string[],
       totalHeaders: 0
     };
 
@@ -305,7 +307,7 @@ export class ProxyRulesHandler {
       }
     });
 
-    Object.entries(patternCounts).forEach(([pattern, count]) => {
+    Object.entries(patternCounts).forEach(([pattern, count]: [string, any]) => {
       if (count > 1) {
         warnings.push(`Pattern "${pattern}" appears ${count} times`);
         suggestions.push(`Consider consolidating rules with pattern "${pattern}"`);

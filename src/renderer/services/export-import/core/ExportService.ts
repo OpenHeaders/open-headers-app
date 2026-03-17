@@ -319,7 +319,7 @@ export class ExportService {
    * @returns {number} - Total item count
    * @private
    */
-  _countExportItems(exportData) {
+  _countExportItems(exportData: Record<string, any>) {
     let count = 0;
 
     if (exportData.sources && Array.isArray(exportData.sources)) {
@@ -331,17 +331,17 @@ export class ExportService {
     }
 
     if (exportData.rules && typeof exportData.rules === 'object') {
-      count += Object.values(exportData.rules).reduce((sum, rules) => 
-        sum + (Array.isArray(rules) ? rules.length : 0), 0);
+      count += (Object.values(exportData.rules) as any[]).reduce((sum: number, rules: any) =>
+        sum + (Array.isArray(rules) ? rules.length : 0), 0) as number;
     }
 
     if (exportData.environments && typeof exportData.environments === 'object') {
-      count += Object.values(exportData.environments).reduce((sum, env) => {
+      count += (Object.values(exportData.environments) as any[]).reduce((sum: number, env: any) => {
         if (env && typeof env === 'object' && !Array.isArray(env)) {
           return sum + Object.keys(env).length;
         }
         return sum;
-      }, 0);
+      }, 0) as number;
     }
 
     if (exportData.workspace) {
@@ -357,7 +357,7 @@ export class ExportService {
    * @returns {string} - Human-readable size estimate
    * @private
    */
-  _calculateExportSize(exportData) {
+  _calculateExportSize(exportData: Record<string, any>) {
     try {
       const jsonString = JSON.stringify(exportData);
       const bytes = new Blob([jsonString]).size;
@@ -376,7 +376,7 @@ export class ExportService {
    * @returns {Object} - Sanitized options for logging
    * @private
    */
-  _sanitizeOptionsForLogging(exportOptions) {
+  _sanitizeOptionsForLogging(exportOptions: Record<string, any>) {
     const sanitized = { ...exportOptions };
     
     // Remove potentially sensitive workspace data
@@ -396,11 +396,11 @@ export class ExportService {
    * @returns {Object} - Comprehensive export statistics
    */
   getExportStatistics(exportData: Record<string, any>) {
-    const stats = {
+    const stats: Record<string, any> = {
       version: exportData.version,
       totalItems: this._countExportItems(exportData),
       estimatedSize: this._calculateExportSize(exportData),
-      dataTypes: {}
+      dataTypes: {} as Record<string, any>
     };
 
     if (exportData.sources) {

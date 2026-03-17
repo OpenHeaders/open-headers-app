@@ -93,8 +93,8 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
     const { token } = theme.useToken();
     const [headerType, setHeaderType] = useState('request');
     const [valueType, setValueType] = useState('static');
-    const [envVarValidation, setEnvVarValidation] = useState({});
-    const [domainValidation, setDomainValidation] = useState([]);
+    const [envVarValidation, setEnvVarValidation] = useState<Record<string, any>>({});
+    const [domainValidation, setDomainValidation] = useState<any[]>([]);
     const formRef = useRef(null);
 
     useEffect(() => {
@@ -185,13 +185,13 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
     const validateAllEnvVars = () => {
         const values = form.getFieldsValue();
         const variables = envContext.getAllVariables();
-        const validations = {};
-        
+        const validations: Record<string, any> = {};
+
         // Validate header name
         if (values.headerName) {
             validations.headerName = validateEnvironmentVariables(values.headerName, variables);
         }
-        
+
         // Validate header value or dynamic fields
         if (valueType === 'static' && values.headerValue) {
             validations.headerValue = validateEnvironmentVariables(values.headerValue, variables);
@@ -203,10 +203,10 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
                 validations.suffix = validateEnvironmentVariables(values.suffix, variables);
             }
         }
-        
+
         // Validate domains
         if (values.domains && values.domains.length > 0) {
-            const domainValidations = values.domains.map(domain => 
+            const domainValidations = values.domains.map((domain: string) =>
                 validateEnvironmentVariables(domain, variables)
             );
             validations.domains = domainValidations;

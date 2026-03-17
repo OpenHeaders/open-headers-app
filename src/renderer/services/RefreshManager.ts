@@ -1,12 +1,11 @@
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('RefreshManager');
-const NetworkAwareScheduler = require('./NetworkAwareScheduler');
-const RefreshCoordinator = require('./RefreshCoordinator');
-const timeManager = require('./TimeManager');
-const { ConcurrentMap } = require('../utils/error-handling/ConcurrencyControl');
-const { RequestDeduplicator } = require('../utils/error-handling/ConcurrencyControl');
-const { adaptiveCircuitBreakerManager } = require('../utils/error-handling/AdaptiveCircuitBreaker');
-const { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } = require('../constants/retryConfig');
+import NetworkAwareScheduler from './NetworkAwareScheduler';
+import RefreshCoordinator from './RefreshCoordinator';
+import timeManager from './TimeManager';
+import { ConcurrentMap, RequestDeduplicator } from '../utils/error-handling/ConcurrencyControl';
+import { adaptiveCircuitBreakerManager } from '../utils/error-handling/AdaptiveCircuitBreaker';
+import { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } from '../constants/retryConfig';
 
 /**
  * RefreshManager - Coordinates source refreshing with circuit breaker protection
@@ -429,7 +428,7 @@ class RefreshManager {
     log.debug(`Removed source ${sourceId}`);
   }
 
-  async refreshSource(sourceId, options = {}) {
+  async refreshSource(sourceId: string, options: Record<string, any> = {}) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const source = await this.sources.get(sourceId);

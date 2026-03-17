@@ -1,7 +1,7 @@
 /**
  * AutoSaveManager - Handles auto-save functionality with conflict prevention
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('AutoSaveManager');
 
 class AutoSaveManager {
@@ -186,4 +186,4 @@ class AutoSaveManager {
   }
 }
 
-module.exports = AutoSaveManager;
+export default AutoSaveManager;

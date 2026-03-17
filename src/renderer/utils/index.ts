@@ -3,8 +3,11 @@
 // Error handling utilities
 export {
   CircuitBreaker,
-  ConcurrencyControl,
-  logger
+  createLogger,
+  Mutex,
+  Semaphore,
+  ConcurrentMap,
+  ConcurrentSet
 } from './error-handling';
 
 // UI utilities

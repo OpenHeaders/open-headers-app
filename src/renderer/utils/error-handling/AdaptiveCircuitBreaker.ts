@@ -1,5 +1,5 @@
-const { createLogger } = require('./logger');
-const timeManager = require('../../services/TimeManager');
+import { createLogger } from './logger';
+import timeManager from '../../services/TimeManager';
 
 const log = createLogger('AdaptiveCircuitBreaker');
 
@@ -423,7 +423,7 @@ class AdaptiveCircuitBreakerManager {
 
 const adaptiveCircuitBreakerManager = new AdaptiveCircuitBreakerManager();
 
-module.exports = {
+export {
   AdaptiveCircuitBreaker,
   AdaptiveCircuitBreakerManager,
   adaptiveCircuitBreakerManager,

@@ -1,11 +1,18 @@
 /**
  * EnvironmentStorageManager - Handles loading and saving environment data
  */
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentStorageManager');
 
+interface StorageAPI {
+  loadFromStorage: (...args: any[]) => Promise<any>;
+  saveToStorage: (...args: any[]) => Promise<any>;
+}
+
 class EnvironmentStorageManager {
-  constructor(storageAPI) {
+  storageAPI: StorageAPI;
+
+  constructor(storageAPI: StorageAPI) {
     this.storageAPI = storageAPI;
   }
 
@@ -113,4 +120,4 @@ class EnvironmentStorageManager {
   }
 }
 
-module.exports = EnvironmentStorageManager;
+export default EnvironmentStorageManager;
