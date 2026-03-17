@@ -3,7 +3,7 @@
  * Manages source updates, broadcasting, workspace switching, and initial data loading
  */
 
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
