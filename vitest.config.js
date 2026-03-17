@@ -5,7 +5,7 @@ export default defineConfig({
     test: {
         environment: 'node',
         setupFiles: ['./tests/setup.js'],
-        include: ['tests/**/*.test.{js,ts}'],
+        include: ['tests/**/*.test.{js,ts,tsx}'],
         deps: {
             inline: [/src\//, 'electron', 'electron-log'],
         },
