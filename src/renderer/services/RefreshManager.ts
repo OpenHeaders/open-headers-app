@@ -1,5 +1,64 @@
 import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('RefreshManager');
+
+/** Refresh options for a source */
+interface RefreshOptions {
+  enabled?: boolean;
+  interval?: number;
+  lastRefresh?: number | null;
+  nextRefresh?: number | null;
+  preserveTiming?: boolean;
+  [key: string]: unknown;
+}
+
+/** Source configuration for refresh management */
+interface RefreshSource {
+  sourceId: string;
+  sourceType: string;
+  sourcePath?: string;
+  sourceMethod?: string;
+  sourceContent?: string;
+  refreshOptions?: RefreshOptions;
+  requestOptions?: Record<string, unknown>;
+  jsonFilter?: Record<string, unknown>;
+  activationState?: string;
+  missingDependencies?: string[];
+  [key: string]: unknown;
+}
+
+/** Schedule entry for a source */
+interface ScheduleEntry {
+  sourceId: string;
+  intervalMs: number;
+  lastRefresh: number | null;
+  nextRefresh: number | null;
+  retryCount: number;
+  maxRetries: number;
+  backoffFactor: number;
+  failureCount: number;
+  maxConsecutiveFailures: number;
+  alignToMinute: boolean;
+  alignToHour: boolean;
+  alignToDay: boolean;
+  isTemporary?: boolean;
+}
+
+/** Network state event */
+interface NetworkStateEvent {
+  state: {
+    isOnline: boolean;
+    networkQuality?: string;
+    [key: string]: unknown;
+  };
+}
+
+/** HTTP service interface */
+interface HttpService {
+  request: (sourceId: string, sourcePath: string | undefined, sourceMethod: string | undefined, requestOptions: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> }>;
+}
+
+/** Update callback type */
+type OnUpdateCallback = (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => void;
 import NetworkAwareScheduler from './NetworkAwareScheduler';
 import RefreshCoordinator from './RefreshCoordinator';
 import timeManager from './TimeManager';
@@ -74,7 +133,7 @@ class RefreshManager {
     }, 5000); // Changed from 1000ms to 5000ms to reduce overhead
   }
 
-  static normalizeSourceId(sourceId) {
+  static normalizeSourceId(sourceId: string | number | null | undefined): string {
     if (sourceId === null || sourceId === undefined) {
       throw new Error('Invalid sourceId: null or undefined');
     }
@@ -84,13 +143,13 @@ class RefreshManager {
   /**
    * Initialize the refresh manager
    */
-  async initialize(httpService, onUpdateCallback) {
+  async initialize(httpService: HttpService, onUpdateCallback: OnUpdateCallback) {
     if (this.isInitialized) return;
 
     this.httpService = httpService;
     this.onUpdateCallback = onUpdateCallback;
 
-    const scheduleUpdateCallback = (sourceId, schedule) => {
+    const scheduleUpdateCallback = (sourceId: string, schedule: ScheduleEntry) => {
       if (schedule.nextRefresh) {
         this.notifyUI(sourceId, undefined, {
           refreshOptions: {
@@ -142,7 +201,7 @@ class RefreshManager {
     }
   }
 
-  async handleNetworkStateSync(event) {
+  async handleNetworkStateSync(event: NetworkStateEvent) {
     if (!event || !event.state || typeof event.state.isOnline !== 'boolean') {
       log.warn('Invalid network state event received:', event);
       return;
@@ -239,7 +298,7 @@ class RefreshManager {
     timeManager.pauseMonitoring();
   }
 
-  async addSource(source) {
+  async addSource(source: RefreshSource) {
     if (!this.isInitialized || source.sourceType !== 'http') {
       return;
     }
@@ -273,7 +332,7 @@ class RefreshManager {
     }
   }
 
-  async updateSource(source) {
+  async updateSource(source: RefreshSource) {
     if (source.sourceType !== 'http') return;
 
     if (source.activationState === 'waiting_for_deps') {
@@ -406,7 +465,7 @@ class RefreshManager {
     }
   }
 
-  async removeSource(sourceId) {
+  async removeSource(sourceId: string) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     if (!(await this.sources.has(sourceId))) return;
@@ -662,7 +721,7 @@ class RefreshManager {
     return Math.min(timeout, 60000);
   }
 
-  async manualRefresh(sourceId) {
+  async manualRefresh(sourceId: string) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     log.info(`Manual refresh requested for ${sourceId}`);
@@ -677,7 +736,7 @@ class RefreshManager {
   }
 
 
-  getTimeUntilRefresh(sourceId, sourceData = null) {
+  getTimeUntilRefresh(sourceId: string, sourceData: RefreshSource | null = null) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const schedule = this._cachedSchedules.get(sourceId);
@@ -742,7 +801,7 @@ class RefreshManager {
     return 0;
   }
 
-  getRefreshStatus(sourceId) {
+  getRefreshStatus(sourceId: string) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
@@ -776,7 +835,7 @@ class RefreshManager {
   }
 
 
-  notifyUI(sourceId, content, additionalData = {}) {
+  notifyUI(sourceId: string, content: unknown, additionalData: Record<string, unknown> = {}) {
     if (!this.onUpdateCallback) return;
     this.onUpdateCallback(sourceId, content, additionalData);
   }

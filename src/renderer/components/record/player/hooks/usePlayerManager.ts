@@ -21,15 +21,44 @@ import { createLogger } from '../../../../utils/error-handling/logger';
 
 const log = createLogger('usePlayerManager');
 
+interface RecordMetadata {
+    recordId: string;
+    viewport?: { width: number; height: number };
+    [key: string]: unknown;
+}
+
+interface RecordData {
+    metadata: RecordMetadata;
+    events: unknown[];
+    [key: string]: unknown;
+}
+
+interface ProxyStatus {
+    running: boolean;
+    port?: number;
+    rulesCount?: number;
+    sourcesCount?: number;
+}
+
+interface RRWebPlayerInstance {
+    getReplayer: () => { getCurrentTime: () => number; getMetaData: () => { playing?: boolean }; pause: () => void; play: (time?: number) => void } | null;
+    addEventListener: (event: string, handler: (event: { payload: unknown }) => void) => void;
+    _restoreConsole?: () => void;
+    _restoreCreateElement?: () => void;
+    _eventHandlers?: { timeUpdate: ((event: { payload: unknown }) => void) | null; stateUpdate: ((event: { payload: unknown }) => void) | null };
+    $destroy?: () => void;
+    [key: string]: unknown;
+}
+
 export const usePlayerManager = (
-    record,
-    rrwebPlayer,
-    viewMode,
-    autoHighlight,
-    processRecordForProxy,
-    createConsoleOverrides,
-    onPlaybackTimeChange,
-    onPlayingStateChange
+    record: RecordData | null,
+    rrwebPlayer: (new (options: { target: HTMLElement; props: Record<string, unknown> }) => RRWebPlayerInstance) | null,
+    viewMode: string,
+    autoHighlight: boolean,
+    processRecordForProxy: (record: RecordData, proxyStatus: ProxyStatus) => Promise<RecordData>,
+    createConsoleOverrides: () => (() => void),
+    onPlaybackTimeChange: ((time: number) => void) | null,
+    onPlayingStateChange: ((playing: boolean) => void) | null
 ) => {
     const [player, setPlayer] = useState(null);
     const playerContainerRef = useRef(null);
@@ -144,7 +173,7 @@ export const usePlayerManager = (
                 const originalCreateElement = document.createElement;
                 const iframeRefs = [];
                 
-                document.createElement = function(tagName) {
+                document.createElement = function(tagName: string) {
                     const element = originalCreateElement.call(document, tagName);
                     
                     if (tagName.toLowerCase() === 'iframe') {
@@ -298,7 +327,7 @@ export const usePlayerManager = (
                         // Add error handling for missing nodes
                         plugins: [
                             {
-                                handler: (event) => {
+                                handler: (event: Record<string, unknown>) => {
                                     if (event.type === 3 && event.data) { // Incremental snapshot
                                         // Add error boundary for mutations
                                         try {
@@ -313,26 +342,28 @@ export const usePlayerManager = (
                             },
                             // Custom iframe handler plugin
                             {
-                                handler: (event, isSync, context) => {
+                                handler: (event: Record<string, unknown>, _isSync: boolean, _context: unknown) => {
                                     // Handle iframe-related events
                                     if (event.type === 2) { // Full snapshot
                                         // Already handled by preprocessor
                                         return event;
                                     }
-                                    
-                                    if (event.type === 3 && event.data?.source === 0) { // DOM mutation
+
+                                    const eventData = event.data as Record<string, unknown> | undefined;
+                                    if (event.type === 3 && eventData?.source === 0) { // DOM mutation
                                         // Filter out iframe script errors
-                                        if (event.data.adds) {
-                                            event.data.adds = event.data.adds.filter(add => {
-                                                if (add.node?.tagName === 'script' && 
-                                                    add.node?.textContent?.includes('Blocked script execution')) {
+                                        if (eventData.adds) {
+                                            eventData.adds = (eventData.adds as Array<Record<string, unknown>>).filter((add: Record<string, unknown>) => {
+                                                const node = add.node as Record<string, unknown> | undefined;
+                                                if (node?.tagName === 'script' &&
+                                                    (node?.textContent as string | undefined)?.includes('Blocked script execution')) {
                                                     return false;
                                                 }
                                                 return true;
                                             });
                                         }
                                     }
-                                    
+
                                     return event;
                                 }
                             }
@@ -398,10 +429,10 @@ export const usePlayerManager = (
         if (!player || typeof player.addEventListener !== 'function' || !autoHighlight) return;
 
         // Initialize tracking variables
-        let lastTime = null;
+        let lastTime: number | null = null;
 
-        const timeUpdateHandler = (event) => {
-            const time = event.payload;
+        const timeUpdateHandler = (event: { payload: unknown }) => {
+            const time = event.payload as number;
 
             // Only update if time changed by at least 1000ms
             if (lastTime === null || Math.abs(time - lastTime) >= 1000) {
@@ -412,8 +443,8 @@ export const usePlayerManager = (
             }
         };
 
-        const stateUpdateHandler = (event) => {
-            const state = event.payload;
+        const stateUpdateHandler = (event: { payload: unknown }) => {
+            const state = event.payload as { playing?: boolean } | null;
             if (state && typeof state.playing === 'boolean' && callbacksRef.current.onPlayingStateChange) {
                 callbacksRef.current.onPlayingStateChange(state.playing);
             }

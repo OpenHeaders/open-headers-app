@@ -175,7 +175,7 @@ class RefreshManagerIntegration {
         // Resolve headers and other request options
         let resolvedRequestOptions = source.requestOptions ? {...source.requestOptions} : {};
         if (resolvedRequestOptions.headers) {
-            resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers);
+            resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers) as Record<string, string>;
         }
         if (resolvedRequestOptions.body) {
             resolvedRequestOptions.body = envService.resolveTemplate(resolvedRequestOptions.body);

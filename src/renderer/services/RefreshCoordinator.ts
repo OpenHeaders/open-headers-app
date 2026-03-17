@@ -290,7 +290,7 @@ class RefreshCoordinator {
   /**
    * Check if a source is currently refreshing
    */
-  async isRefreshing(sourceId) {
+  async isRefreshing(sourceId: string) {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     return this.activeRefreshes.has(sourceId);
@@ -301,7 +301,7 @@ class RefreshCoordinator {
   /**
    * Update metrics with new refresh duration
    */
-  updateMetrics(duration) {
+  updateMetrics(duration: number) {
     this.metrics.totalRefreshTime += duration;
     this.metrics.averageRefreshTime = 
       this.metrics.totalRefreshTime / (this.metrics.successfulRefreshes || 1);

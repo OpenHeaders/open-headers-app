@@ -12,6 +12,65 @@ import PermissionAlert from './PermissionAlert';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SettingsModal');
 
+/** Settings values managed by the modal */
+interface SettingsValues {
+    theme?: string;
+    compactMode?: boolean;
+    launchAtLogin?: boolean;
+    hideOnLaunch?: boolean;
+    autoHighlightTableEntries?: boolean;
+    autoScrollTableEntries?: boolean;
+    videoRecording?: boolean;
+    videoQuality?: string;
+    recordingHotkeyEnabled?: boolean;
+    developerMode?: boolean;
+    pendingVideoRecording?: boolean;
+    [key: string]: unknown;
+}
+
+/** Initial action to perform when modal opens */
+interface InitialAction {
+    action: string;
+    value: unknown;
+}
+
+/** Permission check result */
+interface PermissionCheck {
+    platform: string;
+    [key: string]: unknown;
+}
+
+/** Permission request result */
+interface PermissionRequest {
+    success: boolean;
+    hasPermission?: boolean;
+    platform: string;
+    needsManualGrant?: boolean;
+    error?: string;
+    [key: string]: unknown;
+}
+
+/** Permission alert configuration */
+interface PermissionAlertConfig {
+    type: string;
+    message: string;
+    description: string;
+    action: {
+        text: string;
+        onClick: () => void;
+    };
+}
+
+/** Props for the SettingsModal component */
+interface SettingsModalProps {
+    open: boolean;
+    settings: SettingsValues;
+    onCancel: () => void;
+    onSave: (values: SettingsValues) => void;
+    initialTab?: string;
+    initialAction?: InitialAction;
+}
+
 // Modal styles configuration
 const modalStyles = {
     modal: {
@@ -59,7 +118,7 @@ const modalStyles = {
  * @param {string} initialAction.action - Action type (e.g., 'toggleVideoRecording')
  * @param {*} initialAction.value - Action value
  */
-const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAction }) => {
+const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAction }: SettingsModalProps) => {
     // Form state management
     const [formValues, setFormValues] = useState(settings || {});
     const { themeMode, isCompactMode } = useTheme();
@@ -145,7 +204,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
      * @param {boolean} autoSave - Whether to auto-save after successful change
      * @returns {Promise<boolean>} True if the field was successfully changed
      */
-    const handleFieldChange = async (fieldName, value, autoSave = false) => {
+    const handleFieldChange = async (fieldName: string, value: unknown, autoSave = false): Promise<boolean> => {
         // Handle screen recording permission for video recording
         if (fieldName === 'videoRecording' && value) {
             try {
@@ -212,7 +271,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
      * @param {Object} permissionCheck - Initial permission check result
      * @param {Object} permissionRequest - Permission request result
      */
-    const handlePermissionDenied = (permissionCheck, permissionRequest) => {
+    const handlePermissionDenied = (permissionCheck: PermissionCheck, permissionRequest: PermissionRequest) => {
         log.warn('Screen recording permission denied');
         
         // Update permission state
@@ -255,7 +314,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
      * @param {*} value - New value
      * @returns {Object} Updated form values with dependencies applied
      */
-    const applySettingDependencies = (newValues, fieldName, value) => {
+    const applySettingDependencies = (newValues: SettingsValues, fieldName: string, value: unknown): SettingsValues => {
         const updatedValues = { ...newValues };
 
         // Dependency: if launchAtLogin is false, hideOnLaunch must be false
@@ -283,7 +342,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
      * Handle form submission with specific values
      * @param {Object} valuesToSave - Optional specific values to save (defaults to formValues)
      */
-    const handleSubmitWithValues = (valuesToSave) => {
+    const handleSubmitWithValues = (valuesToSave?: SettingsValues) => {
         try {
             // Use provided values or current form values
             let finalValues = { ...(valuesToSave || formValues) };

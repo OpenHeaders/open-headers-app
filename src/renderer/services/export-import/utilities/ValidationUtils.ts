@@ -15,6 +15,26 @@
 
 import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig';
 
+/** Validation result returned by all validation functions */
+interface ValidationResult {
+  success: boolean;
+  error?: string;
+  warning?: string;
+  warnings?: string[];
+  data?: Record<string, unknown>;
+}
+
+/** Import payload structure */
+interface ImportPayload {
+  version?: string;
+  workspace?: Record<string, unknown>;
+  sources?: Array<Record<string, unknown>>;
+  proxyRules?: Array<Record<string, unknown>>;
+  rules?: Record<string, Array<Record<string, unknown>>>;
+  environmentSchema?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 /**
  * Validates the basic structure of import data
  * 
@@ -24,7 +44,7 @@ import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig';
  * @param {any} data - The data to validate
  * @returns {Object} - Validation result with success flag and error message
  */
-export function validateImportData(data) {
+export function validateImportData(data: unknown): ValidationResult {
   if (!data || typeof data !== 'object') {
     return {
       success: false,
@@ -51,7 +71,7 @@ export function validateImportData(data) {
  * @param {string} fileContent - Raw file content
  * @returns {Object} - Validation result with parsed data or error
  */
-export function validateAndParseFileContent(fileContent) {
+export function validateAndParseFileContent(fileContent: string): ValidationResult {
   try {
     if (!fileContent || typeof fileContent !== 'string') {
       return {
@@ -88,14 +108,15 @@ export function validateAndParseFileContent(fileContent) {
  * @param {Object} workspace - Workspace configuration object
  * @returns {Object} - Validation result
  */
-export function validateWorkspaceConfig(workspace) {
-  if (!workspace || typeof workspace !== 'object') {
+export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResult {
+  if (!workspaceInput || typeof workspaceInput !== 'object') {
     return {
       success: false,
       error: 'Workspace configuration is required and must be an object'
     };
   }
 
+  const workspace = workspaceInput as Record<string, unknown>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.WORKSPACE;
   for (const field of requiredFields) {
     if (!workspace[field]) {
@@ -106,7 +127,7 @@ export function validateWorkspaceConfig(workspace) {
     }
   }
 
-  if (workspace.name && workspace.name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
+  if (workspace.name && typeof workspace.name === 'string' && workspace.name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
     return {
       success: false,
       error: `Workspace name exceeds maximum length of ${VALIDATION_RULES.MAX_NAME_LENGTH} characters`
@@ -121,13 +142,15 @@ export function validateWorkspaceConfig(workspace) {
  * @param {Object} variable - Environment variable object
  * @returns {Object} - Validation result
  */
-export function validateEnvironmentVariable(variable) {
-  if (!variable || typeof variable !== 'object') {
+export function validateEnvironmentVariable(variableInput: unknown): ValidationResult {
+  if (!variableInput || typeof variableInput !== 'object') {
     return {
       success: false,
       error: 'Environment variable must be an object'
     };
   }
+
+  const variable = variableInput as Record<string, unknown>;
 
   if (!variable.name || typeof variable.name !== 'string') {
     return {
@@ -136,7 +159,8 @@ export function validateEnvironmentVariable(variable) {
     };
   }
 
-  if (variable.name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
+  const varName = variable.name as string;
+  if (varName.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
     return {
       success: false,
       error: `Variable name exceeds maximum length of ${VALIDATION_RULES.MAX_NAME_LENGTH} characters`
@@ -151,17 +175,19 @@ export function validateEnvironmentVariable(variable) {
  * @param {Object} rule - Proxy rule object
  * @returns {Object} - Validation result
  */
-export function validateProxyRule(rule) {
-  if (!rule || typeof rule !== 'object') {
+export function validateProxyRule(ruleInput: unknown): ValidationResult {
+  if (!ruleInput || typeof ruleInput !== 'object') {
     return {
       success: false,
       error: 'Proxy rule must be an object'
     };
   }
 
+  const rule = ruleInput as Record<string, unknown>;
+
   // Proxy rules can be either static (with domains) or dynamic (with headerRuleId)
   const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
-  const isStaticRule = rule.isDynamic === false || (rule.domains && rule.domains.length > 0);
+  const isStaticRule = rule.isDynamic === false || (rule.domains && Array.isArray(rule.domains) && rule.domains.length > 0);
 
   if (!isDynamicRule && !isStaticRule) {
     return {
@@ -208,14 +234,15 @@ export function validateProxyRule(rule) {
  * @param {Object} source - Source object
  * @returns {Object} - Validation result
  */
-export function validateSource(source) {
-  if (!source || typeof source !== 'object') {
+export function validateSource(sourceInput: unknown): ValidationResult {
+  if (!sourceInput || typeof sourceInput !== 'object') {
     return {
       success: false,
       error: 'Source must be an object'
     };
   }
 
+  const source = sourceInput as Record<string, unknown>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.SOURCE;
   for (const field of requiredFields) {
     if (!source[field]) {
@@ -277,7 +304,7 @@ export function validateSource(source) {
  * @param {string} version - Version string to validate
  * @returns {Object} - Validation result
  */
-export function validateVersion(version) {
+export function validateVersion(version: string): ValidationResult {
   if (!version || typeof version !== 'string') {
     return {
       success: false,
@@ -300,13 +327,15 @@ export function validateVersion(version) {
  * @param {Object} schema - Environment schema object
  * @returns {Object} - Validation result
  */
-export function validateEnvironmentSchema(schema) {
-  if (!schema || typeof schema !== 'object') {
+export function validateEnvironmentSchema(schemaInput: unknown): ValidationResult {
+  if (!schemaInput || typeof schemaInput !== 'object') {
     return {
       success: false,
       error: 'Environment schema must be an object'
     };
   }
+
+  const schema = schemaInput as Record<string, unknown>;
 
   if (schema.environments && typeof schema.environments !== 'object') {
     return {
@@ -337,7 +366,7 @@ export function validateEnvironmentSchema(schema) {
  * @param {Object} payload - Complete import payload
  * @returns {Object} - Comprehensive validation result with aggregated errors/warnings
  */
-export function validateImportPayload(payload) {
+export function validateImportPayload(payload: ImportPayload): ValidationResult {
   const errors = [];
   const warnings = [];
 
@@ -367,7 +396,7 @@ export function validateImportPayload(payload) {
 
   // Sources validation
   if (payload.sources && Array.isArray(payload.sources)) {
-    payload.sources.forEach((source, index) => {
+    payload.sources.forEach((source: Record<string, unknown>, index: number) => {
       const sourceValidation = validateSource(source);
       if (!sourceValidation.success) {
         errors.push(`Source ${index + 1} validation failed: ${sourceValidation.error}`);
@@ -377,7 +406,7 @@ export function validateImportPayload(payload) {
 
   // Proxy rules validation
   if (payload.proxyRules && Array.isArray(payload.proxyRules)) {
-    payload.proxyRules.forEach((rule, index) => {
+    payload.proxyRules.forEach((rule: Record<string, unknown>, index: number) => {
       const ruleValidation = validateProxyRule(rule);
       if (!ruleValidation.success) {
         errors.push(`Proxy rule ${index + 1} validation failed: ${ruleValidation.error}`);

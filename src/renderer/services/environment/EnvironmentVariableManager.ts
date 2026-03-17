@@ -25,7 +25,7 @@ class EnvironmentVariableManager {
   /**
    * Set variable in an environment
    */
-  setVariable(environments, environmentName, name, value, isSecret = false) {
+  setVariable(environments: Record<string, Record<string, { value: string; isSecret: boolean; updatedAt: string }>>, environmentName: string, name: string, value: string | null, isSecret = false) {
     // Deep copy to avoid mutations
     const updatedEnvironments = JSON.parse(JSON.stringify(environments));
     
@@ -54,7 +54,7 @@ class EnvironmentVariableManager {
   /**
    * Create a new environment
    */
-  createEnvironment(environments, name) {
+  createEnvironment(environments: Record<string, Record<string, unknown>>, name: string) {
     if (environments[name]) {
       throw new Error(`Environment '${name}' already exists`);
     }
@@ -71,7 +71,7 @@ class EnvironmentVariableManager {
   /**
    * Delete an environment
    */
-  deleteEnvironment(environments, name) {
+  deleteEnvironment(environments: Record<string, Record<string, unknown>>, name: string) {
     if (name === 'Default') {
       throw new Error('Cannot delete Default environment');
     }
@@ -86,7 +86,7 @@ class EnvironmentVariableManager {
   /**
    * Validate environment exists
    */
-  validateEnvironmentExists(environments, name) {
+  validateEnvironmentExists(environments: Record<string, Record<string, unknown>>, name: string) {
     if (!environments[name]) {
       throw new Error(`Environment '${name}' does not exist`);
     }
@@ -95,7 +95,7 @@ class EnvironmentVariableManager {
   /**
    * Get variable count for an environment
    */
-  getVariableCount(environments, environmentName) {
+  getVariableCount(environments: Record<string, Record<string, unknown>>, environmentName: string) {
     const env = environments[environmentName];
     return env ? Object.keys(env).length : 0;
   }

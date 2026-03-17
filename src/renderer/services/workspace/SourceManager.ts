@@ -14,6 +14,25 @@ interface EnvironmentService {
   getAllVariables: () => Record<string, string>;
 }
 
+/** Source data configuration */
+interface SourceData {
+  sourceId?: string;
+  sourceType: string;
+  sourcePath: string;
+  sourceMethod?: string;
+  sourceName?: string;
+  requestOptions?: Record<string, unknown>;
+  jsonFilter?: {
+    path?: string;
+    [key: string]: unknown;
+  };
+  refreshOptions?: Record<string, unknown>;
+  activationState?: string;
+  missingDependencies?: string[];
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
 class SourceManager {
   storageAPI: StorageAPI;
   environmentService: EnvironmentService;
@@ -26,7 +45,7 @@ class SourceManager {
   /**
    * Load sources for a workspace
    */
-  async loadSources(workspaceId) {
+  async loadSources(workspaceId: string) {
     try {
       const data = await this.storageAPI.loadFromStorage(`workspaces/${workspaceId}/sources.json`);
       if (!data) return [];
@@ -63,7 +82,7 @@ class SourceManager {
   /**
    * Save sources
    */
-  async saveSources(workspaceId, sources) {
+  async saveSources(workspaceId: string, sources: SourceData[]) {
     try {
       const path = `workspaces/${workspaceId}/sources.json`;
       await this.storageAPI.saveToStorage(path, JSON.stringify(sources));
@@ -77,9 +96,9 @@ class SourceManager {
   /**
    * Add a new source
    */
-  async addSource(sources, sourceData) {
+  async addSource(sources: SourceData[], sourceData: SourceData) {
     // Check for duplicates
-    const isDuplicate = sources.some(src =>
+    const isDuplicate = sources.some((src: SourceData) =>
       src.sourceType === sourceData.sourceType &&
       src.sourcePath === sourceData.sourcePath &&
       (sourceData.sourceType !== 'http' || src.sourceMethod === sourceData.sourceMethod)
@@ -90,7 +109,7 @@ class SourceManager {
     }
 
     // Generate ID
-    const maxId = sources.reduce((max, src) => {
+    const maxId = sources.reduce((max: number, src: SourceData) => {
       const id = parseInt(src.sourceId);
       return id > max ? id : max;
     }, 0);
@@ -119,12 +138,12 @@ class SourceManager {
   /**
    * Extract environment variables from source configuration
    */
-  extractVariablesFromSource(source) {
+  extractVariablesFromSource(source: SourceData): string[] {
     const variables = new Set<string>();
     const variablePattern = /\{\{(\w+)\}\}/g;
     
     // Helper to extract from any string
-    const extractFromString = (str) => {
+    const extractFromString = (str: string) => {
       if (typeof str === 'string') {
         const matches = [...str.matchAll(variablePattern)];
         matches.forEach(match => variables.add(match[1]));
@@ -132,13 +151,13 @@ class SourceManager {
     };
     
     // Helper to extract from object recursively
-    const extractFromObject = (obj) => {
+    const extractFromObject = (obj: unknown) => {
       if (!obj || typeof obj !== 'object') return;
-      
+
       if (Array.isArray(obj)) {
-        obj.forEach(item => extractFromObject(item));
+        obj.forEach((item: unknown) => extractFromObject(item));
       } else {
-        Object.values(obj).forEach(value => {
+        Object.values(obj as Record<string, unknown>).forEach((value: unknown) => {
           if (typeof value === 'string') {
             extractFromString(value);
           } else if (typeof value === 'object') {
@@ -167,7 +186,7 @@ class SourceManager {
   /**
    * Evaluate if a source has all required dependencies
    */
-  async evaluateSourceDependencies(source) {
+  async evaluateSourceDependencies(source: SourceData) {
     if (source.sourceType !== 'http') {
       return { ready: true, missing: [] };
     }
@@ -203,7 +222,7 @@ class SourceManager {
   /**
    * Check and activate sources that have their dependencies met
    */
-  async activateReadySources(sources) {
+  async activateReadySources(sources: SourceData[]) {
     let activatedCount = 0;
     const updatedSources = [...sources];
     let hasChanges = false;

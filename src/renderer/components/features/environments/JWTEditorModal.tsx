@@ -21,17 +21,16 @@ const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
-/**
- * JWT Editor Modal Component
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Modal visibility
- * @param {string} props.variableName - Name of the variable being edited
- * @param {string} props.initialValue - Initial JWT token value
- * @param {boolean} props.isSecret - Whether the variable is a secret
- * @param {Function} props.onSave - Save callback with new token value and type
- * @param {Function} props.onCancel - Cancel callback
- */
-const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initialIsSecret, onSave, onCancel }) => {
+interface JWTEditorModalProps {
+    visible: boolean;
+    variableName: string;
+    initialValue: string;
+    isSecret: boolean;
+    onSave: (token: string, isSecret: boolean) => void;
+    onCancel: () => void;
+}
+
+const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, initialValue, isSecret: initialIsSecret, onSave, onCancel }) => {
   const { token } = theme.useToken();
   const [decodedHeader, setDecodedHeader] = useState('');
   const [decodedPayload, setDecodedPayload] = useState('');
@@ -97,7 +96,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Update the encoded token (with or without signing)
    */
-  const updateEncodedToken = async (headerObj, payloadObj) => {
+  const updateEncodedToken = async (headerObj: Record<string, unknown>, payloadObj: Record<string, unknown>) => {
     try {
       let newToken;
       
@@ -127,7 +126,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle header changes
    */
-  const handleHeaderChange = async (e) => {
+  const handleHeaderChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newHeader = e.target.value;
     setDecodedHeader(newHeader);
     
@@ -147,7 +146,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle payload changes
    */
-  const handlePayloadChange = async (e) => {
+  const handlePayloadChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newPayload = e.target.value;
     setDecodedPayload(newPayload);
     
@@ -171,7 +170,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle secret key changes
    */
-  const handleSecretKeyChange = async (e) => {
+  const handleSecretKeyChange = async (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const newSecret = e.target.value;
     setSecretKey(newSecret);
     
@@ -189,7 +188,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle toggle for using secret key
    */
-  const handleUseSecretKeyToggle = async (checked) => {
+  const handleUseSecretKeyToggle = async (checked: boolean) => {
     setUseSecretKey(checked);
     setSigningError(null);
     
@@ -205,7 +204,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle algorithm change
    */
-  const handleAlgorithmChange = async (value) => {
+  const handleAlgorithmChange = async (value: string) => {
     setAlgorithm(value);
     
     // Update the header to reflect the new algorithm
@@ -227,7 +226,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Format JSON on blur for better readability
    */
-  const formatOnBlur = (type) => {
+  const formatOnBlur = (type: 'header' | 'payload') => {
     try {
       if (type === 'header') {
         const headerObj = validateJSON(decodedHeader);
@@ -246,7 +245,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle encoded token input changes
    */
-  const handleEncodedInputChange = (e) => {
+  const handleEncodedInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newToken = e.target.value;
     setEncodedInput(newToken);
     setEncodedInputError(null);
@@ -282,7 +281,7 @@ const JWTEditorModal = ({ visible, variableName, initialValue, isSecret: initial
   /**
    * Handle mode switch
    */
-  const handleModeSwitch = (mode) => {
+  const handleModeSwitch = (mode: string) => {
     setEditMode(mode);
     
     // If switching to encoded mode, sync the encoded input with current encoded token
