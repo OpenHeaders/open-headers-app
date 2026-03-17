@@ -1,7 +1,7 @@
 // Video services exports
 module.exports = {
-  ffmpegManager: require('./ffmpeg-manager'),
-  videoCaptureService: require('./video-capture-service'),
-  videoConverter: require('./video-converter'),
-  videoExportManager: require('./video-export-manager')
+  FFmpegManager: require('./ffmpeg-manager').FFmpegManager,
+  VideoCaptureService: require('./video-capture-service').VideoCaptureService,
+  VideoConverter: require('./video-converter').VideoConverter,
+  videoExportManager: require('./video-export-manager').videoExportManager
 };

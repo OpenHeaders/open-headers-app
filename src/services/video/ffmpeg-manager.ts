@@ -1,31 +1,63 @@
-const { app, dialog } = require('electron');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
-const AdmZip = require('adm-zip');
-const tar = require('tar');
-const { createLogger } = require('../../utils/mainLogger');
+import electron from 'electron';
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
+import child_process from 'child_process';
+import AdmZip from 'adm-zip';
+import * as tar from 'tar';
+import mainLogger from '../../utils/mainLogger.js';
+
+const { app, dialog } = electron;
+const { exec } = child_process;
+const { createLogger } = mainLogger;
 
 const log = createLogger('FFmpegManager');
+
+interface DownloadCallback {
+    resolve: (value: string) => void;
+    reject: (reason: Error) => void;
+}
+
+interface DownloadProgress {
+    percent: number;
+    downloaded: number;
+    total: number;
+}
+
+interface ExecResult {
+    stdout: string;
+    stderr: string;
+}
+
+interface FFmpegCheckResult {
+    available: boolean;
+    path?: string;
+    isSystem?: boolean;
+}
 
 /**
  * FFmpeg Manager for on-demand installation and management
  */
 class FFmpegManager {
+    ffmpegPath: string | null = null;
+    platform: string = process.platform;
+    ffmpegDir: string = '';
+    isDownloading: boolean = false;
+    downloadCallbacks: DownloadCallback[] = [];
+
     constructor() {
-        this.ffmpegPath = null;
-        this.platform = process.platform;
-        this.ffmpegDir = path.join(app.getPath('userData'), 'ffmpeg');
-        this.isDownloading = false;
-        this.downloadCallbacks = [];
+        try {
+            this.ffmpegDir = path.join(app.getPath('userData'), 'ffmpeg');
+        } catch {
+            // Outside Electron (tests) — use temp path
+            this.ffmpegDir = path.join('/tmp', 'ffmpeg');
+        }
     }
 
     /**
      * Check if FFmpeg is available
-     * @returns {Object} Availability status
      */
-    async checkFFmpeg() {
+    async checkFFmpeg(): Promise<FFmpegCheckResult> {
         // First, check if we already downloaded FFmpeg
         const localFFmpeg = this.getLocalFFmpegPath();
         if (fs.existsSync(localFFmpeg)) {
@@ -35,7 +67,7 @@ class FFmpegManager {
                 this.ffmpegPath = localFFmpeg;
                 log.info('Found local FFmpeg at:', localFFmpeg);
                 return { available: true, path: localFFmpeg };
-            } catch (error) {
+            } catch (error: any) {
                 log.warn('Local FFmpeg found but not working, removing:', error.message);
                 try {
                     await fs.promises.unlink(localFFmpeg);
@@ -59,17 +91,16 @@ class FFmpegManager {
 
     /**
      * Find system FFmpeg installation
-     * @returns {string|null} FFmpeg path or null
      */
-    async findSystemFFmpeg() {
-        const paths = process.platform === 'win32' 
+    async findSystemFFmpeg(): Promise<string | null> {
+        const paths = process.platform === 'win32'
             ? ['ffmpeg.exe', 'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe', 'C:\\ffmpeg\\bin\\ffmpeg.exe']
             : ['/opt/homebrew/bin/ffmpeg', '/usr/local/bin/ffmpeg', '/usr/bin/ffmpeg', 'ffmpeg'];
-        
+
         for (const ffmpegPath of paths) {
             try {
                 const result = await this.execPromise(`"${ffmpegPath}" -version`);
-                log.info('Found system FFmpeg:', ffmpegPath, 'Version:', result.stdout.split('\n')[0]);
+                log.info(`Found system FFmpeg: ${ffmpegPath} Version: ${result.stdout.split('\n')[0]}`);
                 return ffmpegPath;
             } catch (e) {
                 log.debug('FFmpeg not found at:', ffmpegPath);
@@ -81,23 +112,22 @@ class FFmpegManager {
 
     /**
      * Get local FFmpeg path
-     * @returns {string} Local FFmpeg path
      */
-    getLocalFFmpegPath() {
+    getLocalFFmpegPath(): string {
         const filename = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
         return path.join(this.ffmpegDir, filename);
     }
 
     /**
      * Download FFmpeg with progress callback
-     * @param {Function} progressCallback Progress callback function
-     * @param {Function} phaseCallback Phase callback function
-     * @returns {Promise<string>} FFmpeg path
      */
-    async downloadFFmpeg(progressCallback, phaseCallback) {
+    async downloadFFmpeg(
+        progressCallback?: (progress: DownloadProgress) => void,
+        phaseCallback?: (phase: string) => void
+    ): Promise<string> {
         // If already downloading, wait for it
         if (this.isDownloading) {
-            return new Promise((resolve, reject) => {
+            return new Promise<string>((resolve, reject) => {
                 this.downloadCallbacks.push({ resolve, reject });
             });
         }
@@ -109,8 +139,8 @@ class FFmpegManager {
             // Determine the correct file based on platform and architecture
             const platform = process.platform;
             const arch = process.arch;
-            let filename;
-            
+            let filename: string;
+
             if (platform === 'darwin') {
                 filename = arch === 'arm64' ? 'ffmpeg-macos-arm64.zip' : 'ffmpeg-macos-x64.zip';
             } else if (platform === 'win32') {
@@ -126,14 +156,14 @@ class FFmpegManager {
 
             // Create directory
             await fs.promises.mkdir(this.ffmpegDir, { recursive: true });
-            
+
             // Clean up any existing files to ensure fresh extraction
             try {
                 const existingFiles = await fs.promises.readdir(this.ffmpegDir);
                 for (const file of existingFiles) {
                     // Skip temp files that might be in use
                     if (file.startsWith('ffmpeg-temp')) continue;
-                    
+
                     const filePath = path.join(this.ffmpegDir, file);
                     const stat = await fs.promises.stat(filePath);
                     if (stat.isDirectory()) {
@@ -165,7 +195,7 @@ class FFmpegManager {
             }
 
             this.ffmpegPath = this.getLocalFFmpegPath();
-            
+
             // Verify FFmpeg works
             if (phaseCallback) phaseCallback('verifying');
             await this.verifyFFmpeg();
@@ -173,16 +203,16 @@ class FFmpegManager {
             log.info('FFmpeg downloaded and verified successfully');
 
             // Notify all waiting callbacks
-            this.downloadCallbacks.forEach(cb => cb.resolve(this.ffmpegPath));
-            
+            this.downloadCallbacks.forEach(cb => cb.resolve(this.ffmpegPath!));
+
             return this.ffmpegPath;
 
-        } catch (error) {
+        } catch (error: any) {
             log.error('Failed to download FFmpeg:', error);
-            
+
             // Notify all waiting callbacks
             this.downloadCallbacks.forEach(cb => cb.reject(error));
-            
+
             throw error;
         } finally {
             this.isDownloading = false;
@@ -192,22 +222,22 @@ class FFmpegManager {
 
     /**
      * Download file with progress
-     * @param {string} url URL to download
-     * @param {string} destination Destination path
-     * @param {Function} progressCallback Progress callback
-     * @returns {Promise<void>}
      */
-    async downloadFile(url, destination, progressCallback) {
-        return new Promise((resolve, reject) => {
+    async downloadFile(
+        url: string,
+        destination: string,
+        progressCallback?: (progress: DownloadProgress) => void
+    ): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
             const file = fs.createWriteStream(destination);
             let downloadedSize = 0;
-            
-            const makeRequest = (urlToFollow) => {
+
+            const makeRequest = (urlToFollow: string) => {
                 https.get(urlToFollow, (response) => {
                     // Handle redirects
                     if (response.statusCode === 302 || response.statusCode === 301) {
                         response.destroy();
-                        makeRequest(response.headers.location);
+                        makeRequest(response.headers.location!);
                         return;
                     }
 
@@ -218,9 +248,9 @@ class FFmpegManager {
                         return;
                     }
 
-                    const totalSize = parseInt(response.headers['content-length'], 10);
+                    const totalSize = parseInt(response.headers['content-length'] as string, 10);
 
-                    response.on('data', (chunk) => {
+                    response.on('data', (chunk: Buffer) => {
                         downloadedSize += chunk.length;
                         if (progressCallback && totalSize) {
                             progressCallback({
@@ -258,12 +288,10 @@ class FFmpegManager {
 
     /**
      * Extract FFmpeg from archive
-     * @param {string} archivePath Archive path
-     * @returns {Promise<void>}
      */
-    async extractFFmpeg(archivePath) {
+    async extractFFmpeg(archivePath: string): Promise<void> {
         const ext = path.extname(archivePath);
-        
+
         if (ext === '.zip') {
             // Windows and macOS
             await this.extractZip(archivePath);
@@ -277,64 +305,62 @@ class FFmpegManager {
 
     /**
      * Extract ZIP file
-     * @param {string} archivePath ZIP file path
-     * @returns {Promise<void>}
      */
-    async extractZip(archivePath) {
+    async extractZip(archivePath: string): Promise<void> {
         const zip = new AdmZip(archivePath);
-        
+
         // Extract all contents to maintain directory structure
         zip.extractAllTo(this.ffmpegDir, true);
         log.info('Extracted all files to:', this.ffmpegDir);
-        
+
         // Check if extraction created a nested directory (e.g., ffmpeg-macos-arm64-bundle)
         const extractedItems = await fs.promises.readdir(this.ffmpegDir);
-        const bundleDir = extractedItems.find(item => 
+        const bundleDir = extractedItems.find(item =>
             item.includes('ffmpeg') && item.includes('bundle')
         );
-        
+
         if (bundleDir) {
             // Move contents from bundle directory to parent
             const bundlePath = path.join(this.ffmpegDir, bundleDir);
             const bundleContents = await fs.promises.readdir(bundlePath);
-            
+
             log.info(`Found bundle directory: ${bundleDir}, moving contents up`);
-            
+
             for (const item of bundleContents) {
                 const sourcePath = path.join(bundlePath, item);
                 const destPath = path.join(this.ffmpegDir, item);
-                
+
                 // Remove destination if it exists
                 try {
                     await fs.promises.rm(destPath, { recursive: true, force: true });
                 } catch (e) {
                     // Ignore errors
                 }
-                
+
                 // Move item
                 await fs.promises.rename(sourcePath, destPath);
             }
-            
+
             // Remove empty bundle directory
             await fs.promises.rmdir(bundlePath);
             log.info('Moved bundle contents to ffmpeg directory');
         }
-        
+
         // Verify the ffmpeg binary exists
         const ffmpegPath = this.getLocalFFmpegPath();
         if (!await this.fileExists(ffmpegPath)) {
             throw new Error('FFmpeg executable not found after extraction');
         }
-        
+
         // Make ffmpeg executable
         await fs.promises.chmod(ffmpegPath, '755');
-        
+
         // For macOS, also check if libs directory exists (for bundled dylibs)
         if (process.platform === 'darwin') {
             const libsPath = path.join(this.ffmpegDir, 'libs');
             if (await this.fileExists(libsPath)) {
                 log.info('Found libs directory for macOS dynamic libraries');
-                
+
                 // Make all .dylib files executable
                 const libFiles = await fs.promises.readdir(libsPath);
                 for (const libFile of libFiles) {
@@ -345,16 +371,14 @@ class FFmpegManager {
                 }
             }
         }
-        
+
         log.info('FFmpeg extraction completed successfully');
     }
 
     /**
      * Extract TAR file
-     * @param {string} archivePath TAR file path
-     * @returns {Promise<void>}
      */
-    async extractTar(archivePath) {
+    async extractTar(archivePath: string): Promise<void> {
         // Extract all contents to maintain directory structure
         await tar.x({
             file: archivePath,
@@ -366,14 +390,14 @@ class FFmpegManager {
         if (!await this.fileExists(ffmpegPath)) {
             throw new Error('FFmpeg executable not found after extraction');
         }
-        
+
         log.info('Extracted FFmpeg to:', ffmpegPath);
-        
+
         // For Linux, check if libs directory exists (for bundled libraries)
         const libsPath = path.join(this.ffmpegDir, 'libs');
         if (await this.fileExists(libsPath)) {
             log.info('Found libs directory for Linux shared libraries');
-            
+
             // Make all .so files executable
             const libFiles = await fs.promises.readdir(libsPath);
             for (const libFile of libFiles) {
@@ -387,13 +411,11 @@ class FFmpegManager {
 
     /**
      * Find files recursively
-     * @param {string} dir Directory path
-     * @returns {Promise<string[]>} File paths
      */
-    async findFilesRecursive(dir) {
-        const files = [];
+    async findFilesRecursive(dir: string): Promise<string[]> {
+        const files: string[] = [];
         const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
             if (entry.isDirectory()) {
@@ -402,15 +424,14 @@ class FFmpegManager {
                 files.push(fullPath);
             }
         }
-        
+
         return files;
     }
 
     /**
      * Verify FFmpeg installation
-     * @returns {Promise<void>}
      */
-    async verifyFFmpeg() {
+    async verifyFFmpeg(): Promise<void> {
         const result = await this.execPromise(`"${this.ffmpegPath}" -version`);
         if (!result.stdout.includes('ffmpeg version')) {
             throw new Error('FFmpeg verification failed');
@@ -420,10 +441,8 @@ class FFmpegManager {
 
     /**
      * Execute command as promise
-     * @param {string} command Command to execute
-     * @returns {Promise<Object>} Result with stdout and stderr
      */
-    execPromise(command) {
+    execPromise(command: string): Promise<ExecResult> {
         return new Promise((resolve, reject) => {
             exec(command, (error, stdout, stderr) => {
                 if (error) reject(error);
@@ -434,18 +453,15 @@ class FFmpegManager {
 
     /**
      * Get FFmpeg path
-     * @returns {string|null} FFmpeg path
      */
-    getFFmpegPath() {
+    getFFmpegPath(): string | null {
         return this.ffmpegPath;
     }
 
     /**
      * Check if file exists
-     * @param {string} filePath File path
-     * @returns {Promise<boolean>} True if exists
      */
-    async fileExists(filePath) {
+    async fileExists(filePath: string): Promise<boolean> {
         try {
             await fs.promises.access(filePath);
             return true;
@@ -455,4 +471,5 @@ class FFmpegManager {
     }
 }
 
-module.exports = FFmpegManager;
+export { FFmpegManager };
+export default FFmpegManager;
