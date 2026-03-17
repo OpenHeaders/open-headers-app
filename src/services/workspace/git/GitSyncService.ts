@@ -32,11 +32,11 @@ import GitCleanupManager from './utils/GitCleanupManager';
 import { GitErrorHandler } from './utils/GitErrorHandler';
 
 // Config modules
-const ConfigFileDetector = require('../ConfigFileDetector');
-const ConfigFileValidator = require('../config-file-validator');
+const { ConfigFileDetector } = require('../ConfigFileDetector');
+const { ConfigFileValidator } = require('../config-file-validator');
 
 // Legacy support
-const GitAutoInstaller = require('../git-auto-installer');
+const { GitAutoInstaller } = require('../git-auto-installer');
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
