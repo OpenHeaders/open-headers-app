@@ -35,6 +35,23 @@ const { Text } = Typography;
  * @param {Function} props.onDeleteVariable - Callback to delete variable
  * @param {Object} props.form - Ant Design form instance
  */
+interface VariableMetadata {
+    value: string;
+    isSecret: boolean;
+}
+
+interface VariableTableProps {
+    variablesWithMetadata: Record<string, VariableMetadata>;
+    missingVariables: string[];
+    variableUsage: Record<string, string[]>;
+    sources: any[];
+    rules: any[];
+    onAddVariable: (name: string, value: string, isSecret: boolean) => void;
+    onEditVariable: (name: string, value: string, isSecret: boolean) => void;
+    onDeleteVariable: (name: string) => void;
+    form: any;
+}
+
 const VariableTable = ({
   variablesWithMetadata,
   missingVariables,
@@ -45,7 +62,7 @@ const VariableTable = ({
   onEditVariable,
   onDeleteVariable,
   form
-}) => {
+}: VariableTableProps) => {
   const [editingKey, setEditingKey] = useState('');
   const [showSensitive, setShowSensitive] = useState({});
   const [jwtModalVisible, setJwtModalVisible] = useState(false);

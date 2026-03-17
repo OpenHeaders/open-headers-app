@@ -144,7 +144,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
                 
                 // Create a virtual file for the environment data
                 const envContent = JSON.stringify(preloadedEnvData);
-                const virtualFile = new Blob([envContent], { type: 'application/json' });
+                const virtualFile = new Blob([envContent], { type: 'application/json' }) as Blob & { name: string };
                 virtualFile.name = 'imported-environment.json';
                 
                 // Set up the file info
@@ -330,8 +330,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
             // Handle separate files mode where only environment file is selected
             if (fileMode === 'separate' && !files.sources && files.environments) {
                 const envData = files.environments.analysis.rawData;
-                const filteredEnvData = {};
-                
+                const filteredEnvData: Record<string, any> = {};
+
                 if (selectedItems.environments) {
                     if (envData.environmentSchema) {
                         filteredEnvData.environmentSchema = envData.environmentSchema;
@@ -372,8 +372,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
             const envData = files.environments?.analysis?.rawData;
             
             // Create filtered data based on selected items
-            const filteredMainData = {};
-            const filteredEnvData = {};
+            const filteredMainData: Record<string, any> = {};
+            const filteredEnvData: Record<string, any> = {};
             
             // Always include version if present
             if (mainData.version) {

@@ -13,24 +13,52 @@ const log = createLogger('TimeManager');
  * - Wall-clock aligned scheduling
  */
 class TimeManager {
+  listeners: Set<(events: Array<Record<string, any>>) => void>;
+  checkInterval: ReturnType<typeof setInterval> | null;
+  isDestroyed: boolean;
+  lastWallTime: number;
+  lastMonotonicTime: number;
+  lastTimezone: string;
+  lastTimezoneOffset: number;
+  TIME_JUMP_THRESHOLD: number;
+  CHECK_INTERVAL: number;
+  MONOTONIC_DRIFT_THRESHOLD: number;
+  EventType: {
+    TIME_JUMP_FORWARD: string;
+    TIME_JUMP_BACKWARD: string;
+    TIMEZONE_CHANGE: string;
+    DST_CHANGE: string;
+    SYSTEM_WAKE: string;
+    CLOCK_DRIFT: string;
+  };
+  stats: {
+    timeJumps: number;
+    timezoneChanges: number;
+    dstChanges: number;
+    systemWakes: number;
+    startTime: number;
+  };
+  recentOSWakeEvent: boolean;
+  osWakeEventTimeout: ReturnType<typeof setTimeout> | null;
+
   constructor() {
     // Core state
     this.listeners = new Set();
     this.checkInterval = null;
     this.isDestroyed = false;
-    
+
     // Time tracking (using Date.now() directly in constructor for initialization)
     const initialTime = Date.now();
     this.lastWallTime = initialTime;
     this.lastMonotonicTime = performance.now();
     this.lastTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     this.lastTimezoneOffset = new Date(initialTime).getTimezoneOffset();
-    
+
     // Detection thresholds
     this.TIME_JUMP_THRESHOLD = 5000; // 5 seconds
     this.CHECK_INTERVAL = 1000; // Check every second
     this.MONOTONIC_DRIFT_THRESHOLD = 2000; // 2 seconds drift tolerance
-    
+
     // Event types
     this.EventType = {
       TIME_JUMP_FORWARD: 'time_jump_forward',
@@ -40,7 +68,7 @@ class TimeManager {
       SYSTEM_WAKE: 'system_wake',
       CLOCK_DRIFT: 'clock_drift'
     };
-    
+
     // Statistics
     this.stats = {
       timeJumps: 0,
@@ -49,7 +77,7 @@ class TimeManager {
       systemWakes: 0,
       startTime: initialTime
     };
-    
+
     // Track recent OS wake event to avoid duplicate detection
     this.recentOSWakeEvent = false;
     this.osWakeEventTimeout = null;
@@ -364,7 +392,7 @@ class TimeManager {
    * @param {number} lastRun - Last run timestamp
    * @param {Object} options - Alignment options
    */
-  getNextAlignedTime(intervalMs, lastRun = null, options = {}) {
+  getNextAlignedTime(intervalMs: number, lastRun: number | null = null, options: { alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } = {}) {
     const {
       alignToMinute = false,
       alignToHour = false,

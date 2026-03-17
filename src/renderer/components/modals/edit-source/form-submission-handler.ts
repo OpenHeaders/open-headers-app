@@ -9,8 +9,31 @@ const log = createLogger('FormSubmissionHandler');
  * Handles the complex form submission logic for EditSourceModal
  * Extracted for better maintainability and testability
  */
+interface SourceData {
+    sourceId: string;
+    sourceType: string;
+    sourcePath: string;
+    sourceTag: string;
+    sourceMethod: string;
+    requestOptions: Record<string, unknown>;
+    jsonFilter: { enabled: boolean; path: string };
+    refreshOptions: { enabled: boolean; interval: number; preserveTiming?: boolean; nextRefresh?: number };
+    refreshNow: boolean;
+    isFiltered: boolean;
+    filteredWith: string | null;
+    originalResponse?: unknown;
+}
+
 class FormSubmissionHandler {
-    constructor(form, source, envContext, httpOptionsRef, originalValuesRef) {
+    form: any;
+    source: Record<string, any>;
+    envContext: Record<string, any>;
+    httpOptionsRef: React.MutableRefObject<any>;
+    originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>;
+    totpEnabled: boolean;
+    totpSecret: string;
+
+    constructor(form: any, source: Record<string, any>, envContext: Record<string, any>, httpOptionsRef: React.MutableRefObject<any>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
         this.form = form;
         this.source = source;
         this.envContext = envContext;
@@ -129,7 +152,7 @@ class FormSubmissionHandler {
         const { isTotpEnabled, totpSecretValue } = this.collectTotpConfiguration(values);
 
         // Prepare source data for update - preserve originalResponse if available
-        const sourceData = {
+        const sourceData: Record<string, any> = {
             sourceId: this.source.sourceId,
             sourceType: this.source.sourceType,
             sourcePath: values.sourcePath,

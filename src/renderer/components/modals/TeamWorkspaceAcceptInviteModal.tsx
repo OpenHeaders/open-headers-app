@@ -87,7 +87,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                 ? generateUniqueWorkspaceName(inviteData.workspaceName, workspaceContext.workspaces)
                 : inviteData.workspaceName;
 
-            const formValues = {
+            const formValues: Record<string, any> = {
                 name: workspaceName,
                 description: inviteData.description || `Shared workspace: ${inviteData.workspaceName}`,
                 type: 'team',

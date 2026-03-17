@@ -137,7 +137,13 @@ const isForbiddenCombination = (keys) => {
 /**
  * HotkeyInput component for capturing and validating keyboard shortcuts
  */
-const HotkeyInput = forwardRef(({ value, onChange, disabled }, ref) => {
+interface HotkeyInputProps {
+    value?: string;
+    onChange?: (value: string) => void;
+    disabled?: boolean;
+}
+
+const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps, ref) => {
     const [isEditing, setIsEditing] = useState(false);
     const [currentKeys, setCurrentKeys] = useState([]);
     const [capturedHotkey, setCapturedHotkey] = useState('');

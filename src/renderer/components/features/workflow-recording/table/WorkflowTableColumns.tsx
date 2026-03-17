@@ -181,8 +181,8 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     dataIndex: 'timestamp',
     key: 'timestamp',
     render: (timestamp) => <TimestampCell timestamp={timestamp} />,
-    sorter: (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
-    defaultSortOrder: 'ascend',
+    sorter: (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    defaultSortOrder: 'ascend' as const,
     width: 200
   },
   {

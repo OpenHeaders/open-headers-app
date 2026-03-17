@@ -7,15 +7,29 @@ const { ConcurrentMap, Mutex } = require('../utils/error-handling/ConcurrencyCon
  * Improved RefreshCoordinator with proper queue limits and concurrency control
  */
 class RefreshCoordinator {
+  activeRefreshes: InstanceType<typeof ConcurrentMap>;
+  refreshQueue: InstanceType<typeof ConcurrentMap>;
+  queueMutex: InstanceType<typeof Mutex>;
+  MAX_QUEUE_SIZE: number;
+  metrics: {
+    totalRefreshes: number;
+    successfulRefreshes: number;
+    failedRefreshes: number;
+    skippedRefreshes: number;
+    droppedFromQueue: number;
+    averageRefreshTime: number;
+    totalRefreshTime: number;
+  };
+
   constructor() {
     // Thread-safe data structures
     this.activeRefreshes = new ConcurrentMap('activeRefreshes');
     this.refreshQueue = new ConcurrentMap('refreshQueue');
     this.queueMutex = new Mutex('queue');
-    
+
     // Configuration
     this.MAX_QUEUE_SIZE = 100; // Prevent unbounded queue growth
-    
+
     // Metrics with proper initialization
     this.metrics = {
       totalRefreshes: 0,
@@ -41,7 +55,7 @@ class RefreshCoordinator {
   /**
    * Execute a refresh operation with coordination
    */
-  async executeRefresh(sourceId, refreshFn, options = {}) {
+  async executeRefresh(sourceId: string, refreshFn: (id: string) => Promise<any>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string } = {}) {
     const {
       priority = 'normal',
       skipIfActive = true,

@@ -236,7 +236,7 @@ const validateAllFormFields = async (form, envContext) => {
     }
 };
 
-module.exports = {
+export {
     validateEnvironmentVariables,
     validateTotpCodePlaceholder,
     validateHeadersForVariables,

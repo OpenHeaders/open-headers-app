@@ -15,11 +15,25 @@ const log = createLogger('NetworkAwareScheduler');
  * NetworkAwareScheduler - Manages refresh scheduling with network awareness
  */
 class NetworkAwareScheduler {
+  schedules: InstanceType<typeof ConcurrentMap>;
+  activeRefreshes: InstanceType<typeof ConcurrentSet>;
+  timers: Map<string, ReturnType<typeof setTimeout>>;
+  refreshSemaphore: InstanceType<typeof Semaphore>;
+  overdueSemaphore: InstanceType<typeof Semaphore>;
+  refreshCallback: ((sourceId: string, options?: Record<string, any>) => Promise<any>) | null;
+  scheduleUpdateCallback: ((sourceId: string, schedule: any) => void) | null;
+  lastNetworkState: { isOnline: boolean };
+  isDestroyed: boolean;
+  isPaused: boolean;
+  timeEventUnsubscribe: (() => void) | null;
+  OVERDUE_CHECK_INTERVAL: number;
+  overdueCheckTimer: ReturnType<typeof setInterval> | null;
+
   constructor() {
     this.schedules = new ConcurrentMap('schedules');
     this.activeRefreshes = new ConcurrentSet('activeRefreshes');
     this.timers = new Map();
-    
+
     this.refreshSemaphore = new Semaphore(10, 'refresh');
     this.overdueSemaphore = new Semaphore(3, 'overdue');
     this.refreshCallback = null;
@@ -28,7 +42,7 @@ class NetworkAwareScheduler {
     this.isDestroyed = false;
     this.isPaused = false;
     this.timeEventUnsubscribe = null;
-    
+
     this.OVERDUE_CHECK_INTERVAL = 30000; // 30 seconds
     this.overdueCheckTimer = null;
   }

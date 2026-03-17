@@ -29,6 +29,18 @@ import '../../../../styles/RecordViewer.css';
  * @param {Function} props.onAutoHighlightChange - External auto-highlight change handler
  * @returns {React.ReactNode} Rendered workflow viewer
  */
+interface WorkflowViewerProps {
+    record: any;
+    onRecordChange?: (record: any) => void;
+    viewMode: string;
+    playbackTime?: number;
+    onPlaybackTimeChange?: (time: number) => void;
+    autoHighlight?: boolean;
+    onAutoHighlightChange?: (autoHighlight: boolean) => void;
+    showAllWorkflowsButton?: boolean;
+    onShowAllWorkflows?: () => void;
+}
+
 const WorkflowViewer = ({
                           record: externalRecord,
                           onRecordChange,
@@ -39,7 +51,7 @@ const WorkflowViewer = ({
                           onAutoHighlightChange: externalOnAutoHighlightChange,
                           showAllWorkflowsButton,
                           onShowAllWorkflows
-                        }) => {
+                        }: WorkflowViewerProps) => {
   const { settings } = useSettings();
 
   // Internal state

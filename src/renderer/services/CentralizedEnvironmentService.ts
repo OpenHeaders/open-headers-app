@@ -20,6 +20,12 @@ const {
 const log = createLogger('CentralizedEnvironmentService');
 
 class CentralizedEnvironmentService {
+  stateManager: InstanceType<typeof EnvironmentStateManager>;
+  storageManager: InstanceType<typeof EnvironmentStorageManager>;
+  variableManager: InstanceType<typeof EnvironmentVariableManager>;
+  templateResolver: InstanceType<typeof TemplateResolver>;
+  eventManager: InstanceType<typeof EnvironmentEventManager>;
+
   constructor() {
     // Initialize managers
     this.stateManager = new EnvironmentStateManager();
@@ -27,10 +33,10 @@ class CentralizedEnvironmentService {
     this.variableManager = new EnvironmentVariableManager();
     this.templateResolver = new TemplateResolver();
     this.eventManager = new EnvironmentEventManager();
-    
+
     // Setup workspace listener
     this.setupWorkspaceListener();
-    
+
     log.info('CentralizedEnvironmentService initialized');
   }
 
@@ -375,7 +381,7 @@ class CentralizedEnvironmentService {
     );
 
     // If we're deleting the active environment, switch to Default
-    let updates = { environments: updatedEnvironments };
+    let updates: { environments: any; activeEnvironment?: string } = { environments: updatedEnvironments };
     const wasActiveEnvironment = state.activeEnvironment === name;
     if (wasActiveEnvironment) {
       updates.activeEnvironment = 'Default';

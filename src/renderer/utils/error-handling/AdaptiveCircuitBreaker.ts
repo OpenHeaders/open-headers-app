@@ -13,23 +13,52 @@ const CircuitState = {
  * Adaptive Circuit Breaker with exponential backoff
  */
 class AdaptiveCircuitBreaker {
-  constructor(options = {}) {
+  name: string;
+  failureThreshold: number;
+  halfOpenMaxAttempts: number;
+  baseTimeout: number;
+  maxTimeout: number;
+  backoffMultiplier: number;
+  timeoutJitter: number;
+  resetTimeout: number;
+  state: string;
+  failureCount: number;
+  successCount: number;
+  halfOpenAttempts: number;
+  nextAttemptTime: number | null;
+  consecutiveOpenings: number;
+  lastSuccessTime: number;
+  totalFailuresInCycle: number;
+  manualBypassActive: boolean;
+  metrics: {
+    totalRequests: number;
+    totalFailures: number;
+    totalSuccesses: number;
+    circuitOpenCount: number;
+    lastStateChange: number;
+    consecutiveOpenings: number;
+    currentTimeout: number;
+    manualBypasses: number;
+    timeoutHistory: Array<{ timestamp: number; timeout: number; opening: number }>;
+  };
+
+  constructor(options: Record<string, any> = {}) {
     this.name = options.name || 'unnamed';
     this.failureThreshold = options.failureThreshold || 5;
     this.halfOpenMaxAttempts = options.halfOpenMaxAttempts || 3;
-    
+
     this.baseTimeout = options.baseTimeout || 30000;
     this.maxTimeout = options.maxTimeout || 3600000;
     this.backoffMultiplier = options.backoffMultiplier || 2;
     this.timeoutJitter = options.timeoutJitter || 0.1;
-    
+
     this.resetTimeout = this.baseTimeout;
     this.state = CircuitState.CLOSED;
     this.failureCount = 0;
     this.successCount = 0;
     this.halfOpenAttempts = 0;
     this.nextAttemptTime = null;
-    
+
     this.consecutiveOpenings = 0;
     this.lastSuccessTime = timeManager.now();
     this.totalFailuresInCycle = 0;
@@ -50,7 +79,7 @@ class AdaptiveCircuitBreaker {
   /**
    * Execute a function with circuit breaker protection
    */
-  async execute(fn, options = {}) {
+  async execute(fn: () => Promise<any>, options: { bypassIfOpen?: boolean; reason?: string } = {}) {
     const { bypassIfOpen = false, reason = 'auto' } = options;
     
     this.metrics.totalRequests++;
@@ -178,7 +207,7 @@ class AdaptiveCircuitBreaker {
   /**
    * Transition to a new state with exponential backoff
    */
-  transitionTo(newState, options = {}) {
+  transitionTo(newState: string, options: { maintainBackoffLevel?: boolean } = {}) {
     const oldState = this.state;
     this.state = newState;
     this.metrics.lastStateChange = timeManager.now();
@@ -338,6 +367,14 @@ class AdaptiveCircuitBreaker {
  * Circuit Breaker Manager
  */
 class AdaptiveCircuitBreakerManager {
+  breakers: Map<string, AdaptiveCircuitBreaker>;
+  defaultOptions: {
+    failureThreshold: number;
+    baseTimeout: number;
+    maxTimeout: number;
+    backoffMultiplier: number;
+  };
+
   constructor() {
     this.breakers = new Map();
     this.defaultOptions = {

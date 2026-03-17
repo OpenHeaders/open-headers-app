@@ -10,7 +10,7 @@ import { AUTH_TYPES, PROVIDER_ICONS } from '../constants';
  * @returns {string} Human-readable relative time string
  */
 export const getTimeAgo = (date) => {
-    const seconds = Math.floor((new Date() - date) / 1000);
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     if (seconds < 10) return 'Just now';
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);

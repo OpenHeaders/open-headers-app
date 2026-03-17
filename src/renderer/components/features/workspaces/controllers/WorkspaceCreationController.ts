@@ -12,8 +12,25 @@ import { prepareAuthData, prepareWorkspaceData } from '../utils';
 const { createLogger } = require('../../../../utils/error-handling/logger');
 const log = createLogger('WorkspaceCreationController');
 
+interface WorkspaceCreationDependencies {
+    gitService: {
+        getStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string }>;
+        install: () => Promise<{ success: boolean; error?: string; message?: string }>;
+        testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; message?: string }>;
+        commitConfiguration: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
+    };
+    workspaceService: {
+        create: (data: Record<string, unknown>) => Promise<{ id: string } | null>;
+    };
+}
+
 class WorkspaceCreationController {
-    constructor(dependencies) {
+    private stateMachine: WorkspaceCreationStateMachine;
+    private dependencies: WorkspaceCreationDependencies;
+    private abortController: AbortController | null;
+    private listeners: Set<(stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) => void>;
+
+    constructor(dependencies: WorkspaceCreationDependencies) {
         this.stateMachine = new WorkspaceCreationStateMachine();
         this.dependencies = dependencies;
         this.abortController = null;

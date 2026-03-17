@@ -15,7 +15,12 @@ import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '../shared';
  * @param {Function} onImportError - Callback when import fails
  * @returns {React.ReactNode} Upload component
  */
-export const WorkflowUpload = ({ onImportSuccess, onImportError }) => {
+interface WorkflowUploadProps {
+  onImportSuccess: () => void;
+  onImportError: (error: any) => void;
+}
+
+export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploadProps) => {
   const uploadProps = {
     name: 'workflow',
     multiple: false,
@@ -33,7 +38,7 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }) => {
         <Button 
           type="primary"
           icon={<UploadOutlined />}
-          size="default"
+          size="middle"
         >
           Import Workflow
         </Button>
@@ -50,12 +55,19 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }) => {
  * @param {Function} onBulkDelete - Callback for bulk delete action
  * @returns {React.ReactNode} Action buttons component
  */
-export const WorkflowTableActions = ({ 
-  onImportSuccess, 
-  onImportError, 
-  selectedWorkflows = [], 
-  onBulkDelete 
-}) => {
+interface WorkflowTableActionsProps {
+  onImportSuccess: () => void;
+  onImportError: (error: any) => void;
+  selectedWorkflows?: any[];
+  onBulkDelete?: (workflows: any[]) => void;
+}
+
+export const WorkflowTableActions = ({
+  onImportSuccess,
+  onImportError,
+  selectedWorkflows = [],
+  onBulkDelete
+}: WorkflowTableActionsProps) => {
   return (
     <Space size="middle">
       <WorkflowUpload 
@@ -66,8 +78,8 @@ export const WorkflowTableActions = ({
       {selectedWorkflows.length > 0 && (
         <Button 
           danger 
-          size="default"
-          onClick={() => onBulkDelete(selectedWorkflows)}
+          size="middle"
+          onClick={() => onBulkDelete?.(selectedWorkflows)}
         >
           Delete Selected ({selectedWorkflows.length})
         </Button>

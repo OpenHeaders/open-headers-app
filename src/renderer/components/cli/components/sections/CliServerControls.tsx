@@ -64,7 +64,7 @@ const CliServerControls = ({
     // Single-pass syntax highlighter for curl commands
     const highlightCmd = (cmd) => {
         const result = [];
-        const c = (color, text, extra) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
+        const c = (color: string, text: string, extra?: React.CSSProperties) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
         // Order matters: more specific patterns first
         const regex = /\b(curl)\b|(\\)\n|(-[HXd])\b|\b(GET|POST|PUT|DELETE|PATCH)\b|(https?:\/\/\S+)|("(?:[^"\\]|\\.)*")\s*:|("(?:[^"\\]|\\.)*")|\b(true|false|null)\b|([{}[\]])|(')/gm;
         let last = 0;
@@ -90,7 +90,7 @@ const CliServerControls = ({
     // Single-pass syntax highlighter for PowerShell commands
     const highlightPs = (cmd) => {
         const result = [];
-        const c = (color, text, extra) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
+        const c = (color: string, text: string, extra?: React.CSSProperties) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
         const regex = /\b(Invoke-RestMethod|ConvertTo-Json)\b|(`)\n|(-[A-Za-z]+)\b|(\$\w+)|(https?:\/\/\S+)|("(?:[^"\\]|\\.)*")\s*=|("(?:[^"\\]|\\.)*")|\b(POST|GET|PUT|DELETE|PATCH)\b|(@\{|[{}|;])/gm;
         let last = 0;
         let match;
@@ -158,13 +158,13 @@ const CliServerControls = ({
             </div>
         );
     };
-    const paramTableStyle = {
+    const paramTableStyle: React.CSSProperties = {
         width: '100%',
         fontSize: 12,
         borderCollapse: 'collapse',
         marginBottom: 12
     };
-    const thStyle = {
+    const thStyle: React.CSSProperties = {
         textAlign: 'left',
         padding: '4px 8px',
         borderBottom: '1px solid var(--ant-color-border)',
