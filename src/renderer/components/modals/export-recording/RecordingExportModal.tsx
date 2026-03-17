@@ -43,7 +43,14 @@ import ExportInfoCard from './ExportInfoCard';
  * @param {number} record.timestamp - Recording timestamp
  * @param {function} onExportJson - Handler for JSON export completion
  */
-const RecordingExportModal = ({ visible, onCancel, record, onExportJson }) => {
+interface RecordingExportModalProps {
+    visible: boolean;
+    onCancel: () => void;
+    record: Record<string, any> | null;
+    onExportJson: (recording: Record<string, any>) => void;
+}
+
+const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: RecordingExportModalProps) => {
     // Export configuration state
     const [exportType, setExportType] = useState('json');
     const [videoFormat, setVideoFormat] = useState('webm');

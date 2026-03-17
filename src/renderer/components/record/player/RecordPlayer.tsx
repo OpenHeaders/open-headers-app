@@ -29,6 +29,19 @@ import { createLogger } from '../../../utils/error-handling/logger';
 const { Text } = Typography;
 const log = createLogger('RecordPlayer');
 
+interface RecordPlayerProps {
+    record: any;
+    rrwebPlayer: any;
+    loading: boolean;
+    onPlaybackTimeChange?: (time: number) => void;
+    processRecordForProxy?: (...args: any[]) => any;
+    createConsoleOverrides?: () => any;
+    onPlayingStateChange?: (playing: boolean) => void;
+    autoHighlight?: boolean;
+    showAllWorkflowsButton?: boolean;
+    onShowAllWorkflows?: () => void;
+}
+
 const RecordPlayer = ({
                           record,
                           rrwebPlayer,
@@ -40,7 +53,7 @@ const RecordPlayer = ({
                           autoHighlight = false,
                           showAllWorkflowsButton = false,
                           onShowAllWorkflows
-                      }) => {
+                      }: RecordPlayerProps) => {
     const { token } = theme.useToken();
     const [viewMode, setViewMode] = useState('dom');
 

@@ -45,6 +45,15 @@ const { Title } = Typography;
  * @param {function} onToggleRule - Callback for rule enable/disable
  * @returns {JSX.Element} Complete proxy rules management section
  */
+interface ProxyRulesSectionProps {
+    rules: Record<string, any>[];
+    sources: Record<string, any>[];
+    headerRules: Record<string, any>[];
+    onSaveRule: (rule: Record<string, any>) => Promise<any>;
+    onDeleteRule: (ruleId: string) => Promise<any>;
+    onToggleRule: (ruleId: string, enabled: boolean) => any;
+}
+
 const ProxyRulesSection = ({
     rules,
     sources,
@@ -52,7 +61,7 @@ const ProxyRulesSection = ({
     onSaveRule,
     onDeleteRule,
     onToggleRule
-}) => {
+}: ProxyRulesSectionProps) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [editingRule, setEditingRule] = useState(null);
 
