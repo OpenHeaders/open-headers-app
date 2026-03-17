@@ -113,7 +113,7 @@ function validateConfigStructure(data: Record<string, unknown>) {
         throw new Error(`Invalid source at index ${index}: missing required fields`);
       }
       
-      if (!['http', 'file', 'env'].includes(source.sourceType)) {
+      if (!['http', 'file', 'env'].includes(source.sourceType as string)) {
         throw new Error(`Invalid source type at index ${index}: ${source.sourceType}`);
       }
     });
@@ -141,7 +141,7 @@ function validateConfigStructure(data: Record<string, unknown>) {
     (data.proxyRules as Array<Record<string, unknown>>).forEach((rule: Record<string, unknown>, index: number) => {
       // Validate based on rule type
       const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
-      const isStaticRule = rule.isDynamic === false || (rule.domains && rule.domains.length > 0);
+      const isStaticRule = rule.isDynamic === false || (rule.domains && (rule.domains as unknown[]).length > 0);
       
       if (!isDynamicRule && !isStaticRule) {
         throw new Error(`Invalid proxy rule at index ${index}: must have either domains (for static rules) or headerRuleId (for dynamic rules)`);
@@ -172,8 +172,9 @@ function validateConfigStructure(data: Record<string, unknown>) {
       throw new Error('Invalid configuration: environmentSchema must be an object');
     }
     
-    if (data.environmentSchema.variableDefinitions && 
-        typeof data.environmentSchema.variableDefinitions !== 'object') {
+    const envSchema = data.environmentSchema as Record<string, unknown>;
+    if (envSchema.variableDefinitions &&
+        typeof envSchema.variableDefinitions !== 'object') {
       throw new Error('Invalid configuration: environmentSchema.variableDefinitions must be an object');
     }
   }
@@ -198,11 +199,12 @@ function validateConfigStructure(data: Record<string, unknown>) {
     }
     
     // Required fields for Git workspace
-    if (data.workspace.type === 'git') {
-      if (!data.workspace.gitUrl) {
+    const workspace = data.workspace as Record<string, unknown>;
+    if (workspace.type === 'git') {
+      if (!workspace.gitUrl) {
         throw new Error('Invalid workspace configuration: gitUrl is required for Git workspaces');
       }
-      if (!data.workspace.name) {
+      if (!workspace.name) {
         throw new Error('Invalid workspace configuration: name is required');
       }
     }

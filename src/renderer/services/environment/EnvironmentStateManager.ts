@@ -31,7 +31,7 @@ class EnvironmentStateManager extends BaseStateManager {
   /**
    * Override setState to log environment-specific details
    */
-  setState(updates) {
+  setState(updates: Record<string, unknown>) {
     const prevState = { ...this.state };
     super.setState(updates);
     
@@ -79,7 +79,7 @@ class EnvironmentStateManager extends BaseStateManager {
   /**
    * Track initialization promise
    */
-  setInitPromise(promise) {
+  setInitPromise(promise: Promise<unknown>) {
     this.initPromise = promise;
   }
 
@@ -93,28 +93,28 @@ class EnvironmentStateManager extends BaseStateManager {
   /**
    * Track load promise for workspace
    */
-  setLoadPromise(workspaceId, promise) {
+  setLoadPromise(workspaceId: string, promise: Promise<unknown>) {
     this.loadPromises.set(workspaceId, promise);
   }
 
   /**
    * Get load promise for workspace
    */
-  getLoadPromise(workspaceId) {
+  getLoadPromise(workspaceId: string) {
     return this.loadPromises.get(workspaceId);
   }
 
   /**
    * Clear load promise for workspace
    */
-  clearLoadPromise(workspaceId) {
+  clearLoadPromise(workspaceId: string) {
     this.loadPromises.delete(workspaceId);
   }
 
   /**
    * Check if workspace is being loaded
    */
-  isLoadingWorkspace(workspaceId) {
+  isLoadingWorkspace(workspaceId: string) {
     return this.loadPromises.has(workspaceId);
   }
 

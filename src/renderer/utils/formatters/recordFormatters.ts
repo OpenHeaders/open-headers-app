@@ -1,13 +1,13 @@
 // Utility functions for formatting record data
 
-export const formatDuration = (ms) => {
+export const formatDuration = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return minutes > 0 ? `${minutes}m ${remainingSeconds}s` : `${seconds}s`;
 };
 
-export const formatTimestamp = (timestamp) => {
+export const formatTimestamp = (timestamp: number | string) => {
     const date = new Date(timestamp);
     const months = ['January', 'February', 'March', 'April', 'May', 'June',
         'July', 'August', 'September', 'October', 'November', 'December'];
@@ -22,19 +22,19 @@ export const formatTimestamp = (timestamp) => {
     return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
 };
 
-export const formatConsoleArg = (arg) => {
+export const formatConsoleArg = (arg: null | undefined | string | number | boolean | { __type?: string; message?: string; tagName?: string; id?: string; className?: string; name?: string; [key: string]: unknown }) => {
     if (arg === null) return 'null';
     if (arg === undefined) return 'undefined';
 
-    if (arg.__type === 'Error') {
+    if (typeof arg === 'object' && arg.__type === 'Error') {
         return `Error: ${arg.message}`;
     }
 
-    if (arg.__type === 'HTMLElement') {
+    if (typeof arg === 'object' && arg.__type === 'HTMLElement') {
         return `<${arg.tagName}${arg.id ? '#' + arg.id : ''}${arg.className ? '.' + arg.className : ''}>`;
     }
 
-    if (arg.__type === 'Function') {
+    if (typeof arg === 'object' && arg.__type === 'Function') {
         return `ƒ ${arg.name}()`;
     }
 
@@ -49,7 +49,7 @@ export const formatConsoleArg = (arg) => {
     return String(arg);
 };
 
-export const formatBytes = (bytes) => {
+export const formatBytes = (bytes: number) => {
     if (bytes > 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     if (bytes > 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${bytes} B`;
@@ -58,12 +58,12 @@ export const formatBytes = (bytes) => {
 // Alias for consistency with RecordingsTable
 export const formatFileSize = formatBytes;
 
-export const formatMilliseconds = (ms) => {
+export const formatMilliseconds = (ms: number) => {
     if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`;
     return `${Math.round(ms)} ms`;
 };
 
-export const formatRelativeTime = (timestamp) => {
+export const formatRelativeTime = (timestamp: number) => {
     const totalSeconds = Math.floor(timestamp / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -73,7 +73,7 @@ export const formatRelativeTime = (timestamp) => {
 };
 
 // New function to format relative time with smaller milliseconds (returns JSX)
-export const formatRelativeTimeWithSmallMs = (timestamp) => {
+export const formatRelativeTimeWithSmallMs = (timestamp: number) => {
     const totalSeconds = Math.floor(timestamp / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -86,7 +86,7 @@ export const formatRelativeTimeWithSmallMs = (timestamp) => {
 };
 
 // Format absolute time with 24H format and milliseconds
-export const format24HTimeWithMs = (absoluteTime) => {
+export const format24HTimeWithMs = (absoluteTime: Date) => {
     const hours = absoluteTime.getHours().toString().padStart(2, '0');
     const minutes = absoluteTime.getMinutes().toString().padStart(2, '0');
     const seconds = absoluteTime.getSeconds().toString().padStart(2, '0');
@@ -107,7 +107,7 @@ export const format24HTimeWithMs = (absoluteTime) => {
 };
 
 // Format time ago (e.g., "1h 23m 40s ago", "10s ago")
-export const formatTimeAgo = (timestamp) => {
+export const formatTimeAgo = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
     

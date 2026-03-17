@@ -41,6 +41,19 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Input, Space, Button, Checkbox, Tooltip, theme } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 
+interface SearchOverlayProps {
+    visible: boolean;
+    searchValue: string;
+    onSearchChange: (value: string) => void;
+    onClose: () => void;
+    inverseFilter?: boolean;
+    onInverseFilterChange?: (checked: boolean) => void;
+    placeholder?: string;
+    showInverseFilter?: boolean;
+    style?: React.CSSProperties;
+    debounceMs?: number;
+}
+
 const SearchOverlay = ({
     visible,
     searchValue,
@@ -52,7 +65,7 @@ const SearchOverlay = ({
     showInverseFilter = false,
     style = {},
     debounceMs = 300
-}) => {
+}: SearchOverlayProps) => {
     const { token } = theme.useToken();
     const [localSearchValue, setLocalSearchValue] = useState(searchValue);
     const overlayRef = useRef(null);
@@ -64,7 +77,7 @@ const SearchOverlay = ({
 
     // Handle click outside
     useEffect(() => {
-        const handleClickOutside = (event) => {
+        const handleClickOutside = (event: MouseEvent) => {
             if (overlayRef.current && !overlayRef.current.contains(event.target)) {
                 onClose();
             }
@@ -81,8 +94,8 @@ const SearchOverlay = ({
     // Debounced search change handler
     const debouncedOnSearchChange = useCallback(
         (() => {
-            let timeoutId;
-            return (value) => {
+            let timeoutId: ReturnType<typeof setTimeout>;
+            return (value: string) => {
                 clearTimeout(timeoutId);
                 timeoutId = setTimeout(() => {
                     onSearchChange(value);
@@ -93,7 +106,7 @@ const SearchOverlay = ({
     );
 
     // Handle local input changes
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setLocalSearchValue(value);
         debouncedOnSearchChange(value);
@@ -120,7 +133,7 @@ const SearchOverlay = ({
      * Handle keyboard events in the search input
      * @param {KeyboardEvent} e - The keyboard event
      */
-    const handleKeyPress = (e) => {
+    const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             onClose();
         }

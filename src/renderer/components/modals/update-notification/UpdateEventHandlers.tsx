@@ -23,6 +23,15 @@ import timeManager from '../../../services/TimeManager';
  * @param {number} params.MIN_CHECK_DISPLAY_TIME - Minimum notification display time
  * @returns {Object} Event handlers and cleanup function
  */
+interface UpdateEventHandlersParams {
+    notificationManager: { clearNotification: (key: string) => void; clearAllNotifications: () => void; showAlreadyCheckingNotification: (isDownloading: boolean) => void; showUpdateAvailableNotification: (info: { version: string }, progress: number) => void; showDownloadProgressNotification: (percent: number) => void; showUpdateReadyNotification: (info: { version: string }) => void; showNoUpdatesNotification: () => void; showUpdateErrorNotification: (msg: string) => void; NOTIFICATION_KEYS: Record<string, string> };
+    state: { isDownloading: boolean; manualCheckInProgress: boolean; updateDownloaded: boolean };
+    setState: { setManualCheckInProgress: (v: boolean) => void; setUpdateInfo: (info: unknown) => void; setIsDownloading: (v: boolean) => void; setDownloadProgress: (v: number) => void; setUpdateDownloaded: (v: boolean) => void; setIsInstalling: (v: boolean) => void };
+    refs: { checkingNotificationRef: React.MutableRefObject<boolean>; inSilentCheckModeRef: React.MutableRefObject<boolean>; pendingNotificationRef: React.MutableRefObject<boolean>; checkStartTimeRef: React.MutableRefObject<number>; handlingAlreadyDownloadedRef: React.MutableRefObject<boolean> };
+    debugLog: (message: string) => void;
+    MIN_CHECK_DISPLAY_TIME: number;
+}
+
 export const createUpdateEventHandlers = ({
     notificationManager,
     state,
@@ -30,7 +39,7 @@ export const createUpdateEventHandlers = ({
     refs,
     debugLog,
     MIN_CHECK_DISPLAY_TIME
-}) => {
+}: UpdateEventHandlersParams) => {
     const debugLabel = '[UpdateNotification Debug]';
 
     /**
@@ -123,7 +132,7 @@ export const createUpdateEventHandlers = ({
      * @param {boolean} isManual - Whether this was a manual check
      * @param {Object} info - Update info from main process (optional)
      */
-    const showUpdateReadyNotification = (isManual, info = null) => {
+    const showUpdateReadyNotification = (isManual: boolean, info: { version?: string } | null = null) => {
         debugLog(`${debugLabel} Showing update ready notification`);
 
         // Clear checking notification
@@ -150,7 +159,7 @@ export const createUpdateEventHandlers = ({
      * Handle update available event
      * @param {Object} info - Update information
      */
-    const handleUpdateAvailable = (info) => {
+    const handleUpdateAvailable = (info: { version: string }) => {
         debugLog(`${debugLabel} Received "update-available" event with version ${info.version}`);
 
         // Update state
@@ -169,7 +178,7 @@ export const createUpdateEventHandlers = ({
      * Handle download progress updates
      * @param {Object} progressObj - Progress information
      */
-    const handleUpdateProgress = (progressObj) => {
+    const handleUpdateProgress = (progressObj: { percent: number }) => {
         const percent = Math.round(progressObj.percent) || 0;
         setState.setDownloadProgress(percent);
 
@@ -186,7 +195,7 @@ export const createUpdateEventHandlers = ({
      * Handle update downloaded event
      * @param {Object} info - Update information
      */
-    const handleUpdateDownloaded = (info) => {
+    const handleUpdateDownloaded = (info: { version: string }) => {
         debugLog(`${debugLabel} Received "update-downloaded" event for version ${info.version}`);
 
         // Update state
@@ -205,7 +214,7 @@ export const createUpdateEventHandlers = ({
      * Handle update error event
      * @param {string} message - Error message
      */
-    const handleUpdateError = (message) => {
+    const handleUpdateError = (message: string) => {
         debugLog(`${debugLabel} Received "update-error" event: ${message}`);
 
         // Update state

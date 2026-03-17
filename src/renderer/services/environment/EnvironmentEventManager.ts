@@ -37,7 +37,7 @@ class EnvironmentEventManager {
    */
   setupEnvironmentStructureListener(onStructureChange: (data: { workspaceId: string; [key: string]: unknown }) => Promise<void>) {
     const handleStructureChange = async (event: Event | { detail: unknown }) => {
-      const data = (event as CustomEvent).detail as { workspaceId?: string; [key: string]: unknown };
+      const data = (event as CustomEvent).detail as { workspaceId: string; [key: string]: unknown } | null;
       if (!data || !data.workspaceId) return;
       
       log.info(`Environment structure changed for workspace: ${data.workspaceId}`);

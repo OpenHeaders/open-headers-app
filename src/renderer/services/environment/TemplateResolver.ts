@@ -56,7 +56,7 @@ class TemplateResolver {
   /**
    * Extract variable names from a template
    */
-  extractVariables(template) {
+  extractVariables(template: string | null) {
     if (!template || typeof template !== 'string') {
       return [];
     }
@@ -77,7 +77,7 @@ class TemplateResolver {
   /**
    * Check if a string contains variables
    */
-  hasVariables(template) {
+  hasVariables(template: string | null) {
     if (!template || typeof template !== 'string') {
       return false;
     }
@@ -90,7 +90,7 @@ class TemplateResolver {
   /**
    * Resolve template in an object recursively
    */
-  resolveObject(obj, variables, options = {}) {
+  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
     if (!obj || typeof obj !== 'object') {
       return this.resolveTemplate(obj, variables, options);
     }
@@ -122,7 +122,7 @@ class TemplateResolver {
   /**
    * Validate that all required variables are present
    */
-  validateVariables(template, variables) {
+  validateVariables(template: string | null, variables: Record<string, string>) {
     const required = this.extractVariables(template);
     const missing = required.filter(varName => !variables.hasOwnProperty(varName));
     
@@ -136,8 +136,8 @@ class TemplateResolver {
   /**
    * Create a resolver function with pre-bound variables
    */
-  createResolver(variables, options = {}) {
-    return (template) => this.resolveTemplate(template, variables, options);
+  createResolver(variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
+    return (template: string | null) => this.resolveTemplate(template, variables, options);
   }
 }
 

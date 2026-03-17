@@ -26,6 +26,7 @@ interface SourceConfig {
   sourceType?: string;
   sourcePath?: string;
   sourceName?: string;
+  sourceTag?: string;
   name?: string;
   requestOptions?: {
     headers?: HeaderEntry[];
@@ -84,7 +85,7 @@ export const extractVariables = (text: string): string[] => {
  * @param {Object} rules - Rules object containing header rules
  * @returns {string[]} Array of missing variable names
  */
-export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment: Record<string, string>, rules: RulesConfig | null = null): string[] => {
+export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment: Record<string, unknown>, rules: RulesConfig | null = null): string[] => {
   const missingVars = new Set<string>();
   
   if (!sources || !Array.isArray(sources)) {

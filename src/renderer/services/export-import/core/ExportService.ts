@@ -50,7 +50,7 @@ export class ExportService {
    * @param {Object} exportOptions - Export configuration options
    * @returns {Promise<void>}
    */
-  async execute(exportOptions) {
+  async execute(exportOptions: Record<string, unknown>) {
     const startTime = Date.now();
     log.info('Starting export process', { options: this._sanitizeOptionsForLogging(exportOptions) });
 
@@ -90,7 +90,7 @@ export class ExportService {
    * @returns {Promise<Object>} - Collected export data
    * @private
    */
-  async _gatherExportData(exportOptions) {
+  async _gatherExportData(exportOptions: Record<string, unknown>) {
     const { selectedItems, appVersion } = exportOptions;
     
     const exportData: Record<string, any> = {
@@ -163,7 +163,7 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array of written file paths
    * @private
    */
-  async _handleFileExport(exportData, exportOptions) {
+  async _handleFileExport(exportData: Record<string, unknown>, exportOptions: Record<string, unknown>) {
     const { fileFormat } = exportOptions;
 
     if (fileFormat === FILE_FORMATS.SINGLE) {
@@ -179,7 +179,7 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array with single file path
    * @private
    */
-  async _handleSingleFileExport(exportData) {
+  async _handleSingleFileExport(exportData: Record<string, unknown>) {
     const filename = generateTimestampedFilename('open-headers-config', '', 'json');
     
     const filePath = await handleSingleFileExport({
@@ -197,7 +197,7 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array of written file paths
    * @private
    */
-  async _handleSeparateFilesExport(exportData, exportOptions) {
+  async _handleSeparateFilesExport(exportData: Record<string, unknown>, exportOptions: Record<string, unknown>) {
     const { environmentOption } = exportOptions;
     
     // Separate environment data for separate file
@@ -234,7 +234,7 @@ export class ExportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateExportOptions(exportOptions) {
+  _validateExportOptions(exportOptions: Record<string, unknown>) {
     if (!exportOptions || typeof exportOptions !== 'object') {
       throw new Error('Export options must be provided as an object');
     }
@@ -263,7 +263,7 @@ export class ExportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateExportData(exportData, exportOptions) {
+  _validateExportData(exportData: Record<string, unknown>, exportOptions: Record<string, unknown>) {
     const { selectedItems } = exportOptions;
     const validationErrors = [];
 

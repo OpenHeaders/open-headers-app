@@ -23,6 +23,15 @@ import { ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-desig
  * @param {function} setIsInstalling - State setter for installation status
  * @param {function} debugLog - Debug logging function
  */
+interface UpdateNotificationManagerProps {
+    notification: { open: (args: Record<string, unknown>) => void; info: (args: Record<string, unknown>) => void; success: (args: Record<string, unknown>) => void; error: (args: Record<string, unknown>) => void; destroy: (key: string) => void };
+    modal: { confirm: (args: Record<string, unknown>) => void };
+    token: { colorSuccess?: string; [key: string]: unknown };
+    isInstalling: boolean;
+    setIsInstalling: (value: boolean) => void;
+    debugLog: (message: string) => void;
+}
+
 export const UpdateNotificationManager = ({
     notification,
     modal,
@@ -30,7 +39,7 @@ export const UpdateNotificationManager = ({
     isInstalling,
     setIsInstalling,
     debugLog
-}) => {
+}: UpdateNotificationManagerProps) => {
     // Notification keys for proper management
     const NOTIFICATION_KEYS = {
         CHECKING: 'checking-updates',
@@ -56,7 +65,7 @@ export const UpdateNotificationManager = ({
      * Clear a specific notification by key
      * @param {string} key - Notification key to clear
      */
-    const clearNotification = (key) => {
+    const clearNotification = (key: string) => {
         debugLog(`Clearing notification with key: ${key}`);
         notification.destroy(key);
     };
@@ -79,7 +88,7 @@ export const UpdateNotificationManager = ({
      * Show already checking notification
      * @param {boolean} isDownloading - Whether download/processing is in progress
      */
-    const showAlreadyCheckingNotification = (isDownloading) => {
+    const showAlreadyCheckingNotification = (isDownloading: boolean) => {
         notification.info({
             message: isDownloading ? 'Update In Progress' : 'Check In Progress',
             description: isDownloading
@@ -95,7 +104,7 @@ export const UpdateNotificationManager = ({
      * @param {Object} info - Update information
      * @param {number} progress - Processing progress (0-100)
      */
-    const showUpdateAvailableNotification = (info, progress = 0) => {
+    const showUpdateAvailableNotification = (info: { version: string }, progress = 0) => {
         debugLog(`Showing update available notification for version ${info.version}`);
         notification.info({
             message: 'Update Available',
@@ -114,7 +123,7 @@ export const UpdateNotificationManager = ({
      * Show update processing progress notification
      * @param {number} percent - Processing progress percentage
      */
-    const showDownloadProgressNotification = (percent) => {
+    const showDownloadProgressNotification = (percent: number) => {
         notification.info({
             message: 'Processing Update',
             description: (
@@ -178,7 +187,7 @@ export const UpdateNotificationManager = ({
      * Show update ready notification
      * @param {Object} info - Update information
      */
-    const showUpdateReadyNotification = (info) => {
+    const showUpdateReadyNotification = (info: { version: string }) => {
         debugLog(`Showing update ready notification for version ${info.version}`);
         
         const installButton = createInstallButton();
@@ -210,7 +219,7 @@ export const UpdateNotificationManager = ({
      * Show update error notification
      * @param {string} message - Error message
      */
-    const showUpdateErrorNotification = (message) => {
+    const showUpdateErrorNotification = (message: string) => {
         debugLog('Showing update error notification');
         notification.error({
             message: 'Update Error',

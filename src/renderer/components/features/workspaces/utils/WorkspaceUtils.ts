@@ -9,7 +9,7 @@ import { AUTH_TYPES, PROVIDER_ICONS } from '../constants';
  * @param {Date} date - The date to calculate relative time from
  * @returns {string} Human-readable relative time string
  */
-export const getTimeAgo = (date) => {
+export const getTimeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
     if (seconds < 10) return 'Just now';
     if (seconds < 60) return `${seconds}s ago`;
@@ -26,7 +26,7 @@ export const getTimeAgo = (date) => {
  * @param {string} url - The Git repository URL
  * @returns {string} Repository name
  */
-export const extractRepoName = (url) => {
+export const extractRepoName = (url: string) => {
     if (!url) return '';
     return url.split('/').pop().replace('.git', '');
 };
@@ -36,7 +36,7 @@ export const extractRepoName = (url) => {
  * @param {string} url - The Git repository URL
  * @returns {string} Icon component name
  */
-export const getProviderIcon = (url) => {
+export const getProviderIcon = (url: string) => {
     if (!url) return PROVIDER_ICONS.generic;
     
     if (url.includes('github.com')) {
@@ -66,7 +66,7 @@ export const getProviderIcon = (url) => {
  * @param {string} authType - Selected authentication type
  * @returns {Object} Prepared authentication data
  */
-export const prepareAuthData = async (values, authType) => {
+export const prepareAuthData = async (values: Record<string, string>, authType: string) => {
     let authData = {};
     
     switch (authType) {
@@ -121,7 +121,7 @@ export const prepareAuthData = async (values, authType) => {
  * @param {Object} authData - Prepared authentication data
  * @returns {Object} Prepared workspace object with sensitive fields removed
  */
-export const prepareWorkspaceData = (values, editingWorkspace, authData) => {
+export const prepareWorkspaceData = (values: Record<string, unknown>, editingWorkspace: Record<string, unknown> | null, authData: Record<string, unknown>) => {
     const workspace = {
         ...values,
         id: editingWorkspace?.id || Date.now().toString(),
@@ -149,7 +149,7 @@ export const prepareWorkspaceData = (values, editingWorkspace, authData) => {
  * @param {Object} validationDetails - Validation details from API
  * @returns {string[]} Array of formatted validation items
  */
-export const formatValidationDetails = (validationDetails) => {
+export const formatValidationDetails = (validationDetails: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number }) => {
     const items = [];
     if (validationDetails.sourceCount > 0) {
         items.push(`${validationDetails.sourceCount} sources`);

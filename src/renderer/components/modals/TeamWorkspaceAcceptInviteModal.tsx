@@ -12,12 +12,19 @@ import ConnectionProgressModal from '../features/workspaces/components/Connectio
 const { Option } = Select;
 const { Text } = Typography;
 
+interface TeamWorkspaceAcceptInviteModalProps {
+    visible: boolean;
+    inviteData: Record<string, unknown> | null;
+    onCancel: () => void;
+    onSuccess?: () => void;
+}
+
 const TeamWorkspaceAcceptInviteModal = ({
     visible,
     inviteData,
     onCancel,
     onSuccess
-}) => {
+}: TeamWorkspaceAcceptInviteModalProps) => {
     const [form] = Form.useForm();
     const { message } = App.useApp();
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);
@@ -69,11 +76,11 @@ const TeamWorkspaceAcceptInviteModal = ({
         setSshKeySource(sshKeySourceValue || DEFAULT_VALUES.sshKeySource);
     }, [sshKeySourceValue]);
 
-    const generateUniqueWorkspaceName = (baseName, existingWorkspaces) => {
+    const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<Record<string, unknown>>) => {
         let counter = 1;
         let newName = baseName;
-        
-        while (existingWorkspaces.find(w => w.name === newName)) {
+
+        while (existingWorkspaces.find((w: Record<string, unknown>) => w.name === newName)) {
             counter++;
             newName = `${baseName} (${counter})`;
         }
@@ -267,7 +274,7 @@ const TeamWorkspaceAcceptInviteModal = ({
             
             unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress?.();
             
-            progressUnsubscribeRef.current = services.gitService.onProgress?.((event) => {
+            progressUnsubscribeRef.current = services.gitService.onProgress?.((event: { type: string; data: Record<string, unknown> }) => {
                 if (event.type === 'git-connection') {
                     setConnectionProgress(event.data.summary || []);
                 }
@@ -326,7 +333,7 @@ const TeamWorkspaceAcceptInviteModal = ({
         }
     };
 
-    const handleFinish = async (values) => {
+    const handleFinish = async (values: Record<string, unknown>) => {
         if (!connectionTested) {
             message.warning('Please test the connection before joining the workspace');
             return;
