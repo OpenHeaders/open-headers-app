@@ -3,13 +3,14 @@
  * Manages SSL certificate generation, trust, and lifecycle for the WSS server
  */
 
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-const crypto = require('crypto');
-const { createLogger } = require('../../utils/mainLogger');
-const CertificateGenerator = require('../../utils/certificateGenerator');
+import fs from 'fs';
+import path from 'path';
+import child_process from 'child_process';
+import crypto from 'crypto';
+import mainLogger from '../../utils/mainLogger.js';
 
+const { execSync } = child_process;
+const { createLogger } = mainLogger;
 const log = createLogger('WSCertificateHandler');
 
 const CERT_VERIFY_HTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Certificate Verified</title>
@@ -19,8 +20,40 @@ const CERT_VERIFY_HTML = `<!DOCTYPE html><html><head><meta charset="UTF-8"><titl
 <p>Connection status: <strong style="color:#34A853">Connected</strong></p></div>
 <script>setTimeout(()=>window.close(),2000)</script></body></html>`;
 
+interface CertificatePaths {
+    keyPath: string | null;
+    certPath: string | null;
+    fingerprint: string | null;
+    validTo?: string | null;
+    subject?: string | null;
+}
+
+interface CertEnsureResult {
+    success: boolean;
+    renewed?: boolean;
+    error?: string;
+}
+
+interface TrustResult {
+    trusted: boolean;
+    error?: string;
+}
+
+interface TrustActionResult {
+    success: boolean;
+    error?: string;
+}
+
+interface WSServiceLike {
+    appDataPath: string | null;
+    _broadcastToAll(message: string): number;
+}
+
 class WSCertificateHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+    certificatePaths: CertificatePaths;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
         this.certificatePaths = {
             keyPath: null,
@@ -31,9 +64,8 @@ class WSCertificateHandler {
 
     /**
      * Ensure certificate files exist, or create them
-     * @returns {Promise<Object>} Status object with success flag
      */
-    async ensureCertificatesExist() {
+    async ensureCertificatesExist(): Promise<CertEnsureResult> {
         try {
             const certsDir = this._getCertificatesDirectory();
             if (!fs.existsSync(certsDir)) {
@@ -54,7 +86,7 @@ class WSCertificateHandler {
                 // Auto-renew if expiring within 30 days or already expired
                 const RENEWAL_THRESHOLD_DAYS = 30;
                 if (validTo) {
-                    const daysLeft = Math.ceil((new Date(validTo) - Date.now()) / (1000 * 60 * 60 * 24));
+                    const daysLeft = Math.ceil((new Date(validTo).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                     if (daysLeft <= RENEWAL_THRESHOLD_DAYS) {
                         log.info(`Certificate expires in ${daysLeft} days, auto-renewing...`);
                         try {
@@ -74,7 +106,7 @@ class WSCertificateHandler {
                             };
                             log.info('Certificate auto-renewed successfully');
                             return { success: true, renewed: true };
-                        } catch (renewError) {
+                        } catch (renewError: any) {
                             log.warn('Certificate auto-renewal failed, using existing cert:', renewError.message);
                             // Fall through to use existing cert
                         }
@@ -116,13 +148,13 @@ class WSCertificateHandler {
                 };
 
                 return { success: true };
-            } catch (genError) {
+            } catch (genError: any) {
                 return {
                     success: false,
                     error: `Failed to generate certificates: ${genError.message}`
                 };
             }
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: `Error ensuring certificates exist: ${error.message}`
@@ -132,10 +164,8 @@ class WSCertificateHandler {
 
     /**
      * Gets the appropriate directory for storing certificates
-     * @private
-     * @returns {string}
      */
-    _getCertificatesDirectory() {
+    _getCertificatesDirectory(): string {
         if (this.wsService.appDataPath) {
             return path.join(this.wsService.appDataPath, 'certs');
         }
@@ -144,9 +174,8 @@ class WSCertificateHandler {
 
     /**
      * Generate SSL certificates using cross-platform method
-     * @private
      */
-    async _generateCertificates(certsDir, keyPath, certPath) {
+    async _generateCertificates(certsDir: string, keyPath: string, certPath: string): Promise<void> {
         try {
             if (this._isOpenSSLAvailable()) {
                 try {
@@ -155,12 +184,13 @@ class WSCertificateHandler {
                     execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 397 -subj "/O=OpenHeaders/CN=OpenHeaders localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
                     log.info('Successfully generated certificate files with OpenSSL');
                     return;
-                } catch (opensslError) {
+                } catch (opensslError: any) {
                     log.warn('OpenSSL command failed, falling back to Node.js implementation:', opensslError.message);
                 }
             }
 
             log.info('Using cross-platform certificate generator...');
+            const CertificateGenerator = require('../../utils/certificateGenerator.js');
             const generator = new CertificateGenerator(log);
             const result = await generator.generateCertificates(certsDir);
 
@@ -169,7 +199,7 @@ class WSCertificateHandler {
             }
 
             log.info('Successfully generated certificate files');
-        } catch (error) {
+        } catch (error: any) {
             log.error('Failed to generate certificates:', error.message);
             throw error;
         }
@@ -177,10 +207,8 @@ class WSCertificateHandler {
 
     /**
      * Check if OpenSSL is available on the system
-     * @private
-     * @returns {boolean}
      */
-    _isOpenSSLAvailable() {
+    _isOpenSSLAvailable(): boolean {
         try {
             execSync('openssl version', { stdio: 'ignore' });
             return true;
@@ -191,11 +219,8 @@ class WSCertificateHandler {
 
     /**
      * Calculate certificate fingerprint
-     * @private
-     * @param {Buffer} cert
-     * @returns {string}
      */
-    _calculateCertFingerprint(cert) {
+    _calculateCertFingerprint(cert: Buffer): string {
         try {
             const x509 = new crypto.X509Certificate(cert);
             return x509.fingerprint.toUpperCase();
@@ -207,18 +232,15 @@ class WSCertificateHandler {
 
     /**
      * Parse certificate metadata (expiry and subject)
-     * @private
-     * @param {Buffer} cert
-     * @returns {{validTo: string|null, subject: string|null}}
      */
-    _parseCertificateInfo(cert) {
+    _parseCertificateInfo(cert: Buffer): { validTo: string | null; subject: string | null } {
         try {
             const x509 = new crypto.X509Certificate(cert);
             return {
                 validTo: new Date(x509.validTo).toISOString(),
                 subject: x509.subject || null
             };
-        } catch (error) {
+        } catch (error: any) {
             log.warn('Could not parse certificate info:', error.message);
             return { validTo: null, subject: null };
         }
@@ -227,10 +249,9 @@ class WSCertificateHandler {
     /**
      * Returns an HTTPS request handler for the WSS server
      * Handles /ping, /verify-cert, /accept-cert endpoints
-     * @returns {Function}
      */
-    createHttpsRequestHandler() {
-        return (req, res) => {
+    createHttpsRequestHandler(): (req: any, res: any) => void {
+        return (req: any, res: any) => {
             const urlPath = new URL(req.url, `https://${req.headers.host}`).pathname;
 
             if (urlPath === '/ping') {
@@ -251,9 +272,8 @@ class WSCertificateHandler {
 
     /**
      * Check if the WSS certificate is trusted by the OS
-     * @returns {Promise<{trusted: boolean, error?: string}>}
      */
-    async checkCertificateTrust() {
+    async checkCertificateTrust(): Promise<TrustResult> {
         const certPath = this.certificatePaths.certPath;
         if (!certPath || !fs.existsSync(certPath)) {
             return { trusted: false, error: 'Certificate file not found' };
@@ -297,7 +317,7 @@ class WSCertificateHandler {
             }
 
             return { trusted: false, error: `Unsupported platform: ${platform}` };
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error checking certificate trust:', error);
             return { trusted: false, error: error.message };
         }
@@ -305,9 +325,8 @@ class WSCertificateHandler {
 
     /**
      * Trust the WSS certificate in the OS trust store
-     * @returns {Promise<{success: boolean, error?: string}>}
      */
-    async trustCertificate() {
+    async trustCertificate(): Promise<TrustActionResult> {
         const certPath = this.certificatePaths.certPath;
         if (!certPath || !fs.existsSync(certPath)) {
             return { success: false, error: 'Certificate file not found' };
@@ -315,7 +334,7 @@ class WSCertificateHandler {
 
         try {
             const platform = process.platform;
-            let result;
+            let result: TrustActionResult | undefined;
 
             if (platform === 'darwin') {
                 try {
@@ -334,7 +353,7 @@ class WSCertificateHandler {
                     execSync(`certutil -addstore -user Root "${certPath}"`, { stdio: 'pipe' });
                     log.info('Certificate added to Windows user Root store');
                     result = { success: true };
-                } catch (error) {
+                } catch (error: any) {
                     const msg = (error.message || '').toLowerCase();
                     if (msg.includes('denied') || msg.includes('policy')) {
                         return { success: false, error: 'Your organization\'s policy prevents adding certificates. Contact your IT administrator.' };
@@ -354,7 +373,7 @@ class WSCertificateHandler {
                     execSync(`certutil -d sql:"${nssDb}" -A -n "OpenHeaders localhost" -t "C,," -i "${certPath}"`, { stdio: 'pipe' });
                     log.info('Certificate added to Linux NSS database');
                     result = { success: true };
-                } catch (error) {
+                } catch (error: any) {
                     return { success: false, error: error.message || 'Failed to add certificate — ensure libnss3-tools is installed (apt install libnss3-tools)' };
                 }
             } else {
@@ -362,12 +381,12 @@ class WSCertificateHandler {
             }
 
             // Notify connected extensions so they can upgrade from WS to WSS
-            if (result.success) {
+            if (result && result.success) {
                 this._broadcastCertificateTrustChanged(true);
             }
 
-            return result;
-        } catch (error) {
+            return result!;
+        } catch (error: any) {
             log.error('Error trusting certificate:', error);
             return { success: false, error: error.message };
         }
@@ -375,9 +394,8 @@ class WSCertificateHandler {
 
     /**
      * Remove the WSS certificate from the OS trust store
-     * @returns {Promise<{success: boolean, error?: string}>}
      */
-    async untrustCertificate() {
+    async untrustCertificate(): Promise<TrustActionResult> {
         const certPath = this.certificatePaths.certPath;
         if (!certPath || !fs.existsSync(certPath)) {
             return { success: false, error: 'Certificate file not found' };
@@ -391,7 +409,7 @@ class WSCertificateHandler {
                     execSync(`security delete-certificate -c "OpenHeaders localhost" ~/Library/Keychains/login.keychain-db`, { stdio: 'pipe' });
                     log.info('Certificate removed from macOS login keychain');
                     return { success: true };
-                } catch (error) {
+                } catch (error: any) {
                     return { success: false, error: error.message || 'Failed to remove certificate' };
                 }
             }
@@ -401,7 +419,7 @@ class WSCertificateHandler {
                     execSync(`certutil -delstore -user Root "OpenHeaders localhost"`, { stdio: 'pipe' });
                     log.info('Certificate removed from Windows user Root store');
                     return { success: true };
-                } catch (error) {
+                } catch (error: any) {
                     return { success: false, error: error.message || 'Failed to remove certificate' };
                 }
             }
@@ -412,13 +430,13 @@ class WSCertificateHandler {
                     execSync(`certutil -d sql:"${nssDb}" -D -n "OpenHeaders localhost"`, { stdio: 'pipe' });
                     log.info('Certificate removed from Linux NSS database');
                     return { success: true };
-                } catch (error) {
+                } catch (error: any) {
                     return { success: false, error: error.message || 'Failed to remove certificate' };
                 }
             }
 
             return { success: false, error: `Unsupported platform: ${platform}` };
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error untrusting certificate:', error);
             return { success: false, error: error.message };
         }
@@ -426,10 +444,8 @@ class WSCertificateHandler {
 
     /**
      * Broadcast certificate trust status change to all connected extensions
-     * @private
-     * @param {boolean} trusted
      */
-    _broadcastCertificateTrustChanged(trusted) {
+    _broadcastCertificateTrustChanged(trusted: boolean): void {
         try {
             const message = JSON.stringify({
                 type: 'certificateTrustChanged',
@@ -443,4 +459,5 @@ class WSCertificateHandler {
     }
 }
 
-module.exports = WSCertificateHandler;
+export { WSCertificateHandler };
+export default WSCertificateHandler;

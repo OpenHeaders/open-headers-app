@@ -3,34 +3,76 @@
  * Manages rule broadcasting, dynamic value population, and toggle from extensions
  */
 
-const WebSocket = require('ws');
-const fs = require('fs');
-const path = require('path');
-const { createLogger } = require('../../utils/mainLogger');
-const atomicWriter = require('../../utils/atomicFileWriter');
-const { DATA_FORMAT_VERSION } = require('../../config/version');
+import WebSocket from 'ws';
+import fs from 'fs';
+import path from 'path';
+import mainLogger from '../../utils/mainLogger.js';
+import atomicWriter from '../../utils/atomicFileWriter.js';
 
+const { createLogger } = mainLogger;
 const log = createLogger('WSRuleHandler');
 
+const versionConfig = require('../../config/version');
+const { DATA_FORMAT_VERSION } = versionConfig;
+
+interface HeaderRule {
+    id: string | number;
+    headerName?: string;
+    headerValue?: string;
+    isEnabled?: boolean;
+    isDynamic?: boolean;
+    sourceId?: string | number;
+    prefix?: string;
+    suffix?: string;
+    domains?: string[];
+    hasEnvVars?: boolean;
+    envVars?: string[];
+    activationState?: string;
+    missingDependencies?: string[];
+    updatedAt?: string;
+    [key: string]: any;
+}
+
+interface Rules {
+    header?: HeaderRule[];
+    [key: string]: any;
+}
+
+interface Source {
+    sourceId: string;
+    sourceContent?: string;
+}
+
+interface WSServiceLike {
+    rules: Rules;
+    sources: Source[];
+    appDataPath: string | null;
+    environmentHandler: {
+        loadEnvironmentVariables(): Record<string, string>;
+        resolveTemplate(template: string, variables: Record<string, string>): string;
+    };
+    _broadcastToAll(message: string): number;
+}
+
 class WSRuleHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
     }
 
     /**
      * Update rules and broadcast to all clients
-     * @param {Object} rules
      */
-    updateRules(rules) {
+    updateRules(rules: Rules): void {
         this.wsService.rules = rules;
         this.broadcastRules();
     }
 
     /**
      * Send rules to a specific client
-     * @param {WebSocket} ws
      */
-    async sendRulesToClient(ws) {
+    async sendRulesToClient(ws: any): Promise<void> {
         return new Promise((resolve, reject) => {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 reject(new Error('WebSocket not in OPEN state'));
@@ -48,7 +90,7 @@ class WSRuleHandler {
                     }
                 });
 
-                ws.send(message, (error) => {
+                ws.send(message, (error: Error | undefined) => {
                     if (error) {
                         log.error('Error sending rules to client:', error);
                         reject(error);
@@ -65,7 +107,7 @@ class WSRuleHandler {
     /**
      * Broadcast rules to all connected clients
      */
-    broadcastRules() {
+    broadcastRules(): void {
         const populatedRules = this._populateDynamicHeaderValues(this.wsService.rules);
 
         const message = JSON.stringify({
@@ -81,29 +123,26 @@ class WSRuleHandler {
 
     /**
      * Populate dynamic header values from sources and resolve environment variables
-     * @private
-     * @param {Object} rules
-     * @returns {Object}
      */
-    _populateDynamicHeaderValues(rules) {
-        const populatedRules = JSON.parse(JSON.stringify(rules));
+    _populateDynamicHeaderValues(rules: Rules): Rules {
+        const populatedRules: Rules = JSON.parse(JSON.stringify(rules));
         const envHandler = this.wsService.environmentHandler;
 
-        let environmentVariables = null;
+        let environmentVariables: Record<string, string> | null = null;
         try {
             environmentVariables = envHandler.loadEnvironmentVariables();
-        } catch (error) {
+        } catch (error: any) {
             log.warn('Failed to load environment variables:', error.message);
         }
 
         if (populatedRules.header && Array.isArray(populatedRules.header)) {
-            populatedRules.header = populatedRules.header.map(rule => {
-                let processedRule = { ...rule };
+            populatedRules.header = populatedRules.header.map((rule: HeaderRule) => {
+                let processedRule: HeaderRule = { ...rule };
 
                 if (rule.hasEnvVars && environmentVariables) {
                     try {
-                        const missingVars = rule.envVars ? rule.envVars.filter(varName => {
-                            const value = environmentVariables[varName];
+                        const missingVars = rule.envVars ? rule.envVars.filter((varName: string) => {
+                            const value = environmentVariables![varName];
                             return value === undefined || value === null || value === '';
                         }) : [];
 
@@ -131,11 +170,11 @@ class WSRuleHandler {
                         }
 
                         if (rule.domains && Array.isArray(rule.domains)) {
-                            processedRule.domains = rule.domains.flatMap(domain => {
+                            processedRule.domains = rule.domains.flatMap((domain: string) => {
                                 if (domain && domain.includes('{{')) {
-                                    const resolved = envHandler.resolveTemplate(domain, environmentVariables);
+                                    const resolved = envHandler.resolveTemplate(domain, environmentVariables!);
                                     if (resolved && resolved.includes(',')) {
-                                        return resolved.split(',').map(d => d.trim()).filter(d => d);
+                                        return resolved.split(',').map((d: string) => d.trim()).filter((d: string) => d);
                                     }
                                     return resolved;
                                 }
@@ -153,7 +192,7 @@ class WSRuleHandler {
                 }
 
                 if (processedRule.isDynamic && processedRule.sourceId) {
-                    const source = this.wsService.sources.find(s => s.sourceId === processedRule.sourceId.toString());
+                    const source = this.wsService.sources.find((s: Source) => s.sourceId === processedRule.sourceId!.toString());
                     if (source && source.sourceContent) {
                         const prefix = processedRule.prefix || '';
                         const suffix = processedRule.suffix || '';
@@ -162,7 +201,7 @@ class WSRuleHandler {
                 }
 
                 return processedRule;
-            }).filter(rule => rule !== null);
+            }).filter((rule: HeaderRule | null) => rule !== null) as HeaderRule[];
         }
 
         return populatedRules;
@@ -174,10 +213,8 @@ class WSRuleHandler {
 
     /**
      * Handle toggle rule request from extension
-     * @param {string} ruleId
-     * @param {boolean} enabled
      */
-    async handleToggleRule(ruleId, enabled) {
+    async handleToggleRule(ruleId: string | number, enabled: boolean): Promise<void> {
         try {
             if (!this.wsService.rules || !this.wsService.rules.header) {
                 log.error('No header rules available to toggle');
@@ -185,7 +222,7 @@ class WSRuleHandler {
             }
 
             let ruleFound = false;
-            const updatedHeaderRules = this.wsService.rules.header.map(rule => {
+            const updatedHeaderRules = this.wsService.rules.header.map((rule: HeaderRule) => {
                 if (String(rule.id) === String(ruleId)) {
                     ruleFound = true;
                     return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
@@ -208,10 +245,8 @@ class WSRuleHandler {
 
     /**
      * Handle toggle all rules request from extension
-     * @param {Array} ruleIds
-     * @param {boolean} enabled
      */
-    async handleToggleAllRules(ruleIds, enabled) {
+    async handleToggleAllRules(ruleIds: string[], enabled: boolean): Promise<void> {
         try {
             log.info(`Handling toggle all rules request: ${ruleIds.length} rules -> ${enabled}`);
 
@@ -221,7 +256,7 @@ class WSRuleHandler {
             }
 
             let rulesUpdated = 0;
-            const updatedHeaderRules = this.wsService.rules.header.map(rule => {
+            const updatedHeaderRules = this.wsService.rules.header.map((rule: HeaderRule) => {
                 if (ruleIds.includes(String(rule.id))) {
                     rulesUpdated++;
                     return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
@@ -244,9 +279,8 @@ class WSRuleHandler {
 
     /**
      * Persist rules to disk, broadcast to extensions, and notify desktop UI
-     * @private
      */
-    async _persistAndNotify() {
+    async _persistAndNotify(): Promise<void> {
         if (this.wsService.appDataPath) {
             try {
                 const workspacesPath = path.join(this.wsService.appDataPath, 'workspaces.json');
@@ -262,7 +296,7 @@ class WSRuleHandler {
 
                 const rulesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'rules.json');
 
-                let rulesStorage;
+                let rulesStorage: any;
                 try {
                     const existingData = await fs.promises.readFile(rulesPath, 'utf8');
                     rulesStorage = JSON.parse(existingData);
@@ -273,7 +307,7 @@ class WSRuleHandler {
                 rulesStorage.rules = this.wsService.rules;
                 rulesStorage.metadata = rulesStorage.metadata || {};
                 rulesStorage.metadata.totalRules = Object.values(this.wsService.rules)
-                    .reduce((sum, rules) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
+                    .reduce((sum: number, rules: any) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
                 rulesStorage.metadata.lastUpdated = new Date().toISOString();
 
                 await atomicWriter.writeJson(rulesPath, rulesStorage, { pretty: true });
@@ -286,9 +320,10 @@ class WSRuleHandler {
         this.broadcastRules();
 
         try {
-            const { BrowserWindow } = require('electron');
+            const electron = require('electron');
+            const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
-            windows.forEach(window => {
+            windows.forEach((window: any) => {
                 if (window && !window.isDestroyed()) {
                     const rulesData = {
                         rules: { header: this.wsService.rules.header || [] },
@@ -303,7 +338,7 @@ class WSRuleHandler {
                         window.dispatchEvent(new CustomEvent('rules-updated', {
                             detail: { rules: ${JSON.stringify(rulesData)} }
                         }));
-                    `).catch(err => {
+                    `).catch((err: Error) => {
                         log.error('Failed to dispatch rules-updated event:', err);
                     });
                 }
@@ -314,4 +349,5 @@ class WSRuleHandler {
     }
 }
 
-module.exports = WSRuleHandler;
+export { WSRuleHandler };
+export default WSRuleHandler;

@@ -3,23 +3,45 @@
  * Manages source updates, broadcasting, workspace switching, and initial data loading
  */
 
-const WebSocket = require('ws');
-const fs = require('fs');
-const path = require('path');
-const { createLogger } = require('../../utils/mainLogger');
+import WebSocket from 'ws';
+import fs from 'fs';
+import path from 'path';
+import mainLogger from '../../utils/mainLogger.js';
 
+const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');
 
+interface Source {
+    sourceId?: string;
+    sourceContent?: string;
+    [key: string]: any;
+}
+
+interface SourceServiceLike {
+    on?(event: string, handler: () => void): void;
+    getAllSources?(): Source[];
+}
+
+interface WSServiceLike {
+    rules: any;
+    sources: Source[];
+    appDataPath: string | null;
+    sourceService: SourceServiceLike | null;
+    ruleHandler: { broadcastRules(): void };
+    _broadcastToAll(message: string): number;
+}
+
 class WSSourceHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
     }
 
     /**
      * Update sources and broadcast to all clients
-     * @param {Array|Object} sources
      */
-    updateSources(sources) {
+    updateSources(sources: any): void {
         if (sources && typeof sources === 'object' && sources.type === 'rules-update') {
             if (sources.data && sources.data.rules) {
                 this.wsService.rules = sources.data.rules;
@@ -47,9 +69,8 @@ class WSSourceHandler {
 
     /**
      * Send sources to a specific client
-     * @param {WebSocket} ws
      */
-    async sendSourcesToClient(ws) {
+    async sendSourcesToClient(ws: any): Promise<void> {
         return new Promise(async (resolve, reject) => {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 reject(new Error('WebSocket not in OPEN state'));
@@ -71,7 +92,7 @@ class WSSourceHandler {
                         }
 
                         const workspaceList = JSON.parse(await fs.promises.readFile(workspacesPath, 'utf8')).workspaces || [];
-                        const activeWorkspace = workspaceList.find(w => w.id === activeWorkspaceId);
+                        const activeWorkspace = workspaceList.find((w: any) => w.id === activeWorkspaceId);
 
                         if (activeWorkspace && (activeWorkspace.type === 'git' || activeWorkspace.type === 'team')) {
                             const sourcesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
@@ -92,7 +113,7 @@ class WSSourceHandler {
                     sources: this.wsService.sources
                 });
 
-                ws.send(message, (error) => {
+                ws.send(message, (error: Error | undefined) => {
                     if (error) {
                         log.error('Error sending sources to client:', error);
                         reject(error);
@@ -108,15 +129,13 @@ class WSSourceHandler {
 
     /**
      * Check whether any source's content has changed
-     * @param {Array} newSources
-     * @returns {boolean}
      */
-    _hasSourceContentChanged(newSources) {
+    _hasSourceContentChanged(newSources: Source[]): boolean {
         if (!Array.isArray(newSources)) return true;
         const current = this.wsService.sources;
         if (!current || current.length !== newSources.length) return true;
 
-        const oldMap = new Map();
+        const oldMap = new Map<string, string>();
         for (const s of current) {
             if (s.sourceId) oldMap.set(String(s.sourceId), s.sourceContent || '');
         }
@@ -133,7 +152,7 @@ class WSSourceHandler {
     /**
      * Broadcast sources to all connected clients
      */
-    broadcastSources() {
+    broadcastSources(): void {
         const message = JSON.stringify({
             type: 'sourcesUpdated',
             sources: this.wsService.sources
@@ -143,12 +162,11 @@ class WSSourceHandler {
 
     /**
      * Handle workspace switch - reload rules and sources from new workspace
-     * @param {string} workspaceId
      */
-    async onWorkspaceSwitch(workspaceId) {
+    async onWorkspaceSwitch(workspaceId: string): Promise<void> {
         try {
             log.info(`WebSocket service switching to workspace: ${workspaceId}`);
-            const appDataPath = this.wsService.appDataPath;
+            const appDataPath = this.wsService.appDataPath!;
 
             const rulesPath = path.join(appDataPath, 'workspaces', workspaceId, 'rules.json');
             if (fs.existsSync(rulesPath)) {
@@ -188,7 +206,7 @@ class WSSourceHandler {
     /**
      * Register for source service events
      */
-    registerSourceEvents() {
+    registerSourceEvents(): void {
         const sourceService = this.wsService.sourceService;
         if (!sourceService) return;
 
@@ -207,9 +225,8 @@ class WSSourceHandler {
 
     /**
      * Update from source service and broadcast
-     * @private
      */
-    _updateAndBroadcast() {
+    _updateAndBroadcast(): void {
         const sourceService = this.wsService.sourceService;
         if (!sourceService) return;
 
@@ -226,7 +243,7 @@ class WSSourceHandler {
     /**
      * Load initial data (rules and sources) from storage
      */
-    async loadInitialData() {
+    async loadInitialData(): Promise<void> {
         try {
             const appDataPath = this.wsService.appDataPath;
             if (!appDataPath) return;
@@ -242,7 +259,7 @@ class WSSourceHandler {
                         activeWorkspaceId = workspaces.activeWorkspaceId;
                     }
                 }
-            } catch (error) {
+            } catch (error: any) {
                 log.warn('Could not read active workspace, using default:', error.message);
             }
 
@@ -274,4 +291,5 @@ class WSSourceHandler {
     }
 }
 
-module.exports = WSSourceHandler;
+export { WSSourceHandler };
+export default WSSourceHandler;

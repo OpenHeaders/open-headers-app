@@ -1,20 +1,57 @@
-// ws-service.js - WebSocket service core: server lifecycle, message routing, public API
-const WebSocket = require('ws');
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
-const { createLogger } = require('../../utils/mainLogger');
-const WSNetworkStateHandler = require('./ws-network-state');
-const WSCertificateHandler = require('./ws-certificate-handler');
-const WSRecordingHandler = require('./ws-recording-handler');
-const WSRuleHandler = require('./ws-rule-handler');
-const WSSourceHandler = require('./ws-source-handler');
-const WSEnvironmentHandler = require('./ws-environment-handler');
-const WSClientHandler = require('./ws-client-handler');
-const windowsFocusHelper = require('../../main/modules/utils/windowsFocus');
+// ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
+import WebSocket from 'ws';
+import https from 'https';
+import http from 'http';
+import fs from 'fs';
+import mainLogger from '../../utils/mainLogger.js';
+import { WSNetworkStateHandler } from './ws-network-state';
+import { WSCertificateHandler } from './ws-certificate-handler';
+import { WSRecordingHandler } from './ws-recording-handler';
+import { WSRuleHandler } from './ws-rule-handler';
+import { WSSourceHandler } from './ws-source-handler';
+import { WSEnvironmentHandler } from './ws-environment-handler';
+import { WSClientHandler } from './ws-client-handler';
+
+const { createLogger } = mainLogger;
+const windowsFocusHelper = require('../../main/modules/utils/windowsFocus.js');
 const log = createLogger('WebSocketService');
 
+interface InitializeOptions {
+    wsPort?: number;
+    wssPort?: number;
+    sourceService?: any;
+    appDataPath?: string;
+    networkService?: any;
+}
+
 class WebSocketService {
+    wss: WebSocket.Server | null;
+    secureWss: WebSocket.Server | null;
+    httpServer: http.Server | null;
+    httpsServer: https.Server | null;
+    wsPort: number;
+    wssPort: number;
+    host: string;
+    isInitializing: boolean;
+    sources: any[];
+    rules: any;
+    sourceService: any;
+    appDataPath: string | null;
+    connectedClients: Map<string, any>;
+    clientInitializationLocks: Map<string, any>;
+    rulesBroadcastTimer: ReturnType<typeof setTimeout> | null;
+    lastRulesBroadcast: number;
+    _closing: boolean;
+
+    // Handlers
+    certificateHandler: WSCertificateHandler;
+    recordingHandler: WSRecordingHandler;
+    ruleHandler: WSRuleHandler;
+    sourceHandler: WSSourceHandler;
+    environmentHandler: WSEnvironmentHandler;
+    clientHandler: WSClientHandler;
+    networkStateHandler: WSNetworkStateHandler | null;
+
     constructor() {
         this.wss = null;
         this.secureWss = null;
@@ -37,19 +74,17 @@ class WebSocketService {
         // Handlers
         this.certificateHandler = new WSCertificateHandler(this);
         this.recordingHandler = new WSRecordingHandler(this);
-        this.ruleHandler = new WSRuleHandler(this);
-        this.sourceHandler = new WSSourceHandler(this);
-        this.environmentHandler = new WSEnvironmentHandler(this);
-        this.clientHandler = new WSClientHandler(this);
+        this.ruleHandler = new WSRuleHandler(this as any);
+        this.sourceHandler = new WSSourceHandler(this as any);
+        this.environmentHandler = new WSEnvironmentHandler(this as any);
+        this.clientHandler = new WSClientHandler(this as any);
         this.networkStateHandler = null;
     }
 
     /**
      * Initialize the WebSocket service
-     * @param {Object} options
-     * @returns {boolean}
      */
-    initialize(options = {}) {
+    initialize(options: InitializeOptions = {}): boolean {
         if (this.isInitializing) return false;
         this.isInitializing = true;
 
@@ -101,12 +136,10 @@ class WebSocketService {
 
     /**
      * Broadcast a pre-serialized message to all WS and WSS clients
-     * @param {string} message - JSON string
-     * @returns {number} clients reached
      */
-    _broadcastToAll(message) {
+    _broadcastToAll(message: string): number {
         let count = 0;
-        const send = (server) => {
+        const send = (server: WebSocket.Server | null) => {
             if (!server) return;
             server.clients.forEach((client) => {
                 if (client.readyState === WebSocket.OPEN) {
@@ -122,8 +155,7 @@ class WebSocketService {
 
     // ── Server lifecycle ──────────────────────────
 
-    /** @private */
-    _setupWsServer() {
+    _setupWsServer(): void {
         try {
             log.info(`WebSocket server (WS) starting on ${this.host}:${this.wsPort}`);
 
@@ -144,8 +176,7 @@ class WebSocketService {
         }
     }
 
-    /** @private */
-    async _setupWssServer() {
+    async _setupWssServer(): Promise<void> {
         try {
             log.info(`Secure WebSocket server (WSS) starting on ${this.host}:${this.wssPort}`);
 
@@ -155,8 +186,8 @@ class WebSocketService {
                 return;
             }
 
-            const key = fs.readFileSync(this.certificateHandler.certificatePaths.keyPath);
-            const cert = fs.readFileSync(this.certificateHandler.certificatePaths.certPath);
+            const key = fs.readFileSync(this.certificateHandler.certificatePaths.keyPath!);
+            const cert = fs.readFileSync(this.certificateHandler.certificatePaths.certPath!);
 
             this.httpsServer = https.createServer({ key, cert },
                 this.certificateHandler.createHttpsRequestHandler()
@@ -174,13 +205,12 @@ class WebSocketService {
         }
     }
 
-    /** @private */
-    _listenWithRetry(server, port, host, label, onListening) {
+    _listenWithRetry(server: http.Server | https.Server, port: number, host: string, label: string, onListening?: () => void): void {
         const maxRetries = 5;
         const retryDelay = 500;
         let attempts = 0;
 
-        const retryHandler = (error) => {
+        const retryHandler = (error: NodeJS.ErrnoException) => {
             if (error.code === 'EADDRINUSE' && attempts < maxRetries) {
                 attempts++;
                 log.warn(`${label} port ${port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
@@ -199,8 +229,7 @@ class WebSocketService {
         server.listen(port, host);
     }
 
-    /** @private */
-    _restartWebSocketServer(serverType) {
+    _restartWebSocketServer(serverType: string): void {
         try {
             if (serverType === 'WS') {
                 if (this.wss) { this.wss.close(); if (this.httpServer) this.httpServer.close(); }
@@ -214,21 +243,21 @@ class WebSocketService {
         }
     }
 
-    async close() {
+    async close(): Promise<void> {
         this._closing = true;
         this.clientHandler.stopClientCleanup();
 
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
 
-        const terminateAll = (server) => {
+        const terminateAll = (server: WebSocket.Server | null) => {
             if (!server) return;
             for (const c of server.clients) { try { c.terminate(); } catch (e) { /* ignore */ } }
         };
         terminateAll(this.wss);
         terminateAll(this.secureWss);
 
-        const closeServer = (httpSrv, wsSrv, label) => {
+        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: WebSocket.Server | null, label: string): Promise<void> => {
             if (!httpSrv) return Promise.resolve();
             return new Promise((resolve) => {
                 const t = setTimeout(() => { log.warn(`${label} close timed out`); resolve(); }, 2000);
@@ -244,9 +273,8 @@ class WebSocketService {
 
     // ── Message routing ───────────────────────────
 
-    /** @private */
-    _configureWebSocketServer(server, serverType) {
-        server.on('connection', (ws, request) => {
+    _configureWebSocketServer(server: WebSocket.Server, serverType: string): void {
+        server.on('connection', (ws: any, request: http.IncomingMessage) => {
             log.info(`${serverType} client connected`);
 
             const clientId = `${serverType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -271,14 +299,14 @@ class WebSocketService {
                 this.clientInitializationLocks.delete(clientId);
                 this.clientHandler.broadcastConnectionStatus();
             });
-            ws.on('error', (error) => log.error(`${serverType} client error:`, error));
+            ws.on('error', (error: Error) => log.error(`${serverType} client error:`, error));
             ws.on('pong', () => {
                 ws.isAlive = true;
                 const c = this.connectedClients.get(clientId);
                 if (c) c.lastActivity = new Date();
             });
 
-            ws.on('message', (msg) => {
+            ws.on('message', (msg: string) => {
                 try {
                     const data = JSON.parse(msg);
                     const c = this.connectedClients.get(clientId);
@@ -301,14 +329,13 @@ class WebSocketService {
             });
         });
 
-        server.on('error', (error) => {
+        server.on('error', (error: Error) => {
             log.error(`${serverType} server error:`, error);
             setTimeout(() => this._restartWebSocketServer(serverType), 5000);
         });
     }
 
-    /** @private */
-    _dispatchMessage(ws, data) {
+    _dispatchMessage(ws: any, data: any): void {
         switch (data.type) {
             case 'requestSources':
                 if (ws.isInitialized) this.sourceHandler.sendSourcesToClient(ws);
@@ -352,11 +379,11 @@ class WebSocketService {
 
     // ── Shared utilities ──────────────────────────
 
-    /** @private */
-    _handleFocusApp(navigation) {
+    _handleFocusApp(navigation: any): void {
         try {
             log.info('_handleFocusApp called with navigation:', navigation);
-            const { BrowserWindow } = require('electron');
+            const electron = require('electron');
+            const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
             if (windows.length === 0) { log.warn('No windows available to focus'); return; }
 
@@ -377,9 +404,9 @@ class WebSocketService {
 
     // ── Public API / delegators ───────────────────
 
-    isConnected() { return this.connectedClients.size > 0; }
+    isConnected(): boolean { return this.connectedClients.size > 0; }
 
-    sendToBrowserExtension(message) {
+    sendToBrowserExtension(message: any): boolean {
         if (this.connectedClients.size === 0) {
             log.warn('No connected browser extensions to send message to');
             return false;
@@ -390,24 +417,26 @@ class WebSocketService {
     }
 
     // Source delegators
-    updateSources(sources) { this.sourceHandler.updateSources(sources); }
-    onWorkspaceSwitch(workspaceId) { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
+    updateSources(sources: any): void { this.sourceHandler.updateSources(sources); }
+    onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
 
     // Rule delegators
-    updateRules(rules) { this.ruleHandler.updateRules(rules); }
-    broadcastRules() { this.ruleHandler.broadcastRules(); }
+    updateRules(rules: any): void { this.ruleHandler.updateRules(rules); }
+    broadcastRules(): void { this.ruleHandler.broadcastRules(); }
 
     // Client delegators
-    getConnectionStatus() { return this.clientHandler.getConnectionStatus(); }
+    getConnectionStatus(): Record<string, any> { return this.clientHandler.getConnectionStatus(); }
 
     // Certificate delegators
-    checkCertificateTrust() { return this.certificateHandler.checkCertificateTrust(); }
-    trustCertificate() { return this.certificateHandler.trustCertificate(); }
-    untrustCertificate() { return this.certificateHandler.untrustCertificate(); }
+    checkCertificateTrust(): Promise<any> { return this.certificateHandler.checkCertificateTrust(); }
+    trustCertificate(): Promise<any> { return this.certificateHandler.trustCertificate(); }
+    untrustCertificate(): Promise<any> { return this.certificateHandler.untrustCertificate(); }
 
     // Recording delegators
-    broadcastVideoRecordingState(enabled) { this.recordingHandler.broadcastVideoRecordingState(enabled); }
-    broadcastRecordingHotkeyChange(hotkey, enabled) { this.recordingHandler.broadcastRecordingHotkeyChange(hotkey, enabled); }
+    broadcastVideoRecordingState(enabled: boolean): void { this.recordingHandler.broadcastVideoRecordingState(enabled); }
+    broadcastRecordingHotkeyChange(hotkey: string, enabled?: boolean): void { this.recordingHandler.broadcastRecordingHotkeyChange(hotkey, enabled); }
 }
 
-module.exports = new WebSocketService();
+const wsServiceInstance = new WebSocketService();
+export { WebSocketService, wsServiceInstance };
+export default wsServiceInstance;

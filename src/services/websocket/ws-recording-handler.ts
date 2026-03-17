@@ -3,14 +3,31 @@
  * Manages video recording lifecycle and workflow save from browser extensions
  */
 
-const WebSocket = require('ws');
-const { createLogger } = require('../../utils/mainLogger');
-const atomicWriter = require('../../utils/atomicFileWriter');
+import WebSocket from 'ws';
+import mainLogger from '../../utils/mainLogger.js';
+import atomicWriter from '../../utils/atomicFileWriter.js';
 
+const { createLogger } = mainLogger;
 const log = createLogger('WSRecordingHandler');
 
+interface WSServiceLike {
+    appDataPath: string | null;
+    _broadcastToAll(message: string): number;
+    _handleFocusApp(navigation: any): void;
+}
+
+interface VideoCaptureServiceLike {
+    initialize(appDataPath: string | null): Promise<void>;
+    startRecording(options: any): Promise<{ success: boolean; error?: string }>;
+    stopRecording(recordingId: string): Promise<{ success: boolean; error?: string }>;
+    updateRecordingState(recordingId: string, state: string): Promise<void>;
+}
+
 class WSRecordingHandler {
-    constructor(wsService) {
+    wsService: WSServiceLike;
+    videoCaptureService: VideoCaptureServiceLike | null;
+
+    constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
         this.videoCaptureService = null;
     }
@@ -18,11 +35,11 @@ class WSRecordingHandler {
     /**
      * Initialize video capture service
      */
-    async initializeVideoCaptureService() {
+    async initializeVideoCaptureService(): Promise<void> {
         try {
             const VideoCaptureService = require('../video/video-capture-service');
             this.videoCaptureService = new VideoCaptureService();
-            await this.videoCaptureService.initialize(this.wsService.appDataPath);
+            await this.videoCaptureService!.initialize(this.wsService.appDataPath);
             log.info('Video capture service initialized');
         } catch (error) {
             log.error('Failed to initialize video capture service:', error);
@@ -32,16 +49,16 @@ class WSRecordingHandler {
 
     /**
      * Send video recording state to specific client
-     * @param {WebSocket} ws
      */
-    async sendVideoRecordingState(ws) {
+    async sendVideoRecordingState(ws: any): Promise<void> {
         try {
-            const { app } = require('electron');
+            const electron = require('electron');
+            const { app } = electron;
             const fs = require('fs').promises;
             const path = require('path');
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings = {};
+            let settings: any = {};
 
             try {
                 const settingsData = await fs.readFile(settingsPath, 'utf8');
@@ -68,9 +85,8 @@ class WSRecordingHandler {
 
     /**
      * Broadcast video recording state to all connected clients
-     * @param {boolean} enabled
      */
-    broadcastVideoRecordingState(enabled) {
+    broadcastVideoRecordingState(enabled: boolean): void {
         const message = JSON.stringify({
             type: 'videoRecordingStateChanged',
             enabled: enabled
@@ -82,16 +98,16 @@ class WSRecordingHandler {
 
     /**
      * Send recording hotkey to client
-     * @param {WebSocket} ws
      */
-    async sendRecordingHotkey(ws) {
+    async sendRecordingHotkey(ws: any): Promise<void> {
         try {
-            const { app } = require('electron');
+            const electron = require('electron');
+            const { app } = electron;
             const fs = require('fs').promises;
             const path = require('path');
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings = {};
+            let settings: any = {};
 
             try {
                 const settingsData = await fs.readFile(settingsPath, 'utf8');
@@ -117,10 +133,8 @@ class WSRecordingHandler {
 
     /**
      * Broadcast recording hotkey change to all connected extensions
-     * @param {string} hotkey
-     * @param {boolean} enabled
      */
-    broadcastRecordingHotkeyChange(hotkey, enabled) {
+    broadcastRecordingHotkeyChange(hotkey: string, enabled?: boolean): void {
         try {
             const message = JSON.stringify({
                 type: 'recordingHotkeyChanged',
@@ -137,12 +151,11 @@ class WSRecordingHandler {
 
     /**
      * Notify UI that a recording is being processed
-     * @param {string} recordId
-     * @param {Object} metadata
      */
-    notifyRecordingProcessing(recordId, metadata) {
+    notifyRecordingProcessing(recordId: string, metadata: any): void {
         try {
-            const { BrowserWindow } = require('electron');
+            const electron = require('electron');
+            const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
 
             const processingNotification = {
@@ -158,7 +171,7 @@ class WSRecordingHandler {
                 hasProcessedVersion: false
             };
 
-            windows.forEach(window => {
+            windows.forEach((window: any) => {
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('recording-processing', processingNotification);
                     log.info('Sent recording-processing event to renderer');
@@ -171,17 +184,14 @@ class WSRecordingHandler {
 
     /**
      * Notify UI of recording processing progress
-     * @param {string} recordId
-     * @param {string} stage
-     * @param {number} progress
-     * @param {Object} details
      */
-    notifyRecordingProgress(recordId, stage, progress, details = {}) {
+    notifyRecordingProgress(recordId: string, stage: string, progress: number, details: any = {}): void {
         try {
-            const { BrowserWindow } = require('electron');
+            const electron = require('electron');
+            const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
 
-            windows.forEach(window => {
+            windows.forEach((window: any) => {
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('recording-progress', {
                         recordId,
@@ -198,12 +208,11 @@ class WSRecordingHandler {
 
     /**
      * Handle save recording from browser extension
-     * @param {Object} recordingData
-     * @returns {Promise<Object>}
      */
-    async handleSaveRecording(recordingData) {
+    async handleSaveRecording(recordingData: any): Promise<{ success: boolean; recordId?: string; metadata?: any; error?: string }> {
         try {
-            const { app } = require('electron');
+            const electron = require('electron');
+            const { app } = electron;
             const fs = require('fs').promises;
             const path = require('path');
             const { preprocessRecordingForSave } = require('./utils/recordingPreprocessor');
@@ -227,7 +236,7 @@ class WSRecordingHandler {
             const recordingDir = path.join(recordingsPath, recordId);
             await fs.mkdir(recordingDir, { recursive: true });
 
-            let processedRecordingData;
+            let processedRecordingData: any;
             let hasProcessedVersion = false;
 
             try {
@@ -236,7 +245,7 @@ class WSRecordingHandler {
                     eventCount: recordingData.record?.events?.length || 0
                 });
 
-                let proxyPort = null;
+                let proxyPort: number | null = null;
                 try {
                     const proxyService = require('../proxy/ProxyService');
                     if (proxyService && proxyService.isRunning) {
@@ -247,11 +256,11 @@ class WSRecordingHandler {
                     } else {
                         log.info('Proxy is not running, skipping resource prefetch');
                     }
-                } catch (error) {
+                } catch (error: any) {
                     log.warn('Could not check proxy status:', error.message);
                 }
 
-                const onProgress = (stage, progress, details) => {
+                const onProgress = (stage: string, progress: number, details: any) => {
                     if (stage === 'preprocessing') {
                         const overallProgress = 10 + Math.round(progress * 0.15);
                         this.notifyRecordingProgress(recordId, 'preprocessing', overallProgress, {
@@ -274,7 +283,7 @@ class WSRecordingHandler {
                     eventCount: recordingData.record?.events?.length || 0
                 });
                 log.info(`Successfully preprocessed recording ${recordId}`);
-            } catch (preprocessError) {
+            } catch (preprocessError: any) {
                 log.error('Failed to preprocess recording:', preprocessError);
                 this.notifyRecordingProgress(recordId, 'error', 0);
                 throw new Error(`Preprocessing failed: ${preprocessError.message}`);
@@ -325,9 +334,10 @@ class WSRecordingHandler {
             this.notifyRecordingProgress(recordId, 'complete', 100);
 
             try {
-                const { BrowserWindow } = require('electron');
+                const electron2 = require('electron');
+                const { BrowserWindow } = electron2;
                 const windows = BrowserWindow.getAllWindows();
-                windows.forEach(window => {
+                windows.forEach((window: any) => {
                     if (window && !window.isDestroyed()) {
                         window.webContents.send('recording-received', metadata);
                         log.info('Sent recording-received event to renderer');
@@ -341,7 +351,7 @@ class WSRecordingHandler {
 
             log.info(`Recording saved successfully with ID: ${recordId}`);
             return { success: true, recordId: recordId, metadata };
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error saving recording:', error);
             return { success: false, error: error.message };
         }
@@ -349,12 +359,11 @@ class WSRecordingHandler {
 
     /**
      * Handle start sync recording request
-     * @param {WebSocket} ws
-     * @param {Object} data
      */
-    async handleStartSyncRecording(ws, data) {
+    async handleStartSyncRecording(ws: any, data: any): Promise<void> {
         try {
-            const { app } = require('electron');
+            const electron = require('electron');
+            const { app } = electron;
             const fs = require('fs').promises;
             const path = require('path');
 
@@ -398,7 +407,7 @@ class WSRecordingHandler {
                 log.error(`Failed to start video recording: ${result.error}`);
                 this._sendVideoRecordingStatus(ws, data.recordingId, 'error', result.error);
             }
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error handling start sync recording:', error);
             this._sendVideoRecordingStatus(ws, data.recordingId, 'error', error.message);
         }
@@ -406,12 +415,11 @@ class WSRecordingHandler {
 
     /**
      * Handle stop sync recording request
-     * @param {WebSocket} ws
-     * @param {Object} data
      */
-    async handleStopSyncRecording(ws, data) {
+    async handleStopSyncRecording(ws: any, data: any): Promise<void> {
         try {
-            const { app } = require('electron');
+            const electron = require('electron');
+            const { app } = electron;
             const fs = require('fs').promises;
             const path = require('path');
 
@@ -445,7 +453,7 @@ class WSRecordingHandler {
                 log.error(`Failed to stop video recording: ${result.error}`);
                 this._sendVideoRecordingStatus(ws, data.recordingId, 'error', result.error);
             }
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error handling stop sync recording:', error);
             this._sendVideoRecordingStatus(ws, data.recordingId, 'error', error.message);
         }
@@ -453,10 +461,8 @@ class WSRecordingHandler {
 
     /**
      * Handle recording state synchronization
-     * @param {WebSocket} ws
-     * @param {Object} data
      */
-    async handleRecordingStateSync(ws, data) {
+    async handleRecordingStateSync(ws: any, data: any): Promise<void> {
         try {
             if (!this.videoCaptureService) {
                 return;
@@ -471,10 +477,8 @@ class WSRecordingHandler {
     /**
      * Handle a saveRecording/saveWorkflow message from the extension
      * Preprocesses record ID, focuses app, notifies UI, saves, and responds
-     * @param {WebSocket} ws
-     * @param {Object} data - The raw message data
      */
-    handleSaveRecordingMessage(ws, data) {
+    handleSaveRecordingMessage(ws: any, data: any): void {
         log.info(`Received ${data.type} request from extension`);
 
         // Ensure consistent record ID
@@ -524,13 +528,8 @@ class WSRecordingHandler {
 
     /**
      * Send video recording status to client
-     * @private
-     * @param {WebSocket} ws
-     * @param {string} recordingId
-     * @param {string} status
-     * @param {string} error
      */
-    _sendVideoRecordingStatus(ws, recordingId, status, error = null) {
+    _sendVideoRecordingStatus(ws: any, recordingId: string, status: string, error: string | null = null): void {
         if (ws && ws.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'videoRecordingStatus',
@@ -545,4 +544,5 @@ class WSRecordingHandler {
     }
 }
 
-module.exports = WSRecordingHandler;
+export { WSRecordingHandler };
+export default WSRecordingHandler;
