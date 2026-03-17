@@ -6,11 +6,58 @@
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceServiceAdapter');
 
+interface GitProgressEvent {
+    type: string;
+    data: unknown;
+}
+
+interface GitResult {
+    success: boolean;
+    error?: string;
+    message?: string;
+    branches?: string[];
+    configFileValid?: boolean;
+    validationDetails?: unknown;
+    readAccess?: boolean;
+    writeAccess?: boolean;
+    commitHash?: string;
+    commitInfo?: unknown;
+    files?: string[];
+    noChanges?: boolean;
+    details?: unknown;
+}
+
+interface GitConfig {
+    [key: string]: unknown;
+}
+
+interface WorkspaceData {
+    id?: string;
+    [key: string]: unknown;
+}
+
+interface SyncEvent {
+    type: string;
+    data: unknown;
+}
+
+interface WorkspaceContextType {
+    createWorkspace: (data: WorkspaceData) => Promise<WorkspaceData | null>;
+    updateWorkspace: (id: string, data: WorkspaceData) => Promise<WorkspaceData | null>;
+    deleteWorkspace: (id: string) => Promise<boolean | null>;
+    getWorkspaces: () => Promise<WorkspaceData[]>;
+    [key: string]: unknown;
+}
+
+interface ServiceAdapterDependencies {
+    workspaceContext: WorkspaceContextType;
+}
+
 /**
  * Adapter for Git-related operations
  */
 class GitServiceAdapter {
-    progressListeners: Set<(event: { type: string; data: unknown }) => void>;
+    progressListeners: Set<(event: GitProgressEvent) => void>;
 
     constructor() {
         this.progressListeners = new Set();
@@ -36,7 +83,7 @@ class GitServiceAdapter {
     async install() {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data) => {
+            const progressHandler = (data: unknown) => {
                 this.progressListeners.forEach(listener => {
                     listener({ type: 'git-install', data });
                 });
@@ -63,7 +110,7 @@ class GitServiceAdapter {
         }
     }
 
-    async testConnection(config) {
+    async testConnection(config: GitConfig) {
         try {
             const result = await window.electronAPI.testGitConnection(config);
             return {
@@ -85,10 +132,10 @@ class GitServiceAdapter {
         }
     }
 
-    async commitConfiguration(config) {
+    async commitConfiguration(config: GitConfig) {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data) => {
+            const progressHandler = (data: unknown) => {
                 this.progressListeners.forEach(listener => {
                     listener({ type: 'git-commit', data });
                 });
@@ -121,7 +168,7 @@ class GitServiceAdapter {
         }
     }
 
-    async createBranch(config) {
+    async createBranch(config: GitConfig) {
         try {
             const result = await window.electronAPI.createBranch(config);
             return {
@@ -138,7 +185,7 @@ class GitServiceAdapter {
         }
     }
 
-    async checkWritePermissions(config) {
+    async checkWritePermissions(config: GitConfig) {
         try {
             const result = await window.electronAPI.checkWritePermissions(config);
             return {
@@ -160,7 +207,7 @@ class GitServiceAdapter {
      * Returns unsubscribe function that should be called when done
      */
     subscribeToConnectionProgress() {
-        const progressHandler = (data) => {
+        const progressHandler = (data: unknown) => {
             this.progressListeners.forEach(listener => {
                 listener({ type: 'git-connection', data });
             });
@@ -169,7 +216,7 @@ class GitServiceAdapter {
         return window.electronAPI.onGitConnectionProgress(progressHandler);
     }
 
-    onProgress(listener) {
+    onProgress(listener: (event: GitProgressEvent) => void) {
         this.progressListeners.add(listener);
         return () => this.progressListeners.delete(listener);
     }
@@ -179,13 +226,13 @@ class GitServiceAdapter {
  * Adapter for workspace CRUD operations
  */
 class WorkspaceServiceAdapter {
-    workspaceContext: Record<string, any>;
+    workspaceContext: WorkspaceContextType;
 
-    constructor(workspaceContext: Record<string, any>) {
+    constructor(workspaceContext: WorkspaceContextType) {
         this.workspaceContext = workspaceContext;
     }
 
-    async create(workspaceData) {
+    async create(workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.createWorkspace(workspaceData);
         
         if (!result) {
@@ -200,7 +247,7 @@ class WorkspaceServiceAdapter {
         };
     }
 
-    async update(workspaceId, workspaceData) {
+    async update(workspaceId: string, workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.updateWorkspace(workspaceId, workspaceData);
         
         if (!result) {
@@ -212,7 +259,7 @@ class WorkspaceServiceAdapter {
         return result;
     }
 
-    async delete(workspaceId) {
+    async delete(workspaceId: string) {
         const result = await this.workspaceContext.deleteWorkspace(workspaceId);
         
         if (!result) {
@@ -228,9 +275,9 @@ class WorkspaceServiceAdapter {
     // by CentralizedWorkspaceService.createWorkspace() which already switches
     // to the newly created workspace
 
-    async get(workspaceId) {
+    async get(workspaceId: string) {
         const workspaces = await this.workspaceContext.getWorkspaces();
-        return workspaces.find(w => w.id === workspaceId);
+        return workspaces.find((w: WorkspaceData) => w.id === workspaceId);
     }
 
     async list() {
@@ -243,7 +290,7 @@ class WorkspaceServiceAdapter {
  */
 class SyncServiceAdapter {
     static instance: SyncServiceAdapter | null = null;
-    syncListeners: Set<(event: { type: string; data: unknown }) => void>;
+    syncListeners: Set<(event: SyncEvent) => void>;
     electronListeners: Map<string, () => void>;
     isSetup: boolean;
 
@@ -307,7 +354,7 @@ class SyncServiceAdapter {
         log.debug('SyncServiceAdapter listeners cleared');
     }
 
-    async initializeWorkspaceSync(workspaceId) {
+    async initializeWorkspaceSync(workspaceId: string) {
         const result = await window.electronAPI.initializeWorkspaceSync(workspaceId);
         
         if (!result.success) {
@@ -319,7 +366,7 @@ class SyncServiceAdapter {
         return result;
     }
 
-    async syncWorkspace(workspaceId, options = {}) {
+    async syncWorkspace(workspaceId: string, options: Record<string, unknown> = {}) {
         const result = await window.electronAPI.syncWorkspace(workspaceId, options);
         
         if (!result.success) {
@@ -331,8 +378,8 @@ class SyncServiceAdapter {
         return result;
     }
 
-    onSyncCompleted(listener) {
-        const wrappedListener = (event) => {
+    onSyncCompleted(listener: (data: unknown) => void) {
+        const wrappedListener = (event: SyncEvent) => {
             if (event.type === 'sync-completed') {
                 listener(event.data);
             }
@@ -350,7 +397,7 @@ class SyncServiceAdapter {
 export class WorkspaceServiceAdapterFactory {
     static instance = null;
     
-    static create(dependencies) {
+    static create(dependencies: ServiceAdapterDependencies) {
         if (WorkspaceServiceAdapterFactory.instance) {
             // Update the workspace context if it changed
             if (dependencies?.workspaceContext) {

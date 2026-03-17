@@ -113,7 +113,7 @@ class WorkspaceCreationStateMachine {
         this.transitions = this.defineTransitions();
     }
 
-    defineTransitions() {
+    defineTransitions(): Record<string, Record<string, TransitionConfig>> {
         return {
             [WORKSPACE_CREATION_STATES.IDLE]: {
                 [WORKSPACE_CREATION_EVENTS.START_CREATION]: {
@@ -614,7 +614,7 @@ class WorkspaceCreationStateMachine {
         };
     }
 
-    transition(event, payload = {}) {
+    transition(event: string, payload: Record<string, unknown> = {}) {
         const currentTransitions = this.transitions[this.state];
         if (!currentTransitions || !currentTransitions[event]) {
             // Only warn for non-idle states and non-completed states to avoid spam from delayed events
@@ -661,7 +661,7 @@ class WorkspaceCreationStateMachine {
         return true;
     }
 
-    addListener(listener) {
+    addListener(listener: (data: StateChangeData) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }
@@ -688,12 +688,12 @@ class WorkspaceCreationStateMachine {
         return this.context;
     }
 
-    setError(error) {
+    setError(error: Error) {
         this.context.error = error;
         this.transition(WORKSPACE_CREATION_EVENTS.ERROR_OCCURRED, { error });
     }
 
-    setTimeout(operation, timeout = 30000) {
+    setTimeout(operation: string, timeout: number = 30000) {
         const timeoutId = setTimeout(() => {
             this.transition(WORKSPACE_CREATION_EVENTS.TIMEOUT_OCCURRED, { 
                 error: new Error(`Operation ${operation} timed out after ${timeout}ms`) 
@@ -704,7 +704,7 @@ class WorkspaceCreationStateMachine {
         return timeoutId;
     }
 
-    clearTimeout(operation) {
+    clearTimeout(operation: string) {
         const timeoutId = this.context.operationTimeouts.get(operation);
         if (timeoutId) {
             clearTimeout(timeoutId);
@@ -744,7 +744,7 @@ class WorkspaceCreationStateMachine {
         this.transition(WORKSPACE_CREATION_EVENTS.ROLLBACK_COMPLETED);
     }
 
-    async executeRollbackAction(action) {
+    async executeRollbackAction(action: RollbackAction) {
         switch (action.type) {
             case 'delete_workspace':
                 if (window.electronAPI?.deleteWorkspace) {

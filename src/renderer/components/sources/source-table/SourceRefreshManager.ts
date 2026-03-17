@@ -7,6 +7,50 @@
 
 import { formatTimeRemaining } from './SourceTableUtils';
 
+interface RefreshStatus {
+    isRefreshing?: boolean;
+    isRetry?: boolean;
+    attemptNumber?: number;
+    circuitBreaker?: CircuitBreakerStatus;
+}
+
+interface CircuitBreakerStatus {
+    isOpen?: boolean;
+    state?: string;
+    failureCount: number;
+    timeUntilNextAttemptMs?: number;
+}
+
+interface DisplayState {
+    text: string;
+    timestamp: number;
+    refreshStartTime?: number | null;
+}
+
+interface TimeManager {
+    now: () => number;
+}
+
+interface RefreshManager {
+    getRefreshStatus: (sourceId: string) => RefreshStatus | null;
+    getTimeUntilRefresh: (sourceId: string, source: SourceItem) => number;
+}
+
+interface SourceItem {
+    sourceId: string;
+    sourceType: string;
+    activationState?: string;
+    refreshOptions?: {
+        enabled?: boolean;
+        interval?: number;
+        lastRefresh?: number;
+    };
+}
+
+interface Logger {
+    debug: (message: string) => void;
+}
+
 /**
  * Helper function to get refreshing status text
  * @param {Object} refreshStatus - Refresh status object
@@ -14,7 +58,7 @@ import { formatTimeRemaining } from './SourceTableUtils';
  * @param {Object} timeManager - Time manager instance
  * @returns {string} Refreshing status text
  */
-const getRefreshingText = (refreshStatus, displayState, timeManager) => {
+const getRefreshingText = (refreshStatus: RefreshStatus | null, displayState: DisplayState | undefined, timeManager: TimeManager) => {
     if (refreshStatus?.isRetry && refreshStatus?.attemptNumber > 0) {
         return `Retrying (attempt ${refreshStatus.attemptNumber} of 3)...`;
     }
@@ -35,7 +79,7 @@ const getRefreshingText = (refreshStatus, displayState, timeManager) => {
  * @param {boolean} isManual - Whether this is for manual refresh
  * @returns {string} Failure message prefix
  */
-const getFailurePrefix = (failureCount, isManual = true) => {
+const getFailurePrefix = (failureCount: number, isManual: boolean = true) => {
     if (failureCount === 1) {
         return isManual ? 'Manual refresh failed' : 'Failed';
     }
@@ -48,7 +92,7 @@ const getFailurePrefix = (failureCount, isManual = true) => {
  * @param {boolean} isManual - Whether this is for manual refresh
  * @returns {string} Formatted status text
  */
-const formatCircuitBreakerStatus = (circuitBreaker, isManual = true) => {
+const formatCircuitBreakerStatus = (circuitBreaker: CircuitBreakerStatus, isManual: boolean = true) => {
     const { timeUntilNextAttemptMs, failureCount } = circuitBreaker;
     
     if (timeUntilNextAttemptMs && timeUntilNextAttemptMs > 0) {
@@ -73,7 +117,7 @@ const formatCircuitBreakerStatus = (circuitBreaker, isManual = true) => {
  * @param {boolean} isManual - Whether this is for manual refresh
  * @returns {string} Formatted retry status
  */
-const formatRetryStatus = (failureCount, timeUntilRefresh, isManual = true) => {
+const formatRetryStatus = (failureCount: number, timeUntilRefresh: number, isManual: boolean = true) => {
     const prefix = getFailurePrefix(failureCount, isManual);
     
     // Always show countdown since we now immediately set nextRefresh
@@ -85,7 +129,7 @@ const formatRetryStatus = (failureCount, timeUntilRefresh, isManual = true) => {
  * @param {number} failureCount - Number of failures
  * @returns {string} Formatted status text
  */
-const formatHalfOpenStatus = (failureCount) => {
+const formatHalfOpenStatus = (failureCount: number) => {
     const prefix = getFailurePrefix(failureCount, false);
     return `${prefix} - Testing recovery...`;
 };
@@ -99,7 +143,7 @@ const formatHalfOpenStatus = (failureCount) => {
  * @param {Object} timeManager - Time manager instance
  * @returns {string|Object} Status text to display or object with text and circuitBreaker info
  */
-export const getRefreshStatusText = (source, refreshManager, refreshDisplayStates, refreshingSourceId, timeManager) => {
+export const getRefreshStatusText = (source: SourceItem | null, refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager): string | { text: string; circuitBreaker?: CircuitBreakerStatus; isRefreshing?: boolean; isRetry?: boolean; isCircuitOpen?: boolean } => {
     // Early returns for invalid sources
     if (!source || source.sourceType !== 'http') {
         return '';
@@ -190,6 +234,13 @@ const getStatusTextForUpdate = ({
     refreshDisplayStates,
     refreshingSourceId,
     timeManager
+}: {
+    source: SourceItem;
+    refreshStatus: RefreshStatus | null;
+    refreshManager: RefreshManager;
+    refreshDisplayStates: Record<string, DisplayState>;
+    refreshingSourceId: string | null;
+    timeManager: TimeManager;
 }) => {
     // Special states
     if (source.activationState === 'waiting_for_deps') {
@@ -246,12 +297,12 @@ const getStatusTextForUpdate = ({
  * @param {Object} timeManager - Time manager instance
  * @returns {Object} Updated display states
  */
-export const updateRefreshDisplayStates = (sources, refreshManager, refreshDisplayStates, refreshingSourceId, timeManager) => {
+export const updateRefreshDisplayStates = (sources: SourceItem[], refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager) => {
     const now = timeManager.now();
-    const newDisplayStates = {};
+    const newDisplayStates: Record<string, DisplayState> = {};
     let needsUpdate = false;
-    
-    sources.forEach(source => {
+
+    sources.forEach((source: SourceItem) => {
         if (source.sourceType !== 'http') return;
         
         const refreshStatus = refreshManager.getRefreshStatus(source.sourceId);
@@ -288,12 +339,12 @@ export const updateRefreshDisplayStates = (sources, refreshManager, refreshDispl
  * @param {Object} log - Logger instance
  * @returns {Object} Cleaned display states
  */
-export const cleanupDisplayStates = (sources, refreshDisplayStates, log) => {
-    const sourceIds = new Set(sources.map(s => s.sourceId));
-    const filtered = {};
+export const cleanupDisplayStates = (sources: SourceItem[], refreshDisplayStates: Record<string, DisplayState>, log: Logger) => {
+    const sourceIds = new Set(sources.map((s: SourceItem) => s.sourceId));
+    const filtered: Record<string, DisplayState> = {};
     let hasChanges = false;
     
-    Object.keys(refreshDisplayStates).forEach(sourceId => {
+    Object.keys(refreshDisplayStates).forEach((sourceId: string) => {
         if (sourceIds.has(parseInt(sourceId))) {
             filtered[sourceId] = refreshDisplayStates[sourceId];
         } else {

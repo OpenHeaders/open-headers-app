@@ -30,7 +30,7 @@ import {
 /**
  * Component that displays timestamp with live updating relative time
  */
-const TimestampCell = ({ timestamp }) => {
+const TimestampCell = ({ timestamp }: { timestamp: string }) => {
   const [relativeTime, setRelativeTime] = useState(formatTimeAgo(timestamp));
 
   useEffect(() => {
@@ -58,7 +58,16 @@ const TimestampCell = ({ timestamp }) => {
 /**
  * Editable cell component for inline editing
  */
-const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxLength, isTag = false }) => {
+interface EditableCellProps {
+  value: string | null;
+  onSave: (value: string | null) => void;
+  placeholder?: string;
+  maxLength?: number;
+  displayMaxLength?: number;
+  isTag?: boolean;
+}
+
+const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxLength, isTag = false }: EditableCellProps) => {
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value || '');
 
@@ -133,7 +142,21 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
 /**
  * Component for Delete button with controlled tooltip
  */
-const DeleteActionButton = ({ record, onDelete, isProcessing }) => {
+interface WorkflowRecord {
+  id: string;
+  timestamp: string;
+  url?: string;
+  metadata?: { url?: string; initialUrl?: string };
+  hasVideo?: boolean;
+  duration?: number;
+  tag?: { name?: string; url?: string } | null;
+  description?: string;
+  size?: number;
+  eventCount?: number;
+  source?: string;
+}
+
+const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: WorkflowRecord; onDelete: (id: string) => void; isProcessing: boolean }) => {
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
@@ -175,13 +198,13 @@ const DeleteActionButton = ({ record, onDelete, isProcessing }) => {
  * @param {Object} processingRecords - Map of recordId to processing state
  * @returns {Array} Table columns configuration
  */
-export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetadata, processingRecords = {}): any[] => [
+export const createWorkflowColumns = (onView: (record: WorkflowRecord) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecord) => void, onUpdateMetadata: (id: string, data: Record<string, unknown>) => void, processingRecords: Record<string, boolean> = {}): any[] => [
   {
     title: 'Timestamp',
     dataIndex: 'timestamp',
     key: 'timestamp',
-    render: (timestamp) => <TimestampCell timestamp={timestamp} />,
-    sorter: (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    render: (timestamp: string) => <TimestampCell timestamp={timestamp} />,
+    sorter: (a: WorkflowRecord, b: WorkflowRecord) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     defaultSortOrder: 'ascend' as const,
     width: 200
   },
@@ -189,7 +212,7 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     title: 'URL',
     dataIndex: 'url',
     key: 'url',
-    render: (url, record) => {
+    render: (url: string, record: WorkflowRecord) => {
       const displayUrl = url || record.metadata?.url || record.metadata?.initialUrl || 'Unknown';
       let truncatedUrl = displayUrl;
       
@@ -214,7 +237,7 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
   {
     title: 'Type',
     key: 'type',
-    render: (_, record) => (
+    render: (_: unknown, record: WorkflowRecord) => (
       <Space size="small">
         <Tooltip title="Page recording with console logs, network activity, storage changes, DOM events, and other metadata">
           <Tag>
@@ -236,16 +259,16 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     title: 'Duration',
     dataIndex: 'duration',
     key: 'duration',
-    render: (duration) => formatDuration(duration),
+    render: (duration: number) => formatDuration(duration),
     width: 100
   },
   {
     title: 'Tag',
     dataIndex: 'tag',
     key: 'tag',
-    render: (tag, record) => {
+    render: (tag: { name?: string; url?: string } | null, record: WorkflowRecord) => {
       // Parse tag data - always object with name/url
-      const getTagData = (tag) => {
+      const getTagData = (tag: { name?: string; url?: string } | null) => {
         if (!tag) return { name: '', url: '' };
         return { name: tag.name || '', url: tag.url || '' };
       };
@@ -295,7 +318,7 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     title: 'Description',
     dataIndex: 'description',
     key: 'description',
-    render: (description, record) => {
+    render: (description: string, record: WorkflowRecord) => {
       // Truncate display value
       const displayValue = description && description.length > 15
         ? `${description.substring(0, 15)}...`
@@ -347,14 +370,14 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     title: 'Size',
     dataIndex: 'size',
     key: 'size',
-    render: (size) => formatFileSize(size),
+    render: (size: number) => formatFileSize(size),
     width: 100
   },
   {
     title: 'Events',
     dataIndex: 'eventCount',
     key: 'eventCount',
-    render: (count) => (
+    render: (count: number) => (
       <Tag>
         {count?.toLocaleString() || 0} events
       </Tag>
@@ -365,7 +388,7 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
     title: 'Source',
     dataIndex: 'source',
     key: 'source',
-    render: (source) => (
+    render: (source: string) => (
       <Tag>
         {source === 'extension' ? (
           <>
@@ -383,7 +406,7 @@ export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetada
   {
     title: 'Actions',
     key: 'actions',
-    render: (_, record) => {
+    render: (_: unknown, record: WorkflowRecord) => {
       const isProcessing = !!processingRecords[record.id];
       
       return (

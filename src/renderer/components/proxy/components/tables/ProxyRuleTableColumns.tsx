@@ -7,9 +7,41 @@ import { getResolvedPreview } from '../../../../utils/validation/environment-var
 
 const { Text } = Typography;
 
+interface ProxyRule {
+    id: string;
+    name?: string;
+    headerRuleId?: string;
+    headerName?: string;
+    headerValue?: string;
+    isDynamic?: boolean;
+    sourceId?: string;
+    prefix?: string;
+    suffix?: string;
+    hasEnvVars?: boolean;
+    domains?: string[];
+    enabled?: boolean;
+}
+
+interface HeaderRule {
+    id: string;
+    headerName?: string;
+    headerValue?: string;
+    isDynamic?: boolean;
+    sourceId?: string;
+    prefix?: string;
+    suffix?: string;
+    hasEnvVars?: boolean;
+    domains?: string[];
+}
+
+interface Source {
+    sourceId: string;
+    sourceContent?: string;
+}
+
 /**
  * Proxy Rule Table Column Definitions
- * 
+ *
  * Modular column definitions for the proxy rules table.
  * Separates column logic from table component for better maintainability.
  */
@@ -17,7 +49,7 @@ const { Text } = Typography;
 /**
  * Get header rule information by ID for reference resolution
  */
-const getHeaderRuleInfo = (headerRuleId, headerRules) => {
+const getHeaderRuleInfo = (headerRuleId: string, headerRules: HeaderRule[]) => {
     return headerRules.find(r => r.id === headerRuleId);
 };
 
@@ -32,7 +64,7 @@ export const createNameColumn = () => ({
 });
 
 // Domains Column Component
-const DomainsColumnContent = ({ record, headerRules }) => {
+const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; headerRules: HeaderRule[] }) => {
     const envContext = useEnvironments();
     
     let domains;
@@ -53,7 +85,7 @@ const DomainsColumnContent = ({ record, headerRules }) => {
     let resolvedDomains = domains;
     if (hasEnvVars && envContext.environmentsReady && domains) {
         const variables = envContext.getAllVariables();
-        resolvedDomains = domains.flatMap(domain => {
+        resolvedDomains = domains.flatMap((domain: string) => {
             if (domain && domain.includes('{{')) {
                 const preview = getResolvedPreview(domain, variables);
                 // Split comma-separated domains from resolved env vars
@@ -67,7 +99,7 @@ const DomainsColumnContent = ({ record, headerRules }) => {
         <Space direction="vertical" size={1}>
             {resolvedDomains && resolvedDomains.length > 0 ? (
                 <>
-                    {resolvedDomains.slice(0, 1).map((domain, index) => {
+                    {resolvedDomains.slice(0, 1).map((domain: string, index: number) => {
                         const isTruncated = domain.length > 18;
                         const displayDomain = isTruncated ? `${domain.substring(0, 18)}...` : domain;
                         const isUnresolved = domain.includes('{{') && domain.includes('}}');
@@ -107,15 +139,15 @@ const DomainsColumnContent = ({ record, headerRules }) => {
 /**
  * Domains Column - Shows domains for custom rules or inherited domains for references with env var resolution
  */
-export const createDomainsColumn = (headerRules) => ({
+export const createDomainsColumn = (headerRules: HeaderRule[]) => ({
     title: 'Domains',
     key: 'domains',
     width: '20%',
-    render: (_, record) => <DomainsColumnContent record={record} headerRules={headerRules} />
+    render: (_: unknown, record: ProxyRule) => <DomainsColumnContent record={record} headerRules={headerRules} />
 });
 
 // Header Column Component
-const HeaderColumnContent = ({ record, sources, headerRules }) => {
+const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRule; sources: Source[]; headerRules: HeaderRule[] }) => {
     const envContext = useEnvironments();
     
     let headerInfo;
@@ -219,24 +251,24 @@ const HeaderColumnContent = ({ record, sources, headerRules }) => {
 /**
  * Header Column - Shows header name and value information with env var resolution
  */
-export const createHeaderColumn = (sources, headerRules) => ({
+export const createHeaderColumn = (sources: Source[], headerRules: HeaderRule[]) => ({
     title: 'Header',
     key: 'header',
     width: '28%',
-    render: (_, record) => <HeaderColumnContent record={record} sources={sources} headerRules={headerRules} />
+    render: (_: unknown, record: ProxyRule) => <HeaderColumnContent record={record} sources={sources} headerRules={headerRules} />
 });
 
 /**
  * Type Column - Shows whether rule is custom or reference, and if it uses environment variables
  */
-export const createTypeColumn = (headerRules) => ({
+export const createTypeColumn = (headerRules: HeaderRule[]) => ({
     title: 'Type',
     key: 'type',
     width: '15%',
     align: 'center',
-    render: (_, record) => {
+    render: (_: unknown, record: ProxyRule) => {
         let hasEnvVars = false;
-        
+
         if (record.headerRuleId) {
             // Check if referenced header rule has env vars
             const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
@@ -275,15 +307,15 @@ export const createTypeColumn = (headerRules) => ({
 /**
  * Status Column - Toggle switch for enabling/disabling rules
  */
-export const createStatusColumn = (onToggle) => ({
+export const createStatusColumn = (onToggle: (id: string, checked: boolean) => void) => ({
     title: 'Status',
     key: 'status',
     width: '8%',
     align: 'center',
-    render: (_, record) => (
+    render: (_: unknown, record: ProxyRule) => (
         <Switch
             checked={record.enabled !== false}
-            onChange={(checked) => onToggle && onToggle(record.id, checked)}
+            onChange={(checked: boolean) => onToggle && onToggle(record.id, checked)}
             size="small"
         />
     )
@@ -292,11 +324,11 @@ export const createStatusColumn = (onToggle) => ({
 /**
  * Actions Column - Edit and delete buttons
  */
-export const createActionsColumn = (onEdit, onDelete) => ({
+export const createActionsColumn = (onEdit: (record: ProxyRule) => void, onDelete: (id: string) => void) => ({
     title: 'Actions',
     key: 'actions',
     width: '12%',
-    render: (_, record) => (
+    render: (_: unknown, record: ProxyRule) => (
         <Space>
             <Button
                 type="text"
@@ -323,7 +355,7 @@ export const createActionsColumn = (onEdit, onDelete) => ({
  * Create all table columns
  * Factory function that creates all columns with proper dependencies
  */
-export const createAllColumns = (sources, headerRules, onEdit, onDelete, onToggle) => [
+export const createAllColumns = (sources: Source[], headerRules: HeaderRule[], onEdit: (record: ProxyRule) => void, onDelete: (id: string) => void, onToggle: (id: string, checked: boolean) => void) => [
     createNameColumn(),
     createTypeColumn(headerRules),
     createDomainsColumn(headerRules),
