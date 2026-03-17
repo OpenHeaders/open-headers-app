@@ -14,7 +14,13 @@ import React from 'react';
 import { Segmented, Tooltip } from 'antd';
 import { VideoCameraOutlined, FileOutlined } from '@ant-design/icons';
 
-const ViewModeToggle = ({ viewMode, onViewModeChange, hasVideo }) => {
+interface ViewModeToggleProps {
+    viewMode: string;
+    onViewModeChange: (mode: string) => void;
+    hasVideo: boolean;
+}
+
+const ViewModeToggle = ({ viewMode, onViewModeChange, hasVideo }: ViewModeToggleProps) => {
     const videoOption = {
         label: 'Video',
         value: 'video',

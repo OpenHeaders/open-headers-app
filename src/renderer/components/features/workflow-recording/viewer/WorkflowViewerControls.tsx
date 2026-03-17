@@ -17,12 +17,19 @@ const { Text } = Typography;
  * @param {Function} props.onAutoScrollChange - Auto-scroll change handler
  * @returns {React.ReactNode} Rendered controls
  */
+interface WorkflowViewerControlsProps {
+  autoHighlight: boolean;
+  autoScroll: boolean;
+  onAutoHighlightChange: (value: boolean) => void;
+  onAutoScrollChange: (value: boolean) => void;
+}
+
 const WorkflowViewerControls = ({
   autoHighlight,
   autoScroll,
   onAutoHighlightChange,
   onAutoScrollChange
-}) => {
+}: WorkflowViewerControlsProps) => {
   return (
     <Space style={{ marginRight: '16px' }}>
       <Tooltip title="Highlight table entries based on current record timestamp">

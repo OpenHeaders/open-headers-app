@@ -6,11 +6,17 @@ import {
     formatMissingVariables
 } from '../../../../utils/validation/environment-variables';
 
-const DomainSection = ({ 
-    domainValidation, 
+interface DomainSectionProps {
+    domainValidation: unknown[];
+    setDomainValidation: React.Dispatch<React.SetStateAction<unknown[]>>;
+    envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string> };
+}
+
+const DomainSection = ({
+    domainValidation,
     setDomainValidation,
-    envContext 
-}) => {
+    envContext
+}: DomainSectionProps) => {
     return (
         <Form.Item
             label="Domains"
