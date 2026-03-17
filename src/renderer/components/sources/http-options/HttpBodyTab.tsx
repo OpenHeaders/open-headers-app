@@ -29,7 +29,13 @@ const { TextArea } = Input;
  * @param {Function} props.validateVariableExists - Variable validation function
  * @returns {JSX.Element} Body tab component
  */
-const HttpBodyTab = ({ contentType, handleContentTypeChange, validateVariableExists }) => {
+interface HttpBodyTabProps {
+    contentType: string;
+    handleContentTypeChange: (value: string) => void;
+    validateVariableExists: (value: string) => { valid: boolean; error?: string };
+}
+
+const HttpBodyTab = ({ contentType, handleContentTypeChange, validateVariableExists }: HttpBodyTabProps) => {
     return (
         <Row gutter={16}>
             <Col span={6}>

@@ -6,13 +6,21 @@ import { CloseOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@
  * Separate modal for showing Git connection test progress
  * Features auto-close functionality and real-time progress display
  */
+interface ConnectionProgressModalProps {
+    visible: boolean;
+    isTestingConnection: boolean;
+    connectionProgress: { step: string; status: string; details?: string; progress?: number }[];
+    onClose: () => void;
+    testResult?: { success: boolean; message?: string; error?: string } | null;
+}
+
 const ConnectionProgressModal = ({
     visible,
     isTestingConnection,
     connectionProgress,
     onClose,
     testResult = null
-}) => {
+}: ConnectionProgressModalProps) => {
     const [autoCloseCountdown, setAutoCloseCountdown] = useState(0);
     const autoCloseTimerRef = useRef(null);
     const countdownTimerRef = useRef(null);

@@ -16,7 +16,14 @@ import { WorkflowViewer, VIEW_MODES } from '../viewer';
  * @param {Function} props.onAutoHighlightChange - Callback for auto-highlight changes
  * @returns {React.ReactNode} Rendered component
  */
-const WorkflowDetails = ({ record, playbackTime, autoHighlight, onAutoHighlightChange }) => {
+interface WorkflowDetailsProps {
+    record: Record<string, unknown> | null;
+    playbackTime: number;
+    autoHighlight: boolean;
+    onAutoHighlightChange: (value: boolean) => void;
+}
+
+const WorkflowDetails = ({ record, playbackTime, autoHighlight, onAutoHighlightChange }: WorkflowDetailsProps) => {
     return (
         <Card
             className="record-details-card"
