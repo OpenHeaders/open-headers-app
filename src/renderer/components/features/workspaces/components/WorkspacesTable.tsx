@@ -37,6 +37,18 @@ const { Text } = Typography;
  * @param {Function} props.onUpdateWorkspace - Handler for updating workspace settings
  * @returns {JSX.Element} WorkspacesTable component
  */
+interface WorkspacesTableProps {
+    workspaces: any[];
+    activeWorkspaceId: string;
+    syncStatus: Record<string, { syncing?: boolean; error?: string; lastSync?: string }>;
+    onSyncWorkspace: (workspace: any) => void;
+    onEditWorkspace: (workspace: any) => void;
+    onDeleteWorkspace: (workspace: any) => void;
+    onCloneToPersonal: (workspace: any) => void;
+    onSwitchWorkspace: (workspaceId: string) => void;
+    onUpdateWorkspace: (workspaceId: string, updates: any) => Promise<boolean>;
+}
+
 const WorkspacesTable = ({
     workspaces,
     activeWorkspaceId,
@@ -47,7 +59,7 @@ const WorkspacesTable = ({
     onCloneToPersonal,
     onSwitchWorkspace,
     onUpdateWorkspace
-}) => {
+}: WorkspacesTableProps) => {
     const { message } = App.useApp();
     const [shareModalVisible, setShareModalVisible] = useState(false);
     const [selectedWorkspace, setSelectedWorkspace] = useState(null);
@@ -69,8 +81,8 @@ const WorkspacesTable = ({
                     
                     // Choose the fastest update interval needed
                     gitWorkspacesWithSyncTimes.forEach(w => {
-                        const lastSync = new Date(syncStatus[w.id].lastSync);
-                        const timeDiff = (now - lastSync) / 1000;
+                        const lastSync = new Date(syncStatus[w.id].lastSync!);
+                        const timeDiff = (now.getTime() - lastSync.getTime()) / 1000;
                         
                         if (timeDiff < 60 && updateInterval > 1000) {
                             updateInterval = 1000; // Update every second
@@ -115,8 +127,8 @@ const WorkspacesTable = ({
             let minTimeToNextThreshold = Infinity;
             
             gitWorkspacesWithSyncTimes.forEach(w => {
-                const lastSync = new Date(syncStatus[w.id].lastSync);
-                const timeDiff = (now - lastSync) / 1000;
+                const lastSync = new Date(syncStatus[w.id].lastSync!);
+                const timeDiff = (now.getTime() - lastSync.getTime()) / 1000;
                 
                 if (timeDiff < 60) {
                     minTimeToNextThreshold = Math.min(minTimeToNextThreshold, (60 - timeDiff) * 1000 + 100);

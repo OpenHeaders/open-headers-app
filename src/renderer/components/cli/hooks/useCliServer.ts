@@ -175,7 +175,7 @@ export const useCliServer = ({ active = false } = {}) => {
     /**
      * Set log filters
      */
-    const setFilters = useCallback(({ method, endpoint, status: statusFilter } = {}) => {
+    const setFilters = useCallback(({ method, endpoint, status: statusFilter }: { method?: string | null; endpoint?: string; status?: string | null } = {}) => {
         if (method !== undefined) setFilterMethod(method);
         if (endpoint !== undefined) setFilterEndpoint(endpoint);
         if (statusFilter !== undefined) setFilterStatus(statusFilter);

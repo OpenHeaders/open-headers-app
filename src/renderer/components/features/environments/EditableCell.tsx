@@ -13,7 +13,7 @@ const { TextArea } = Input;
 /**
  * Dynamic value input that switches between TextArea and SecretInput based on isSecret
  */
-const DynamicValueInput = forwardRef((props, ref) => {
+const DynamicValueInput = forwardRef((props: Record<string, any>, ref: React.Ref<any>) => {
   const form = Form.useFormInstance();
   const isSecret = Form.useWatch('isSecret', form);
   
@@ -43,6 +43,16 @@ const DynamicValueInput = forwardRef((props, ref) => {
  * @param {React.ReactNode} props.children - Child elements to render when not editing
  * @param {Object} restProps - Additional props to pass to the td element
  */
+interface EditableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
+  editing: boolean;
+  dataIndex: string;
+  title: string;
+  inputType: 'text' | 'password' | 'radio' | 'dynamic';
+  record: any;
+  index: number;
+  children: React.ReactNode;
+}
+
 const EditableCell = ({
   editing,
   dataIndex,
@@ -52,7 +62,7 @@ const EditableCell = ({
   index,
   children,
   ...restProps
-}) => {
+}: EditableCellProps) => {
   /**
    * Renders the appropriate input component based on input type
    */

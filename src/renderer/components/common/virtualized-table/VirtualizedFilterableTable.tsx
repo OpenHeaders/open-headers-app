@@ -34,6 +34,40 @@ import './VirtualizedTables.css';
  * @component
  * @since 3.0.0
  */
+interface ColumnDef {
+  key?: string;
+  dataIndex?: string;
+  title?: React.ReactNode;
+  width?: number;
+  align?: 'left' | 'right' | 'center';
+  render?: (value: any, record: any, index: number) => React.ReactNode;
+  onFilter?: (value: any, record: any) => boolean;
+  filteredValue?: any[];
+}
+
+interface RowSelectionConfig {
+  type?: 'radio' | 'checkbox';
+  selectedRowKeys?: React.Key[];
+  onChange?: (selectedRowKeys: React.Key[], selectedRows: any[]) => void;
+  onSelect?: (record: any, selected: boolean, selectedRows: any[], nativeEvent: any) => void;
+}
+
+interface VirtualizedFilterableTableProps {
+  columns: ColumnDef[];
+  dataSource: any[];
+  rowHeight?: number;
+  height?: number;
+  onRow?: (record: any, index: number) => Record<string, any>;
+  rowKey: string | ((record: any) => React.Key);
+  rowSelection?: RowSelectionConfig;
+  rowClassName?: string | ((record: any, index: number) => string);
+  onChange?: (...args: any[]) => void;
+  filteredValue?: any[];
+  scroll?: { x?: number; y?: number };
+  selectedRowKeys?: React.Key[];
+  [key: string]: any;
+}
+
 const VirtualizedFilterableTable = forwardRef(({
   columns,
   dataSource,
@@ -48,8 +82,8 @@ const VirtualizedFilterableTable = forwardRef(({
   scroll,
   selectedRowKeys = [],
   ...restProps
-}, ref) => {
-  const listRef = React.useRef();
+}: VirtualizedFilterableTableProps, ref) => {
+  const listRef = React.useRef<any>();
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({

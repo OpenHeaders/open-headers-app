@@ -64,6 +64,21 @@ const styles = {
  * @param {*} value - Current value of the setting
  * @param {function} onChange - Callback function when setting value changes
  */
+interface SettingItemProps {
+    icon?: React.ComponentType<any>;
+    title: string;
+    description?: string;
+    fieldName: string;
+    isActive?: boolean;
+    disabled?: boolean;
+    tooltip?: string;
+    type?: 'switch' | 'select' | 'text';
+    options?: { value: string; label: string }[];
+    placeholder?: string;
+    value?: any;
+    onChange?: (fieldName: string, newValue: any) => void;
+}
+
 const SettingItem = forwardRef(({
     icon: Icon,
     title,
@@ -77,7 +92,7 @@ const SettingItem = forwardRef(({
     placeholder = '',
     value,
     onChange
-}, ref) => {
+}: SettingItemProps, ref) => {
     /**
      * Handle setting value changes
      * @param {*} newValue - New value for the setting

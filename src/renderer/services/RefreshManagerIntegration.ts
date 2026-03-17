@@ -10,6 +10,17 @@ const { createLogger } = require('../utils/error-handling/logger');
 const log = createLogger('RefreshManagerIntegration');
 
 class RefreshManagerIntegration {
+    initialized: boolean;
+    initializing: boolean;
+    httpService: any;
+    updateCallback: ((sourceId: string, content: any, additionalData: Record<string, any>) => void) | null;
+    sourceSubscriptionCleanup: (() => void) | null;
+    envSubscriptionCleanup: (() => void) | null;
+    lastSeenSources: Map<string, any>;
+    envChangeDebounceTimer: ReturnType<typeof setTimeout> | null;
+    sourceChangeDebounceTimers: Map<string, ReturnType<typeof setTimeout>>;
+    sourceActivationCleanup?: (() => void) | null;
+
     constructor() {
         this.initialized = false;
         this.initializing = false;

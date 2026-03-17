@@ -49,7 +49,49 @@ export const WORKSPACE_CREATION_EVENTS = {
     RESET: 'reset'
 };
 
+interface RollbackAction {
+    type: string;
+    workspaceId?: string;
+    repoPath?: string;
+    paths?: string[];
+}
+
+interface StateMachineContext {
+    formData: Record<string, unknown> | null;
+    workspaceId: string | null;
+    gitStatus: Record<string, unknown> | null;
+    connectionResult: Record<string, unknown> | null;
+    error: Error | null;
+    rollbackActions: RollbackAction[];
+    retryCount: number;
+    maxRetries: number;
+    startTime: string | null;
+    operationTimeouts: Map<string, ReturnType<typeof setTimeout>>;
+    syncProgress: unknown;
+    abortRequested: boolean;
+    cancelRequested: boolean;
+}
+
+interface TransitionConfig {
+    target: string;
+    action?: (context: StateMachineContext, event: { payload: Record<string, unknown>; type: string }) => StateMachineContext | null;
+    guard?: (context: StateMachineContext, event?: unknown) => boolean;
+    condition?: (context: StateMachineContext, event: { payload: Record<string, unknown>; type: string }) => boolean;
+    fallback?: string;
+}
+
+interface StateChangeData {
+    state: string;
+    context: StateMachineContext;
+    timestamp: string;
+}
+
 class WorkspaceCreationStateMachine {
+    state: string;
+    context: StateMachineContext;
+    listeners: Set<(data: StateChangeData) => void>;
+    transitions: Record<string, Record<string, TransitionConfig>>;
+
     constructor() {
         this.state = WORKSPACE_CREATION_STATES.IDLE;
         this.context = {

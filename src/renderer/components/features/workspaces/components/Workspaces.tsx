@@ -388,7 +388,6 @@ const Workspaces = () => {
                         onDeleteWorkspace={handleDeleteWorkspace}
                         onCloneToPersonal={handleCloneToPersonal}
                         onSwitchWorkspace={switchWorkspace}
-                        onShareWorkspace={handleShareWorkspace}
                         onUpdateWorkspace={updateWorkspace}
                     />
                 </Space>

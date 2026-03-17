@@ -14,8 +14,41 @@ export const RULE_TYPES = {
     URL: 'url'
 };
 
+// Rule data interface for createRule parameter
+interface RuleData {
+    id?: string;
+    name?: string;
+    description?: string;
+    isEnabled?: boolean;
+    domains?: string[];
+    createdAt?: string;
+    updatedAt?: string;
+    // Header-specific
+    headerName?: string;
+    headerValue?: string;
+    tag?: string;
+    isResponse?: boolean;
+    isDynamic?: boolean;
+    sourceId?: string | null;
+    prefix?: string;
+    suffix?: string;
+    hasEnvVars?: boolean;
+    envVars?: string[];
+    // Payload-specific
+    matchPattern?: string;
+    matchType?: string;
+    replaceWith?: string;
+    isRequest?: boolean;
+    contentType?: string;
+    // URL-specific
+    replacePattern?: string;
+    redirectTo?: string;
+    modifyParams?: Array<Record<string, any>>;
+    action?: string;
+}
+
 // Common rule structure
-export const createRule = (type, data = {}) => {
+export const createRule = (type: string, data: RuleData = {}) => {
     const baseRule = {
         id: data.id || Date.now().toString(),
         type: type,

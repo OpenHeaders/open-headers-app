@@ -40,7 +40,7 @@ const CliServerLogs = ({
             dataIndex: 'timestamp',
             key: 'timestamp',
             width: 150,
-            defaultSortOrder: 'descend',
+            defaultSortOrder: 'descend' as const,
             sorter: (a, b) => a.timestamp - b.timestamp,
             render: (ts) => {
                 const date = new Date(ts);

@@ -12,13 +12,22 @@ import { CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
  * @param {Function} props.onInstallGit - Handler for Git installation
  * @returns {JSX.Element} GitStatusAlert component
  */
+interface GitStatusAlertProps {
+    checkingGitStatus: boolean;
+    gitStatus: { isInstalled: boolean; gitPath?: string; error?: string } | null;
+    installingGit: boolean;
+    gitInstallProgress: string;
+    onInstallGit: () => void;
+    style?: React.CSSProperties;
+}
+
 const GitStatusAlert = ({
     checkingGitStatus,
     gitStatus,
     installingGit,
     gitInstallProgress,
     onInstallGit
-}) => {
+}: GitStatusAlertProps) => {
     /**
      * Renders the checking status alert
      * @returns {JSX.Element} Checking status alert

@@ -10,6 +10,8 @@ const log = createLogger('WorkspaceServiceAdapter');
  * Adapter for Git-related operations
  */
 class GitServiceAdapter {
+    progressListeners: Set<(event: { type: string; data: unknown }) => void>;
+
     constructor() {
         this.progressListeners = new Set();
     }
@@ -177,7 +179,9 @@ class GitServiceAdapter {
  * Adapter for workspace CRUD operations
  */
 class WorkspaceServiceAdapter {
-    constructor(workspaceContext) {
+    workspaceContext: Record<string, any>;
+
+    constructor(workspaceContext: Record<string, any>) {
         this.workspaceContext = workspaceContext;
     }
 
@@ -238,16 +242,21 @@ class WorkspaceServiceAdapter {
  * Adapter for sync operations - Singleton pattern to prevent multiple instances
  */
 class SyncServiceAdapter {
+    static instance: SyncServiceAdapter | null = null;
+    syncListeners: Set<(event: { type: string; data: unknown }) => void>;
+    electronListeners: Map<string, () => void>;
+    isSetup: boolean;
+
     constructor() {
         if (SyncServiceAdapter.instance) {
             return SyncServiceAdapter.instance;
         }
-        
+
         this.syncListeners = new Set();
         this.electronListeners = new Map();
         this.isSetup = false;
         this.setupEventListeners();
-        
+
         SyncServiceAdapter.instance = this;
     }
 

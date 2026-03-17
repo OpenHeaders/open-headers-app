@@ -7,7 +7,22 @@ const { Text } = Typography;
  * ImportEnvironmentSelector component for selecting specific environments
  * Handles environment selection with counts and helper actions
  */
-const ImportEnvironmentSelector = ({ 
+interface EnvironmentInfo {
+    varCount: number;
+    [key: string]: any;
+}
+
+interface ImportEnvironmentSelectorProps {
+    selectedItems: { environments?: boolean; [key: string]: any };
+    combinedEnvInfo: { hasEnvironments: boolean; [key: string]: any };
+    availableEnvironments: Record<string, EnvironmentInfo>;
+    selectedEnvironments: Record<string, boolean>;
+    onEnvironmentSelectionChange: (envName: string, checked: boolean) => void;
+    onSelectAllEnvironments: () => void;
+    onSelectNoEnvironments: () => void;
+}
+
+const ImportEnvironmentSelector = ({
     selectedItems,
     combinedEnvInfo,
     availableEnvironments,
@@ -15,7 +30,7 @@ const ImportEnvironmentSelector = ({
     onEnvironmentSelectionChange,
     onSelectAllEnvironments,
     onSelectNoEnvironments
-}) => {
+}: ImportEnvironmentSelectorProps) => {
     // Only show if environments are selected and available
     if (!selectedItems.environments || !combinedEnvInfo.hasEnvironments || 
         Object.keys(availableEnvironments).length === 0) {

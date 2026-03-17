@@ -26,7 +26,14 @@ export const useSyncOperations = (workspaceContext) => {
         let syncHandled = false;
         let timeoutId = null;
         
-        const syncListeners = {
+        const syncListeners: {
+            messageKey: string;
+            unsubscribeStart?: () => void;
+            unsubscribe?: () => void;
+            cleanup: () => void;
+            setupListeners: (workspaceId: string) => void;
+            startTimeout: (workspaceId: string) => void;
+        } = {
             messageKey: syncMessageKey,
             cleanup: () => {
                 if (syncListeners.unsubscribeStart) syncListeners.unsubscribeStart();

@@ -5,6 +5,13 @@ const { createLogger } = require('../../utils/error-handling/logger');
 const log = createLogger('AutoSaveManager');
 
 class AutoSaveManager {
+  saveTimers: Record<string, ReturnType<typeof setTimeout> | null>;
+  autoSaveInterval: ReturnType<typeof setInterval> | null;
+  isDirty: { sources: boolean; rules: boolean; proxyRules: boolean };
+  isSaving: boolean;
+  saveQueue: Array<() => Promise<void>>;
+  workspaceSwitching: boolean;
+
   constructor() {
     this.saveTimers = {};
     this.autoSaveInterval = null;

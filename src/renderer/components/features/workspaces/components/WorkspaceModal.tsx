@@ -295,7 +295,7 @@ const WorkspaceModal = ({
                 };
                 
                 // Use private method to gather export data without triggering file save
-                const exportData = await exportService._gatherExportData(exportOptions);
+                const exportData: Record<string, any> = await exportService._gatherExportData(exportOptions);
                 
                 // Sanitize sources for team workspaces - remove local execution data
                 if (exportData.sources && Array.isArray(exportData.sources)) {
@@ -306,13 +306,13 @@ const WorkspaceModal = ({
                 }
                 
                 // Prepare files for commit
-                const files = {};
+                const files: Record<string, string> = {};
                 if (values.fileFormat === FILE_FORMATS.SINGLE) {
                     files['open-headers-config.json'] = JSON.stringify(exportData, null, 2);
                 } else {
                     // Separate main config and environment
-                    const mainData = { ...exportData };
-                    const envData = {};
+                    const mainData: Record<string, any> = { ...exportData };
+                    const envData: Record<string, any> = {};
                     
                     if (exportData.environmentSchema) {
                         envData.environmentSchema = exportData.environmentSchema;
@@ -342,7 +342,7 @@ const WorkspaceModal = ({
                     files,
                     message: `Initialize Open Headers configuration for ${values.name}`
                 };
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Failed to prepare export data:', error);
                 console.error('Error details:', error.stack);
                 message.error({

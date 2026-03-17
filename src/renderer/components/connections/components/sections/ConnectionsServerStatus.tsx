@@ -232,7 +232,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }) => {
                             if (status.certificateExpiry) {
                                 const expiry = new Date(status.certificateExpiry);
                                 const now = new Date();
-                                const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+                                const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                                 isExpired = daysLeft <= 0;
                                 isExpiringSoon = daysLeft > 0 && daysLeft <= 30;
                                 expiryStr = expiry.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });

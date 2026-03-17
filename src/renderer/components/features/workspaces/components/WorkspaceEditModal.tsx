@@ -68,7 +68,7 @@ const WorkspaceEditModal = ({
             const authData = workspace.authData || {};
             
             // Set form values from the workspace
-            const formValues = {
+            const formValues: Record<string, any> = {
                 name: workspace.name,
                 description: workspace.description,
                 type: workspace.type,
@@ -78,7 +78,7 @@ const WorkspaceEditModal = ({
                 authType: workspace.authType || 'none',
                 autoSync: workspace.autoSync !== false,
             };
-            
+
             // Add auth-related fields based on authType
             if (workspace.authType === 'token' && authData.token) {
                 formValues.gitToken = authData.token;

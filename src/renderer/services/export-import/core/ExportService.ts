@@ -27,9 +27,16 @@ const log = createLogger('ExportService');
  * Orchestrates the complete export process for all data types
  */
 export class ExportService {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+  sourcesHandler: SourcesHandler;
+  proxyRulesHandler: ProxyRulesHandler;
+  rulesHandler: RulesHandler;
+  environmentsHandler: EnvironmentsHandler;
+  workspaceHandler: WorkspaceHandler;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
-    
+
     // Initialize handlers
     this.sourcesHandler = new SourcesHandler(dependencies);
     this.proxyRulesHandler = new ProxyRulesHandler(dependencies);
@@ -86,7 +93,7 @@ export class ExportService {
   async _gatherExportData(exportOptions) {
     const { selectedItems, appVersion } = exportOptions;
     
-    const exportData = {
+    const exportData: Record<string, any> = {
       version: appVersion || DEFAULTS.APP_VERSION
     };
 
@@ -388,7 +395,7 @@ export class ExportService {
    * @param {Object} exportData - Export data to analyze
    * @returns {Object} - Comprehensive export statistics
    */
-  getExportStatistics(exportData) {
+  getExportStatistics(exportData: Record<string, any>) {
     const stats = {
       version: exportData.version,
       totalItems: this._countExportItems(exportData),

@@ -12,6 +12,20 @@ const { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } = require('../constant
  * RefreshManager - Coordinates source refreshing with circuit breaker protection
  */
 class RefreshManager {
+  isInitialized: boolean;
+  sources: InstanceType<typeof ConcurrentMap>;
+  httpService: any;
+  onUpdateCallback: ((sourceId: string, content: any, additionalData: Record<string, any>) => void) | null;
+  scheduler: InstanceType<typeof NetworkAwareScheduler>;
+  coordinator: InstanceType<typeof RefreshCoordinator>;
+  deduplicator: InstanceType<typeof RequestDeduplicator>;
+  eventCleanup: Array<() => void>;
+  _cachedSchedules: Map<string, any>;
+  _statusCache: Map<string, any>;
+  _overdueChecks?: Map<string, number>;
+  lastCacheUpdate: number;
+  cacheUpdateInterval: ReturnType<typeof setInterval> | null;
+
   constructor() {
     this.isInitialized = false;
     this.sources = new ConcurrentMap('sources');
@@ -451,7 +465,7 @@ class RefreshManager {
     });
   }
 
-  async performRefresh(sourceId, source, options = {}) {
+  async performRefresh(sourceId: string, source: any, options: { reason?: string } = {}) {
     const startTime = timeManager.now();
     const { reason = 'auto' } = options;
     const isManualRefresh = reason === 'manual';

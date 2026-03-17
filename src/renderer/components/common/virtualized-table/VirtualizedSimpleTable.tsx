@@ -32,6 +32,33 @@ import './VirtualizedTables.css';
  * @component
  * @since 3.0.0
  */
+interface SimpleColumnDef {
+  key?: string;
+  dataIndex?: string;
+  title?: React.ReactNode;
+  width?: number;
+  align?: 'left' | 'right' | 'center';
+  render?: (value: any, record: any, index: number) => React.ReactNode;
+}
+
+interface SimpleRowSelectionConfig {
+  selectedRowKeys?: React.Key[];
+  onChange?: (selectedRowKeys: React.Key[], selectedRows: any[]) => void;
+}
+
+interface VirtualizedSimpleTableProps {
+  columns: SimpleColumnDef[];
+  dataSource: any[];
+  rowHeight?: number;
+  height?: number;
+  onRow?: (record: any, index: number) => Record<string, any>;
+  rowKey: string | ((record: any) => React.Key);
+  rowSelection?: SimpleRowSelectionConfig;
+  expandable?: Record<string, any>;
+  scroll?: { x?: number; y?: number };
+  [key: string]: any;
+}
+
 const VirtualizedSimpleTable = forwardRef(({
   columns,
   dataSource,
@@ -43,7 +70,7 @@ const VirtualizedSimpleTable = forwardRef(({
   expandable,
   scroll,
   ...restProps
-}, ref) => {
+}: VirtualizedSimpleTableProps, ref) => {
   // Row renderer for react-window virtualization
   const Row = useCallback(({ index, style }) => {
     const record = dataSource[index];

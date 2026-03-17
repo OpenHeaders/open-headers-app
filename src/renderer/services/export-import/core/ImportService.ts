@@ -27,9 +27,16 @@ const log = createLogger('ImportService');
  * Orchestrates the complete import process for all data types
  */
 export class ImportService {
-  constructor(dependencies) {
+  dependencies: Record<string, any>;
+  sourcesHandler: SourcesHandler;
+  proxyRulesHandler: ProxyRulesHandler;
+  rulesHandler: RulesHandler;
+  environmentsHandler: EnvironmentsHandler;
+  workspaceHandler: WorkspaceHandler;
+
+  constructor(dependencies: Record<string, any>) {
     this.dependencies = dependencies;
-    
+
     // Initialize handlers
     this.sourcesHandler = new SourcesHandler(dependencies);
     this.proxyRulesHandler = new ProxyRulesHandler(dependencies);
@@ -92,17 +99,17 @@ export class ImportService {
    */
   async _parseImportFiles(importOptions) {
     // Parse main file content
-    const mainFileResult = validateAndParseFileContent(importOptions.fileContent);
+    const mainFileResult = validateAndParseFileContent(importOptions.fileContent) as any;
     if (!mainFileResult.success) {
       throw new Error(`Main file parsing failed: ${mainFileResult.error}`);
     }
 
     const importData = mainFileResult.data;
-    let envData = null;
+    let envData: any = null;
 
     // Parse environment file if provided
     if (importOptions.envFileContent) {
-      const envFileResult = validateAndParseFileContent(importOptions.envFileContent);
+      const envFileResult = validateAndParseFileContent(importOptions.envFileContent) as any;
       if (!envFileResult.success) {
         throw new Error(`Environment file parsing failed: ${envFileResult.error}`);
       }
@@ -155,7 +162,7 @@ export class ImportService {
   async _importAllDataTypes(importData, envData, importOptions) {
     const { selectedItems } = importOptions;
     
-    const allStats = {
+    const allStats: Record<string, any> = {
       sourcesImported: 0,
       sourcesSkipped: 0,
       proxyRulesImported: 0,
@@ -164,7 +171,7 @@ export class ImportService {
       rulesSkipped: { total: 0 },
       environmentsImported: 0,
       variablesCreated: 0,
-      errors: []
+      errors: [] as any[]
     };
 
     // Import sources
@@ -293,7 +300,7 @@ export class ImportService {
    * @private
    */
   _validateImportPayload(importData) {
-    const validation = validateImportPayload(importData);
+    const validation = validateImportPayload(importData) as any;
     if (!validation.success) {
       throw new Error(`Import data validation failed: ${validation.error}`);
     }
@@ -336,7 +343,7 @@ export class ImportService {
    * @param {Object} importStats - Import statistics to analyze
    * @returns {Object} - Comprehensive import statistics
    */
-  getImportStatistics(importStats) {
+  getImportStatistics(importStats: Record<string, any>) {
     const stats = {
       totalImported: 0,
       totalSkipped: 0,

@@ -6,6 +6,10 @@ const log = createLogger('ConcurrencyControl');
  * Ensures exclusive access to critical sections
  */
 class Mutex {
+  name: string;
+  locked: boolean;
+  queue: Array<() => void>;
+
   constructor(name = 'unnamed') {
     this.name = name;
     this.locked = false;
@@ -67,7 +71,12 @@ class Mutex {
  * Semaphore implementation for limiting concurrent operations
  */
 class Semaphore {
-  constructor(maxConcurrent, name = 'unnamed') {
+  name: string;
+  maxConcurrent: number;
+  current: number;
+  queue: Array<() => void>;
+
+  constructor(maxConcurrent: number, name = 'unnamed') {
     this.name = name;
     this.maxConcurrent = maxConcurrent;
     this.current = 0;
@@ -141,6 +150,10 @@ class Semaphore {
  * Thread-safe Map implementation
  */
 class ConcurrentMap {
+  name: string;
+  map: Map<string, any>;
+  mutex: Mutex;
+
   constructor(name = 'unnamed') {
     this.name = name;
     this.map = new Map();
@@ -184,6 +197,10 @@ class ConcurrentMap {
  * Thread-safe Set implementation
  */
 class ConcurrentSet {
+  name: string;
+  set: Set<string>;
+  mutex: Mutex;
+
   constructor(name = 'unnamed') {
     this.name = name;
     this.set = new Set();
@@ -223,6 +240,9 @@ class ConcurrentSet {
  * Request deduplication cache
  */
 class RequestDeduplicator {
+  pendingRequests: Map<string, Promise<any>>;
+  mutex: Mutex;
+
   constructor() {
     this.pendingRequests = new Map();
     this.mutex = new Mutex('request-dedup');

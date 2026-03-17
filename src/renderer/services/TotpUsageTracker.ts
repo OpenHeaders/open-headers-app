@@ -10,14 +10,19 @@ const log = createLogger('TotpUsageTracker');
  * by tracking when each code was last used for each source.
  */
 class TotpUsageTracker {
+  usageMap: Map<string, { lastCode: string; lastUsedTime: number; cooldownUntil: number; secret: string }>;
+  TOTP_PERIOD: number;
+  CLEANUP_INTERVAL: number;
+  cleanupInterval: ReturnType<typeof setInterval> | null;
+
   constructor() {
     // Map of sourceId -> { lastCode, lastUsedTime, cooldownUntil, secret }
     this.usageMap = new Map();
-    
+
     // Constants
     this.TOTP_PERIOD = 30000; // 30 seconds in milliseconds
     this.CLEANUP_INTERVAL = 60000; // Clean up old entries every minute
-    
+
     // Don't start cleanup interval until we have entries
     this.cleanupInterval = null;
   }

@@ -18,13 +18,24 @@ const log = createLogger('useWorkspaceCreation');
  * @param {boolean} options.disableNotifications - Disable automatic success/error notifications
  * @returns {Object} Workspace creation state and actions
  */
-export const useWorkspaceCreation = (dependencies, options = {}) => {
+interface WorkspaceCreationContext {
+    formData?: Record<string, any> | null;
+    workspaceId?: string | null;
+    error?: Error | null;
+    [key: string]: unknown;
+}
+
+interface WorkspaceCreationOptions {
+    disableNotifications?: boolean;
+}
+
+export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreationOptions = {}) => {
     const { message } = App.useApp();
-    const controllerRef = useRef(null);
+    const controllerRef = useRef<any>(null);
     const [state, setState] = useState(WORKSPACE_CREATION_STATES.IDLE);
-    const [context, setContext] = useState({});
-    const [progress, setProgress] = useState(null);
-    const [error, setError] = useState(null);
+    const [context, setContext] = useState<WorkspaceCreationContext>({});
+    const [progress, setProgress] = useState<any>(null);
+    const [error, setError] = useState<Error | null>(null);
 
     // Initialize controller
     useEffect(() => {

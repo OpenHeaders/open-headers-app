@@ -25,15 +25,26 @@ let globalShowSecretsInModal = true;
  * @param {Object} props.style - Additional styles
  * @param {Object} restProps - Additional props to pass to TextArea
  */
-const SecretInput = forwardRef(({ 
-  value, 
-  onChange, 
+interface SecretInputProps {
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  showButton?: boolean;
+  useGlobalPreference?: false | 'edit' | 'modal';
+  autoSize?: { minRows?: number; maxRows?: number };
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+const SecretInput = forwardRef<any, SecretInputProps>(({
+  value,
+  onChange,
   placeholder = "Enter value",
   showButton = false,
   useGlobalPreference = false,
   autoSize = { minRows: 1, maxRows: 14 },
   style = {},
-  ...restProps 
+  ...restProps
 }, ref) => {
   const getInitialVisibility = () => {
     if (useGlobalPreference === 'edit') return globalShowSecretsInEditMode;

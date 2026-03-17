@@ -6,9 +6,24 @@ import { adaptiveCircuitBreakerManager } from '../../utils/error-handling';
 
 const { Text } = Typography;
 
-export function CircuitBreakerStatus({ inFooter = false }) {
+interface BreakerMetrics {
+    totalRequests: number;
+    totalSuccesses: number;
+}
+
+interface BreakerInfo {
+    state: string;
+    metrics: BreakerMetrics;
+    nextAttemptTime?: number;
+    backoff?: {
+        consecutiveOpenings: number;
+        currentTimeout: number;
+    };
+}
+
+export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean }) {
     const { settings } = useSettings();
-    const [breakers, setBreakers] = useState({});
+    const [breakers, setBreakers] = useState<Record<string, BreakerInfo>>({});
     const [isExpanded, setIsExpanded] = useState(false);
     
     useEffect(() => {
@@ -34,7 +49,7 @@ export function CircuitBreakerStatus({ inFooter = false }) {
     }
     
     // Count breakers by state
-    const breakerStates = Object.values(breakers).reduce((acc, breaker) => {
+    const breakerStates = Object.values(breakers).reduce((acc: { total: number; CLOSED: number; OPEN: number; HALF_OPEN: number; [key: string]: number }, breaker) => {
         acc[breaker.state] = (acc[breaker.state] || 0) + 1;
         acc.total++;
         return acc;
@@ -131,8 +146,8 @@ export function CircuitBreakerStatus({ inFooter = false }) {
                                                      breaker.state === 'HALF_OPEN' ? 'warning' :
                                                      'error';
                                     
-                                    const successRate = breaker.metrics.totalRequests > 0
-                                        ? (breaker.metrics.totalSuccesses / breaker.metrics.totalRequests * 100).toFixed(1)
+                                    const successRate: number = breaker.metrics.totalRequests > 0
+                                        ? parseFloat((breaker.metrics.totalSuccesses / breaker.metrics.totalRequests * 100).toFixed(1))
                                         : 0;
                                     
                                     return (
@@ -156,10 +171,10 @@ export function CircuitBreakerStatus({ inFooter = false }) {
                                                         Success Rate: {successRate}% ({breaker.metrics.totalSuccesses}/{breaker.metrics.totalRequests})
                                                     </Text>
                                                     <Progress 
-                                                        percent={parseFloat(successRate)} 
+                                                        percent={successRate} 
                                                         size="small" 
                                                         showInfo={false}
-                                                        strokeColor={parseFloat(successRate) > 80 ? '#52c41a' : '#faad14'}
+                                                        strokeColor={successRate > 80 ? '#52c41a' : '#faad14'}
                                                     />
                                                 </div>
                                             )}

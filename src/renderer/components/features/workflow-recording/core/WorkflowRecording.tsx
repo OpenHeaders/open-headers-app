@@ -170,7 +170,6 @@ const WorkflowRecording = ({
                     viewMode="info"
                     onPlaybackTimeChange={onPlaybackTimeChange}
                     autoHighlight={autoHighlight}
-                    renderDetails={renderDetails}
                     showAllWorkflowsButton={false}
                     onShowAllWorkflows={() => setShowTable(true)}
                 />

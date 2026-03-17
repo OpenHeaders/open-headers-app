@@ -328,13 +328,13 @@ export const getSettingsConfig = (formValues, screenRecordingPermission) => ({
 export const settingsStyles = {
     section: {
         fontSize: 13,
-        fontWeight: 600,
+        fontWeight: 600 as const,
         marginBottom: 16,
         marginTop: 8,
     },
     tabContent: {
         height: '400px',
-        overflowY: 'auto',
+        overflowY: 'auto' as const,
         paddingRight: '8px'
     }
 };
