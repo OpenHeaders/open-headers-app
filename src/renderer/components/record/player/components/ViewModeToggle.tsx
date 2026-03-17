@@ -26,7 +26,7 @@ const ViewModeToggle = ({ viewMode, onViewModeChange, hasVideo }) => {
         <Segmented
             value={viewMode}
             onChange={onViewModeChange}
-            size="default"
+            size={"middle" as const}
             options={[
                 {
                     label: 'Session',

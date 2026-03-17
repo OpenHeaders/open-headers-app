@@ -24,7 +24,7 @@ export function AppHeader({
   onOpenAbout,
   theme
 }) {
-  const actionsMenuItems = [
+  const actionsMenuItems: any[] = [
     {
       key: 'export',
       icon: <ExportOutlined />,
@@ -38,7 +38,7 @@ export function AppHeader({
       onClick: onImport
     },
     {
-      type: 'divider'
+      type: 'divider' as const
     },
     {
       key: 'check-updates',

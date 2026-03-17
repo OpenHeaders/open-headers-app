@@ -80,7 +80,7 @@ const RecordPlayer = ({
                             <Button
                                 icon={<TableOutlined />}
                                 onClick={onShowAllWorkflows}
-                                size="default"
+                                size={"middle" as const}
                                 aria-label="View all workflow recordings"
                                 title="Go back to workflows list"
                             >

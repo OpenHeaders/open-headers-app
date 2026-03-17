@@ -323,7 +323,7 @@ export const createJsonFilterToggleHandler = ({
         setTimeout(() => {
             try {
                 // Try to find and focus the JSON path input
-                const pathInput = document.querySelector('input[id$="-jsonFilter-path"]');
+                const pathInput = document.querySelector('input[id$="-jsonFilter-path"]') as HTMLElement | null;
                 if (pathInput) {
                     pathInput.focus();
                 }

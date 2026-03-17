@@ -238,7 +238,7 @@ const HeaderRules = () => {
             // Update header rules
             rulesStorage.rules[RULE_TYPES.HEADER] = newRules;
             rulesStorage.metadata.totalRules = Object.values(rulesStorage.rules)
-                .reduce((sum, rules) => sum + rules.length, 0);
+                .reduce((sum: number, rules: any) => sum + rules.length, 0);
             rulesStorage.metadata.lastUpdated = new Date().toISOString();
             
             // Save in new format
@@ -483,7 +483,7 @@ const HeaderRules = () => {
     };
 
     // Table columns matching browser extension
-    const columns = [
+    const columns: any[] = [
         {
             title: 'Type',
             key: 'type',

@@ -65,7 +65,7 @@ import {
  *   onChange={handleDomainsChange}
  * />
  */
-const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }) => {
+const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }: { value?: any[]; onChange?: any; onValidate?: any; validationResults?: any[] }) => {
     // Input state management
     const [inputVisible, setInputVisible] = useState(false);
     const [inputValue, setInputValue] = useState('');

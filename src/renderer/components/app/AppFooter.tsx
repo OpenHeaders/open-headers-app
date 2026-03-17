@@ -20,7 +20,7 @@ export function AppFooter({ appVersion, theme, debugComponents }) {
               Open Headers
             </Text>
             {appVersion && (
-              <Tag color="default" size="small" style={{ fontSize: '11px', lineHeight: '18px' }}>
+              <Tag color="default" style={{ fontSize: '11px', lineHeight: '18px' }}>
                 v{appVersion}
               </Tag>
             )}

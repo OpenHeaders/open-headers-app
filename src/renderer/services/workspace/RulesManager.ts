@@ -51,7 +51,7 @@ class RulesManager {
         version: DATA_FORMAT_VERSION,
         rules,
         metadata: {
-          totalRules: Object.values(rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0),
+          totalRules: Object.values(rules).reduce((sum: number, ruleArray: any) => sum + ruleArray.length, 0),
           lastUpdated: new Date().toISOString()
         }
       };

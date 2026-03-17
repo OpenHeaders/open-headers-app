@@ -99,7 +99,7 @@ export const handleWorkflowImport = async (file, onSuccess, onError) => {
       return;
     }
     
-    log.debug('Importing workflow recording file:', file.name, 'Type:', { isJson, isHar, isVideo });
+    log.debug(`Importing workflow recording file: ${file.name} Type:`, { isJson, isHar, isVideo });
     
     if (isVideo) {
       // Handle video import

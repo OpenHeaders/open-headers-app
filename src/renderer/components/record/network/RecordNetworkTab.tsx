@@ -321,7 +321,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     const useVirtualization = tableDataSource.length > 100;
 
     // Complete table props
-    const tableProps = {
+    const tableProps: any = {
         ...createStandardTableProps(
             tableDataSource,
             columns,
@@ -329,7 +329,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             generateRowClassName
         ),
         rowSelection: {
-            type: 'radio',
+            type: 'radio' as const,
             selectedRowKeys: selectedRequestId ?
                 tableDataSource.findIndex(req => req.id === selectedRequestId) >= 0 ?
                     [tableDataSource.findIndex(req => req.id === selectedRequestId)] : []

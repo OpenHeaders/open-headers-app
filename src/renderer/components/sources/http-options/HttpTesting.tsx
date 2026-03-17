@@ -388,13 +388,13 @@ export const createHttpTestHandler = ({
  * @param {Object} values - Form values
  * @returns {Object} Prepared request options
  */
-const prepareRequestOptions = (form, values) => {
+const prepareRequestOptions = (form, values): Record<string, any> => {
     // Get content type from form
     const formContentType = form.getFieldValue(['requestOptions', 'contentType']);
     const contentType = formContentType || values.requestOptions?.contentType || 'application/json';
-    
+
     // Prepare request options with defaults
-    const requestOptions = {
+    const requestOptions: Record<string, any> = {
         queryParams: {},
         headers: [],  // Keep as array initially for variable substitution
         body: null,

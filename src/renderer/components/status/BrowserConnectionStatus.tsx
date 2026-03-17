@@ -176,7 +176,7 @@ const BrowserConnectionStatus = () => {
                                     <Space size="small">
                                         {getBrowserIcon(client.browser)}
                                         <span>{getBrowserName(client.browser)} {client.browserVersion ? `v${client.browserVersion.split('.')[0]}` : ''}</span>
-                                        <Tag size="small" color={client.connectionType === 'WSS' ? 'green' : 'blue'}>
+                                        <Tag color={client.connectionType === 'WSS' ? 'green' : 'blue'}>
                                             {client.connectionType}
                                         </Tag>
                                     </Space>

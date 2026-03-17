@@ -343,7 +343,7 @@ const Workspaces = () => {
                             💡 Tip: Disable auto-sync or Clone a team workspace to a personal workspace to test changes without being overwritten by auto-sync.
                         </Text>
                         <Divider style={styles.tutorialDivider} />
-                        <Text type="primary">
+                        <Text type={"secondary" as any}>
                             <strong>🔒 Privacy First:</strong> All workspace data is stored locally on your device. 
                             There is <strong>no</strong> analytics, telemetry, or usage data collection. 
                             Your configurations, API keys, and workspace settings never leave your device.

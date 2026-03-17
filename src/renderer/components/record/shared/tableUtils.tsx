@@ -83,8 +83,8 @@ export const createStandardTableProps = (
 ) => ({
     dataSource,
     columns,
-    size: 'small',
-    pagination: false,
+    size: 'small' as const,
+    pagination: false as const,
     scroll: { y: 280 },
     sticky: true,
     onChange: onTableChange,

@@ -60,7 +60,7 @@ const ImportEnvironmentSelector = ({
                 <div style={{ marginTop: 8 }}>
                     <Space>
                         <Text 
-                            type="link" 
+                            type={"link" as any} 
                             style={{ fontSize: '12px', cursor: 'pointer' }}
                             onClick={onSelectAllEnvironments}
                         >
@@ -68,7 +68,7 @@ const ImportEnvironmentSelector = ({
                         </Text>
                         <Text type="secondary">|</Text>
                         <Text 
-                            type="link" 
+                            type={"link" as any} 
                             style={{ fontSize: '12px', cursor: 'pointer' }}
                             onClick={onSelectNoEnvironments}
                         >

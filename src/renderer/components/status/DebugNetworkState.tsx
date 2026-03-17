@@ -56,7 +56,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
     
     const style = inFooter ? baseStyle : {
         ...baseStyle,
-        position: 'fixed',
+        position: 'fixed' as const,
         bottom: 10,
         left: 160, // Position after collapsed HTTP Sources
         zIndex: 9999

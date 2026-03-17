@@ -113,7 +113,7 @@ interface ElectronAPI {
   send: (...args: any[]) => void;
 
   // Updates
-  checkForUpdates: () => void;
+  checkForUpdates: (isManual?: boolean) => void;
   installUpdate: () => void;
   restartApp: () => void;
 

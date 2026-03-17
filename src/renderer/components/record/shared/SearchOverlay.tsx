@@ -101,7 +101,7 @@ const SearchOverlay = ({
 
     if (!visible) return null;
 
-    const defaultStyle = {
+    const defaultStyle: React.CSSProperties = {
         position: 'absolute',
         top: '50%',
         left: '50%',

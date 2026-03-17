@@ -340,7 +340,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }) => {
                                 option.value.toLowerCase().includes(inputValue.toLowerCase())
                             }
                             onBlur={(e) => {
-                                const fieldValue = e.target.value;
+                                const fieldValue = (e.target as HTMLInputElement).value;
                                 // Only normalize if it doesn't contain env vars
                                 if (!fieldValue.includes('{{')) {
                                     const normalized = normalizeHeaderName(fieldValue);

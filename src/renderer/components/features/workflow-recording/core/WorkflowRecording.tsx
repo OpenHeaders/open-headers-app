@@ -151,7 +151,7 @@ const WorkflowRecording = ({
                         <Button
                             icon={<TableOutlined />}
                             onClick={() => setShowTable(true)}
-                            size="default"
+                            size={"middle" as const}
                             aria-label="View all workflow recordings"
                             title="Go back to workflows list"
                         >

@@ -60,7 +60,7 @@ const EnvironmentSelector = ({
           <div>
             <p>The following variables are used in your sources but are not defined in the '{targetEnv}' environment:</p>
             <div style={{ marginTop: 8, marginBottom: 16 }}>
-              {missingVars.map(varName => (
+              {missingVars.map((varName: string) => (
                 <Tag key={varName} color="error" style={{ marginBottom: 4 }}>
                   {`{{${varName}}}`}
                 </Tag>
@@ -104,7 +104,7 @@ const EnvironmentSelector = ({
    * Generates dropdown menu items for environment management
    */
   const getDropdownItems = () => {
-    const items = [
+    const items: any[] = [
       {
         key: 'new',
         icon: <PlusOutlined />,
@@ -128,7 +128,7 @@ const EnvironmentSelector = ({
     // Add delete option for non-default environments
     if (activeEnvironment !== 'Default') {
       items.push(
-        { key: 'divider', type: 'divider' },
+        { key: 'divider', type: 'divider' as const },
         {
           key: 'delete',
           icon: <DeleteOutlined />,
