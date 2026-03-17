@@ -1,13 +1,133 @@
-// src/services/NetworkMonitor.js
-const { EventEmitter } = require('events');
-const os = require('os');
-const dns = require('dns').promises;
-const { net } = require('electron');
-const { createLogger } = require('../utils/mainLogger');
+import { EventEmitter } from 'events';
+import os from 'os';
+import dns from 'dns';
+import electron from 'electron';
+import mainLogger from '../../utils/mainLogger.js';
+import timeManager from '../core/TimeManager';
+
+const { net } = electron;
+const { createLogger } = mainLogger;
 const log = createLogger('NetworkMonitor');
-const timeManager = require('../core/TimeManager');
+const dnsPromises = dns.promises;
+
+export interface NetworkMonitorConfig {
+    normalCheckInterval: number;
+    fastCheckInterval: number;
+    networkStabilizationDelay: number;
+    maxConsecutiveFailures: number;
+}
+
+export interface MonitorState {
+    isOnline: boolean;
+    connectionType: string;
+    lastChange: number;
+    confidence: number;
+    networkInterfaces: Map<string, os.NetworkInterfaceInfo[]>;
+    vpnActive: boolean;
+    lastCheck: number;
+    consecutiveFailures: number;
+    networkQuality: string;
+}
+
+export interface InterfaceChange {
+    type: 'added' | 'modified' | 'removed';
+    interface: string;
+    addresses?: os.NetworkInterfaceInfo[];
+    previousAddresses?: os.NetworkInterfaceInfo[];
+    hasIPv4?: boolean;
+    hasIPv6?: boolean;
+}
+
+export interface InterfaceAnalysis {
+    significantChange: boolean;
+    likelyOnline: boolean;
+    vpnDetected: boolean;
+    activeInterfaceCount: number;
+}
+
+export interface EndpointConfig {
+    url: string;
+    timeout: number;
+    weight: number;
+}
+
+export interface EndpointCheckResult {
+    success: boolean;
+    statusCode?: number | null;
+    responseTime?: number;
+    endpoint?: string;
+    error?: string | null;
+}
+
+export interface MultiEndpointResult {
+    success: boolean;
+    confidence: number;
+    successRate: number;
+    avgResponseTime: number | null;
+    successfulEndpoints: number;
+    totalEndpoints: number;
+    responsive: string[];
+}
+
+export interface ComprehensiveResults {
+    basic: { success: boolean; error?: string };
+    dns: { success: boolean; successRate?: number; workingCombinations?: unknown[] };
+    endpoints: MultiEndpointResult | { success: boolean; confidence?: number };
+}
+
+export interface StateChangeRecord {
+    timestamp: number;
+    wasOnline: boolean;
+    isOnline: boolean;
+    duration: number;
+}
+
+export interface NetworkChangeData {
+    type?: string;
+    changes?: InterfaceChange[];
+    analysis?: InterfaceAnalysis;
+    interfaces?: NodeJS.Dict<os.NetworkInterfaceInfo[]>;
+    source?: string;
+    state?: MonitorState;
+    checkResult?: {
+        isOnline: boolean;
+        confidence: number;
+        networkQuality: string;
+    };
+}
+
+export interface VPNStateData {
+    active: boolean;
+    interface?: string | null;
+    name?: string | null;
+    method?: string;
+}
 
 class NetworkMonitor extends EventEmitter {
+    state: MonitorState;
+
+    lastInterfaces: Map<string, os.NetworkInterfaceInfo[]>;
+    checkInterval: ReturnType<typeof setInterval> | null = null;
+    fastCheckInterval: ReturnType<typeof setInterval> | null = null;
+    platformMonitor: (EventEmitter & { start(): void; stop(): void }) | null = null;
+    changeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    isDestroyed = false;
+    stateLock = false;
+
+    // Configuration
+    config: NetworkMonitorConfig;
+
+    // Track recent state changes to prevent flapping
+    stateChangeHistory: StateChangeRecord[] = [];
+    maxHistorySize = 10;
+
+    // Track initialization time to prevent false VPN disconnects
+    initializationTime: number;
+
+    // Timers map for better management
+    timers = new Map<string, ReturnType<typeof setTimeout>>();
+    intervals = new Map<string, ReturnType<typeof setInterval>>();
+
     constructor() {
         super();
 
@@ -24,12 +144,6 @@ class NetworkMonitor extends EventEmitter {
         };
 
         this.lastInterfaces = new Map();
-        this.checkInterval = null;
-        this.fastCheckInterval = null;
-        this.platformMonitor = null;
-        this.changeDebounceTimer = null;
-        this.isDestroyed = false;
-        this.stateLock = false;
 
         // Configuration
         this.config = {
@@ -39,19 +153,10 @@ class NetworkMonitor extends EventEmitter {
             maxConsecutiveFailures: 3
         };
 
-        // Track recent state changes to prevent flapping
-        this.stateChangeHistory = [];
-        this.maxHistorySize = 10;
-        
-        // Track initialization time to prevent false VPN disconnects
         this.initializationTime = timeManager.now();
-        
-        // Timers map for better management
-        this.timers = new Map();
-        this.intervals = new Map();
     }
 
-    async initialize() {
+    async initialize(): Promise<MonitorState> {
         log.info('Initializing comprehensive network monitoring...');
 
         // Create platform-specific monitor
@@ -66,7 +171,7 @@ class NetworkMonitor extends EventEmitter {
         return this.state;
     }
 
-    createPlatformMonitor() {
+    createPlatformMonitor(): EventEmitter & { start(): void; stop(): void; removeAllListeners(): any } {
         const PlatformMonitors = require('./PlatformMonitors');
 
         switch (process.platform) {
@@ -81,7 +186,7 @@ class NetworkMonitor extends EventEmitter {
         }
     }
 
-    startMonitoring() {
+    startMonitoring(): void {
         // Start interface monitoring (fast)
         this.startInterfaceMonitoring();
 
@@ -90,12 +195,12 @@ class NetworkMonitor extends EventEmitter {
 
         // Start platform-specific monitoring
         if (this.platformMonitor) {
-            this.platformMonitor.on('network-change', (data) => {
+            this.platformMonitor.on('network-change', (data: NetworkChangeData) => {
                 log.debug('Platform-specific network change detected:', data);
                 this.handlePlatformNetworkChange(data);
             });
 
-            this.platformMonitor.on('vpn-state', (data) => {
+            this.platformMonitor.on('vpn-state', (data: VPNStateData) => {
                 this.handleVPNStateChange(data);
             });
 
@@ -105,9 +210,9 @@ class NetworkMonitor extends EventEmitter {
         log.info('Monitoring started');
     }
 
-    startInterfaceMonitoring() {
+    startInterfaceMonitoring(): void {
         if (this.isDestroyed) return;
-        
+
         // Initial check
         this.checkNetworkInterfaces();
 
@@ -117,26 +222,26 @@ class NetworkMonitor extends EventEmitter {
                 this.checkNetworkInterfaces();
             }
         }, this.config.fastCheckInterval);
-        
+
         this.fastCheckInterval = intervalId;
         this.intervals.set('fastCheck', intervalId);
     }
 
-    startConnectivityMonitoring() {
+    startConnectivityMonitoring(): void {
         if (this.isDestroyed) return;
-        
+
         // Regular connectivity checks
         const intervalId = setInterval(() => {
             if (!this.isDestroyed) {
                 this.performConnectivityCheck();
             }
         }, this.config.normalCheckInterval);
-        
+
         this.checkInterval = intervalId;
         this.intervals.set('connectivityCheck', intervalId);
     }
 
-    checkNetworkInterfaces() {
+    checkNetworkInterfaces(): void {
         const currentInterfaces = os.networkInterfaces();
         const changes = this.detectInterfaceChanges(currentInterfaces);
 
@@ -144,7 +249,7 @@ class NetworkMonitor extends EventEmitter {
             log.debug('Network interface changes detected:', changes);
 
             // Update state
-            this.state.networkInterfaces = new Map(Object.entries(currentInterfaces));
+            this.state.networkInterfaces = new Map(Object.entries(currentInterfaces) as [string, os.NetworkInterfaceInfo[]][]);
 
             // Analyze changes
             const analysis = this.analyzeInterfaceChanges(changes, currentInterfaces);
@@ -159,14 +264,15 @@ class NetworkMonitor extends EventEmitter {
             }
         }
 
-        this.lastInterfaces = new Map(Object.entries(currentInterfaces));
+        this.lastInterfaces = new Map(Object.entries(currentInterfaces) as [string, os.NetworkInterfaceInfo[]][]);
     }
 
-    detectInterfaceChanges(currentInterfaces) {
-        const changes = [];
+    detectInterfaceChanges(currentInterfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]>): InterfaceChange[] {
+        const changes: InterfaceChange[] = [];
 
         // Check for new or modified interfaces
         for (const [name, addresses] of Object.entries(currentInterfaces)) {
+            if (!addresses) continue;
             const lastAddresses = this.lastInterfaces.get(name);
 
             if (!lastAddresses) {
@@ -208,13 +314,14 @@ class NetworkMonitor extends EventEmitter {
         return changes;
     }
 
-    analyzeInterfaceChanges(changes, currentInterfaces) {
+    analyzeInterfaceChanges(changes: InterfaceChange[], currentInterfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]>): InterfaceAnalysis {
         let significantChange = false;
         let likelyOnline = false;
         let vpnDetected = false;
 
         // Check if we have any active non-internal interfaces
         for (const [name, addresses] of Object.entries(currentInterfaces)) {
+            if (!addresses) continue;
             const hasActiveIPv4 = addresses.some(addr =>
                 addr.family === 'IPv4' && !addr.internal && addr.address !== '127.0.0.1'
             );
@@ -280,37 +387,37 @@ class NetworkMonitor extends EventEmitter {
             likelyOnline,
             vpnDetected,
             activeInterfaceCount: Object.values(currentInterfaces).filter(addresses =>
-                addresses.some(addr => addr.family === 'IPv4' && !addr.internal)
+                addresses && addresses.some(addr => addr.family === 'IPv4' && !addr.internal)
             ).length
         };
     }
 
-    async performComprehensiveCheck() {
+    async performComprehensiveCheck(): Promise<MonitorState> {
         log.debug('Performing comprehensive network check...');
 
         // Run all checks in parallel with individual timeouts
         const [basicCheck, dnsCheck, endpointsCheck] = await Promise.allSettled([
             Promise.race([
                 this.checkBasicConnectivity(),
-                new Promise((resolve) => 
+                new Promise<{ success: boolean; error: string }>((resolve) =>
                     setTimeout(() => resolve({ success: false, error: 'timeout' }), 5000)
                 )
             ]),
             Promise.race([
                 this.checkDNSResolution(),
-                new Promise((resolve) => 
+                new Promise<{ success: boolean; successRate: number }>((resolve) =>
                     setTimeout(() => resolve({ success: false, successRate: 0 }), 8000)
                 )
             ]),
             Promise.race([
                 this.checkMultipleEndpoints(),
-                new Promise((resolve) => 
+                new Promise<{ success: boolean; confidence: number }>((resolve) =>
                     setTimeout(() => resolve({ success: false, confidence: 0 }), 10000)
                 )
             ])
         ]);
 
-        const results = {
+        const results: ComprehensiveResults = {
             basic: basicCheck.status === 'fulfilled' ? basicCheck.value : { success: false },
             dns: dnsCheck.status === 'fulfilled' ? dnsCheck.value : { success: false },
             endpoints: endpointsCheck.status === 'fulfilled' ? endpointsCheck.value : { success: false }
@@ -325,21 +432,21 @@ class NetworkMonitor extends EventEmitter {
             dns: {
                 success: results.dns.success,
                 successRate: results.dns.successRate || 0,
-                workingCombinations: results.dns.workingCombinations?.length || 0
+                workingCombinations: (results.dns as any).workingCombinations?.length || 0
             },
             endpoints: {
                 success: results.endpoints.success,
                 confidence: results.endpoints.confidence || 0,
-                successfulEndpoints: results.endpoints.successfulEndpoints || 0,
-                totalEndpoints: results.endpoints.totalEndpoints || 0,
-                avgResponseTime: results.endpoints.avgResponseTime || 0
+                successfulEndpoints: (results.endpoints as any).successfulEndpoints || 0,
+                totalEndpoints: (results.endpoints as any).totalEndpoints || 0,
+                avgResponseTime: (results.endpoints as any).avgResponseTime || 0
             }
         });
 
         return this.updateStateFromResults(results);
     }
 
-    async performConnectivityCheck() {
+    async performConnectivityCheck(): Promise<void> {
         try {
             const results = await this.checkMultipleEndpoints();
 
@@ -356,17 +463,17 @@ class NetworkMonitor extends EventEmitter {
         }
     }
 
-    async checkBasicConnectivity() {
+    async checkBasicConnectivity(): Promise<{ success: boolean }> {
         // Use Electron's net module for basic connectivity
         return new Promise((resolve) => {
-            const request = net.request({
+            const request = (net as any).request({
                 method: 'HEAD',
                 url: 'https://www.google.com/generate_204',
                 timeout: 3000
             });
 
             let resolved = false;
-            const handleResponse = (success) => {
+            const handleResponse = (success: boolean): void => {
                 if (!resolved) {
                     resolved = true;
                     resolve({ success });
@@ -374,7 +481,7 @@ class NetworkMonitor extends EventEmitter {
             };
 
             request.on('response', () => handleResponse(true));
-            request.on('error', (error) => {
+            request.on('error', (error: Error) => {
                 log.debug('Basic connectivity check failed:', error.message);
                 handleResponse(false);
             });
@@ -384,16 +491,16 @@ class NetworkMonitor extends EventEmitter {
         });
     }
 
-    async checkDNSResolution() {
+    async checkDNSResolution(): Promise<{ success: boolean; successRate: number; workingCombinations: unknown[] }> {
         const dnsServers = ['1.1.1.1', '8.8.8.8', '208.67.222.222'];
         const domains = ['google.com', 'cloudflare.com', 'microsoft.com'];
 
         // Create all checks in parallel using flatMap for better performance
         const checks = dnsServers.flatMap(server =>
             domains.map(domain =>
-                dns.resolve4(domain, { servers: [server] })
+                dnsPromises.resolve4(domain, { servers: [server] } as any)
                     .then(() => ({ success: true, server, domain }))
-                    .catch((error) => {
+                    .catch((error: Error) => {
                         log.debug(`DNS resolution failed for ${domain} via ${server}:`, error.message);
                         return { success: false, server, domain, error: error.message };
                     })
@@ -405,21 +512,21 @@ class NetworkMonitor extends EventEmitter {
             checks.map(check =>
                 Promise.race([
                     check,
-                    new Promise((resolve) => 
+                    new Promise<{ success: boolean; error: string }>((resolve) =>
                         setTimeout(() => resolve({ success: false, error: 'timeout' }), 5000)
                     )
                 ])
             )
         );
-        
+
         const successful = results.filter(r =>
             r.status === 'fulfilled' && r.value.success
         ).length;
-        
+
         const failed = results.filter(r =>
             r.status === 'fulfilled' && !r.value.success
         );
-        
+
         if (failed.length > 0) {
             log.debug(`DNS check: ${failed.length}/${checks.length} checks failed`);
         }
@@ -429,12 +536,12 @@ class NetworkMonitor extends EventEmitter {
             successRate: successful / checks.length,
             workingCombinations: results
                 .filter(r => r.status === 'fulfilled' && r.value.success)
-                .map(r => r.value)
+                .map(r => (r as PromiseFulfilledResult<any>).value)
         };
     }
 
-    async checkMultipleEndpoints() {
-        const endpoints = [
+    async checkMultipleEndpoints(): Promise<MultiEndpointResult> {
+        const endpoints: EndpointConfig[] = [
             { url: 'https://www.google.com/generate_204', timeout: 3000, weight: 1.0 },
             { url: 'https://connectivity-check.ubuntu.com', timeout: 3000, weight: 0.8 },
             { url: 'http://captive.apple.com/hotspot-detect.html', timeout: 3000, weight: 0.8 },
@@ -445,17 +552,17 @@ class NetworkMonitor extends EventEmitter {
 
         // Execute all endpoint checks truly in parallel
         const results = await Promise.allSettled(
-            endpoints.map(endpoint => 
+            endpoints.map(endpoint =>
                 // Add a hard timeout for each endpoint check
                 Promise.race([
                     this.checkEndpoint(endpoint),
-                    new Promise((resolve) => 
-                        setTimeout(() => 
-                            resolve({ 
-                                success: false, 
-                                error: 'timeout', 
-                                endpoint: endpoint.url 
-                            }), 
+                    new Promise<EndpointCheckResult>((resolve) =>
+                        setTimeout(() =>
+                            resolve({
+                                success: false,
+                                error: 'timeout',
+                                endpoint: endpoint.url
+                            }),
                             endpoint.timeout + 1000
                         )
                     )
@@ -465,7 +572,7 @@ class NetworkMonitor extends EventEmitter {
 
         let totalWeight = 0;
         let successWeight = 0;
-        const responseTimes = [];
+        const responseTimes: number[] = [];
         let successfulEndpoints = 0;
         let failedEndpoints = 0;
 
@@ -481,8 +588,8 @@ class NetworkMonitor extends EventEmitter {
                 }
             } else {
                 failedEndpoints++;
-                log.debug(`Endpoint check failed for ${endpoint.url}:`, 
-                    result.status === 'rejected' ? result.reason : result.value?.error || 'Unknown error');
+                log.debug(`Endpoint check failed for ${endpoint.url}:`,
+                    result.status === 'rejected' ? result.reason : (result as PromiseFulfilledResult<EndpointCheckResult>).value?.error || 'Unknown error');
             }
         });
 
@@ -490,7 +597,7 @@ class NetworkMonitor extends EventEmitter {
         const avgResponseTime = responseTimes.length > 0
             ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
             : null;
-            
+
         if (failedEndpoints > 0) {
             log.debug(`Endpoint checks: ${successfulEndpoints}/${endpoints.length} successful`);
         }
@@ -504,16 +611,16 @@ class NetworkMonitor extends EventEmitter {
             totalEndpoints: endpoints.length,
             responsive: results
                 .map((r, i) => ({ ...r, endpoint: endpoints[i] }))
-                .filter(r => r.status === 'fulfilled' && r.value?.success)
+                .filter(r => r.status === 'fulfilled' && (r as any).value?.success)
                 .map(r => r.endpoint.url)
         };
     }
 
-    async checkEndpoint(endpoint) {
+    async checkEndpoint(endpoint: EndpointConfig): Promise<EndpointCheckResult> {
         const startTime = timeManager.now();
 
         return new Promise((resolve) => {
-            const request = net.request({
+            const request = (net as any).request({
                 method: 'HEAD',
                 url: endpoint.url,
                 timeout: endpoint.timeout
@@ -521,7 +628,7 @@ class NetworkMonitor extends EventEmitter {
 
             let resolved = false;
 
-            const handleResponse = (success, statusCode = null, error = null) => {
+            const handleResponse = (success: boolean, statusCode: number | null = null, error: string | null = null): void => {
                 if (!resolved) {
                     resolved = true;
                     resolve({
@@ -534,11 +641,11 @@ class NetworkMonitor extends EventEmitter {
                 }
             };
 
-            request.on('response', (response) => {
+            request.on('response', (response: any) => {
                 handleResponse(true, response.statusCode);
             });
 
-            request.on('error', (error) => {
+            request.on('error', (error: Error) => {
                 handleResponse(false, null, error.message);
             });
 
@@ -548,42 +655,40 @@ class NetworkMonitor extends EventEmitter {
         });
     }
 
-
-
-    calculateNetworkQuality(results) {
+    calculateNetworkQuality(results: { success: boolean; confidence?: number; avgResponseTime?: number | null }): string {
         if (!results.success) return 'offline';
 
         const { confidence, avgResponseTime } = results;
 
-        if (confidence > 0.8 && avgResponseTime < 100) return 'excellent';
-        if (confidence > 0.6 && avgResponseTime < 300) return 'good';
-        if (confidence > 0.4 && avgResponseTime < 1000) return 'fair';
+        if (confidence && confidence > 0.8 && avgResponseTime != null && avgResponseTime < 100) return 'excellent';
+        if (confidence && confidence > 0.6 && avgResponseTime != null && avgResponseTime < 300) return 'good';
+        if (confidence && confidence > 0.4 && avgResponseTime != null && avgResponseTime < 1000) return 'fair';
         return 'poor';
     }
 
-    updateStateFromResults(results) {
+    updateStateFromResults(results: ComprehensiveResults): MonitorState {
         // Prevent concurrent state updates
         if (this.stateLock) {
             log.warn('State update already in progress, skipping');
             return this.state;
         }
-        
+
         try {
             this.stateLock = true;
-            
+
             const wasOnline = this.state.isOnline;
             const previousState = JSON.parse(JSON.stringify(this.state));
 
             // Create new state object atomically
             const isOnline = results.basic.success || results.endpoints.success;
-            const newState = {
+            const newState: MonitorState = {
                 ...this.state,
-                isOnline: isOnline,
+                isOnline,
                 confidence: results.endpoints.confidence || 0,
-                networkQuality: this.calculateNetworkQuality(results.endpoints),
+                networkQuality: this.calculateNetworkQuality(results.endpoints as any),
                 lastCheck: timeManager.now()
             };
-            
+
             // Debug log for network state determination
             log.debug('Network state determination:', {
                 basicSuccess: results.basic.success,
@@ -620,9 +725,9 @@ class NetworkMonitor extends EventEmitter {
         }
     }
 
-    handleNetworkChange(data) {
+    handleNetworkChange(data: NetworkChangeData): void {
         if (this.isDestroyed) return;
-        
+
         log.info('Handling network change:', {
             type: data.type,
             changes: data.changes?.length || 0,
@@ -638,18 +743,18 @@ class NetworkMonitor extends EventEmitter {
 
         const timerId = setTimeout(async () => {
             if (this.isDestroyed) return;
-            
+
             this.timers.delete('changeDebounce');
-            
+
             log.info('Performing comprehensive check after network change...');
-            
+
             // Perform comprehensive check after network change
             const checkResult = await this.performComprehensiveCheck();
-            
+
             if (this.isDestroyed) return;
 
             // Emit detailed change event with all state fields
-            const eventData = {
+            const eventData: NetworkChangeData = {
                 ...data,
                 state: { ...this.state },
                 checkResult: {
@@ -658,30 +763,30 @@ class NetworkMonitor extends EventEmitter {
                     networkQuality: this.state.networkQuality
                 }
             };
-            
+
             this.emit('network-change', eventData);
         }, 500); // 500ms debounce
-        
+
         this.changeDebounceTimer = timerId;
         this.timers.set('changeDebounce', timerId);
     }
 
-    handlePlatformNetworkChange(data) {
+    handlePlatformNetworkChange(data: NetworkChangeData): void {
         // Platform-specific change detected
         log.debug('Platform network change:', data);
         this.handleNetworkChange({ ...data, source: 'platform' });
     }
 
-    handleVPNStateChange(data) {
+    handleVPNStateChange(data: VPNStateData): void {
         const wasActive = this.state.vpnActive;
-        
+
         // Only update VPN state if we have a definitive signal
         // Ignore "disconnected" signals during initialization phase
         if (!data.active && timeManager.now() - this.initializationTime < 5000) {
             log.debug('Ignoring VPN disconnect signal during initialization phase');
             return;
         }
-        
+
         this.state.vpnActive = data.active;
 
         if (wasActive !== data.active) {
@@ -700,7 +805,7 @@ class NetworkMonitor extends EventEmitter {
         }
     }
 
-    handleConnectivityChange(results) {
+    handleConnectivityChange(results: MultiEndpointResult): void {
         const wasOnline = this.state.isOnline;
         this.state.isOnline = results.success;
         this.state.confidence = results.confidence;
@@ -716,8 +821,8 @@ class NetworkMonitor extends EventEmitter {
         });
     }
 
-    recordStateChange(wasOnline, isOnline) {
-        const change = {
+    recordStateChange(wasOnline: boolean, isOnline: boolean): void {
+        const change: StateChangeRecord = {
             timestamp: timeManager.now(),
             wasOnline,
             isOnline,
@@ -734,19 +839,18 @@ class NetworkMonitor extends EventEmitter {
         this.state.lastChange = timeManager.now();
     }
 
-
-    getState() {
+    getState(): MonitorState {
         return { ...this.state };
     }
 
-    async forceCheck() {
+    async forceCheck(): Promise<MonitorState> {
         log.info('Force check requested');
         return await this.performComprehensiveCheck();
     }
 
-    destroy() {
+    destroy(): void {
         log.info('Shutting down network monitor');
-        
+
         this.isDestroyed = true;
 
         // Clear all intervals
@@ -788,7 +892,7 @@ class NetworkMonitor extends EventEmitter {
         // Clear state history to free memory
         this.stateChangeHistory = [];
         this.lastInterfaces.clear();
-        
+
         // Remove all listeners with error handling
         try {
             this.removeAllListeners();
@@ -798,4 +902,5 @@ class NetworkMonitor extends EventEmitter {
     }
 }
 
-module.exports = NetworkMonitor;
+export { NetworkMonitor };
+export default NetworkMonitor;

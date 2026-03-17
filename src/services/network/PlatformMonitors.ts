@@ -1,27 +1,34 @@
-// src/services/PlatformMonitors.js
-const { EventEmitter } = require('events');
-const { spawn, exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { createLogger } = require('../utils/mainLogger');
+import { EventEmitter } from 'events';
+import child_process from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import mainLogger from '../../utils/mainLogger.js';
+
+const { createLogger } = mainLogger;
+const { spawn, exec } = child_process;
+
+type ChildProcess = child_process.ChildProcess;
+type FSWatcher = fs.FSWatcher;
+type Logger = ReturnType<typeof createLogger>;
 
 // Base class for platform monitors
 class BasePlatformMonitor extends EventEmitter {
+    processes: ChildProcess[] = [];
+    watchers: FSWatcher[] = [];
+    intervals: ReturnType<typeof setInterval>[] = [];
+    log: Logger;
+
     constructor() {
         super();
-        this.processes = [];
-        this.watchers = [];
-        this.intervals = [];
+        this.log = createLogger(this.constructor.name);
     }
 
-    start() {
-        this.log = this.log || createLogger(this.constructor.name);
+    start(): void {
         this.log.info('Starting platform-specific monitoring');
     }
 
-    stop() {
-        this.log = this.log || createLogger(this.constructor.name);
+    stop(): void {
         this.log.info('Stopping platform-specific monitoring');
 
         // Clean up processes
@@ -30,7 +37,7 @@ class BasePlatformMonitor extends EventEmitter {
                 if (proc && !proc.killed) {
                     proc.kill();
                 }
-            } catch (e) {
+            } catch (e: any) {
                 this.log.debug(`Process cleanup error: ${e.message}`);
             }
         });
@@ -41,7 +48,7 @@ class BasePlatformMonitor extends EventEmitter {
                 if (watcher && typeof watcher.close === 'function') {
                     watcher.close();
                 }
-            } catch (e) {
+            } catch (e: any) {
                 this.log.debug(`Watcher cleanup error: ${e.message}`);
             }
         });
@@ -56,7 +63,7 @@ class BasePlatformMonitor extends EventEmitter {
         this.intervals = [];
     }
 
-    executeCommand(command, args = [], timeoutMs = 5000) {
+    executeCommand(command: string, args: string[] = [], timeoutMs = 5000): Promise<string> {
         return new Promise((resolve, reject) => {
             const childProcess = exec(`${command} ${args.join(' ')}`, { timeout: timeoutMs, windowsHide: true }, (error, stdout, stderr) => {
                 if (error) {
@@ -94,7 +101,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
         this.log = createLogger('MacOSNetworkMonitor');
     }
 
-    start() {
+    start(): void {
         super.start();
 
         this.watchNetworkConfiguration();
@@ -103,7 +110,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
         this.monitorNetworkChanges();
     }
 
-    watchNetworkConfiguration() {
+    watchNetworkConfiguration(): void {
         // Watch for network configuration changes
         const configPaths = [
             '/Library/Preferences/SystemConfiguration/com.apple.airport.preferences.plist',
@@ -124,26 +131,26 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                         }
                     });
                     this.watchers.push(watcher);
-                } catch (e) {
+                } catch (e: any) {
                     this.log.error(`Failed to watch ${configPath}:`, e.message);
                 }
             }
         });
     }
 
-    watchVPNState() {
-        let lastVPNState = null;
-        let lastVPNInterface = null;
+    watchVPNState(): void {
+        let lastVPNState: boolean | null = null;
+        let lastVPNInterface: string | null = null;
         let initialCheckDone = false;
 
-        const checkVPN = async () => {
+        const checkVPN = async (): Promise<void> => {
             try {
                 // First check using scutil for native VPNs
                 const output = await this.executeCommand('scutil', ['--nc', 'list']);
                 const lines = output.split('\n');
 
                 let activeVPN = false;
-                let vpnName = null;
+                let vpnName: string | null = null;
 
                 for (const line of lines) {
                     if (line.includes('(Connected)')) {
@@ -221,12 +228,11 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
         }, 500);
 
         // Regular checks - reduced frequency to prevent excessive process spawning
-        // Changed from 1 second to 10 seconds for consistency with Windows
         const interval = setInterval(checkVPN, 10000);
         this.intervals.push(interval);
     }
 
-    async checkVPNInterfaces() {
+    async checkVPNInterfaces(): Promise<void> {
         try {
             const output = await this.executeCommand('ifconfig');
 
@@ -240,7 +246,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
             ];
 
             let vpnActive = false;
-            let vpnInterface = null;
+            let vpnInterface: string | null = null;
 
             // Split by interface sections
             const interfaces = output.split(/^(?=\w)/m);
@@ -265,15 +271,15 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 method: 'interface-check',
                 interface: vpnInterface
             });
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to check VPN interfaces:', e.message);
         }
     }
 
-    watchWiFiState() {
-        let lastWiFiState = null;
+    watchWiFiState(): void {
+        let lastWiFiState: { on: boolean; ssid: string | null } | null = null;
 
-        const checkWiFi = async () => {
+        const checkWiFi = async (): Promise<void> => {
             try {
                 // Get WiFi power state
                 const powerOutput = await this.executeCommand(
@@ -308,12 +314,12 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
         this.intervals.push(interval);
     }
 
-    monitorNetworkChanges() {
+    monitorNetworkChanges(): void {
         // Use route monitor for real-time network changes
         try {
             const routeMonitor = spawn('route', ['-n', 'monitor']);
 
-            routeMonitor.stdout.on('data', (data) => {
+            routeMonitor.stdout.on('data', (data: Buffer) => {
                 const output = data.toString();
 
                 if (output.includes('RTM_IFINFO') || output.includes('RTM_NEWADDR') || output.includes('RTM_DELADDR')) {
@@ -325,12 +331,12 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 }
             });
 
-            routeMonitor.on('error', (err) => {
+            routeMonitor.on('error', (err: Error) => {
                 this.log.error('Route monitor error:', err.message);
             });
 
             this.processes.push(routeMonitor);
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to start route monitor:', e.message);
         }
     }
@@ -338,14 +344,15 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
 
 // Windows-specific network monitor
 class WindowsNetworkMonitor extends BasePlatformMonitor {
+    vpnCheckInProgress = false;
+    adapterMonitorActive = false;
+
     constructor() {
         super();
         this.log = createLogger('WindowsNetworkMonitor');
-        this.vpnCheckInProgress = false;
-        this.adapterMonitorActive = false;
     }
 
-    start() {
+    start(): void {
         super.start();
 
         this.watchNetworkAdapters();
@@ -355,12 +362,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         // this.monitorNetworkEvents();
     }
 
-    watchNetworkAdapters() {
+    watchNetworkAdapters(): void {
         // Use polling instead of persistent PowerShell process to avoid hangs
-        // The infinite loop PowerShell script was causing process accumulation
-        let lastState = null;
+        let lastState: string | null = null;
 
-        const checkAdapters = async () => {
+        const checkAdapters = async (): Promise<void> => {
             if (this.adapterMonitorActive) {
                 return; // Skip if previous check still running
             }
@@ -388,11 +394,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                         }
 
                         lastState = currentState;
-                    } catch (e) {
+                    } catch (e: any) {
                         this.log.debug('JSON parsing error in adapter check:', e.message);
                     }
                 }
-            } catch (e) {
+            } catch (e: any) {
                 this.log.debug('Adapter check failed:', e.message);
             } finally {
                 this.adapterMonitorActive = false;
@@ -405,7 +411,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         this.intervals.push(interval);
     }
 
-    watchNetworkAdaptersLegacy() {
+    watchNetworkAdaptersLegacy(): void {
         // DEPRECATED: This method used an infinite loop PowerShell script
         // that caused process accumulation. Kept for reference only.
         const monitorScript = `
@@ -423,13 +429,13 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             }
         `;
 
-        const startMonitor = () => {
+        const startMonitor = (): void => {
             try {
                 const monitor = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', monitorScript]);
-                let lastState = null;
-                let restartTimer = null;
+                let lastState: string | null = null;
+                let restartTimer: ReturnType<typeof setTimeout> | null = null;
 
-                monitor.stdout.on('data', (data) => {
+                monitor.stdout.on('data', (data: Buffer) => {
                     const output = data.toString().trim();
                     if (output && (output.startsWith('[') || output.startsWith('{'))) {
                         try {
@@ -445,13 +451,13 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                             }
 
                             lastState = currentState;
-                        } catch (e) {
+                        } catch (e: any) {
                             this.log.debug('JSON parsing error in adapter monitor:', e.message);
                         }
                     }
                 });
 
-                monitor.on('error', (err) => {
+                monitor.on('error', (err: Error) => {
                     this.log.error('Adapter monitor error:', err.message);
                     // Restart monitor after 10 seconds
                     if (!restartTimer) {
@@ -462,7 +468,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                     }
                 });
 
-                monitor.on('exit', (code) => {
+                monitor.on('exit', (code: number | null) => {
                     this.log.warn(`Adapter monitor exited with code ${code}`);
                     // Remove from processes array
                     const index = this.processes.indexOf(monitor);
@@ -472,7 +478,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 });
 
                 this.processes.push(monitor);
-            } catch (e) {
+            } catch (e: any) {
                 this.log.error('Failed to start adapter monitor:', e.message);
                 // Fall back to periodic polling if PowerShell spawn fails
                 this.fallbackAdapterMonitoring();
@@ -482,7 +488,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         startMonitor();
     }
 
-    fallbackAdapterMonitoring() {
+    fallbackAdapterMonitoring(): void {
         this.log.info('Using fallback adapter monitoring');
         // Implement simple periodic check as fallback
         const checkAdapters = setInterval(() => {
@@ -491,16 +497,16 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 type: 'fallback-check'
             });
         }, 30000); // Check every 30 seconds
-        
+
         this.intervals.push(checkAdapters);
     }
 
-    watchVPNState() {
-        let lastVPNState = null;
-        let lastVPNInterface = null;
+    watchVPNState(): void {
+        let lastVPNState: boolean | null = null;
+        let lastVPNInterface: string | null = null;
         let initialCheckDone = false;
 
-        const checkVPN = async () => {
+        const checkVPN = async (): Promise<void> => {
             // Prevent concurrent VPN checks - critical fix for process accumulation
             if (this.vpnCheckInProgress) {
                 this.log.debug('Skipping VPN check - previous check still in progress');
@@ -510,11 +516,10 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
 
             try {
                 let activeVPN = false;
-                let vpnName = null;
-                let vpnDetails = {};
+                let vpnName: string | null = null;
+                let vpnDetails: Record<string, unknown> = {};
 
                 // First check using PowerShell to get VPN connections
-                // Added -NoProfile -NonInteractive for faster startup and no hangs
                 try {
                     const vpnOutput = await this.executeCommand('powershell', [
                         '-NoProfile',
@@ -522,7 +527,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                         '-Command',
                         'Get-VpnConnection | Where-Object {$_.ConnectionStatus -eq "Connected"} | Select-Object -First 1 | ConvertTo-Json -Compress'
                     ], 5000);
-                    
+
                     if (vpnOutput && vpnOutput.trim()) {
                         try {
                             const vpnInfo = JSON.parse(vpnOutput);
@@ -551,7 +556,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                             '-Command',
                             'Get-NetAdapter | Where-Object {$_.InterfaceDescription -match "VPN|TAP|OpenVPN|NordVPN|ExpressVPN|Cisco|Fortinet|WireGuard" -and $_.Status -eq "Up"} | Select-Object -First 1 Name, InterfaceDescription | ConvertTo-Json -Compress'
                         ], 5000);
-                        
+
                         if (adapterOutput && adapterOutput.trim()) {
                             try {
                                 const adapterInfo = JSON.parse(adapterOutput);
@@ -574,7 +579,6 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                     try {
                         const rasOutput = await this.executeCommand('rasdial');
                         // rasdial shows "No connections" if no active connections
-                        // Otherwise it shows connection details
                         if (rasOutput && !rasOutput.includes('No connections')) {
                             const lines = rasOutput.split('\n');
                             for (const line of lines) {
@@ -588,7 +592,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                                 }
                             }
                         }
-                    } catch (e) {
+                    } catch (e: any) {
                         // rasdial might not be available
                         this.log.debug('rasdial check failed:', e.message);
                     }
@@ -623,10 +627,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                     }
                     initialCheckDone = true;
                 }
-            } catch (e) {
+            } catch (e: any) {
                 this.log.error('VPN check failed:', e.message);
-                // Note: checkVPNInterfaces() is not available on Windows
-                // The VPN check already has multiple fallbacks (Get-VpnConnection, Get-NetAdapter, rasdial)
             } finally {
                 // Always reset the flag to allow next check
                 this.vpnCheckInProgress = false;
@@ -637,15 +639,14 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         setTimeout(checkVPN, 1000);
 
         // Regular checks - reduced frequency to prevent process accumulation
-        // Changed from 1 second to 10 seconds to prevent spawning too many PowerShell processes
         const interval = setInterval(checkVPN, 10000);
         this.intervals.push(interval);
     }
 
-    watchWiFiState() {
-        let lastWiFiState = null;
+    watchWiFiState(): void {
+        let lastWiFiState: { connected: boolean; ssid: string | null } | null = null;
 
-        const checkWiFi = async () => {
+        const checkWiFi = async (): Promise<void> => {
             try {
                 const wifiOutput = await this.executeCommand('netsh', ['wlan', 'show', 'interfaces']);
 
@@ -655,7 +656,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 const isConnected = stateMatch && stateMatch[1] === 'connected';
                 const ssid = ssidMatch ? ssidMatch[1].trim() : null;
 
-                const currentState = { connected: isConnected, ssid };
+                const currentState = { connected: isConnected || false, ssid };
 
                 if (JSON.stringify(lastWiFiState) !== JSON.stringify(currentState)) {
                     this.log.info('WiFi state changed:', currentState);
@@ -678,7 +679,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         this.intervals.push(interval);
     }
 
-    monitorNetworkEvents() {
+    monitorNetworkEvents(): void {
         // Monitor Windows network events using WMI
         const eventScript = `
             Register-WmiEvent -Query "SELECT * FROM __InstanceModificationEvent WITHIN 2 WHERE TargetInstance ISA 'Win32_NetworkAdapter'" |
@@ -690,7 +691,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
         try {
             const monitor = spawn('powershell', ['-Command', eventScript]);
 
-            monitor.stdout.on('data', (data) => {
+            monitor.stdout.on('data', (data: Buffer) => {
                 const output = data.toString().trim();
                 if (output.includes('NETWORK_CHANGE')) {
                     this.log.info('WMI network event detected');
@@ -700,12 +701,12 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 }
             });
 
-            monitor.on('error', (err) => {
+            monitor.on('error', (err: Error) => {
                 this.log.error('WMI monitor error:', err.message);
             });
 
             this.processes.push(monitor);
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to start WMI monitor:', e.message);
         }
     }
@@ -718,7 +719,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         this.log = createLogger('LinuxNetworkMonitor');
     }
 
-    start() {
+    start(): void {
         super.start();
 
         this.watchNetworkManager();
@@ -727,7 +728,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         this.watchWiFiState();
     }
 
-    watchNetworkManager() {
+    watchNetworkManager(): void {
         // Try to use NetworkManager if available
         this.checkNetworkManager().then(hasNM => {
             if (hasNM) {
@@ -738,7 +739,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         });
     }
 
-    async checkNetworkManager() {
+    async checkNetworkManager(): Promise<boolean> {
         try {
             await this.executeCommand('nmcli', ['--version']);
             return true;
@@ -747,12 +748,12 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         }
     }
 
-    monitorWithNetworkManager() {
+    monitorWithNetworkManager(): void {
         // Monitor NetworkManager events
         try {
             const monitor = spawn('nmcli', ['monitor']);
 
-            monitor.stdout.on('data', (data) => {
+            monitor.stdout.on('data', (data: Buffer) => {
                 const output = data.toString();
 
                 if (output.includes('connected') || output.includes('disconnected') ||
@@ -765,25 +766,25 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                 }
             });
 
-            monitor.on('error', (err) => {
+            monitor.on('error', (err: Error) => {
                 this.log.error('NetworkManager monitor error:', err.message);
                 // Fall back to ip monitor
                 this.monitorWithIPCommand();
             });
 
             this.processes.push(monitor);
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to start NetworkManager monitor:', e.message);
             this.monitorWithIPCommand();
         }
     }
 
-    monitorWithIPCommand() {
+    monitorWithIPCommand(): void {
         // Use ip monitor as fallback
         try {
             const monitor = spawn('ip', ['monitor', 'link', 'address', 'route']);
 
-            monitor.stdout.on('data', (data) => {
+            monitor.stdout.on('data', (data: Buffer) => {
                 const output = data.toString();
 
                 if (output.includes('link/') || output.includes('inet') || output.includes('route')) {
@@ -795,17 +796,17 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                 }
             });
 
-            monitor.on('error', (err) => {
+            monitor.on('error', (err: Error) => {
                 this.log.error('IP monitor error:', err.message);
             });
 
             this.processes.push(monitor);
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to start IP monitor:', e.message);
         }
     }
 
-    watchNetworkInterfaces() {
+    watchNetworkInterfaces(): void {
         // Watch /sys/class/net for interface changes
         const netPath = '/sys/class/net';
 
@@ -821,22 +822,22 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.watchers.push(watcher);
-        } catch (e) {
+        } catch (e: any) {
             this.log.error('Failed to watch network interfaces:', e.message);
         }
     }
 
-    watchVPNState() {
-        let lastVPNState = null;
+    watchVPNState(): void {
+        let lastVPNState: boolean | null = null;
 
-        const checkVPN = async () => {
+        const checkVPN = async (): Promise<void> => {
             try {
                 // Check for VPN interfaces
                 const interfaces = await this.executeCommand('ip', ['link', 'show']);
 
                 const vpnPatterns = ['tun', 'tap', 'vpn', 'ppp', 'ipsec'];
                 let vpnActive = false;
-                let vpnInterface = null;
+                let vpnInterface: string | null = null;
 
                 const lines = interfaces.split('\n');
                 for (const line of lines) {
@@ -871,7 +872,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                     });
                     lastVPNState = vpnActive;
                 }
-            } catch (e) {
+            } catch (e: any) {
                 this.log.error('Failed to check VPN state:', e.message);
             }
         };
@@ -884,12 +885,12 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
         this.intervals.push(interval);
     }
 
-    watchWiFiState() {
-        let lastWiFiState = null;
+    watchWiFiState(): void {
+        let lastWiFiState: { connected: boolean; ssid: string | null } | null = null;
 
-        const checkWiFi = async () => {
+        const checkWiFi = async (): Promise<void> => {
             try {
-                let wifiInfo = null;
+                let wifiInfo: { connected: boolean; ssid: string | null } | null = null;
 
                 // Try using nmcli first
                 try {
@@ -899,7 +900,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                     for (const line of lines) {
                         if (line.includes('*')) {
                             // Connected WiFi
-                            const parts = line.split(/\s+/).filter(p => p);
+                            const parts = line.split(/\s+/).filter((p: string) => p);
                             if (parts.length > 1) {
                                 wifiInfo = {
                                     connected: true,
@@ -953,7 +954,7 @@ class GenericNetworkMonitor extends BasePlatformMonitor {
         this.log = createLogger('GenericNetworkMonitor');
     }
 
-    start() {
+    start(): void {
         super.start();
 
         this.log.info('Using generic network monitoring');
@@ -962,10 +963,10 @@ class GenericNetworkMonitor extends BasePlatformMonitor {
         this.watchInterfaces();
     }
 
-    watchInterfaces() {
+    watchInterfaces(): void {
         let lastInterfaces = JSON.stringify(os.networkInterfaces());
 
-        const checkInterfaces = () => {
+        const checkInterfaces = (): void => {
             const currentInterfaces = JSON.stringify(os.networkInterfaces());
 
             if (currentInterfaces !== lastInterfaces) {
@@ -983,7 +984,8 @@ class GenericNetworkMonitor extends BasePlatformMonitor {
     }
 }
 
-module.exports = {
+export {
+    BasePlatformMonitor,
     MacOSNetworkMonitor,
     WindowsNetworkMonitor,
     LinuxNetworkMonitor,

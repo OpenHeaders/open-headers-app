@@ -1,14 +1,79 @@
-const EventEmitter = require('events');
-const os = require('os');
-const dns = require('dns').promises;
-const { createLogger } = require('../../utils/mainLogger');
-const timeManager = require('../core/TimeManager');
+import { EventEmitter } from 'events';
+import os from 'os';
+import dns from 'dns';
+import net from 'net';
+import child_process from 'child_process';
+import util from 'util';
+import mainLogger from '../../utils/mainLogger.js';
+import timeManager from '../core/TimeManager';
+
+const { createLogger } = mainLogger;
+const dnsPromises = dns.promises;
+
+export interface ConnectivityEndpoint {
+    host: string;
+    port: number;
+    name: string;
+}
+
+export interface EndpointResult extends ConnectivityEndpoint {
+    success: boolean;
+    latency?: number;
+    error?: string;
+    errorCode?: string;
+}
+
+export interface NetworkDiagnostics {
+    dnsResolvable: boolean;
+    internetReachable: boolean;
+    captivePortal: boolean;
+    latency: number;
+}
+
+export interface NetworkInterfaceInfo {
+    name: string;
+    addresses: os.NetworkInterfaceInfo[];
+    type: string;
+}
+
+export interface NetworkState {
+    isOnline: boolean;
+    networkQuality: string;
+    vpnActive: boolean;
+    interfaces: [string, NetworkInterfaceInfo][];
+    primaryInterface: string | null;
+    connectionType: string;
+    diagnostics: NetworkDiagnostics;
+    lastUpdate: number;
+    version: number;
+}
+
+export interface DnsCheckResult {
+    host: string;
+    success: boolean;
+    latency?: number;
+    ips?: string[];
+    error?: string;
+}
+
+export interface NetworkQualityInput {
+    dnsSuccess: boolean;
+    connectivitySuccess: boolean;
+    latency: number;
+}
+
+export interface StateChangeRecord {
+    wasOnline: boolean;
+    isOnline: boolean;
+    timestamp: number;
+    type: 'stable' | 'change';
+}
 
 /**
  * Consolidated NetworkService
  * Combines NetworkMonitor and NetworkStateManager functionality
  * Provides unified network state management with atomic updates
- * 
+ *
  * Key stability features:
  * - Hysteresis: Prevents rapid state changes with a 5-second cooldown
  * - Consecutive check requirement: Requires 2 consecutive confirmations for state changes
@@ -19,11 +84,57 @@ const timeManager = require('../core/TimeManager');
  * - Background-optimized: Longer intervals and fewer endpoints for background operation
  */
 class NetworkService extends EventEmitter {
+    private log = createLogger('NetworkService');
+
+    // State management - start optimistic, will be corrected by initial check
+    state: NetworkState;
+
+    // Concurrency control
+    stateUpdateLock = false;
+    pendingStateChanges: Record<string, unknown> = {};
+
+    intervals = new Map<string, ReturnType<typeof setTimeout>>();
+    isDestroyed = false;
+
+    // Minimal endpoints for battery efficiency
+    dnsTestHosts = ['google.com', 'cloudflare.com'];
+    connectivityEndpoints: ConnectivityEndpoint[] = [
+        { host: '8.8.8.8', port: 443, name: 'Google DNS' },
+        { host: '8.8.4.4', port: 443, name: 'Google DNS Secondary' }
+    ];
+
+    // Background-optimized intervals
+    checkInterval = 60000; // 60 seconds
+    quickCheckInterval = 15000; // 15 seconds
+    debounceDelay = 1000; // 1 second debounce
+
+    // Adaptive monitoring - DISABLED for better background reliability
+    isNetworkStable = false;
+    adaptiveCheckInterval: number;
+    adaptiveQuickCheckInterval: number;
+
+    // State stability - REDUCED for faster recovery
+    consecutiveOfflineChecks = 0;
+    consecutiveOnlineChecks = 0;
+    requiredConsecutiveChecks = 1;
+    lastComprehensiveCheck = 0;
+    comprehensiveCheckInProgress = false;
+    stateChangeHistory: StateChangeRecord[] = [];
+    maxHistorySize = 10;
+
+    // Hysteresis prevents rapid state changes
+    hysteresisTimeout: ReturnType<typeof setTimeout> | null = null;
+    hysteresisDelay = 2000;
+
+    isInitialized = false;
+    initializationTime: number;
+
+    private _doingInitialCheck = false;
+    private stateUpdateTimeout: ReturnType<typeof setTimeout> | undefined;
+
     constructor() {
         super();
-        this.log = createLogger('NetworkService');
-        
-        // State management - start optimistic, will be corrected by initial check
+
         this.state = {
             isOnline: true,
             networkQuality: 'good',
@@ -40,78 +151,40 @@ class NetworkService extends EventEmitter {
             lastUpdate: timeManager.now(),
             version: 0
         };
-        
-        // Concurrency control
-        this.stateUpdateLock = false;
-        this.pendingStateChanges = {};
-        
-        this.intervals = new Map();
-        this.isDestroyed = false;
-        
-        // Minimal endpoints for battery efficiency
-        this.dnsTestHosts = ['google.com', 'cloudflare.com'];
-        this.connectivityEndpoints = [
-            { host: '8.8.8.8', port: 443, name: 'Google DNS' },
-            { host: '8.8.4.4', port: 443, name: 'Google DNS Secondary' }
-        ];
-        
-        // Background-optimized intervals
-        this.checkInterval = 60000; // 60 seconds - less frequent for battery savings
-        this.quickCheckInterval = 15000; // 15 seconds - reduced frequency for background mode
-        this.debounceDelay = 1000; // 1 second debounce - faster response for background apps
-        
-        // Adaptive monitoring - DISABLED for better background reliability
-        // this.stableNetworkMultiplier = 1; // Don't increase intervals for background apps
-        // this.stabilityThreshold = 300000; // 5 minutes before reducing checks
-        this.isNetworkStable = false; // Start as unstable to maintain regular checks
+
         this.adaptiveCheckInterval = this.checkInterval;
         this.adaptiveQuickCheckInterval = this.quickCheckInterval;
-        
-        // State stability - REDUCED for faster recovery
-        this.consecutiveOfflineChecks = 0;
-        this.consecutiveOnlineChecks = 0;
-        this.requiredConsecutiveChecks = 1; // Only 1 check needed for background apps
-        this.lastComprehensiveCheck = 0;
-        this.comprehensiveCheckInProgress = false;
-        this.stateChangeHistory = [];
-        this.maxHistorySize = 10;
-        
-        // Hysteresis prevents rapid state changes - REDUCED for background apps
-        this.hysteresisTimeout = null;
-        this.hysteresisDelay = 2000; // 2 seconds - faster recovery for background mode
-        
-        this.isInitialized = false;
         this.initializationTime = timeManager.now();
     }
 
     /**
      * Initialize the service
      */
-    async initialize() {
+    async initialize(): Promise<void> {
         this.log.info('Initializing NetworkService...');
-        
+
         this.startMonitoring();
-        
+
         this._doingInitialCheck = true;
-        
+
         // Initial network check
         this.log.debug('Starting initial network check...');
         const checkStartTime = timeManager.now();
         await this.checkNetworkState();
         const checkEndTime = timeManager.now();
-        this.log.debug('Initial network check completed in', checkEndTime - checkStartTime, 'ms');
-        
+        this.log.debug(`Initial network check completed in ${checkEndTime - checkStartTime}ms`);
+
         this._doingInitialCheck = false;
-        
+
         this.isInitialized = true;
         this.log.info('NetworkService initialized successfully');
-        this.log.debug('Initialization complete, time elapsed:', timeManager.now() - this.initializationTime, 'ms');
+        this.log.debug(`Initialization complete, time elapsed: ${timeManager.now() - this.initializationTime}ms`);
     }
 
     /**
      * Start all monitoring tasks
      */
-    startMonitoring() {
+    startMonitoring(): void {
         this.startAdaptiveMonitoring();
         this.log.info('Network monitoring started');
     }
@@ -119,22 +192,22 @@ class NetworkService extends EventEmitter {
     /**
      * Get current state
      */
-    getState() {
+    getState(): NetworkState {
         return { ...this.state };
     }
-    
+
     /**
      * Start adaptive monitoring for background operation
      */
-    startAdaptiveMonitoring() {
-        const scheduleNextCheck = () => {
-            const interval = this.isNetworkStable ? 
-                this.adaptiveCheckInterval : 
+    startAdaptiveMonitoring(): void {
+        const scheduleNextCheck = (): void => {
+            const interval = this.isNetworkStable ?
+                this.adaptiveCheckInterval :
                 this.checkInterval;
-            
+
             this.intervals.set('networkCheck', setTimeout(() => {
                 if (!this.isDestroyed) {
-                    this.checkNetworkState().catch(err => 
+                    this.checkNetworkState().catch(err =>
                         this.log.error('Network state check error:', err)
                     );
                     scheduleNextCheck();
@@ -143,14 +216,14 @@ class NetworkService extends EventEmitter {
         };
         scheduleNextCheck();
 
-        const scheduleNextQuickCheck = () => {
-            const interval = this.isNetworkStable ? 
-                this.adaptiveQuickCheckInterval : 
+        const scheduleNextQuickCheck = (): void => {
+            const interval = this.isNetworkStable ?
+                this.adaptiveQuickCheckInterval :
                 this.quickCheckInterval;
-            
+
             this.intervals.set('quickCheck', setTimeout(() => {
                 if (!this.isDestroyed) {
-                    this.quickConnectivityCheck().catch(err => 
+                    this.quickConnectivityCheck().catch(err =>
                         this.log.error('Quick connectivity check error:', err)
                     );
                     scheduleNextQuickCheck();
@@ -158,44 +231,22 @@ class NetworkService extends EventEmitter {
             }, interval));
         };
         scheduleNextQuickCheck();
-        
+
         this.log.debug('Started adaptive monitoring for background operation');
     }
-    
+
     /**
      * Update monitoring based on network stability
      */
-    updateAdaptiveMonitoring() {
+    updateAdaptiveMonitoring(): void {
         // Adaptive monitoring is DISABLED for background apps
         // We want consistent check intervals to ensure reliability
-        
-        /* Original adaptive logic kept for reference:
-        const now = timeManager.now();
-        const timeSinceLastChange = now - this.state.lastUpdate;
-        
-        // If network has been stable for threshold period
-        if (this.state.isOnline && timeSinceLastChange > this.stabilityThreshold) {
-            if (!this.isNetworkStable) {
-                this.isNetworkStable = true;
-                this.adaptiveCheckInterval = this.checkInterval * this.stableNetworkMultiplier;
-                this.adaptiveQuickCheckInterval = this.quickCheckInterval * this.stableNetworkMultiplier;
-                this.log.info('Network stable - reducing check frequency for battery savings');
-            }
-        } else {
-            if (this.isNetworkStable) {
-                this.isNetworkStable = false;
-                this.adaptiveCheckInterval = this.checkInterval;
-                this.adaptiveQuickCheckInterval = this.quickCheckInterval;
-                this.log.info('Network unstable - resuming normal check frequency');
-            }
-        }
-        */
     }
 
     /**
      * Apply state changes atomically
      */
-    applyStateChanges() {
+    applyStateChanges(): void {
         if (this.stateUpdateLock) {
             this.log.warn('State update already in progress, queueing changes');
             setTimeout(() => this.applyStateChanges(), 50);
@@ -203,28 +254,28 @@ class NetworkService extends EventEmitter {
         }
 
         this.stateUpdateLock = true;
-        
+
         try {
             const hasChanges = Object.keys(this.pendingStateChanges).length > 0;
             if (!hasChanges) {
                 return;
             }
 
-            const newState = JSON.parse(JSON.stringify(this.state));
+            const newState: NetworkState = JSON.parse(JSON.stringify(this.state));
             Object.assign(newState, this.pendingStateChanges);
             newState.version = this.state.version + 1;
             newState.lastUpdate = timeManager.now();
             this.pendingStateChanges = {};
-            
+
             const oldState = this.state;
             this.state = newState;
-            
+
             // Suppress false offline during initialization
             const timeSinceInit = timeManager.now() - this.initializationTime;
             const isOffline = !newState.isOnline;
             const wasOnline = oldState.isOnline;
-            
-            
+
+
             // 10-second grace period prevents false offline on startup (reduced for background apps)
             if (isOffline && (timeSinceInit < 10000 || this._doingInitialCheck) && !this.isInitialized) {
                 this.log.debug('SUPPRESSING offline state during initialization phase', {
@@ -239,7 +290,7 @@ class NetworkService extends EventEmitter {
                 this.state = oldState;
                 return;
             }
-            
+
             if (wasOnline !== newState.isOnline) {
                 this.log.warn('NETWORK STATE TRANSITION:', {
                     from: wasOnline ? 'online' : 'offline',
@@ -249,16 +300,16 @@ class NetworkService extends EventEmitter {
                     version: newState.version
                 });
             }
-            
+
             const eventData = {
                 newState: this.getState(),
                 oldState,
                 version: newState.version
             };
-            
-            
+
+
             this.emit('stateChanged', eventData);
-            
+
         } finally {
             this.stateUpdateLock = false;
         }
@@ -267,20 +318,20 @@ class NetworkService extends EventEmitter {
     /**
      * Update state with changes
      */
-    updateState(changes, immediate = false) {
+    updateState(changes: Record<string, unknown>, immediate = false): void {
         if (changes.hasOwnProperty('isOnline')) {
             if (!changes.isOnline) {
                 this.log.debug('OFFLINE STATE REQUESTED - Stack trace:', new Error().stack);
-                
+
                 if (this._doingInitialCheck && !this.isInitialized) {
                     this.log.debug('SKIPPING offline state change during initial check');
                     return;
                 }
             }
         }
-        
+
         Object.assign(this.pendingStateChanges, changes);
-        
+
         if (immediate) {
             this.applyStateChanges();
         } else {
@@ -294,92 +345,92 @@ class NetworkService extends EventEmitter {
     /**
      * Apply state changes with hysteresis to prevent rapid fluctuations
      */
-    applyStateWithHysteresis(newState) {
+    applyStateWithHysteresis(newState: Partial<NetworkState>): void {
         const currentIsOnline = this.state.isOnline;
         const newIsOnline = newState.isOnline;
-        
+
         const now = timeManager.now();
-        this.recordStateChangeAttempt(currentIsOnline, newIsOnline, now);
-        
+        this.recordStateChangeAttempt(currentIsOnline, newIsOnline!, now);
+
         if (currentIsOnline !== newIsOnline) {
             if (this.hysteresisTimeout) {
                 this.log.debug(`State change blocked by hysteresis (current: ${currentIsOnline ? 'online' : 'offline'}, attempted: ${newIsOnline ? 'online' : 'offline'})`);
                 return;
             }
-            
+
             if (!this.isStableStateChange()) {
                 this.log.debug(`State change blocked - not stable (current: ${currentIsOnline ? 'online' : 'offline'}, attempted: ${newIsOnline ? 'online' : 'offline'})`);
                 return;
             }
-            
+
             this.hysteresisTimeout = setTimeout(() => {
                 this.hysteresisTimeout = null;
                 this.log.debug('Hysteresis period ended');
             }, this.hysteresisDelay);
-            
+
             this.log.info(`Applying state change with hysteresis: ${currentIsOnline ? 'online' : 'offline'} -> ${newIsOnline ? 'online' : 'offline'}`);
         }
-        
-        this.updateState(newState);
+
+        this.updateState(newState as Record<string, unknown>);
         this.updateAdaptiveMonitoring();
     }
-    
+
     /**
      * Record state change attempt for stability analysis
      */
-    recordStateChangeAttempt(wasOnline, isOnline, timestamp) {
+    recordStateChangeAttempt(wasOnline: boolean, isOnline: boolean, timestamp: number): void {
         this.stateChangeHistory.push({
             wasOnline,
             isOnline,
             timestamp,
             type: wasOnline === isOnline ? 'stable' : 'change'
         });
-        
+
         if (this.stateChangeHistory.length > this.maxHistorySize) {
             this.stateChangeHistory.shift();
         }
     }
-    
+
     /**
      * Check if a state change is stable based on recent history
      */
-    isStableStateChange() {
+    isStableStateChange(): boolean {
         if (this.stateChangeHistory.length < 3) {
             return true;
         }
-        
+
         const recentChanges = this.stateChangeHistory.slice(-5);
         const changeCount = recentChanges.filter(h => h.type === 'change').length;
-        
+
         if (changeCount >= 3) {
             this.log.debug(`Too many recent state changes (${changeCount} in last 5 checks)`);
             return false;
         }
-        
+
         const last3 = this.stateChangeHistory.slice(-3);
         const states = last3.map(h => h.isOnline);
         if (states.length === 3 && states[0] === states[2] && states[0] !== states[1]) {
             this.log.debug('Detected flip-flop pattern in state changes');
             return false;
         }
-        
+
         return true;
     }
 
     /**
      * Comprehensive network state check
      */
-    async checkNetworkState() {
+    async checkNetworkState(): Promise<void> {
         if (this.isDestroyed) return;
-        
+
         if (this.comprehensiveCheckInProgress) {
             this.log.debug('Skipping comprehensive check - another check in progress');
             return;
         }
-        
+
         this.comprehensiveCheckInProgress = true;
         this.lastComprehensiveCheck = timeManager.now();
-        
+
         try {
             const [interfaces, dnsResults, connectivityResults] = await Promise.all([
                 this.getNetworkInterfaces(),
@@ -390,19 +441,19 @@ class NetworkService extends EventEmitter {
             const vpnActive = this.detectVPN(interfaces);
             const primaryInterface = this.findPrimaryInterface(interfaces);
             const connectionType = this.determineConnectionType(primaryInterface);
-            
+
             const networkQuality = this.calculateNetworkQuality({
                 dnsSuccess: dnsResults.some(r => r.success),
                 connectivitySuccess: connectivityResults.some(r => r.success),
-                latency: Math.min(...connectivityResults.filter(r => r.latency).map(r => r.latency))
+                latency: Math.min(...connectivityResults.filter(r => r.latency).map(r => r.latency!))
             });
 
             const hasDNS = dnsResults.some(r => r.success);
             const hasConnectivity = connectivityResults.some(r => r.success);
-            
+
             // Online if EITHER DNS OR connectivity work (more forgiving)
             const isOnline = hasDNS || hasConnectivity;
-            
+
             // Log comprehensive check results for debugging
             this.log.debug('COMPREHENSIVE CHECK COMPLETE:', {
                 hasDNS,
@@ -412,7 +463,7 @@ class NetworkService extends EventEmitter {
                 vpnActive,
                 primaryInterface,
                 connectionType,
-                dnsServers: dns.getServers(),
+                dnsServers: dnsPromises.getServers(),
                 connectivityDetails: connectivityResults.map(r => ({
                     name: r.name,
                     success: r.success,
@@ -432,11 +483,11 @@ class NetworkService extends EventEmitter {
                     dnsResolvable: dnsResults.some(r => r.success),
                     internetReachable: connectivityResults.some(r => r.success),
                     captivePortal: false, // TODO: Implement captive portal detection
-                    latency: Math.min(...connectivityResults.filter(r => r.latency).map(r => r.latency))
+                    latency: Math.min(...connectivityResults.filter(r => r.latency).map(r => r.latency!))
                 }
             });
 
-        } catch (error) {
+        } catch (error: any) {
             this.log.error('Error in network state check:', error);
             this.log.debug('Setting offline state due to check error', {
                 error: error.message,
@@ -461,20 +512,20 @@ class NetworkService extends EventEmitter {
     /**
      * Quick connectivity check
      */
-    async quickConnectivityCheck() {
+    async quickConnectivityCheck(): Promise<void> {
         if (this.isDestroyed) return;
-        
+
         const timeSinceComprehensive = timeManager.now() - this.lastComprehensiveCheck;
         if (this.comprehensiveCheckInProgress || timeSinceComprehensive < 2000) {
             this.log.debug('Skipping quick check - comprehensive check active or recent');
             return;
         }
-        
+
         try {
             // Use Google DNS first as it's most reliable with VPNs
             const endpoint = this.connectivityEndpoints[0];
             const result = await this.checkEndpoint(endpoint);
-            
+
             // If we get EADDRNOTAVAIL, it's likely a VPN routing issue, not truly offline
             // Try the second endpoint before declaring offline
             if (!result.success && result.errorCode === 'EADDRNOTAVAIL' && this.connectivityEndpoints.length > 1) {
@@ -495,7 +546,7 @@ class NetworkService extends EventEmitter {
                     result.success = true;
                 }
             }
-            
+
             if (result.success !== this.state.isOnline) {
                 if (result.success) {
                     this.consecutiveOnlineChecks++;
@@ -504,7 +555,7 @@ class NetworkService extends EventEmitter {
                     this.consecutiveOfflineChecks++;
                     this.consecutiveOnlineChecks = 0;
                 }
-                
+
                 if ((result.success && this.consecutiveOnlineChecks >= this.requiredConsecutiveChecks) ||
                     (!result.success && this.consecutiveOfflineChecks >= this.requiredConsecutiveChecks)) {
                     this.log.warn(`QUICK CHECK STATE CHANGE: ${this.state.isOnline ? 'online' : 'offline'} -> ${result.success ? 'online' : 'offline'}`, {
@@ -523,7 +574,7 @@ class NetworkService extends EventEmitter {
                 this.consecutiveOnlineChecks = 0;
                 this.consecutiveOfflineChecks = 0;
             }
-        } catch (error) {
+        } catch (error: any) {
             this.log.debug('Quick connectivity check failed:', error.message);
         }
     }
@@ -531,14 +582,13 @@ class NetworkService extends EventEmitter {
     /**
      * Get network interfaces
      */
-    async getNetworkInterfaces() {
-        const interfaces = new Map();
+    async getNetworkInterfaces(): Promise<Map<string, NetworkInterfaceInfo>> {
+        const interfaces = new Map<string, NetworkInterfaceInfo>();
         const netInterfaces = os.networkInterfaces();
-        
-        // this.log.info('Detected network interfaces:', Object.keys(netInterfaces));
-        
+
         for (const [name, addresses] of Object.entries(netInterfaces)) {
-            const validAddresses = addresses.filter(addr => 
+            if (!addresses) continue;
+            const validAddresses = addresses.filter(addr =>
                 !addr.internal && addr.family === 'IPv4'
             );
 
@@ -554,7 +604,7 @@ class NetworkService extends EventEmitter {
                 });
             }
         }
-        
+
         this.log.debug(`Found ${interfaces.size} active network interfaces`);
         return interfaces;
     }
@@ -562,49 +612,45 @@ class NetworkService extends EventEmitter {
     /**
      * Check DNS resolution
      */
-    async checkDNSResolution() {
+    async checkDNSResolution(): Promise<DnsCheckResult[]> {
         this.log.debug('Starting DNS resolution checks for hosts:', this.dnsTestHosts);
-        
+
         // Log current DNS servers
         try {
-            const dnsServers = dns.getServers();
+            const dnsServers = dnsPromises.getServers();
             this.log.debug('Current DNS servers:', dnsServers);
-        } catch (error) {
+        } catch (error: any) {
             this.log.debug('Could not get DNS servers:', error.message);
         }
-        
-        const checkPromises = this.dnsTestHosts.map(async (host) => {
+
+        const checkPromises = this.dnsTestHosts.map(async (host): Promise<DnsCheckResult> => {
             try {
                 const start = timeManager.now();
                 this.log.debug(`DNS check starting for: ${host}`);
-                
-                let result;
-                
+
+                let result: string[] | string;
+
                 // Use OS-specific DNS commands for more reliable resolution
                 if (process.platform === 'darwin') {
-                    // macOS: use dscacheutil or nslookup
                     result = await this.checkDNSMacOS(host);
                 } else if (process.platform === 'win32') {
-                    // Windows: use nslookup
                     result = await this.checkDNSWindows(host);
                 } else if (process.platform === 'linux') {
-                    // Linux: use getent or nslookup
                     result = await this.checkDNSLinux(host);
                 } else {
-                    // Fallback to Node.js DNS resolver
                     result = await Promise.race([
-                        dns.resolve4(host),
-                        new Promise((_, reject) => 
+                        dnsPromises.resolve4(host),
+                        new Promise<never>((_, reject) =>
                             setTimeout(() => reject(new Error('DNS timeout')), 3000)
                         )
                     ]);
                 }
-                
+
                 const latency = timeManager.now() - start;
                 const ips = Array.isArray(result) ? result : [result];
                 this.log.debug(`DNS check SUCCESS for ${host}: resolved to ${ips.join(', ')} in ${latency}ms`);
                 return { host, success: true, latency, ips };
-            } catch (error) {
+            } catch (error: any) {
                 this.log.debug(`DNS check FAILED for ${host}: ${error.message}`);
                 return { host, success: false, error: error.message };
             }
@@ -617,9 +663,9 @@ class NetworkService extends EventEmitter {
      * Parse nslookup output to extract IP addresses
      * Handles both Windows and Unix output formats
      */
-    parseNslookupOutput(stdout) {
+    parseNslookupOutput(stdout: string): string[] {
         const lines = stdout.split('\n');
-        const ips = [];
+        const ips: string[] = [];
 
         let foundAnswerSection = false;
         let skipNextAddress = true; // Skip first Address line (DNS server) on Windows
@@ -667,7 +713,7 @@ class NetworkService extends EventEmitter {
     /**
      * Validate IPv4 address format
      */
-    isValidIPv4(str) {
+    isValidIPv4(str: string): boolean {
         if (!str) return false;
         const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
         if (!ipv4Regex.test(str)) return false;
@@ -681,10 +727,8 @@ class NetworkService extends EventEmitter {
     /**
      * Execute nslookup command
      */
-    async executeNslookup(host) {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
+    async executeNslookup(host: string): Promise<string[]> {
+        const execAsync = util.promisify(child_process.exec);
 
         // Add timeout to prevent hanging processes - 5 second timeout
         const { stdout } = await execAsync(`nslookup -timeout=3 ${host} 8.8.8.8`, {
@@ -703,11 +747,9 @@ class NetworkService extends EventEmitter {
     /**
      * Check DNS on macOS using system commands
      */
-    async checkDNSMacOS(host) {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
-        
+    async checkDNSMacOS(host: string): Promise<string[]> {
+        const execAsync = util.promisify(child_process.exec);
+
         try {
             // Try dscacheutil first (faster)
             const { stdout } = await execAsync(`dscacheutil -q host -a name ${host}`);
@@ -720,40 +762,32 @@ class NetworkService extends EventEmitter {
         } catch (error) {
             this.log.debug(`dscacheutil failed for ${host}, trying nslookup`);
         }
-        
+
         // Fallback to nslookup
         return await this.executeNslookup(host);
     }
-    
+
     /**
      * Check DNS on Windows using nslookup
      */
-    async checkDNSWindows(host) {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
-
+    async checkDNSWindows(host: string): Promise<string[]> {
         // Skip PowerShell Resolve-DnsName - it can hang and cause process accumulation
-        // Use nslookup directly as it's more reliable and doesn't require PowerShell startup overhead
-        // The Resolve-DnsName cmdlet was causing dozens of hanging powershell.exe processes
+        // Use nslookup directly as it's more reliable
         try {
             return await this.executeNslookup(host);
         } catch (error) {
-            this.log.debug(`nslookup failed for ${host}: ${error.message}`);
+            this.log.debug(`nslookup failed for ${host}: ${(error as Error).message}`);
             // Final fallback to Node.js DNS resolver
-            const dns = require('dns').promises;
-            return await dns.resolve4(host);
+            return await dnsPromises.resolve4(host);
         }
     }
-    
+
     /**
      * Check DNS on Linux using getent or nslookup
      */
-    async checkDNSLinux(host) {
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
-        
+    async checkDNSLinux(host: string): Promise<string[]> {
+        const execAsync = util.promisify(child_process.exec);
+
         // Try getent first (more reliable on Linux)
         try {
             const { stdout } = await execAsync(`getent hosts ${host}`);
@@ -766,7 +800,7 @@ class NetworkService extends EventEmitter {
         } catch (error) {
             this.log.debug(`getent failed for ${host}, trying nslookup`);
         }
-        
+
         // Fallback to nslookup
         return await this.executeNslookup(host);
     }
@@ -774,10 +808,8 @@ class NetworkService extends EventEmitter {
     /**
      * Check internet connectivity
      */
-    async checkInternetConnectivity() {
-        // this.log.info('Starting connectivity checks for endpoints:', this.connectivityEndpoints);
-        
-        const checkPromises = this.connectivityEndpoints.map(endpoint => 
+    async checkInternetConnectivity(): Promise<EndpointResult[]> {
+        const checkPromises = this.connectivityEndpoints.map(endpoint =>
             this.checkEndpoint(endpoint)
         );
 
@@ -787,10 +819,9 @@ class NetworkService extends EventEmitter {
     /**
      * Check single endpoint
      */
-    async checkEndpoint(endpoint) {
-        const net = require('net');
+    async checkEndpoint(endpoint: ConnectivityEndpoint): Promise<EndpointResult> {
         const start = timeManager.now();
-        
+
         this.log.debug(`Checking connectivity to ${endpoint.name} (${endpoint.host}:${endpoint.port})`);
 
         return new Promise((resolve) => {
@@ -807,9 +838,8 @@ class NetworkService extends EventEmitter {
                 resolve({ ...endpoint, success: true, latency });
             });
 
-            socket.on('error', (error) => {
+            socket.on('error', (error: NodeJS.ErrnoException) => {
                 if (!connected) {
-                    // EADDRNOTAVAIL often happens with VPNs - treat as network routing issue, not offline
                     if (error.code === 'EADDRNOTAVAIL') {
                         this.log.debug(`Connectivity BLOCKED by VPN/firewall to ${endpoint.name}: ${error.message}`);
                     } else {
@@ -829,7 +859,7 @@ class NetworkService extends EventEmitter {
 
             try {
                 socket.connect(endpoint.port, endpoint.host);
-            } catch (error) {
+            } catch (error: any) {
                 this.log.debug(`Connectivity ERROR to ${endpoint.name}: ${error.message}`);
                 resolve({ ...endpoint, success: false, error: error.message });
             }
@@ -839,23 +869,23 @@ class NetworkService extends EventEmitter {
     /**
      * Detect VPN
      */
-    detectVPN(interfaces) {
+    detectVPN(interfaces: Map<string, NetworkInterfaceInfo>): boolean {
         const vpnIndicators = ['tun', 'tap', 'ppp', 'ipsec', 'vpn'];
-        
+
         for (const [name] of interfaces) {
             const lowerName = name.toLowerCase();
             if (vpnIndicators.some(indicator => lowerName.includes(indicator))) {
                 return true;
             }
         }
-        
+
         return false;
     }
 
     /**
      * Find primary interface
      */
-    findPrimaryInterface(interfaces) {
+    findPrimaryInterface(interfaces: Map<string, NetworkInterfaceInfo>): string | null {
         for (const [name, info] of interfaces) {
             if (info.type === 'ethernet') {
                 return name;
@@ -875,12 +905,12 @@ class NetworkService extends EventEmitter {
     /**
      * Get interface type
      */
-    getInterfaceType(name) {
+    getInterfaceType(name: string): string {
         const lowerName = name.toLowerCase();
-        
+
         if (lowerName.includes('eth') || lowerName.includes('en0')) {
             return 'ethernet';
-        } else if (lowerName.includes('wi-fi') || lowerName.includes('wlan') || 
+        } else if (lowerName.includes('wi-fi') || lowerName.includes('wlan') ||
                    lowerName.includes('airport') || lowerName.includes('en1')) {
             return 'wifi';
         } else if (lowerName.includes('lo')) {
@@ -893,19 +923,19 @@ class NetworkService extends EventEmitter {
     /**
      * Determine connection type
      */
-    determineConnectionType(primaryInterface) {
+    determineConnectionType(primaryInterface: string | null): string {
         if (!primaryInterface) return 'none';
-        
-        const interfaces = new Map(this.state.interfaces);
+
+        const interfaces = new Map<string, NetworkInterfaceInfo>(this.state.interfaces);
         const info = interfaces.get(primaryInterface);
-        
+
         return info ? info.type : 'unknown';
     }
 
     /**
      * Calculate network quality
      */
-    calculateNetworkQuality({ dnsSuccess, connectivitySuccess, latency }) {
+    calculateNetworkQuality({ dnsSuccess, connectivitySuccess, latency }: NetworkQualityInput): string {
         if (!dnsSuccess && !connectivitySuccess) {
             return 'poor';
         }
@@ -924,7 +954,7 @@ class NetworkService extends EventEmitter {
     /**
      * Force network check
      */
-    async forceCheck() {
+    async forceCheck(): Promise<NetworkState> {
         this.log.info('Forcing network check...');
         await this.checkNetworkState();
         return this.getState();
@@ -933,21 +963,19 @@ class NetworkService extends EventEmitter {
     /**
      * Destroy the service
      */
-    destroy() {
+    destroy(): void {
         this.log.info('Destroying NetworkService...');
         this.isDestroyed = true;
 
         for (const [name, timerId] of this.intervals) {
-            if (typeof timerId === 'number') {
-                clearTimeout(timerId); // Works for both setTimeout and setInterval
-                clearInterval(timerId);
-            }
+            clearTimeout(timerId);
+            clearInterval(timerId as unknown as number);
             this.log.debug(`Cleared timer: ${name}`);
         }
         this.intervals.clear();
 
         clearTimeout(this.stateUpdateTimeout);
-        clearTimeout(this.hysteresisTimeout);
+        clearTimeout(this.hysteresisTimeout!);
 
         this.removeAllListeners();
 
@@ -955,4 +983,7 @@ class NetworkService extends EventEmitter {
     }
 }
 
-module.exports = new NetworkService();
+const networkService = new NetworkService();
+
+export { NetworkService, networkService };
+export default networkService;
