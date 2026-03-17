@@ -12,7 +12,7 @@ import atomicWriter from '../../utils/atomicFileWriter';
 const { createLogger } = mainLogger;
 const log = createLogger('WSRuleHandler');
 
-const versionConfig = require('../../config/version');
+const versionConfig = require('../../config/version').default;
 const { DATA_FORMAT_VERSION } = versionConfig;
 
 interface HeaderRule {

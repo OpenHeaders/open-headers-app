@@ -162,7 +162,7 @@ class WindowManager {
                     if (process.platform === 'darwin') {
                         setTimeout(() => {
                             // Lazy require to avoid circular dependency (trayManager imports windowManager)
-                            const trayManager = require('../tray/trayManager');
+                            const trayManager = require('../tray/trayManager').default;
                             trayManager.updateTray(settings);
                             log.info('Applied dock visibility setting after window ready');
                         }, 100);
@@ -181,7 +181,7 @@ class WindowManager {
 
         // Hide to system tray instead of closing unless app is quitting
         this.mainWindow.on('close', (event: any) => {
-            const appLifecycle = require('../app/lifecycle');
+            const appLifecycle = require('../app/lifecycle').default;
             if (!appLifecycle.isQuittingApp()) {
                 event.preventDefault();
                 this.mainWindow.hide();

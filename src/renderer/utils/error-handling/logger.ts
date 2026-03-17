@@ -8,7 +8,7 @@ let _timeManager: { getDate: (ts?: number | null) => Date } | null = null;
 function getTimeManager() {
   if (!_timeManager && typeof require !== 'undefined') {
     try {
-      _timeManager = require('../../services/TimeManager');
+      _timeManager = require('../../services/TimeManager').default;
     } catch (e) {
       // TimeManager not available yet, use Date directly
     }

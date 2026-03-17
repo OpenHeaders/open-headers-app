@@ -142,7 +142,7 @@ class WorkspaceHandlers {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-            const serviceRegistryMod = require('../../../../services/core/ServiceRegistry');
+            const serviceRegistryMod = require('../../../../services/core/ServiceRegistry').default;
 
             const health: any = {
                 gitSync: false,

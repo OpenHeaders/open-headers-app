@@ -95,8 +95,8 @@ class AppLifecycle {
             // Start CLI API server (non-blocking — app works without it)
             // Lazy require to avoid circular dependency (CliSetupHandler requires lifecycle)
             try {
-                const CliApiService = require('../../../services/cli/CliApiService');
-                const CliSetupHandler = require('../../../services/cli/CliSetupHandler');
+                const { CliApiService } = require('../../../services/cli/CliApiService');
+                const { CliSetupHandler } = require('../../../services/cli/CliSetupHandler');
                 const cliApiService = new CliApiService();
                 const cliSetupHandler = new CliSetupHandler();
                 cliApiService.setSetupHandler(cliSetupHandler);

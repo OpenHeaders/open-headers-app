@@ -49,7 +49,7 @@ class SettingsHandlers {
 
             // Update global recording hotkey if changed
             if (settings.recordingHotkey || settings.hasOwnProperty('recordingHotkeyEnabled')) {
-                const globalShortcuts = require('../../shortcuts/globalShortcuts');
+                const globalShortcuts = require('../../shortcuts/globalShortcuts').default;
 
                 // Update hotkey if it changed
                 if (settings.recordingHotkey) {

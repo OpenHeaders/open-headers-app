@@ -173,7 +173,7 @@ class RecordingHandlers {
             // Get proxy status to check if it's running
             let proxyPort: number | null = null;
             try {
-                const proxyServiceMod = require('../../../../services/proxy/ProxyService');
+                const proxyServiceMod = require('../../../../services/proxy/ProxyService').default;
                 if (proxyServiceMod && proxyServiceMod.isRunning) {
                     proxyPort = proxyServiceMod.port;
                     log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);

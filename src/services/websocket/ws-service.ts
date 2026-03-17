@@ -387,7 +387,7 @@ class WebSocketService {
             if (windows.length === 0) { log.warn('No windows available to focus'); return; }
 
             const mainWindow = windows[0];
-            const windowsFocusHelper = require('../../main/modules/utils/windowsFocus');
+            const windowsFocusHelper = require('../../main/modules/utils/windowsFocus').default;
             windowsFocusHelper.focusWindow(mainWindow);
 
             if (navigation && (navigation.tab || navigation.subTab)) {

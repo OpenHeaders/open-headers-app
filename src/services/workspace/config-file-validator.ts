@@ -10,7 +10,7 @@ import mainLogger from '../../utils/mainLogger';
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileValidator');
 
-const versionConfig = require('../../config/version');
+const versionConfig = require('../../config/version').default;
 const { DATA_FORMAT_VERSION } = versionConfig;
 
 // Type definitions

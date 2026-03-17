@@ -5,7 +5,7 @@ import mainLogger from '../../utils/mainLogger';
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
 
-const configValidator = require('../../utils/configValidator');
+const configValidator = require('../../utils/configValidator').default;
 const { analyzeConfigFile } = configValidator;
 
 // Type definitions

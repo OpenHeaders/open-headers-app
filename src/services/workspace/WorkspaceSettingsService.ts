@@ -17,7 +17,7 @@ const { app } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSettingsService');
 
-const versionConfig = require('../../config/version');
+const versionConfig = require('../../config/version').default;
 const { DATA_FORMAT_VERSION } = versionConfig;
 
 // Type definitions

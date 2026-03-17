@@ -13,7 +13,7 @@ import {
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
 
-const versionConfig = require('../../config/version');
+const versionConfig = require('../../config/version').default;
 const { DATA_FORMAT_VERSION } = versionConfig;
 
 // Constants
@@ -1104,7 +1104,7 @@ class WorkspaceSyncScheduler {
       // Notify WebSocket service to update browser extensions.
       // Skip when nothing changed to avoid redundant messages on every periodic sync.
       if (broadcastToExtensions) {
-        const webSocketService = require('../websocket/ws-service');
+        const webSocketService = require('../websocket/ws-service').default;
         if (webSocketService && webSocketService.updateSources) {
           // Update sources -- use mergedSources (which preserves local sourceContent)
           // instead of data.sources (raw Git config without execution data).
@@ -1127,7 +1127,7 @@ class WorkspaceSyncScheduler {
 
       // Reload proxy rules if they were imported
       if (data.proxyRules && Array.isArray(data.proxyRules) && data.proxyRules.length > 0) {
-        const proxyService = require('../proxy/ProxyService');
+        const proxyService = require('../proxy/ProxyService').default;
         // Only reload if this is the current workspace
         if (proxyService.ruleStore && proxyService.ruleStore.currentWorkspaceId === workspaceId) {
           await proxyService.ruleStore.load();
