@@ -3,7 +3,7 @@
  * Manages client initialization, heartbeat, cleanup, and connection status
  */
 
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;

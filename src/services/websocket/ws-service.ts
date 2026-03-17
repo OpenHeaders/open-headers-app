@@ -1,5 +1,5 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 import https from 'https';
 import http from 'http';
 import fs from 'fs';

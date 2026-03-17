@@ -3,7 +3,7 @@
  * Manages video recording lifecycle and workflow save from browser extensions
  */
 
-import WebSocket from 'ws';
+const WebSocket = require('ws');
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 
