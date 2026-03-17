@@ -1,7 +1,75 @@
+/** Cookie attributes parsed from cookie string */
+interface CookieAttributes {
+  [key: string]: string | boolean | undefined;
+  domain?: string;
+  path?: string;
+  httponly?: boolean;
+  secure?: boolean;
+  samesite?: string;
+  'max-age'?: string;
+  expires?: string;
+}
+
+/** Parsed cookie representation */
+interface ParsedCookie {
+  name: string;
+  value: string;
+  isDeleted: boolean;
+  attributes: CookieAttributes;
+  domain?: string | null;
+}
+
+/** Storage event item */
+interface StorageItem {
+  timestamp: number;
+  type: string;
+  action: string;
+  key?: string;
+  name?: string;
+  value?: unknown;
+  oldValue?: unknown;
+  newValue?: unknown;
+  domain?: string;
+  path?: string;
+  url?: string | null;
+  data?: {
+    localStorage?: Record<string, unknown>;
+    sessionStorage?: Record<string, unknown>;
+    cookies?: string;
+  };
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Recording event */
+interface RecordingEvent {
+  timestamp: number;
+  type: string;
+  url?: string;
+  data: Record<string, unknown>;
+}
+
+/** Recording record */
+interface RecordingRecord {
+  id?: string;
+  events?: RecordingEvent[];
+  console?: unknown[];
+  network?: unknown[];
+  storage?: unknown[];
+  startTime?: number;
+  endTime?: number;
+  url?: string;
+  metadata?: Record<string, unknown>;
+  viewport?: { width: number; height: number };
+  userAgent?: string;
+  _originalEvents?: RecordingEvent[];
+  [key: string]: unknown;
+}
+
 /**
  * Extract domain from URL
  */
-function extractDomain(url) {
+function extractDomain(url: string | null | undefined): string | null {
   if (!url) return null;
   try {
     const urlObj = new URL(url);
@@ -15,7 +83,7 @@ function extractDomain(url) {
  * Parse cookie string into individual cookies with their attributes
  * Handles both single cookie (with attributes) and multiple cookies
  */
-function parseCookieString(cookieStr) {
+function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[] {
   if (!cookieStr) return [];
   
   // Check if this looks like multiple cookies (no path/domain/etc attributes)
@@ -24,7 +92,7 @@ function parseCookieString(cookieStr) {
     // Multiple cookies format: "name1=value1; name2=value2"
     const cookies = [];
     const pairs = cookieStr.split('; ');
-    pairs.forEach(pair => {
+    pairs.forEach((pair: string) => {
       const eqIndex = pair.indexOf('=');
       if (eqIndex > 0) {
         cookies.push({
@@ -39,7 +107,7 @@ function parseCookieString(cookieStr) {
   }
   
   // Single cookie with attributes
-  const parts = cookieStr.split(';').map(s => s.trim());
+  const parts = cookieStr.split(';').map((s: string) => s.trim());
   if (parts.length === 0) return [];
   
   // First part is the cookie name=value
@@ -66,8 +134,8 @@ function parseCookieString(cookieStr) {
   const cookieValue = firstPart.substring(eqIndex + 1); // Don't trim cookie values, they might have intentional spaces
   
   // Parse attributes
-  const attributes = {};
-  let cookieDomain = null;
+  const attributes: CookieAttributes = {};
+  let cookieDomain: string | null = null;
   
   for (let i = 1; i < parts.length; i++) {
     const part = parts[i];
@@ -106,7 +174,7 @@ function parseCookieString(cookieStr) {
  * Converts new recording format (single events array) to old format (separate arrays)
  * for backward compatibility with existing components
  */
-export function convertNewRecordingFormat(record) {
+export function convertNewRecordingFormat(record: RecordingRecord) {
   if (!record || !record.events) {
     return record;
   }
@@ -128,7 +196,7 @@ export function convertNewRecordingFormat(record) {
   const startTime = record.startTime;
 
   // Process each event based on its type
-  record.events.forEach(event => {
+  record.events.forEach((event: RecordingEvent) => {
     // Calculate relative timestamp
     const relativeTimestamp = event.timestamp - startTime;
     
@@ -299,13 +367,13 @@ export function convertNewRecordingFormat(record) {
 /**
  * Process storage events to match the old format expected by RecordStorageTab
  */
-export function processStorageEvents(storage, record) {
+export function processStorageEvents(storage: StorageItem[], record: RecordingRecord) {
   const processedStorage = [];
   
-  storage.forEach(item => {
+  storage.forEach((item: StorageItem) => {
     // URL should already be present from the converter, but fallback to record URL
     const itemUrl = item.url || record.url || null;
-    
+
     if (item.type === 'initial' && item.data) {
       // Process initial storage snapshot
       const { localStorage, sessionStorage, cookies } = item.data;
@@ -346,7 +414,7 @@ export function processStorageEvents(storage, record) {
       if (cookies) {
         // Initial cookies are the full cookie string with multiple cookies
         const cookiePairs = cookies.split('; ');
-        cookiePairs.forEach(pair => {
+        cookiePairs.forEach((pair: string) => {
           const eqIndex = pair.indexOf('=');
           if (eqIndex > 0) {
             const name = pair.substring(0, eqIndex).trim();
@@ -427,7 +495,7 @@ export function processStorageEvents(storage, record) {
  * Process storage events and only mark as "Initial" those that existed when recording started
  * Also track previous values for proper old/new value display
  */
-function deduplicateInitialStorage(storageEvents) {
+function deduplicateInitialStorage(storageEvents: StorageItem[]) {
   const seenKeys = new Map(); // Map of type:key -> last known value
   const processedEvents = [];
   
@@ -440,7 +508,7 @@ function deduplicateInitialStorage(storageEvents) {
     }
   }
   
-  storageEvents.forEach(event => {
+  storageEvents.forEach((event: StorageItem) => {
     const key = `${event.type}:${event.name}`;
     
     // Check if this is an initial storage state by looking at metadata
@@ -510,10 +578,10 @@ function deduplicateInitialStorage(storageEvents) {
 /**
  * Convert flat storage array for RecordStorageTab component
  */
-export function convertStorageForTable(storage) {
-  const tableData = [];
-  
-  storage.forEach(item => {
+export function convertStorageForTable(storage: StorageItem[]) {
+  const tableData: StorageItem[] = [];
+
+  storage.forEach((item: StorageItem) => {
     // Handle both the converted format and direct storage events
     if (item.action === 'initial') {
       // Initial state entries

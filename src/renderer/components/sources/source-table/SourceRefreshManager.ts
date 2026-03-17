@@ -340,12 +340,12 @@ export const updateRefreshDisplayStates = (sources: SourceItem[], refreshManager
  * @returns {Object} Cleaned display states
  */
 export const cleanupDisplayStates = (sources: SourceItem[], refreshDisplayStates: Record<string, DisplayState>, log: Logger) => {
-    const sourceIds = new Set(sources.map((s: SourceItem) => s.sourceId));
+    const sourceIds = new Set(sources.map((s: SourceItem) => String(s.sourceId)));
     const filtered: Record<string, DisplayState> = {};
     let hasChanges = false;
     
     Object.keys(refreshDisplayStates).forEach((sourceId: string) => {
-        if (sourceIds.has(parseInt(sourceId))) {
+        if (sourceIds.has(sourceId)) {
             filtered[sourceId] = refreshDisplayStates[sourceId];
         } else {
             hasChanges = true;

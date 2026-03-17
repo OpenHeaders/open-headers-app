@@ -72,11 +72,16 @@ interface StateMachineContext {
     cancelRequested: boolean;
 }
 
+interface TransitionEvent {
+    payload: Record<string, any>;
+    type: string;
+}
+
 interface TransitionConfig {
     target: string;
-    action?: (context: StateMachineContext, event: { payload: Record<string, unknown>; type: string }) => StateMachineContext | null;
+    action?: (context: StateMachineContext, event: TransitionEvent) => Record<string, any> | null;
     guard?: (context: StateMachineContext, event?: unknown) => boolean;
-    condition?: (context: StateMachineContext, event: { payload: Record<string, unknown>; type: string }) => boolean;
+    condition?: (context: StateMachineContext, event: TransitionEvent) => unknown;
     fallback?: string;
 }
 
@@ -652,7 +657,7 @@ class WorkspaceCreationStateMachine {
         if (transition.action) {
             const newContext = transition.action(this.context, eventPayload);
             if (newContext) {
-                this.context = newContext;
+                this.context = newContext as StateMachineContext;
             }
         }
 

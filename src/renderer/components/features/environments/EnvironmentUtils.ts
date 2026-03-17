@@ -8,12 +8,69 @@ import { showMessage } from '../../../utils/ui/messageUtil';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentUtils');
 
+/** A header with a name and value */
+interface HeaderEntry {
+  name?: string;
+  value?: string;
+}
+
+/** Query parameter entry */
+interface QueryParam {
+  key?: string;
+  value?: string;
+}
+
+/** Source configuration used for environment variable checking */
+interface SourceConfig {
+  sourceId?: string;
+  sourceType?: string;
+  sourcePath?: string;
+  sourceName?: string;
+  name?: string;
+  requestOptions?: {
+    headers?: HeaderEntry[];
+    queryParams?: QueryParam[];
+    body?: string;
+    totpSecret?: string;
+    [key: string]: unknown;
+  };
+  jsonFilter?: {
+    enabled?: boolean;
+    path?: string;
+  };
+  [key: string]: unknown;
+}
+
+/** Header rule with optional environment variable tracking */
+interface HeaderRule {
+  id?: string;
+  headerName?: string;
+  hasEnvVars?: boolean;
+  envVars?: string[];
+  enabled?: boolean;
+  name?: string;
+  [key: string]: unknown;
+}
+
+/** Rules object containing header rules */
+interface RulesConfig {
+  header?: HeaderRule[];
+  [key: string]: unknown;
+}
+
+/** Variable usage information */
+interface VariableUsageInfo {
+  sourceId: string;
+  sourceName: string;
+  isRule: boolean;
+}
+
 /**
  * Extracts all variable references from a text string
  * @param {string} text - Text to search for variables
  * @returns {string[]} Array of variable names found
  */
-export const extractVariables = (text) => {
+export const extractVariables = (text: string): string[] => {
   if (!text || typeof text !== 'string') return [];
   
   const matches = text.match(VARIABLE_TEMPLATE_REGEX) || [];
@@ -27,7 +84,7 @@ export const extractVariables = (text) => {
  * @param {Object} rules - Rules object containing header rules
  * @returns {string[]} Array of missing variable names
  */
-export const checkMissingVariables = (sources, targetEnvironment, rules = null) => {
+export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment: Record<string, string>, rules: RulesConfig | null = null): string[] => {
   const missingVars = new Set();
   
   if (!sources || !Array.isArray(sources)) {
@@ -35,7 +92,7 @@ export const checkMissingVariables = (sources, targetEnvironment, rules = null) 
     return [];
   }
 
-  sources.forEach(source => {
+  sources.forEach((source: SourceConfig) => {
     if (source.sourceType === 'http') {
       // Check URL for variables
       const urlVars = extractVariables(source.sourcePath || '');
@@ -47,7 +104,7 @@ export const checkMissingVariables = (sources, targetEnvironment, rules = null) 
       
       // Check headers
       if (source.requestOptions?.headers) {
-        source.requestOptions.headers.forEach(header => {
+        source.requestOptions.headers.forEach((header: HeaderEntry) => {
           const headerVars = extractVariables(header.value || '');
           headerVars.forEach(varName => {
             if (!targetEnvironment[varName]) {
@@ -71,7 +128,7 @@ export const checkMissingVariables = (sources, targetEnvironment, rules = null) 
       
       // Check query parameters
       if (source.requestOptions?.queryParams) {
-        source.requestOptions.queryParams.forEach(param => {
+        source.requestOptions.queryParams.forEach((param: QueryParam) => {
           const paramVars = extractVariables(param.value || '');
           paramVars.forEach(varName => {
             if (!targetEnvironment[varName]) {
@@ -95,9 +152,9 @@ export const checkMissingVariables = (sources, targetEnvironment, rules = null) 
   
   // Check header rules for environment variables
   if (rules && rules.header && Array.isArray(rules.header)) {
-    rules.header.forEach(rule => {
+    rules.header.forEach((rule: HeaderRule) => {
       if (rule.hasEnvVars && rule.envVars && Array.isArray(rule.envVars)) {
-        rule.envVars.forEach(varName => {
+        rule.envVars.forEach((varName: string) => {
           if (!targetEnvironment[varName]) {
             missingVars.add(varName);
           }
@@ -115,7 +172,7 @@ export const checkMissingVariables = (sources, targetEnvironment, rules = null) 
  * @param {Object} existingEnvironments - Existing environments object
  * @returns {string} Unique environment name
  */
-export const generateUniqueEnvironmentName = (baseName, existingEnvironments) => {
+export const generateUniqueEnvironmentName = (baseName: string, existingEnvironments: Record<string, unknown>): string => {
   let newName = `${baseName}-copy`;
   let counter = 1;
   
@@ -132,7 +189,7 @@ export const generateUniqueEnvironmentName = (baseName, existingEnvironments) =>
  * @param {Object} source - Source configuration object
  * @returns {boolean} True if source uses variables
  */
-export const sourceUsesVariables = (source) => {
+export const sourceUsesVariables = (source: SourceConfig | null): boolean => {
   if (!source) return false;
   
   const sourceStr = JSON.stringify(source);
@@ -144,7 +201,7 @@ export const sourceUsesVariables = (source) => {
  * @param {Array} sources - Array of source configurations
  * @returns {Array} Filtered array of sources using variables
  */
-export const getSourcesUsingVariables = (sources) => {
+export const getSourcesUsingVariables = (sources: SourceConfig[]): SourceConfig[] => {
   if (!sources || !Array.isArray(sources)) return [];
   
   return sources.filter(sourceUsesVariables);
@@ -158,7 +215,7 @@ export const getSourcesUsingVariables = (sources) => {
  * @param {Object} rules - Rules object for rule name lookup
  * @returns {Array} Array of formatted source info
  */
-export const formatVariableUsage = (varName, sourceIds, sources, rules = null) => {
+export const formatVariableUsage = (varName: string, sourceIds: string[], sources: SourceConfig[], rules: RulesConfig | null = null): VariableUsageInfo[] => {
   if (!sourceIds || !Array.isArray(sourceIds)) return [];
   
   return sourceIds.map(sourceId => {
@@ -169,7 +226,7 @@ export const formatVariableUsage = (varName, sourceIds, sources, rules = null) =
       
       // Try to find the actual rule to get its name
       if (rules && rules.header) {
-        const rule = rules.header.find(r => r.id === ruleId);
+        const rule = rules.header.find((r: HeaderRule) => r.id === ruleId);
         if (rule) {
           ruleName = rule.headerName || `Header Rule #${ruleId}`;
         }
@@ -183,7 +240,7 @@ export const formatVariableUsage = (varName, sourceIds, sources, rules = null) =
     }
     
     // Regular source
-    const source = sources.find(s => s.sourceId === sourceId);
+    const source = sources.find((s: SourceConfig) => s.sourceId === sourceId);
     return {
       sourceId,
       sourceName: source?.sourceName || source?.name || `Source ${sourceId}`,

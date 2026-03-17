@@ -332,10 +332,10 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Complete table props
     const tableProps = createStandardTableProps(
-        tableData,
-        columns,
-        handleTableChange,
-        generateRowClassName
+        tableData as any,
+        columns as any,
+        handleTableChange as any,
+        generateRowClassName as any
     );
 
     return (

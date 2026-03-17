@@ -6,7 +6,7 @@ import { createLogger } from '../../utils/error-handling/logger';
 class BaseStateManager {
   serviceName: string;
   log: ReturnType<typeof createLogger>;
-  listeners: Set<(state: Record<string, any>, changedKeys: string[]) => void>;
+  listeners: Set<(state: any, changedKeys: string[]) => void>;
   state: Record<string, any>;
 
   constructor(serviceName: string) {
@@ -19,7 +19,7 @@ class BaseStateManager {
   /**
    * Subscribe to state changes
    */
-  subscribe(listener) {
+  subscribe(listener: (state: any, changedKeys: string[]) => void) {
     this.listeners.add(listener);
     // Immediately call with current state
     listener(this.getState(), []);
@@ -29,7 +29,7 @@ class BaseStateManager {
   /**
    * Notify all listeners
    */
-  notifyListeners(changedKeys = []) {
+  notifyListeners(changedKeys: string[] = []) {
     const state = this.getState();
     this.listeners.forEach(listener => {
       try {
@@ -51,7 +51,7 @@ class BaseStateManager {
   /**
    * Update state and notify listeners
    */
-  setState(updates, changedKeys = []) {
+  setState(updates: Record<string, any>, changedKeys: string[] = []) {
     this.state = { ...this.state, ...updates };
     this.notifyListeners(changedKeys);
   }

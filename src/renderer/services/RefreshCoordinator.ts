@@ -45,7 +45,7 @@ class RefreshCoordinator {
   /**
    * Normalize sourceId to string
    */
-  static normalizeSourceId(sourceId) {
+  static normalizeSourceId(sourceId: string | number | null | undefined): string {
     if (sourceId === null || sourceId === undefined) {
       throw new Error('Invalid sourceId: null or undefined');
     }
@@ -106,11 +106,11 @@ class RefreshCoordinator {
   /**
    * Create a refresh operation with timeout
    */
-  createRefreshOperation(sourceId, refreshFn, timeout, reason) {
+  createRefreshOperation(sourceId: string, refreshFn: (id: string) => Promise<unknown>, timeout: number, reason: string) {
     const startTime = timeManager.now();
     
     const refreshPromise = refreshFn(sourceId)
-      .then(result => {
+      .then((result: unknown) => {
         const duration = timeManager.now() - startTime;
         this.updateMetrics(duration);
         
@@ -123,9 +123,9 @@ class RefreshCoordinator {
           timestamp: timeManager.now()
         };
       })
-      .catch(error => {
+      .catch((error: Error) => {
         const duration = timeManager.now() - startTime;
-        
+
         log.error(`Refresh failed for ${sourceId}`, {
           error: error.message,
           duration,
@@ -158,7 +158,7 @@ class RefreshCoordinator {
   /**
    * Queue a refresh operation with size limits
    */
-  async queueRefresh(sourceId, refreshFn, options) {
+  async queueRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string }) {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
@@ -197,7 +197,7 @@ class RefreshCoordinator {
   /**
    * Process queued refreshes for a source
    */
-  async processQueue(sourceId) {
+  async processQueue(sourceId: string) {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
@@ -236,7 +236,7 @@ class RefreshCoordinator {
   /**
    * Cancel active refresh for a source
    */
-  async cancelRefresh(sourceId) {
+  async cancelRefresh(sourceId: string) {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     
@@ -251,7 +251,7 @@ class RefreshCoordinator {
       const queue = await this.refreshQueue.get(sourceId);
       if (!queue || queue.length === 0) return false;
       
-      queue.forEach(item => {
+      queue.forEach((item: { reject: (error: Error) => void }) => {
         item.reject(new Error('Refresh cancelled'));
       });
       
@@ -270,7 +270,7 @@ class RefreshCoordinator {
     
     for (const [, queue] of allQueues) {
       if (queue && queue.length > 0) {
-        queue.forEach(item => {
+        queue.forEach((item: { reject: (error: Error) => void }) => {
           item.reject(new Error('All refreshes cancelled'));
         });
       }

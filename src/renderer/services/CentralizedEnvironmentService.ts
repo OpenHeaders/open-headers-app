@@ -43,7 +43,7 @@ class CentralizedEnvironmentService {
   /**
    * Subscribe to state changes
    */
-  subscribe(listener) {
+  subscribe(listener: (state: Record<string, unknown>, changedKeys: string[]) => void) {
     return this.stateManager.subscribe(listener);
   }
 
@@ -57,7 +57,7 @@ class CentralizedEnvironmentService {
   /**
    * Initialize service
    */
-  async initialize(workspaceId = null) {
+  async initialize(workspaceId: string | null = null) {
     const initPromise = this.stateManager.getInitPromise();
     if (initPromise) {
       return initPromise;
@@ -73,7 +73,7 @@ class CentralizedEnvironmentService {
     return promise;
   }
 
-  async _doInitialize(workspaceId) {
+  async _doInitialize(workspaceId: string | null) {
     try {
       log.info(`Initializing CentralizedEnvironmentService for workspace: ${workspaceId}`);
       this.stateManager.setState({ isLoading: true, error: null });
@@ -106,7 +106,7 @@ class CentralizedEnvironmentService {
   /**
    * Load environments for a workspace (with deduplication)
    */
-  async loadWorkspaceEnvironments(workspaceId) {
+  async loadWorkspaceEnvironments(workspaceId: string | null) {
     // Check if we're already loading this workspace
     if (this.stateManager.isLoadingWorkspace(workspaceId)) {
       log.debug(`Already loading workspace ${workspaceId}, reusing promise`);
@@ -125,7 +125,7 @@ class CentralizedEnvironmentService {
     }
   }
 
-  async _doLoadWorkspace(workspaceId) {
+  async _doLoadWorkspace(workspaceId: string | null) {
     try {
       const data = await this.storageManager.loadEnvironments(workspaceId);
       
@@ -153,7 +153,7 @@ class CentralizedEnvironmentService {
    * Setup listener for workspace changes
    */
   setupWorkspaceListener() {
-    this.eventManager.setupWorkspaceListener(async (newWorkspaceId) => {
+    this.eventManager.setupWorkspaceListener(async (newWorkspaceId: string) => {
       const currentState = this.stateManager.getState();
       if (currentState.currentWorkspaceId !== newWorkspaceId) {
         log.info(`[CentralizedEnvironmentService] Workspace changed from ${currentState.currentWorkspaceId} to ${newWorkspaceId}`);
@@ -161,7 +161,7 @@ class CentralizedEnvironmentService {
       }
     });
     
-    this.eventManager.setupEnvironmentStructureListener(async (data) => {
+    this.eventManager.setupEnvironmentStructureListener(async (data: { workspaceId: string }) => {
       const currentState = this.stateManager.getState();
       // Only reload if it's for the current workspace
       if (currentState.currentWorkspaceId === data.workspaceId) {
@@ -175,7 +175,7 @@ class CentralizedEnvironmentService {
   /**
    * Handle workspace change
    */
-  async handleWorkspaceChange(workspaceId) {
+  async handleWorkspaceChange(workspaceId: string) {
     const state = this.stateManager.getState();
     if (state.currentWorkspaceId === workspaceId && state.isReady) {
       log.debug(`Already in workspace ${workspaceId} and ready`);
@@ -256,7 +256,7 @@ class CentralizedEnvironmentService {
   /**
    * Resolve template with variables
    */
-  resolveTemplate(template) {
+  resolveTemplate(template: string) {
     const variables = this.getAllVariables();
     const result = this.templateResolver.resolveTemplate(template, variables, {
       logMissing: true,
@@ -270,7 +270,7 @@ class CentralizedEnvironmentService {
   /**
    * Set variable in current environment
    */
-  async setVariable(name, value, isSecret = false) {
+  async setVariable(name: string, value: string, isSecret = false) {
     const state = this.stateManager.getState();
     return this.setVariableInEnvironment(name, value, state.activeEnvironment, isSecret);
   }
@@ -278,7 +278,7 @@ class CentralizedEnvironmentService {
   /**
    * Set variable in a specific environment
    */
-  async setVariableInEnvironment(name, value, environmentName, isSecret = false) {
+  async setVariableInEnvironment(name: string, value: string, environmentName: string, isSecret = false) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.setVariable(
       state.environments,
@@ -312,7 +312,7 @@ class CentralizedEnvironmentService {
   /**
    * Batch set multiple variables in a specific environment (single save + single IPC event)
    */
-  async batchSetVariablesInEnvironment(environmentName, variables) {
+  async batchSetVariablesInEnvironment(environmentName: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>) {
     const state = this.stateManager.getState();
     // Deep copy to avoid mutations
     const updatedEnvironments = JSON.parse(JSON.stringify(state.environments));
@@ -357,7 +357,7 @@ class CentralizedEnvironmentService {
   /**
    * Create new environment
    */
-  async createEnvironment(name) {
+  async createEnvironment(name: string) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.createEnvironment(
       state.environments,
@@ -373,7 +373,7 @@ class CentralizedEnvironmentService {
   /**
    * Delete an environment
    */
-  async deleteEnvironment(name) {
+  async deleteEnvironment(name: string) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.deleteEnvironment(
       state.environments,
@@ -412,7 +412,7 @@ class CentralizedEnvironmentService {
   /**
    * Switch to different environment
    */
-  async switchEnvironment(name) {
+  async switchEnvironment(name: string) {
     const state = this.stateManager.getState();
     this.variableManager.validateEnvironmentExists(state.environments, name);
 
@@ -452,7 +452,7 @@ class CentralizedEnvironmentService {
 }
 
 // Create singleton instance
-let serviceInstance = null;
+let serviceInstance: CentralizedEnvironmentService | null = null;
 
 export function getCentralizedEnvironmentService() {
   if (!serviceInstance) {

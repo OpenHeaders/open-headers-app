@@ -19,34 +19,63 @@ import {
 const { Option } = Select;
 const { Text } = Typography;
 
-const ValueSection = ({ 
-    mode, 
-    valueType, 
-    setValueType, 
+interface EnvVarFieldValidation {
+    isValid: boolean;
+    hasVars: boolean;
+    usedVars: string[];
+    missingVars: string[];
+}
+
+interface EnvVarValidationState {
+    headerValue?: EnvVarFieldValidation;
+    cookieValue?: EnvVarFieldValidation;
+    prefix?: EnvVarFieldValidation;
+    suffix?: EnvVarFieldValidation;
+    [key: string]: EnvVarFieldValidation | undefined;
+}
+
+interface EnvContext {
+    environmentsReady: boolean;
+    getAllVariables: () => Record<string, string>;
+}
+
+interface ValueSectionProps {
+    mode: 'generic' | 'cookie';
+    valueType: string;
+    setValueType: (type: string) => void;
+    envVarValidation: EnvVarValidationState;
+    setEnvVarValidation: React.Dispatch<React.SetStateAction<EnvVarValidationState>>;
+    envContext: EnvContext;
+}
+
+const ValueSection: React.FC<ValueSectionProps> = ({
+    mode,
+    valueType,
+    setValueType,
     envVarValidation,
     setEnvVarValidation,
-    envContext 
+    envContext
 }) => {
     const { sources } = useSources();
     const { token } = theme.useToken();
     
     // Helper function to validate environment variables in a field
-    const validateFieldEnvVars = (fieldName, value) => {
+    const validateFieldEnvVars = (fieldName: string, value: string): EnvVarFieldValidation | null => {
         if (!value || !envContext.environmentsReady) return null;
-        
+
         const variables = envContext.getAllVariables();
         const validation = validateEnvironmentVariables(value, variables);
-        
-        setEnvVarValidation(prev => ({
+
+        setEnvVarValidation((prev: EnvVarValidationState) => ({
             ...prev,
             [fieldName]: validation
         }));
-        
+
         return validation;
     };
 
     // Validation for header value
-    const validateHeaderValue = (_, value) => {
+    const validateHeaderValue = (_: unknown, value: string) => {
         if (valueType === 'static' && (!value || !value.trim())) {
             return Promise.reject('Header value is required');
         }
@@ -61,7 +90,7 @@ const ValueSection = ({
     };
 
     // Validation for cookie value
-    const validateCookieValue = (_, value) => {
+    const validateCookieValue = (_: unknown, value: string) => {
         if (valueType === 'static' && (!value || !value.trim())) {
             return Promise.reject('Cookie value is required');
         }
@@ -76,7 +105,7 @@ const ValueSection = ({
     };
 
     // Validation for prefix/suffix
-    const validatePrefixSuffix = (fieldName) => (_, value) => {
+    const validatePrefixSuffix = (fieldName: string) => (_: unknown, value: string) => {
         if (!value) return Promise.resolve(); // Optional fields
         
         const envValidation = validateFieldEnvVars(fieldName, value);

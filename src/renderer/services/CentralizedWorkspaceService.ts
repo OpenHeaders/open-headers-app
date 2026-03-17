@@ -78,7 +78,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Override setState to handle dirty flags
    */
-  setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
+  setState(updates: Record<string, any>, changedKeys: string[] = []) {
     // Mark as dirty if data changed
     if (changedKeys.includes('sources')) this.autoSaveManager.markDirty('sources');
     if (changedKeys.includes('rules')) this.autoSaveManager.markDirty('rules');
@@ -486,7 +486,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update a source
    */
-  async updateSource(sourceId: string, updates: Record<string, unknown>) {
+  async updateSource(sourceId: string, updates: Record<string, any>) {
     let updatedSource = null;
     const sources = this.state.sources.map(source => {
       if (source.sourceId === String(sourceId)) {
@@ -634,11 +634,11 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a proxy rule
    */
-  async addProxyRule(ruleData: Record<string, unknown>) {
+  async addProxyRule(ruleData: Record<string, any>) {
     const proxyRules = [...this.state.proxyRules, ruleData];
     this.setState({ proxyRules }, ['proxyRules']);
     
-    await this.rulesManager.syncProxyRule(ruleData, 'add');
+    await this.rulesManager.syncProxyRule(ruleData as { id: string; [key: string]: unknown }, 'add');
     
     // Update workspace metadata
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
@@ -750,7 +750,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update an existing workspace
    */
-  async updateWorkspace(workspaceId: string, updates: Record<string, unknown>) {
+  async updateWorkspace(workspaceId: string, updates: Record<string, any>) {
     try {
       // Validate workspace exists
       const existingWorkspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
@@ -981,7 +981,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Setup workspace sync listener
    */
   setupSyncListener() {
-    const unsubscribe = this.syncManager.setupSyncListener((data: Record<string, unknown>) => {
+    const unsubscribe = this.syncManager.setupSyncListener((data: { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: Record<string, any>; hasChanges?: boolean }) => {
       const currentSyncStatus: Record<string, any> = { ...(this.state.syncStatus as Record<string, any>) };
       
       if (data.success) {
@@ -1042,7 +1042,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   setupRefreshListener() {
     const handleRefresh = async (event: Event) => {
-      const workspaceId = event.detail?.workspaceId;
+      const workspaceId = (event as CustomEvent<{ workspaceId: string }>).detail?.workspaceId;
       if (workspaceId && workspaceId === this.state.activeWorkspaceId) {
         log.info('Received workspace data refresh request');
         await this.loadWorkspaceData(workspaceId);

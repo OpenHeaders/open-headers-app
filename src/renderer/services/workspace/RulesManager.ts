@@ -16,6 +16,23 @@ interface RulesElectronAPI {
   proxyDeleteRule?: (...args: any[]) => Promise<any>;
 }
 
+interface HeaderRule {
+  id: string;
+  [key: string]: unknown;
+}
+
+interface RulesCollection {
+  header: HeaderRule[];
+  request: HeaderRule[];
+  response: HeaderRule[];
+  [key: string]: HeaderRule[];
+}
+
+interface ProxyRule {
+  id: string;
+  [key: string]: unknown;
+}
+
 class RulesManager {
   storageAPI: StorageAPI;
   electronAPI: RulesElectronAPI;
@@ -28,7 +45,7 @@ class RulesManager {
   /**
    * Load rules for a workspace
    */
-  async loadRules(workspaceId) {
+  async loadRules(workspaceId: string): Promise<RulesCollection> {
     try {
       const data = await this.storageAPI.loadFromStorage(`workspaces/${workspaceId}/rules.json`);
       if (data) {
@@ -45,7 +62,7 @@ class RulesManager {
   /**
    * Save rules
    */
-  async saveRules(workspaceId, rules) {
+  async saveRules(workspaceId: string, rules: RulesCollection) {
     try {
       const rulesStorage = {
         version: DATA_FORMAT_VERSION,
@@ -78,7 +95,7 @@ class RulesManager {
   /**
    * Load proxy rules for a workspace
    */
-  async loadProxyRules(workspaceId) {
+  async loadProxyRules(workspaceId: string): Promise<ProxyRule[]> {
     try {
       const data = await this.storageAPI.loadFromStorage(`workspaces/${workspaceId}/proxy-rules.json`);
       return data ? JSON.parse(data) : [];
@@ -91,7 +108,7 @@ class RulesManager {
   /**
    * Save proxy rules
    */
-  async saveProxyRules(workspaceId, proxyRules) {
+  async saveProxyRules(workspaceId: string, proxyRules: ProxyRule[]) {
     try {
       const path = `workspaces/${workspaceId}/proxy-rules.json`;
       await this.storageAPI.saveToStorage(path, JSON.stringify(proxyRules));
@@ -105,7 +122,7 @@ class RulesManager {
   /**
    * Add a header rule
    */
-  addHeaderRule(rules, ruleData) {
+  addHeaderRule(rules: RulesCollection, ruleData: Record<string, unknown>) {
     const newRule = {
       ...ruleData,
       id: Date.now().toString(),
@@ -121,10 +138,10 @@ class RulesManager {
   /**
    * Update a header rule
    */
-  updateHeaderRule(rules, ruleId, updates) {
+  updateHeaderRule(rules: RulesCollection, ruleId: string, updates: Record<string, unknown>) {
     return {
       ...rules,
-      header: rules.header.map(rule =>
+      header: rules.header.map((rule: HeaderRule) =>
         rule.id === ruleId
           ? { ...rule, ...updates, updatedAt: new Date().toISOString() }
           : rule
@@ -135,17 +152,17 @@ class RulesManager {
   /**
    * Remove a header rule
    */
-  removeHeaderRule(rules, ruleId) {
+  removeHeaderRule(rules: RulesCollection, ruleId: string) {
     return {
       ...rules,
-      header: rules.header.filter(rule => rule.id !== ruleId)
+      header: rules.header.filter((rule: HeaderRule) => rule.id !== ruleId)
     };
   }
 
   /**
    * Sync proxy rule with proxy manager
    */
-  async syncProxyRule(rule, action) {
+  async syncProxyRule(rule: ProxyRule, action: 'add' | 'remove') {
     if (!this.electronAPI) return;
 
     try {

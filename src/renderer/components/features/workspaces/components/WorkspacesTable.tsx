@@ -23,6 +23,18 @@ import TeamWorkspaceShareInviteModal from '../../../modals/TeamWorkspaceShareInv
 
 const { Text } = Typography;
 
+/** Workspace record used in table rendering */
+interface WorkspaceRecord {
+    id: string;
+    name: string;
+    type: string;
+    gitUrl?: string;
+    authType?: string;
+    autoSync?: boolean;
+    isDefault?: boolean;
+    [key: string]: unknown;
+}
+
 /**
  * Table component for displaying workspaces
  * @param {Object} props - Component props
@@ -163,7 +175,7 @@ const WorkspacesTable = ({
         };
     }, [workspaces, syncStatus]);
     
-    const handleShareWorkspace = (workspace) => {
+    const handleShareWorkspace = (workspace: WorkspaceRecord) => {
         setSelectedWorkspace(workspace);
         setShareModalVisible(true);
     };
@@ -174,7 +186,7 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered name cell
      */
-    const renderNameCell = (name, record) => (
+    const renderNameCell = (name: string, record: WorkspaceRecord) => (
         <Space>
             {record.type === WORKSPACE_TYPES.GIT ? <TeamOutlined /> : <UserOutlined />}
             <Text strong={record.id === activeWorkspaceId}>{name}</Text>
@@ -189,7 +201,7 @@ const WorkspacesTable = ({
      * @param {string} type - Workspace type
      * @returns {JSX.Element} Rendered type cell
      */
-    const renderTypeCell = (type) => (
+    const renderTypeCell = (type: string) => (
         <Tag color={type === WORKSPACE_TYPES.GIT ? 'blue' : 'default'}>
             {type === WORKSPACE_TYPES.GIT ? 'Team' : 'Personal'}
         </Tag>
@@ -201,7 +213,7 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered sync status cell
      */
-    const renderSyncStatusCell = (_, record) => {
+    const renderSyncStatusCell = (_: unknown, record: WorkspaceRecord) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text>-</Text>;
         }
@@ -242,7 +254,7 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered repository cell
      */
-    const renderRepositoryCell = (url, record) => {
+    const renderRepositoryCell = (url: string, record: WorkspaceRecord) => {
         if (record.type !== WORKSPACE_TYPES.GIT || !url) {
             return <Text type="secondary">-</Text>;
         }
@@ -270,7 +282,7 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auth cell
      */
-    const renderAuthCell = (_, record) => {
+    const renderAuthCell = (_: unknown, record: WorkspaceRecord) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text type="secondary">-</Text>;
         }
@@ -305,12 +317,12 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auto-sync cell
      */
-    const renderAutoSyncCell = (_, record) => {
+    const renderAutoSyncCell = (_: unknown, record: WorkspaceRecord) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text type="secondary">-</Text>;
         }
         
-        const handleToggle = async (checked) => {
+        const handleToggle = async (checked: boolean) => {
             if (onUpdateWorkspace) {
                 const result = await onUpdateWorkspace(record.id, { autoSync: checked });
                 if (result) {
@@ -338,7 +350,7 @@ const WorkspacesTable = ({
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered actions cell
      */
-    const renderActionsCell = (_, record) => {
+    const renderActionsCell = (_: unknown, record: WorkspaceRecord) => {
         const isGitWorkspace = record.type === WORKSPACE_TYPES.GIT;
         const isDefaultPersonal = record.id === 'default-personal' || record.isDefault;
         const isActiveWorkspace = record.id === activeWorkspaceId;
