@@ -213,7 +213,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }) => {
                             After accepting the invitation, the config will be automatically synced every 1h
                         </li>
                         <li >
-                            (Optional) Environment values must be imported separately via 'Menu -> Import' or 'Share Environment'
+                            (Optional) Environment values must be imported separately via &apos;Menu &rarr; Import&apos; or &apos;Share Environment&apos;
                         </li>
                     </ul>
                 </div>

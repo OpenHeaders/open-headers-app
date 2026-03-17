@@ -28,6 +28,7 @@ export function AppLayout({
   currentRecord,
   recordPlaybackTime,
   autoHighlight,
+  loading,
   settings,
   sources,
   onTabChange,
@@ -53,7 +54,7 @@ export function AppLayout({
   onHandleImport,
   preloadedEnvData,
   updateNotificationRef
-}) {
+}: any) {
   const { token } = theme.useToken();
 
   return (
@@ -67,7 +68,7 @@ export function AppLayout({
         theme={token}
       />
 
-      <Content className={`app-content ${typeof window !== 'undefined' && window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
+      <Content className={`app-content ${typeof window !== 'undefined' && (window as any).electronAPI?.platform ? `platform-${(window as any).electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
         <AppTabs
           activeTab={activeTab}
           onTabChange={onTabChange}
@@ -84,7 +85,7 @@ export function AppLayout({
           onRemoveSource={onRemoveSource}
           onRefreshSource={onRefreshSource}
           onUpdateSource={onUpdateSource}
-          tutorialMode={settings?.tutorialMode}
+          tutorialMode={(settings as any)?.tutorialMode}
         />
       </Content>
 
@@ -92,7 +93,7 @@ export function AppLayout({
         appVersion={appVersion}
         theme={token}
         debugComponents={
-          settings?.developerMode && (
+          (settings as any)?.developerMode && (
             <>
               <CircuitBreakerStatus inFooter={true} />
               <DebugSourceInfo inFooter={true} />
