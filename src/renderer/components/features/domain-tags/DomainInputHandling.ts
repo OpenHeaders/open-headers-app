@@ -16,8 +16,47 @@
  * @since 3.0.0
  */
 
+import type { InputRef } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateDomain } from './DomainValidation';
+
+interface PasteHandlerParams {
+    value: string[];
+    onChange?: (tags: string[]) => void;
+    inputValue: string;
+    setInputValue: (value: string) => void;
+    inputRef: React.RefObject<InputRef | null>;
+}
+
+interface InputChangeHandlerParams {
+    value: string[];
+    onChange?: (tags: string[]) => void;
+    setInputValue: (value: string) => void;
+    inputRef: React.RefObject<InputRef | null>;
+}
+
+interface InputConfirmHandlerParams {
+    value: string[];
+    onChange?: (tags: string[]) => void;
+    inputValue: string;
+    setInputVisible: (visible: boolean) => void;
+    setInputValue: (value: string) => void;
+}
+
+interface KeyboardHandlerParams {
+    value: string[];
+    onChange?: (tags: string[]) => void;
+    inputValue: string;
+    setInputVisible: (visible: boolean) => void;
+    setInputValue: (value: string) => void;
+    handleInputConfirm: () => void;
+    inputRef: React.RefObject<InputRef | null>;
+}
+
+interface BatchProcessorParams {
+    value: string[];
+    onChange?: (tags: string[]) => void;
+}
 
 /**
  * Processes a single domain input with validation and sanitization
@@ -36,7 +75,7 @@ import { validateDomain } from './DomainValidation';
  * const domain = processSingleDomain('invalid..domain');
  * // Returns: '' (and shows error message)
  */
-export const processSingleDomain = (input) => {
+export const processSingleDomain = (input: string): string => {
     if (!input) return '';
 
     // Remove surrounding quotes and trim whitespace
@@ -76,13 +115,13 @@ export const processSingleDomain = (input) => {
  *   inputRef: inputRef
  * });
  */
-export const createPasteHandler = ({ 
-    value, 
-    onChange, 
-    inputValue, 
-    setInputValue, 
-    inputRef 
-}) => (e) => {
+export const createPasteHandler = ({
+    value,
+    onChange,
+    inputValue,
+    setInputValue,
+    inputRef
+}: PasteHandlerParams) => (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
 
@@ -138,12 +177,12 @@ export const createPasteHandler = ({
  *   inputRef: inputRef
  * });
  */
-export const createInputChangeHandler = ({ 
-    value, 
-    onChange, 
-    setInputValue, 
-    inputRef 
-}) => (e) => {
+export const createInputChangeHandler = ({
+    value,
+    onChange,
+    setInputValue,
+    inputRef
+}: InputChangeHandlerParams) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
     // Check if user typed a comma for automatic domain addition
@@ -203,13 +242,13 @@ export const createInputChangeHandler = ({
  *   setInputValue: setInput
  * });
  */
-export const createInputConfirmHandler = ({ 
-    value, 
-    onChange, 
-    inputValue, 
-    setInputVisible, 
-    setInputValue 
-}) => () => {
+export const createInputConfirmHandler = ({
+    value,
+    onChange,
+    inputValue,
+    setInputVisible,
+    setInputValue
+}: InputConfirmHandlerParams) => () => {
     const domain = processSingleDomain(inputValue);
 
     if (domain) {
@@ -250,15 +289,15 @@ export const createInputConfirmHandler = ({
  *   inputRef: inputRef
  * });
  */
-export const createKeyboardHandler = ({ 
-    value, 
-    onChange, 
-    inputValue, 
-    setInputVisible, 
-    setInputValue, 
-    handleInputConfirm, 
-    inputRef 
-}) => (e) => {
+export const createKeyboardHandler = ({
+    value,
+    onChange,
+    inputValue,
+    setInputVisible,
+    setInputValue,
+    handleInputConfirm,
+    inputRef
+}: KeyboardHandlerParams) => (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
         // Enter key: confirm current input
         handleInputConfirm();
@@ -301,7 +340,7 @@ export const createKeyboardHandler = ({
  * processBatch(['example.com', 'test.com', 'invalid..domain']);
  * // Adds valid domains, shows errors for invalid ones
  */
-export const createBatchProcessor = ({ value, onChange }) => (domains) => {
+export const createBatchProcessor = ({ value, onChange }: BatchProcessorParams) => (domains: string[]) => {
     const validDomains = [];
     const errors = [];
     

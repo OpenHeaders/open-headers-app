@@ -27,6 +27,58 @@
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { debugRefreshState } from './SourceTableUtils';
 
+interface RefreshDisplayState {
+    text: string;
+    timestamp: number;
+}
+
+interface SourceRecord {
+    sourceId: string;
+    sourceType?: string;
+    sourceTag?: string;
+    [key: string]: unknown;
+}
+
+interface LoggerLike {
+    debug: (message: string, data?: unknown) => void;
+    error: (message: string, data?: unknown) => void;
+}
+
+interface TimeManagerLike {
+    now: () => number;
+    getDate: () => Date;
+}
+
+interface SaveSourceParams {
+    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => SourceRecord | null;
+    setRefreshingSourceId: (id: string | null) => void;
+    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
+    setEditModalVisible: (visible: boolean) => void;
+    handleRefreshSource: (sourceId: string, source: SourceRecord) => Promise<boolean>;
+    log: LoggerLike;
+}
+
+interface RefreshSourceParams {
+    onRefreshSource: (sourceId: string, updatedSource?: SourceRecord | null) => Promise<boolean>;
+    setRefreshingSourceId: (id: string | null) => void;
+    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
+    timeManager: TimeManagerLike;
+    log: LoggerLike;
+}
+
+interface RemoveSourceParams {
+    onRemoveSource: (sourceId: string) => Promise<boolean>;
+    setRemovingSourceId: (id: string | null) => void;
+    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
+    sources: SourceRecord[];
+}
+
+interface ModalHandlerParams {
+    setSelectedSourceId: (id: string | null) => void;
+    setEditModalVisible: (visible: boolean) => void;
+    setContentViewerVisible: (visible: boolean) => void;
+}
+
 // Handler factory functions for source table operations
 // Each factory creates a handler with dependency injection for better testability
 
@@ -48,7 +100,7 @@ export const createSaveSourceHandler = ({
     setEditModalVisible,
     handleRefreshSource,
     log
-}) => async (sourceData) => {
+}: SaveSourceParams) => async (sourceData: Record<string, any>) => {
     // Main save handler that coordinates source updates with refresh operations
     // Handles both simple updates and complex refresh-triggered updates
     try {
@@ -130,7 +182,7 @@ export const createSaveSourceHandler = ({
         }
     } catch (error) {
         log.error('Error saving source:', error);
-        showMessage('error', `Error: ${error.message}`);
+        showMessage('error', `Error: ${(error as Error).message}`);
         return false;
     } finally {
         // Clear refreshing state with delay to ensure UI updates properly
@@ -157,7 +209,7 @@ export const createRefreshSourceHandler = ({
     setRefreshDisplayStates,
     timeManager,
     log
-}) => async (sourceId, updatedSource = null) => {
+}: RefreshSourceParams) => async (sourceId: string, updatedSource: SourceRecord | null = null) => {
     // Manual refresh handler with comprehensive status tracking
     // Coordinates with RefreshManager and provides visual feedback
     try {
@@ -185,7 +237,7 @@ export const createRefreshSourceHandler = ({
 
         return success;
     } catch (error) {
-        debugRefreshState(sourceId, 'Manual Refresh Error', { error: error.message }, log, timeManager);
+        debugRefreshState(sourceId, 'Manual Refresh Error', { error: (error as Error).message }, log, timeManager);
         return false;
     } finally {
         // Clear refreshing state with a delay to ensure UI updates
@@ -211,7 +263,7 @@ export const createRemoveSourceHandler = ({
     setRemovingSourceId,
     setRefreshDisplayStates,
     sources
-}) => async (sourceId) => {
+}: RemoveSourceParams) => async (sourceId: string) => {
     // Remove source handler with comprehensive cleanup and user feedback
     // Handles state cleanup and provides informative messages to users
     try {
@@ -245,7 +297,7 @@ export const createRemoveSourceHandler = ({
 
         return success;
     } catch (error) {
-        showMessage('error', `Error removing source: ${error.message}`);
+        showMessage('error', `Error removing source: ${(error as Error).message}`);
         return false;
     } finally {
         // Clear removing state to stop loading spinner
@@ -265,16 +317,16 @@ export const createModalHandlers = ({
     setSelectedSourceId,
     setEditModalVisible,
     setContentViewerVisible
-}) => ({
+}: ModalHandlerParams) => ({
     // Edit source handler - opens edit modal for the selected source
-    handleEditSource: (source) => {
+    handleEditSource: (source: SourceRecord) => {
         // Store only the source ID to always get latest data from sources array
         setSelectedSourceId(source.sourceId);
         setEditModalVisible(true);
     },
     
     // View content handler - opens content viewer modal for the selected source
-    handleViewContent: (source) => {
+    handleViewContent: (source: SourceRecord) => {
         // Store only the source ID to always get latest data from sources array
         setSelectedSourceId(source.sourceId);
         setContentViewerVisible(true);

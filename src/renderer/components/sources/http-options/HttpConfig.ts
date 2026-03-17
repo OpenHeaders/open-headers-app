@@ -22,9 +22,46 @@
  * @since 3.0.0
  */
 
+import type { FormInstance } from 'antd';
 import { createLogger } from '../../../utils/error-handling/logger';
 
 const log = createLogger('HttpConfig');
+
+interface ContentTypeHandlerParams {
+    setContentType: (value: string) => void;
+    form: FormInstance;
+}
+
+interface RefreshToggleParams {
+    setRefreshEnabled: (enabled: boolean) => void;
+    refreshEnabledRef: React.MutableRefObject<boolean>;
+    customIntervalRef: React.MutableRefObject<number>;
+    refreshTypeRef: React.MutableRefObject<string>;
+    form: FormInstance;
+}
+
+interface RefreshTypeHandlerParams {
+    setRefreshType: (type: string) => void;
+    refreshTypeRef: React.MutableRefObject<string>;
+    setCustomInterval: (interval: number) => void;
+    customIntervalRef: React.MutableRefObject<number>;
+    refreshEnabledRef: React.MutableRefObject<boolean>;
+    form: FormInstance;
+}
+
+interface CustomIntervalHandlerParams {
+    setCustomInterval: (interval: number) => void;
+    customIntervalRef: React.MutableRefObject<number>;
+    refreshEnabledRef: React.MutableRefObject<boolean>;
+    form: FormInstance;
+}
+
+interface JsonFilterToggleParams {
+    setJsonFilterEnabled: (enabled: boolean) => void;
+    jsonFilterEnabledRef: React.MutableRefObject<boolean>;
+    jsonFilterPathRef: React.MutableRefObject<string>;
+    form: FormInstance;
+}
 
 /**
  * Creates content type change handler
@@ -43,7 +80,7 @@ const log = createLogger('HttpConfig');
  *   form
  * });
  */
-export const createContentTypeHandler = ({ setContentType, form }) => (value) => {
+export const createContentTypeHandler = ({ setContentType, form }: ContentTypeHandlerParams) => (value: string) => {
     setContentType(value);
     form.setFieldsValue({
         requestOptions: {
@@ -82,7 +119,7 @@ export const createRefreshToggleHandler = ({
     customIntervalRef,
     refreshTypeRef,
     form
-}) => (checked) => {
+}: RefreshToggleParams) => (checked: boolean) => {
     // Update both state and ref
     setRefreshEnabled(checked);
     refreshEnabledRef.current = checked;
@@ -135,7 +172,7 @@ export const createRefreshTypeHandler = ({
     customIntervalRef,
     refreshEnabledRef,
     form
-}) => (e) => {
+}: RefreshTypeHandlerParams) => (e: { target: { value: string } }) => {
     const newType = e.target.value;
     // Update both state and ref
     setRefreshType(newType);
@@ -194,7 +231,7 @@ export const createCustomIntervalHandler = ({
     customIntervalRef,
     refreshEnabledRef,
     form
-}) => (value) => {
+}: CustomIntervalHandlerParams) => (value: number) => {
     // Ensure value is a positive number
     const interval = value > 0 ? value : 1;
     // Update both state and ref
@@ -239,7 +276,7 @@ export const createPresetIntervalHandler = ({
     customIntervalRef,
     refreshEnabledRef,
     form
-}) => (value) => {
+}: CustomIntervalHandlerParams) => (value: number) => {
     // Update state and ref for consistency
     setCustomInterval(value); // We use the same state for both preset and custom
     customIntervalRef.current = value;
@@ -281,7 +318,7 @@ export const createJsonFilterToggleHandler = ({
     jsonFilterEnabledRef,
     jsonFilterPathRef,
     form
-}) => (enabled) => {
+}: JsonFilterToggleParams) => (enabled: boolean) => {
     // Update both state and ref
     setJsonFilterEnabled(enabled);
     jsonFilterEnabledRef.current = enabled;
@@ -387,17 +424,17 @@ export const getFormInitialValues = () => ({
  * initializeFormStructure(form, setContentType, setJsonFilterEnabled, ...refs);
  */
 export const initializeFormStructure = (
-    form,
-    setContentType,
-    setJsonFilterEnabled,
-    jsonFilterEnabledRef,
-    jsonFilterPathRef,
-    setRefreshEnabled,
-    refreshEnabledRef,
-    setRefreshType,
-    refreshTypeRef,
-    setCustomInterval,
-    customIntervalRef
+    form: FormInstance,
+    setContentType: (value: string) => void,
+    setJsonFilterEnabled: (enabled: boolean) => void,
+    jsonFilterEnabledRef: React.MutableRefObject<boolean>,
+    jsonFilterPathRef: React.MutableRefObject<string>,
+    setRefreshEnabled: (enabled: boolean) => void,
+    refreshEnabledRef: React.MutableRefObject<boolean>,
+    setRefreshType: (type: string) => void,
+    refreshTypeRef: React.MutableRefObject<string>,
+    setCustomInterval: (interval: number) => void,
+    customIntervalRef: React.MutableRefObject<number>
 ) => {
     try {
         const formValues = form.getFieldsValue(true);

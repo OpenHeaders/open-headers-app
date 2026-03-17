@@ -16,6 +16,30 @@ import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
 import ServerConfig from '../server-config/ServerConfig';
 
+interface SourceRecord {
+    sourceId: string;
+    [key: string]: unknown;
+}
+
+interface AppTabsProps {
+    activeTab: string;
+    onTabChange: (key: string) => void;
+    tabScrollPositions: Record<string, number>;
+    onTabScrollPositionChange: (tab: string, position: number) => void;
+    currentRecord: Record<string, unknown> | null;
+    recordPlaybackTime: number;
+    autoHighlight: boolean;
+    onRecordChange: (record: Record<string, unknown> | null) => void;
+    onPlaybackTimeChange: (time: number) => void;
+    onAutoHighlightChange: (enabled: boolean) => void;
+    sources: SourceRecord[];
+    onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+    onRemoveSource: (sourceId: string) => Promise<boolean>;
+    onRefreshSource: (sourceId: string) => Promise<boolean>;
+    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => SourceRecord | null;
+    tutorialMode: boolean;
+}
+
 export function AppTabs({
                             activeTab,
                             onTabChange,
@@ -33,8 +57,8 @@ export function AppTabs({
                             onRefreshSource,
                             onUpdateSource,
                             tutorialMode
-                        }) {
-    const handleTabChange = (key) => {
+                        }: AppTabsProps) {
+    const handleTabChange = (key: string) => {
         const currentContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
         if (currentContainer) {
             onTabScrollPositionChange(activeTab, currentContainer.scrollTop);
@@ -77,13 +101,13 @@ export function AppTabs({
                 <div className="content-container">
                     <WorkflowRecording
                         record={currentRecord}
-                        onRecordChange={(newRecord) => {
+                        onRecordChange={(newRecord: Record<string, unknown> | null) => {
                             onRecordChange(newRecord);
                             onPlaybackTimeChange(0);
                         }}
                         onPlaybackTimeChange={onPlaybackTimeChange}
                         autoHighlight={autoHighlight}
-                        renderDetails={(showDetails) =>
+                        renderDetails={(showDetails: boolean) =>
                             showDetails && currentRecord ? (
                                 <WorkflowDetails
                                     record={currentRecord}

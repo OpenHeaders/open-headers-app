@@ -1,16 +1,35 @@
 import React from 'react';
 import { Form, Input, Row, Col, Checkbox } from 'antd';
+import type { FormInstance } from 'antd';
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import HttpOptions from '../../sources/HttpOptions';
 import { validateEnvironmentVariables, validateTotpCodePlaceholder } from './form-validation';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EditSourceForm');
 
+interface EditSourceFormProps {
+    form: FormInstance;
+    source: { sourceId: string; [key: string]: unknown };
+    envContext: Record<string, unknown>;
+    totpEnabled: boolean;
+    totpSecret: string;
+    refreshNow: boolean;
+    refreshingSourceId: string | null;
+    saving: boolean;
+    onFormChange: (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => void;
+    onTotpChange: (enabled: boolean, secret: string) => void;
+    onTestResponse: (response: string) => void;
+    onTestingChange: (testing: boolean) => void;
+    onRefreshNowChange: (e: CheckboxChangeEvent) => void;
+    onGetHttpOptionsRef: React.Ref<unknown>;
+}
+
 /**
  * EditSourceForm component handles the form fields for editing an HTTP source
  * Separated from main modal for better modularity and maintainability
  */
-const EditSourceForm = ({
+const EditSourceForm: React.FC<EditSourceFormProps> = ({
     form,
     source,
     envContext,
@@ -32,7 +51,7 @@ const EditSourceForm = ({
      * @param {string} value - URL value to validate
      * @returns {Promise} - Validation result
      */
-    const validateUrl = async (_, value) => {
+    const validateUrl = async (_: unknown, value: string) => {
         log.debug('URL validator called with value:', value);
         
         try {

@@ -21,24 +21,24 @@ import { Card, Form, Input, Switch, Button, Space, Typography, Alert, Progress, 
 
 const { Text } = Typography;
 
+interface TotpAuthCardProps {
+    handleTotpToggle: (checked: boolean) => void;
+    handleTotpSecretChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    handleTestTotp: () => void;
+    totpError: string | null;
+    totpTesting: boolean;
+    totpPreviewVisible: boolean;
+    totpCode: string;
+    timeRemaining: number;
+    testSourceId: string;
+    canUseTotpSecret: (sourceId: string) => boolean;
+    getCooldownSeconds: (sourceId: string) => number;
+}
+
 /**
  * TOTP Authentication card component for TOTP configuration
- * 
- * @param {Object} props - Component props
- * @param {Function} props.handleTotpToggle - TOTP toggle handler
- * @param {Function} props.handleTotpSecretChange - TOTP secret change handler
- * @param {Function} props.handleTestTotp - TOTP test handler
- * @param {string} props.totpError - Current TOTP error message
- * @param {boolean} props.totpTesting - TOTP testing state
- * @param {boolean} props.totpPreviewVisible - TOTP preview visibility
- * @param {string} props.totpCode - Current TOTP code
- * @param {number} props.timeRemaining - Seconds remaining for current code
- * @param {string} props.testSourceId - Test source ID for cooldown checking
- * @param {Function} props.canUseTotpSecret - Function to check TOTP cooldown
- * @param {Function} props.getCooldownSeconds - Function to get cooldown seconds
- * @returns {JSX.Element} TOTP authentication card component
  */
-const TotpAuthCard = ({
+const TotpAuthCard: React.FC<TotpAuthCardProps> = ({
     handleTotpToggle,
     handleTotpSecretChange,
     handleTestTotp,

@@ -1,32 +1,69 @@
 /**
  * Source Form Utils
- * 
+ *
  * Utility functions and helpers for source form operations including
  * scroll handling, form state management, and configuration helpers.
- * 
+ *
  * Utility Categories:
  * - Scroll event handling for sticky header behavior
  * - Form validation trigger utilities
  * - Environment change effect handlers
  * - TOTP tracking and management helpers
- * 
+ *
  * @module SourceFormUtils
  * @since 3.0.0
  */
 
+import type { FormInstance } from 'antd';
+
+interface LoggerLike {
+    debug: (message: string, data?: unknown) => void;
+    info: (message: string, data?: unknown) => void;
+    warn: (message: string, data?: unknown) => void;
+    error: (message: string, data?: unknown) => void;
+}
+
+interface ScrollHandlerParams {
+    formCardRef: React.RefObject<HTMLElement | null>;
+    setIsSticky: (sticky: boolean) => void;
+    isSticky: boolean;
+    headerHeight?: number;
+}
+
+interface EnvironmentChangeHandlerParams {
+    form: FormInstance;
+    sourceType: string;
+    envContext: { environmentsReady: boolean };
+    httpOptionsRef: React.RefObject<{ validateFields?: () => void } | null>;
+    log: LoggerLike;
+}
+
+interface TotpTrackingHandlerParams {
+    totpEnabled: boolean;
+    totpSecret: string;
+    trackTotpSecret: (sourceId: string) => void;
+    untrackTotpSecret: (sourceId: string) => void;
+    testSourceId: string;
+}
+
+interface FormValues {
+    sourcePath?: string;
+    [key: string]: unknown;
+}
+
 /**
  * Creates scroll event handler for sticky header behavior
- * 
+ *
  * Factory function that creates a scroll event handler to determine
  * when the form header should become sticky based on scroll position.
- * 
+ *
  * @param {Object} params - Handler parameters
  * @param {React.RefObject} params.formCardRef - Form card ref for position detection
  * @param {Function} params.setIsSticky - Sticky state setter
  * @param {boolean} params.isSticky - Current sticky state
  * @param {number} params.headerHeight - App header height in pixels (default: 64)
  * @returns {Function} Scroll event handler
- * 
+ *
  * @example
  * const handleScroll = createScrollHandler({
  *   formCardRef,
@@ -40,7 +77,7 @@ export const createScrollHandler = ({
     setIsSticky,
     isSticky,
     headerHeight = 64
-}) => () => {
+}: ScrollHandlerParams) => () => {
     // Skip if form card ref is not available
     if (!formCardRef.current) return;
 
@@ -70,7 +107,7 @@ export const createScrollHandler = ({
  *   return cleanup;
  * }, [handleScroll]);
  */
-export const setupScrollListener = (scrollHandler) => {
+export const setupScrollListener = (scrollHandler: () => void) => {
     // Add scroll event listener
     window.addEventListener('scroll', scrollHandler);
 
@@ -103,7 +140,7 @@ export const createEnvironmentChangeHandler = ({
     envContext,
     httpOptionsRef,
     log
-}) => () => {
+}: EnvironmentChangeHandlerParams) => () => {
     // Only handle changes for HTTP sources when environments are ready
     if (!form || sourceType !== 'http' || !envContext.environmentsReady) return;
     
@@ -156,7 +193,7 @@ export const createTotpTrackingHandler = ({
     trackTotpSecret,
     untrackTotpSecret,
     testSourceId
-}) => () => {
+}: TotpTrackingHandlerParams) => () => {
     // Track TOTP source when enabled and secret is available
     if (totpEnabled && totpSecret) {
         trackTotpSecret(testSourceId);
@@ -201,7 +238,7 @@ export const getFormInitialValues = () => ({
  * const fields = getFieldsWithTemplateVariables(formValues);
  * // Returns: ['sourcePath', 'headers.0.value']
  */
-export const getFieldsWithTemplateVariables = (values) => {
+export const getFieldsWithTemplateVariables = (values: FormValues): string[] => {
     const fieldsToValidate = [];
     
     // Check URL for environment variables or TOTP codes
@@ -245,7 +282,7 @@ export const generateTempSourceId = (prefix = 'new-source') => {
  * const testId = createTestSourceId('new-source-123');
  * // Returns: "test-new-source-123"
  */
-export const createTestSourceId = (tempSourceId) => {
+export const createTestSourceId = (tempSourceId: string): string => {
     return `test-${tempSourceId}`;
 };
 
@@ -263,10 +300,10 @@ export const createTestSourceId = (tempSourceId) => {
  * const debouncedValidation = debounceValidation(validateField, 500);
  * debouncedValidation(fieldValue);
  */
-export const debounceValidation = (validationFn, delay = 300) => {
-    let timeoutId;
-    
-    return (...args) => {
+export const debounceValidation = (validationFn: (...args: unknown[]) => void, delay = 300) => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    return (...args: unknown[]) => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
             validationFn(...args);

@@ -1,30 +1,33 @@
 import React from 'react';
 import { Card, Radio, Space, Typography, Divider, Empty, Spin, Checkbox } from 'antd';
+import type { RadioChangeEvent } from 'antd';
 import { SafetyOutlined, WarningOutlined, DatabaseOutlined } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
 
+interface EnvironmentVariablesCardProps {
+    exportPurpose: string;
+    environmentOption: string;
+    onEnvironmentOptionChange: (value: string) => void;
+    fileFormat: string;
+    onFileFormatChange: (value: string) => void;
+    environments: Record<string, Record<string, unknown>>;
+    environmentsReady: boolean;
+    selectedEnvironments: Record<string, boolean>;
+    onEnvironmentSelectionChange: (envName: string, checked: boolean) => void;
+    onSelectAllEnvironments: () => void;
+    onSelectNoEnvironments: () => void;
+}
+
 /**
  * EnvironmentVariablesCard component for environment variables configuration
  * Provides options for exporting environment variables with security considerations
- * 
- * @param {string} exportPurpose - Export purpose ('team' or 'backup')
- * @param {string} environmentOption - Environment export option ('none', 'schema', 'full')
- * @param {function} onEnvironmentOptionChange - Handler for environment option changes
- * @param {string} fileFormat - File format ('single' or 'separate')
- * @param {function} onFileFormatChange - Handler for file format changes
- * @param {Object} environments - Available environments object
- * @param {boolean} environmentsReady - Whether environments are loaded
- * @param {Object} selectedEnvironments - Selected environments state
- * @param {function} onEnvironmentSelectionChange - Handler for environment selection
- * @param {function} onSelectAllEnvironments - Handler for selecting all environments
- * @param {function} onSelectNoEnvironments - Handler for deselecting all environments
  */
-const EnvironmentVariablesCard = ({ 
-    exportPurpose, 
-    environmentOption, 
-    onEnvironmentOptionChange, 
-    fileFormat, 
+const EnvironmentVariablesCard: React.FC<EnvironmentVariablesCardProps> = ({
+    exportPurpose,
+    environmentOption,
+    onEnvironmentOptionChange,
+    fileFormat,
     onFileFormatChange,
     environments,
     environmentsReady,
@@ -36,7 +39,7 @@ const EnvironmentVariablesCard = ({
     /**
      * Handle environment option changes with automatic file format adjustment
      */
-    const handleEnvironmentOptionChange = (e) => {
+    const handleEnvironmentOptionChange = (e: RadioChangeEvent) => {
         const newValue = e.target.value;
         onEnvironmentOptionChange(newValue);
         

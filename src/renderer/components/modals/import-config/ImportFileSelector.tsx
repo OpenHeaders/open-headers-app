@@ -4,22 +4,29 @@ import { FileOutlined, FolderOutlined, UploadOutlined, QuestionCircleOutlined } 
 
 const { Paragraph } = Typography;
 
+interface FileDataItem {
+    file: { name: string };
+    [key: string]: unknown;
+}
+
+interface ImportFileSelectorProps {
+    importType: string;
+    onImportTypeChange: (key: string) => void;
+    analyzing: boolean;
+    fileData: FileDataItem | null;
+    envFileData: FileDataItem | null;
+    onFileSelect: (file: File, isEnvFile?: boolean) => boolean | void | Promise<boolean>;
+    onFileRemove: () => void;
+    onEnvFileRemove: () => void;
+    fileError: string | null;
+    onFileErrorClear: () => void;
+}
+
 /**
  * ImportFileSelector component for file selection with multiple import modes
  * Provides tabbed interface for single file vs separate files import
- * 
- * @param {string} importType - Current import type ('single' or 'separate')
- * @param {function} onImportTypeChange - Handler for import type changes
- * @param {boolean} analyzing - Whether files are being analyzed
- * @param {Object} fileData - Main file data object
- * @param {Object} envFileData - Environment file data object
- * @param {function} onFileSelect - Handler for file selection
- * @param {function} onFileRemove - Handler for main file removal
- * @param {function} onEnvFileRemove - Handler for environment file removal
- * @param {string} fileError - File error message if any
- * @param {function} onFileErrorClear - Handler for clearing file errors
  */
-const ImportFileSelector = ({
+const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
     importType,
     onImportTypeChange,
     analyzing,

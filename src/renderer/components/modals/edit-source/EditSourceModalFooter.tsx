@@ -1,11 +1,25 @@
 import React from 'react';
 import { Button, Tooltip } from 'antd';
 
+interface EditSourceModalFooterProps {
+    source: { sourceId: string; [key: string]: unknown };
+    saving: boolean;
+    testing: boolean;
+    refreshingSourceId: string | null;
+    totpEnabled: boolean;
+    totpSecret: string;
+    refreshNow: boolean;
+    canUseTotpSecret: (sourceId: string) => boolean;
+    getCooldownSeconds: (sourceId: string) => number;
+    onCancel: () => void;
+    onSave: () => void;
+}
+
 /**
  * EditSourceModalFooter component provides the modal footer with Cancel and Save buttons
  * Handles loading states, tooltips, and button states based on form validation
  */
-const EditSourceModalFooter = ({
+const EditSourceModalFooter: React.FC<EditSourceModalFooterProps> = ({
     source,
     saving,
     testing,
