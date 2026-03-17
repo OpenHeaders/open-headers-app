@@ -14,7 +14,8 @@ import { Typography } from 'antd';
 
 const { Text } = Typography;
 
-const NetworkStatusCell = ({ status, record, token }) => {
+interface NetworkStatusCellProps { status: number; record: Record<string, unknown>; token: Record<string, unknown>; }
+const NetworkStatusCell = ({ status, record, token }: NetworkStatusCellProps) => {
     // Handle error states
     if (record.error) {
         return (

@@ -12,7 +12,8 @@
 
 import React from 'react';
 
-const DOMPlayerContainer = ({ playerContainerRef, token, viewMode }) => {
+interface DOMPlayerContainerProps { playerContainerRef: React.RefObject<HTMLDivElement>; token: Record<string, unknown>; viewMode: string; }
+const DOMPlayerContainer = ({ playerContainerRef, token, viewMode }: DOMPlayerContainerProps) => {
     if (viewMode !== 'dom') return null;
 
     return (

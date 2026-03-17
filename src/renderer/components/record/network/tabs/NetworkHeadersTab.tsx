@@ -13,8 +13,9 @@ import { Space, Typography } from 'antd';
 
 const { Text } = Typography;
 
-const NetworkHeadersTab = ({ request, token }) => {
-    const renderHeaderSection = (title, headers) => {
+interface NetworkHeadersTabProps { request: Record<string, unknown>; token: Record<string, unknown>; }
+const NetworkHeadersTab = ({ request, token }: NetworkHeadersTabProps) => {
+    const renderHeaderSection = (title: string, headers: Record<string, string>) => {
         if (!headers || Object.keys(headers).length === 0) return null;
         
         return (

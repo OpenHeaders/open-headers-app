@@ -20,7 +20,8 @@ import { getDisplayName } from './utils/urlUtils';
 
 const { Text } = Typography;
 
-const RecordNetworkDetails = ({ request, record, onClose }) => {
+interface RecordNetworkDetailsProps { request: Record<string, unknown>; record: Record<string, unknown>; onClose: () => void; }
+const RecordNetworkDetails = ({ request, record, onClose }: RecordNetworkDetailsProps) => {
     const { token } = theme.useToken();
     const [activeTab, setActiveTab] = useState('headers');
 

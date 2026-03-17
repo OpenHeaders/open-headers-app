@@ -15,7 +15,8 @@ import { getDisplayName } from './utils/urlUtils';
 
 const { Text } = Typography;
 
-const NetworkRequestCell = ({ url, record, token }) => {
+interface NetworkRequestCellProps { url: string; record: Record<string, unknown>; token: Record<string, unknown>; }
+const NetworkRequestCell = ({ url, record, token }: NetworkRequestCellProps) => {
     const displayName = getDisplayName(url, 'index');
 
     return (
