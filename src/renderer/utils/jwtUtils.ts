@@ -223,7 +223,7 @@ export function getJWTExpiration(payload: Record<string, unknown>) {
     return { hasExpiration: false };
   }
 
-  const exp = payload.exp * 1000; // Convert to milliseconds
+  const exp = (payload.exp as number) * 1000; // Convert to milliseconds
   const now = Date.now();
   const isExpired = exp < now;
   const expiresAt = new Date(exp);

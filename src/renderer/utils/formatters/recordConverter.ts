@@ -41,12 +41,43 @@ interface StorageItem {
   [key: string]: unknown;
 }
 
+/** Event data fields shared across event types */
+interface EventData {
+  type?: string;
+  level?: string;
+  args?: unknown[];
+  stack?: string;
+  url?: string;
+  requestId?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  timing?: { startTime?: number; endTime?: number; [key: string]: unknown };
+  status?: number;
+  statusText?: string;
+  responseHeaders?: Record<string, string>;
+  responseBody?: string;
+  responseSize?: number;
+  action?: string;
+  key?: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+  domain?: string;
+  path?: string;
+  title?: string;
+  transitionType?: string;
+  localStorage?: Record<string, unknown>;
+  sessionStorage?: Record<string, unknown>;
+  cookies?: string;
+  [key: string]: unknown;
+}
+
 /** Recording event */
 interface RecordingEvent {
   timestamp: number;
   type: string;
   url?: string;
-  data: Record<string, unknown>;
+  data: EventData;
 }
 
 /** Recording record */
@@ -174,7 +205,8 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
  * Converts new recording format (single events array) to old format (separate arrays)
  * for backward compatibility with existing components
  */
-export function convertNewRecordingFormat(record: RecordingRecord) {
+export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<string, unknown> | unknown) {
+  const record = recordInput as RecordingRecord;
   if (!record || !record.events) {
     return record;
   }
@@ -444,7 +476,7 @@ export function processStorageEvents(storage: StorageItem[], record: RecordingRe
       
       // Handle cookie SET events specially - parse individual cookies
       if (mappedType === 'cookie' && item.newValue !== undefined && item.newValue !== null) {
-        const parsedCookies = parseCookieString(item.newValue);
+        const parsedCookies = parseCookieString(item.newValue as string);
         parsedCookies.forEach(({ name, value, isDeleted, domain: cookieDomain, attributes }) => {
           // Use cookie's domain attribute if available, otherwise fall back to URL domain
           const effectiveDomain = cookieDomain || item.domain || extractDomain(itemUrl) || 'unknown';

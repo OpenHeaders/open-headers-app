@@ -28,9 +28,9 @@ export class SourcesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of sources or null if not selected
    */
-  async exportSources(options) {
-    const { selectedItems } = options;
-    
+  async exportSources(options: Record<string, unknown>) {
+    const { selectedItems } = options as { selectedItems: Record<string, boolean> };
+
     if (!selectedItems.sources) {
       log.debug('Sources not selected for export');
       return null;
@@ -38,9 +38,9 @@ export class SourcesHandler {
 
     try {
       const sources = this.dependencies.sources || [];
-      
+
       // Filter out invalid sources before export
-      const validSources = sources.filter(source => {
+      const validSources = sources.filter((source: Record<string, unknown>) => {
         const validation = validateSource(source);
         if (!validation.success) {
           log.warn(`Filtering out invalid source during export: ${validation.error}`, source);
@@ -63,7 +63,7 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport, options) {
+  async importSources(sourcesToImport: Array<Record<string, unknown>>, options: Record<string, unknown>) {
     const stats = {
       imported: 0,
       skipped: 0,
@@ -111,7 +111,7 @@ export class SourcesHandler {
    * @returns {Promise<Object>} - Import result
    * @private
    */
-  async _importSingleSource(source, options) {
+  async _importSingleSource(source: Record<string, unknown>, options: Record<string, unknown>) {
     // Validate source structure
     const validation = validateSource(source);
     if (!validation.success) {
@@ -155,7 +155,7 @@ export class SourcesHandler {
    * @returns {Promise<boolean>} - Success status
    * @private
    */
-  async _addSource(source) {
+  async _addSource(source: Record<string, unknown>) {
     // Dynamic import to avoid circular dependencies
     const mod = await import('../../../hooks/workspace/useSources') as any;
     const success = await mod.addSource(source);
@@ -196,7 +196,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources to validate
    * @returns {Object} - Validation result
    */
-  validateSourcesForExport(sources) {
+  validateSourcesForExport(sources: Array<Record<string, unknown>>) {
     if (!Array.isArray(sources)) {
       return {
         success: false,
@@ -227,7 +227,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources array
    * @returns {Object} - Statistics object
    */
-  getSourcesStatistics(sources) {
+  getSourcesStatistics(sources: Array<Record<string, unknown>>) {
     if (!Array.isArray(sources)) {
       return { total: 0, byType: {} };
     }

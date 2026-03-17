@@ -29,7 +29,7 @@ class EnvironmentStateManager {
   /**
    * Initialize state for a workspace
    */
-  initWorkspace(workspaceId) {
+  initWorkspace(workspaceId: string) {
     if (!this.workspaceStates[workspaceId]) {
       this.workspaceStates[workspaceId] = {
         environments: { Personal: {} },
@@ -43,7 +43,7 @@ class EnvironmentStateManager {
   /**
    * Get environments for a workspace
    */
-  getEnvironments(workspaceId) {
+  getEnvironments(workspaceId: string) {
     this.initWorkspace(workspaceId);
     return this.workspaceStates[workspaceId].environments;
   }
@@ -51,7 +51,7 @@ class EnvironmentStateManager {
   /**
    * Set environments for a workspace
    */
-  setEnvironments(workspaceId, environments) {
+  setEnvironments(workspaceId: string, environments: Record<string, Record<string, unknown>>) {
     this.initWorkspace(workspaceId);
     
     // Validate environments before setting
@@ -88,7 +88,7 @@ class EnvironmentStateManager {
   /**
    * Get active environment for a workspace
    */
-  getActiveEnvironment(workspaceId) {
+  getActiveEnvironment(workspaceId: string) {
     this.initWorkspace(workspaceId);
     return this.workspaceStates[workspaceId].activeEnvironment;
   }
@@ -96,7 +96,7 @@ class EnvironmentStateManager {
   /**
    * Set active environment for a workspace
    */
-  setActiveEnvironment(workspaceId, environmentName) {
+  setActiveEnvironment(workspaceId: string, environmentName: string) {
     this.initWorkspace(workspaceId);
     this.workspaceStates[workspaceId].activeEnvironment = environmentName;
     log.debug(`Set active environment for workspace ${workspaceId}: ${environmentName}`);
@@ -105,14 +105,14 @@ class EnvironmentStateManager {
   /**
    * Check if a workspace has been loaded
    */
-  isWorkspaceLoaded(workspaceId) {
+  isWorkspaceLoaded(workspaceId: string) {
     return this.workspaceStates[workspaceId]?.loaded || false;
   }
 
   /**
    * Get last known good state for recovery
    */
-  getLastGoodState(workspaceId) {
+  getLastGoodState(workspaceId: string) {
     this.initWorkspace(workspaceId);
     const state = this.workspaceStates[workspaceId];
     if (state.environments && Object.keys(state.environments).length > 0) {
@@ -127,7 +127,7 @@ class EnvironmentStateManager {
   /**
    * Clear state for a workspace (use with caution)
    */
-  clearWorkspace(workspaceId) {
+  clearWorkspace(workspaceId: string) {
     if (this.workspaceStates[workspaceId]) {
       delete this.workspaceStates[workspaceId];
       log.info(`Cleared state for workspace: ${workspaceId}`);

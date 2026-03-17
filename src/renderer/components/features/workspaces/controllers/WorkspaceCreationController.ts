@@ -44,7 +44,7 @@ class WorkspaceCreationController {
         this.stateMachine.addListener(this.handleStateChange);
     }
 
-    async create(formData, options = {}) {
+    async create(formData: Record<string, unknown>, options: Record<string, unknown> = {}) {
         // Reset any existing operation
         this.reset();
         
@@ -119,7 +119,7 @@ class WorkspaceCreationController {
         this.stateMachine.transition(WORKSPACE_CREATION_EVENTS.WORKSPACE_ACTIVATED);
     }
 
-    async validateForm(formData) {
+    async validateForm(formData: Record<string, unknown>) {
         this.checkAborted();
         
         // Validate required fields
@@ -150,7 +150,7 @@ class WorkspaceCreationController {
         });
     }
 
-    async handleGitOperations(formData) {
+    async handleGitOperations(formData: Record<string, unknown>) {
         this.checkAborted();
         
         // Check Git status
@@ -219,7 +219,7 @@ class WorkspaceCreationController {
         }
     }
 
-    async testConnection(formData) {
+    async testConnection(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
@@ -258,7 +258,7 @@ class WorkspaceCreationController {
         }
     }
 
-    async createWorkspace(formData) {
+    async createWorkspace(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
@@ -295,7 +295,7 @@ class WorkspaceCreationController {
 
     // Removed handlePostCreation since initial commit is now done before workspace creation
 
-    async performInitialCommit(formData) {
+    async performInitialCommit(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
@@ -348,7 +348,7 @@ class WorkspaceCreationController {
     // Removed initializeSync and setupSyncListeners since sync happens automatically during workspace switch
 
 
-    async validateGitUrl(url) {
+    async validateGitUrl(url: string) {
         // Basic URL validation
         if (!url.match(/^(https?:\/\/|git@|file:\/\/|\/|\w+:\/\/)/)) {
             throw new Error('Invalid Git repository URL format');
@@ -377,7 +377,7 @@ class WorkspaceCreationController {
         // Cleanup resources if needed
     }
 
-    handleStateChange(stateData) {
+    handleStateChange(stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) {
         const { state } = stateData;
         
         // Notify listeners
@@ -416,7 +416,7 @@ class WorkspaceCreationController {
         }
     }
 
-    addListener(listener) {
+    addListener(listener: (stateData: { state: string; context?: Record<string, unknown>; timestamp?: string }) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }

@@ -25,7 +25,14 @@ const { Title } = Typography;
  * @param {function} onImport - Handler for import action
  * @param {Object} preloadedEnvData - Preloaded environment data from protocol links
  */
-const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
+interface ImportModalProps {
+    visible: boolean;
+    onClose: () => void;
+    onImport: ((data: Record<string, unknown>) => Promise<void>) | null;
+    preloadedEnvData: Record<string, unknown> | null;
+}
+
+const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportModalProps) => {
     // Get theme token
     const { token } = theme.useToken();
     
@@ -57,7 +64,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * @param {Object} data - The parsed configuration data
      * @returns {Object} Analysis result
      */
-    const analyzeConfigData = (data) => {
+    const analyzeConfigData = (data: Record<string, any>) => {
         let totalVariableCount = 0;
         let environmentCount = 0;
         const envs = {};
@@ -102,7 +109,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * @param {Object} mainAnalysis - Analysis from main file
      * @param {Object} envAnalysis - Analysis from environment file
      */
-    const updateCombinedEnvInfo = (mainAnalysis, envAnalysis) => {
+    const updateCombinedEnvInfo = (mainAnalysis: Record<string, unknown> | null, envAnalysis: Record<string, unknown> | null) => {
         setCombinedEnvInfo(() => {
             const main = mainAnalysis || files.sources?.analysis || {};
             const env = envAnalysis || files.environments?.analysis || {};
@@ -205,7 +212,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * @param {File} file - Selected file
      * @param {boolean} isEnvironmentFile - Whether this is an environment file
      */
-    const handleFileSelection = async (file, isEnvironmentFile = false) => {
+    const handleFileSelection = async (file: File, isEnvironmentFile = false) => {
         try {
             const content = await file.text();
             const data = JSON.parse(content);
@@ -262,7 +269,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * Handle item selection changes
      * @param {string} item - Item type to toggle
      */
-    const handleItemChange = (item) => {
+    const handleItemChange = (item: string) => {
         setSelectedItems(prev => ({
             ...prev,
             [item]: !prev[item]
@@ -274,7 +281,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * @param {string} envName - Environment name
      * @param {boolean} checked - Selection state
      */
-    const handleEnvironmentSelectionChange = (envName, checked) => {
+    const handleEnvironmentSelectionChange = (envName: string, checked: boolean) => {
         setSelectedEnvironments(prev => ({
             ...prev,
             [envName]: checked
@@ -303,7 +310,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * Handle import mode change
      * @param {string} mode - Import mode ('merge' or 'replace')
      */
-    const handleImportModeChange = (mode) => {
+    const handleImportModeChange = (mode: string) => {
         setImportMode(mode);
     };
 
@@ -311,7 +318,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }) => {
      * Handle workspace import toggle
      * @param {boolean} checked - Whether to import workspace
      */
-    const handleImportWorkspaceChange = (checked) => {
+    const handleImportWorkspaceChange = (checked: boolean) => {
         setImportWorkspace(checked);
     };
 

@@ -33,14 +33,14 @@ interface ImportOptions {
   [key: string]: unknown;
 }
 
-/** Import data parsed from file */
+/** Import data parsed from file - uses Record<string, any> for compatibility with handler-specific ImportData types */
 interface ImportData {
   version?: string;
   sources?: Record<string, unknown>[];
   proxyRules?: Record<string, unknown>[];
   rules?: Record<string, Array<Record<string, unknown>>>;
   rulesMetadata?: Record<string, unknown>;
-  environments?: Record<string, unknown>;
+  environments?: Record<string, Record<string, Record<string, unknown>>>;
   environmentSchema?: Record<string, unknown>;
   workspace?: Record<string, unknown>;
   [key: string]: unknown;
@@ -243,7 +243,11 @@ export class ImportService {
 
     // Import environments
     if (selectedItems.environments) {
-      const envStats = await this.environmentsHandler.importEnvironments(importData, importOptions);
+      // Cast through intermediate type for handler-specific ImportData compatibility
+      const envStats = await this.environmentsHandler.importEnvironments(
+        importData as unknown as Parameters<typeof this.environmentsHandler.importEnvironments>[0],
+        importOptions
+      );
       allStats.environmentsImported = envStats.environmentsImported;
       allStats.variablesCreated = envStats.variablesCreated;
       allStats.errors.push(...envStats.errors);

@@ -19,7 +19,7 @@ interface ExportOptions {
 
 /** Import options for rules */
 interface ImportOptions {
-  importMode: string;
+  importMode?: string;
   selectedItems: Record<string, boolean>;
   [key: string]: unknown;
 }
@@ -87,9 +87,9 @@ export class RulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Rules data object or null if not selected
    */
-  async exportRules(options: ExportOptions) {
-    const { selectedItems } = options;
-    
+  async exportRules(options: Record<string, unknown>) {
+    const { selectedItems } = options as { selectedItems: Record<string, boolean> };
+
     if (!selectedItems.rules) {
       log.debug('Rules not selected for export');
       return null;
@@ -124,15 +124,17 @@ export class RulesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importRules(rulesToImport: RulesToImport, options: ImportOptions) {
+  async importRules(rulesToImportInput: RulesToImport | Record<string, unknown>, optionsInput: ImportOptions | Record<string, unknown>) {
+    const rulesToImport = rulesToImportInput as RulesToImport;
+    const options = optionsInput as ImportOptions;
     const stats = {
-      imported: { total: 0 },
-      skipped: { total: 0 },
-      errors: []
+      imported: { total: 0 } as Record<string, number>,
+      skipped: { total: 0 } as Record<string, number>,
+      errors: [] as Array<{ ruleType: string; ruleId: string; error: string }>
     };
 
     // Initialize counters for each rule type
-    Object.values(RULE_TYPES).forEach(type => {
+    Object.values(RULE_TYPES).forEach((type: string) => {
       stats.imported[type] = 0;
       stats.skipped[type] = 0;
     });
@@ -342,7 +344,8 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to validate
    * @returns {Object} - Validation result
    */
-  validateRulesForExport(rulesData: RulesData) {
+  validateRulesForExport(rulesDataInput: RulesData | Record<string, unknown>) {
+    const rulesData = rulesDataInput as RulesData;
     if (!rulesData || typeof rulesData !== 'object') {
       return {
         success: false,
@@ -386,7 +389,8 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data object
    * @returns {Object} - Statistics object
    */
-  getRulesStatistics(rulesData: RulesData) {
+  getRulesStatistics(rulesDataInput: RulesData | Record<string, unknown>) {
+    const rulesData = rulesDataInput as RulesData;
     if (!rulesData || !rulesData.rules) {
       return { 
         total: 0, 
@@ -416,8 +420,9 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeRules(rulesData: RulesData) {
-    const warnings = [];
+  analyzeRules(rulesDataInput: RulesData | Record<string, unknown>) {
+    const rulesData = rulesDataInput as RulesData;
+    const warnings: string[] = [];
     const suggestions = [];
 
     if (!rulesData || !rulesData.rules) {

@@ -160,19 +160,19 @@ class ConcurrentMap {
     this.mutex = new Mutex(`${name}-map`);
   }
 
-  async get(key) {
+  async get(key: string) {
     return this.mutex.withLock(() => this.map.get(key));
   }
 
-  async set(key, value) {
+  async set(key: string, value: unknown) {
     return this.mutex.withLock(() => this.map.set(key, value));
   }
 
-  async has(key) {
+  async has(key: string) {
     return this.mutex.withLock(() => this.map.has(key));
   }
 
-  async delete(key) {
+  async delete(key: string) {
     return this.mutex.withLock(() => this.map.delete(key));
   }
 
@@ -214,15 +214,15 @@ class ConcurrentSet {
     this.mutex = new Mutex(`${name}-set`);
   }
 
-  async add(value) {
+  async add(value: string) {
     return this.mutex.withLock(() => this.set.add(value));
   }
 
-  async has(value) {
+  async has(value: string) {
     return this.mutex.withLock(() => this.set.has(value));
   }
 
-  async delete(value) {
+  async delete(value: string) {
     return this.mutex.withLock(() => this.set.delete(value));
   }
 
@@ -261,7 +261,7 @@ class RequestDeduplicator {
    * @param {Function} requestFn Function that returns a promise
    * @returns {Promise<any>} Result of the request
    */
-  async execute(key, requestFn) {
+  async execute<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
     const release = await this.mutex.acquire();
     try {
       // Check if request is already pending

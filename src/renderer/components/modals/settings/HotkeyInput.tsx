@@ -82,7 +82,7 @@ const FORBIDDEN_COMBINATIONS = [
 /**
  * Format hotkey for display as tags based on platform
  */
-const formatHotkeyForDisplay = (hotkey) => {
+const formatHotkeyForDisplay = (hotkey: string | undefined): string[] => {
     if (!hotkey) return [];
     
     // Detect platform
@@ -90,7 +90,7 @@ const formatHotkeyForDisplay = (hotkey) => {
                   window?.electronAPI?.platform === 'darwin';
     
     // Split the hotkey and replace CommandOrControl
-    const parts = hotkey.split('+').map(part => {
+    const parts = hotkey.split('+').map((part: string) => {
         const trimmed = part.trim();
         if (trimmed === 'CommandOrControl') {
             return isMac ? 'Cmd' : 'Ctrl';
@@ -106,8 +106,8 @@ const formatHotkeyForDisplay = (hotkey) => {
 /**
  * Normalize key combination for comparison
  */
-const normalizeKeys = (keys) => {
-    return keys.map(key => {
+const normalizeKeys = (keys: string[]) => {
+    return keys.map((key: string) => {
         if (key === 'CommandOrControl' || key === 'Command' || key === 'Control' || key === 'Cmd' || key === 'Ctrl') {
             return 'CommandOrControl';
         }
@@ -121,7 +121,7 @@ const normalizeKeys = (keys) => {
 /**
  * Check if a key combination is forbidden
  */
-const isForbiddenCombination = (keys) => {
+const isForbiddenCombination = (keys: string[]) => {
     const normalizedInput = normalizeKeys(keys);
     
     for (const forbidden of FORBIDDEN_COMBINATIONS) {
@@ -179,7 +179,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
         }
     }, [isEditing]);
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: React.KeyboardEvent) => {
         if (!isEditing) return;
         
         
@@ -258,7 +258,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
         }
     };
 
-    const handleKeyUp = (e) => {
+    const handleKeyUp = (e: React.KeyboardEvent) => {
         if (!isEditing) return;
         e.preventDefault();
         e.stopPropagation();
@@ -348,7 +348,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
                     >
                         {currentKeys.length > 0 ? (
                             <Space size={8}>
-                                {formatHotkeyForDisplay(currentKeys.join('+')).map((key, index) => (
+                                {formatHotkeyForDisplay(currentKeys.join('+')).map((key: string, index: number) => (
                                     <Tag 
                                         key={index}
                                         color="blue"
@@ -395,7 +395,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <Space size={4}>
-                {formatHotkeyForDisplay(value).map((key, index) => (
+                {formatHotkeyForDisplay(value).map((key: string, index: number) => (
                     <Tag 
                         key={index}
                         style={{ 

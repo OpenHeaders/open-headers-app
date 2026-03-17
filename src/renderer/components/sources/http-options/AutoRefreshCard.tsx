@@ -33,6 +33,17 @@ const { Option } = Select;
  * @param {Object} props.form - Form instance for field access
  * @returns {JSX.Element} Auto-refresh card component
  */
+interface AutoRefreshCardProps {
+    refreshEnabled: boolean;
+    handleRefreshToggle: (checked: boolean) => void;
+    refreshType: string;
+    handleRefreshTypeChange: (e: { target: { value: string } }) => void;
+    customInterval: number;
+    handlePresetIntervalChange: (value: number) => void;
+    handleCustomIntervalChange: (value: number | null) => void;
+    form: ReturnType<typeof import('antd').Form.useForm>[0];
+}
+
 const AutoRefreshCard = ({
     refreshEnabled,
     handleRefreshToggle,
@@ -42,7 +53,7 @@ const AutoRefreshCard = ({
     handlePresetIntervalChange,
     handleCustomIntervalChange,
     form
-}) => {
+}: AutoRefreshCardProps) => {
     return (
         <Card
             size="small"

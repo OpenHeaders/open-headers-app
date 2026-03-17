@@ -66,7 +66,7 @@ class WorkspaceManager {
   /**
    * Save workspaces configuration
    */
-  async saveWorkspaces(config) {
+  async saveWorkspaces(config: { workspaces: Record<string, unknown>[]; activeWorkspaceId: string; syncStatus: Record<string, unknown> }) {
     try {
       await this.storageAPI.saveToStorage('workspaces.json', JSON.stringify({
         workspaces: config.workspaces,
@@ -82,9 +82,9 @@ class WorkspaceManager {
   /**
    * Create a new workspace with enhanced validation
    */
-  async createWorkspace(workspaces, workspace) {
+  async createWorkspace(workspaces: Array<Record<string, unknown>>, workspace: Record<string, unknown>) {
     // Validate workspace ID uniqueness
-    if (workspaces.some(w => w.id === workspace.id)) {
+    if (workspaces.some((w: Record<string, unknown>) => w.id === workspace.id)) {
       throw new Error(`Workspace with ID ${workspace.id} already exists`);
     }
 
@@ -146,8 +146,8 @@ class WorkspaceManager {
   /**
    * Validate workspace exists
    */
-  validateWorkspaceExists(workspaces, workspaceId) {
-    const workspace = workspaces.find(w => w.id === workspaceId);
+  validateWorkspaceExists(workspaces: Array<Record<string, unknown>>, workspaceId: string) {
+    const workspace = workspaces.find((w: Record<string, unknown>) => w.id === workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
@@ -157,7 +157,7 @@ class WorkspaceManager {
   /**
    * Delete all data files for a workspace
    */
-  async deleteWorkspaceData(workspaceId) {
+  async deleteWorkspaceData(workspaceId: string) {
     if (workspaceId === 'default-personal') {
       throw new Error('Cannot delete default personal workspace data');
     }
@@ -174,7 +174,7 @@ class WorkspaceManager {
   /**
    * Copy all data from one workspace to another
    */
-  async copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId) {
+  async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string) {
     try {
       const files = ['sources.json', 'rules.json', 'proxy-rules.json', 'environments.json'];
       

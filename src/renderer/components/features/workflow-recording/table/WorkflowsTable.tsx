@@ -33,7 +33,12 @@ const { Text } = Typography;
  * @param {Function} props.onRecordDeleted - Callback when a record is deleted
  * @returns {React.ReactNode} Rendered component
  */
-const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
+interface WorkflowsTableProps {
+    onViewRecord: (record: Record<string, unknown>) => void;
+    onRecordDeleted?: (recordId: string) => void;
+}
+
+const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) => {
     const [workflowRecordings, setWorkflowRecordings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [exportModalVisible, setExportModalVisible] = useState(false);
@@ -59,7 +64,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles record deletion
      * @param {string} recordId - ID of record to delete
      */
-    const handleDelete = async (recordId) => {
+    const handleDelete = async (recordId: string) => {
         const success = await deleteWorkflowRecording(recordId);
         if (success) {
             setWorkflowRecordings(prev => prev.filter(r => r.id !== recordId));
@@ -75,7 +80,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles record export via modal
      * @param {Object} record - Record to export
      */
-    const handleExport = (record) => {
+    const handleExport = (record: Record<string, unknown>) => {
         setSelectedRecord(record);
         setExportModalVisible(true);
     };
@@ -84,7 +89,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles JSON export completion
      * @param {Object} record - Record metadata being exported
      */
-    const handleExportJson = async (record) => {
+    const handleExportJson = async (record: Record<string, unknown>) => {
         try {
             const timestamp = new Date(record.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
             const filename = `open-headers_recording_${timestamp}.json`;
@@ -137,7 +142,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles workflow recording import error
      * @param {Error} error - Import error
      */
-    const handleImportError = (error) => {
+    const handleImportError = (error: Error) => {
         log.error('Import error:', error);
     };
 
@@ -257,7 +262,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * @param {string} recordId - ID of the record to update
      * @param {Object} updates - Object containing fields to update (tag, description) or special actions
      */
-    const handleUpdateMetadata = async (recordId, updates) => {
+    const handleUpdateMetadata = async (recordId: string, updates: Record<string, unknown>) => {
         // Check if this is a special action to open the description modal
         if (updates._action === 'editDescription' || updates._action === 'viewDescription') {
             const record = workflowRecordings.find(r => r.id === recordId);
@@ -313,7 +318,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles saving description from modal
      * @param {string} description - New description value
      */
-    const handleSaveDescription = async (description) => {
+    const handleSaveDescription = async (description: string) => {
         if (!editingRecord) return;
         
         await handleUpdateMetadata(editingRecord.id, { description });
@@ -325,7 +330,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
      * Handles saving tag from modal
      * @param {string|Object} tag - New tag value (string or {name, url})
      */
-    const handleSaveTag = async (tag) => {
+    const handleSaveTag = async (tag: string | Record<string, string>) => {
         if (!editingRecord) return;
         
         await handleUpdateMetadata(editingRecord.id, { tag });

@@ -2,6 +2,7 @@
  * Utility functions for workflow operations
  */
 
+import React from 'react';
 import { showMessage } from '../../../../utils';
 import { createLogger } from '../../../../utils/error-handling/logger';
 
@@ -31,7 +32,7 @@ export const loadWorkflowRecordings = async () => {
  * @param {string} recordingId - ID of the workflow recording to delete
  * @returns {Promise<boolean>} Success status
  */
-export const deleteWorkflowRecording = async (recordingId) => {
+export const deleteWorkflowRecording = async (recordingId: string) => {
   try {
     if (!recordingId || typeof recordingId !== 'string') {
       log.error('Invalid recording ID provided for deletion');
@@ -63,7 +64,7 @@ export const deleteWorkflowRecording = async (recordingId) => {
  * @param {string} itemId - ID of the item to highlight
  * @param {number} delay - Delay before applying highlight (default: 500ms)
  */
-export const applyWorkflowRecordingHighlight = (applyHighlight, targetType, itemId, delay = 500) => {
+export const applyWorkflowRecordingHighlight = (applyHighlight: (target: string, id: string) => void, targetType: string, itemId: string, delay = 500) => {
   setTimeout(() => {
     log.debug('Applying highlight for:', itemId);
     applyHighlight(targetType, itemId);
@@ -76,7 +77,7 @@ export const applyWorkflowRecordingHighlight = (applyHighlight, targetType, item
  * @param {Function} onSuccess - Success callback
  * @param {Function} onError - Error callback
  */
-export const handleWorkflowImport = async (file, onSuccess, onError) => {
+export const handleWorkflowImport = async (file: File, onSuccess: ((data: Record<string, unknown>) => void) | null, onError: ((error: Error) => void) | null) => {
   try {
     if (!file || !(file instanceof File)) {
       const error = new Error('Invalid file provided for import');
@@ -169,7 +170,7 @@ export const handleWorkflowImport = async (file, onSuccess, onError) => {
  * @param {number} headerHeight - Height of the app header (default: 64px)
  * @returns {Function} Cleanup function
  */
-export const createStickyScrollHandler = (elementRef, setIsSticky, headerHeight = 64) => {
+export const createStickyScrollHandler = (elementRef: React.RefObject<HTMLElement | null>, setIsSticky: (sticky: boolean) => void, headerHeight = 64) => {
   const handleScroll = () => {
     if (!elementRef?.current) return;
 

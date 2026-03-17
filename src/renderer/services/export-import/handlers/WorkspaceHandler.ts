@@ -28,7 +28,7 @@ export class WorkspaceHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Workspace data or null if not selected
    */
-  async exportWorkspace(options: Record<string, unknown>) {
+  async exportWorkspace(options: { includeWorkspace?: boolean; includeCredentials?: boolean; currentWorkspace?: Record<string, any> }) {
     const { includeWorkspace, includeCredentials, currentWorkspace } = options;
     
     if (!includeWorkspace || !currentWorkspace) {
@@ -67,7 +67,7 @@ export class WorkspaceHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics with created workspace info
    */
-  async importWorkspace(workspaceInfo: Record<string, unknown> | null, options: Record<string, unknown>) {
+  async importWorkspace(workspaceInfo: Record<string, any> | null, options: Record<string, any>) {
     const stats = {
       createdWorkspace: null,
       errors: []
@@ -119,7 +119,7 @@ export class WorkspaceHandler {
    * @returns {Promise<Object>} - Created workspace object
    * @private
    */
-  async _createWorkspaceFromImport(workspaceInfo: Record<string, unknown>, options: Record<string, unknown>) {
+  async _createWorkspaceFromImport(workspaceInfo: Record<string, any>, options: Record<string, any>) {
     const { workspaces, createWorkspace } = this.dependencies;
 
     // Check if workspace with same name exists and generate unique name if needed
@@ -169,7 +169,7 @@ export class WorkspaceHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _switchToWorkspace(workspace: Record<string, unknown>) {
+  async _switchToWorkspace(workspace: Record<string, any>) {
     try {
       const { switchWorkspace } = this.dependencies;
       if (switchWorkspace) {
@@ -188,7 +188,7 @@ export class WorkspaceHandler {
    * @returns {boolean} - Whether to import credentials
    * @private
    */
-  _shouldImportCredentials(options: Record<string, unknown>) {
+  _shouldImportCredentials(options: Record<string, any>) {
     // For Git sync operations, always import credentials if present
     if (options.isGitSync) {
       return true;
@@ -204,7 +204,7 @@ export class WorkspaceHandler {
    * @returns {Object} - Sanitized authentication data
    * @private
    */
-  _sanitizeAuthData(authData: Record<string, unknown>) {
+  _sanitizeAuthData(authData: Record<string, any>) {
     if (!authData || typeof authData !== 'object') {
       return {};
     }
@@ -232,7 +232,7 @@ export class WorkspaceHandler {
    * @returns {Object} - Validated and sanitized authentication data
    * @private
    */
-  _validateAndSanitizeAuthData(authData: Record<string, unknown>) {
+  _validateAndSanitizeAuthData(authData: Record<string, any>) {
     if (!authData || typeof authData !== 'object') {
       throw new Error('Authentication data must be an object');
     }
@@ -265,7 +265,7 @@ export class WorkspaceHandler {
    * @param {Object} workspaceData - Workspace data object
    * @returns {Object} - Statistics object
    */
-  getWorkspaceStatistics(workspaceData: Record<string, unknown> | null) {
+  getWorkspaceStatistics(workspaceData: Record<string, any> | null) {
     if (!workspaceData) {
       return { 
         hasWorkspace: false 
@@ -288,7 +288,7 @@ export class WorkspaceHandler {
    * @param {Object} workspaceData - Workspace data to validate
    * @returns {Object} - Validation result
    */
-  validateWorkspaceForExport(workspaceData: Record<string, unknown> | null) {
+  validateWorkspaceForExport(workspaceData: Record<string, any> | null) {
     if (!workspaceData) {
       return { success: true }; // No workspace data is valid
     }

@@ -10,7 +10,7 @@ const { Title, Text } = Typography;
 /**
  * Mask a token string: show first 4 and last 4 chars
  */
-const maskToken = (token) => {
+const maskToken = (token: string) => {
     if (!token || token.length <= 12) return token || '';
     return `${token.slice(0, 4)}..${token.slice(-4)}`;
 };
@@ -28,6 +28,15 @@ const maskToken = (token) => {
  * @param {function} onRegenerateToken - Callback to rotate the auth token
  * @returns {JSX.Element} CLI server control panel
  */
+interface CliServerControlsProps {
+    status: { running: boolean; port: number; token?: string; discoveryPath?: string };
+    loading: boolean;
+    tutorialMode: boolean;
+    onToggleServer: () => void;
+    onUpdatePort: (port: number | null) => void;
+    onRegenerateToken: () => void;
+}
+
 const CliServerControls = ({
     status,
     loading,
@@ -35,7 +44,7 @@ const CliServerControls = ({
     onToggleServer,
     onUpdatePort,
     onRegenerateToken
-}) => {
+}: CliServerControlsProps) => {
     const { message } = App.useApp();
     const [showToken, setShowToken] = useState(false);
     const isWindows = navigator.platform === 'Win32';
@@ -56,13 +65,13 @@ const CliServerControls = ({
         }
     };
 
-    const copyCmd = (text) => {
+    const copyCmd = (text: string) => {
         navigator.clipboard.writeText(text);
         message.success('Command copied to clipboard');
     };
 
     // Single-pass syntax highlighter for curl commands
-    const highlightCmd = (cmd) => {
+    const highlightCmd = (cmd: string) => {
         const result = [];
         const c = (color: string, text: string, extra?: React.CSSProperties) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
         // Order matters: more specific patterns first
@@ -88,7 +97,7 @@ const CliServerControls = ({
     };
 
     // Single-pass syntax highlighter for PowerShell commands
-    const highlightPs = (cmd) => {
+    const highlightPs = (cmd: string) => {
         const result = [];
         const c = (color: string, text: string, extra?: React.CSSProperties) => <span key={result.length} style={{ color, ...extra }}>{text}</span>;
         const regex = /\b(Invoke-RestMethod|ConvertTo-Json)\b|(`)\n|(-[A-Za-z]+)\b|(\$\w+)|(https?:\/\/\S+)|("(?:[^"\\]|\\.)*")\s*=|("(?:[^"\\]|\\.)*")|\b(POST|GET|PUT|DELETE|PATCH)\b|(@\{|[{}|;])/gm;
@@ -111,7 +120,7 @@ const CliServerControls = ({
         return result;
     };
 
-    const CodeBlock = ({ cmd }) => {
+    const CodeBlock = ({ cmd }: { cmd: string }) => {
         const [copied, setCopied] = useState(false);
         const handleCopy = () => {
             copyCmd(cmd);

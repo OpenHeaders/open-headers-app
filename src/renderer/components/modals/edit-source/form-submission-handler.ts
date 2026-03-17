@@ -49,7 +49,7 @@ class FormSubmissionHandler {
      * @param {Object} jsonFilter - JSON filter object
      * @returns {boolean} - True if valid, false otherwise
      */
-    validateJsonFilter(jsonFilter) {
+    validateJsonFilter(jsonFilter: { enabled?: boolean; path?: string } | null) {
         if (jsonFilter?.enabled === true && !jsonFilter?.path) {
             // Make the path field visible and mark it as error
             this.form.setFields([
@@ -90,7 +90,7 @@ class FormSubmissionHandler {
         }
         
         // Perform comprehensive validation of all fields
-        await validateAllFormFields(this.form, this.envContext);
+        await validateAllFormFields(this.form, this.envContext as Parameters<typeof validateAllFormFields>[1]);
         
         return values;
     }
@@ -100,7 +100,7 @@ class FormSubmissionHandler {
      * @param {Object} jsonFilter - Raw JSON filter from form
      * @returns {Object} - Normalized JSON filter
      */
-    normalizeJsonFilter(jsonFilter) {
+    normalizeJsonFilter(jsonFilter: { enabled?: boolean; path?: string } | null) {
         return {
             enabled: Boolean(jsonFilter?.enabled),
             path: jsonFilter?.enabled === true ? (jsonFilter.path || '') : ''
@@ -112,7 +112,7 @@ class FormSubmissionHandler {
      * @param {Object} values - Form values
      * @returns {Object} - TOTP configuration
      */
-    collectTotpConfiguration(values) {
+    collectTotpConfiguration(values: Record<string, any>) {
         // First check form values
         let isTotpEnabled = values.enableTOTP === true;
         let totpSecretValue = values.totpSecret || '';
@@ -147,7 +147,7 @@ class FormSubmissionHandler {
      * @param {boolean} shouldRefreshNow - Whether to refresh immediately
      * @returns {Object} - Prepared source data
      */
-    prepareSourceData(values, shouldRefreshNow) {
+    prepareSourceData(values: Record<string, any>, shouldRefreshNow: boolean) {
         const normalizedJsonFilter = this.normalizeJsonFilter(values.jsonFilter);
         const { isTotpEnabled, totpSecretValue } = this.collectTotpConfiguration(values);
 
@@ -192,7 +192,7 @@ class FormSubmissionHandler {
      * Updates source data with latest state from HttpOptions component
      * @param {Object} sourceData - Source data to update
      */
-    updateFromHttpOptions(sourceData) {
+    updateFromHttpOptions(sourceData: Record<string, any>) {
         if (!this.httpOptionsRef.current) return;
 
         // Update JSON filter state
@@ -227,7 +227,7 @@ class FormSubmissionHandler {
      * @param {Object} sourceData - Source data to configure
      * @param {boolean} shouldRefreshNow - Whether to refresh immediately
      */
-    configureRefreshTiming(sourceData, shouldRefreshNow) {
+    configureRefreshTiming(sourceData: Record<string, any>, shouldRefreshNow: boolean) {
         const hasIntervalChanged = 
             sourceData.refreshOptions?.interval !== this.originalValuesRef.current.interval;
         const hasEnabledChanged = 
@@ -263,7 +263,7 @@ class FormSubmissionHandler {
      * Ensures URL has proper protocol
      * @param {Object} sourceData - Source data to update
      */
-    ensureUrlProtocol(sourceData) {
+    ensureUrlProtocol(sourceData: Record<string, any>) {
         if (sourceData.sourceType === 'http' && !sourceData.sourcePath.match(/^https?:\/\//i)) {
             sourceData.sourcePath = 'https://' + sourceData.sourcePath;
         }
@@ -274,7 +274,7 @@ class FormSubmissionHandler {
      * @param {Object} sourceData - Source data to validate
      * @throws {Error} - If validation fails
      */
-    validateFinalSourceData(sourceData) {
+    validateFinalSourceData(sourceData: Record<string, any>) {
         // Final validation check for JSON filter
         if (sourceData.jsonFilter.enabled === true && !sourceData.jsonFilter.path) {
             throw new Error('JSON filter is enabled but no path is specified. Please enter a JSON path.');
@@ -286,7 +286,7 @@ class FormSubmissionHandler {
      * @param {boolean} shouldRefreshNow - Whether to refresh immediately
      * @returns {Promise<Object>} - Prepared source data
      */
-    async handleSubmission(shouldRefreshNow) {
+    async handleSubmission(shouldRefreshNow: boolean) {
         try {
             const values = await this.validateAndPrepareData();
             let sourceData = this.prepareSourceData(values, shouldRefreshNow);

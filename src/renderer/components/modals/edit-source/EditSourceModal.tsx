@@ -15,7 +15,15 @@ const log = createLogger('EditSourceModal');
  * Provides a comprehensive interface for modifying source configuration
  * including URL, headers, query parameters, JSON filtering, and TOTP settings
  */
-const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }) => {
+interface EditSourceModalProps {
+    source: { sourceId: string; [key: string]: any } | null;
+    open: boolean;
+    onCancel: () => void;
+    onSave: (sourceData: Record<string, any>) => Promise<boolean>;
+    refreshingSourceId: string | null;
+}
+
+const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }: EditSourceModalProps) => {
     // Form instance
     const [form] = Form.useForm();
     
@@ -141,7 +149,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
      * Tracks form value changes to detect user edits
      * Updates form state reference and marks component as having user edits
      */
-    const handleFormChange = (changedValues) => {
+    const handleFormChange = (changedValues: Record<string, any>) => {
         if (isInitializedRef.current) {
             setHasUserEdits(true);
 
@@ -171,7 +179,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
      * Handles TOTP state changes from HttpOptions component
      * Updates component state and marks as having user edits
      */
-    const handleTotpChange = (enabled, secret) => {
+    const handleTotpChange = (enabled: boolean, secret: string) => {
 
         if (isInitializedRef.current &&
             (enabled !== totpEnabled || (enabled && secret !== totpSecret))) {
@@ -232,7 +240,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
      * Handles HttpOptions component reference and initial state setup
      * Sets up TOTP state and headers when HttpOptions is mounted
      */
-    const handleGetHttpOptionsRef = (instance) => {
+    const handleGetHttpOptionsRef = (instance: Record<string, any> | null) => {
         if (instance && !httpOptionsRef.current) {
             httpOptionsRef.current = instance;
 
@@ -318,7 +326,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
                 // Handle validation errors
                 if (error.errorFields) {
                     const jsonPathError = error.errorFields.find(
-                        field => field.name[0] === 'jsonFilter' && field.name[1] === 'path'
+                        (field: { name: string[] }) => field.name[0] === 'jsonFilter' && field.name[1] === 'path'
                     );
                     
                     if (jsonPathError) {
@@ -338,7 +346,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
      * Handles test response from HttpOptions component
      * Processes the response for display purposes
      */
-    const handleTestResponse = (response) => {
+    const handleTestResponse = (response: string | null) => {
         if (response) {
             try {
                 const parsedResponse = JSON.parse(response);
@@ -357,7 +365,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId })
      * Handles refresh checkbox state changes
      * Updates component state and form state reference
      */
-    const handleRefreshNowChange = (e) => {
+    const handleRefreshNowChange = (e: { target: { checked: boolean } }) => {
         const checked = e.target.checked;
         setRefreshNow(checked);
         formStateRef.current.refreshNow = checked;
