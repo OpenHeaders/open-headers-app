@@ -58,7 +58,7 @@ class ProxyCache {
     try {
       const entries = await atomicWriter.readJson(this.metadataPath);
       if (entries !== null) {
-        this.metadata = new Map(entries);
+        this.metadata = new Map(entries as any);
       } else {
         this.metadata = new Map();
       }

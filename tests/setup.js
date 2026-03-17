@@ -16,13 +16,20 @@ Module._resolveFilename = function (request, parent, isMain, options) {
     try {
         return originalResolve.call(this, request, parent, isMain, options);
     } catch (err) {
-        // When resolution fails for extensionless imports, try .ts then .js
-        // This handles both CJS require('./foo') and ESM import from .ts files
-        if (err.code === 'MODULE_NOT_FOUND' && !request.match(/\.\w+$/)) {
-            for (const ext of ['.ts', '.js']) {
+        if (err.code === 'MODULE_NOT_FOUND') {
+            // When a .js import fails, try .ts (handles converted files)
+            if (request.endsWith('.js')) {
                 try {
-                    return originalResolve.call(this, request + ext, parent, isMain, options);
-                } catch (_) { /* try next */ }
+                    return originalResolve.call(this, request.replace(/\.js$/, '.ts'), parent, isMain, options);
+                } catch (_) { /* fall through */ }
+            }
+            // When extensionless import fails, try .ts then .js
+            if (!request.match(/\.\w+$/)) {
+                for (const ext of ['.ts', '.js']) {
+                    try {
+                        return originalResolve.call(this, request + ext, parent, isMain, options);
+                    } catch (_) { /* try next */ }
+                }
             }
         }
         throw err;
