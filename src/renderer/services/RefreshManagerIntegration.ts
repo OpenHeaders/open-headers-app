@@ -6,7 +6,7 @@
 import refreshManager from './RefreshManager';
 import { getCentralizedWorkspaceService } from './CentralizedWorkspaceService';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('RefreshManagerIntegration');
 
 class RefreshManagerIntegration {

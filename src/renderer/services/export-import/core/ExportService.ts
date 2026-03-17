@@ -19,7 +19,7 @@ import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ExportService');
 
 /**

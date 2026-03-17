@@ -173,7 +173,7 @@ class RecordingHandlers {
             // Get proxy status to check if it's running
             let proxyPort: number | null = null;
             try {
-                const proxyServiceMod = require('../../../../services/proxy/ProxyService').default;
+                const proxyServiceMod = (await import('../../../../services/proxy/ProxyService')).default;
                 if (proxyServiceMod && proxyServiceMod.isRunning) {
                     proxyPort = proxyServiceMod.port;
                     log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);
@@ -281,7 +281,7 @@ class RecordingHandlers {
 
     async handleDownloadRecording(_: any, record: any) {
         try {
-            const { dialog } = require('electron');
+            const { dialog } = await import('electron');
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             const recordPath = path.join(recordingsPath, record.id, 'record-processed.json');
 

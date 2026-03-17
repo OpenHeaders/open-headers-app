@@ -7,7 +7,7 @@ import EditSourceForm from './EditSourceForm';
 import EditSourceModalFooter from './EditSourceModalFooter';
 import FormSubmissionHandler from './form-submission-handler';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EditSourceModal');
 
 /**

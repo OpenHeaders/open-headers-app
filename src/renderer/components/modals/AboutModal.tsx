@@ -63,7 +63,7 @@ const AboutModal = ({ open, onClose, appVersion }) => {
                 {/* Application Icon with rounded corners and shadow */}
                 <div className="app-icon-container">
                     <img
-                        src={String(require('../../images/icon128.png'))}
+                        src="./images/icon128.png"
                         alt="Open Headers Logo"
                         className="app-icon"
                         style={{

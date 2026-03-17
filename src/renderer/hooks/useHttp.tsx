@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useTotpState, useEnvironments } from '../contexts';
-const { createLogger } = require('../utils/error-handling/logger');
+import { createLogger } from '../utils/error-handling/logger';
 const log = createLogger('useHttp');
 
 interface JsonFilter {

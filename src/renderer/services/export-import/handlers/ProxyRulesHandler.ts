@@ -9,7 +9,7 @@ import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
 import { validateProxyRule } from '../utilities/ValidationUtils';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ProxyRulesHandler');
 
 /**

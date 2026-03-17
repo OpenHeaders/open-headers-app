@@ -9,7 +9,7 @@ import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
 import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection';
 import { DEFAULTS } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceHandler');
 
 /**

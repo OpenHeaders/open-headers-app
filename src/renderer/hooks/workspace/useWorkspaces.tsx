@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 import { showMessage } from '../../utils/ui/messageUtil';
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useWorkspaces');
 
 interface UseWorkspacesReturn {

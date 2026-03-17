@@ -10,7 +10,7 @@ import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utili
 import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
 import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentsHandler');
 
 /**

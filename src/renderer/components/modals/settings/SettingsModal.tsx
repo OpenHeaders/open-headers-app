@@ -9,7 +9,7 @@ import WorkflowSettings from './WorkflowSettings';
 import DeveloperSettings from './DeveloperSettings';
 import PermissionAlert from './PermissionAlert';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SettingsModal');
 
 // Modal styles configuration

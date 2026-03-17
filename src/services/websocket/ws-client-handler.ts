@@ -3,7 +3,9 @@
  * Manages client initialization, heartbeat, cleanup, and connection status
  */
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const WebSocket = require('ws');
+import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
@@ -202,7 +204,6 @@ class WSClientHandler {
      */
     broadcastConnectionStatus(): void {
         try {
-            const electron = require('electron');
             const { BrowserWindow } = electron;
             const status = this.getConnectionStatus();
 

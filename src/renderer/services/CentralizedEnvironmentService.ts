@@ -8,14 +8,14 @@
  * - Proper initialization sequencing
  */
 
-const { createLogger } = require('../utils/error-handling/logger');
-const {
+import { createLogger } from '../utils/error-handling/logger';
+import {
   EnvironmentStateManager,
   EnvironmentStorageManager,
   EnvironmentVariableManager,
   TemplateResolver,
   EnvironmentEventManager
-} = require('./environment');
+} from './environment';
 
 const log = createLogger('CentralizedEnvironmentService');
 

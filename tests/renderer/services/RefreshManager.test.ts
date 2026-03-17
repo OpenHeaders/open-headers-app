@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 
 // Mock logger
 vi.mock('../../../src/renderer/utils/error-handling/logger', () => ({
@@ -102,9 +102,12 @@ vi.stubGlobal('window', {
   },
 });
 
-// Import the singleton - we need to get the module and reset between tests
-const module = await import('../../../src/renderer/services/RefreshManager');
-const refreshManager = module.default;
+let refreshManager: any;
+
+beforeAll(async () => {
+  const mod = await import('../../../src/renderer/services/RefreshManager');
+  refreshManager = mod.default;
+});
 
 describe('RefreshManager', () => {
   beforeEach(async () => {
@@ -138,19 +141,19 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('normalizeSourceId', () => {
     it('converts number to string', () => {
-      expect(refreshManager.constructor.normalizeSourceId(42)).toBe('42');
+      expect((refreshManager.constructor as any).normalizeSourceId(42)).toBe('42');
     });
 
     it('returns string as-is', () => {
-      expect(refreshManager.constructor.normalizeSourceId('s1')).toBe('s1');
+      expect((refreshManager.constructor as any).normalizeSourceId('s1')).toBe('s1');
     });
 
     it('throws for null', () => {
-      expect(() => refreshManager.constructor.normalizeSourceId(null)).toThrow();
+      expect(() => (refreshManager.constructor as any).normalizeSourceId(null)).toThrow();
     });
 
     it('throws for undefined', () => {
-      expect(() => refreshManager.constructor.normalizeSourceId(undefined)).toThrow();
+      expect(() => (refreshManager.constructor as any).normalizeSourceId(undefined)).toThrow();
     });
   });
 
@@ -159,37 +162,37 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('getNetworkTimeout', () => {
     it('returns base timeout for good network', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(15000);
     });
 
     it('returns reduced timeout for excellent network', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'excellent' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'excellent' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(12000);
     });
 
     it('returns increased timeout for moderate network', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'moderate' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'moderate' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(22500);
     });
 
     it('returns doubled timeout for poor network', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(30000);
     });
 
     it('caps timeout at 60000ms', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
       const timeout = await refreshManager.getNetworkTimeout(50000);
       expect(timeout).toBe(60000);
     });
 
     it('uses default base timeout of 15000', async () => {
-      (window.electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
+      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
       const timeout = await refreshManager.getNetworkTimeout();
       expect(timeout).toBe(15000);
     });
@@ -205,12 +208,10 @@ describe('RefreshManager', () => {
     });
 
     it('returns positive time from cached schedule', () => {
-      const realNow = _now;
       refreshManager._cachedSchedules.set('s1', {
-        nextRefresh: realNow + 30000,
+        nextRefresh: _now + 30000,
       });
       const result = refreshManager.getTimeUntilRefresh('s1');
-      // Should be approximately 30000ms, allow small margin
       expect(result).toBeGreaterThan(29000);
       expect(result).toBeLessThanOrEqual(30000);
     });
@@ -222,11 +223,10 @@ describe('RefreshManager', () => {
     });
 
     it('returns time from sourceData.refreshOptions.nextRefresh when no cached schedule', () => {
-      const realNow = _now;
       const sourceData = {
         refreshOptions: {
           enabled: true,
-          nextRefresh: realNow + 20000,
+          nextRefresh: _now + 20000,
         },
       };
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);
@@ -238,11 +238,10 @@ describe('RefreshManager', () => {
       const sourceData = {
         refreshOptions: {
           enabled: true,
-          nextRefresh: _now - 100, // slightly past, within 1s buffer
+          nextRefresh: _now - 100,
         },
       };
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);
-      // -100 is not < -1000, so it returns 0 from the outer fallthrough
       expect(result).toBe(0);
     });
   });
@@ -303,7 +302,6 @@ describe('RefreshManager', () => {
       await refreshManager.handleNetworkStateSync(null);
       await refreshManager.handleNetworkStateSync({});
       await refreshManager.handleNetworkStateSync({ state: {} });
-      // Should not throw
     });
   });
 
@@ -370,12 +368,10 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('startCacheUpdateInterval', () => {
     it('clears existing interval before starting new one', () => {
-      const firstInterval = refreshManager.cacheUpdateInterval;
       refreshManager.startCacheUpdateInterval();
-      const secondInterval = refreshManager.cacheUpdateInterval;
-      expect(secondInterval).toBeDefined();
-      // Cleanup
-      if (secondInterval) clearInterval(secondInterval);
+      const interval = refreshManager.cacheUpdateInterval;
+      expect(interval).toBeDefined();
+      if (interval) clearInterval(interval);
       refreshManager.cacheUpdateInterval = null;
     });
   });

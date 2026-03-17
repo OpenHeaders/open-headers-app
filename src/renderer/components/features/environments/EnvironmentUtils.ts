@@ -5,7 +5,7 @@
 import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
 import { showMessage } from '../../../utils/ui/messageUtil';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentUtils');
 
 /**

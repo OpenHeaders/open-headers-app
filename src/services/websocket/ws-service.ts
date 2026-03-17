@@ -1,5 +1,7 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
-const WebSocket = require('ws');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const WS = require('ws');
+import electron from 'electron';
 import https from 'https';
 import http from 'http';
 import fs from 'fs';
@@ -24,8 +26,8 @@ interface InitializeOptions {
 }
 
 class WebSocketService {
-    wss: WebSocket.Server | null;
-    secureWss: WebSocket.Server | null;
+    wss: any | null;
+    secureWss: any | null;
     httpServer: http.Server | null;
     httpsServer: https.Server | null;
     wsPort: number;
@@ -97,7 +99,6 @@ class WebSocketService {
 
             if (!this.appDataPath) {
                 try {
-                    const electron = require('electron');
                     if (electron && electron.app) {
                         this.appDataPath = electron.app.getPath('userData');
                     }
@@ -138,10 +139,10 @@ class WebSocketService {
      */
     _broadcastToAll(message: string): number {
         let count = 0;
-        const send = (server: WebSocket.Server | null) => {
+        const send = (server: any | null) => {
             if (!server) return;
             server.clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
+                if (client.readyState === WS.OPEN) {
                     try { client.send(message); count++; }
                     catch (e) { log.error('Error broadcasting to client:', e); }
                 }
@@ -164,7 +165,7 @@ class WebSocketService {
                 else { res.writeHead(426, { 'Content-Type': 'text/plain' }); res.end('Upgrade Required - WebSocket Only'); }
             });
 
-            this.wss = new WebSocket.Server({ server: this.httpServer, host: this.host });
+            this.wss = new WS.Server({ server: this.httpServer, host: this.host });
             this._configureWebSocketServer(this.wss, 'WS');
 
             this._listenWithRetry(this.httpServer, this.wsPort, this.host, 'WS', () => {
@@ -192,7 +193,7 @@ class WebSocketService {
                 this.certificateHandler.createHttpsRequestHandler()
             );
 
-            this.secureWss = new WebSocket.Server({ server: this.httpsServer, host: this.host });
+            this.secureWss = new WS.Server({ server: this.httpsServer, host: this.host });
             this._configureWebSocketServer(this.secureWss, 'WSS');
 
             this._listenWithRetry(this.httpsServer, this.wssPort, this.host, 'WSS', () => {
@@ -249,14 +250,14 @@ class WebSocketService {
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
 
-        const terminateAll = (server: WebSocket.Server | null) => {
+        const terminateAll = (server: any | null) => {
             if (!server) return;
             for (const c of server.clients) { try { c.terminate(); } catch (e) { /* ignore */ } }
         };
         terminateAll(this.wss);
         terminateAll(this.secureWss);
 
-        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: WebSocket.Server | null, label: string): Promise<void> => {
+        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: any | null, label: string): Promise<void> => {
             if (!httpSrv) return Promise.resolve();
             return new Promise((resolve) => {
                 const t = setTimeout(() => { log.warn(`${label} close timed out`); resolve(); }, 2000);
@@ -272,7 +273,7 @@ class WebSocketService {
 
     // ── Message routing ───────────────────────────
 
-    _configureWebSocketServer(server: WebSocket.Server, serverType: string): void {
+    _configureWebSocketServer(server: any, serverType: string): void {
         server.on('connection', (ws: any, request: http.IncomingMessage) => {
             log.info(`${serverType} client connected`);
 
@@ -381,12 +382,12 @@ class WebSocketService {
     _handleFocusApp(navigation: any): void {
         try {
             log.info('_handleFocusApp called with navigation:', navigation);
-            const electron = require('electron');
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
             if (windows.length === 0) { log.warn('No windows available to focus'); return; }
 
             const mainWindow = windows[0];
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const windowsFocusHelper = require('../../main/modules/utils/windowsFocus').default;
             windowsFocusHelper.focusWindow(mainWindow);
 

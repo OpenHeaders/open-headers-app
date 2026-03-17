@@ -39,7 +39,7 @@ import {
     extractVariablesFromRule
 } from '../../utils/validation/environment-variables';
 
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('HeaderRules');
 
 const { Title, Text } = Typography;

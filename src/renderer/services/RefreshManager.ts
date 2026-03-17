@@ -606,7 +606,7 @@ class RefreshManager {
         // For sources without auto-refresh, we need to temporarily add them to scheduler for retry
         if (!source.refreshOptions?.enabled || source.refreshOptions?.interval <= 0) {
           // Calculate retry delay immediately based on failure count
-          const { INITIAL_RETRY_CONFIG } = require('../constants/retryConfig');
+          const { INITIAL_RETRY_CONFIG } = await import('../constants/retryConfig');
           const baseDelay = INITIAL_RETRY_CONFIG.baseDelay;
           const maxJitter = INITIAL_RETRY_CONFIG.maxJitter;
           const delay = baseDelay + Math.random() * maxJitter;

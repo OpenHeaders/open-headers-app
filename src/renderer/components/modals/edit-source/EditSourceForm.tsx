@@ -3,7 +3,7 @@ import { Form, Input, Row, Col, Checkbox } from 'antd';
 import HttpOptions from '../../sources/HttpOptions';
 import { validateEnvironmentVariables, validateTotpCodePlaceholder } from './form-validation';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EditSourceForm');
 
 /**

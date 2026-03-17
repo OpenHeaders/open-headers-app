@@ -3,6 +3,7 @@
  * Manages environment variable loading, template resolution, and proxy sync
  */
 
+import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
@@ -92,7 +93,6 @@ class WSEnvironmentHandler {
      */
     setupEnvironmentListener(): void {
         try {
-            const electron = require('electron');
             const { ipcMain } = electron;
 
             const broadcastIfEnvVars = () => {
@@ -122,6 +122,7 @@ class WSEnvironmentHandler {
      */
     syncProxyService(): void {
         try {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const proxyService = require('../proxy/ProxyService').default;
 
             const envVars = this.loadEnvironmentVariables();

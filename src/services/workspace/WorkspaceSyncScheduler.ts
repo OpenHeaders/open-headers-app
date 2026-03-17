@@ -1,3 +1,6 @@
+import electron from 'electron';
+import path from 'path';
+import fs from 'fs';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 import {
@@ -13,8 +16,7 @@ import {
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
 
-const versionConfig = require('../../config/version').default;
-const { DATA_FORMAT_VERSION } = versionConfig;
+import { DATA_FORMAT_VERSION } from '../../config/version';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -159,7 +161,7 @@ function broadcastToRenderers(channel: string, data: unknown, broadcaster: Broad
   }
 
   // Default Electron implementation
-  const { BrowserWindow } = require('electron');
+  const { BrowserWindow } = electron;
   BrowserWindow.getAllWindows().forEach((window: { isDestroyed(): boolean; webContents: { send(channel: string, data: unknown): void } } | null) => {
     if (window && !window.isDestroyed()) {
       window.webContents.send(channel, data);
@@ -588,9 +590,8 @@ class WorkspaceSyncScheduler {
    */
   async checkForDataChanges(workspaceId: string, newData: SyncData): Promise<boolean> {
     try {
-      const path = require('path');
-      const fs = require('fs').promises;
-      const { app } = require('electron');
+      const { app } = electron;
+      const fsPromises = fs.promises;
       const userDataPath = app.getPath('userData');
       const workspacePath = path.join(userDataPath, 'workspaces', workspaceId);
 
@@ -598,7 +599,7 @@ class WorkspaceSyncScheduler {
       if (newData.sources) {
         try {
           const sourcesPath = path.join(workspacePath, 'sources.json');
-          const existingData = await fs.readFile(sourcesPath, 'utf8');
+          const existingData = await fsPromises.readFile(sourcesPath, 'utf8');
           const existingSources = JSON.parse(existingData) as Source[];
 
           // Compare sources (ignore dynamic fields like sourceContent, originalResponse, refresh timings, etc.)
@@ -636,7 +637,7 @@ class WorkspaceSyncScheduler {
       if (newData.rules) {
         try {
           const rulesPath = path.join(workspacePath, 'rules.json');
-          const existingData = await fs.readFile(rulesPath, 'utf8');
+          const existingData = await fsPromises.readFile(rulesPath, 'utf8');
           const existingRules = JSON.parse(existingData);
 
           if (JSON.stringify(existingRules.rules) !== JSON.stringify(newData.rules)) {
@@ -652,7 +653,7 @@ class WorkspaceSyncScheduler {
       if (newData.proxyRules) {
         try {
           const proxyPath = path.join(workspacePath, 'proxy-rules.json');
-          const existingData = await fs.readFile(proxyPath, 'utf8');
+          const existingData = await fsPromises.readFile(proxyPath, 'utf8');
           const existingProxy = JSON.parse(existingData);
 
           if (JSON.stringify(existingProxy) !== JSON.stringify(newData.proxyRules)) {
@@ -668,7 +669,7 @@ class WorkspaceSyncScheduler {
       if (newData.environments || newData.environmentSchema) {
         try {
           const envPath = path.join(workspacePath, 'environments.json');
-          const existingData = await fs.readFile(envPath, 'utf8');
+          const existingData = await fsPromises.readFile(envPath, 'utf8');
           const existingEnv = JSON.parse(existingData);
 
           // Extract environment names and variable names (not values)
@@ -727,14 +728,13 @@ class WorkspaceSyncScheduler {
   async importSyncedData(workspaceId: string, data: SyncData, options: { broadcastToExtensions?: boolean } = {}): Promise<void> {
     const { broadcastToExtensions = true } = options;
     try {
-      const path = require('path');
-      const fs = require('fs').promises;
-      const { app } = require('electron');
+      const { app } = electron;
+      const fsPromises = fs.promises;
       const userDataPath = app.getPath('userData');
       const workspacePath = path.join(userDataPath, 'workspaces', workspaceId);
 
       // Ensure workspace directory exists
-      await fs.mkdir(workspacePath, { recursive: true });
+      await fsPromises.mkdir(workspacePath, { recursive: true });
 
       // Track merged sources so the WebSocket broadcast (below) uses
       // sources WITH local execution data (sourceContent, etc.) instead of
@@ -748,7 +748,7 @@ class WorkspaceSyncScheduler {
         // Load existing sources to preserve local execution data
         let existingSources: Source[] = [];
         try {
-          const existingData = await fs.readFile(sourcesPath, 'utf8');
+          const existingData = await fsPromises.readFile(sourcesPath, 'utf8');
           existingSources = JSON.parse(existingData);
         } catch (error) {
           // No existing sources, that's fine
@@ -1036,7 +1036,7 @@ class WorkspaceSyncScheduler {
         // Create backup if significant data loss detected
         if (validation.shouldBackup && existingEnvFileExists) {
           log.warn(`Creating backup before potentially destructive environment sync (${validation.lossPercentage}% value loss)`);
-          await createBackupIfNeeded(fs, envPath);
+          await createBackupIfNeeded(fs.promises, envPath);
         }
 
         // Block write if it would result in complete data loss
@@ -1062,7 +1062,7 @@ class WorkspaceSyncScheduler {
           await atomicWriter.writeJson(envPath, environmentsData, { pretty: true });
 
           // Cleanup old backups (keep only 3 most recent)
-          await cleanupOldBackups(fs, workspacePath, path, 3);
+          await cleanupOldBackups(fs.promises, workspacePath, path, 3);
 
           const envCount = Object.keys(environmentsToImport).length;
           let varCount = 0;
@@ -1104,6 +1104,7 @@ class WorkspaceSyncScheduler {
       // Notify WebSocket service to update browser extensions.
       // Skip when nothing changed to avoid redundant messages on every periodic sync.
       if (broadcastToExtensions) {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const webSocketService = require('../websocket/ws-service').default;
         if (webSocketService && webSocketService.updateSources) {
           // Update sources -- use mergedSources (which preserves local sourceContent)
@@ -1127,6 +1128,7 @@ class WorkspaceSyncScheduler {
 
       // Reload proxy rules if they were imported
       if (data.proxyRules && Array.isArray(data.proxyRules) && data.proxyRules.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const proxyService = require('../proxy/ProxyService').default;
         // Only reload if this is the current workspace
         if (proxyService.ruleStore && proxyService.ruleStore.currentWorkspaceId === workspaceId) {

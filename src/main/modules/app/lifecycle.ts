@@ -11,7 +11,7 @@ import WorkspaceSyncScheduler from '../../../services/workspace/WorkspaceSyncSch
 import networkService from '../../../services/network/NetworkService';
 import proxyService from '../../../services/proxy/ProxyService';
 import webSocketService from '../../../services/websocket/ws-service';
-require('../../../services/video/video-export-manager'); // Side-effect: registers IPC handlers in constructor
+import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -95,8 +95,8 @@ class AppLifecycle {
             // Start CLI API server (non-blocking — app works without it)
             // Lazy require to avoid circular dependency (CliSetupHandler requires lifecycle)
             try {
-                const { CliApiService } = require('../../../services/cli/CliApiService');
-                const { CliSetupHandler } = require('../../../services/cli/CliSetupHandler');
+                const { CliApiService } = await import('../../../services/cli/CliApiService');
+                const { CliSetupHandler } = await import('../../../services/cli/CliSetupHandler');
                 const cliApiService = new CliApiService();
                 const cliSetupHandler = new CliSetupHandler();
                 cliApiService.setSetupHandler(cliSetupHandler);
@@ -152,7 +152,7 @@ class AppLifecycle {
 
                 await atomicWriter.writeJson(settingsPath, defaultSettings, { pretty: true });
                 log.info('Created default settings file with auto-launch and hide enabled');
-                const AutoLaunch = require('auto-launch');
+                const AutoLaunch = (await import('auto-launch')).default;
                 try {
                     const args = process.platform === 'win32' ?
                         ['--hidden', '--autostart'] :
@@ -163,7 +163,7 @@ class AppLifecycle {
                         path: app.getPath('exe'),
                         args: args,
                         isHidden: true
-                    });
+                    } as any);
 
                     await autoLauncher.enable();
                     log.info('Auto-launch enabled for first-time user');
@@ -184,7 +184,7 @@ class AppLifecycle {
             const data = await fs.promises.readFile(settingsPath, 'utf8');
             const settings = JSON.parse(data);
             if (settings.logLevel) {
-                const { setGlobalLogLevel } = require('../../../utils/mainLogger');
+                const { setGlobalLogLevel } = await import('../../../utils/mainLogger');
                 setGlobalLogLevel(settings.logLevel, true);
                 log.info(`Applied log level from settings: ${settings.logLevel}`);
             }

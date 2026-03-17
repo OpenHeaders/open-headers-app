@@ -3,6 +3,7 @@
  * Manages source updates, broadcasting, workspace switching, and initial data loading
  */
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const WebSocket = require('ws');
 import fs from 'fs';
 import path from 'path';

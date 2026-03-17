@@ -1,6 +1,9 @@
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
+import zlib from 'zlib';
+import os from 'os';
+import crypto from 'crypto';
 import mainLogger from '../../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION } from '../../../../config/version';
 import appLifecycle from '../../app/lifecycle';
@@ -142,7 +145,7 @@ class WorkspaceHandlers {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-            const serviceRegistryMod = require('../../../../services/core/ServiceRegistry').default;
+            const serviceRegistryMod = (await import('../../../../services/core/ServiceRegistry')).default;
 
             const health: any = {
                 gitSync: false,
@@ -496,7 +499,6 @@ class WorkspaceHandlers {
 
             // Compress the payload for smaller URLs
             const payloadJson = JSON.stringify(payload);
-            const zlib = require('zlib');
             const compressed = zlib.gzipSync(payloadJson, { level: 9 });
             const payloadParam = compressed.toString('base64url');
 
@@ -539,7 +541,6 @@ class WorkspaceHandlers {
             }
 
             // Fallback to system user name
-            const os = require('os');
             return os.userInfo().username || 'Unknown User';
         } catch (error) {
             log.warn('Failed to get user name:', error);
@@ -549,7 +550,6 @@ class WorkspaceHandlers {
 
     generateInviteId(): string {
         // Generate a unique invite ID for tracking/analytics
-        const crypto = require('crypto');
         return crypto.randomBytes(8).toString('hex');
     }
 
@@ -618,7 +618,6 @@ class WorkspaceHandlers {
 
             // Always compress the payload for smaller URLs
             const payloadJson = JSON.stringify(payload);
-            const zlib = require('zlib');
 
             // Compress with maximum compression level
             const compressed = zlib.gzipSync(payloadJson, { level: 9 });

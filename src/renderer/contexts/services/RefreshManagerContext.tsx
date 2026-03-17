@@ -3,7 +3,7 @@ import refreshManagerIntegration from '../../services/RefreshManagerIntegration'
 import { useHttp } from '../../hooks/useHttp';
 import { useSources } from '../../hooks/workspace';
 import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
-const { createLogger } = require('../../utils/error-handling/logger');
+import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('RefreshManagerContext');
 
 interface RefreshManagerContextValue {

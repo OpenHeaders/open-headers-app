@@ -19,7 +19,7 @@ import {
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
 
-const { createLogger } = require('../../../utils/error-handling/logger');
+import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ImportService');
 
 /**

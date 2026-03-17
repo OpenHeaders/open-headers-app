@@ -6,8 +6,9 @@
  */
 
 // Core Services
-export { ExportService } from './core/ExportService';
-export { ImportService } from './core/ImportService';
+import { ExportService } from './core/ExportService';
+import { ImportService } from './core/ImportService';
+export { ExportService, ImportService };
 
 // Configuration and Constants
 export * from './core/ExportImportConfig';
@@ -32,10 +33,6 @@ export * from './utilities/DuplicateDetection';
  * @returns {Object} - Object containing both services
  */
 export function createExportImportServices(dependencies) {
-  // Import locally to avoid warnings about import usage
-  const { ExportService } = require('./core/ExportService');
-  const { ImportService } = require('./core/ImportService');
-  
   return {
     exportService: new ExportService(dependencies),
     importService: new ImportService(dependencies)

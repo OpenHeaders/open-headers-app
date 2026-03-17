@@ -287,7 +287,7 @@ class SystemHandlers {
                 }
 
                 // Permission not granted, try to request it
-                const { desktopCapturer } = require('electron');
+                const { desktopCapturer } = await import('electron');
 
                 try {
                     // This will trigger permission dialog if not previously granted

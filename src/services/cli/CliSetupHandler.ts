@@ -11,9 +11,12 @@ const fsPromises = fs.promises;
 
 // Lazy-loaded to avoid circular dependencies at startup
 const getLazyDeps = () => ({
-    appLifecycle: require('../../main/modules/app/lifecycle'),
-    proxyService: require('../proxy/ProxyService').proxyService || require('../proxy/ProxyService').default || require('../proxy/ProxyService'),
-    webSocketService: require('../websocket/ws-service'),
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    appLifecycle: require('../../main/modules/app/lifecycle').default,
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    proxyService: require('../proxy/ProxyService').default,
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    webSocketService: require('../websocket/ws-service').default,
 });
 
 const log = createLogger('CliSetup');
