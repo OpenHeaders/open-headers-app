@@ -7,6 +7,7 @@ describe('CliApiService', () => {
 
     beforeEach(() => {
         svc = new CliApiService();
+        svc.requestLogs = []; // Clear any logs loaded from disk between tests
     });
 
     describe('constructor', () => {

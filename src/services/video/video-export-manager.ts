@@ -1,16 +1,30 @@
-const { dialog, BrowserWindow, ipcMain, shell } = require('electron');
-const path = require('path');
-const fs = require('fs').promises;
-const FFmpegManager = require('./ffmpeg-manager');
-const VideoConverter = require('./video-converter');
-const { createLogger } = require('../../utils/mainLogger');
+import electron from 'electron';
+import path from 'path';
+import fs from 'fs';
+import { FFmpegManager } from './ffmpeg-manager';
+import { VideoConverter } from './video-converter';
+import mainLogger from '../../utils/mainLogger.js';
 
+const { dialog, BrowserWindow, ipcMain, shell } = electron;
+const { createLogger } = mainLogger;
+
+const fsPromises = fs.promises;
 const log = createLogger('VideoExportManager');
+
+interface ExportResult {
+    success: boolean;
+    error?: string;
+    cancelled?: boolean;
+    path?: string;
+    format?: string;
+}
 
 /**
  * Video Export Manager for handling export dialog and conversion
  */
 class VideoExportManager {
+    ffmpegManager: FFmpegManager;
+
     constructor() {
         this.ffmpegManager = new FFmpegManager();
         this.initializeHandlers();
@@ -19,9 +33,9 @@ class VideoExportManager {
     /**
      * Initialize IPC handlers
      */
-    initializeHandlers() {
+    initializeHandlers(): void {
         // Handle export video request
-        ipcMain.handle('export-video', async (event, recordingPath) => {
+        ipcMain.handle('export-video', async (_event: any, recordingPath: string) => {
             return this.showExportDialog(recordingPath);
         });
 
@@ -31,13 +45,13 @@ class VideoExportManager {
         });
 
         // Handle FFmpeg download
-        ipcMain.handle('download-ffmpeg', async (event) => {
+        ipcMain.handle('download-ffmpeg', async (event: any) => {
             const sender = event.sender;
-            
+
             try {
                 // Send initial downloading status
                 sender.send('ffmpeg-install-status', { phase: 'downloading' });
-                
+
                 const result = await this.ffmpegManager.downloadFFmpeg((progress) => {
                     // Send progress with both percent and size information
                     sender.send('ffmpeg-download-progress', progress);
@@ -46,32 +60,32 @@ class VideoExportManager {
                     sender.send('ffmpeg-install-status', { phase });
                 });
                 return { success: true, path: result };
-            } catch (error) {
+            } catch (error: any) {
                 log.error('FFmpeg download failed:', error);
                 return { success: false, error: error.message };
             }
         });
 
         // Handle video conversion
-        ipcMain.handle('convert-video', async (event, inputPath, outputPath) => {
+        ipcMain.handle('convert-video', async (event: any, inputPath: string, outputPath: string) => {
             const sender = event.sender;
-            
+
             try {
                 // Ensure FFmpeg is available before converting
                 const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
                 if (!ffmpegStatus.available) {
                     throw new Error('FFmpeg not available');
                 }
-                
+
                 const ffmpegPath = this.ffmpegManager.getFFmpegPath();
                 log.info('Using FFmpeg for conversion:', ffmpegPath);
-                
-                const converter = new VideoConverter(ffmpegPath);
+
+                const converter = new VideoConverter(ffmpegPath!);
                 const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
                     sender.send('video-conversion-progress', progress);
                 });
                 return result;
-            } catch (error) {
+            } catch (error: any) {
                 log.error('Video conversion failed:', error);
                 return { success: false, error: error.message };
             }
@@ -80,16 +94,14 @@ class VideoExportManager {
 
     /**
      * Show export dialog and handle user choice
-     * @param {string} recordingPath Path to the recording
-     * @returns {Object} Export result
      */
-    async showExportDialog(recordingPath) {
+    async showExportDialog(recordingPath: string): Promise<ExportResult> {
         const window = BrowserWindow.getFocusedWindow();
-        
+
         // Check if video file exists
         const videoPath = path.join(recordingPath, 'video.webm');
         const videoExists = await this.fileExists(videoPath);
-        
+
         if (!videoExists) {
             dialog.showErrorBox(
                 'No Video Available',
@@ -125,10 +137,8 @@ class VideoExportManager {
 
     /**
      * Export video as WebM
-     * @param {string} videoPath Source video path
-     * @returns {Object} Export result
      */
-    async exportWebM(videoPath) {
+    async exportWebM(videoPath: string): Promise<ExportResult> {
         try {
             const result = await dialog.showSaveDialog({
                 title: 'Save Video',
@@ -144,13 +154,13 @@ class VideoExportManager {
             }
 
             // Copy file to destination
-            await fs.copyFile(videoPath, result.filePath);
-            
+            await fsPromises.copyFile(videoPath, result.filePath!);
+
             // Show in file manager
-            shell.showItemInFolder(result.filePath);
-            
+            shell.showItemInFolder(result.filePath!);
+
             return { success: true, path: result.filePath, format: 'webm' };
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error exporting WebM:', error);
             return { success: false, error: error.message };
         }
@@ -158,23 +168,21 @@ class VideoExportManager {
 
     /**
      * Export video as MP4
-     * @param {string} videoPath Source video path
-     * @returns {Object} Export result
      */
-    async exportMP4(videoPath) {
+    async exportMP4(videoPath: string): Promise<ExportResult> {
         try {
             // Check FFmpeg availability
             const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
-            
+
             if (!ffmpegStatus.available) {
                 // Show installation dialog
                 const installChoice = await this.showFFmpegInstallDialog();
-                
+
                 if (installChoice !== 'install') {
                     // Fall back to WebM export
                     return this.exportWebM(videoPath);
                 }
-                
+
                 // Install FFmpeg
                 const installResult = await this.installFFmpegWithProgress();
                 if (!installResult.success) {
@@ -197,15 +205,15 @@ class VideoExportManager {
             }
 
             // Convert to MP4
-            const convertResult = await this.convertToMP4WithProgress(videoPath, result.filePath);
-            
+            const convertResult = await this.convertToMP4WithProgress(videoPath, result.filePath!);
+
             if (convertResult.success) {
                 // Show in file manager
-                shell.showItemInFolder(result.filePath);
+                shell.showItemInFolder(result.filePath!);
             }
-            
+
             return convertResult;
-        } catch (error) {
+        } catch (error: any) {
             log.error('Error exporting MP4:', error);
             return { success: false, error: error.message };
         }
@@ -213,9 +221,8 @@ class VideoExportManager {
 
     /**
      * Show FFmpeg installation dialog
-     * @returns {string} User choice
      */
-    async showFFmpegInstallDialog() {
+    async showFFmpegInstallDialog(): Promise<string> {
         const result = await dialog.showMessageBox({
             type: 'question',
             title: 'MP4 Export Requires FFmpeg',
@@ -231,15 +238,14 @@ class VideoExportManager {
 
     /**
      * Install FFmpeg with progress window
-     * @returns {Object} Installation result
      */
-    async installFFmpegWithProgress() {
+    async installFFmpegWithProgress(): Promise<ExportResult> {
         // Create progress window
         const progressWindow = new BrowserWindow({
             width: 400,
             height: 200,
             modal: true,
-            parent: BrowserWindow.getFocusedWindow(),
+            parent: BrowserWindow.getFocusedWindow()!,
             frame: false,
             resizable: false,
             webPreferences: {
@@ -304,7 +310,7 @@ class VideoExportManager {
                 <script>
                     window.electronAPI.onFFmpegDownloadProgress((progress) => {
                         document.getElementById('progress').style.width = progress.percent + '%';
-                        document.getElementById('status').textContent = 
+                        document.getElementById('status').textContent =
                             \`Downloaded \${Math.round(progress.downloaded / 1024 / 1024)}MB of \${Math.round(progress.total / 1024 / 1024)}MB\`;
                     });
                 </script>
@@ -317,7 +323,7 @@ class VideoExportManager {
 
         try {
             // Add progress listener
-            ipcMain.on('ffmpeg-download-progress', (event, progress) => {
+            ipcMain.on('ffmpeg-download-progress', (_event: any, progress: any) => {
                 if (!progressWindow.isDestroyed()) {
                     progressWindow.webContents.send('ffmpeg-download-progress', progress);
                 }
@@ -346,42 +352,39 @@ class VideoExportManager {
             });
 
             progressWindow.close();
-            
+
             dialog.showMessageBox({
                 type: 'info',
                 title: 'FFmpeg Installed',
                 message: 'FFmpeg has been installed successfully.',
                 buttons: ['OK']
             });
-            
+
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             if (!progressWindow.isDestroyed()) {
                 progressWindow.close();
             }
-            
+
             dialog.showErrorBox(
                 'Installation Failed',
                 `Failed to install FFmpeg: ${error.message}\n\nYou can still export as WebM.`
             );
-            
+
             return { success: false, error: error.message };
         }
     }
 
     /**
      * Convert to MP4 with progress window
-     * @param {string} inputPath Input video path
-     * @param {string} outputPath Output video path
-     * @returns {Object} Conversion result
      */
-    async convertToMP4WithProgress(inputPath, outputPath) {
+    async convertToMP4WithProgress(inputPath: string, outputPath: string): Promise<ExportResult> {
         // Create progress window
         const progressWindow = new BrowserWindow({
             width: 400,
             height: 200,
             modal: true,
-            parent: BrowserWindow.getFocusedWindow(),
+            parent: BrowserWindow.getFocusedWindow()!,
             frame: false,
             resizable: false,
             webPreferences: {
@@ -446,7 +449,7 @@ class VideoExportManager {
                 <script>
                     window.electronAPI.onVideoConversionProgress((progress) => {
                         document.getElementById('progress').style.width = progress.percent + '%';
-                        document.getElementById('status').textContent = 
+                        document.getElementById('status').textContent =
                             \`Converting... \${progress.percent}% complete\`;
                     });
                 </script>
@@ -458,7 +461,7 @@ class VideoExportManager {
         progressWindow.show();
 
         try {
-            const converter = new VideoConverter(this.ffmpegManager.getFFmpegPath());
+            const converter = new VideoConverter(this.ffmpegManager.getFFmpegPath()!);
             const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
                 if (!progressWindow.isDestroyed()) {
                     progressWindow.webContents.send('video-conversion-progress', progress);
@@ -467,28 +470,26 @@ class VideoExportManager {
 
             progressWindow.close();
             return result;
-        } catch (error) {
+        } catch (error: any) {
             if (!progressWindow.isDestroyed()) {
                 progressWindow.close();
             }
-            
+
             dialog.showErrorBox(
                 'Conversion Failed',
                 `Failed to convert video: ${error.message}`
             );
-            
+
             return { success: false, error: error.message };
         }
     }
 
     /**
      * Check if file exists
-     * @param {string} filePath File path
-     * @returns {boolean} True if exists
      */
-    async fileExists(filePath) {
+    async fileExists(filePath: string): Promise<boolean> {
         try {
-            await fs.access(filePath);
+            await fsPromises.access(filePath);
             return true;
         } catch {
             return false;
@@ -496,4 +497,8 @@ class VideoExportManager {
     }
 }
 
-module.exports = new VideoExportManager();
+// Singleton instance — side-effect: constructor registers IPC handlers
+const videoExportManager = new VideoExportManager();
+
+export { VideoExportManager, videoExportManager };
+export default videoExportManager;
