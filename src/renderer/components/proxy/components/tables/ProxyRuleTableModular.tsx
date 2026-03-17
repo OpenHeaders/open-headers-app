@@ -50,15 +50,25 @@ import ProxyRuleTableEmpty from './ProxyRuleTableEmpty';
  * @param {function} onAdd - Callback when "Add First Rule" button is clicked
  * @returns {JSX.Element} Proxy rules management table
  */
-const ProxyRuleTable = ({ 
-    rules, 
-    sources, 
-    headerRules = [], 
-    onEdit, 
-    onDelete, 
-    onToggle, 
-    onAdd 
-}) => {
+interface ProxyRuleTableProps {
+    rules: Record<string, any>[];
+    sources: any[];
+    headerRules?: any[];
+    onEdit: (rule: Record<string, any>) => void;
+    onDelete: (ruleId: string) => Promise<any>;
+    onToggle: (ruleId: string, enabled: boolean) => void;
+    onAdd: () => void;
+}
+
+const ProxyRuleTable = ({
+    rules,
+    sources,
+    headerRules = [],
+    onEdit,
+    onDelete,
+    onToggle,
+    onAdd
+}: ProxyRuleTableProps) => {
     // Create columns with all dependencies
     const columns = createAllColumns(sources, headerRules, onEdit, onDelete, onToggle);
 

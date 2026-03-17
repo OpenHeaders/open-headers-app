@@ -39,6 +39,16 @@ const { Title, Text } = Typography;
  * @param {function} onToggleCacheDetails - Callback for details visibility toggle
  * @returns {JSX.Element} Cache management section
  */
+interface ProxyCacheSectionProps {
+    cacheStats: Record<string, any>;
+    cacheEnabled: boolean;
+    cacheEntries: Record<string, any>[];
+    showCacheDetails: boolean;
+    onToggleCache: (enabled: boolean) => void;
+    onClearCache: () => Promise<any>;
+    onToggleCacheDetails: () => void;
+}
+
 const ProxyCacheSection = ({
     cacheStats,
     cacheEnabled,
@@ -47,7 +57,7 @@ const ProxyCacheSection = ({
     onToggleCache,
     onClearCache,
     onToggleCacheDetails
-}) => {
+}: ProxyCacheSectionProps) => {
     return (
         <Card style={{ marginTop: '16px' }}>
             <Space direction="vertical" style={{ width: '100%' }}>

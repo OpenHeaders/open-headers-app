@@ -16,6 +16,15 @@
 import React from 'react';
 import { Spin } from 'antd';
 
+interface VideoPlayerContainerProps {
+    videoRef: React.RefObject<HTMLVideoElement>;
+    token: Record<string, any>;
+    viewMode: string;
+    videoLoading: boolean;
+    onVideoLoaded: () => void;
+    onVideoError: (error?: unknown) => void;
+}
+
 const VideoPlayerContainer = ({
                                   videoRef,
                                   token,
@@ -23,7 +32,7 @@ const VideoPlayerContainer = ({
                                   videoLoading,
                                   onVideoLoaded,
                                   onVideoError
-                              }) => {
+                              }: VideoPlayerContainerProps) => {
     if (viewMode !== 'video') return null;
 
     return (

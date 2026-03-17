@@ -42,13 +42,21 @@ const { Title, Text } = Typography;
  * @param {function} onUpdatePort - Callback for port configuration changes
  * @returns {JSX.Element} Proxy server control panel
  */
+interface ProxyServerControlsProps {
+    proxyStatus: Record<string, any>;
+    loading: boolean;
+    tutorialMode: boolean;
+    onToggleProxy: () => void;
+    onUpdatePort: (port: number) => void;
+}
+
 const ProxyServerControls = ({
     proxyStatus,
     loading,
     tutorialMode,
     onToggleProxy,
     onUpdatePort
-}) => {
+}: ProxyServerControlsProps) => {
     return (
         <Card>
             <Space direction="vertical" style={{ width: '100%' }}>

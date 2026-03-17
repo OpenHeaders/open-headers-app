@@ -22,16 +22,27 @@ const { Text } = Typography;
  * @param {Function} props.onSave - Callback when saving description
  * @param {Function} props.onCancel - Callback when canceling
  */
-const EditDescriptionModal = ({ 
-    visible, 
+interface EditDescriptionModalProps {
+    visible: boolean;
+    recordId: string;
+    recordUrl: string;
+    recordTag: { name: string; url?: string } | null;
+    currentDescription: string;
+    viewOnly?: boolean;
+    onSave: (...args: any[]) => Promise<any>;
+    onCancel: () => void;
+}
+
+const EditDescriptionModal = ({
+    visible,
     recordId,
     recordUrl,
     recordTag,
-    currentDescription, 
+    currentDescription,
     viewOnly = false,
-    onSave, 
-    onCancel 
-}) => {
+    onSave,
+    onCancel
+}: EditDescriptionModalProps) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
 
