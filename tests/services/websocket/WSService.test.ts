@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock mainLogger to prevent .js extension resolution issues in CJS→ESM chains
+vi.mock('../../../src/utils/mainLogger', () => ({
+    default: { createLogger: () => ({ info: () => {}, warn: () => {}, error: () => {}, debug: () => {} }) },
+    createLogger: () => ({ info: () => {}, warn: () => {}, error: () => {}, debug: () => {} }),
+}));
+
 import { WebSocketService } from '../../../src/services/websocket/ws-service';
 
 describe('WebSocketService', () => {

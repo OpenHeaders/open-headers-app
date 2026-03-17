@@ -50,7 +50,7 @@ class ProxyRuleStore {
       const rulesPath = this.getRulesPath();
       const rules = await atomicWriter.readJson(rulesPath);
       if (rules !== null) {
-        this.rules = rules;
+        this.rules = rules as ProxyRule[];
         this.log.debug(`Loaded ${this.rules.length} proxy rules from ${rulesPath}`);
       } else {
         this.rules = [];

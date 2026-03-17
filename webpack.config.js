@@ -13,7 +13,7 @@ const env = dotenv.config().parsed || {};
 const mainConfig = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'electron-main',
-    entry: './src/main.js',
+    entry: './src/main.ts',
     output: {
         path: path.resolve(__dirname, 'dist-webpack'),
         filename: 'main.js'
@@ -39,6 +39,9 @@ const mainConfig = {
     },
     resolve: {
         extensions: ['.ts', '.js'],
+        extensionAlias: {
+            '.js': ['.ts', '.js'],
+        },
         fallback: {
             "fsevents": false
         },
@@ -95,7 +98,7 @@ const mainConfig = {
 const preloadConfig = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
     target: 'electron-preload',
-    entry: './src/preload.js',
+    entry: './src/preload.ts',
     output: {
         path: path.resolve(__dirname, 'dist-webpack'),
         filename: 'preload.js'
@@ -117,6 +120,9 @@ const preloadConfig = {
     },
     resolve: {
         extensions: ['.ts', '.js'],
+        extensionAlias: {
+            '.js': ['.ts', '.js'],
+        },
         fallback: {
             "fsevents": false
         },
@@ -242,6 +248,9 @@ const rendererConfig = {
     },
     resolve: {
         extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        extensionAlias: {
+            '.js': ['.ts', '.js'],
+        },
         fallback: {
             "fsevents": false
         },

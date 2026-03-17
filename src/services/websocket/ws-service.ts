@@ -13,7 +13,6 @@ import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSClientHandler } from './ws-client-handler';
 
 const { createLogger } = mainLogger;
-const windowsFocusHelper = require('../../main/modules/utils/windowsFocus.js');
 const log = createLogger('WebSocketService');
 
 interface InitializeOptions {
@@ -388,6 +387,7 @@ class WebSocketService {
             if (windows.length === 0) { log.warn('No windows available to focus'); return; }
 
             const mainWindow = windows[0];
+            const windowsFocusHelper = require('../../main/modules/utils/windowsFocus');
             windowsFocusHelper.focusWindow(mainWindow);
 
             if (navigation && (navigation.tab || navigation.subTab)) {
