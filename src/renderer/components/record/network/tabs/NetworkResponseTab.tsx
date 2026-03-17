@@ -13,7 +13,8 @@ import { Space, Typography } from 'antd';
 
 const { Text } = Typography;
 
-const NetworkResponseTab = ({ request, token }) => {
+interface NetworkResponseTabProps { request: Record<string, unknown>; token: Record<string, unknown>; }
+const NetworkResponseTab = ({ request, token }: NetworkResponseTabProps) => {
     if (!request.responseBody) {
         return (
             <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>

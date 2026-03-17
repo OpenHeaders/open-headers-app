@@ -13,7 +13,8 @@ import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
-const NetworkFilterTags = ({ showInverseTag, showSearchTag, bodyFilters }) => {
+interface NetworkFilterTagsProps { showInverseTag: boolean; showSearchTag: boolean; bodyFilters: { hasRequestBody: boolean; hasResponseBody: boolean }; }
+const NetworkFilterTags = ({ showInverseTag, showSearchTag, bodyFilters }: NetworkFilterTagsProps) => {
     return (
         <>
             {showSearchTag && !showInverseTag && (

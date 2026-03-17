@@ -15,7 +15,8 @@ import { format24HTimeWithMs } from '../../../../utils';
 
 const { Text } = Typography;
 
-const NetworkTimingTab = ({ request, record, token }) => {
+interface NetworkTimingTabProps { request: Record<string, unknown>; record: Record<string, unknown>; token: Record<string, unknown>; }
+const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => {
     const duration = request.duration || (request.endTime - request.timestamp) || 0;
     const timing = request.timing || {};
 
