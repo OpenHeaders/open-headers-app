@@ -423,7 +423,7 @@ class WorkspaceHandlers {
 
             // Delete workspace folder first
             const folderResult = await this.handleDeleteWorkspaceFolder(_, workspaceId);
-            if (!folderResult.success) {
+            if (folderResult && !folderResult.success) {
                 log.warn(`Failed to delete workspace folder: ${folderResult.error}`);
                 // Continue anyway, as the folder might not exist
             }

@@ -488,8 +488,8 @@ class ProxyService extends EventEmitter {
                         const matches = headerRule.domains.some(domainPattern => {
                             const resolvedPattern = this.resolveEnvironmentVariables(domainPattern);
                             if (resolvedPattern.includes(',')) {
-                                const patterns = resolvedPattern.split(',').map(p => p.trim());
-                                return patterns.some(pattern => DomainMatcher.matches(targetUrl, pattern));
+                                const patterns = resolvedPattern.split(',').map((p: string) => p.trim());
+                                return patterns.some((pattern: string) => DomainMatcher.matches(targetUrl, pattern));
                             }
                             return DomainMatcher.matches(targetUrl, resolvedPattern);
                         });
@@ -503,8 +503,8 @@ class ProxyService extends EventEmitter {
                     const matches = proxyRule.domains.some(domainPattern => {
                         const resolvedPattern = this.resolveEnvironmentVariables(domainPattern);
                         if (resolvedPattern.includes(',')) {
-                            const patterns = resolvedPattern.split(',').map(p => p.trim());
-                            return patterns.some(pattern => DomainMatcher.matches(targetUrl, pattern));
+                            const patterns = resolvedPattern.split(',').map((p: string) => p.trim());
+                            return patterns.some((pattern: string) => DomainMatcher.matches(targetUrl, pattern));
                         }
                         return DomainMatcher.matches(targetUrl, resolvedPattern);
                     });

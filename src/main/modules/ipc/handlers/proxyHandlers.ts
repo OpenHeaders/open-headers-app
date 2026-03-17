@@ -14,7 +14,7 @@ const log = createLogger('ProxyHandlers');
 class ProxyHandlers {
     async handleProxyStart(_: any, port: number | null) {
         try {
-            const result = await proxyService.start(port);
+            const result = await proxyService.start(port ?? undefined);
             if (result.success) {
                 // Restore cache configuration from user settings
                 try {

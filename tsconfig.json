@@ -1,11 +1,10 @@
 {
   "compilerOptions": {
-    /* No more .js files — pure TypeScript codebase */
     "allowJs": false,
     "checkJs": false,
 
-    /* Start permissive — tighten per-directory over time */
-    "strict": false,
+    /* Strict mode enabled — all new code must be type-safe */
+    "strict": true,
 
     /* Output */
     "target": "ES2022",
@@ -37,6 +36,8 @@
     "dist",
     "dist-webpack",
     "build",
-    "scripts"
+    "scripts",
+    /* Renderer excluded from strict — has separate tsconfig */
+    "src/renderer/**/*"
   ]
 }
