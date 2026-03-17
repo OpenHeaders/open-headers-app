@@ -17,7 +17,14 @@ import { formatValue } from './StorageUtils';
 
 const { Text } = Typography;
 
-const StorageChangeCell = ({ record, onViewDetails, messageApi, token }) => {
+interface StorageChangeCellProps {
+    record: Record<string, unknown>;
+    onViewDetails: (record: Record<string, unknown>) => void;
+    messageApi: { success: (msg: string) => void; error: (msg: string) => void };
+    token: Record<string, unknown>;
+}
+
+const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: StorageChangeCellProps) => {
     const oldDisplay = formatValue(record.oldValue);
     const newDisplay = formatValue(record.value);
     
@@ -34,7 +41,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }) => {
     if (record.action === 'clear') {
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                <Text style={{ fontSize: '12px', color: token.colorTextSecondary }}>
+                <Text style={{ fontSize: '12px', color: token.colorTextSecondary as string }}>
                     Cleared all entries
                 </Text>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', flexShrink: 0 }}>
@@ -92,7 +99,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }) => {
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: record.action === 'set' ? token.colorSuccess : token.colorTextSecondary
+                    color: (record.action === 'set' ? token.colorSuccess : token.colorTextSecondary) as string
                 }}
                 title={newDisplay}
             >

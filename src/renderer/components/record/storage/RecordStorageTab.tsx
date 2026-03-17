@@ -28,6 +28,7 @@ import { createStandardTableProps } from '../shared';
 const { Text } = Typography;
 
 interface StorageRecord {
+    [key: string]: unknown;
     timestamp: number;
     type: string;
     action: string;
@@ -251,7 +252,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                     record={record}
                     onViewDetails={showValueModal}
                     messageApi={messageApi}
-                    token={token}
+                    token={token as unknown as Record<string, unknown>}
                 />
             )
         },

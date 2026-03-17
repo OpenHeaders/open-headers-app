@@ -15,7 +15,14 @@ import {
  * @param {Function} props.onClose - Handler for closing the modal
  * @returns {JSX.Element} EnvironmentShareModal component
  */
-const EnvironmentShareModal = ({ visible, environmentName, environmentData, onClose }) => {
+interface EnvironmentShareModalProps {
+    visible: boolean;
+    environmentName: string;
+    environmentData: Record<string, unknown>;
+    onClose: () => void;
+}
+
+const EnvironmentShareModal = ({ visible, environmentName, environmentData, onClose }: EnvironmentShareModalProps) => {
     const { message } = App.useApp();
     const { token } = theme.useToken();
     const [isIncludeValues, setIsIncludeValues] = useState(false);

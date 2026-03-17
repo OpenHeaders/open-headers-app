@@ -14,13 +14,21 @@ const { Text, Title } = Typography;
  * @param {function} onItemChange - Handler for item selection changes
  * @param {string} importMode - Current import mode ('merge' or 'replace')
  */
-const ImportItemsSelector = ({ 
-    fileInfo, 
-    combinedEnvInfo, 
-    selectedItems, 
+interface ImportItemsSelectorProps {
+    fileInfo: Record<string, number | boolean>;
+    combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number };
+    selectedItems: Record<string, boolean>;
+    onItemChange: (item: string) => void;
+    importMode: string;
+}
+
+const ImportItemsSelector = ({
+    fileInfo,
+    combinedEnvInfo,
+    selectedItems,
     onItemChange,
     importMode
-}) => {
+}: ImportItemsSelectorProps) => {
     return (
         <Card size="small" title={
             <Space>

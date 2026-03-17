@@ -22,13 +22,21 @@ import { convertNewRecordingFormat } from '../../../../utils';
  * @param {Function} props.renderDetails - Function to render details section
  * @returns {React.ReactNode} Rendered component
  */
+interface WorkflowRecordingProps {
+    record: { id?: string; metadata?: { recordId?: string }; [key: string]: unknown } | null;
+    onRecordChange: (record: Record<string, unknown> | null) => void;
+    onPlaybackTimeChange: (time: number) => void;
+    autoHighlight: boolean;
+    renderDetails?: (embedded: boolean) => React.ReactNode;
+}
+
 const WorkflowRecording = ({
                                record,
                                onRecordChange,
                                onPlaybackTimeChange,
                                autoHighlight,
                                renderDetails
-                           }) => {
+                           }: WorkflowRecordingProps) => {
     const [showTable, setShowTable] = useState(!record); // Show table by default if no record
     const { token } = theme.useToken();
     const { settings } = useSettings();

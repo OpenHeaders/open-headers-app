@@ -23,7 +23,14 @@ const { useToken } = theme;
  * @param {boolean} record.hasVideo - Whether video recording is available for this session
  * @param {boolean} isExporting - Whether export process is currently in progress (disables controls)
  */
-const ExportFormatSelector = ({ exportType, onExportTypeChange, record, isExporting }) => {
+interface ExportFormatSelectorProps {
+    exportType: string;
+    onExportTypeChange: (type: string) => void;
+    record: Record<string, unknown> | null;
+    isExporting: boolean;
+}
+
+const ExportFormatSelector = ({ exportType, onExportTypeChange, record, isExporting }: ExportFormatSelectorProps) => {
     const { token } = useToken();
     return (
         <div>
