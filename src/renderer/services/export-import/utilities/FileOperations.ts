@@ -45,11 +45,11 @@ export function generateTimestampedFilename(prefix = 'open-headers-config', suff
  * @param {string} options.buttonLabel - Save button label
  * @returns {Promise<string|null>} - Selected file path or null if cancelled
  */
-export async function showExportFileDialog({ 
-  title = 'Export Configuration', 
-  defaultPath, 
-  buttonLabel = 'Export' 
-}) {
+export async function showExportFileDialog({
+  title = 'Export Configuration',
+  defaultPath = '',
+  buttonLabel = 'Export'
+}: { title?: string; defaultPath?: string; buttonLabel?: string } = {}) {
   try {
     return await window.electronAPI.saveFileDialog({
       title,
@@ -102,7 +102,7 @@ export async function showImportFileDialog({
  * @param {boolean} pretty - Whether to pretty-print the JSON (default: true)
  * @returns {Promise<void>}
  */
-export async function writeJsonFile(filePath, data, pretty = true) {
+export async function writeJsonFile(filePath: string, data: Record<string, unknown>, pretty = true) {
   try {
     const jsonString = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
     await window.electronAPI.writeFile(filePath, jsonString);
@@ -116,7 +116,7 @@ export async function writeJsonFile(filePath, data, pretty = true) {
  * @param {string} filePath - Path to the file to read
  * @returns {Promise<Object>} - Parsed JSON data
  */
-export async function readJsonFile(filePath) {
+export async function readJsonFile(filePath: string) {
   try {
     const content = await window.electronAPI.readFile(filePath);
     return JSON.parse(content);
@@ -131,7 +131,7 @@ export async function readJsonFile(filePath) {
  * @param {string} envFileName - Environment file name
  * @returns {string} - Path for the environment file
  */
-export function generateCompanionFilePath(mainFilePath, envFileName) {
+export function generateCompanionFilePath(mainFilePath: string, envFileName: string) {
   const lastSlashIndex = mainFilePath.lastIndexOf('/');
   const lastBackslashIndex = mainFilePath.lastIndexOf('\\');
   const separatorIndex = Math.max(lastSlashIndex, lastBackslashIndex);
@@ -154,7 +154,7 @@ export function generateCompanionFilePath(mainFilePath, envFileName) {
  * @param {string} filePath - File path to validate
  * @returns {Object} - Validation result
  */
-export function validateFilePath(filePath) {
+export function validateFilePath(filePath: string) {
   if (!filePath || typeof filePath !== 'string') {
     return {
       success: false,
@@ -195,13 +195,13 @@ export function validateFilePath(filePath) {
  * @param {Object} environmentData - Environment data (optional)
  * @returns {Promise<Array<string>>} - Array of written file paths
  */
-export async function handleMultiFileExport({ 
+export async function handleMultiFileExport({
   title = 'Export Configuration',
   mainFilename,
   environmentFilename,
   mainData,
   environmentData
-}) {
+}: { title?: string; mainFilename: string; environmentFilename?: string; mainData: Record<string, unknown>; environmentData?: Record<string, unknown> }) {
   const writtenFiles = [];
 
   // Get main file path
@@ -240,7 +240,7 @@ export async function handleMultiFileExport({
  * @param {Object} data - Data to export
  * @returns {Promise<string>} - Path to written file
  */
-export async function handleSingleFileExport({ filename, data }) {
+export async function handleSingleFileExport({ filename, data }: { filename: string; data: Record<string, unknown> }) {
   const filePath = await showExportFileDialog({
     title: 'Export Configuration',
     defaultPath: filename,

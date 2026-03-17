@@ -36,9 +36,9 @@ interface ImportOptions {
 /** Import data parsed from file */
 interface ImportData {
   version?: string;
-  sources?: unknown[];
-  proxyRules?: unknown[];
-  rules?: Record<string, unknown[]>;
+  sources?: Record<string, unknown>[];
+  proxyRules?: Record<string, unknown>[];
+  rules?: Record<string, Array<Record<string, unknown>>>;
   rulesMetadata?: Record<string, unknown>;
   environments?: Record<string, unknown>;
   environmentSchema?: Record<string, unknown>;
@@ -201,7 +201,7 @@ export class ImportService {
   async _importAllDataTypes(importData: ImportData, envData: ImportData | null, importOptions: ImportOptions) {
     const { selectedItems } = importOptions;
     
-    const allStats: Record<string, any> = {
+    const allStats: ImportStats = {
       sourcesImported: 0,
       sourcesSkipped: 0,
       proxyRulesImported: 0,
@@ -210,7 +210,7 @@ export class ImportService {
       rulesSkipped: { total: 0 },
       environmentsImported: 0,
       variablesCreated: 0,
-      errors: [] as any[]
+      errors: []
     };
 
     // Import sources
@@ -232,7 +232,7 @@ export class ImportService {
     // Import rules
     if (selectedItems.rules && (importData.rules || importData.rulesMetadata)) {
       const rulesData = {
-        rules: importData.rules,
+        rules: importData.rules as Record<string, Array<{ id: string; [key: string]: unknown }>>,
         metadata: importData.rulesMetadata
       };
       const rulesStats = await this.rulesHandler.importRules(rulesData, importOptions);

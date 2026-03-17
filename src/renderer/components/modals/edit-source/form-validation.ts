@@ -1,13 +1,35 @@
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('FormValidation');
 
+interface EnvContext {
+    environmentsReady: boolean;
+    getAllVariables: () => Record<string, string>;
+    activeEnvironment: string;
+}
+
+interface FormInstance {
+    getFieldValue: (name: string | string[]) => unknown;
+}
+
+interface HeaderEntry {
+    key?: string;
+    value?: string;
+}
+
+interface QueryParamEntry {
+    key?: string;
+    value?: string;
+}
+
+interface JsonFilterEntry {
+    enabled?: boolean;
+    path?: string;
+}
+
 /**
  * Validates environment variables in a value string
- * @param {string} value - The value to validate
- * @param {Object} envContext - Environment context for variable validation
- * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateEnvironmentVariables = (value, envContext) => {
+const validateEnvironmentVariables = (value: string, envContext: EnvContext): Promise<void> => {
     if (!value || typeof value !== 'string') return Promise.resolve();
     
     // Skip validation if environments aren't ready yet
@@ -47,15 +69,15 @@ const validateEnvironmentVariables = (value, envContext) => {
  * @param {Object} form - Ant Design form instance
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateTotpCodePlaceholder = (value, form) => {
+const validateTotpCodePlaceholder = (value: string, form: FormInstance): Promise<void> => {
     if (!value || typeof value !== 'string') return Promise.resolve();
     
     // Check for TOTP code pattern [[TOTP_CODE]]
     if (value.includes('[[TOTP_CODE]]')) {
         // Get current TOTP settings from form
-        const totpSecret = form.getFieldValue('totpSecret');
-        const enableTOTP = form.getFieldValue('enableTOTP');
-        
+        const totpSecret = form.getFieldValue('totpSecret') as string | undefined;
+        const enableTOTP = form.getFieldValue('enableTOTP') as boolean | undefined;
+
         if (!enableTOTP || !totpSecret || totpSecret.trim() === '') {
             return Promise.reject(new Error('TOTP code placeholder [[TOTP_CODE]] is used but no TOTP secret is configured. Please enable TOTP and provide a secret.'));
         }
@@ -71,7 +93,7 @@ const validateTotpCodePlaceholder = (value, form) => {
  * @param {string} fieldName - Name of the field being validated (for error messages)
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateHeadersForVariables = (headers, envContext, fieldName = 'Header') => {
+const validateHeadersForVariables = (headers: HeaderEntry[] | null | undefined, envContext: EnvContext, fieldName = 'Header'): Promise<void> => {
     if (!headers || !Array.isArray(headers)) return Promise.resolve();
     
     for (const [index, header] of headers.entries()) {
@@ -106,7 +128,7 @@ const validateHeadersForVariables = (headers, envContext, fieldName = 'Header') 
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateQueryParamsForVariables = (queryParams, envContext) => {
+const validateQueryParamsForVariables = (queryParams: QueryParamEntry[] | null | undefined, envContext: EnvContext): Promise<void> => {
     if (!queryParams || !Array.isArray(queryParams)) return Promise.resolve();
     
     for (const [index, param] of queryParams.entries()) {
@@ -136,7 +158,7 @@ const validateQueryParamsForVariables = (queryParams, envContext) => {
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateBodyForVariables = (body, envContext) => {
+const validateBodyForVariables = (body: string | null | undefined, envContext: EnvContext): Promise<void> => {
     if (!body) return Promise.resolve();
     
     const envVarMatches = body.match(/{{([^}]+)}}/g);
@@ -161,7 +183,7 @@ const validateBodyForVariables = (body, envContext) => {
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateJsonFilterForVariables = (jsonFilter, envContext) => {
+const validateJsonFilterForVariables = (jsonFilter: JsonFilterEntry | null | undefined, envContext: EnvContext): Promise<void> => {
     if (!jsonFilter || !jsonFilter.enabled || !jsonFilter.path) return Promise.resolve();
     
     const envVarMatches = jsonFilter.path.match(/{{([^}]+)}}/g);
@@ -186,7 +208,7 @@ const validateJsonFilterForVariables = (jsonFilter, envContext) => {
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateTotpSecretForVariables = (totpSecret, envContext) => {
+const validateTotpSecretForVariables = (totpSecret: string | null | undefined, envContext: EnvContext): Promise<void> => {
     if (!totpSecret) return Promise.resolve();
     
     const envVarMatches = totpSecret.match(/{{([^}]+)}}/g);
@@ -211,26 +233,26 @@ const validateTotpSecretForVariables = (totpSecret, envContext) => {
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if all validations pass, rejects with first error encountered
  */
-const validateAllFormFields = async (form, envContext) => {
+const validateAllFormFields = async (form: FormInstance, envContext: EnvContext): Promise<void> => {
     // Validate headers
-    const headers = form.getFieldValue(['requestOptions', 'headers']);
+    const headers = form.getFieldValue(['requestOptions', 'headers']) as HeaderEntry[] | undefined;
     await validateHeadersForVariables(headers, envContext);
-    
+
     // Validate query params
-    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']);
+    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']) as QueryParamEntry[] | undefined;
     await validateQueryParamsForVariables(queryParams, envContext);
-    
+
     // Validate body
-    const body = form.getFieldValue(['requestOptions', 'body']);
+    const body = form.getFieldValue(['requestOptions', 'body']) as string | undefined;
     await validateBodyForVariables(body, envContext);
-    
+
     // Validate JSON filter path
-    const jsonFilter = form.getFieldValue('jsonFilter');
+    const jsonFilter = form.getFieldValue('jsonFilter') as JsonFilterEntry | undefined;
     await validateJsonFilterForVariables(jsonFilter, envContext);
-    
+
     // Validate TOTP secret
-    const enableTOTP = form.getFieldValue('enableTOTP');
-    const totpSecret = form.getFieldValue('totpSecret');
+    const enableTOTP = form.getFieldValue('enableTOTP') as boolean | undefined;
+    const totpSecret = form.getFieldValue('totpSecret') as string | undefined;
     if (enableTOTP && totpSecret) {
         await validateTotpSecretForVariables(totpSecret, envContext);
     }

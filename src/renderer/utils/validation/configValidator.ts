@@ -15,7 +15,7 @@ const log = createLogger('ConfigValidator');
  * @param {boolean} isSeparateMode - Whether we're in separate files mode (affects validation strictness)
  * @returns {Object} Validation result with file info or error
  */
-async function analyzeConfigFile(content, isEnvFile = false, isSeparateMode = false) {
+async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateMode = false) {
   try {
     const data = JSON.parse(content);
     
@@ -101,14 +101,14 @@ async function analyzeConfigFile(content, isEnvFile = false, isSeparateMode = fa
  * @param {Object} data - Parsed configuration object
  * @throws {Error} If structure is invalid
  */
-function validateConfigStructure(data) {
+function validateConfigStructure(data: Record<string, unknown>) {
   // Validate sources
   if (data.sources) {
     if (!Array.isArray(data.sources)) {
       throw new Error('Invalid configuration: sources must be an array');
     }
     
-    data.sources.forEach((source, index) => {
+    (data.sources as Array<Record<string, unknown>>).forEach((source: Record<string, unknown>, index: number) => {
       if (!source.sourceId || !source.sourceType || !source.sourcePath) {
         throw new Error(`Invalid source at index ${index}: missing required fields`);
       }
@@ -138,7 +138,7 @@ function validateConfigStructure(data) {
       throw new Error('Invalid configuration: proxyRules must be an array');
     }
     
-    data.proxyRules.forEach((rule, index) => {
+    (data.proxyRules as Array<Record<string, unknown>>).forEach((rule: Record<string, unknown>, index: number) => {
       // Validate based on rule type
       const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
       const isStaticRule = rule.isDynamic === false || (rule.domains && rule.domains.length > 0);
@@ -216,7 +216,7 @@ function validateConfigStructure(data) {
  * @param {string} filePath - Expected file path in repository
  * @returns {Object} Validation result
  */
-async function validateGitWorkspaceConfig(content, filePath) {
+async function validateGitWorkspaceConfig(content: string, filePath: string) {
   try {
     // First, use the standard config validation
     const validationResult = await analyzeConfigFile(content, false, false) as Record<string, any>;
@@ -267,7 +267,7 @@ async function validateGitWorkspaceConfig(content, filePath) {
  * @param {string} basePath - Base path for config files
  * @returns {Object} Combined configuration object
  */
-async function readAndValidateMultiFileConfig(readFile, basePath) {
+async function readAndValidateMultiFileConfig(readFile: (path: string, options?: { list: boolean }) => Promise<string[] & string>, basePath: string) {
   let config: Record<string, any> = {};
   let validationResults: Record<string, any> = {
     mainFile: null,
@@ -282,7 +282,7 @@ async function readAndValidateMultiFileConfig(readFile, basePath) {
     // Try to read main config
     try {
       const files = await readFile(basePath, { list: true });
-      const mainFile = files.find(f => mainConfigPattern.test(f));
+      const mainFile = files.find((f: string) => mainConfigPattern.test(f));
       
       if (mainFile) {
         const content = await readFile(`${basePath}/${mainFile}`);
@@ -297,7 +297,7 @@ async function readAndValidateMultiFileConfig(readFile, basePath) {
     // Try to read env file
     try {
       const files = await readFile(basePath, { list: true });
-      const envFile = files.find(f => envConfigPattern.test(f));
+      const envFile = files.find((f: string) => envConfigPattern.test(f));
       
       if (envFile) {
         const content = await readFile(`${basePath}/${envFile}`);

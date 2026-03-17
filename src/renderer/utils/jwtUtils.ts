@@ -8,7 +8,7 @@
  * @param {string} token - JWT token string
  * @returns {Object} Decoded token with header and payload
  */
-export function decodeJWT(token) {
+export function decodeJWT(token: string) {
   try {
     if (!token || typeof token !== 'string') {
       throw new Error('Invalid token');
@@ -40,7 +40,7 @@ export function decodeJWT(token) {
  * @param {string} signature - Original signature (we can't re-sign without secret)
  * @returns {string} Encoded JWT token
  */
-export function encodeJWT(header, payload, signature = '') {
+export function encodeJWT(header: Record<string, unknown>, payload: Record<string, unknown>, signature = '') {
   try {
     // Base64URL encode header and payload
     const encodedHeader = btoa(JSON.stringify(header))
@@ -68,7 +68,7 @@ export function encodeJWT(header, payload, signature = '') {
  * @param {string} algorithm - Algorithm to use (default: HS256)
  * @returns {Promise<string>} Signed JWT token
  */
-export async function signJWT(header, payload, secret, algorithm = 'HS256') {
+export async function signJWT(header: Record<string, unknown>, payload: Record<string, unknown>, secret: string, algorithm = 'HS256') {
   try {
     // Ensure algorithm in header matches
     const finalHeader = { ...header, alg: algorithm, typ: 'JWT' };
@@ -167,7 +167,7 @@ export async function signJWT(header, payload, secret, algorithm = 'HS256') {
  * @param {string} value - String to check
  * @returns {boolean} True if valid JWT format
  */
-export function isJWT(value) {
+export function isJWT(value: string) {
   if (!value || typeof value !== 'string') {
     return false;
   }
@@ -196,7 +196,7 @@ export function isJWT(value) {
  * @param {Object} obj - Object to format
  * @returns {string} Formatted JSON string
  */
-export function formatJSON(obj) {
+export function formatJSON(obj: Record<string, unknown>) {
   return JSON.stringify(obj, null, 2);
 }
 
@@ -205,7 +205,7 @@ export function formatJSON(obj) {
  * @param {string} jsonString - JSON string to validate
  * @returns {Object} Parsed JSON or throws error
  */
-export function validateJSON(jsonString) {
+export function validateJSON(jsonString: string) {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
@@ -218,7 +218,7 @@ export function validateJSON(jsonString) {
  * @param {Object} payload - JWT payload
  * @returns {Object} Expiration info
  */
-export function getJWTExpiration(payload) {
+export function getJWTExpiration(payload: Record<string, unknown>) {
   if (!payload || !payload.exp) {
     return { hasExpiration: false };
   }

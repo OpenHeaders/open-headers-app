@@ -14,9 +14,9 @@ class EnvironmentEventManager {
   /**
    * Setup workspace change listener
    */
-  setupWorkspaceListener(onWorkspaceChange) {
-    const handleWorkspaceSwitch = async (event) => {
-      const newWorkspaceId = event.detail?.workspaceId;
+  setupWorkspaceListener(onWorkspaceChange: (workspaceId: string) => Promise<void>) {
+    const handleWorkspaceSwitch = async (event: Event) => {
+      const newWorkspaceId = (event as CustomEvent).detail?.workspaceId;
       if (!newWorkspaceId) return;
       
       log.info(`Workspace switched event received: ${newWorkspaceId}`);
@@ -35,9 +35,9 @@ class EnvironmentEventManager {
   /**
    * Setup environment structure change listener
    */
-  setupEnvironmentStructureListener(onStructureChange) {
-    const handleStructureChange = async (event) => {
-      const data = event.detail;
+  setupEnvironmentStructureListener(onStructureChange: (data: { workspaceId: string; [key: string]: unknown }) => Promise<void>) {
+    const handleStructureChange = async (event: Event | { detail: unknown }) => {
+      const data = (event as CustomEvent).detail as { workspaceId?: string; [key: string]: unknown };
       if (!data || !data.workspaceId) return;
       
       log.info(`Environment structure changed for workspace: ${data.workspaceId}`);
@@ -64,7 +64,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment loaded event
    */
-  dispatchEnvironmentsLoaded(workspaceId, environments, activeEnvironment) {
+  dispatchEnvironmentsLoaded(workspaceId: string, environments: Record<string, unknown>, activeEnvironment: string) {
     window.dispatchEvent(new CustomEvent('environments-loaded', {
       detail: { 
         workspaceId,
@@ -83,7 +83,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment variables changed event
    */
-  dispatchVariablesChanged(environmentName, variables) {
+  dispatchVariablesChanged(environmentName: string, variables: Record<string, unknown>) {
     window.dispatchEvent(new CustomEvent('environment-variables-changed', {
       detail: { 
         environment: environmentName, 
@@ -100,7 +100,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment changed event
    */
-  dispatchEnvironmentChanged(environmentName, variables) {
+  dispatchEnvironmentChanged(environmentName: string, variables: Record<string, unknown>) {
     window.dispatchEvent(new CustomEvent('environment-switched', {
       detail: { 
         environment: environmentName, 
@@ -116,7 +116,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment deleted event
    */
-  dispatchEnvironmentDeleted(environmentName) {
+  dispatchEnvironmentDeleted(environmentName: string) {
     window.dispatchEvent(new CustomEvent('environment-deleted', {
       detail: { environment: environmentName }
     }));

@@ -24,18 +24,18 @@ interface ImportOptions {
   [key: string]: unknown;
 }
 
-/** Rules to import structure */
-interface RulesToImport {
-  rules: Record<string, RuleEntry[]>;
-  metadata?: Record<string, unknown>;
-}
-
 /** Individual rule entry */
 interface RuleEntry {
   id: string;
   name?: string;
   enabled?: boolean;
   [key: string]: unknown;
+}
+
+/** Rules to import structure */
+interface RulesToImport {
+  rules?: Record<string, RuleEntry[]>;
+  metadata?: Record<string, unknown>;
 }
 
 /** Rules storage structure */

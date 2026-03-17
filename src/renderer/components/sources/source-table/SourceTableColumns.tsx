@@ -35,19 +35,43 @@ import { isTemplateSource } from './SourceDependencyChecker';
 
 const { Text } = Typography;
 
-/**
- * Creates table columns configuration for source table
- * @param {Object} params - Configuration parameters
- * @param {Object} params.token - Ant Design theme token
- * @param {Function} params.getRefreshStatusText - Function to get refresh status text
- * @param {Function} params.handleViewContent - View content handler
- * @param {Function} params.handleEditSource - Edit source handler
- * @param {Function} params.handleRemoveSource - Remove source handler
- * @param {Function} params.handleRefreshSource - Refresh source handler
- * @param {number} params.refreshingSourceId - Currently refreshing source ID
- * @param {number} params.removingSourceId - Currently removing source ID
- * @returns {Array} Table columns configuration
- */
+interface SourceRecord {
+    sourceId: string;
+    sourceType: 'http' | 'file' | 'env';
+    sourceTag?: string;
+    sourcePath?: string;
+    sourceContent?: string;
+    activationState?: string;
+    missingDependencies?: string[];
+    refreshOptions?: { enabled?: boolean; [key: string]: unknown };
+    [key: string]: unknown;
+}
+
+interface CircuitBreakerInfo {
+    isOpen?: boolean;
+    failureCount?: number;
+    timeUntilNextAttemptMs?: number;
+    timeUntilNextAttempt?: string;
+    canManualBypass?: boolean;
+}
+
+interface RefreshStatusInfo {
+    text: string;
+    isCircuitOpen?: boolean;
+    circuitBreaker?: CircuitBreakerInfo | null;
+}
+
+interface SourceTableColumnsParams {
+    token: Record<string, unknown>;
+    getRefreshStatusText: (record: SourceRecord) => string | RefreshStatusInfo;
+    handleViewContent: (record: SourceRecord) => void;
+    handleEditSource: (record: SourceRecord) => void;
+    handleRemoveSource: (sourceId: string) => void;
+    handleRefreshSource: (sourceId: string) => void;
+    refreshingSourceId: string | null;
+    removingSourceId: string | null;
+}
+
 export const createSourceTableColumns = ({
     token,
     getRefreshStatusText,
@@ -57,7 +81,7 @@ export const createSourceTableColumns = ({
     handleRefreshSource,
     refreshingSourceId,
     removingSourceId
-}) => [
+}: SourceTableColumnsParams) => [
     // Column 1: Source ID
     // Simple numeric identifier for each source, used for internal tracking
     {
@@ -73,7 +97,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourceType',
         key: 'sourceType',
         width: 180,
-        render: (type, record) => (
+        render: (type: string, record: SourceRecord) => (
             <Space size={4} direction="vertical" align="start">
                 <Space size={4}>
                     {/* Primary type tag with color coding:
@@ -146,7 +170,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourceTag',
         key: 'sourceTag',
         width: 80,
-        render: (tag) => tag || '-', // Display dash when no tag is set
+        render: (tag: string | undefined) => tag || '-', // Display dash when no tag is set
     },
     // Column 4: Source Path/URL
     // Displays the source location with visual cues for type and state
@@ -155,7 +179,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourcePath',
         key: 'sourcePath',
         ellipsis: true, // Enable text truncation with ellipsis
-        render: (path, record) => (
+        render: (path: string, record: SourceRecord) => (
             <Text
                 ellipsis={{ tooltip: path }} // Show full path in tooltip on hover
                 style={{ 
@@ -176,7 +200,7 @@ export const createSourceTableColumns = ({
         title: 'Content',
         dataIndex: 'sourceContent',
         key: 'sourceContent',
-        render: (content) => (
+        render: (content: string | undefined) => (
             <div className="source-content-cell" style={{ maxHeight: '60px', fontSize: '11px' }}>
                 <Text ellipsis={{ tooltip: content }}>
                     {/* Trim content to prevent layout issues with large content */}
@@ -191,7 +215,7 @@ export const createSourceTableColumns = ({
         title: 'Actions',
         key: 'actions',
         width: 180,
-        render: (_, record) => (
+        render: (_: unknown, record: SourceRecord) => (
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 {/* HTTP Sources: Full functionality with refresh status and controls */}
                 {record.sourceType === 'http' && (

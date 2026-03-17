@@ -458,9 +458,9 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a new source
    */
-  async addSource(sourceData: Record<string, unknown>) {
+  async addSource(sourceData: Record<string, any>) {
     const sources = [...this.state.sources];
-    const newSource = await this.sourceManager.addSource(sources, sourceData);
+    const newSource = await this.sourceManager.addSource(sources, sourceData as { sourceType: string; sourcePath: string; [key: string]: unknown });
     
     sources.push(newSource);
     this.setState({ sources }, ['sources']);
@@ -476,7 +476,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
       });
     } catch (saveError) {
       // Rollback the change if save fails
-      this.setState({ sources: this.state.sources.filter(s => s.sourceId !== newSource.sourceId) }, ['sources']);
+      this.setState({ sources: this.state.sources.filter((s: Record<string, any>) => s.sourceId !== newSource.sourceId) }, ['sources']);
       throw saveError;
     }
     
@@ -488,7 +488,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   async updateSource(sourceId: string, updates: Record<string, any>) {
     let updatedSource = null;
-    const sources = this.state.sources.map(source => {
+    const sources = this.state.sources.map((source: Record<string, any>) => {
       if (source.sourceId === String(sourceId)) {
         const mergedUpdates = { ...updates };
         if (updates.refreshOptions && source.refreshOptions) {
@@ -534,9 +534,9 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Update source activation state
    */
   updateSourceActivation(sourceId: string, activate: boolean) {
-    const sources = this.state.sources.map(source => {
+    const sources = this.state.sources.map((source: Record<string, any>) => {
       if (source.sourceId === String(sourceId)) {
-        const updated = {
+        const updated: Record<string, any> = {
           ...source,
           activationState: activate ? 'active' : source.activationState,
           missingDependencies: activate ? [] : source.missingDependencies
@@ -562,7 +562,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Remove a source
    */
   async removeSource(sourceId: string) {
-    const sources = this.state.sources.filter(source => 
+    const sources = this.state.sources.filter((source: Record<string, any>) =>
       source.sourceId !== String(sourceId)
     );
     
@@ -651,8 +651,8 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Remove a proxy rule
    */
   async removeProxyRule(ruleId: string) {
-    const rule = this.state.proxyRules.find(r => r.id === ruleId);
-    const proxyRules = this.state.proxyRules.filter(r => r.id !== ruleId);
+    const rule = this.state.proxyRules.find((r: Record<string, any>) => r.id === ruleId);
+    const proxyRules = this.state.proxyRules.filter((r: Record<string, any>) => r.id !== ruleId);
     this.setState({ proxyRules }, ['proxyRules']);
     
     if (rule) {
@@ -731,8 +731,8 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   async updateWorkspaceMetadata(workspaceId: string, metadata: Record<string, unknown>) {
     try {
-      const workspaces = this.state.workspaces.map(w => 
-        w.id === workspaceId 
+      const workspaces = this.state.workspaces.map((w: Record<string, any>) =>
+        w.id === workspaceId
           ? { ...w, metadata: { ...w.metadata, ...metadata }, updatedAt: new Date().toISOString() }
           : w
       );
@@ -777,7 +777,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         updatedAt: new Date().toISOString()
       };
       
-      const workspaces = this.state.workspaces.map(w => 
+      const workspaces = this.state.workspaces.map((w: Record<string, any>) =>
         w.id === workspaceId ? { ...w, ...finalUpdates } : w
       );
       this.setState({ workspaces }, ['workspaces']);
@@ -801,7 +801,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         throw new Error('Cannot delete default personal workspace');
       }
       
-      const workspaces = this.state.workspaces.filter(w => w.id !== workspaceId);
+      const workspaces = this.state.workspaces.filter((w: Record<string, any>) => w.id !== workspaceId);
       this.setState({ workspaces }, ['workspaces']);
       
       if (this.state.activeWorkspaceId === workspaceId) {

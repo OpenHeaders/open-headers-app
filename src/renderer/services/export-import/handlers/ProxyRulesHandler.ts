@@ -28,7 +28,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of proxy rules or null if not selected
    */
-  async exportProxyRules(options) {
+  async exportProxyRules(options: Record<string, unknown>) {
     const { selectedItems } = options;
     
     if (!selectedItems.proxyRules) {
@@ -63,7 +63,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importProxyRules(rulesToImport, options) {
+  async importProxyRules(rulesToImport: Record<string, unknown>[], options: Record<string, unknown>) {
     const stats = {
       imported: 0,
       skipped: 0,
@@ -123,7 +123,7 @@ export class ProxyRulesHandler {
    * @returns {Promise<Object>} - Import result
    * @private
    */
-  async _importSingleProxyRule(rule, existingRules, options) {
+  async _importSingleProxyRule(rule: Record<string, unknown>, existingRules: Record<string, unknown>[], options: Record<string, unknown>) {
     // Validate rule structure
     const validation = validateProxyRule(rule);
     if (!validation.success) {
@@ -166,7 +166,7 @@ export class ProxyRulesHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _saveProxyRule(rule) {
+  async _saveProxyRule(rule: Record<string, unknown>) {
     const saveResult = await window.electronAPI.proxySaveRule(rule);
     
     if (!saveResult || !saveResult.success) {
@@ -201,7 +201,7 @@ export class ProxyRulesHandler {
    * @param {Object} stats - Import statistics
    * @private
    */
-  _emitProxyRulesUpdatedEvent(stats) {
+  _emitProxyRulesUpdatedEvent(stats: { imported: number; skipped: number }) {
     try {
       window.dispatchEvent(new CustomEvent(EVENTS.PROXY_RULES_UPDATED, {
         detail: {
@@ -220,7 +220,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules to validate
    * @returns {Object} - Validation result
    */
-  validateProxyRulesForExport(rules) {
+  validateProxyRulesForExport(rules: Record<string, unknown>[]) {
     if (!Array.isArray(rules)) {
       return {
         success: false,
@@ -251,7 +251,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules array
    * @returns {Object} - Statistics object
    */
-  getProxyRulesStatistics(rules) {
+  getProxyRulesStatistics(rules: Record<string, unknown>[]) {
     if (!Array.isArray(rules)) {
       return { 
         total: 0, 
@@ -291,7 +291,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeProxyRules(rules) {
+  analyzeProxyRules(rules: Record<string, unknown>[]) {
     if (!Array.isArray(rules)) {
       return { warnings: [], suggestions: [] };
     }

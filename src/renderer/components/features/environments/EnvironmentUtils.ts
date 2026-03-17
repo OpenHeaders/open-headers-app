@@ -85,7 +85,7 @@ export const extractVariables = (text: string): string[] => {
  * @returns {string[]} Array of missing variable names
  */
 export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment: Record<string, string>, rules: RulesConfig | null = null): string[] => {
-  const missingVars = new Set();
+  const missingVars = new Set<string>();
   
   if (!sources || !Array.isArray(sources)) {
     log.warn('Invalid sources provided to checkMissingVariables');
@@ -117,7 +117,7 @@ export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment
       // Check body, totpSecret, and other fields
       ['body', 'totpSecret'].forEach(field => {
         if (source.requestOptions?.[field]) {
-          const fieldVars = extractVariables(source.requestOptions[field] || '');
+          const fieldVars = extractVariables((source.requestOptions[field] as string) || '');
           fieldVars.forEach(varName => {
             if (!targetEnvironment[varName]) {
               missingVars.add(varName);
