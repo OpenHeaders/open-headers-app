@@ -354,10 +354,10 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     // Complete table props
     const tableProps: any = {
         ...createStandardTableProps(
-            tableDataSource,
-            columns,
-            handleTableChange,
-            generateRowClassName
+            tableDataSource as any,
+            columns as any,
+            handleTableChange as any,
+            generateRowClassName as any
         ),
         rowSelection: {
             type: 'radio' as const,

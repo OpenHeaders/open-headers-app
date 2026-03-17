@@ -75,16 +75,16 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Extract searchable fields from console record
      */
-    const extractSearchableFields = (consoleRecord) => {
-        const message = consoleRecord.args.map(arg => formatConsoleArg(arg)).join(' ');
+    const extractSearchableFields = (consoleRecord: ConsoleRecord) => {
+        const message = (consoleRecord as ConsoleRecord).args.map((arg: unknown) => formatConsoleArg(arg)).join(' ');
         return [message];
     };
 
     /**
      * Render console log message with actions
      */
-    const renderMessage = (args, consoleRecord) => {
-        const message = args.map(arg => formatConsoleArg(arg)).join(' ');
+    const renderMessage = (args: unknown[], consoleRecord: ConsoleRecord) => {
+        const message = args.map((arg: unknown) => formatConsoleArg(arg)).join(' ');
         const needsExpansion = message.length > 150;
         const displayMessage = needsExpansion ? message.substring(0, 150) + '...' : message;
 
@@ -105,7 +105,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 </Text>
                 
                 <div style={{ display: 'flex', gap: '2px', flexShrink: 0 }}>
-                    {createCopyButton(message, () => messageApi.success('Copied to clipboard'))}
+                    {createCopyButton(message, messageApi)}
                     
                     {needsExpansion && createViewButton(
                         () => showConsoleModal(consoleRecord.timestamp, consoleRecord.level, message),
@@ -119,7 +119,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Render log level tag
      */
-    const renderLevel = (level) => (
+    const renderLevel = (level: string) => (
         <Tag color={
             level === 'error' ? 'error' :
             level === 'warn' ? 'warning' :
@@ -134,14 +134,14 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     const columns = [
         {
             ...createTimestampColumn(
-                (timestamp, consoleRecord) => (
+                ((timestamp: number, consoleRecord: ConsoleRecord) => (
                     <TimestampCell
                         timestamp={timestamp}
                         record={record}
                         isCurrentEntry={timeHighlight.isCurrentEntry(consoleRecord, record.console)}
                         width={100}
                     />
-                ),
+                )) as (value: number) => React.ReactNode,
                 120
             )
         },
@@ -158,8 +158,8 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'DEBUG', value: 'debug' }
             ],
             filteredValue: consoleLevelFilter,
-            onFilter: (value, record) => record.level === value,
-            sorter: (a, b) => a.level.localeCompare(b.level),
+            onFilter: (value: string, record: ConsoleRecord) => record.level === value,
+            sorter: (a: ConsoleRecord, b: ConsoleRecord) => a.level.localeCompare(b.level),
             render: renderLevel
         },
         {
@@ -254,29 +254,29 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     // Format table data with unique keys
     const tableData = record.console
         .slice()
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .map((item, index) => ({
+        .sort((a: ConsoleRecord, b: ConsoleRecord) => a.timestamp - b.timestamp)
+        .map((item: ConsoleRecord, index: number) => ({
             ...item,
             key: `console-${item.timestamp}-${index}`
         }));
 
     // Table change handler
-    const handleTableChange = (pagination, filters) => {
+    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
         setConsoleLevelFilter(filters.level || []);
     };
 
     // Row class name generator
-    const generateRowClassName = (consoleRecord) => {
+    const generateRowClassName = (consoleRecord: ConsoleRecord) => {
         const baseClass = `console-${consoleRecord.level}`;
         return timeHighlight.getRowClassName(consoleRecord, record.console, baseClass);
     };
 
     // Complete table props
     const tableProps = createStandardTableProps(
-        tableData,
-        columns,
-        handleTableChange,
-        generateRowClassName
+        tableData as any,
+        columns as any,
+        handleTableChange as any,
+        generateRowClassName as any
     );
 
     return (

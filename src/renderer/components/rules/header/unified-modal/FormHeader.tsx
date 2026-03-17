@@ -14,6 +14,33 @@ import {
 
 const { Text } = Typography;
 
+interface EnvVarFieldValidation {
+    isValid: boolean;
+    hasVars: boolean;
+    usedVars: string[];
+    missingVars: string[];
+}
+
+interface EnvVarValidationState {
+    headerName?: EnvVarFieldValidation;
+    cookieName?: EnvVarFieldValidation;
+    [key: string]: EnvVarFieldValidation | undefined;
+}
+
+interface EnvContext {
+    environmentsReady: boolean;
+    getAllVariables: () => Record<string, string>;
+}
+
+interface FormHeaderProps {
+    mode: 'generic' | 'cookie';
+    headerType: string;
+    setHeaderType: (type: string) => void;
+    envVarValidation: EnvVarValidationState;
+    setEnvVarValidation: React.Dispatch<React.SetStateAction<EnvVarValidationState>>;
+    envContext: EnvContext;
+}
+
 // Common header suggestions
 const HEADER_SUGGESTIONS = [
     'Authorization',
@@ -59,40 +86,40 @@ const FORBIDDEN_HEADERS = [
 ];
 
 // Normalize header name
-const normalizeHeaderName = (name) => {
+const normalizeHeaderName = (name: string): string => {
     if (!name) return '';
     return name.split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join('-');
 };
 
-const FormHeader = ({ 
-    mode, 
-    headerType, 
-    setHeaderType, 
-    envVarValidation, 
+const FormHeader: React.FC<FormHeaderProps> = ({
+    mode,
+    headerType,
+    setHeaderType,
+    envVarValidation,
     setEnvVarValidation,
-    envContext 
+    envContext
 }) => {
     const form = Form.useFormInstance();
     
     // Helper function to validate environment variables in a field
-    const validateFieldEnvVars = (fieldName, value) => {
+    const validateFieldEnvVars = (fieldName: string, value: string): EnvVarFieldValidation | null => {
         if (!value || !envContext.environmentsReady) return null;
         
         const variables = envContext.getAllVariables();
         const validation = validateEnvironmentVariables(value, variables);
         
-        setEnvVarValidation(prev => ({
+        setEnvVarValidation((prev: EnvVarValidationState) => ({
             ...prev,
             [fieldName]: validation
         }));
-        
+
         return validation;
     };
 
     // Validation for header name
-    const validateHeaderName = (_, value) => {
+    const validateHeaderName = (_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Header name is required');
         }
@@ -123,7 +150,7 @@ const FormHeader = ({
     };
 
     // Validation for cookie name
-    const validateCookieName = (_, value) => {
+    const validateCookieName = (_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Cookie name is required');
         }
@@ -151,7 +178,7 @@ const FormHeader = ({
                     rules={[{ validator: validateHeaderName }]}
                     extra={envVarValidation.headerName?.hasVars && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            <InfoCircleOutlined /> Uses environment variables: {envVarValidation.headerName.usedVars.map(v => `{{${v}}}`).join(', ')}
+                            <InfoCircleOutlined /> Uses environment variables: {envVarValidation.headerName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                         </Text>
                     )}
                 >
@@ -184,7 +211,7 @@ const FormHeader = ({
                     rules={[{ validator: validateCookieName }]}
                     extra={envVarValidation.cookieName?.hasVars && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            <InfoCircleOutlined /> Uses environment variables: {envVarValidation.cookieName.usedVars.map(v => `{{${v}}}`).join(', ')}
+                            <InfoCircleOutlined /> Uses environment variables: {envVarValidation.cookieName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                         </Text>
                     )}
                 >

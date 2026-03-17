@@ -207,7 +207,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
     };
 
     // Build cookie value string
-    const buildCookieValue = (values: Record<string, string | number | boolean | undefined>, isDynamic = false) => {
+    const buildCookieValue = (values: Record<string, unknown>, isDynamic = false) => {
         let cookieString;
         
         // Build name=value part
@@ -233,7 +233,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
                 cookieString += `; Max-Age=${values.maxAge}`;
             } else if (values.expirationMode === 'expires' && values.expires) {
                 // Convert the date to UTC string
-                const expiresDate = new Date(values.expires).toUTCString();
+                const expiresDate = new Date(values.expires as string | number).toUTCString();
                 cookieString += `; Expires=${expiresDate}`;
             }
             // Session cookies don't have Max-Age or Expires
@@ -390,9 +390,10 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
             form.setFieldsValue({ maxAge: undefined, expires: undefined });
         } else {
             setExpirationMode('maxAge');
-            const seconds = preset.unit === 'hours' 
-                ? preset.value * 3600 
-                : preset.value * 86400;
+            const numValue = typeof preset.value === 'number' ? preset.value : parseInt(String(preset.value), 10);
+            const seconds = preset.unit === 'hours'
+                ? numValue * 3600
+                : numValue * 86400;
             form.setFieldsValue({ maxAge: seconds });
         }
     };

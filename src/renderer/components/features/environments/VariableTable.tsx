@@ -78,7 +78,7 @@ interface VariableTableProps {
     sources: SourceEntry[];
     rules: RulesMap;
     onAddVariable: (...args: unknown[]) => void;
-    onEditVariable: (key: string, row: Record<string, unknown>) => Promise<void>;
+    onEditVariable: (key: string, row: unknown) => Promise<void>;
     onDeleteVariable: (name: string) => void;
     form: ReturnType<typeof Form.useForm>[0];
 }
@@ -151,10 +151,10 @@ const VariableTable = ({
    */
   const save = async (key: string) => {
     try {
-      const row = await form.validateFields();
+      const row = (await form.validateFields()) as { name: string; value: string; isSecret: boolean };
       await onEditVariable(key, row);
       setEditingKey('');
-      
+
       // Hide the secret value again after saving if it's a secret
       // The key is the variable name in this case
       if (row.isSecret) {

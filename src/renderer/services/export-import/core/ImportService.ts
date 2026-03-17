@@ -22,6 +22,45 @@ import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConf
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ImportService');
 
+/** Import options configuration */
+interface ImportOptions {
+  fileContent: string;
+  envFileContent?: string;
+  selectedItems: Record<string, boolean>;
+  importMode?: string;
+  isGitSync?: boolean;
+  workspaceInfo?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Import data parsed from file */
+interface ImportData {
+  version?: string;
+  sources?: unknown[];
+  proxyRules?: unknown[];
+  rules?: Record<string, unknown[]>;
+  rulesMetadata?: Record<string, unknown>;
+  environments?: Record<string, unknown>;
+  environmentSchema?: Record<string, unknown>;
+  workspace?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Import statistics */
+interface ImportStats {
+  sourcesImported: number;
+  sourcesSkipped: number;
+  proxyRulesImported: number;
+  proxyRulesSkipped: number;
+  rulesImported: { total: number; [key: string]: number };
+  rulesSkipped: { total: number; [key: string]: number };
+  environmentsImported: number;
+  variablesCreated: number;
+  errors: Array<{ error: string; [key: string]: unknown }>;
+  createdWorkspace?: { name: string; type: string } | null;
+  [key: string]: unknown;
+}
+
 /**
  * Import Service Class
  * Orchestrates the complete import process for all data types
@@ -50,7 +89,7 @@ export class ImportService {
    * @param {Object} importOptions - Import configuration options
    * @returns {Promise<void>}
    */
-  async execute(importOptions) {
+  async execute(importOptions: ImportOptions) {
     const startTime = Date.now();
     log.info('Starting import process', { mode: importOptions.importMode, isGitSync: importOptions.isGitSync });
 
@@ -97,7 +136,7 @@ export class ImportService {
    * @returns {Promise<Object>} - Parsed import data and environment data
    * @private
    */
-  async _parseImportFiles(importOptions) {
+  async _parseImportFiles(importOptions: ImportOptions) {
     // Parse main file content
     const mainFileResult = validateAndParseFileContent(importOptions.fileContent) as any;
     if (!mainFileResult.success) {
@@ -142,7 +181,7 @@ export class ImportService {
    * @returns {Promise<Object>} - Workspace import statistics
    * @private
    */
-  async _handleWorkspaceImport(importData, importOptions) {
+  async _handleWorkspaceImport(importData: ImportData, importOptions: ImportOptions) {
     if (!importOptions.workspaceInfo && !importData.workspace) {
       return { createdWorkspace: null };
     }
@@ -159,7 +198,7 @@ export class ImportService {
    * @returns {Promise<Object>} - Combined import statistics
    * @private
    */
-  async _importAllDataTypes(importData, envData, importOptions) {
+  async _importAllDataTypes(importData: ImportData, envData: ImportData | null, importOptions: ImportOptions) {
     const { selectedItems } = importOptions;
     
     const allStats: Record<string, any> = {
@@ -220,7 +259,7 @@ export class ImportService {
    * @returns {Promise<void>}
    * @private
    */
-  async _finalizeImport(importStats, importOptions) {
+  async _finalizeImport(importStats: ImportStats, importOptions: ImportOptions) {
     const hasImportedData = this._hasImportedData(importStats);
 
     if (hasImportedData) {
@@ -254,7 +293,7 @@ export class ImportService {
    * @param {Object} importOptions - Import options
    * @private
    */
-  _showImportWarnings(importData, importOptions) {
+  _showImportWarnings(importData: ImportData, importOptions: ImportOptions) {
     const warnings = generateImportWarnings(importData, importOptions);
     if (warnings) {
       showMessage('warning', warnings);
@@ -267,7 +306,7 @@ export class ImportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateImportOptions(importOptions) {
+  _validateImportOptions(importOptions: ImportOptions) {
     if (!importOptions || typeof importOptions !== 'object') {
       throw new Error('Import options must be provided as an object');
     }
@@ -299,7 +338,7 @@ export class ImportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateImportPayload(importData) {
+  _validateImportPayload(importData: ImportData) {
     const validation = validateImportPayload(importData) as any;
     if (!validation.success) {
       throw new Error(`Import data validation failed: ${validation.error}`);
@@ -316,7 +355,7 @@ export class ImportService {
    * @returns {boolean} - Whether any data was imported
    * @private
    */
-  _hasImportedData(importStats) {
+  _hasImportedData(importStats: ImportStats) {
     return importStats.sourcesImported > 0 ||
            importStats.proxyRulesImported > 0 ||
            importStats.rulesImported.total > 0 ||

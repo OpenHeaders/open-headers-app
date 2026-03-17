@@ -11,6 +11,64 @@ import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
 
+/** Export options for rules */
+interface ExportOptions {
+  selectedItems: Record<string, boolean>;
+  [key: string]: unknown;
+}
+
+/** Import options for rules */
+interface ImportOptions {
+  importMode: string;
+  selectedItems: Record<string, boolean>;
+  [key: string]: unknown;
+}
+
+/** Rules to import structure */
+interface RulesToImport {
+  rules: Record<string, RuleEntry[]>;
+  metadata?: Record<string, unknown>;
+}
+
+/** Individual rule entry */
+interface RuleEntry {
+  id: string;
+  name?: string;
+  enabled?: boolean;
+  [key: string]: unknown;
+}
+
+/** Rules storage structure */
+interface RulesStorage {
+  rules: Record<string, RuleEntry[]>;
+  metadata: {
+    totalRules: number;
+    lastUpdated: string;
+    [key: string]: unknown;
+  };
+}
+
+/** Import statistics per type */
+interface TypeImportStats {
+  imported: number;
+  skipped: number;
+  errors: Array<{ ruleType: string; ruleId: string; error: string }>;
+}
+
+/** Import statistics */
+interface ImportStats {
+  imported: Record<string, number>;
+  skipped: Record<string, number>;
+  errors: Array<{ ruleType: string; ruleId: string; error: string }>;
+}
+
+/** Rules data for validation/statistics */
+interface RulesData {
+  rules?: Record<string, RuleEntry[]>;
+  rulesMetadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
 /**
  * Rules Handler Class
  * Manages export and import operations for application rules
@@ -29,7 +87,7 @@ export class RulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Rules data object or null if not selected
    */
-  async exportRules(options) {
+  async exportRules(options: ExportOptions) {
     const { selectedItems } = options;
     
     if (!selectedItems.rules) {
@@ -66,7 +124,7 @@ export class RulesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importRules(rulesToImport, options) {
+  async importRules(rulesToImport: RulesToImport, options: ImportOptions) {
     const stats = {
       imported: { total: 0 },
       skipped: { total: 0 },
@@ -145,7 +203,7 @@ export class RulesHandler {
    * @returns {Promise<Object>} - Import statistics for this type
    * @private
    */
-  async _importRulesOfType(ruleType, rulesToImport, existingRulesStorage, options) {
+  async _importRulesOfType(ruleType: string, rulesToImport: RuleEntry[], existingRulesStorage: RulesStorage, options: ImportOptions): Promise<TypeImportStats> {
     const stats = {
       imported: 0,
       skipped: 0,
@@ -165,7 +223,7 @@ export class RulesHandler {
     } else {
       // Merge mode: check for duplicates
       const existingRules = existingRulesStorage.rules[ruleType] || [];
-      const existingIds = new Set(existingRules.map(r => r.id));
+      const existingIds = new Set(existingRules.map((r: RuleEntry) => r.id));
 
       for (const rule of rulesToImport) {
         try {
@@ -223,7 +281,7 @@ export class RulesHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _saveRulesStorage(rulesStorage) {
+  async _saveRulesStorage(rulesStorage: RulesStorage) {
     try {
       const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
       await window.electronAPI.saveToStorage(rulesPath, JSON.stringify(rulesStorage));
@@ -238,7 +296,7 @@ export class RulesHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _updateWebSocketService(rulesStorage) {
+  async _updateWebSocketService(rulesStorage: RulesStorage) {
     try {
       const exportData = exportForExtension(rulesStorage);
       window.electronAPI.updateWebSocketSources({
@@ -256,7 +314,7 @@ export class RulesHandler {
    * @param {Object} stats - Import statistics
    * @private
    */
-  _emitRulesUpdatedEvent(stats) {
+  _emitRulesUpdatedEvent(stats: ImportStats) {
     try {
       window.dispatchEvent(new CustomEvent(EVENTS.RULES_UPDATED, {
         detail: {
@@ -284,7 +342,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to validate
    * @returns {Object} - Validation result
    */
-  validateRulesForExport(rulesData) {
+  validateRulesForExport(rulesData: RulesData) {
     if (!rulesData || typeof rulesData !== 'object') {
       return {
         success: false,
@@ -328,7 +386,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data object
    * @returns {Object} - Statistics object
    */
-  getRulesStatistics(rulesData) {
+  getRulesStatistics(rulesData: RulesData) {
     if (!rulesData || !rulesData.rules) {
       return { 
         total: 0, 
@@ -358,7 +416,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeRules(rulesData) {
+  analyzeRules(rulesData: RulesData) {
     const warnings = [];
     const suggestions = [];
 

@@ -135,7 +135,7 @@ const HeaderRules = () => {
         
         // Listen for import events
         const handleRulesImported = (event: Event) => {
-            log.info('Header rules imported, reloading:', event.detail);
+            log.info('Header rules imported, reloading:', (event as CustomEvent).detail);
             loadRules().catch(error => log.error('Failed to reload rules:', error));
         };
         
@@ -223,7 +223,7 @@ const HeaderRules = () => {
     };
 
     // Save rules to storage and sync to extension
-    const saveRules = useCallback(async (newRules: Record<string, unknown>[]) => {
+    const saveRules = useCallback(async (newRules: Record<string, any>[]) => {
         try {
             // Load existing rules storage or create new one
             let rulesStorage;
@@ -361,7 +361,7 @@ const HeaderRules = () => {
     };
 
     // Get dynamic value info for a rule including environment variable resolution
-    const getDynamicValueInfo = (rule: Record<string, unknown>) => {
+    const getDynamicValueInfo = (rule: Record<string, any>) => {
         const result = {
             actualValue: '',
             sourceInfo: '',
@@ -488,7 +488,7 @@ const HeaderRules = () => {
             title: 'Type',
             key: 'type',
             width: 180,
-            render: (_: unknown, record: Record<string, unknown>) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
 
                 return (
@@ -566,7 +566,7 @@ const HeaderRules = () => {
             title: 'Source',
             key: 'source',
             width: 200,
-            render: (_: unknown, record: Record<string, unknown>) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
 
                 if (!record.isDynamic) {
@@ -637,8 +637,8 @@ const HeaderRules = () => {
             dataIndex: 'headerName',
             key: 'headerName',
             width: 160,
-            sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => (a.headerName as string).localeCompare(b.headerName as string),
-            render: (text: string, record: Record<string, unknown>) => {
+            sorter: (a: Record<string, any>, b: Record<string, any>) => (a.headerName as string).localeCompare(b.headerName as string),
+            render: (text: string, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType && record.isEnabled;
                 
@@ -696,7 +696,7 @@ const HeaderRules = () => {
             dataIndex: 'headerValue',
             key: 'value',
             width: 200,
-            render: (_: unknown, record: Record<string, unknown>) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType;
 
@@ -769,8 +769,8 @@ const HeaderRules = () => {
             dataIndex: 'domains',
             key: 'domains',
             width: 140,
-            sorter: (a: Record<string, unknown>, b: Record<string, unknown>) => (a.domains as string[]).join(',').localeCompare((b.domains as string[]).join(',')),
-            render: (domains: string[], record: Record<string, unknown>) => {
+            sorter: (a: Record<string, any>, b: Record<string, any>) => (a.domains as string[]).join(',').localeCompare((b.domains as string[]).join(',')),
+            render: (domains: string[], record: Record<string, any>) => {
                 // Check if rule has missing dependencies
                 const info = getDynamicValueInfo(record);
                 const hasMissingDeps = info.activationState === 'waiting_for_deps';
@@ -839,7 +839,7 @@ const HeaderRules = () => {
             key: 'status',
             width: 80,
             align: 'center',
-            render: (_: unknown, record: Record<string, unknown>) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
                 const isWaitingForDeps = info.activationState === 'waiting_for_deps';
 
@@ -861,7 +861,7 @@ const HeaderRules = () => {
             width: 120,
             align: 'center',
             fixed: 'right',
-            render: (_: unknown, record: Record<string, unknown>) => {
+            render: (_: unknown, record: Record<string, any>) => {
                 const info = getDynamicValueInfo(record);
 
                 const handleCopyValue = async () => {
