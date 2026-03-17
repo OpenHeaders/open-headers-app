@@ -140,7 +140,7 @@ class EnvironmentVariableManager {
       case 'json':
         const parsed = JSON.parse(data);
         Object.entries(parsed).forEach(([key, value]) => {
-          if (typeof value === 'object' && value.value !== undefined) {
+          if (typeof value === 'object' && value !== null && (value as any).value !== undefined) {
             variables[key] = value;
           } else {
             // Convert simple key-value to variable object

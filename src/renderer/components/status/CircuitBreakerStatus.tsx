@@ -75,7 +75,7 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
     
     const style = inFooter ? baseStyle : {
         ...baseStyle,
-        position: 'fixed',
+        position: 'fixed' as const,
         bottom: 10,
         left: 280, // Position after Network State
         zIndex: 9999

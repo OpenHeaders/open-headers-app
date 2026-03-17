@@ -130,7 +130,7 @@ export const usePlayerManager = (
                         'An iframe which has both allow-scripts'
                     ];
                     
-                    if (suppressPatterns.some(pattern => message?.includes(pattern))) {
+                    if (suppressPatterns.some(pattern => typeof message === 'string' && message?.includes(pattern))) {
                         return true; // Prevent default error handling
                     }
                     

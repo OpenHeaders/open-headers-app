@@ -182,7 +182,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
         
         // Listen for processing progress updates
         const unsubscribeProgress = window.electronAPI.onRecordingProgress(({ recordId, stage, progress, details }) => {
-            log.debug('[WorkflowsTable] Recording progress:', recordId, stage, progress);
+            log.debug(`[WorkflowsTable] Recording progress: ${recordId} ${stage}`, progress);
             setProcessingRecords(prev => {
                 const existing = prev[recordId] || {};
                 return {
@@ -236,7 +236,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }) => {
                 ));
             } else if (data.hasVideo !== undefined) {
                 // Video status update
-                log.debug('[WorkflowsTable] Video status updated for recording:', data.recordingId, 'hasVideo:', data.hasVideo);
+                log.debug(`[WorkflowsTable] Video status updated for recording: ${data.recordingId} hasVideo: ${data.hasVideo}`);
                 setWorkflowRecordings(prev => prev.map(r => 
                     r.id === data.recordingId ? { ...r, hasVideo: data.hasVideo } : r
                 ));

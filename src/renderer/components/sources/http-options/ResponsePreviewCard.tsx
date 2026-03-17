@@ -154,7 +154,7 @@ const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }) => {
                                             {Object.entries(testResponseContent.headers).map(([key, value]) => (
                                                 <tr key={key}>
                                                     <td>{key}</td>
-                                                    <td>{value}</td>
+                                                    <td>{value as React.ReactNode}</td>
                                                 </tr>
                                             ))}
                                             </tbody>

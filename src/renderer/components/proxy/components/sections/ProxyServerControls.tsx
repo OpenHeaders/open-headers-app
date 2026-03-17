@@ -102,7 +102,7 @@ const ProxyServerControls = ({
                                     <li><Text>The proxy cache stores frequently used resources locally for faster subsequent replays.</Text></li>
                                 </ul>
                                 <Divider style={{ margin: '12px 0' }} />
-                                <Text type="primary">
+                                <Text type={"secondary" as any}>
                                     <strong>💾 Storage efficiency:</strong> Recordings are typically 10-100x smaller than video files (.mp4) while providing perfect fidelity DOM reconstruction.
                                 </Text>
                                 <br />

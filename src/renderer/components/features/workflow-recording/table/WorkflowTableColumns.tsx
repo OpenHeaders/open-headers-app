@@ -175,7 +175,7 @@ const DeleteActionButton = ({ record, onDelete, isProcessing }) => {
  * @param {Object} processingRecords - Map of recordId to processing state
  * @returns {Array} Table columns configuration
  */
-export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetadata, processingRecords = {}) => [
+export const createWorkflowColumns = (onView, onDelete, onExport, onUpdateMetadata, processingRecords = {}): any[] => [
   {
     title: 'Timestamp',
     dataIndex: 'timestamp',

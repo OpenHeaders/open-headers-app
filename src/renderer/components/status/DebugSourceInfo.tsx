@@ -18,7 +18,7 @@ export const DebugSourceInfo = ({ inFooter = false }) => {
     
     const style = inFooter ? baseStyle : {
         ...baseStyle,
-        position: 'fixed',
+        position: 'fixed' as const,
         bottom: 10,
         left: 10,
         zIndex: 9999

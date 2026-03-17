@@ -96,7 +96,7 @@ export function ContentTabs({
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => onCopyContent(internalContent || '')}
-                            type={copyingContent ? "success" : "default"}
+                            type={(copyingContent ? "success" : "default") as any}
                         >
                             {copyingContent ? 'Copied!' : 'Copy'}
                         </Button>
@@ -132,7 +132,7 @@ export function ContentTabs({
                             size="small"
                             icon={copyingJson ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => onCopyJson(internalOriginalResponse || '')}
-                            type={copyingJson ? "success" : "default"}
+                            type={(copyingJson ? "success" : "default") as any}
                         >
                             {copyingJson ? 'Copied!' : 'Copy'}
                         </Button>

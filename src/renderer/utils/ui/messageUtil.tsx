@@ -56,7 +56,7 @@ export const showMessage = (type, content, duration = 3) => {
     globalShowMessage(type, content, duration);
 };
 
-export const successMessage = (content, duration) => showMessage('success', content, duration);
-export const errorMessage = (content, duration) => showMessage('error', content, duration);
-export const warningMessage = (content, duration) => showMessage('warning', content, duration);
-export const infoMessage = (content, duration) => showMessage('info', content, duration);
+export const successMessage = (content, duration?) => showMessage('success', content, duration);
+export const errorMessage = (content, duration?) => showMessage('error', content, duration);
+export const warningMessage = (content, duration?) => showMessage('warning', content, duration);
+export const infoMessage = (content, duration?) => showMessage('info', content, duration);

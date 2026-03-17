@@ -45,9 +45,9 @@ interface VariableTableProps {
     missingVariables: string[];
     variableUsage: Record<string, string[]>;
     sources: any[];
-    rules: any[];
-    onAddVariable: (name: string, value: string, isSecret: boolean) => void;
-    onEditVariable: (name: string, value: string, isSecret: boolean) => void;
+    rules: any;
+    onAddVariable: (...args: any[]) => void;
+    onEditVariable: (...args: any[]) => void;
     onDeleteVariable: (name: string) => void;
     form: any;
 }

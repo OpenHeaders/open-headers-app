@@ -306,8 +306,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
                 title="Set Recording Hotkey"
                 open={isEditing}
                 onCancel={handleCancel}
-                autoFocusButton={null}
-                focusTriggerAfterClose={false}
+                {...{ autoFocusButton: null, focusTriggerAfterClose: false } as any}
                 footer={[
                     <Button key="cancel" onClick={handleCancel}>
                         Cancel

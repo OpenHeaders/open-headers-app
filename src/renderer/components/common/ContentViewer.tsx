@@ -138,7 +138,7 @@ const ContentViewer = ({ source, open, onClose }) => {
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => handleCopyContent(internalContent || '')}
-                            type={copyingContent ? "success" : "default"}
+                            type={(copyingContent ? "success" : "default") as any}
                             style={{ marginLeft: 'auto' }}
                         >
                             {copyingContent ? 'Copied!' : 'Copy'}

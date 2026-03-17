@@ -185,6 +185,13 @@ class ConcurrentMap {
   }
 
   /**
+   * Get all keys as array (snapshot)
+   */
+  async keys() {
+    return this.mutex.withLock(() => Array.from(this.map.keys()));
+  }
+
+  /**
    * Get all entries as array (snapshot)
    */
   async entries() {

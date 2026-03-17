@@ -83,7 +83,7 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
                             {Object.entries(fileInfo.ruleBreakdown).map(([type, count], index) => (
                                 <span key={type}>
                                     {index > 0 && ', '}
-                                    <Text>{type} ({count})</Text>
+                                    <Text>{type} ({count as React.ReactNode})</Text>
                                 </span>
                             ))}
                         </div>

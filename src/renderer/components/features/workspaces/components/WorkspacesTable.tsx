@@ -203,7 +203,7 @@ const WorkspacesTable = ({
      */
     const renderSyncStatusCell = (_, record) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
-            return <Text type="default">-</Text>;
+            return <Text>-</Text>;
         }
 
         const status = syncStatus[record.id];

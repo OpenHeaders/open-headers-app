@@ -120,7 +120,7 @@ class SourceManager {
    * Extract environment variables from source configuration
    */
   extractVariablesFromSource(source) {
-    const variables = new Set();
+    const variables = new Set<string>();
     const variablePattern = /\{\{(\w+)\}\}/g;
     
     // Helper to extract from any string
