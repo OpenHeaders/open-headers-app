@@ -68,7 +68,7 @@ export function AppLayout({
         theme={token}
       />
 
-      <Content className={`app-content ${typeof window !== 'undefined' && (window as any).electronAPI?.platform ? `platform-${(window as any).electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
+      <Content className={`app-content ${typeof window !== 'undefined' && window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
         <AppTabs
           activeTab={activeTab}
           onTabChange={onTabChange}

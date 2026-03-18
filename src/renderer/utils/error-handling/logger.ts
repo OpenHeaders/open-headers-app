@@ -25,7 +25,7 @@ const LOG_LEVELS: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 
 // Initialize log level
 let currentLevel = LOG_LEVELS.info;
 try {
-  if (typeof window !== 'undefined' && (window as any).electronAPI && (window as any).electronAPI.isDevelopment) {
+  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isDevelopment) {
     currentLevel = LOG_LEVELS.debug;
   }
 } catch (e) {

@@ -23,7 +23,7 @@ export function useUpdateChecker(): UseUpdateCheckerReturn {
     if (updateNotificationRef.current?.checkForUpdates) {
       updateNotificationRef.current.checkForUpdates(true);
     } else {
-      (window as any).electronAPI.checkForUpdates(true);
+      window.electronAPI.checkForUpdates(true);
 
       const loadingIcon = <LoadingOutlined spin />;
       notification.open({
