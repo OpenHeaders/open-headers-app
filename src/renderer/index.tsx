@@ -16,24 +16,24 @@
         'can escape its sandboxing'
     ];
 
-    const shouldSuppress = (args: any[]) => {
+    const shouldSuppress = (args: unknown[]) => {
         const message = args[0]?.toString() || '';
         return suppressPatterns.some(pattern => message.includes(pattern));
     };
 
-    console.error = function(...args: any[]) {
+    console.error = function(...args: unknown[]) {
         if (!shouldSuppress(args)) {
             originalError.apply(console, args);
         }
     };
 
-    console.warn = function(...args: any[]) {
+    console.warn = function(...args: unknown[]) {
         if (!shouldSuppress(args)) {
             originalWarn.apply(console, args);
         }
     };
 
-    console.log = function(...args: any[]) {
+    console.log = function(...args: unknown[]) {
         if (!shouldSuppress(args)) {
             originalLog.apply(console, args);
         }

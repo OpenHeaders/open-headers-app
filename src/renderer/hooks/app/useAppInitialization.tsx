@@ -22,8 +22,8 @@ export function useAppInitialization({ setAppVersion, setActiveTab, setCurrentRe
   useEffect(() => {
     const getAppVersion = async () => {
       try {
-        if ((window as any).electronAPI && (window as any).electronAPI.getAppVersion) {
-          const version = await (window as any).electronAPI.getAppVersion();
+        if (window.electronAPI && window.electronAPI.getAppVersion) {
+          const version = await window.electronAPI.getAppVersion();
           setAppVersion(version);
         }
       } catch (error) {
@@ -35,7 +35,7 @@ export function useAppInitialization({ setAppVersion, setActiveTab, setCurrentRe
     getAppVersion();
 
     // Set up listener for opening record recordings from main process
-    const unsubscribe = (window as any).electronAPI.onOpenRecordRecording((data: any) => {
+    const unsubscribe = window.electronAPI.onOpenRecordRecording((data: any) => {
       log.info('Received request to open record recording:', data);
       setActiveTab('record-viewer');
       if (data && data.record) {

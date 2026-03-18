@@ -17,7 +17,7 @@ export function useEnv(): UseEnvReturn {
                 throw new Error('Environment variable name is required');
             }
 
-            return await (window as any).electronAPI.getEnvVariable(name);
+            return await window.electronAPI.getEnvVariable(name);
         } catch (error: any) {
             throw new Error(`Error getting environment variable: ${error.message}`);
         }

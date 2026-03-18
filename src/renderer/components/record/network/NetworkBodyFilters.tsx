@@ -21,7 +21,7 @@ const NetworkBodyFilters = ({ bodyFilters, onBodyFiltersChange, token }: Network
     const isBodyFilterActive = bodyFilters.hasRequestBody || bodyFilters.hasResponseBody;
 
     // Memoize the body filter menu to prevent recreating it on every render
-    const bodyFilterMenu = useMemo((): any => ({
+    const bodyFilterMenu = useMemo((): Record<string, unknown> => ({
         items: [
             {
                 key: 'filters',
