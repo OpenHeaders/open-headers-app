@@ -96,8 +96,8 @@ class NetworkAwareScheduler {
     await timeManager.initialize();
     
     // Subscribe to time events
-    this.timeEventUnsubscribe = timeManager.addListener((events: TimeEvent[]) => {
-      this.handleTimeEvents(events);
+    this.timeEventUnsubscribe = timeManager.addListener((...args: unknown[]) => {
+      this.handleTimeEvents(args[0] as TimeEvent[]);
     });
     
     // Start periodic overdue check
@@ -132,9 +132,10 @@ class NetworkAwareScheduler {
     const schedule = {
       sourceId,
       intervalMs,
-      lastRefresh: existingSchedule?.lastRefresh || 
-                   (source.refreshOptions?.lastRefresh ? 
-                    timeManager.getDate(source.refreshOptions.lastRefresh).getTime() : null),
+      lastRefresh: existingSchedule?.lastRefresh ||
+                   (source.refreshOptions?.lastRefresh
+                    ? timeManager.getDate(source.refreshOptions.lastRefresh as number | null).getTime()
+                    : null),
       nextRefresh: null,
       retryCount: 0,
       maxRetries: 3,
@@ -198,7 +199,7 @@ class NetworkAwareScheduler {
     
     // Always check circuit breaker state first for retry logic
     const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
     const circuitStatus = circuitBreaker.getStatus();
     
     // If circuit breaker has failures, handle retry timing
@@ -343,7 +344,7 @@ class NetworkAwareScheduler {
     // Skip overdue triggers during HALF_OPEN to prevent duplicate test requests
     if (reason === 'overdue') {
       const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-      const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+      const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
       const status = circuitBreaker.getStatus();
       
       if (status.state === 'HALF_OPEN') {
@@ -490,7 +491,7 @@ class NetworkAwareScheduler {
         
         // Skip HALF_OPEN sources to prevent duplicate test requests
         const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
         const status = circuitBreaker.getStatus();
         if (status.state === 'HALF_OPEN') {
           log.debug(`Source ${sourceId} circuit breaker is HALF_OPEN, skipping overdue check to prevent duplicate requests`);
@@ -514,7 +515,7 @@ class NetworkAwareScheduler {
       const sourcesWithOpenCircuits = [];
       for (const [sourceId] of schedules) {
         const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+        const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
         if (circuitBreaker.isOpen()) {
           const status = circuitBreaker.getStatus();
           const timeUntilNextAttempt = status.backoff.timeUntilNextAttempt;
@@ -654,13 +655,13 @@ class NetworkAwareScheduler {
     const value = parseInt(match[1]);
     const unit = match[2].toLowerCase();
     
-    const multipliers = {
+    const multipliers: Record<string, number> = {
       second: 1000,
       minute: 60 * 1000,
       hour: 60 * 60 * 1000,
       day: 24 * 60 * 60 * 1000
     };
-    
+
     return value * multipliers[unit];
   }
 

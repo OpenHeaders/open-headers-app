@@ -43,7 +43,7 @@ const TeamWorkspaceAcceptInviteModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        }) as {
+        }) as unknown as {
             gitService: {
                 getStatus: () => Promise<Record<string, unknown>>;
                 install: () => Promise<{ success: boolean }>;

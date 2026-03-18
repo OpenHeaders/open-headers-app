@@ -82,7 +82,7 @@ const ProxyServer = () => {
 
             {proxyStatus.running && (
                 <ProxyCacheSection
-                    cacheStats={cacheStats}
+                    cacheStats={cacheStats ?? {}}
                     cacheEnabled={cacheEnabled}
                     cacheEntries={cacheEntries}
                     showCacheDetails={showCacheDetails}

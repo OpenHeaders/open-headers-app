@@ -100,7 +100,7 @@ export const createSaveSourceHandler = ({
     setEditModalVisible,
     handleRefreshSource,
     log
-}: SaveSourceParams) => async (sourceData: Record<string, any>) => {
+}: SaveSourceParams) => async (sourceData: Record<string, unknown> & { sourceId: string; refreshNow?: boolean; refreshOptions?: Record<string, unknown> }) => {
     // Main save handler that coordinates source updates with refresh operations
     // Handles both simple updates and complex refresh-triggered updates
     try {

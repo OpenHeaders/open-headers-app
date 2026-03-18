@@ -59,7 +59,7 @@ const WorkspaceEditModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        }) as { gitService: { getStatus: () => Promise<Record<string, unknown>>; install: () => Promise<{ success: boolean }>; subscribeToConnectionProgress: () => (() => void); onProgress: (listener: (event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void); testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; [key: string]: unknown }> }; workspaceService: Record<string, unknown>; syncService: Record<string, unknown>; cleanup: () => void } | null;
+        }) as unknown as { gitService: { getStatus: () => Promise<Record<string, unknown>>; install: () => Promise<{ success: boolean }>; subscribeToConnectionProgress: () => (() => void); onProgress: (listener: (event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void); testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; [key: string]: unknown }> }; workspaceService: Record<string, unknown>; syncService: Record<string, unknown>; cleanup: () => void } | null;
     }, [workspaceContext]);
 
     useEffect(() => {

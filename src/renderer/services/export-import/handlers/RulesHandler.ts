@@ -1,6 +1,6 @@
 /**
  * Rules Handler for Export/Import Operations
- * 
+ *
  * This module handles the export and import of application rules,
  * including type-specific handling and complex merge/replace logic.
  */
@@ -98,24 +98,24 @@ export class RulesHandler {
 
     try {
       let rulesStorage = createRulesStorage();
-      
+
       const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
       const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
-      
+
       if (rulesData) {
         rulesStorage = JSON.parse(rulesData);
       }
 
       const totalRules = Object.values(rulesStorage.rules).reduce((sum, rules) => sum + rules.length, 0);
       log.info(`Exporting ${totalRules} rules across ${Object.keys(rulesStorage.rules).length} types`);
-      
+
       return {
         rules: rulesStorage.rules,
         rulesMetadata: rulesStorage.metadata
       };
     } catch (error) {
       log.error('Failed to export rules:', error);
-      throw new Error(`Failed to export rules: ${error.message}`);
+      throw new Error(`Failed to export rules: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -160,12 +160,12 @@ export class RulesHandler {
       // Process each rule type
       for (const [ruleType, rulesToImportForType] of Object.entries(rulesToImport.rules)) {
         const typeStats = await this._importRulesOfType(
-          ruleType, 
-          rulesToImportForType, 
-          existingRulesStorage, 
+          ruleType,
+          rulesToImportForType,
+          existingRulesStorage,
           options
         );
-        
+
         stats.imported[ruleType] = typeStats.imported;
         stats.skipped[ruleType] = typeStats.skipped;
         stats.imported.total += typeStats.imported;
@@ -193,7 +193,7 @@ export class RulesHandler {
       return stats;
     } catch (error) {
       log.error('Failed to import rules:', error);
-      throw new Error(`Failed to import rules: ${error.message}`);
+      throw new Error(`Failed to import rules: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -207,7 +207,7 @@ export class RulesHandler {
    * @private
    */
   async _importRulesOfType(ruleType: string, rulesToImport: RuleEntry[], existingRulesStorage: RulesStorage, options: ImportOptions): Promise<TypeImportStats> {
-    const stats = {
+    const stats: TypeImportStats = {
       imported: 0,
       skipped: 0,
       errors: []
@@ -249,7 +249,7 @@ export class RulesHandler {
           stats.errors.push({
             ruleType,
             ruleId: rule.id || 'unknown',
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           });
         }
       }
@@ -267,14 +267,14 @@ export class RulesHandler {
     try {
       const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
       const existingRulesData = await window.electronAPI.loadFromStorage(rulesPath);
-      
+
       if (existingRulesData) {
         return JSON.parse(existingRulesData);
       }
     } catch (error) {
       log.debug('No existing rules found, creating new storage');
     }
-    
+
     return createRulesStorage();
   }
 
@@ -289,7 +289,7 @@ export class RulesHandler {
       const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
       await window.electronAPI.saveToStorage(rulesPath, JSON.stringify(rulesStorage));
     } catch (error) {
-      throw new Error(`Failed to save rules storage: ${error.message}`);
+      throw new Error(`Failed to save rules storage: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -361,7 +361,7 @@ export class RulesHandler {
       };
     }
 
-    const errors = [];
+    const errors: string[] = [];
     Object.entries(rulesData.rules).forEach(([ruleType, rules]) => {
       if (!Array.isArray(rules)) {
         errors.push(`Rules for type ${ruleType} must be an array`);
@@ -393,14 +393,14 @@ export class RulesHandler {
   getRulesStatistics(rulesDataInput: RulesData | Record<string, unknown>) {
     const rulesData = rulesDataInput as RulesData;
     if (!rulesData || !rulesData.rules) {
-      return { 
-        total: 0, 
+      return {
+        total: 0,
         byType: {},
         metadata: null
       };
     }
 
-    const stats = {
+    const stats: { total: number; byType: Record<string, number>; metadata: Record<string, unknown> | undefined } = {
       total: 0,
       byType: {},
       metadata: rulesData.rulesMetadata || rulesData.metadata
@@ -424,7 +424,7 @@ export class RulesHandler {
   analyzeRules(rulesDataInput: RulesData | Record<string, unknown>) {
     const rulesData = rulesDataInput as RulesData;
     const warnings: string[] = [];
-    const suggestions = [];
+    const suggestions: string[] = [];
 
     if (!rulesData || !rulesData.rules) {
       return { warnings, suggestions };

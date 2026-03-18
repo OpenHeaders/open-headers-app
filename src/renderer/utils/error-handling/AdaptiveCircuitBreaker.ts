@@ -42,15 +42,15 @@ class AdaptiveCircuitBreaker {
     timeoutHistory: Array<{ timestamp: number; timeout: number; opening: number }>;
   };
 
-  constructor(options: Record<string, any> = {}) {
-    this.name = options.name || 'unnamed';
-    this.failureThreshold = options.failureThreshold || 5;
-    this.halfOpenMaxAttempts = options.halfOpenMaxAttempts || 3;
+  constructor(options: Record<string, unknown> = {}) {
+    this.name = (options.name as string) || 'unnamed';
+    this.failureThreshold = (options.failureThreshold as number) || 5;
+    this.halfOpenMaxAttempts = (options.halfOpenMaxAttempts as number) || 3;
 
-    this.baseTimeout = options.baseTimeout || 30000;
-    this.maxTimeout = options.maxTimeout || 3600000;
-    this.backoffMultiplier = options.backoffMultiplier || 2;
-    this.timeoutJitter = options.timeoutJitter || 0.1;
+    this.baseTimeout = (options.baseTimeout as number) || 30000;
+    this.maxTimeout = (options.maxTimeout as number) || 3600000;
+    this.backoffMultiplier = (options.backoffMultiplier as number) || 2;
+    this.timeoutJitter = (options.timeoutJitter as number) || 0.1;
 
     this.resetTimeout = this.baseTimeout;
     this.state = CircuitState.CLOSED;
@@ -79,7 +79,7 @@ class AdaptiveCircuitBreaker {
   /**
    * Execute a function with circuit breaker protection
    */
-  async execute(fn: () => Promise<any>, options: { bypassIfOpen?: boolean; reason?: string } = {}) {
+  async execute<T>(fn: () => Promise<T>, options: { bypassIfOpen?: boolean; reason?: string } = {}): Promise<T> {
     const { bypassIfOpen = false, reason = 'auto' } = options;
     
     this.metrics.totalRequests++;
@@ -102,7 +102,7 @@ class AdaptiveCircuitBreaker {
       log.debug(`Circuit breaker ${this.name} execution successful`);
       return result;
     } catch (error) {
-      log.error(`Circuit breaker ${this.name} execution failed: ${error.message}`);
+      log.error(`Circuit breaker ${this.name} execution failed: ${(error as Error).message}`);
       this.onFailure();
       throw error;
     }
@@ -111,7 +111,7 @@ class AdaptiveCircuitBreaker {
   /**
    * Execute function with manual bypass
    */
-  async executeWithBypass(fn: () => Promise<unknown>) {
+  async executeWithBypass<T>(fn: () => Promise<T>): Promise<T> {
     this.metrics.manualBypasses++;
     this.manualBypassActive = true;
     
@@ -125,7 +125,7 @@ class AdaptiveCircuitBreaker {
       
       return result;
     } catch (error) {
-      log.warn(`Manual bypass failed for ${this.name}: ${error.message}`);
+      log.warn(`Manual bypass failed for ${this.name}: ${(error as Error).message}`);
       this.manualBypassActive = false;
       this.metrics.totalFailures++;
       
@@ -144,7 +144,7 @@ class AdaptiveCircuitBreaker {
         return true;
         
       case CircuitState.OPEN:
-        if (now >= this.nextAttemptTime) {
+        if (this.nextAttemptTime !== null && now >= this.nextAttemptTime) {
           this.transitionTo(CircuitState.HALF_OPEN);
           return true;
         }
@@ -393,9 +393,9 @@ class AdaptiveCircuitBreakerManager {
     return this.breakers.get(name);
   }
   
-  async execute(name: string, fn: () => Promise<unknown>, options = {}) {
+  async execute<T>(name: string, fn: () => Promise<T>, options: { bypassIfOpen?: boolean; reason?: string } = {}): Promise<T> {
     const breaker = this.getBreaker(name, options);
-    return breaker.execute(fn, options);
+    return breaker!.execute(fn, options);
   }
   
   /**
@@ -413,7 +413,7 @@ class AdaptiveCircuitBreakerManager {
    * Get all circuit breakers status
    */
   getAllStatus() {
-    const status = {};
+    const status: Record<string, ReturnType<AdaptiveCircuitBreaker['getStatus']>> = {};
     for (const [name, breaker] of this.breakers) {
       status[name] = breaker.getStatus();
     }

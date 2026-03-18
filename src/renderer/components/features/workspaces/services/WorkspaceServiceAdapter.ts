@@ -9,6 +9,7 @@ const log = createLogger('WorkspaceServiceAdapter');
 interface GitProgressEvent {
     type: string;
     data: unknown;
+    [key: string]: unknown;
 }
 
 interface GitResult {
@@ -81,7 +82,7 @@ class GitServiceAdapter {
             log.error('Failed to get Git status:', error);
             return {
                 isInstalled: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -111,7 +112,7 @@ class GitServiceAdapter {
             log.error('Git installation failed:', error);
             return {
                 success: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -133,7 +134,7 @@ class GitServiceAdapter {
             log.error('Git connection test failed:', error);
             return {
                 success: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -147,8 +148,8 @@ class GitServiceAdapter {
                 });
             };
 
-            const unsubscribe = window.electronAPI.onGitCommitProgress ? 
-                window.electronAPI.onGitCommitProgress(progressHandler) : 
+            const unsubscribe = window.electronAPI.onGitCommitProgress ?
+                window.electronAPI.onGitCommitProgress(progressHandler) :
                 () => {};
 
             try {
@@ -169,7 +170,7 @@ class GitServiceAdapter {
             log.error('Git commit failed:', error);
             return {
                 success: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -186,7 +187,7 @@ class GitServiceAdapter {
             log.error('Git branch creation failed:', error);
             return {
                 success: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -203,7 +204,7 @@ class GitServiceAdapter {
             log.error('Write permissions check failed:', error);
             return {
                 success: false,
-                error: error.message
+                error: error instanceof Error ? error.message : String(error)
             };
         }
     }
@@ -222,9 +223,9 @@ class GitServiceAdapter {
         return window.electronAPI.onGitConnectionProgress(progressHandler);
     }
 
-    onProgress(listener: (event: GitProgressEvent) => void) {
+    onProgress(listener: (event: GitProgressEvent) => void): () => void {
         this.progressListeners.add(listener);
-        return () => this.progressListeners.delete(listener);
+        return () => { this.progressListeners.delete(listener); };
     }
 }
 
@@ -240,13 +241,13 @@ class WorkspaceServiceAdapter {
 
     async create(workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.createWorkspace(workspaceData);
-        
+
         if (!result) {
             const error = new Error('Workspace creation returned null');
             log.error('Failed to create workspace:', error);
             throw error;
         }
-        
+
         return {
             id: result.id || workspaceData.id,
             ...result
@@ -255,25 +256,25 @@ class WorkspaceServiceAdapter {
 
     async update(workspaceId: string, workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.updateWorkspace(workspaceId, workspaceData);
-        
+
         if (!result) {
             const error = new Error('Workspace update returned null');
             log.error('Failed to update workspace:', error);
             throw error;
         }
-        
+
         return result;
     }
 
     async delete(workspaceId: string) {
         const result = await this.workspaceContext.deleteWorkspace(workspaceId);
-        
+
         if (!result) {
             const error = new Error('Workspace deletion failed');
             log.error('Failed to delete workspace:', error);
             throw error;
         }
-        
+
         return result;
     }
 
@@ -302,9 +303,9 @@ class WorkspaceServiceAdapter {
  */
 class SyncServiceAdapter {
     static instance: SyncServiceAdapter | null = null;
-    syncListeners: Set<(event: SyncEvent) => void>;
-    electronListeners: Map<string, () => void>;
-    isSetup: boolean;
+    syncListeners!: Set<(event: SyncEvent) => void>;
+    electronListeners!: Map<string, () => void>;
+    isSetup!: boolean;
 
     constructor() {
         if (SyncServiceAdapter.instance) {
@@ -324,7 +325,7 @@ class SyncServiceAdapter {
         if (this.isSetup) {
             return;
         }
-        
+
         // Listen for sync events from main process
         if (window.electronAPI.onWorkspaceSyncStarted) {
             const unsubscribe = window.electronAPI.onWorkspaceSyncStarted((data) => {
@@ -352,7 +353,7 @@ class SyncServiceAdapter {
             });
             this.electronListeners.set('sync-progress', unsubscribe);
         }
-        
+
         this.isSetup = true;
         log.debug('SyncServiceAdapter event listeners setup completed');
     }
@@ -360,7 +361,7 @@ class SyncServiceAdapter {
     cleanup() {
         // Clean up listeners but keep singleton instance
         this.syncListeners.clear();
-        
+
         // Don't destroy electron listeners or singleton instance
         // These should persist for the lifetime of the app
         log.debug('SyncServiceAdapter listeners cleared');
@@ -368,25 +369,25 @@ class SyncServiceAdapter {
 
     async initializeWorkspaceSync(workspaceId: string) {
         const result = await window.electronAPI.initializeWorkspaceSync(workspaceId);
-        
+
         if (!result.success) {
             const error = new Error(result.error || 'Failed to initialize sync');
             log.error('Failed to initialize workspace sync:', error);
             throw error;
         }
-        
+
         return result;
     }
 
     async syncWorkspace(workspaceId: string, options: Record<string, unknown> = {}) {
         const result = await window.electronAPI.syncWorkspace(workspaceId, options);
-        
+
         if (!result.success) {
             const error = new Error(result.error || 'Sync failed');
             log.error('Failed to sync workspace:', error);
             throw error;
         }
-        
+
         return result;
     }
 
@@ -396,19 +397,26 @@ class SyncServiceAdapter {
                 listener(event.data);
             }
         };
-        
+
         this.syncListeners.add(wrappedListener);
         return () => this.syncListeners.delete(wrappedListener);
     }
 
 }
 
+interface ServiceAdapterInstance {
+    gitService: GitServiceAdapter;
+    workspaceService: WorkspaceServiceAdapter;
+    syncService: SyncServiceAdapter;
+    cleanup: () => void;
+}
+
 /**
  * Main service adapter factory - uses singleton pattern
  */
 export class WorkspaceServiceAdapterFactory {
-    static instance = null;
-    
+    static instance: ServiceAdapterInstance | null = null;
+
     static create(dependencies: ServiceAdapterDependencies) {
         if (WorkspaceServiceAdapterFactory.instance) {
             // Update the workspace context if it changed
@@ -417,13 +425,13 @@ export class WorkspaceServiceAdapterFactory {
             }
             return WorkspaceServiceAdapterFactory.instance;
         }
-        
+
         const { workspaceContext } = dependencies;
-        
+
         const gitService = new GitServiceAdapter();
         const workspaceService = new WorkspaceServiceAdapter(workspaceContext);
         const syncService = new SyncServiceAdapter();
-        
+
         WorkspaceServiceAdapterFactory.instance = {
             gitService,
             workspaceService,
@@ -436,10 +444,10 @@ export class WorkspaceServiceAdapterFactory {
                 // Don't destroy the factory instance
             }
         };
-        
+
         return WorkspaceServiceAdapterFactory.instance;
     }
-    
+
     static reset() {
         // Only use this for testing or app shutdown
         WorkspaceServiceAdapterFactory.instance = null;

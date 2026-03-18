@@ -27,14 +27,14 @@ export const useProxyServer = () => {
     
     // Proxy server state
     const [proxyStatus, setProxyStatus] = useState({ running: false, port: 59212 });
-    const [rules, setRules] = useState([]);
-    const [headerRules, setHeaderRules] = useState([]);
+    const [rules, setRules] = useState<Record<string, unknown>[]>([]);
+    const [headerRules, setHeaderRules] = useState<Record<string, unknown>[]>([]);
     const [loading, setLoading] = useState(false);
-    
+
     // Cache management state
-    const [cacheStats, setCacheStats] = useState(null);
+    const [cacheStats, setCacheStats] = useState<Record<string, unknown> | null>(null);
     const [cacheEnabled, setCacheEnabled] = useState(true);
-    const [cacheEntries, setCacheEntries] = useState([]);
+    const [cacheEntries, setCacheEntries] = useState<Record<string, unknown>[]>([]);
     const [showCacheDetails, setShowCacheDetails] = useState(false);
 
     /**
@@ -50,7 +50,7 @@ export const useProxyServer = () => {
      */
     const loadRules = async () => {
         const loadedRules = await window.electronAPI.proxyGetRules();
-        setRules(loadedRules);
+        setRules(loadedRules as Record<string, unknown>[]);
     };
 
     /**
@@ -85,7 +85,7 @@ export const useProxyServer = () => {
      */
     const loadCacheEntries = async () => {
         const entries = await window.electronAPI.proxyGetCacheEntries();
-        setCacheEntries(entries);
+        setCacheEntries(entries as Record<string, unknown>[]);
     };
 
     /**
@@ -157,7 +157,7 @@ export const useProxyServer = () => {
     const toggleRule = async (ruleId: string, enabled: boolean) => {
         const rule = rules.find(r => r.id === ruleId);
         if (!rule) return false;
-        
+
         const updatedRule = { ...rule, enabled };
         const result = await window.electronAPI.proxySaveRule(updatedRule);
         
