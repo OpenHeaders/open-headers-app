@@ -31,8 +31,8 @@ import { showMessage } from '../../../utils/ui/messageUtil';
  * handleCopyToClipboard('Hello World', setCopying, 'Text copied!', 'Copy failed!')
  */
 export function handleCopyToClipboard(
-    text, 
-    setCopyingState, 
+    text: string,
+    setCopyingState: (state: boolean) => void,
     successMessage = 'Copied to clipboard',
     errorMessage = 'Failed to copy content'
 ) {
@@ -72,11 +72,11 @@ export function handleCopyToClipboard(
  * copyHandler('{"key": "value"}'); // Copies JSON and shows custom message
  */
 export function createCopyHandler(
-    setCopyingState, 
+    setCopyingState: (state: boolean) => void,
     successMessage = 'Copied to clipboard',
     errorMessage = 'Failed to copy content'
 ) {
-    return (text) => {
+    return (text: string) => {
         handleCopyToClipboard(text, setCopyingState, successMessage, errorMessage);
     };
 }

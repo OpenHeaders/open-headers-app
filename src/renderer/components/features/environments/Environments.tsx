@@ -189,7 +189,7 @@ const Environments = () => {
    * @param {string} oldName - Original variable name
    * @param {Object} newData - New variable data
    */
-  const handleEditVariable = async (oldName, newData) => {
+  const handleEditVariable = async (oldName: string, newData: { name: string; value: string; isSecret?: boolean; [key: string]: unknown }) => {
     try {
       // If name changed, delete old and create new
       if (oldName !== newData.name) {
@@ -214,7 +214,7 @@ const Environments = () => {
    * Handles environment copying
    * @param {string} fromEnv - Source environment name
    */
-  const handleCopyEnvironment = async (fromEnv) => {
+  const handleCopyEnvironment = async (fromEnv: string) => {
     const newName = generateUniqueEnvironmentName(fromEnv, environments);
     const success = await cloneEnvironment(fromEnv, newName);
     
@@ -226,7 +226,7 @@ const Environments = () => {
   /**
    * Handles environment switching (delegates to EnvironmentSelector)
    */
-  const handleEnvironmentSwitch = async (targetEnv) => {
+  const handleEnvironmentSwitch = async (targetEnv: string) => {
     try {
       await switchEnvironment(targetEnv);
       showMessage('success', `Switched to '${targetEnv}' environment`);
@@ -239,7 +239,7 @@ const Environments = () => {
   /**
    * Handles environment deletion
    */
-  const handleDeleteEnvironment = async (envName) => {
+  const handleDeleteEnvironment = async (envName: string) => {
     try {
       const success = await deleteEnvironment(envName);
       if (success) {

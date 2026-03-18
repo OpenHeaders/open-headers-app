@@ -60,7 +60,7 @@ const SecretInput = forwardRef<any, SecretInputProps>(({
     setInternalValue(value || '');
   }, [value]);
   
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     setInternalValue(newValue);
     if (onChange) {

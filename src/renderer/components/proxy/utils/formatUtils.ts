@@ -14,7 +14,7 @@
  * @param {number} bytes - Number of bytes to format
  * @returns {string} Formatted string with units (B, KB, MB, GB)
  */
-export const formatBytes = (bytes) => {
+export const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -31,7 +31,7 @@ export const formatBytes = (bytes) => {
  * @param {string} value - Header value to truncate
  * @returns {string} Truncated value with ellipsis
  */
-export const truncateValue = (value) => {
+export const truncateValue = (value: string) => {
     if (!value) return '';
     if (value.length <= 23) return value;
     return `${value.substring(0, 10)}...${value.substring(value.length - 10)}`;
@@ -47,7 +47,7 @@ export const truncateValue = (value) => {
  * @param {number} maxLength - Maximum length before truncation (default: 18)
  * @returns {string} Truncated domain with ellipsis if needed
  */
-export const truncateDomain = (domain, maxLength = 18) => {
+export const truncateDomain = (domain: string, maxLength = 18) => {
     if (!domain) return '';
     return domain.length > maxLength ? `${domain.substring(0, maxLength)}...` : domain;
 };

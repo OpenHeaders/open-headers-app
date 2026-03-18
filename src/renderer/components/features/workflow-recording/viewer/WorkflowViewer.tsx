@@ -80,7 +80,7 @@ const WorkflowViewer = ({
 
   // Record management
   const record = externalRecord !== undefined ? externalRecord : internalRecord;
-  const setRecord = (newRecord) => {
+  const setRecord = (newRecord: Record<string, unknown>) => {
     if (onRecordChange) {
       onRecordChange(newRecord);
     } else {
@@ -174,7 +174,7 @@ const WorkflowViewer = ({
 
 
   // Playback handlers
-  const handlePlaybackTimeChange = useCallback((time) => {
+  const handlePlaybackTimeChange = useCallback((time: number) => {
     setCurrentTime(time);
     if (onPlaybackTimeChange) {
       onPlaybackTimeChange(time);
@@ -185,7 +185,7 @@ const WorkflowViewer = ({
     // Handle playing state changes if needed
   }, []);
 
-  const handleTabChange = useCallback((key) => {
+  const handleTabChange = useCallback((key: string) => {
     activeTabRef.current = key;
   }, []);
 

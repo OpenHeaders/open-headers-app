@@ -29,6 +29,7 @@ interface ExportImportDependencies {
   createEnvironment: (name: string) => Promise<boolean>;
   setVariable: (name: string, value: string | null, environment?: string | null, isSecret?: boolean) => Promise<boolean>;
   generateEnvironmentSchema: (sources: any[]) => any;
+  [key: string]: unknown;
 }
 
 interface UseExportImportReturn {

@@ -187,7 +187,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
     ]);
 
     // Create URL field validator with context dependencies
-    const validateUrl = (rule, value) => validateUrlField(
+    const validateUrl = (rule: unknown, value: string) => validateUrlField(
         rule, 
         value, 
         sourceType, 
@@ -369,7 +369,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
                                                         const startTime = Date.now();
                                                         setTestProgress({ attempt: 0, maxAttempts: 0, startTime });
                                                         
-                                                        const progressCallback = (attempt, maxAttempts) => {
+                                                        const progressCallback = (attempt: number, maxAttempts: number) => {
                                                             setTestProgress({ attempt, maxAttempts, startTime });
                                                         };
                                                         

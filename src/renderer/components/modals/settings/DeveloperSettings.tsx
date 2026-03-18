@@ -18,19 +18,19 @@ interface DeveloperSettingsProps { formValues: Record<string, unknown>; screenRe
 const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: DeveloperSettingsProps) => {
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
 
-    const renderSettingItems = (items) => (
+    const renderSettingItems = (items: { fieldName: string; title: string; [key: string]: unknown }[]) => (
         <>
-            {items.map((setting, index) => (
+            {items.map((setting, index: number) => (
                 <SettingItem
                     key={`${setting.fieldName}-${index}`}
-                    {...setting}
+                    {...setting as React.ComponentProps<typeof SettingItem>}
                     onChange={onChange}
                 />
             ))}
         </>
     );
 
-    const handleOpenPath = (pathKey) => {
+    const handleOpenPath = (pathKey: string) => {
         window.electronAPI.openAppPath(pathKey);
     };
 

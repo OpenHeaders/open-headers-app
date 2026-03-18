@@ -86,7 +86,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     /**
      * Handle individual export item selection changes
      */
-    const handleItemChange = (item) => {
+    const handleItemChange = (item: string) => {
         setSelectedItems(prev => ({
             ...prev,
             [item]: !prev[item]
@@ -96,7 +96,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     /**
      * Auto-select recommended options based on export purpose
      */
-    const handlePurposeChange = (value) => {
+    const handlePurposeChange = (value: string) => {
         setExportPurpose(value);
         if (value === 'team') {
             setEnvironmentOption('schema');
@@ -110,7 +110,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     /**
      * Handle environment selection changes
      */
-    const handleEnvironmentSelectionChange = (envName, checked) => {
+    const handleEnvironmentSelectionChange = (envName: string, checked: boolean) => {
         setSelectedEnvironments(prev => ({
             ...prev,
             [envName]: checked

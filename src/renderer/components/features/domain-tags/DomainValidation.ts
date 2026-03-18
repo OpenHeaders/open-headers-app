@@ -48,7 +48,7 @@
  * const result = validateDomain('invalid..domain');
  * // { valid: false, message: 'Invalid domain pattern' }
  */
-export const validateDomain = (domain) => {
+export const validateDomain = (domain: string) => {
     // Check for empty or whitespace-only input
     if (!domain || !domain.trim()) {
         return { valid: false, message: 'Domain cannot be empty' };
@@ -122,7 +122,7 @@ export const validateDomain = (domain) => {
  * //   invalid: [{ domain: 'invalid..domain', message: 'Invalid domain pattern' }]
  * // }
  */
-export const validateDomainBatch = (domains) => {
+export const validateDomainBatch = (domains: string[]) => {
     const valid = [];
     const invalid = [];
     
@@ -152,7 +152,7 @@ export const validateDomainBatch = (domains) => {
  * isWildcardDomain('example.com');   // false
  * isWildcardDomain('*://test.com/*'); // true
  */
-export const isWildcardDomain = (domain) => {
+export const isWildcardDomain = (domain: string) => {
     return domain && (domain.includes('*') || domain === '*');
 };
 
@@ -170,7 +170,7 @@ export const isWildcardDomain = (domain) => {
  * extractBaseDomain('*.example.com');                // 'example.com'
  * extractBaseDomain('*://test.com/*');               // 'test.com'
  */
-export const extractBaseDomain = (domain) => {
+export const extractBaseDomain = (domain: string) => {
     if (!domain) return '';
     
     // Remove protocol prefixes

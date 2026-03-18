@@ -233,7 +233,7 @@ const WorkspaceModal = ({
             
             unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress();
             
-            progressUnsubscribeRef.current = services.gitService.onProgress((event) => {
+            progressUnsubscribeRef.current = services.gitService.onProgress((event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => {
                 if (event.type === 'git-connection') {
                     setConnectionProgress(event.data.summary || []);
                 }
@@ -267,7 +267,7 @@ const WorkspaceModal = ({
         }
     };
     
-    const handleFinish = async (values) => {
+    const handleFinish = async (values: Record<string,unknown>) => {
         // For new team workspaces, include export data in the workspace creation values
         if (!editingWorkspace && values.type === 'team') {
             try {

@@ -55,7 +55,7 @@ import { THEME_MODES } from '../../../contexts';
  * @param {string} screenRecordingPermission.platform - Operating system platform
  * @returns {Object} Configuration object with general, appearance, and records sections
  */
-export const getSettingsConfig = (formValues, screenRecordingPermission) => ({
+export const getSettingsConfig = (formValues: Record<string,unknown>, screenRecordingPermission: Record<string,unknown>) => ({
     // General application behavior settings
     general: [
         {

@@ -34,7 +34,7 @@ class TotpUsageTracker {
    * @param {string} code - The TOTP code that was used
    * @returns {void}
    */
-  recordUsage(sourceId, secret, code) {
+  recordUsage(sourceId: string, secret: string, code: string) {
     if (!sourceId || !code) return;
     
     const now = timeManager.now();
@@ -61,7 +61,7 @@ class TotpUsageTracker {
    * @param {string} sourceId - The source ID
    * @returns {{ inCooldown: boolean, remainingSeconds: number, lastUsedTime: number | null }}
    */
-  checkCooldown(sourceId) {
+  checkCooldown(sourceId: string) {
     if (!sourceId) {
       return { inCooldown: false, remainingSeconds: 0, lastUsedTime: null };
     }

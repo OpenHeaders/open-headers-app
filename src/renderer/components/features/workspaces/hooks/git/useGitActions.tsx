@@ -51,7 +51,7 @@ export const useGitActions = () => {
             setGitStatus(status);
         } catch (error) {
             log.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: error.message });
+            setGitStatus({ isInstalled: false, error: (error as Error).message });
         } finally {
             setCheckingGitStatus(false);
         }
@@ -75,7 +75,7 @@ export const useGitActions = () => {
             }
         } catch (error) {
             log.error('Git installation error:', error);
-            message.error('Failed to install Git: ' + error.message);
+            message.error('Failed to install Git: ' + (error as Error).message);
         } finally {
             setInstallingGit(false);
             setGitInstallProgress('');
@@ -86,7 +86,7 @@ export const useGitActions = () => {
      * Tests Git connection with progress tracking
      * @param {Object} formValues - Form values for connection test
      */
-    const handleTestConnection = useCallback(async (formValues) => {
+    const handleTestConnection = useCallback(async (formValues: Record<string,unknown>) => {
         if (!formValues.gitUrl) {
             message.warning('Please enter a Git repository URL');
             return;
@@ -102,7 +102,7 @@ export const useGitActions = () => {
         });
         
         try {
-            const authData = await prepareAuthData(formValues, formValues.authType);
+            const authData = await prepareAuthData(formValues, formValues.authType as string);
             
             const result = await window.electronAPI.testGitConnection({
                 url: formValues.gitUrl,
@@ -120,7 +120,7 @@ export const useGitActions = () => {
                 handleConnectionError(result);
             }
         } catch (error) {
-            message.error(`Connection test failed: ${error.message}`);
+            message.error(`Connection test failed: ${(error as Error).message}`);
             setConnectionTested(false);
         } finally {
             setTestingConnection(false);
@@ -137,7 +137,7 @@ export const useGitActions = () => {
      * Handles successful connection test
      * @param {Object} result - Connection test result
      */
-    const handleConnectionSuccess = (result) => {
+    const handleConnectionSuccess = (result: { warning?: string; configFileValid?: boolean; branches?: string[] | number; message?: string; validationDetails?: unknown; [key: string]: unknown }) => {
         if (result.warning) {
             void message.warning(result.warning);
         } else if (result.configFileValid) {
@@ -151,12 +151,12 @@ export const useGitActions = () => {
      * Handles valid config file in connection test
      * @param {Object} result - Connection test result
      */
-    const handleValidConfigFile = (result) => {
+    const handleValidConfigFile = (result: { validationDetails?: unknown; message?: string; branches?: string[] | number; [key: string]: unknown }) => {
         if (result.validationDetails) {
-            const items = formatValidationDetails(result.validationDetails);
+            const items = formatValidationDetails(result.validationDetails as Parameters<typeof formatValidationDetails>[0]);
             
             if (items.length > 0) {
-                const isMultiFile = result.message && result.message.includes('multi-file');
+                const isMultiFile = result.message && (result.message as string).includes('multi-file');
                 void message.success(
                     <div>
                         <div style={{ fontWeight: 500 }}>✅ Connection successful!</div>
@@ -186,7 +186,7 @@ export const useGitActions = () => {
      * Handles connection test error
      * @param {Object} result - Connection test result
      */
-    const handleConnectionError = (result) => {
+    const handleConnectionError = (result: { validationDetails?: unknown; error?: string; hint?: string; debugHint?: string; [key: string]: unknown }) => {
         if (result.validationDetails) {
             void message.error(
                 <div>

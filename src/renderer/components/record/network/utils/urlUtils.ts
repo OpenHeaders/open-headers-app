@@ -12,7 +12,7 @@
  * @param {string} fallback - Fallback text when URL parsing fails
  * @returns {string} Shortened display name
  */
-export const getDisplayName = (url, fallback = 'Request Details') => {
+export const getDisplayName = (url: string, fallback = 'Request Details') => {
     if (!url) return fallback;
     
     const urlParts = url.split('/');

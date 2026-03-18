@@ -38,7 +38,7 @@ const ConsoleLogModal = ({
 
     if (!selectedLog) return null;
 
-    const getLogLevelColor = (level) => {
+    const getLogLevelColor = (level: string) => {
         switch (level) {
             case 'error': return 'error';
             case 'warn': return 'warning';

@@ -14,7 +14,7 @@ import { useMemo } from 'react';
  * @param {Object} workspaceContext - Workspace context object
  * @returns {Object} Combined workspace actions and state
  */
-export const useWorkspaceActions = (workspaceContext) => {
+export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: Record<string, unknown>) => Promise<unknown>; updateWorkspace: (id: string, data: Record<string, unknown>) => Promise<unknown>; deleteWorkspace: (id: string) => Promise<boolean>; cloneWorkspaceToPersonal?: (id: string, name: string) => Promise<boolean>; syncWorkspace: (id: string) => Promise<unknown>; switchWorkspace: (id: string) => Promise<unknown>; [key: string]: unknown }) => {
     // Create service adapters for new architecture (using singleton pattern)
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
@@ -36,7 +36,7 @@ export const useWorkspaceActions = (workspaceContext) => {
      * @param {Object} editingWorkspace - Workspace being edited (if any)
      * @returns {Promise<boolean>} Success status
      */
-    const handleSaveWorkspace = async (values, editingWorkspace) => {
+    const handleSaveWorkspace = async (values: Record<string,unknown>, editingWorkspace: Record<string,unknown> | null) => {
         // Use new architecture for new workspaces
         if (!editingWorkspace) {
             return await workspaceCreation.createWorkspace(values);
@@ -46,18 +46,19 @@ export const useWorkspaceActions = (workspaceContext) => {
         const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
         
         if (saveResult.success && saveResult.result) {
+            const result = saveResult.result as { id?: string; [key: string]: unknown };
             const workspace = {
                 ...values,
-                id: saveResult.result.id || Date.now().toString(),
+                id: result.id || Date.now().toString(),
                 type: values.gitUrl ? 'git' : 'personal'
             };
-            
+
             // Handle sync operations for updated workspaces
             if (workspace.type === 'git') {
                 const syncListeners = syncOps.setupSyncListeners();
-                await syncOps.handleWorkspaceSwitch(saveResult.result, workspace, syncListeners);
+                await syncOps.handleWorkspaceSwitch(result, workspace, syncListeners);
             } else {
-                await syncOps.handleWorkspaceSwitch(saveResult.result, workspace, null);
+                await syncOps.handleWorkspaceSwitch(result, workspace, null);
             }
         }
         

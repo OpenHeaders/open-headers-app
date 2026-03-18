@@ -33,7 +33,7 @@
  * formatTimeRemaining(300000)  // "5m 0s"
  * formatTimeRemaining(45000)   // "0m 45s"
  */
-export const formatTimeRemaining = (milliseconds) => {
+export const formatTimeRemaining = (milliseconds: number) => {
     // Convert milliseconds to total seconds for easier calculations
     const totalSeconds = Math.floor(milliseconds / 1000);
     
@@ -67,7 +67,7 @@ export const formatTimeRemaining = (milliseconds) => {
  * trimContent("This is a very long content string that needs trimming") 
  * // "This is a ...g trimming"
  */
-export const trimContent = (content) => {
+export const trimContent = (content: string) => {
     // Handle empty or null content with user-friendly message
     if (!content) return 'No content yet';
 
@@ -97,11 +97,11 @@ export const trimContent = (content) => {
  * debugRefreshState(123, "Manual Refresh Started", { userId: 'user1' }, log, timeManager);
  * // Outputs: [14:30:15] [RefreshTable] Source 123 - Manual Refresh Started: { userId: 'user1' }
  */
-export const debugRefreshState = (sourceId, action, data = {}, log, timeManager) => {
+export const debugRefreshState = (sourceId: string, action: string, data = {}, log: { debug: (message: string, data?: unknown) => void }, timeManager: { getDate: () => Date }) => {
     // Extract time portion from ISO string for compact timestamp display
     // Format: HH:MM:SS for easy scanning in debug logs
     const timestamp = timeManager.getDate().toISOString().substring(11, 19);
-    
+
     // Structured log format for consistent debugging across the application
     // Includes timestamp, component context, source ID, action, and additional data
     log.debug(`[${timestamp}] [RefreshTable] Source ${sourceId} - ${action}:`, data);

@@ -65,15 +65,15 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
         }
     };
     
-    const handleChange = async (type, auth) => {
+    const handleChange = async (type: string, auth: boolean) => {
         if (type === 'web' && auth) {
             // Web links cannot include auth
             auth = false;
             setIncludeAuth(false);
         }
-        
+
         setLinkType(type);
-        
+
         if (type === 'app' && auth !== includeAuth) {
             try {
                 setLoading(true);

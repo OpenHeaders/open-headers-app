@@ -28,7 +28,7 @@ class AutoSaveManager {
   /**
    * Mark data as dirty
    */
-  markDirty(dataType) {
+  markDirty(dataType: string) {
     if (dataType in this.isDirty) {
       this.isDirty[dataType] = true;
     }
@@ -37,7 +37,7 @@ class AutoSaveManager {
   /**
    * Mark data as clean
    */
-  markClean(dataType) {
+  markClean(dataType: string) {
     if (dataType in this.isDirty) {
       this.isDirty[dataType] = false;
     }
@@ -53,7 +53,7 @@ class AutoSaveManager {
   /**
    * Schedule auto-save with conflict prevention
    */
-  scheduleAutoSave(saveCallback) {
+  scheduleAutoSave(saveCallback: () => Promise<void>) {
     // Don't schedule if workspace is switching
     if (this.workspaceSwitching) {
       log.debug('Skipping auto-save during workspace switch');
@@ -100,7 +100,7 @@ class AutoSaveManager {
   /**
    * Start auto-save interval with conflict prevention
    */
-  startAutoSave(saveCallback, intervalMs = 5000) {
+  startAutoSave(saveCallback: () => Promise<void>, intervalMs = 5000) {
     // Clear any existing interval
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
@@ -156,7 +156,7 @@ class AutoSaveManager {
   /**
    * Set workspace switching state
    */
-  setWorkspaceSwitching(isSwitching) {
+  setWorkspaceSwitching(isSwitching: boolean) {
     this.workspaceSwitching = isSwitching;
     if (isSwitching) {
       // Clear any pending saves

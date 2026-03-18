@@ -10,7 +10,7 @@ export const DEFAULT_PAGINATION = {
   defaultPageSize: 10,
   showSizeChanger: true,
   pageSizeOptions: ['10', '20', '50', '100'],
-  showTotal: (total) => `Total ${total} workflow recordings`
+  showTotal: (total: number) => `Total ${total} workflow recordings`
 };
 
 /**

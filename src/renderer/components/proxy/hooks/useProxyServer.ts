@@ -114,7 +114,7 @@ export const useProxyServer = () => {
     /**
      * Save a proxy rule (create or update)
      */
-    const saveRule = async (rule) => {
+    const saveRule = async (rule: Record<string,unknown>) => {
         const result = await window.electronAPI.proxySaveRule(rule);
         if (result.success) {
             message.success('Rule saved');
@@ -134,7 +134,7 @@ export const useProxyServer = () => {
     /**
      * Delete a proxy rule
      */
-    const deleteRule = async (ruleId) => {
+    const deleteRule = async (ruleId: string) => {
         const result = await window.electronAPI.proxyDeleteRule(ruleId);
         if (result.success) {
             message.success('Rule deleted');
@@ -154,7 +154,7 @@ export const useProxyServer = () => {
     /**
      * Toggle rule enabled/disabled state
      */
-    const toggleRule = async (ruleId, enabled) => {
+    const toggleRule = async (ruleId: string, enabled: boolean) => {
         const rule = rules.find(r => r.id === ruleId);
         if (!rule) return false;
         
@@ -196,7 +196,7 @@ export const useProxyServer = () => {
     /**
      * Toggle cache enabled/disabled state
      */
-    const toggleCache = async (enabled) => {
+    const toggleCache = async (enabled: boolean) => {
         const result = await window.electronAPI.proxySetCacheEnabled(enabled);
         if (result.success) {
             setCacheEnabled(enabled);
@@ -216,7 +216,7 @@ export const useProxyServer = () => {
     /**
      * Update proxy server port configuration
      */
-    const updatePort = (port) => {
+    const updatePort = (port: number) => {
         setProxyStatus(prev => ({
             running: prev.running,
             port: Number(port)

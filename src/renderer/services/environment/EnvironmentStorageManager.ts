@@ -38,7 +38,7 @@ class EnvironmentStorageManager {
   /**
    * Load environments for a workspace
    */
-  async loadEnvironments(workspaceId) {
+  async loadEnvironments(workspaceId: string) {
     try {
       
       const data = await this.storageAPI.loadFromStorage(
@@ -84,7 +84,7 @@ class EnvironmentStorageManager {
   /**
    * Save environments for a workspace
    */
-  async saveEnvironments(workspaceId, environments, activeEnvironment) {
+  async saveEnvironments(workspaceId: string, environments: Record<string, unknown>, activeEnvironment: string) {
     try {
       const data = {
         environments,
@@ -107,7 +107,7 @@ class EnvironmentStorageManager {
   /**
    * Initialize default environments for new workspace
    */
-  async initializeDefaultEnvironments(workspaceId) {
+  async initializeDefaultEnvironments(workspaceId: string) {
     const defaults = {
       environments: { Default: {} },
       activeEnvironment: 'Default'

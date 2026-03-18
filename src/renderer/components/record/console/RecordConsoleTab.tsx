@@ -28,6 +28,7 @@ interface ConsoleRecord {
     level: string;
     args: unknown[];
     key?: string;
+    [key: string]: unknown;
 }
 
 interface RecordData {

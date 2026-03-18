@@ -43,17 +43,17 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
             controllerRef.current = new WorkspaceCreationController(dependencies);
             
             // Listen to state changes
-            const unsubscribe = controllerRef.current.addListener((stateData) => {
+            const unsubscribe = controllerRef.current.addListener((stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }) => {
                 setState(stateData.state);
                 setContext(stateData.context);
-                setError(stateData.context.error);
+                setError(stateData.context?.error ?? null);
                 
                 // Update progress based on state
-                setProgress(getProgressFromState(stateData.state));
-                
+                setProgress(getProgressFromState(stateData.state as string));
+
                 // Handle UI notifications (if not disabled)
                 if (!options.disableNotifications) {
-                    handleStateNotifications(stateData, message);
+                    handleStateNotifications(stateData as { state: string; context: WorkspaceCreationContext; [key: string]: unknown }, message);
                 }
             });
             
@@ -79,7 +79,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
      * @param {Object} options - Additional options
      * @returns {Promise<boolean>} Success status
      */
-    const createWorkspace = useCallback(async (formData, options = {}) => {
+    const createWorkspace = useCallback(async (formData: Record<string,unknown>, options = {}) => {
         if (!controllerRef.current) {
             throw new Error('Controller not initialized');
         }
@@ -131,7 +131,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
     }, [context.formData]);
 
     // Generate user-friendly progress message
-    const getProgressMessage = useCallback((currentState) => {
+    const getProgressMessage = useCallback((currentState: string) => {
         switch (currentState) {
             case WORKSPACE_CREATION_STATES.VALIDATING:
                 return 'Validating workspace configuration...';
@@ -189,7 +189,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
         WORKSPACE_CREATION_STATES.CANCELLING,
         WORKSPACE_CREATION_STATES.CANCELLED
     ].includes(state) === false;
-    const progressMessage = getProgressMessage(state);
+    const progressMessage = getProgressMessage(state as string);
 
     return {
         // State
@@ -224,7 +224,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
  * @param {string} state - Current state
  * @returns {Object} Progress information
  */
-function getProgressFromState(state) {
+function getProgressFromState(state: string) {
     const progressMap = {
         [WORKSPACE_CREATION_STATES.FORM_VALIDATION]: {
             step: 1,
@@ -288,7 +288,7 @@ function getProgressFromState(state) {
         }
     };
 
-    return progressMap[state] || null;
+    return (progressMap as Record<string, { step: number; total: number; title: string; description: string }>)[state] || null;
 }
 
 /**
@@ -296,7 +296,15 @@ function getProgressFromState(state) {
  * @param {Object} stateData - State data from state machine
  * @param {Object} message - Ant Design message API
  */
-function handleStateNotifications(stateData, message) {
+interface MessageInstance {
+    destroy: (key?: string) => void;
+    success: (config: { content: string; duration: number }) => void;
+    error: (config: { content: string; duration: number }) => void;
+    warning: (config: { content: string; duration: number }) => void;
+    loading: (config: { content: string; key: string; duration: number }) => void;
+}
+
+function handleStateNotifications(stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }, message: MessageInstance) {
     const { state, context } = stateData;
 
     switch (state) {

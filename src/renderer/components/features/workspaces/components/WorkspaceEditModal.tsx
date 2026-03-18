@@ -258,7 +258,7 @@ const WorkspaceEditModal = ({
             
             unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress();
             
-            progressUnsubscribeRef.current = services.gitService.onProgress((event) => {
+            progressUnsubscribeRef.current = services.gitService.onProgress((event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => {
                 if (event.type === 'git-connection') {
                     setConnectionProgress(event.data.summary || []);
                 }
@@ -292,7 +292,7 @@ const WorkspaceEditModal = ({
         }
     };
     
-    const handleFinish = async (values) => {
+    const handleFinish = async (values: Record<string,unknown>) => {
         try {
             setIsUpdating(true);
             setUpdateError(null);
@@ -301,9 +301,9 @@ const WorkspaceEditModal = ({
             let authData = null;
             if (workspace.type === WORKSPACE_TYPES.GIT) {
                 try {
-                    authData = await prepareAuthData(values, values.authType || 'none');
+                    authData = await prepareAuthData(values, (values.authType as string) || 'none');
                 } catch (error) {
-                    message.error(`Failed to prepare authentication: ${error.message}`);
+                    message.error(`Failed to prepare authentication: ${(error as Error).message}`);
                     setIsUpdating(false);
                     return;
                 }

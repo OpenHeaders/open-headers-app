@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, Space, Button, Input, Typography, Alert, Checkbox, Tooltip, App, theme } from 'antd';
+import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import { 
     DatabaseOutlined,
     CopyOutlined,
@@ -44,7 +45,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
         }
     }, [visible]);
     
-    const generateEnvironmentLink = async (includeValues) => {
+    const generateEnvironmentLink = async (includeValues: boolean) => {
         try {
             setLoading(true);
             const result = await window.electronAPI.generateEnvironmentConfigLink({
@@ -74,7 +75,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
         }
     };
     
-    const handleIncludeValuesChange = async (e) => {
+    const handleIncludeValuesChange = async (e: CheckboxChangeEvent) => {
         const checked = e.target.checked;
         setIsIncludeValues(checked);
         await generateEnvironmentLink(checked);

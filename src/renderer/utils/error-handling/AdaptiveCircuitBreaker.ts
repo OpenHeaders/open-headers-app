@@ -111,7 +111,7 @@ class AdaptiveCircuitBreaker {
   /**
    * Execute function with manual bypass
    */
-  async executeWithBypass(fn) {
+  async executeWithBypass(fn: () => Promise<unknown>) {
     this.metrics.manualBypasses++;
     this.manualBypassActive = true;
     
@@ -385,7 +385,7 @@ class AdaptiveCircuitBreakerManager {
     };
   }
   
-  getBreaker(name, options = {}) {
+  getBreaker(name: string, options = {}) {
     if (!this.breakers.has(name)) {
       const breakerOptions = { ...this.defaultOptions, ...options, name };
       this.breakers.set(name, new AdaptiveCircuitBreaker(breakerOptions));
@@ -393,7 +393,7 @@ class AdaptiveCircuitBreakerManager {
     return this.breakers.get(name);
   }
   
-  async execute(name, fn, options = {}) {
+  async execute(name: string, fn: () => Promise<unknown>, options = {}) {
     const breaker = this.getBreaker(name, options);
     return breaker.execute(fn, options);
   }
@@ -401,7 +401,7 @@ class AdaptiveCircuitBreakerManager {
   /**
    * Reset specific circuit breaker
    */
-  reset(name) {
+  reset(name: string) {
     const breaker = this.breakers.get(name);
     if (breaker) {
       breaker.reset();

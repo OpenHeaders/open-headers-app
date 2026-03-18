@@ -28,7 +28,7 @@ const EnvironmentStatus = () => {
     const environmentNames = Object.keys(environments || {});
     
     // Get display name for environment
-    const getEnvironmentDisplayName = (envName) => {
+    const getEnvironmentDisplayName = (envName: string) => {
         if (envName === 'Default') return 'Default Environment';
         return envName;
     };

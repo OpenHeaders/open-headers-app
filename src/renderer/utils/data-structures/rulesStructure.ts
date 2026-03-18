@@ -120,7 +120,7 @@ export const createRulesStorage = () => ({
 
 
 // Export rules in a format compatible with browser extension
-export const exportForExtension = (storage) => {
+export const exportForExtension = (storage: Record<string, unknown>) => {
     return {
         version: storage.version,
         rules: storage.rules,
@@ -141,11 +141,11 @@ export const RULE_MESSAGE_TYPES = {
 };
 
 // Validate rule based on type
-export const validateRule = (rule) => {
+export const validateRule = (rule: { type?: string; domains?: string[]; headerName?: string; isDynamic?: boolean; headerValue?: string; [key: string]: unknown }) => {
     if (!rule.type || !Object.values(RULE_TYPES).includes(rule.type)) {
         return { valid: false, error: 'Invalid rule type' };
     }
-    
+
     if (!rule.domains || rule.domains.length === 0) {
         return { valid: false, error: 'At least one domain is required' };
     }
