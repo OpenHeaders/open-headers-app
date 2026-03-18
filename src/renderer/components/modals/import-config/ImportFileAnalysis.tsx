@@ -9,7 +9,7 @@ const { Text } = Typography;
  * Shows file information, statistics, and validation results
  */
 interface ImportFileAnalysisProps {
-    fileInfo: { version?: string; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; [key: string]: unknown } | null;
+    fileInfo: { version?: string; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; ruleBreakdown?: Record<string, number>; [key: string]: unknown } | null;
     envFileData: { variableCount?: number; environmentCount?: number; [key: string]: unknown } | null;
     hasAnyData: boolean;
     combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number };
@@ -45,7 +45,7 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
             {hasAnyData && (
                 <Card size="small" title="Import Preview">
                     <Row gutter={16}>
-                        {fileInfo && fileInfo.sourceCount > 0 && (
+                        {fileInfo && (fileInfo.sourceCount ?? 0) > 0 && (
                             <Col span={6}>
                                 <Statistic
                                     title="Sources"
@@ -54,7 +54,7 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
                                 />
                             </Col>
                         )}
-                        {fileInfo && fileInfo.ruleCount > 0 && (
+                        {fileInfo && (fileInfo.ruleCount ?? 0) > 0 && (
                             <Col span={6}>
                                 <Statistic
                                     title="Rules"
@@ -63,7 +63,7 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
                                 />
                             </Col>
                         )}
-                        {fileInfo && fileInfo.proxyRuleCount > 0 && (
+                        {fileInfo && (fileInfo.proxyRuleCount ?? 0) > 0 && (
                             <Col span={6}>
                                 <Statistic
                                     title="Proxy Rules"
@@ -84,10 +84,10 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
                     </Row>
                     
                     {/* Rule breakdown */}
-                    {fileInfo && fileInfo.ruleCount > 0 && Object.keys(fileInfo.ruleBreakdown).length > 0 && (
+                    {fileInfo && (fileInfo.ruleCount ?? 0) > 0 && fileInfo.ruleBreakdown && Object.keys(fileInfo.ruleBreakdown).length > 0 && (
                         <div style={{ marginTop: 16 }}>
                             <Text type="secondary">Rule Types: </Text>
-                            {Object.entries(fileInfo.ruleBreakdown).map(([type, count], index) => (
+                            {Object.entries(fileInfo.ruleBreakdown).map(([type, count]: [string, number], index) => (
                                 <span key={type}>
                                     {index > 0 && ', '}
                                     <Text>{type} ({count as React.ReactNode})</Text>

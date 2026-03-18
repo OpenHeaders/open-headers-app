@@ -57,7 +57,7 @@ export class WorkspaceHandler {
       return workspaceData;
     } catch (error) {
       log.error('Failed to export workspace:', error);
-      throw new Error(`Failed to export workspace: ${error.message}`);
+      throw new Error(`Failed to export workspace: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -68,7 +68,7 @@ export class WorkspaceHandler {
    * @returns {Promise<Object>} - Import statistics with created workspace info
    */
   async importWorkspace(workspaceInfo: Record<string, any> | null, options: Record<string, any>) {
-    const stats = {
+    const stats: { createdWorkspace: Record<string, unknown> | null; errors: Array<{ workspace: string; error: string }> } = {
       createdWorkspace: null,
       errors: []
     };
@@ -105,8 +105,8 @@ export class WorkspaceHandler {
     } catch (error) {
       log.error('Failed to import workspace:', error);
       stats.errors.push({
-        workspace: workspaceInfo.name,
-        error: error.message
+        workspace: workspaceInfo.name as string,
+        error: error instanceof Error ? error.message : String(error)
       });
       return stats;
     }
@@ -177,7 +177,7 @@ export class WorkspaceHandler {
         log.debug(`Switched to imported workspace: ${workspace.name}`);
       }
     } catch (error) {
-      log.warn(`Failed to switch to imported workspace: ${error.message}`);
+      log.warn(`Failed to switch to imported workspace: ${error instanceof Error ? error.message : String(error)}`);
       // Don't throw - workspace was created successfully, switching is optional
     }
   }

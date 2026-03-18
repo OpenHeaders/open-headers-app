@@ -120,8 +120,8 @@ export const handleWorkflowImport = async (file: File, onSuccess: ((data: Record
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
-        const content = e.target.result;
-        const data = JSON.parse(content.toString());
+        const content = e.target?.result;
+        const data = JSON.parse(content?.toString() ?? '');
         
         // Extract tag and description from metadata if present
         let tag = null;
@@ -151,15 +151,15 @@ export const handleWorkflowImport = async (file: File, onSuccess: ((data: Record
       } catch (error) {
         log.error('Error parsing imported file:', error);
         showMessage('error', 'Invalid workflow recording file format');
-        if (onError) onError(error);
+        if (onError) onError(error instanceof Error ? error : new Error(String(error)));
       }
     };
-    
+
     reader.readAsText(file);
   } catch (error) {
     log.error('Error importing workflow recording:', error);
     showMessage('error', 'Failed to import workflow recording');
-    if (onError) onError(error);
+    if (onError) onError(error instanceof Error ? error : new Error(String(error)));
   }
 };
 
@@ -193,7 +193,7 @@ export const createStickyScrollHandler = (elementRef: React.RefObject<HTMLElemen
     '.app-content'
   ];
   
-  const containerElements = [];
+  const containerElements: Element[] = [];
   if (typeof document !== 'undefined') {
     containers.forEach(selector => {
       const element = document.querySelector(selector);

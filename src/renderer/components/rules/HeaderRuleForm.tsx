@@ -357,7 +357,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
                             size="small"
                             style={{ width: '100%' }}
                             filterOption={(inputValue, option) =>
-                                option.value.toLowerCase().includes(inputValue.toLowerCase())
+                                option?.value?.toString().toLowerCase().includes(inputValue.toLowerCase()) ?? false
                             }
                             onBlur={(e) => {
                                 const fieldValue = (e.target as HTMLInputElement).value;
@@ -555,7 +555,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
                             // Validate environment variables in domains
                             if (envContext.environmentsReady) {
                                 const variables = envContext.getAllVariables();
-                                const invalidDomains = [];
+                                const invalidDomains: string[] = [];
                                 
                                 value.forEach((domain: string, index: number) => {
                                     const validation = validateEnvironmentVariables(domain, variables);
@@ -612,15 +612,15 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
                                         
                                         if (domainsWithVars.length === 0) return null;
                                         
-                                        const validDomains = domainsWithVars.filter(d => d.isValid);
-                                        const invalidDomains = domainsWithVars.filter(d => !d.isValid);
-                                        const allDomainVars = [...new Set(domainsWithVars.flatMap(d => d.vars))];
+                                        const validDomains = domainsWithVars.filter((d): d is NonNullable<typeof d> => d !== null && d.isValid);
+                                        const invalidDomains = domainsWithVars.filter((d): d is NonNullable<typeof d> => d !== null && !d.isValid);
+                                        const allDomainVars = [...new Set(domainsWithVars.filter((d): d is NonNullable<typeof d> => d !== null).flatMap(d => d.vars))];
                                         
                                         return (
                                             <div key={field}>
                                                 <Text type={invalidDomains.length > 0 ? "danger" : "secondary"}>
                                                     • Domains use: {allDomainVars.map(v => `{{${v}}}`).join(', ')}
-                                                    {invalidDomains.length > 0 && ` (missing: ${[...new Set(invalidDomains.flatMap(d => d.missingVars))].join(', ')})`}
+                                                    {invalidDomains.length > 0 && ` (missing: ${[...new Set(invalidDomains.filter((d): d is NonNullable<typeof d> => d !== null).flatMap(d => d.missingVars))].join(', ')})`}
                                                 </Text>
                                             </div>
                                         );

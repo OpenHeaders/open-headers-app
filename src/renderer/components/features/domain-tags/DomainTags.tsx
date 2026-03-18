@@ -25,6 +25,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import type { InputRef } from 'antd';
 
 // Import extracted modules and components
 import {
@@ -69,15 +70,15 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
     // Input state management
     const [inputVisible, setInputVisible] = useState(false);
     const [inputValue, setInputValue] = useState('');
-    const [currentInputValidation, setCurrentInputValidation] = useState(null);
+    const [currentInputValidation, setCurrentInputValidation] = useState<{ isValid: boolean; message?: string } | undefined>(undefined);
     
     // Edit state management
     const [editInputIndex, setEditInputIndex] = useState(-1);
     const [editInputValue, setEditInputValue] = useState('');
 
     // Refs for input focus management
-    const inputRef = useRef(null);
-    const editInputRef = useRef(null);
+    const inputRef = useRef<InputRef | null>(null);
+    const editInputRef = useRef<InputRef | null>(null);
 
     // Focus management effects
     useEffect(() => {
@@ -124,7 +125,7 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
         }
     };
 
-    const showInput = createShowInputHandler(setInputVisible, inputRef);
+    const showInput = createShowInputHandler(setInputVisible, inputRef as unknown as React.RefObject<HTMLInputElement | null>);
 
     const handlePaste = createPasteHandler({
         value,
@@ -151,10 +152,10 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
                     message: 'Unclosed environment variable' 
                 });
             } else {
-                setCurrentInputValidation(null);
+                setCurrentInputValidation(undefined);
             }
         } else {
-            setCurrentInputValidation(null);
+            setCurrentInputValidation(undefined);
         }
         
         // Handle comma-separated input

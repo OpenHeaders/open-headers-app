@@ -79,7 +79,7 @@ export class ExportService {
 
     } catch (error) {
       log.error('Export process failed:', error);
-      showMessage('error', `Export failed: ${error.message}`);
+      showMessage('error', `Export failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -205,26 +205,26 @@ export class ExportService {
     const mainData = { ...exportData };
     
     if (environmentOption !== 'none' && (exportData.environmentSchema || exportData.environments)) {
-      environmentData = {};
+      environmentData = {} as Record<string, unknown>;
       if (exportData.environmentSchema) {
-        environmentData.environmentSchema = exportData.environmentSchema;
+        (environmentData as Record<string, unknown>).environmentSchema = exportData.environmentSchema;
         delete mainData.environmentSchema;
       }
       if (exportData.environments) {
-        environmentData.environments = exportData.environments;
+        (environmentData as Record<string, unknown>).environments = exportData.environments;
         delete mainData.environments;
       }
     }
 
     const mainFilename = generateTimestampedFilename('open-headers-config', '', 'json');
-    const envFilename = environmentData ? generateTimestampedFilename('open-headers-env', '', 'json') : null;
+    const envFilename = environmentData ? generateTimestampedFilename('open-headers-env', '', 'json') : undefined;
 
     return await handleMultiFileExport({
       title: 'Export Configuration',
       mainFilename,
       environmentFilename: envFilename,
       mainData,
-      environmentData
+      environmentData: environmentData ?? undefined
     });
   }
 

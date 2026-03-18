@@ -80,11 +80,11 @@ const SourceTable = ({
     const [contentViewerVisible, setContentViewerVisible] = useState(false);
     
     // Currently selected source ID for modal operations
-    const [selectedSourceId, setSelectedSourceId] = useState(null);
+    const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
     
     // Loading states for visual feedback during operations
-    const [refreshingSourceId, setRefreshingSourceId] = useState(null);
-    const [removingSourceId, setRemovingSourceId] = useState(null);
+    const [refreshingSourceId, setRefreshingSourceId] = useState<string | null>(null);
+    const [removingSourceId, setRemovingSourceId] = useState<string | null>(null);
     
     // Ant Design theme token for consistent styling
     const { token } = theme.useToken();
@@ -272,8 +272,9 @@ const SourceTable = ({
 
     // Render virtualized or regular table based on data size
     // Virtualized table for >50 sources, regular table for smaller datasets
+    const VTable = VirtualizedSimpleTable as React.FC<{ dataSource: Record<string, unknown>[]; columns: Record<string, unknown>[]; rowKey: (record: Record<string, unknown>) => string; height: number; rowHeight: number }>;
     const tableComponent = useVirtualization ? (
-        <VirtualizedSimpleTable
+        <VTable
             dataSource={sources}
             columns={columns}
             rowKey={(record: Record<string,unknown>) => `source-${record.sourceId}-${record.sourceType}`}
@@ -306,7 +307,7 @@ const SourceTable = ({
                     source={selectedSource}
                     open={editModalVisible}
                     onCancel={handleCloseModal}
-                    onSave={handleSaveSource}
+                    onSave={handleSaveSource as (sourceData: Record<string, unknown>) => Promise<boolean>}
                     refreshingSourceId={refreshingSourceId} // Pass refreshing state for UI feedback
                 />
             )}

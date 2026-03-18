@@ -32,6 +32,7 @@ interface ExportFormatSelectorProps {
 
 const ExportFormatSelector = ({ exportType, onExportTypeChange, record, isExporting }: ExportFormatSelectorProps) => {
     const { token } = useToken();
+    if (!record) return null;
     return (
         <div>
             <Title level={5} style={{ marginBottom: 0 }}>Export Format</Title>

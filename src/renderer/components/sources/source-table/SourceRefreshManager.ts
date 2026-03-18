@@ -59,7 +59,7 @@ interface Logger {
  * @returns {string} Refreshing status text
  */
 const getRefreshingText = (refreshStatus: RefreshStatus | null, displayState: DisplayState | undefined, timeManager: TimeManager) => {
-    if (refreshStatus?.isRetry && refreshStatus?.attemptNumber > 0) {
+    if (refreshStatus?.isRetry && (refreshStatus?.attemptNumber ?? 0) > 0) {
         return `Retrying (attempt ${refreshStatus.attemptNumber} of 3)...`;
     }
     
@@ -185,13 +185,13 @@ export const getRefreshStatusText = (source: SourceItem | null, refreshManager: 
     
     // Priority 3: Circuit breaker in HALF_OPEN state
     if (circuitBreaker?.state === 'HALF_OPEN') {
-        return formatHalfOpenStatus(circuitBreaker.failureCount);
+        return formatHalfOpenStatus(circuitBreaker.failureCount ?? 0);
     }
-    
+
     // Priority 4: Has failures (retry logic)
-    if (circuitBreaker?.failureCount > 0) {
+    if ((circuitBreaker?.failureCount ?? 0) > 0) {
         const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId, source);
-        return formatRetryStatus(circuitBreaker.failureCount, timeUntilRefresh, !autoRefreshEnabled);
+        return formatRetryStatus(circuitBreaker!.failureCount ?? 0, timeUntilRefresh, !autoRefreshEnabled);
     }
     
     // Priority 5: Auto-refresh disabled
@@ -219,7 +219,7 @@ export const getRefreshStatusText = (source: SourceItem | null, refreshManager: 
     }
     
     // Fallback: Show configured interval
-    return `Auto-refresh: ${source.refreshOptions.interval}m`;
+    return `Auto-refresh: ${source.refreshOptions?.interval}m`;
 };
 
 /**
@@ -264,13 +264,13 @@ const getStatusTextForUpdate = ({
     
     // Circuit breaker half-open
     if (circuitBreaker?.state === 'HALF_OPEN') {
-        return formatHalfOpenStatus(circuitBreaker.failureCount);
+        return formatHalfOpenStatus(circuitBreaker.failureCount ?? 0);
     }
-    
+
     // Has failures
-    if (circuitBreaker?.failureCount > 0) {
+    if ((circuitBreaker?.failureCount ?? 0) > 0) {
         const timeUntilRefresh = refreshManager.getTimeUntilRefresh(source.sourceId, source);
-        return formatRetryStatus(circuitBreaker.failureCount, timeUntilRefresh, !autoRefreshEnabled);
+        return formatRetryStatus(circuitBreaker!.failureCount ?? 0, timeUntilRefresh, !autoRefreshEnabled);
     }
     
     // Auto-refresh disabled
@@ -285,7 +285,7 @@ const getStatusTextForUpdate = ({
     }
     
     // Fallback to interval
-    return `Auto-refresh: ${source.refreshOptions.interval}m`;
+    return `Auto-refresh: ${source.refreshOptions?.interval}m`;
 };
 
 /**

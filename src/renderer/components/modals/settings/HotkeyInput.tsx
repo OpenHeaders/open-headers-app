@@ -145,10 +145,10 @@ interface HotkeyInputProps {
 
 const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps, ref) => {
     const [isEditing, setIsEditing] = useState(false);
-    const [currentKeys, setCurrentKeys] = useState([]);
+    const [currentKeys, setCurrentKeys] = useState<string[]>([]);
     const [capturedHotkey, setCapturedHotkey] = useState('');
     const [error, setError] = useState('');
-    const inputRef = useRef(null);
+    const inputRef = useRef<HTMLDivElement | null>(null);
     const isMac = navigator?.platform?.toLowerCase().includes('mac') || 
                   window?.electronAPI?.platform === 'darwin';
 
@@ -277,7 +277,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
 
     const handleSave = async () => {
         if (capturedHotkey && !error) {
-            onChange(capturedHotkey);
+            onChange?.(capturedHotkey);
             setIsEditing(false);
             setCurrentKeys([]);
             setCapturedHotkey('');

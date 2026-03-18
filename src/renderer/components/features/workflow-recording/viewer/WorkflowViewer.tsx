@@ -55,12 +55,12 @@ const WorkflowViewer = ({
   const { settings } = useSettings();
 
   // Internal state
-  const [internalRecord, setInternalRecord] = useState(null);
+  const [internalRecord, setInternalRecord] = useState<Record<string, unknown> | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
   // Refs for component lifecycle and scroll management
   const lastActiveTimeRef = useRef(-1);
-  const scrollTimeoutRef = useRef(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrollingRef = useRef(false);
   const activeTabRef = useRef(TAB_KEYS.CONSOLE);
   const previousRecordIdRef = useRef(null);

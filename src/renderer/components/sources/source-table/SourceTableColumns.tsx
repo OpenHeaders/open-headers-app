@@ -121,7 +121,7 @@ export const createSourceTableColumns = ({
                     )}
                 </Space>
                 {/* Dependency warning for HTTP sources with missing requirements */}
-                {type === 'http' && record.activationState === 'waiting_for_deps' && record.missingDependencies?.length > 0 && (
+                {type === 'http' && record.activationState === 'waiting_for_deps' && (record.missingDependencies?.length ?? 0) > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
                         <span style={{ fontSize: '10px', color: '#faad14', fontWeight: 500 }}>
                             Waiting for:
@@ -138,11 +138,11 @@ export const createSourceTableColumns = ({
                                 height: '16px'
                             }}
                         >
-                            {record.missingDependencies[0]}
+                            {record.missingDependencies![0]}
                         </Tag>
                         {/* Show "+X more" tooltip if there are additional dependencies */}
-                        {record.missingDependencies.length > 1 && (
-                            <Tooltip title={record.missingDependencies.slice(1).join(', ')}>
+                        {record.missingDependencies!.length > 1 && (
+                            <Tooltip title={record.missingDependencies!.slice(1).join(', ')}>
                                 <Tag 
                                     color="warning"
                                     style={{ 
@@ -154,7 +154,7 @@ export const createSourceTableColumns = ({
                                         height: '16px'
                                     }}
                                 >
-                                    +{record.missingDependencies.length - 1} more
+                                    +{record.missingDependencies!.length - 1} more
                                 </Tag>
                             </Tooltip>
                         )}
@@ -204,7 +204,7 @@ export const createSourceTableColumns = ({
             <div className="source-content-cell" style={{ maxHeight: '60px', fontSize: '11px' }}>
                 <Text ellipsis={{ tooltip: content }}>
                     {/* Trim content to prevent layout issues with large content */}
-                    {trimContent(content)}
+                    {trimContent(content ?? '')}
                 </Text>
             </div>
         ),
@@ -244,7 +244,7 @@ export const createSourceTableColumns = ({
                                     const failureText = circuitBreaker.failureCount === 1 
                                         ? '1 failure' 
                                         : `${circuitBreaker.failureCount} consecutive failures`;
-                                    const backoffText = circuitBreaker.timeUntilNextAttemptMs > 0
+                                    const backoffText = (circuitBreaker.timeUntilNextAttemptMs ?? 0) > 0
                                         ? `Auto-refresh will resume after this retry attempt.`
                                         : 'Auto-refresh is temporarily paused.';
                                     

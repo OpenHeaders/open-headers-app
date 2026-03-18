@@ -103,7 +103,7 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
             okText: 'Clone',
             onOk: async () => {
                 const newName = `${workspace.name as string} (Personal Copy)`;
-                const success = await cloneWorkspaceToPersonal(workspace.id as string, newName);
+                const success = await cloneWorkspaceToPersonal?.(workspace.id as string, newName);
                 if (success) {
                     void message.success(`Created personal workspace: ${newName}`);
                 } else {

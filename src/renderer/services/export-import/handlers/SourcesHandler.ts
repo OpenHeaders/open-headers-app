@@ -53,7 +53,7 @@ export class SourcesHandler {
       return validSources;
     } catch (error) {
       log.error('Failed to export sources:', error);
-      throw new Error(`Failed to export sources: ${error.message}`);
+      throw new Error(`Failed to export sources: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -64,7 +64,7 @@ export class SourcesHandler {
    * @returns {Promise<Object>} - Import statistics
    */
   async importSources(sourcesToImport: Array<Record<string, unknown>>, options: Record<string, unknown>) {
-    const stats = {
+    const stats: { imported: number; skipped: number; errors: Array<{ source: unknown; error: string }> } = {
       imported: 0,
       skipped: 0,
       errors: []
@@ -95,7 +95,7 @@ export class SourcesHandler {
         log.error(`Failed to import source ${source.sourceId}:`, error);
         stats.errors.push({
           source: source.sourceId,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
@@ -204,7 +204,7 @@ export class SourcesHandler {
       };
     }
 
-    const errors = [];
+    const errors: string[] = [];
     sources.forEach((source, index) => {
       const validation = validateSource(source);
       if (!validation.success) {

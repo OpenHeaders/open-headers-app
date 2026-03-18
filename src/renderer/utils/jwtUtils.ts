@@ -29,7 +29,7 @@ export function decodeJWT(token: string) {
       signature: parts[2]
     };
   } catch (error) {
-    throw new Error(`Failed to decode JWT: ${error.message}`);
+    throw new Error(`Failed to decode JWT: ${(error as Error).message}`);
   }
 }
 
@@ -56,7 +56,7 @@ export function encodeJWT(header: Record<string, unknown>, payload: Record<strin
     // Return JWT with original signature (or empty if not provided)
     return `${encodedHeader}.${encodedPayload}.${signature}`;
   } catch (error) {
-    throw new Error(`Failed to encode JWT: ${error.message}`);
+    throw new Error(`Failed to encode JWT: ${(error as Error).message}`);
   }
 }
 
@@ -158,7 +158,7 @@ export async function signJWT(header: Record<string, unknown>, payload: Record<s
 
     return `${dataToSign}.${signature}`;
   } catch (error) {
-    throw new Error(`Failed to sign JWT: ${error.message}`);
+    throw new Error(`Failed to sign JWT: ${(error as Error).message}`);
   }
 }
 
@@ -209,7 +209,7 @@ export function validateJSON(jsonString: string) {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    throw new Error(`Invalid JSON: ${error.message}`);
+    throw new Error(`Invalid JSON: ${(error as Error).message}`);
   }
 }
 

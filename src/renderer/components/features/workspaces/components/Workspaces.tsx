@@ -61,7 +61,7 @@ const Workspaces = () => {
     
     // Component state
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingWorkspace, setEditingWorkspace] = useState(null);
+    const [editingWorkspace, setEditingWorkspace] = useState<Record<string,unknown> | null>(null);
     
     // Workspace actions hook
     const {
@@ -100,7 +100,7 @@ const Workspaces = () => {
      * Handles successful workspace creation
      * @param {string} workspaceId - ID of the created workspace
      */
-    const handleWorkspaceSuccess = (workspaceId: string) => {
+    const handleWorkspaceSuccess = (workspaceId?: string) => {
         console.log('Workspace created successfully:', workspaceId);
         setModalVisible(false);
         setEditingWorkspace(null);
@@ -119,7 +119,7 @@ const Workspaces = () => {
             });
             
             if (result.success) {
-                let currentAppLink = result.links.appLink;
+                let currentAppLink = result.links!.appLink;
                 
                 modal.info({
                     title: (
@@ -150,14 +150,14 @@ const Workspaces = () => {
                                         });
                                         
                                         if (newResult.success) {
-                                            setAppLink(newResult.links.appLink);
+                                            setAppLink(newResult.links!.appLink);
                                         }
                                     }
                                 };
                                 
                                 const getLinkValue = () => {
                                     if (linkType === 'web') {
-                                        return result.links.webLink;
+                                        return result.links!.webLink;
                                     }
                                     return appLink;
                                 };
@@ -343,7 +343,7 @@ const Workspaces = () => {
                             💡 Tip: Disable auto-sync or Clone a team workspace to a personal workspace to test changes without being overwritten by auto-sync.
                         </Text>
                         <Divider style={styles.tutorialDivider} />
-                        <Text type={"secondary" as any}>
+                        <Text type="secondary">
                             <strong>🔒 Privacy First:</strong> All workspace data is stored locally on your device. 
                             There is <strong>no</strong> analytics, telemetry, or usage data collection. 
                             Your configurations, API keys, and workspace settings never leave your device.
@@ -401,7 +401,7 @@ const Workspaces = () => {
             />
             
             <WorkspaceEditModal
-                visible={modalVisible && editingWorkspace}
+                visible={!!(modalVisible && editingWorkspace)}
                 workspace={editingWorkspace}
                 onCancel={handleModalClose}
                 onSuccess={handleWorkspaceSuccess}

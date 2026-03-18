@@ -65,7 +65,7 @@ async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateM
       variableCount: data.environmentSchema ? Object.keys(data.environmentSchema.variableDefinitions || {}).length : 0,
       
       // Rule breakdown
-      ruleBreakdown: {},
+      ruleBreakdown: {} as Record<string, number>,
       
       // Workspace info if present
       workspaceInfo: data.workspace || null,
@@ -89,7 +89,7 @@ async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateM
     
     return info;
   } catch (error) {
-    if (error.message.includes('Environment file') || error.message.includes('environment-only')) {
+    if (error instanceof Error && (error.message.includes('Environment file') || error.message.includes('environment-only'))) {
       throw error;
     }
     throw new Error('Invalid file format. Please select a valid Open Headers configuration file.');
@@ -221,14 +221,14 @@ function validateConfigStructure(data: Record<string, unknown>) {
 async function validateGitWorkspaceConfig(content: string, filePath: string) {
   try {
     // First, use the standard config validation
-    const validationResult = await analyzeConfigFile(content, false, false) as Record<string, any>;
+    const validationResult = await analyzeConfigFile(content, false, false) as Record<string, unknown>;
 
     // Check if config has any data (workspace alone is not enough)
-    const hasData = validationResult.sourceCount > 0 ||
-                    validationResult.ruleCount > 0 || 
-                    validationResult.proxyRuleCount > 0 || 
-                    validationResult.environmentCount > 0 ||
-                    validationResult.variableCount > 0;
+    const hasData = (validationResult.sourceCount as number) > 0 ||
+                    (validationResult.ruleCount as number) > 0 ||
+                    (validationResult.proxyRuleCount as number) > 0 ||
+                    (validationResult.environmentCount as number) > 0 ||
+                    (validationResult.variableCount as number) > 0;
     
     if (!hasData) {
       return {
@@ -257,7 +257,7 @@ async function validateGitWorkspaceConfig(content: string, filePath: string) {
     log.error('Git workspace config validation failed:', error);
     return {
       success: false,
-      error: error.message || 'Invalid configuration file',
+      error: error instanceof Error ? error.message : 'Invalid configuration file',
       details: null
     };
   }
@@ -332,7 +332,7 @@ async function readAndValidateMultiFileConfig(readFile: (path: string, options?:
     log.error('Multi-file config validation failed:', error);
     return {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
       config: null,
       validationResults
     };

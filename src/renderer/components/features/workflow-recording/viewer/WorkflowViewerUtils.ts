@@ -52,7 +52,7 @@ export const createAutoScrollHandler = () => {
             'tbody tr'
           ];
 
-          let rows = [];
+          let rows: Element[] = [];
           for (const rowSelector of allRowSelectors) {
             rows = Array.from(scrollContainer.querySelectorAll(rowSelector));
             if (rows.length > 0) {
@@ -64,7 +64,7 @@ export const createAutoScrollHandler = () => {
 
           if (currentIndex !== -1) {
             // Calculate approximate scroll position
-            const rowHeight = currentEntry.offsetHeight;
+            const rowHeight = (currentEntry as HTMLElement).offsetHeight;
             const scrollTop = currentIndex * rowHeight - (scrollContainer.clientHeight / 2) + (rowHeight / 2);
 
             scrollContainer.scrollTo({

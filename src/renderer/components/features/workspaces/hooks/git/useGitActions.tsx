@@ -18,7 +18,7 @@ export const useGitActions = () => {
     const { message } = App.useApp();
     
     // Git-related state
-    const [gitStatus, setGitStatus] = useState(null);
+    const [gitStatus, setGitStatus] = useState<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } } | null>(null);
     const [checkingGitStatus, setCheckingGitStatus] = useState(false);
     const [installingGit, setInstallingGit] = useState(false);
     const [gitInstallProgress, setGitInstallProgress] = useState('');
@@ -29,7 +29,7 @@ export const useGitActions = () => {
     
     // Git installation progress subscription
     useEffect(() => {
-        let unsubscribe;
+        let unsubscribe: (() => void) | undefined;
         if (installingGit) {
             unsubscribe = window.electronAPI.onGitInstallProgress((data) => {
                 setGitInstallProgress(data.message || '');
