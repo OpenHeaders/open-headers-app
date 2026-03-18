@@ -60,12 +60,17 @@ class CentralizedWorkspaceService extends BaseStateManager {
     };
     
     // Initialize managers
-    this.workspaceManager = new WorkspaceManager(window.electronAPI as any);
-    this.sourceManager = new SourceManager(window.electronAPI as any, getCentralizedEnvironmentService());
-    this.rulesManager = new RulesManager(window.electronAPI as any, window.electronAPI as any);
+    // Manager constructors accept narrower API interfaces. ElectronAPI satisfies
+    // all required shapes structurally, but some properties (e.g. deleteDirectory)
+    // are defined in preload but not yet in the ElectronAPI global type declaration.
+    // We use targeted casts through unknown to bridge the gap.
+    const api = window.electronAPI as unknown;
+    this.workspaceManager = new WorkspaceManager(api as ConstructorParameters<typeof WorkspaceManager>[0]);
+    this.sourceManager = new SourceManager(api as ConstructorParameters<typeof SourceManager>[0], getCentralizedEnvironmentService());
+    this.rulesManager = new RulesManager(api as ConstructorParameters<typeof RulesManager>[0], api as ConstructorParameters<typeof RulesManager>[1]);
     this.autoSaveManager = new AutoSaveManager();
-    this.syncManager = new SyncManager(window.electronAPI as any);
-    this.broadcastManager = new BroadcastManager(window.electronAPI as any);
+    this.syncManager = new SyncManager(api as ConstructorParameters<typeof SyncManager>[0]);
+    this.broadcastManager = new BroadcastManager(api as ConstructorParameters<typeof BroadcastManager>[0]);
     
     // Other properties
     this.initPromise = null;
@@ -78,7 +83,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Override setState to handle dirty flags
    */
-  setState(updates: Record<string, any>, changedKeys: string[] = []) {
+  setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
     // Mark as dirty if data changed
     if (changedKeys.includes('sources')) this.autoSaveManager.markDirty('sources');
     if (changedKeys.includes('rules')) this.autoSaveManager.markDirty('rules');
@@ -198,11 +203,11 @@ class CentralizedWorkspaceService extends BaseStateManager {
       this.autoSaveManager.markClean('proxyRules');
 
       // Update workspace metadata with actual counts
-      const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+      const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
       await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: (sources as any[]).length,
+        sourceCount: (sources as unknown[]).length,
         ruleCount: totalRules,
-        proxyRuleCount: (proxyRules as any[]).length,
+        proxyRuleCount: (proxyRules as unknown[]).length,
         lastDataLoad: new Date().toISOString()
       });
 
@@ -459,7 +464,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a new source
    */
-  async addSource(sourceData: Record<string, any>) {
+  async addSource(sourceData: Record<string, unknown>) {
     const sources = [...this.state.sources];
     const newSource = await this.sourceManager.addSource(sources, sourceData as { sourceType: string; sourcePath: string; [key: string]: unknown });
     
@@ -477,7 +482,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
       });
     } catch (saveError) {
       // Rollback the change if save fails
-      this.setState({ sources: this.state.sources.filter((s: Record<string, any>) => s.sourceId !== newSource.sourceId) }, ['sources']);
+      this.setState({ sources: this.state.sources.filter((s: Record<string, unknown>) => s.sourceId !== newSource.sourceId) }, ['sources']);
       throw saveError;
     }
     
@@ -487,7 +492,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update a source
    */
-  async updateSource(sourceId: string, updates: Record<string, any>) {
+  async updateSource(sourceId: string, updates: Record<string, unknown>) {
     let updatedSource: Record<string, unknown> | null = null;
     const sources = this.state.sources.map((source: Record<string, unknown>) => {
       if (source.sourceId === String(sourceId)) {
@@ -538,9 +543,9 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Update source activation state
    */
   updateSourceActivation(sourceId: string, activate: boolean) {
-    const sources = this.state.sources.map((source: Record<string, any>) => {
+    const sources = this.state.sources.map((source: Record<string, unknown>) => {
       if (source.sourceId === String(sourceId)) {
-        const updated: Record<string, any> = {
+        const updated: Record<string, unknown> = {
           ...source,
           activationState: activate ? 'active' : source.activationState,
           missingDependencies: activate ? [] : source.missingDependencies
@@ -566,7 +571,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Remove a source
    */
   async removeSource(sourceId: string) {
-    const sources = this.state.sources.filter((source: Record<string, any>) =>
+    const sources = this.state.sources.filter((source: Record<string, unknown>) =>
       source.sourceId !== String(sourceId)
     );
     
@@ -596,7 +601,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -611,7 +616,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -626,7 +631,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -638,7 +643,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Add a proxy rule
    */
-  async addProxyRule(ruleData: Record<string, any>) {
+  async addProxyRule(ruleData: Record<string, unknown>) {
     const proxyRules = [...this.state.proxyRules, ruleData];
     this.setState({ proxyRules }, ['proxyRules']);
     
@@ -655,8 +660,8 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Remove a proxy rule
    */
   async removeProxyRule(ruleId: string) {
-    const rule = this.state.proxyRules.find((r: Record<string, any>) => r.id === ruleId);
-    const proxyRules = this.state.proxyRules.filter((r: Record<string, any>) => r.id !== ruleId);
+    const rule = this.state.proxyRules.find((r: Record<string, unknown>) => r.id === ruleId);
+    const proxyRules = this.state.proxyRules.filter((r: Record<string, unknown>) => r.id !== ruleId);
     this.setState({ proxyRules }, ['proxyRules']);
     
     if (rule) {
@@ -680,22 +685,23 @@ class CentralizedWorkspaceService extends BaseStateManager {
       log.info(`Starting workspace creation: ${workspace.id} (${workspace.type})`);
       
       // Create workspace with enhanced validation
-      const newWorkspace = await this.workspaceManager.createWorkspace(this.state.workspaces, workspace) as Record<string, any>;
+      const newWorkspace = await this.workspaceManager.createWorkspace(this.state.workspaces, workspace) as Record<string, unknown>;
 
       // Add to workspaces list
       const workspaces = [...this.state.workspaces, newWorkspace];
       this.setState({ workspaces }, ['workspaces']);
 
       // Initialize data containers for the new workspace
-      await this.initializeWorkspaceData(newWorkspace.id);
+      const newWorkspaceId = newWorkspace.id as string;
+      await this.initializeWorkspaceData(newWorkspaceId);
 
       // Save workspaces configuration
       await this.saveWorkspaces();
 
       // Auto-switch to the newly created workspace
-      await this.switchWorkspace(newWorkspace.id);
+      await this.switchWorkspace(newWorkspaceId);
 
-      log.info(`Successfully created and switched to workspace: ${newWorkspace.id}`);
+      log.info(`Successfully created and switched to workspace: ${newWorkspaceId}`);
       return newWorkspace;
     } catch (error) {
       log.error('Failed to create workspace:', error);
@@ -735,9 +741,9 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   async updateWorkspaceMetadata(workspaceId: string, metadata: Record<string, unknown>) {
     try {
-      const workspaces = this.state.workspaces.map((w: Record<string, any>) =>
+      const workspaces = this.state.workspaces.map((w: Record<string, unknown>) =>
         w.id === workspaceId
-          ? { ...w, metadata: { ...w.metadata, ...metadata }, updatedAt: new Date().toISOString() }
+          ? { ...w, metadata: { ...(w.metadata as Record<string, unknown>), ...metadata }, updatedAt: new Date().toISOString() }
           : w
       );
       
@@ -754,7 +760,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
   /**
    * Update an existing workspace
    */
-  async updateWorkspace(workspaceId: string, updates: Record<string, any>) {
+  async updateWorkspace(workspaceId: string, updates: Record<string, unknown>) {
     try {
       // Validate workspace exists
       const existingWorkspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
@@ -763,15 +769,17 @@ class CentralizedWorkspaceService extends BaseStateManager {
       const updatedWorkspace = { ...existingWorkspace, ...updates };
       
       // Re-validate the updated workspace
-      if (updates.name && (updates.name.length < 1 || updates.name.length > 100)) {
+      const name = updates.name as string | undefined;
+      if (name && (name.length < 1 || name.length > 100)) {
         throw new Error('Workspace name must be between 1 and 100 characters');
       }
-      
-      if (updates.type && !['personal', 'team', 'git'].includes(updates.type)) {
+
+      const type = updates.type as string | undefined;
+      if (type && !['personal', 'team', 'git'].includes(type)) {
         throw new Error('Invalid workspace type. Must be personal, team, or git');
       }
-      
-      if (updates.type === 'git' && !updatedWorkspace.gitUrl) {
+
+      if (type === 'git' && !updatedWorkspace.gitUrl) {
         throw new Error('Git workspace must have a gitUrl');
       }
       
@@ -781,7 +789,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         updatedAt: new Date().toISOString()
       };
       
-      const workspaces = this.state.workspaces.map((w: Record<string, any>) =>
+      const workspaces = this.state.workspaces.map((w: Record<string, unknown>) =>
         w.id === workspaceId ? { ...w, ...finalUpdates } : w
       );
       this.setState({ workspaces }, ['workspaces']);
@@ -805,7 +813,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         throw new Error('Cannot delete default personal workspace');
       }
       
-      const workspaces = this.state.workspaces.filter((w: Record<string, any>) => w.id !== workspaceId);
+      const workspaces = this.state.workspaces.filter((w: Record<string, unknown>) => w.id !== workspaceId);
       this.setState({ workspaces }, ['workspaces']);
       
       if (this.state.activeWorkspaceId === workspaceId) {
@@ -853,7 +861,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         this.rulesManager.loadProxyRules(workspaceId)
       ]);
       
-      const totalRules = Object.values(rules as Record<string, any[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+      const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
       
       await this.updateWorkspaceMetadata(workspaceId, {
         sourceCount: sources.length,

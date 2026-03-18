@@ -68,8 +68,8 @@ export const DebugSourceInfo = ({ inFooter = false }) => {
                                 <div>ID: {source.sourceId}</div>
                                 <div>Enabled: {source.refreshOptions?.enabled ? 'Yes' : 'No'}</div>
                                 <div>Interval: {source.refreshOptions?.interval}m</div>
-                                <div>Last Refresh: {source.refreshOptions?.lastRefresh ? new Date(source.refreshOptions.lastRefresh).toLocaleTimeString() : 'Never'}</div>
-                                <div>Next Refresh: {source.refreshOptions?.nextRefresh ? new Date(source.refreshOptions.nextRefresh).toLocaleTimeString() : 'Not scheduled'}</div>
+                                <div>Last Refresh: {source.refreshOptions?.lastRefresh ? new Date(source.refreshOptions.lastRefresh as number).toLocaleTimeString() : 'Never'}</div>
+                                <div>Next Refresh: {source.refreshOptions?.nextRefresh ? new Date(source.refreshOptions.nextRefresh as number).toLocaleTimeString() : 'Not scheduled'}</div>
                                 <div>Has Content: {source.sourceContent ? 'Yes' : 'No'}</div>
                             </div>
                         ))}

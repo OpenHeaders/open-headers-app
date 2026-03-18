@@ -18,14 +18,27 @@ interface NavigationRequest {
   value?: string | boolean;
 }
 
+interface NavigationIntent {
+  tab?: string;
+  subTab?: string;
+  target?: string | null;
+  action?: string | null;
+  itemId?: string;
+}
+
+interface SettingsAction {
+  action: string;
+  value?: boolean;
+}
+
 interface UseNavigationDeps {
   setActiveTab: (tab: string) => void;
-  navigate: (intent: any) => void;
+  navigate: (intent: NavigationIntent) => void;
   ACTIONS: Record<string, string>;
   TARGETS: Record<string, string>;
   setSettingsInitialTab: (tab: string | null) => void;
   setSettingsVisible: (visible: boolean) => void;
-  setSettingsAction: (action: any) => void;
+  setSettingsAction: (action: SettingsAction) => void;
 }
 
 /**
@@ -41,12 +54,12 @@ export function useNavigation({
   setSettingsAction
 }: UseNavigationDeps): void {
   useEffect(() => {
-    const unsubscribe = (window as any).electronAPI.onNavigateTo((navigation: NavigationRequest) => {
+    const unsubscribe = window.electronAPI.onNavigateTo((navigation: NavigationRequest) => {
       log.info('Received navigation request:', navigation);
 
       // Always focus the window when navigation is requested
-      if ((window as any).electronAPI?.showMainWindow) {
-        (window as any).electronAPI.showMainWindow();
+      if (window.electronAPI?.showMainWindow) {
+        window.electronAPI.showMainWindow();
       }
 
       if (navigation.tab) {
@@ -151,7 +164,7 @@ function handleSettingsNavigation(
   navigation: NavigationRequest,
   setSettingsInitialTab: (tab: string | null) => void,
   setSettingsVisible: (visible: boolean) => void,
-  setSettingsAction: (action: any) => void
+  setSettingsAction: (action: SettingsAction) => void
 ): void {
   // Handle settings tab navigation
   if (navigation.settingsTab === 'workflows') {

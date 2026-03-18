@@ -11,18 +11,44 @@ import { showMessage } from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSourceRefresh');
 
+interface SourceData {
+  sourceId: string;
+  sourceType: string;
+  sourcePath?: string;
+  sourceMethod?: string;
+  sourceContent?: string;
+  requestOptions?: Record<string, unknown>;
+  jsonFilter?: { enabled: boolean; path?: string; [key: string]: unknown };
+  refreshOptions?: { enabled?: boolean; interval?: number; lastRefresh?: number; [key: string]: unknown };
+  needsInitialFetch?: boolean;
+  originalResponse?: string | null;
+  isFiltered?: boolean;
+  filteredWith?: string | null;
+  [key: string]: unknown;
+}
+
+interface SourceUpdates {
+  sourceContent?: string;
+  originalResponse?: string | null;
+  isFiltered?: boolean;
+  filteredWith?: string | null;
+  needsInitialFetch?: boolean;
+  refreshOptions?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 interface UseSourceRefreshDeps {
-  sources: any[];
-  updateSource: (sourceId: string, updates: any) => void;
+  sources: SourceData[];
+  updateSource: (sourceId: string, updates: SourceUpdates) => void;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (sourceData: any) => Promise<any>;
+  addSource: (sourceData: SourceData) => Promise<SourceData | null>;
 }
 
 interface UseSourceRefreshReturn {
-  handleHttpSourceRefresh: (sourceId: string, updatedSource?: any) => Promise<boolean>;
+  handleHttpSourceRefresh: (sourceId: string, updatedSource?: SourceData | null) => Promise<boolean>;
   refreshSourceWithHttp: (sourceId: string) => Promise<boolean>;
-  handleAddSource: (sourceData: any) => Promise<boolean>;
+  handleAddSource: (sourceData: SourceData) => Promise<boolean>;
 }
 
 /**
@@ -34,10 +60,10 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
   /**
    * Handle HTTP source refresh with actual HTTP request
    */
-  const handleHttpSourceRefresh = useCallback(async (sourceId: string, updatedSource: any = null): Promise<boolean> => {
+  const handleHttpSourceRefresh = useCallback(async (sourceId: string, updatedSource: SourceData | null = null): Promise<boolean> => {
     try {
       // Find the source - use the sources from the hook which are always fresh
-      const source = updatedSource || sources.find((s: any) => s.sourceId === sourceId);
+      const source = updatedSource || sources.find((s) => s.sourceId === sourceId);
       if (!source || source.sourceType !== 'http') {
         log.error(`HTTP source ${sourceId} not found`);
         return false;
@@ -46,16 +72,17 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
       log.debug(`Making HTTP request for source ${sourceId}`, source);
 
       // Make the HTTP request
+      const jsonFilter = { enabled: source.jsonFilter?.enabled ?? false, path: source.jsonFilter?.path };
       const result = await http.request(
         sourceId,
-        source.sourcePath,
+        source.sourcePath || '',
         source.sourceMethod || 'GET',
         source.requestOptions || {},
-        source.jsonFilter || { enabled: false }
+        jsonFilter
       );
 
       // Update the source content and metadata
-      const updates: any = {
+      const updates: SourceUpdates = {
         sourceContent: result.content
       };
 
@@ -81,9 +108,10 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
 
       showMessage('success', 'Source refreshed');
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
       log.error(`Failed to refresh HTTP source ${sourceId}:`, error);
-      showMessage('error', `Failed to refresh source: ${error.message}`);
+      showMessage('error', `Failed to refresh source: ${message}`);
       return false;
     }
   }, [sources, updateSource, http]);
@@ -93,7 +121,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
    */
   const refreshSourceWithHttp = useCallback(async (sourceId: string): Promise<boolean> => {
     // Find the source type
-    const source = sources.find((s: any) => s.sourceId === sourceId);
+    const source = sources.find((s) => s.sourceId === sourceId);
     if (source && source.sourceType === 'http') {
       // Use RefreshManager for HTTP sources to ensure proper scheduling
       return manualRefresh(sourceId);
@@ -106,7 +134,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
   /**
    * Handle add source with initial content fetching for HTTP sources
    */
-  const handleAddSource = useCallback(async (sourceData: any): Promise<boolean> => {
+  const handleAddSource = useCallback(async (sourceData: SourceData): Promise<boolean> => {
     log.debug('Adding source:', sourceData);
 
     // For HTTP sources, fetch content BEFORE adding the source
@@ -116,12 +144,13 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
         showMessage('info', 'Fetching content...');
 
         // Make the HTTP request to get initial content
+        const jsonFilter = { enabled: sourceData.jsonFilter?.enabled ?? false, path: sourceData.jsonFilter?.path };
         const result = await http.request(
           'new-source-' + Date.now(), // Temporary ID for the request
-          sourceData.sourcePath,
+          sourceData.sourcePath || '',
           sourceData.sourceMethod || 'GET',
           sourceData.requestOptions || {},
-          sourceData.jsonFilter || { enabled: false }
+          jsonFilter
         );
 
         // Add the content to the source data
@@ -143,9 +172,10 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
         }
 
         log.debug('Initial content fetched successfully');
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
         log.error('Failed to fetch initial content:', error);
-        showMessage('error', `Failed to fetch content: ${error.message}`);
+        showMessage('error', `Failed to fetch content: ${message}`);
         return false;
       }
     }

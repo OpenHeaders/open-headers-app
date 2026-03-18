@@ -50,15 +50,15 @@ interface WorkspaceRecord {
  * @returns {JSX.Element} WorkspacesTable component
  */
 interface WorkspacesTableProps {
-    workspaces: any[];
+    workspaces: WorkspaceRecord[];
     activeWorkspaceId: string;
-    syncStatus: Record<string, { syncing?: boolean; error?: string; lastSync?: string }>;
-    onSyncWorkspace: (workspace: any) => void;
-    onEditWorkspace: (workspace: any) => void;
-    onDeleteWorkspace: (workspace: any) => void;
-    onCloneToPersonal: (workspace: any) => void;
+    syncStatus: Record<string, { syncing?: boolean; error?: string | null; lastSync?: string | null }>;
+    onSyncWorkspace: (workspace: WorkspaceRecord) => void;
+    onEditWorkspace: (workspace: WorkspaceRecord) => void;
+    onDeleteWorkspace: (workspace: WorkspaceRecord) => void;
+    onCloneToPersonal: (workspace: WorkspaceRecord) => void;
     onSwitchWorkspace: (workspaceId: string) => void;
-    onUpdateWorkspace: (workspaceId: string, updates: any) => Promise<boolean>;
+    onUpdateWorkspace: (workspaceId: string, updates: Partial<WorkspaceRecord>) => Promise<boolean>;
 }
 
 const WorkspacesTable = ({
@@ -209,7 +209,7 @@ const WorkspacesTable = ({
 
     /**
      * Renders the sync status with appropriate icon and tooltip
-     * @param {any} _ - Unused parameter
+     * @param {unknown} _ - Unused parameter
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered sync status cell
      */
@@ -278,7 +278,7 @@ const WorkspacesTable = ({
 
     /**
      * Renders the authentication information
-     * @param {any} _ - Unused parameter
+     * @param {unknown} _ - Unused parameter
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auth cell
      */
@@ -313,7 +313,7 @@ const WorkspacesTable = ({
 
     /**
      * Renders the auto-sync toggle for team workspaces
-     * @param {any} _ - Unused parameter
+     * @param {unknown} _ - Unused parameter
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auto-sync cell
      */
@@ -346,7 +346,7 @@ const WorkspacesTable = ({
 
     /**
      * Renders the action buttons for each workspace with consistent alignment
-     * @param {any} _ - Unused parameter
+     * @param {unknown} _ - Unused parameter
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered actions cell
      */

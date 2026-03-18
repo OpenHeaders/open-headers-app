@@ -5,16 +5,22 @@ interface ProxyStatus {
   port: number;
 }
 
+type RrwebPlayerConstructor = new (config: Record<string, unknown>) => unknown;
+
+interface RrwebRecord {
+  [key: string]: unknown;
+}
+
 interface UseRecordPlayerReturn {
-  rrwebPlayer: any;
+  rrwebPlayer: RrwebPlayerConstructor | null;
   loading: boolean;
   error: string | null;
-  processRecordForProxy: (record: any, proxyStatus: ProxyStatus) => Promise<any>;
+  processRecordForProxy: (record: RrwebRecord, proxyStatus: ProxyStatus) => Promise<RrwebRecord>;
   createConsoleOverrides: () => () => void;
 }
 
 export const useRecordPlayer = (): UseRecordPlayerReturn => {
-    const [rrwebPlayer, setRrwebPlayer] = useState<any>(null);
+    const [rrwebPlayer, setRrwebPlayer] = useState<RrwebPlayerConstructor | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +44,8 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
             'file:///Applications/OpenHeaders.app'
         ];
 
-        const filterConsole = (originalMethod: (...args: any[]) => void) => (...args: any[]) => {
-            const message = args[0]?.toString() || '';
+        const filterConsole = (originalMethod: (...args: unknown[]) => void) => (...args: unknown[]) => {
+            const message = String(args[0] ?? '');
             if (suppressPatterns.some(pattern => message.includes(pattern))) {
                 return;
             }
@@ -56,8 +62,10 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 setError(null);
 
                 // Check if already loaded
-                if ((window as any).rrwebPlayer) {
-                    const player = (window as any).rrwebPlayer?.default || (window as any).rrwebPlayer?.Player || (window as any).rrwebPlayer;
+                const win = window as unknown as Record<string, unknown>;
+                const rrwebModule = win.rrwebPlayer as Record<string, unknown> | undefined;
+                if (rrwebModule) {
+                    const player = (rrwebModule.default || rrwebModule.Player || rrwebModule) as RrwebPlayerConstructor;
                     setRrwebPlayer(() => player);
                     return;
                 }
@@ -69,7 +77,9 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 await new Promise<void>((resolve, reject) => {
                     script.onload = () => {
                         // The UMD bundle exports the player as default or Player property
-                        const player = (window as any).rrwebPlayer?.default || (window as any).rrwebPlayer?.Player || (window as any).rrwebPlayer;
+                        const winRef = window as unknown as Record<string, unknown>;
+                        const rrwebMod = winRef.rrwebPlayer as Record<string, unknown> | undefined;
+                        const player = (rrwebMod?.default || rrwebMod?.Player || rrwebMod) as RrwebPlayerConstructor;
                         setRrwebPlayer(() => player);
                         resolve();
                     };
@@ -82,8 +92,8 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 link.rel = 'stylesheet';
                 link.href = './lib/rrweb-player.css';
                 document.head.appendChild(link);
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err: unknown) {
+                setError(err instanceof Error ? err.message : String(err));
             } finally {
                 setLoading(false);
             }
@@ -99,7 +109,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
         };
     }, []);
 
-    const processRecordForProxy = useCallback(async (record: any, proxyStatus: ProxyStatus): Promise<any> => {
+    const processRecordForProxy = useCallback(async (record: RrwebRecord, proxyStatus: ProxyStatus): Promise<RrwebRecord> => {
         if (!proxyStatus.running) return record;
 
         const proxyUrl = `http://localhost:${proxyStatus.port}`;
@@ -142,8 +152,8 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
         const originalConsoleError = console.error;
         const originalConsoleWarn = console.warn;
 
-        const overriddenError = (...args: any[]) => {
-            const errorMessage = args[0]?.toString() || '';
+        const overriddenError = (...args: unknown[]) => {
+            const errorMessage = String(args[0] ?? '');
             const suppressPatterns = [
                 'Failed to load resource',
                 'Failed to decode downloaded font',
@@ -170,8 +180,8 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
             originalConsoleError.apply(console, args);
         };
 
-        const overriddenWarn = (...args: any[]) => {
-            const warnMessage = args[0]?.toString() || '';
+        const overriddenWarn = (...args: unknown[]) => {
+            const warnMessage = String(args[0] ?? '');
             const suppressPatterns = [
                 'Failed to load resource',
                 'CORS',

@@ -17,9 +17,30 @@ interface EnvironmentSchema {
   variableDefinitions: Record<string, VariableDefinition>;
 }
 
+interface SourceData {
+  sourceId: string;
+  sourceType: string;
+  sourcePath?: string;
+  requestOptions?: {
+    headers?: Array<{ key: string; value: string }>;
+    queryParams?: Array<{ key: string; value: string }>;
+    body?: string;
+    totpSecret?: string;
+    [key: string]: unknown;
+  };
+  jsonFilter?: { enabled?: boolean; path?: string };
+  [key: string]: unknown;
+}
+
+interface EnvironmentVarEntry {
+  value?: string;
+  isSecret?: boolean;
+  [key: string]: unknown;
+}
+
 interface UseEnvironmentSchemaReturn {
-  findVariableUsage: (sources: any[]) => VariableUsage;
-  generateEnvironmentSchema: (sources: any[]) => EnvironmentSchema;
+  findVariableUsage: (sources: SourceData[]) => VariableUsage;
+  generateEnvironmentSchema: (sources: SourceData[]) => EnvironmentSchema;
 }
 
 /**
@@ -28,14 +49,14 @@ interface UseEnvironmentSchemaReturn {
 export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
   const { environments } = useEnvironmentCore();
 
-  const findVariableUsage = useCallback((sources: any[]): VariableUsage => {
+  const findVariableUsage = useCallback((sources: SourceData[]): VariableUsage => {
     const usage: VariableUsage = {};
     const variablePattern = /\{\{(\w+)\}\}/g;
 
-    sources.forEach((source: any) => {
+    sources.forEach((source: SourceData) => {
       if (source.sourceType === 'http') {
         // Check all string fields in the source
-        const checkField = (field: any, path: string) => {
+        const checkField = (field: unknown, path: string) => {
           if (typeof field === 'string') {
             const matches = [...field.matchAll(variablePattern)];
             matches.forEach((match: RegExpMatchArray) => {
@@ -48,7 +69,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
               }
             });
           } else if (typeof field === 'object' && field !== null) {
-            Object.entries(field).forEach(([key, value]) => {
+            Object.entries(field as Record<string, unknown>).forEach(([key, value]) => {
               checkField(value, `${path}.${key}`);
             });
           }
@@ -61,7 +82,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
         if (source.requestOptions) {
           // Check headers
           if (Array.isArray(source.requestOptions.headers)) {
-            source.requestOptions.headers.forEach((header: any) => {
+            source.requestOptions.headers.forEach((header: { key: string; value: string }) => {
               if (header && header.value) {
                 checkField(header.value, `headers.${header.key}`);
               }
@@ -70,7 +91,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
 
           // Check query params
           if (Array.isArray(source.requestOptions.queryParams)) {
-            source.requestOptions.queryParams.forEach((param: any) => {
+            source.requestOptions.queryParams.forEach((param: { key: string; value: string }) => {
               if (param && param.value) {
                 checkField(param.value, `queryParams.${param.key}`);
               }
@@ -94,7 +115,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
     return usage;
   }, []);
 
-  const generateEnvironmentSchema = useCallback((sources: any[]): EnvironmentSchema => {
+  const generateEnvironmentSchema = useCallback((sources: SourceData[]): EnvironmentSchema => {
     const variableUsage = findVariableUsage(sources);
     const schema: EnvironmentSchema = {
       environments: {},
@@ -102,7 +123,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
     };
 
     // Build environment structure
-    Object.entries(environments).forEach(([envName, envVars]: [string, any]) => {
+    Object.entries(environments).forEach(([envName, envVars]: [string, Record<string, EnvironmentVarEntry>]) => {
       schema.environments[envName] = {
         variables: Object.keys(envVars).map(varName => {
           const variable = envVars[varName];
@@ -117,7 +138,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
     // Build variable definitions
     Object.entries(variableUsage).forEach(([varName, usedIn]) => {
       let isSecret = false;
-      Object.values(environments).forEach((envVars: any) => {
+      Object.values(environments).forEach((envVars: Record<string, EnvironmentVarEntry>) => {
         const variable = envVars[varName];
         if (variable && variable.isSecret) {
           isSecret = true;

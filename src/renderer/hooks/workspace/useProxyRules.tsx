@@ -2,9 +2,14 @@ import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 import { showMessage } from '../../utils';
 
+interface ProxyRuleData {
+  id?: string;
+  [key: string]: unknown;
+}
+
 interface UseProxyRulesReturn {
-  rules: any[];
-  addRule: (ruleData: any) => Promise<boolean>;
+  rules: ProxyRuleData[];
+  addRule: (ruleData: ProxyRuleData) => Promise<boolean>;
   removeRule: (ruleId: string) => Promise<boolean>;
 }
 
@@ -14,13 +19,13 @@ interface UseProxyRulesReturn {
 export function useProxyRules(): UseProxyRulesReturn {
   const { proxyRules, service } = useCentralizedWorkspace();
 
-  const addRule = useCallback(async (ruleData: any): Promise<boolean> => {
+  const addRule = useCallback(async (ruleData: ProxyRuleData): Promise<boolean> => {
     try {
       await service.addProxyRule(ruleData);
       showMessage('success', 'Proxy rule added');
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -30,8 +35,8 @@ export function useProxyRules(): UseProxyRulesReturn {
       await service.removeProxyRule(ruleId);
       showMessage('success', 'Proxy rule removed');
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);

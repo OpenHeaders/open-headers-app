@@ -43,16 +43,16 @@ interface SyncEvent {
 }
 
 interface WorkspaceContextType {
-    createWorkspace: (data: any) => Promise<any>;
-    updateWorkspace: (id: string, data: any) => Promise<any>;
-    deleteWorkspace: (id: string) => Promise<any>;
+    createWorkspace: (data: WorkspaceData) => Promise<WorkspaceData | null | boolean>;
+    updateWorkspace: (id: string, data: Partial<WorkspaceData>) => Promise<WorkspaceData | null | boolean>;
+    deleteWorkspace: (id: string) => Promise<boolean | { success: boolean; message?: string }>;
     getWorkspaces?: () => Promise<WorkspaceData[]>;
-    workspaces?: any[];
-    switchWorkspace?: (id: string) => Promise<any>;
-    syncWorkspace?: (id: string, options?: any) => Promise<any>;
-    cloneWorkspaceToPersonal?: (id: string, newName?: string | null) => Promise<any>;
+    workspaces?: WorkspaceData[];
+    switchWorkspace?: (id: string) => Promise<unknown>;
+    syncWorkspace?: (id: string, options?: Record<string, unknown>) => Promise<unknown>;
+    cloneWorkspaceToPersonal?: (id: string, newName?: string | null) => Promise<unknown>;
     activeWorkspaceId?: string;
-    syncStatus?: Record<string, any>;
+    syncStatus?: Record<string, { syncing?: boolean; error?: string | null; lastSync?: string | null }>;
     loading?: boolean;
 }
 
@@ -242,7 +242,7 @@ class WorkspaceServiceAdapter {
     async create(workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.createWorkspace(workspaceData);
 
-        if (!result) {
+        if (!result || typeof result === 'boolean') {
             const error = new Error('Workspace creation returned null');
             log.error('Failed to create workspace:', error);
             throw error;
@@ -257,7 +257,7 @@ class WorkspaceServiceAdapter {
     async update(workspaceId: string, workspaceData: WorkspaceData) {
         const result = await this.workspaceContext.updateWorkspace(workspaceId, workspaceData);
 
-        if (!result) {
+        if (!result || typeof result === 'boolean') {
             const error = new Error('Workspace update returned null');
             log.error('Failed to update workspace:', error);
             throw error;

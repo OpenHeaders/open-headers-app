@@ -6,14 +6,52 @@ import { getCentralizedWorkspaceService } from '../../services/CentralizedWorksp
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('RefreshManagerContext');
 
+interface SourceData {
+  sourceId: string;
+  sourceType: string;
+  sourcePath?: string;
+  sourceMethod?: string;
+  sourceContent?: string;
+  requestOptions?: Record<string, unknown>;
+  jsonFilter?: Record<string, unknown>;
+  refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown };
+  activationState?: string;
+  needsInitialFetch?: boolean;
+  [key: string]: unknown;
+}
+
+interface RefreshStatus {
+  isRefreshing: boolean;
+  isOverdue: boolean;
+  isPaused: boolean;
+  consecutiveErrors: number;
+  isRetry: boolean;
+  attemptNumber: number;
+  failureCount: number;
+  circuitBreaker: {
+    state: string;
+    isOpen: boolean;
+    canManualBypass: boolean;
+    timeUntilNextAttempt: number;
+    timeUntilNextAttemptMs: number;
+    consecutiveOpenings: number;
+    currentTimeout: number;
+    failureCount: number;
+  };
+}
+
+interface HttpService {
+  request: (sourceId: string, url: string, method: string, options: Record<string, unknown>, jsonFilter: Record<string, unknown>) => Promise<unknown>;
+}
+
 interface RefreshManagerContextValue {
   isReady: () => boolean;
-  manualRefresh: (sourceId: string) => Promise<any>;
-  addSource: (source: any) => void;
-  updateSource: (source: any) => void;
+  manualRefresh: (sourceId: string) => Promise<boolean>;
+  addSource: (source: SourceData) => void;
+  updateSource: (source: SourceData) => void;
   removeSource: (sourceId: string) => Promise<void>;
-  getTimeUntilRefresh: (sourceId: string, sourceData: any) => number;
-  getRefreshStatus: (sourceId: string) => any;
+  getTimeUntilRefresh: (sourceId: string, sourceData: { sourceId: string; sourceType: string } | null) => number;
+  getRefreshStatus: (sourceId: string) => RefreshStatus;
 }
 
 /**
@@ -26,13 +64,19 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     const { updateSource } = useSources();
     const http = useHttp();
     const initializationRef = useRef(false);
-    const httpServiceRef = useRef<any>(null);
+    const httpServiceRef = useRef<HttpService | null>(null);
 
     // Update HTTP service reference when http changes
     useEffect(() => {
         httpServiceRef.current = {
-            request: async (sourceId: string, url: string, method: string, options: any, jsonFilter: any) => {
-                return await http.request(sourceId, url, method, options, jsonFilter);
+            request: async (sourceId: string, url: string, method: string, options: Record<string, unknown>, jsonFilter: Record<string, unknown>) => {
+                return await http.request(
+                    sourceId,
+                    url,
+                    method,
+                    options as Parameters<typeof http.request>[3],
+                    jsonFilter as unknown as Parameters<typeof http.request>[4]
+                );
             }
         };
     }, [http]);
@@ -45,14 +89,14 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
 
         initializationRef.current = true;
 
-        const updateCallback = (sourceId: string, content: any, additionalData: any) => {
+        const updateCallback = (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => {
             log.debug('RefreshManager update callback:', { sourceId, hasContent: !!content, additionalData });
 
             // Get the source to check if it has a JSON filter
-            const source = getCentralizedWorkspaceService().getState().sources.find((s: any) => s.sourceId === String(sourceId));
+            const source = getCentralizedWorkspaceService().getState().sources.find((s: SourceData) => s.sourceId === String(sourceId));
 
             // Build updates object
-            const updates: any = {};
+            const updates: Record<string, unknown> = {};
 
             // Only update content if it's explicitly provided (not undefined)
             // This prevents schedule updates from clearing content
@@ -66,18 +110,24 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                 if (additionalData.originalResponse) {
                     updates.originalResponse = additionalData.originalResponse;
                     updates.isFiltered = true;
-                    updates.filteredWith = source?.jsonFilter?.path || null;
-                } else if (source?.jsonFilter?.enabled === false) {
-                    updates.originalResponse = null;
-                    updates.isFiltered = false;
-                    updates.filteredWith = null;
+                    const jsonFilter = source?.jsonFilter as Record<string, unknown> | undefined;
+                    updates.filteredWith = (jsonFilter?.path as string) || null;
+                } else {
+                    const jsonFilter = source?.jsonFilter as Record<string, unknown> | undefined;
+                    if (jsonFilter?.enabled === false) {
+                        updates.originalResponse = null;
+                        updates.isFiltered = false;
+                        updates.filteredWith = null;
+                    }
                 }
 
                 // Merge refreshOptions to preserve all settings
                 if (additionalData.refreshOptions) {
+                    const sourceRefreshOptions = (source?.refreshOptions ?? {}) as Record<string, unknown>;
+                    const additionalRefreshOptions = additionalData.refreshOptions as Record<string, unknown>;
                     updates.refreshOptions = {
-                        ...(source?.refreshOptions || {}),
-                        ...additionalData.refreshOptions
+                        ...sourceRefreshOptions,
+                        ...additionalRefreshOptions
                     };
                 }
 
@@ -95,7 +145,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 await refreshManagerIntegration.initialize(
-                    httpServiceRef.current,
+                    httpServiceRef.current as unknown as Record<string, unknown>,
                     updateCallback
                 );
 
@@ -152,11 +202,11 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     const value: RefreshManagerContextValue = {
         isReady: () => refreshManagerIntegration.isReady(),
         manualRefresh: (sourceId: string) => refreshManagerIntegration.manualRefresh(sourceId),
-        addSource: (source: any) => refreshManagerIntegration.addSource(source),
-        updateSource: (source: any) => refreshManagerIntegration.updateSource(source),
+        addSource: (source: SourceData) => refreshManagerIntegration.addSource(source),
+        updateSource: (source: SourceData) => refreshManagerIntegration.updateSource(source),
         removeSource: (sourceId: string) => refreshManagerIntegration.removeSource(sourceId),
-        getTimeUntilRefresh: (sourceId: string, sourceData: any) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData),
-        getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId)
+        getTimeUntilRefresh: (sourceId: string, sourceData: { sourceId: string; sourceType: string } | null) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData as SourceData | null),
+        getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId) as RefreshStatus
     };
 
     return (
