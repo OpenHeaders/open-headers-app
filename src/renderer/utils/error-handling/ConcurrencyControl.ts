@@ -55,7 +55,7 @@ class Mutex {
   /**
    * Execute a function with mutex protection
    * @param {Function} fn Function to execute
-   * @returns {Promise<any>} Result of the function
+   * @returns {Promise<T>} Result of the function
    */
   async withLock<T>(fn: () => T | Promise<T>): Promise<T> {
     const release = await this.acquire();
@@ -122,7 +122,7 @@ class Semaphore {
   /**
    * Execute a function with semaphore protection
    * @param {Function} fn Function to execute
-   * @returns {Promise<any>} Result of the function
+   * @returns {Promise<T>} Result of the function
    */
   async withPermit<T>(fn: () => T | Promise<T>): Promise<T> {
     const release = await this.acquire();
@@ -149,9 +149,9 @@ class Semaphore {
 /**
  * Thread-safe Map implementation
  */
-class ConcurrentMap {
+class ConcurrentMap<V = unknown> {
   name: string;
-  map: Map<string, any>;
+  map: Map<string, V>;
   mutex: Mutex;
 
   constructor(name = 'unnamed') {
@@ -160,41 +160,41 @@ class ConcurrentMap {
     this.mutex = new Mutex(`${name}-map`);
   }
 
-  async get(key: string) {
+  async get(key: string): Promise<V | undefined> {
     return this.mutex.withLock(() => this.map.get(key));
   }
 
-  async set(key: string, value: unknown) {
+  async set(key: string, value: V): Promise<Map<string, V>> {
     return this.mutex.withLock(() => this.map.set(key, value));
   }
 
-  async has(key: string) {
+  async has(key: string): Promise<boolean> {
     return this.mutex.withLock(() => this.map.has(key));
   }
 
-  async delete(key: string) {
+  async delete(key: string): Promise<boolean> {
     return this.mutex.withLock(() => this.map.delete(key));
   }
 
-  async clear() {
+  async clear(): Promise<void> {
     return this.mutex.withLock(() => this.map.clear());
   }
 
-  async size() {
+  async size(): Promise<number> {
     return this.mutex.withLock(() => this.map.size);
   }
 
   /**
    * Get all keys as array (snapshot)
    */
-  async keys() {
+  async keys(): Promise<string[]> {
     return this.mutex.withLock(() => Array.from(this.map.keys()));
   }
 
   /**
    * Get all entries as array (snapshot)
    */
-  async entries() {
+  async entries(): Promise<[string, V][]> {
     return this.mutex.withLock(() => Array.from(this.map.entries()));
   }
 
@@ -247,7 +247,7 @@ class ConcurrentSet {
  * Request deduplication cache
  */
 class RequestDeduplicator {
-  pendingRequests: Map<string, Promise<any>>;
+  pendingRequests: Map<string, Promise<unknown>>;
   mutex: Mutex;
 
   constructor() {
@@ -259,7 +259,7 @@ class RequestDeduplicator {
    * Execute a request with deduplication
    * @param {string} key Unique key for the request
    * @param {Function} requestFn Function that returns a promise
-   * @returns {Promise<any>} Result of the request
+   * @returns {Promise<T>} Result of the request
    */
   async execute<T>(key: string, requestFn: () => Promise<T>): Promise<T> {
     const release = await this.mutex.acquire();
@@ -269,7 +269,7 @@ class RequestDeduplicator {
         log.debug(`Request ${key} already pending, returning existing promise`);
         const existingPromise = this.pendingRequests.get(key);
         release(); // Release lock before returning
-        return existingPromise;
+        return existingPromise as Promise<T>;
       }
 
       // Create new request promise

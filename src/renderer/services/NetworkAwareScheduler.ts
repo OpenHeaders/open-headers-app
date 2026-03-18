@@ -29,6 +29,7 @@ interface ScheduleEntry {
     alignToMinute: boolean;
     alignToHour: boolean;
     alignToDay: boolean;
+    isTemporary?: boolean;
 }
 
 interface RefreshSource {
@@ -52,7 +53,7 @@ interface TimeEvent {
  * NetworkAwareScheduler - Manages refresh scheduling with network awareness
  */
 class NetworkAwareScheduler {
-  schedules: InstanceType<typeof ConcurrentMap>;
+  schedules: ConcurrentMap<ScheduleEntry>;
   activeRefreshes: InstanceType<typeof ConcurrentSet>;
   timers: Map<string, ReturnType<typeof setTimeout>>;
   refreshSemaphore: InstanceType<typeof Semaphore>;
@@ -67,7 +68,7 @@ class NetworkAwareScheduler {
   overdueCheckTimer: ReturnType<typeof setInterval> | null;
 
   constructor() {
-    this.schedules = new ConcurrentMap('schedules');
+    this.schedules = new ConcurrentMap<ScheduleEntry>('schedules');
     this.activeRefreshes = new ConcurrentSet('activeRefreshes');
     this.timers = new Map();
 

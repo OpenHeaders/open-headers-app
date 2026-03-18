@@ -74,7 +74,7 @@ import { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } from '../constants/re
  */
 class RefreshManager {
   isInitialized: boolean;
-  sources: InstanceType<typeof ConcurrentMap>;
+  sources: ConcurrentMap<RefreshSource>;
   httpService: HttpService | null;
   onUpdateCallback: OnUpdateCallback | null;
   scheduler: InstanceType<typeof NetworkAwareScheduler>;
@@ -89,7 +89,7 @@ class RefreshManager {
 
   constructor() {
     this.isInitialized = false;
-    this.sources = new ConcurrentMap('sources');
+    this.sources = new ConcurrentMap<RefreshSource>('sources');
 
     this.httpService = null;
     this.onUpdateCallback = null;
