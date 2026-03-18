@@ -12,8 +12,10 @@ export default defineConfig({
         testTimeout: 10000,
         coverage: {
             provider: 'v8',
-            include: ['src/services/**', 'src/utils/**', 'src/main/**'],
-            exclude: ['src/renderer/**'],
+            include: ['src/**'],
+            exclude: ['src/renderer/components/**', 'src/renderer/App.tsx', 'src/renderer/index.tsx'],
+            reporter: ['text', 'text-summary', 'html'],
+            reportsDirectory: 'coverage',
         },
     },
 

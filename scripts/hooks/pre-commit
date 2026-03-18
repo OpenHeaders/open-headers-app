@@ -1,0 +1,13 @@
+#!/bin/sh
+echo "Running pre-commit checks..."
+
+echo "→ TypeScript typecheck (main)..."
+npx tsc --noEmit || { echo "❌ Main typecheck failed"; exit 1; }
+
+echo "→ TypeScript typecheck (renderer)..."
+npx tsc -p src/renderer/tsconfig.json --noEmit || { echo "❌ Renderer typecheck failed"; exit 1; }
+
+echo "→ Running tests..."
+npx vitest run --reporter=dot || { echo "❌ Tests failed"; exit 1; }
+
+echo "✅ All pre-commit checks passed"
