@@ -84,7 +84,7 @@ export const processSingleDomain = (input: string): string => {
     // Validate the domain using extracted validation logic
     const { valid, message, sanitized } = validateDomain(domain);
     if (!valid) {
-        showMessage('error', message);
+        showMessage('error', message ?? 'Invalid domain');
         return '';
     }
 

@@ -119,7 +119,7 @@ export function ContentTabs({
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>
-                        {formatContent(internalContent)}
+                        {formatContent(internalContent ?? '')}
                     </pre>
                 </div>
             )

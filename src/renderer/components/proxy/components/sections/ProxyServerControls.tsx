@@ -71,7 +71,7 @@ const ProxyServerControls = ({
                         <InputNumber
                             addonBefore="Port"
                             value={proxyStatus.port}
-                            onChange={onUpdatePort}
+                            onChange={(value) => { if (value !== null) onUpdatePort(value); }}
                             disabled={proxyStatus.running}
                             style={{ width: 150 }}
                         />

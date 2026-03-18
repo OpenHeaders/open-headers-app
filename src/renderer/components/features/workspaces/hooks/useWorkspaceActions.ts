@@ -18,7 +18,7 @@ export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: 
     // Create service adapters for new architecture (using singleton pattern)
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
-            workspaceContext
+            workspaceContext: workspaceContext as Parameters<typeof WorkspaceServiceAdapterFactory.create>[0]['workspaceContext']
         });
     }, [workspaceContext]);
     

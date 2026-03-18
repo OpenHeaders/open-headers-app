@@ -32,14 +32,14 @@ const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<strin
                             
                             if (domainsWithVars.length === 0) return null;
                             
-                            const invalidDomains = domainsWithVars.filter(d => !d.isValid);
-                            const allDomainVars = [...new Set(domainsWithVars.flatMap(d => d.vars))];
-                            
+                            const invalidDomains = domainsWithVars.filter(d => d && !d.isValid);
+                            const allDomainVars = [...new Set(domainsWithVars.flatMap(d => d?.vars ?? []))];
+
                             return (
                                 <div key={field}>
                                     <Text type={invalidDomains.length > 0 ? "danger" : "secondary"}>
                                         • Domains use: {allDomainVars.map(v => `{{${v}}}`).join(', ')}
-                                        {invalidDomains.length > 0 && ` (missing: ${[...new Set(invalidDomains.flatMap(d => d.missingVars))].join(', ')})`}
+                                        {invalidDomains.length > 0 && ` (missing: ${[...new Set(invalidDomains.flatMap(d => d?.missingVars ?? []))].join(', ')})`}
                                     </Text>
                                 </div>
                             );

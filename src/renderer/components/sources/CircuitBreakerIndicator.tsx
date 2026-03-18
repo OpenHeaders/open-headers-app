@@ -60,7 +60,7 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
           color: 'error',
           icon: <ExclamationCircleOutlined />,
           text: timeUntilNextAttempt ? `Paused (${timeUntilNextAttempt})` : 'Paused',
-          tooltip: `Auto-refresh temporarily disabled after ${consecutiveOpenings} consecutive failure${consecutiveOpenings > 1 ? 's' : ''}. ${
+          tooltip: `Auto-refresh temporarily disabled after ${consecutiveOpenings ?? 0} consecutive failure${(consecutiveOpenings ?? 0) > 1 ? 's' : ''}. ${
             timeUntilNextAttempt 
               ? `Will retry in ${timeUntilNextAttempt}.` 
               : 'Retrying soon.'
@@ -110,14 +110,14 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
         </Tag>
       </Tooltip>
       
-      {state === 'OPEN' && consecutiveOpenings > 1 && (
+      {state === 'OPEN' && (consecutiveOpenings ?? 0) > 1 && (
         <div style={{ 
           fontSize: '11px', 
           color: '#666', 
           marginTop: 4,
           marginLeft: 20 
         }}>
-          {getBackoffExplanation(consecutiveOpenings)}
+          {getBackoffExplanation(consecutiveOpenings ?? 0)}
         </div>
       )}
     </div>

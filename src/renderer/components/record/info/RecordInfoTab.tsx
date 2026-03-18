@@ -17,7 +17,7 @@ export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
             <Descriptions bordered column={1}>
                 <Descriptions.Item label="Workflow ID">{metadata.recordId}</Descriptions.Item>
                 <Descriptions.Item label="URL">{metadata.url}</Descriptions.Item>
-                <Descriptions.Item label="Duration">{formatDuration(metadata.duration)}</Descriptions.Item>
+                <Descriptions.Item label="Duration">{formatDuration(metadata.duration ?? 0)}</Descriptions.Item>
                 <Descriptions.Item label="Captured At">
                     <span>
                         {formattedTime.date} {formattedTime.time}

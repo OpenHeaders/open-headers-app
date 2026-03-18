@@ -291,7 +291,7 @@ export const createTotpTestHandler = ({
     // Validate if the secret contains variables that exist
     const validation = validateVariableExists(secret);
     if (!validation.valid) {
-        showMessage('error', validation.error);
+        showMessage('error', validation.error ?? 'Unknown validation error');
         setTotpError(validation.error ?? null);
         setTotpCode('VAR ERROR');
         return;

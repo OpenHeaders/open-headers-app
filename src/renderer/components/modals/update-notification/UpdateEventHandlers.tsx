@@ -291,9 +291,9 @@ export const createUpdateEventHandlers = ({
         const unsubscribeAlreadyInProgress = window.electronAPI.onUpdateCheckAlreadyInProgress?.(handleUpdateCheckAlreadyInProgress) || (() => {});
         const unsubscribeAlreadyDownloaded = window.electronAPI.onUpdateAlreadyDownloaded?.(handleUpdateAlreadyDownloaded) || (() => {});
         const unsubscribeClearChecking = window.electronAPI.onClearUpdateCheckingNotification?.(handleClearCheckingNotification) || (() => {});
-        const unsubscribeAvailable = window.electronAPI.onUpdateAvailable(handleUpdateAvailable);
-        const unsubscribeProgress = window.electronAPI.onUpdateProgress(handleUpdateProgress);
-        const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded(handleUpdateDownloaded);
+        const unsubscribeAvailable = window.electronAPI.onUpdateAvailable((data: Record<string, unknown>) => handleUpdateAvailable(data as unknown as { version: string }));
+        const unsubscribeProgress = window.electronAPI.onUpdateProgress((data: Record<string, unknown>) => handleUpdateProgress(data as unknown as { percent: number }));
+        const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded((data: Record<string, unknown>) => handleUpdateDownloaded(data as unknown as { version: string }));
         const unsubscribeError = window.electronAPI.onUpdateError((data) => handleUpdateError(typeof data === 'string' ? data : (data?.message || String(data))));
         const unsubscribeNotAvailable = window.electronAPI.onUpdateNotAvailable(handleUpdateNotAvailable);
 

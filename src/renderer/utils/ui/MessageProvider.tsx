@@ -5,7 +5,7 @@ import { createLogger } from '../error-handling/logger';
 const log = createLogger('MessageProvider');
 
 // Create a context for the message API
-const MessageContext = createContext(null);
+const MessageContext = createContext<{ showMessage: (type: string, content: string, duration?: number) => void } | null>(null);
 
 // Set of recent messages to prevent duplicates
 const recentMessages = new Set();

@@ -49,7 +49,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
                 includeAuthData: false
             });
             
-            if (result.success) {
+            if (result.success && result.links) {
                 setAppLink(result.links.appLink);
                 setWebLink(result.links.webLink);
             } else {
@@ -82,7 +82,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
                     includeAuthData: auth
                 });
                 
-                if (newResult.success) {
+                if (newResult.success && newResult.links) {
                     setAppLink(newResult.links.appLink);
                 }
             } catch (error) {

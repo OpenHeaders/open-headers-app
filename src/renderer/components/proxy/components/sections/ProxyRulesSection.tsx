@@ -63,7 +63,7 @@ const ProxyRulesSection = ({
     onToggleRule
 }: ProxyRulesSectionProps) => {
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingRule, setEditingRule] = useState(null);
+    const [editingRule, setEditingRule] = useState<Record<string, unknown> | null>(null);
 
     /**
      * Handle add new rule action

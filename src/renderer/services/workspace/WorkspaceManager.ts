@@ -191,7 +191,7 @@ class WorkspaceManager {
           }
         } catch (error) {
           // Ignore errors for files that don't exist
-          log.debug(`Failed to copy ${file}:`, error.message);
+          log.debug(`Failed to copy ${file}:`, error instanceof Error ? error.message : String(error));
         }
       }
 

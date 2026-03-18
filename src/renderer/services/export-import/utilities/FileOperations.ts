@@ -58,7 +58,7 @@ export async function showExportFileDialog({
       filters: FILE_FILTERS.JSON
     });
   } catch (error) {
-    throw new Error(`${ERROR_MESSAGES.FILE_OPERATION_FAILED}: ${error.message}`);
+    throw new Error(`${ERROR_MESSAGES.FILE_OPERATION_FAILED}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -87,7 +87,7 @@ export async function showImportFileDialog({
       properties: multiSelect ? ['openFile', 'multiSelections'] : ['openFile']
     });
   } catch (error) {
-    throw new Error(`${ERROR_MESSAGES.FILE_OPERATION_FAILED}: ${error.message}`);
+    throw new Error(`${ERROR_MESSAGES.FILE_OPERATION_FAILED}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -107,7 +107,7 @@ export async function writeJsonFile(filePath: string, data: Record<string, unkno
     const jsonString = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
     await window.electronAPI.writeFile(filePath, jsonString);
   } catch (error) {
-    throw new Error(`Failed to write file ${filePath}: ${error.message}`);
+    throw new Error(`Failed to write file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -121,7 +121,7 @@ export async function readJsonFile(filePath: string) {
     const content = await window.electronAPI.readFile(filePath, 'utf-8') as string;
     return JSON.parse(content);
   } catch (error) {
-    throw new Error(`Failed to read file ${filePath}: ${error.message}`);
+    throw new Error(`Failed to read file ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

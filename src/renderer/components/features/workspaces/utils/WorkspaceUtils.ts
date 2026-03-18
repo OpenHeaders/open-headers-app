@@ -28,7 +28,7 @@ export const getTimeAgo = (date: Date) => {
  */
 export const extractRepoName = (url: string) => {
     if (!url) return '';
-    return url.split('/').pop().replace('.git', '');
+    return (url.split('/').pop() ?? '').replace('.git', '');
 };
 
 /**
@@ -83,7 +83,7 @@ export const prepareAuthData = async (values: Record<string, any>, authType: str
                 try {
                     sshKeyContent = await window.electronAPI.readFile(values.sshKeyPath, 'utf-8') as string;
                 } catch (error) {
-                    throw new Error(`Failed to read SSH key file: ${error.message}`);
+                    throw new Error(`Failed to read SSH key file: ${error instanceof Error ? error.message : String(error)}`);
                 }
             } else {
                 sshKeyContent = values.sshKey;
@@ -137,7 +137,7 @@ export const prepareWorkspaceData = (values: Record<string, unknown>, editingWor
     ];
     
     fieldsToRemove.forEach(field => {
-        delete workspace[field];
+        delete (workspace as Record<string, unknown>)[field];
     });
     
     return workspace;

@@ -339,34 +339,34 @@ export const validateAllHttpFields = (form: FormInstance, values: HttpFormValues
     if (headers && headers.length > 0) {
         const headerResult = validateHttpHeaders(headers, envContext, form);
         if (!headerResult.valid) {
-            return { message: headerResult.error };
+            return { message: headerResult.error ?? 'Validation failed' };
         }
     }
-    
+
     // Validate query params
     const queryParams = form.getFieldValue(['requestOptions', 'queryParams']);
     if (queryParams && queryParams.length > 0) {
         const queryResult = validateQueryParameters(queryParams, envContext, form);
         if (!queryResult.valid) {
-            return { message: queryResult.error };
+            return { message: queryResult.error ?? 'Validation failed' };
         }
     }
-    
+
     // Validate body
     const body = form.getFieldValue(['requestOptions', 'body']);
     if (body) {
         const bodyResult = validateRequestBody(body, envContext, form);
         if (!bodyResult.valid) {
-            return { message: bodyResult.error };
+            return { message: bodyResult.error ?? 'Validation failed' };
         }
     }
-    
+
     // Validate JSON filter path if enabled
     const jsonFilter = form.getFieldValue('jsonFilter');
     if (jsonFilter?.enabled && jsonFilter?.path) {
         const pathResult = validateJsonFilterPath(jsonFilter.path, envContext, form);
         if (!pathResult.valid) {
-            return { message: pathResult.error };
+            return { message: pathResult.error ?? 'Validation failed' };
         }
     }
     

@@ -16,7 +16,7 @@ const log = createLogger('useVideoLoader');
 export const useVideoLoader = (record: { metadata?: { recordId?: string; [key: string]: unknown }; [key: string]: unknown }, viewMode: string) => {
     const [hasVideo, setHasVideo] = useState(false);
     const [videoLoading, setVideoLoading] = useState(true);
-    const videoRef = useRef(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
     // Check if video exists for this recording
     useEffect(() => {
@@ -29,7 +29,7 @@ export const useVideoLoader = (record: { metadata?: { recordId?: string; [key: s
             try {
                 // Check if recording has video
                 const recordings = await window.electronAPI.loadRecordings();
-                const currentRecording = recordings.find(r => r.id === record.metadata.recordId);
+                const currentRecording = recordings.find(r => r.id === record.metadata?.recordId);
                 setHasVideo(!!(currentRecording as Record<string, any>)?.hasVideo);
             } catch (error) {
                 log.error('Error checking video availability:', error);

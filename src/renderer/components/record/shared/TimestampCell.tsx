@@ -31,7 +31,7 @@ const TimestampCell = ({
     const timeParts = formatRelativeTimeWithSmallMs(timestamp);
     
     // Calculate absolute time
-    const absoluteTime = new Date(record.metadata.startTime + timestamp);
+    const absoluteTime = new Date((record.metadata?.startTime ?? 0) + timestamp);
     const formattedAbsoluteTime = format24HTimeWithMs(absoluteTime);
 
     return (

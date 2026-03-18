@@ -21,7 +21,7 @@ export function extractEnvironmentVariables(text: string | null | undefined): st
         return [];
     }
 
-    const variables = [];
+    const variables: string[] = [];
     const matches = text.matchAll(ENV_VAR_PATTERN);
     
     for (const match of matches) {

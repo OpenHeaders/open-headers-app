@@ -23,8 +23,8 @@ class SyncManager {
     log.info(`[SyncManager] Waiting for initial sync of workspace ${workspaceId}...`);
     
     return new Promise<void>((resolve, reject) => {
-      let unsubscribe;
-      let checkInterval;
+      let unsubscribe: (() => void) | undefined;
+      let checkInterval: ReturnType<typeof setInterval> | undefined;
       let syncReceived = false;
       const startTime = Date.now();
       

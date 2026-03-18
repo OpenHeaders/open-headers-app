@@ -68,7 +68,7 @@ const SearchOverlay = ({
 }: SearchOverlayProps) => {
     const { token } = theme.useToken();
     const [localSearchValue, setLocalSearchValue] = useState(searchValue);
-    const overlayRef = useRef(null);
+    const overlayRef = useRef<HTMLDivElement>(null);
 
     // Sync local value with prop value
     useEffect(() => {
@@ -78,7 +78,7 @@ const SearchOverlay = ({
     // Handle click outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (overlayRef.current && !overlayRef.current.contains(event.target)) {
+            if (overlayRef.current && !overlayRef.current.contains(event.target as Node)) {
                 onClose();
             }
         };

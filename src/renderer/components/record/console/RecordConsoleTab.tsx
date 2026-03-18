@@ -50,10 +50,10 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Modal state
     const [consoleModalVisible, setConsoleModalVisible] = useState(false);
-    const [selectedConsoleLog, setSelectedConsoleLog] = useState(null);
+    const [selectedConsoleLog, setSelectedConsoleLog] = useState<{ timestamp: number; level: string; message: string } | null>(null);
     
     // Filter state
-    const [consoleLevelFilter, setConsoleLevelFilter] = useState([]);
+    const [consoleLevelFilter, setConsoleLevelFilter] = useState<(string | number | boolean)[]>([]);
 
     // Search functionality
     const searchFilter = useSearchFilter();
@@ -77,8 +77,8 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Extract searchable fields from console record
      */
-    const extractSearchableFields = (consoleRecord: ConsoleRecord) => {
-        const message = (consoleRecord as ConsoleRecord).args.map((arg: unknown) => formatConsoleArg(arg as any)).join(' ');
+    const extractSearchableFields = (consoleRecord: Record<string, unknown>) => {
+        const message = ((consoleRecord as ConsoleRecord).args ?? []).map((arg: unknown) => formatConsoleArg(arg as never)).join(' ');
         return [message];
     };
 

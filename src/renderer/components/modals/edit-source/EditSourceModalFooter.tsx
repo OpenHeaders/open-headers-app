@@ -33,12 +33,12 @@ const EditSourceModalFooter: React.FC<EditSourceModalFooterProps> = ({
     onSave
 }) => {
     // Determine if TOTP cooldown is active
-    const isTotpCooldownActive = totpEnabled && 
-        totpSecret && 
-        source && 
-        source.sourceId && 
-        !canUseTotpSecret(source.sourceId) && 
-        refreshNow;
+    const isTotpCooldownActive = !!(totpEnabled &&
+        totpSecret &&
+        source &&
+        source.sourceId &&
+        !canUseTotpSecret(source.sourceId) &&
+        refreshNow);
     
     // Loading state for save button
     const isSaveLoading = saving || 

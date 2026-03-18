@@ -38,7 +38,7 @@ const UpdateNotification = forwardRef((props, ref) => {
     const [updateDownloaded, setUpdateDownloaded] = useState(false);      // Whether update has been downloaded and is ready to install
     const [downloadProgress, setDownloadProgress] = useState(0);          // Current download progress (0-100)
     const [isDownloading, setIsDownloading] = useState(false);            // Whether update is currently downloading
-    const [updateInfo, setUpdateInfo] = useState(null);                  // Information about the available update
+    const [updateInfo, setUpdateInfo] = useState<unknown>(null);                  // Information about the available update
     const [manualCheckInProgress, setManualCheckInProgress] = useState(false); // Whether user initiated a manual check
     const [isInstalling, setIsInstalling] = useState(false);             // Whether update installation is in progress
     const [lastCheckTime, setLastCheckTime] = useState(0);               // Timestamp of last update check (for debouncing)
@@ -53,11 +53,11 @@ const UpdateNotification = forwardRef((props, ref) => {
     const handlingAlreadyDownloadedRef = useRef(false);          // Whether we're handling an already downloaded update
     const eventListenersSetupRef = useRef(false);               // Whether event listeners have been initialized
     const initialCheckPerformedRef = useRef(false);             // Whether initial silent check has been performed
-    const notificationTimeoutRef = useRef(null);                // Timeout for delayed notifications
-    const checkDebounceTimerRef = useRef(null);                 // Timer for debouncing check requests
+    const notificationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);                // Timeout for delayed notifications
+    const checkDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);                 // Timer for debouncing check requests
     const inSilentCheckModeRef = useRef(false);                 // Whether current check is in silent mode
     const pendingNotificationRef = useRef(false);               // Whether a delayed notification is pending
-    const performUpdateCheckRef = useRef(null);                // Ref to latest performUpdateCheck (avoids stale closures)
+    const performUpdateCheckRef = useRef<((isManual?: boolean) => void) | null>(null);                // Ref to latest performUpdateCheck (avoids stale closures)
 
     /**
      * Debug logging function with timestamp
@@ -90,13 +90,13 @@ const UpdateNotification = forwardRef((props, ref) => {
     };
 
     const setState = {
-        setUpdateDownloaded,
-        setDownloadProgress,
-        setIsDownloading,
-        setUpdateInfo,
-        setManualCheckInProgress,
-        setIsInstalling,
-        setLastCheckTime
+        setUpdateDownloaded: (v: boolean) => setUpdateDownloaded(v),
+        setDownloadProgress: (v: number) => setDownloadProgress(v),
+        setIsDownloading: (v: boolean) => setIsDownloading(v),
+        setUpdateInfo: (info: unknown) => setUpdateInfo(info),
+        setManualCheckInProgress: (v: boolean) => setManualCheckInProgress(v),
+        setIsInstalling: (v: boolean) => setIsInstalling(v),
+        setLastCheckTime: (v: number) => setLastCheckTime(v)
     };
 
     const refs = {
