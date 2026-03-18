@@ -36,8 +36,9 @@ const { Text } = Typography;
  * @param {Object} props.form - Ant Design form instance
  */
 interface VariableMetadata {
-    value: string;
-    isSecret: boolean;
+    value?: string;
+    isSecret?: boolean;
+    [key: string]: unknown;
 }
 
 interface VariableRecord {
@@ -563,8 +564,8 @@ const VariableTable = ({
     ...Object.entries(variablesWithMetadata).map(([name, variable]) => ({
       key: name,
       name,
-      value: variable.value,
-      isSecret: variable.isSecret,
+      value: variable.value || '',
+      isSecret: variable.isSecret || false,
       usedIn: variableUsage[name] || []
     })),
     // Missing variables (used but not defined)

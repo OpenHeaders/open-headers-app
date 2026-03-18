@@ -10,6 +10,9 @@ import { ExportService } from './core/ExportService';
 import { ImportService } from './core/ImportService';
 export { ExportService, ImportService };
 
+// Shared types
+export type { ExportImportDependencies, ExportData, ImportData, ExportOptions, ImportOptions, RuleEntry, RulesStorage, EnvironmentVariableEntry } from './core/types';
+
 // Configuration and Constants
 export * from './core/ExportImportConfig';
 
@@ -32,7 +35,9 @@ export * from './utilities/DuplicateDetection';
  * @param {Object} dependencies - Application dependencies
  * @returns {Object} - Object containing both services
  */
-export function createExportImportServices(dependencies: { [key: string]: unknown }) {
+import type { ExportImportDependencies } from './core/types';
+
+export function createExportImportServices(dependencies: ExportImportDependencies) {
   return {
     exportService: new ExportService(dependencies),
     importService: new ImportService(dependencies)
@@ -44,7 +49,7 @@ export function createExportImportServices(dependencies: { [key: string]: unknow
  * @param {Object} dependencies - Dependencies to validate
  * @returns {Object} - Validation result
  */
-export function validateDependencies(dependencies: { [key: string]: unknown }) {
+export function validateDependencies(dependencies: ExportImportDependencies) {
   const required = [
     'sources', 
     'activeWorkspaceId',
@@ -59,11 +64,13 @@ export function validateDependencies(dependencies: { [key: string]: unknown }) {
     'generateEnvironmentSchema'
   ];
 
+  const depsRecord = dependencies as unknown as Record<string, unknown>;
+
   // appVersion can be empty string initially, so check differently
-  const missing = required.filter(dep => !dependencies[dep]);
-  
+  const missing = required.filter(dep => !depsRecord[dep]);
+
   // Allow appVersion to be empty string during initial load
-  if (!dependencies.hasOwnProperty('appVersion')) {
+  if (!Object.prototype.hasOwnProperty.call(dependencies, 'appVersion')) {
     missing.push('appVersion');
   }
   

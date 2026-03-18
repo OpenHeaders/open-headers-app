@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useEnvironmentCore } from './useEnvironmentCore';
+import { useEnvironmentCore, EnvironmentVariableEntry } from './useEnvironmentCore';
 import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useEnvironmentVariables');
@@ -9,7 +9,7 @@ interface UseEnvironmentVariablesReturn {
   deleteVariable: (name: string, environment?: string | null) => Promise<boolean>;
   getVariable: (name: string, environment?: string | null) => string;
   getAllVariables: (environment?: string | null) => Record<string, string>;
-  getAllVariablesWithMetadata: (environment?: string | null) => Record<string, any>;
+  getAllVariablesWithMetadata: (environment?: string | null) => Record<string, EnvironmentVariableEntry>;
 }
 
 /**
@@ -56,7 +56,7 @@ export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
     const envVars = environments[targetEnv] || {};
 
     const result: Record<string, string> = {};
-    Object.entries(envVars).forEach(([key, variable]: [string, any]) => {
+    Object.entries(envVars).forEach(([key, variable]: [string, EnvironmentVariableEntry]) => {
       result[key] = variable.value || '';
     });
 
@@ -69,8 +69,8 @@ export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
 
     // Filter out any non-variable properties
     // Variables should have a 'value' property
-    const variables: Record<string, any> = {};
-    Object.entries(envData).forEach(([key, data]: [string, any]) => {
+    const variables: Record<string, EnvironmentVariableEntry> = {};
+    Object.entries(envData).forEach(([key, data]: [string, EnvironmentVariableEntry]) => {
       if (data && typeof data === 'object' && 'value' in data) {
         variables[key] = data;
       }

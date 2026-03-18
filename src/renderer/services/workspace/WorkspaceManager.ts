@@ -6,9 +6,9 @@ import { DATA_FORMAT_VERSION } from '../../../config/version';
 const log = createLogger('WorkspaceManager');
 
 interface StorageAPI {
-  loadFromStorage: (...args: any[]) => Promise<any>;
-  saveToStorage: (...args: any[]) => Promise<any>;
-  deleteDirectory: (...args: any[]) => Promise<any>;
+  loadFromStorage: (filename: string) => Promise<string | null>;
+  saveToStorage: (filename: string, content: string) => Promise<void>;
+  deleteDirectory: (dirPath: string) => Promise<unknown>;
 }
 
 class WorkspaceManager {

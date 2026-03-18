@@ -9,6 +9,7 @@ import { getCentralizedEnvironmentService } from '../../../services/CentralizedE
 import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utilities/ValidationUtils';
 import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
 import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, EnvironmentVariableEntry } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentsHandler');
@@ -70,10 +71,10 @@ interface EnvironmentData {
  * Manages export and import operations for environment configurations
  */
 export class EnvironmentsHandler {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
   activeWorkspaceId: string;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
     this.activeWorkspaceId = dependencies.activeWorkspaceId;
   }
@@ -144,14 +145,14 @@ export class EnvironmentsHandler {
    */
   _exportFullEnvironments(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
     const { environments } = this.dependencies;
-    let exportEnvironments = environments;
+    let exportEnvironments: Record<string, Record<string, EnvironmentVariableEntry>> = environments;
     let schema = fullSchema;
     
     if (selectedEnvironments && selectedEnvironments.length > 0) {
       exportEnvironments = {};
       selectedEnvironments.forEach((envName: string) => {
         if (environments[envName]) {
-          exportEnvironments[envName] = environments[envName];
+          exportEnvironments[envName] = environments[envName] as Record<string, EnvironmentVariableEntry>;
         }
       });
 
@@ -167,7 +168,7 @@ export class EnvironmentsHandler {
     }
 
     const envCount = Object.keys(exportEnvironments).length;
-    const totalVars = Object.values(exportEnvironments).reduce((sum: number, env: any) => sum + Object.keys(env).length, 0);
+    const totalVars = Object.values(exportEnvironments).reduce((sum: number, env: Record<string, EnvironmentVariableEntry>) => sum + Object.keys(env).length, 0);
     log.info(`Exporting ${envCount} environments with ${totalVars} total variables`);
     
     return {
@@ -377,7 +378,7 @@ export class EnvironmentsHandler {
           // Convert object variableDefinitions to array format for processing
           const variableDefsArray = Object.entries(schemaData.variableDefinitions).map(([name, def]) => ({
             name,
-            ...(def as Record<string, any>)
+            ...(def as Record<string, unknown>)
           }));
           const schemaStats = await this._createVariablesFromSchema(envName, variableDefsArray);
           stats.variablesCreated += schemaStats.variablesCreated;

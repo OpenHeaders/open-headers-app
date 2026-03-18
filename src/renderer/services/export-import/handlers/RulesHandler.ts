@@ -7,6 +7,7 @@
 
 import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
+import type { ExportImportDependencies } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
@@ -75,10 +76,10 @@ interface RulesData {
  * Manages export and import operations for application rules
  */
 export class RulesHandler {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
   activeWorkspaceId: string;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
     this.activeWorkspaceId = dependencies.activeWorkspaceId;
   }
@@ -88,8 +89,8 @@ export class RulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Rules data object or null if not selected
    */
-  async exportRules(options: Record<string, unknown>) {
-    const { selectedItems } = options as { selectedItems: Record<string, boolean> };
+  async exportRules(options: ExportOptions) {
+    const { selectedItems } = options;
 
     if (!selectedItems.rules) {
       log.debug('Rules not selected for export');
@@ -125,9 +126,7 @@ export class RulesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importRules(rulesToImportInput: RulesToImport | Record<string, unknown>, optionsInput: ImportOptions | Record<string, unknown>) {
-    const rulesToImport = rulesToImportInput as RulesToImport;
-    const options = optionsInput as ImportOptions;
+  async importRules(rulesToImport: RulesToImport, options: ImportOptions) {
     const stats = {
       imported: { total: 0 } as Record<string, number>,
       skipped: { total: 0 } as Record<string, number>,
@@ -145,7 +144,7 @@ export class RulesHandler {
       return stats;
     }
 
-    const totalRulesToImport = Object.values(rulesToImport.rules).reduce((sum: number, rules: any) => sum + rules.length, 0);
+    const totalRulesToImport = Object.values(rulesToImport.rules).reduce((sum: number, rules: RuleEntry[]) => sum + rules.length, 0);
     log.info(`Starting import of ${totalRulesToImport} rules in ${options.importMode} mode`);
 
     try {
@@ -174,8 +173,8 @@ export class RulesHandler {
       }
 
       // Update metadata
-      existingRulesStorage.metadata.totalRules = Object.values(existingRulesStorage.rules)
-        .reduce((sum: number, rules: any) => sum + rules.length, 0);
+      existingRulesStorage.metadata.totalRules = (Object.values(existingRulesStorage.rules) as RuleEntry[][])
+        .reduce((sum: number, rules: RuleEntry[]) => sum + rules.length, 0);
       existingRulesStorage.metadata.lastUpdated = new Date().toISOString();
 
       // Save the updated rules

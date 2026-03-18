@@ -5,8 +5,8 @@ import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('SyncManager');
 
 interface SyncElectronAPI {
-  onWorkspaceSyncCompleted?: (callback: (data: Record<string, any>) => void) => (() => void);
-  loadFromStorage: (...args: any[]) => Promise<any>;
+  onWorkspaceSyncCompleted?: (callback: (data: Record<string, unknown>) => void) => (() => void);
+  loadFromStorage: (filename: string) => Promise<string | null>;
 }
 
 class SyncManager {
@@ -52,7 +52,7 @@ class SyncManager {
               resolve();
             } else {
               log.warn('[SyncManager] Initial sync failed via IPC event:', data.error);
-              reject(new Error(data.error || 'Sync failed'));
+              reject(new Error(typeof data.error === 'string' ? data.error : 'Sync failed'));
             }
           }
         });

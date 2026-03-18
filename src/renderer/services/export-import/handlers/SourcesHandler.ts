@@ -8,6 +8,7 @@
 import { isSourceDuplicate } from '../utilities/DuplicateDetection';
 import { validateSource } from '../utilities/ValidationUtils';
 import { IMPORT_MODES } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, ExportOptions, SourceData } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SourcesHandler');
@@ -17,9 +18,9 @@ const log = createLogger('SourcesHandler');
  * Manages export and import operations for source configurations
  */
 export class SourcesHandler {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
   }
 
@@ -28,8 +29,8 @@ export class SourcesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of sources or null if not selected
    */
-  async exportSources(options: Record<string, unknown>) {
-    const { selectedItems } = options as { selectedItems: Record<string, boolean> };
+  async exportSources(options: ExportOptions): Promise<SourceData[] | null> {
+    const { selectedItems } = options;
 
     if (!selectedItems.sources) {
       log.debug('Sources not selected for export');
@@ -111,7 +112,7 @@ export class SourcesHandler {
    * @returns {Promise<Object>} - Import result
    * @private
    */
-  async _importSingleSource(source: Record<string, any>, options: Record<string, any>) {
+  async _importSingleSource(source: SourceData, options: { importMode?: string }) {
     // Validate source structure
     const validation = validateSource(source);
     if (!validation.success) {
@@ -121,7 +122,10 @@ export class SourcesHandler {
     // Check for duplicates in merge mode
     if (options.importMode === IMPORT_MODES.MERGE) {
       const currentSources = this._getCurrentSources();
-      const isDuplicate = isSourceDuplicate(source as any, currentSources as any);
+      const isDuplicate = isSourceDuplicate(
+        source as { sourceType: string; sourcePath?: string; url?: string },
+        currentSources as { sourceType: string; sourcePath?: string; url?: string }[]
+      );
       
       if (isDuplicate) {
         log.debug(`Skipping duplicate source: ${source.sourceId}`);
@@ -140,9 +144,9 @@ export class SourcesHandler {
    * @returns {Array} - Current sources
    * @private
    */
-  _getCurrentSources() {
+  _getCurrentSources(): SourceData[] {
     try {
-      return this.dependencies.exportSources ? this.dependencies.exportSources() : [];
+      return this.dependencies.exportSources();
     } catch (error) {
       log.warn('Failed to get current sources:', error);
       return [];
@@ -155,10 +159,11 @@ export class SourcesHandler {
    * @returns {Promise<boolean>} - Success status
    * @private
    */
-  async _addSource(source: Record<string, unknown>) {
+  async _addSource(source: SourceData) {
     // Dynamic import to avoid circular dependencies
-    const mod = await import('../../../hooks/workspace/useSources') as any;
-    const success = await mod.addSource(source);
+    const mod = await import('../../../hooks/workspace/useSources');
+    const addSource = (mod as unknown as { addSource?: (s: SourceData) => Promise<boolean> }).addSource;
+    const success = await addSource?.(source);
     
     if (!success) {
       throw new Error('Add source operation returned false');
@@ -175,18 +180,14 @@ export class SourcesHandler {
   async _clearExistingSources() {
     const currentSources = this._getCurrentSources();
     const { removeSource } = this.dependencies;
-    
-    if (!removeSource) {
-      throw new Error('Remove source function not available');
-    }
-
     log.info(`Clearing ${currentSources.length} existing sources`);
     
     for (const source of currentSources) {
+      const sourceId = source.sourceId as string;
       try {
-        await removeSource(source.sourceId);
+        await removeSource(sourceId);
       } catch (error) {
-        log.warn(`Failed to remove source ${source.sourceId}:`, error);
+        log.warn(`Failed to remove source ${sourceId}:`, error);
       }
     }
   }

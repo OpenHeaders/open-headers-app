@@ -1,8 +1,15 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getCentralizedEnvironmentService } from '../../services/CentralizedEnvironmentService';
+import { getCentralizedEnvironmentService, CentralizedEnvironmentService } from '../../services/CentralizedEnvironmentService';
+
+export interface EnvironmentVariableEntry {
+  value?: string;
+  isSecret?: boolean;
+  updatedAt?: string;
+  [key: string]: unknown;
+}
 
 interface EnvironmentCoreState {
-  environments: Record<string, any>;
+  environments: Record<string, Record<string, EnvironmentVariableEntry>>;
   activeEnvironment: string;
   isLoading: boolean;
   isReady: boolean;
@@ -10,7 +17,7 @@ interface EnvironmentCoreState {
 }
 
 interface UseEnvironmentCoreReturn extends EnvironmentCoreState {
-  service: any;
+  service: CentralizedEnvironmentService;
 }
 
 /**
@@ -24,7 +31,7 @@ export function useEnvironmentCore(): UseEnvironmentCoreReturn {
 
   // Subscribe to service state changes
   useEffect(() => {
-    const unsubscribe = service.subscribe((newState: Record<string, any>) => {
+    const unsubscribe = service.subscribe((newState: Record<string, unknown>) => {
       setState(newState as EnvironmentCoreState);
     });
     return () => { unsubscribe(); };
