@@ -18,8 +18,8 @@ export function useEnv(): UseEnvReturn {
             }
 
             return await window.electronAPI.getEnvVariable(name);
-        } catch (error: any) {
-            throw new Error(`Error getting environment variable: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error getting environment variable: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 

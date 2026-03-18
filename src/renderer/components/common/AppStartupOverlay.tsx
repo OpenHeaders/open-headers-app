@@ -37,7 +37,7 @@ const AppStartupOverlay = ({
                 }
             }}
         >
-            <Space size={"middle" as any} style={{ display: 'flex', alignItems: 'center', flexDirection: 'column' }}>
+            <Space size={"middle" as never} style={{ display: 'flex', alignItems: 'center', flexDirection: 'column' }}>
                 <img src="./images/icon128.png" alt="Open Headers Logo" style={{ width: 32, height: 32 }} />
                 <Space size="small" style={{ display: 'flex', alignItems: 'center' }}>
                     <Spin 

@@ -143,7 +143,7 @@ const WorkspaceCreationProgressModal = ({
                 {error && (
                     <Alert
                         message="Creation Failed"
-                        description={typeof error === 'object' ? (error as any).message : error}
+                        description={typeof error === 'object' && error !== null ? (error as Record<string, unknown>).message as string : error}
                         type="error"
                         showIcon
                         icon={<CloseCircleOutlined />}

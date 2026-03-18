@@ -141,7 +141,7 @@ const EnvironmentVariablesCard: React.FC<EnvironmentVariablesCardProps> = ({
                                 <div style={{ marginTop: 8 }}>
                                     <Space>
                                         <Text 
-                                            type={"link" as any} 
+                                            type={"link" as never} 
                                             style={{ fontSize: '12px', cursor: 'pointer' }}
                                             onClick={onSelectAllEnvironments}
                                         >
@@ -149,7 +149,7 @@ const EnvironmentVariablesCard: React.FC<EnvironmentVariablesCardProps> = ({
                                         </Text>
                                         <Text type="secondary">|</Text>
                                         <Text 
-                                            type={"link" as any} 
+                                            type={"link" as never} 
                                             style={{ fontSize: '12px', cursor: 'pointer' }}
                                             onClick={onSelectNoEnvironments}
                                         >

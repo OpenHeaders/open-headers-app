@@ -76,7 +76,7 @@ const ExportFormatSelector = ({ exportType, onExportTypeChange, record, isExport
                             width: '100%',
                             padding: '14px',
                             // Theme-aware backgrounds
-                            background: !record.hasVideo ? (token as any).colorBgTextDisabled : exportType === 'video' ? token.colorSuccessBg : token.colorBgContainer,
+                            background: !record.hasVideo ? (token as unknown as Record<string, string>).colorBgTextDisabled : exportType === 'video' ? token.colorSuccessBg : token.colorBgContainer,
                             borderRadius: '8px',
                             // Theme-aware borders
                             border: !record.hasVideo ? `1px solid ${token.colorBorder}` : exportType === 'video' ? `1px solid ${token.colorSuccessBorder}` : `1px solid ${token.colorBorder}`,
