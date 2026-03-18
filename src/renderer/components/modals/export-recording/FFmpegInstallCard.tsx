@@ -69,12 +69,12 @@ const FFmpegInstallCard = ({
         
         // Set up progress listeners
         const unsubscribeProgress = window.electronAPI.onFFmpegDownloadProgress((progress) => {
-            if (typeof progress === 'object' && progress.percent !== undefined) {
-                onDownloadProgressChange(Math.round(progress.percent));
+            if (typeof progress === 'object' && progress !== null && 'percent' in progress) {
+                onDownloadProgressChange(Math.round(Number(progress.percent)));
                 if (progress.downloaded && progress.total) {
-                    onDownloadSizeChange({ 
-                        downloaded: progress.downloaded, 
-                        total: progress.total 
+                    onDownloadSizeChange({
+                        downloaded: Number(progress.downloaded),
+                        total: Number(progress.total)
                     });
                 }
             } else {
@@ -82,10 +82,10 @@ const FFmpegInstallCard = ({
                 onDownloadProgressChange(Math.round(Number(progress) * 100));
             }
         });
-        
+
         const unsubscribeStatus = window.electronAPI.onFFmpegInstallStatus((status) => {
             if (status && status.phase) {
-                onInstallStatusChange(status.phase);
+                onInstallStatusChange(String(status.phase));
             }
         });
         

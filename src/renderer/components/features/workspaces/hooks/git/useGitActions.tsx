@@ -24,7 +24,7 @@ export const useGitActions = () => {
     const [gitInstallProgress, setGitInstallProgress] = useState('');
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionTested, setConnectionTested] = useState(false);
-    const [connectionProgress, setConnectionProgress] = useState([]);
+    const [connectionProgress, setConnectionProgress] = useState<string[]>([]);
     const [showProgressModal, setShowProgressModal] = useState(false);
     
     // Git installation progress subscription
@@ -32,7 +32,7 @@ export const useGitActions = () => {
         let unsubscribe: (() => void) | undefined;
         if (installingGit) {
             unsubscribe = window.electronAPI.onGitInstallProgress((data) => {
-                setGitInstallProgress(data.message || '');
+                setGitInstallProgress(String(data.message ?? ''));
             });
         }
         return () => {
@@ -98,7 +98,7 @@ export const useGitActions = () => {
         
         // Subscribe to progress updates
         const unsubscribe = window.electronAPI.onGitConnectionProgress((data) => {
-            setConnectionProgress(data.summary || []);
+            setConnectionProgress((data.summary as string[]) || []);
         });
         
         try {
