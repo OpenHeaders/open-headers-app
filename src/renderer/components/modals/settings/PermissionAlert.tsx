@@ -30,7 +30,8 @@ const { Text } = Typography;
  * @param {function} permissionAlert.action.onClick - Button click handler
  * @param {function} onClose - Callback function when alert is closed
  */
-const PermissionAlert = ({ permissionAlert, onClose }) => {
+interface PermissionAlertProps { permissionAlert: { type?: 'error' | 'info' | 'success' | 'warning'; message?: string; description?: string; action?: { text: string; onClick: () => void } } | null; onClose: () => void; }
+const PermissionAlert = ({ permissionAlert, onClose }: PermissionAlertProps) => {
     // Don't render if no alert is provided
     if (!permissionAlert) return null;
 

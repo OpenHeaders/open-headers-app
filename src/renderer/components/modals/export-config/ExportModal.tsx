@@ -14,7 +14,8 @@ import ExportWarnings from './ExportWarnings';
  * Provides comprehensive interface for selecting export options including
  * purpose, items, environment variables, workspace config, and file format
  */
-const ExportModal = ({ visible, onCancel, onExport }) => {
+interface ExportModalProps { visible: boolean; onCancel: () => void; onExport: (config: Record<string, unknown>) => void; }
+const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     const { token } = theme.useToken();
     const { environments, environmentsReady } = useEnvironments();
     const { workspaces, activeWorkspaceId } = useWorkspaces();

@@ -114,7 +114,7 @@ const VirtualizedFilterableTable = forwardRef(({
   }, [dataSource, columns]);
 
   // Row renderer for react-window
-  const Row = useCallback(({ index, style }) => {
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const record = processedData[index];
     if (!record) return null;
 

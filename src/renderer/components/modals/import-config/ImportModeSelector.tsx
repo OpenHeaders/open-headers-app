@@ -8,7 +8,8 @@ const { Text, Title } = Typography;
  * ImportModeSelector component for selecting import mode
  * Handles merge vs replace mode selection with clear descriptions
  */
-const ImportModeSelector = ({ importMode, onImportModeChange }) => {
+interface ImportModeSelectorProps { importMode: string; onImportModeChange: (mode: string) => void; }
+const ImportModeSelector = ({ importMode, onImportModeChange }: ImportModeSelectorProps) => {
     return (
         <Card size="small" title={<Title level={5} style={{ margin: 0 }}>Import Mode</Title>}>
             <Radio.Group

@@ -18,12 +18,13 @@ import { formatRelativeTimeWithSmallMs, format24HTimeWithMs } from '../../../uti
 
 const { Text } = Typography;
 
-const TimestampCell = ({ 
-    timestamp, 
-    record, 
-    isCurrentEntry = false, 
-    width = 100 
-}) => {
+interface TimestampCellProps { timestamp: number; record: { metadata?: { startTime: number }; [key: string]: unknown }; isCurrentEntry?: boolean; width?: number; }
+const TimestampCell = ({
+    timestamp,
+    record,
+    isCurrentEntry = false,
+    width = 100
+}: TimestampCellProps) => {
     const { token } = theme.useToken();
     
     // Format relative time

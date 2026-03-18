@@ -14,7 +14,8 @@ const { Text } = Typography;
  * @param {Object} props - Component props
  * @param {Array} props.missingVariables - Array of missing variable names
  */
-export const MissingVariablesAlert = ({ missingVariables }) => {
+interface MissingVariablesAlertProps { missingVariables: string[]; }
+export const MissingVariablesAlert = ({ missingVariables }: MissingVariablesAlertProps) => {
   if (!missingVariables || missingVariables.length === 0) return null;
 
   return (
@@ -32,7 +33,8 @@ export const MissingVariablesAlert = ({ missingVariables }) => {
  * @param {Object} props - Component props
  * @param {boolean} props.showTutorial - Whether to show tutorial mode
  */
-export const TutorialInfo = ({ showTutorial }) => {
+interface TutorialInfoProps { showTutorial: boolean; }
+export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
   if (!showTutorial) return null;
 
   return (
@@ -58,7 +60,8 @@ export const TutorialInfo = ({ showTutorial }) => {
  * @param {Object} props - Component props
  * @param {Array} props.sources - Array of source configurations
  */
-export const VariableUsageSummary = ({ sources }) => {
+interface VariableUsageSummaryProps { sources: Record<string, unknown>[]; }
+export const VariableUsageSummary = ({ sources }: VariableUsageSummaryProps) => {
   const sourcesUsingVariables = getSourcesUsingVariables(sources);
   
   if (!sourcesUsingVariables || sourcesUsingVariables.length === 0) return null;

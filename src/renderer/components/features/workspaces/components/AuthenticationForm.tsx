@@ -13,7 +13,8 @@ const { Option } = Select;
  * @param {Function} props.onBrowseSSHKey - Handler for SSH key file browsing
  * @returns {JSX.Element} AuthenticationForm component
  */
-const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }) => {
+interface AuthenticationFormProps { authType: string; sshKeySource: string; onBrowseSSHKey: () => void; }
+const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: AuthenticationFormProps) => {
     /**
      * Renders token authentication fields
      * @returns {JSX.Element} Token authentication form fields

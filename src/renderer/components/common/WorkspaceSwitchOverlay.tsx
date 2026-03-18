@@ -12,10 +12,11 @@ const { Text } = Typography;
  * - Simple spinner and message
  * - 1 second display duration
  */
-const WorkspaceSwitchOverlay = ({ 
-    visible, 
+interface WorkspaceSwitchOverlayProps { visible: boolean; targetWorkspace: { name?: string; type?: string } | null; }
+const WorkspaceSwitchOverlay = ({
+    visible,
     targetWorkspace
-}) => {
+}: WorkspaceSwitchOverlayProps) => {
     if (!visible) return null;
 
     return (

@@ -27,7 +27,18 @@ import { getStatusText, formatContentByType } from './HttpTesting';
  * @param {*} props.testResponseContent - Response content to display
  * @returns {JSX.Element} Response preview card component
  */
-const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }) => {
+interface TestResponseContent {
+    statusCode?: number;
+    duration?: number;
+    error?: string;
+    details?: string;
+    retryStrategy?: { reason: string };
+    filteredWith?: string;
+    body?: string;
+    headers?: Record<string, string>;
+}
+interface ResponsePreviewCardProps { testResponseVisible: boolean; testResponseContent: TestResponseContent | string | null; }
+const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }: ResponsePreviewCardProps) => {
     if (!testResponseVisible) {
         return null;
     }

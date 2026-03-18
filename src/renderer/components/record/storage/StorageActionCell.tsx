@@ -12,7 +12,8 @@ import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import { getActionColor, getActionTooltip } from './StorageUtils';
 
-const StorageActionCell = ({ action, record }) => {
+interface StorageActionCellProps { action: string; record: { metadata?: { clearedCount?: number; [key: string]: unknown }; [key: string]: unknown }; }
+const StorageActionCell = ({ action, record }: StorageActionCellProps) => {
     const tooltip = getActionTooltip(action);
     
     return (

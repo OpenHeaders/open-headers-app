@@ -33,6 +33,7 @@ interface ConsoleRecord {
 interface RecordData {
     console: ConsoleRecord[];
     startTime?: number;
+    [key: string]: unknown;
 }
 
 interface RecordConsoleTabProps {

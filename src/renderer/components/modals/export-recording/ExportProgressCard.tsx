@@ -22,7 +22,8 @@ const { Text } = Typography;
  * @param {number} downloadProgress - Download progress percentage (0-100) for FFmpeg installation
  * @param {number} conversionProgress - Video conversion progress percentage (0-100) for MP4 conversion
  */
-const ExportProgressCard = ({ exportStatus, downloadProgress, conversionProgress }) => {
+interface ExportProgressCardProps { exportStatus: string; downloadProgress: number; conversionProgress: number; }
+const ExportProgressCard = ({ exportStatus, downloadProgress, conversionProgress }: ExportProgressCardProps) => {
     // Hide component when no export is active
     if (!exportStatus) return null;
 

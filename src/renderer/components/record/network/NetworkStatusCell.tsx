@@ -11,10 +11,11 @@
  */
 import React from 'react';
 import { Typography } from 'antd';
+import type { NetworkRecord, GlobalToken } from './types';
 
 const { Text } = Typography;
 
-interface NetworkStatusCellProps { status: number; record: Record<string, unknown>; token: Record<string, unknown>; }
+interface NetworkStatusCellProps { status: number; record: NetworkRecord; token: GlobalToken; }
 const NetworkStatusCell = ({ status, record, token }: NetworkStatusCellProps) => {
     // Handle error states
     if (record.error) {
@@ -26,7 +27,7 @@ const NetworkStatusCell = ({ status, record, token }: NetworkStatusCellProps) =>
     }
 
     // Determine color based on status code
-    const getStatusColor = (statusCode) => {
+    const getStatusColor = (statusCode: number) => {
         if (statusCode >= 200 && statusCode < 300) return token.colorSuccess;
         if (statusCode >= 300 && statusCode < 400) return token.colorWarning;
         if (statusCode >= 400) return token.colorError;

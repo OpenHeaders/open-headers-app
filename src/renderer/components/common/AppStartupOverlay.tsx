@@ -12,9 +12,10 @@ const { Text } = Typography;
  * - Simple spinner and message
  * - App icon and branding
  */
-const AppStartupOverlay = ({ 
+interface AppStartupOverlayProps { visible: boolean; }
+const AppStartupOverlay = ({
     visible
-}) => {
+}: AppStartupOverlayProps) => {
     if (!visible) return null;
 
     return (

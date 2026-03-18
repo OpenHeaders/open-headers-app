@@ -12,11 +12,12 @@ const { Text } = Typography;
  * @param {Object} selectedItems - Selected items to import
  * @param {Object} combinedEnvInfo - Combined environment information
  */
-const ImportWarnings = ({ 
+interface ImportWarningsProps { importMode: string; selectedItems: Record<string, boolean>; combinedEnvInfo: Record<string, unknown>; }
+const ImportWarnings = ({
     importMode,
     selectedItems,
     combinedEnvInfo
-}) => {
+}: ImportWarningsProps) => {
     return (
         <>
             {/* Replace mode warning */}

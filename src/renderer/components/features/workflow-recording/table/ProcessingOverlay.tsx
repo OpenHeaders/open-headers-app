@@ -7,7 +7,21 @@ import React from 'react';
 import { Progress, Space, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
-const ProcessingOverlay = ({ processing }) => {
+interface ProcessingDetails {
+    eventCount?: number;
+    totalEvents?: number;
+    phase?: string;
+    resourcesFound?: number;
+    eventsProcessed?: number;
+    currentType?: string;
+    currentResource?: string;
+    completed?: number;
+    failed?: number;
+    total?: number;
+    error?: string;
+}
+interface ProcessingOverlayProps { processing: { stage?: string; progress?: number; details?: ProcessingDetails } | null; }
+const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
   if (!processing) return null;
 
   const { stage, progress = 0, details = {} } = processing;

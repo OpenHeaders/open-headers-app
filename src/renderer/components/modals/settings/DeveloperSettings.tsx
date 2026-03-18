@@ -14,7 +14,8 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {Object} screenRecordingPermission - Screen recording permission state
  * @param {function} onChange - Callback function for handling setting changes
  */
-const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }) => {
+interface DeveloperSettingsProps { formValues: Record<string, unknown>; screenRecordingPermission: Record<string, unknown>; onChange: (key: string, value: unknown) => void; }
+const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: DeveloperSettingsProps) => {
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
 
     const renderSettingItems = (items) => (

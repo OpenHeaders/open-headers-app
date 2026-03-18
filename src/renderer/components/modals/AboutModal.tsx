@@ -23,7 +23,8 @@ const { Title, Text, Paragraph } = Typography;
  * @param {string} props.appVersion - Current application version
  * @returns {JSX.Element} About modal component
  */
-const AboutModal = ({ open, onClose, appVersion }) => {
+interface AboutModalProps { open: boolean; onClose: () => void; appVersion: string; }
+const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
     const [activeTab, setActiveTab] = useState('about');
     const { token } = theme.useToken();
 

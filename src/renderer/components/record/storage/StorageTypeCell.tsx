@@ -11,7 +11,8 @@ import React from 'react';
 import { Tag, Tooltip } from 'antd';
 import { getTypeColor, getTypeTooltip } from './StorageUtils';
 
-const StorageTypeCell = ({ type }) => {
+interface StorageTypeCellProps { type: string; }
+const StorageTypeCell = ({ type }: StorageTypeCellProps) => {
     const tooltip = getTypeTooltip(type);
     
     const getDisplayName = (storageType) => {

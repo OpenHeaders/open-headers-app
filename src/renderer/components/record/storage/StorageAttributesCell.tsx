@@ -10,7 +10,8 @@
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
 
-const StorageAttributesCell = ({ record }) => {
+interface StorageAttributesCellProps { record: { type?: string; metadata?: { initial?: boolean; expired?: boolean; httpOnly?: boolean; secure?: boolean; sameSite?: string; [key: string]: unknown }; [key: string]: unknown }; }
+const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
     const attributes = [];
     
     // Initial attribute

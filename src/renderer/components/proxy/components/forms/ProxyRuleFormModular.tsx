@@ -47,7 +47,8 @@ const { Text } = Typography;
  * @param {Array} headerRules - Available header rules for reference mode
  * @returns {JSX.Element} Proxy rule form modal
  */
-const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRules = [] }) => {
+interface ProxyRuleFormProps { visible: boolean; onCancel: () => void; onSave: (values: Record<string, unknown>) => void; rule: Record<string, unknown> | null; sources?: Record<string, unknown>[]; headerRules?: Record<string, unknown>[]; }
+const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRules = [] }: ProxyRuleFormProps) => {
     const [form] = Form.useForm();
     const formRef = useRef(null);
     const [headerType, setHeaderType] = useState('custom');
@@ -190,7 +191,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
                     {headerType === 'reference' ? (
                         <>
                             {/* Existing Header Rule Selection */}
-                            <ExistingHeaderRuleSelector headerRules={headerRules} />
+                            <ExistingHeaderRuleSelector headerRules={headerRules as { id: string; headerName: string; isEnabled: boolean }[]} />
                         </>
                     ) : (
                         /* Custom Header Configuration */
@@ -200,14 +201,14 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
                                 validateHeaderName={validateHeaderName}
                                 valueType={valueType}
                                 setValueType={setValueType}
-                                sources={sources}
+                                sources={sources as { sourceId: string; [key: string]: unknown }[]}
                             />
 
                             {/* Value Input */}
                             {valueType === 'static' ? (
                                 <StaticValueInput validateHeaderValue={validateHeaderValue} />
                             ) : (
-                                <DynamicValueConfig sources={sources} />
+                                <DynamicValueConfig sources={sources as { sourceId: string; [key: string]: unknown }[]} />
                             )}
                             
                             {/* Domains for custom header */}

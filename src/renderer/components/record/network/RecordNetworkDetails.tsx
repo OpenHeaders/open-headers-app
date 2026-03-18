@@ -17,10 +17,11 @@ import NetworkPayloadTab from './tabs/NetworkPayloadTab';
 import NetworkResponseTab from './tabs/NetworkResponseTab';
 import NetworkTimingTab from './tabs/NetworkTimingTab';
 import { getDisplayName } from './utils/urlUtils';
+import type { NetworkRecord, RecordData } from './types';
 
 const { Text } = Typography;
 
-interface RecordNetworkDetailsProps { request: Record<string, unknown>; record: Record<string, unknown>; onClose: () => void; }
+interface RecordNetworkDetailsProps { request: NetworkRecord; record: RecordData; onClose: () => void; }
 const RecordNetworkDetails = ({ request, record, onClose }: RecordNetworkDetailsProps) => {
     const { token } = theme.useToken();
     const [activeTab, setActiveTab] = useState('headers');

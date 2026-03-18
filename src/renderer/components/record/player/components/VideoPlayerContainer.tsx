@@ -15,10 +15,11 @@
 
 import React from 'react';
 import { Spin } from 'antd';
+import type { GlobalToken } from 'antd/es/theme/interface';
 
 interface VideoPlayerContainerProps {
     videoRef: React.RefObject<HTMLVideoElement>;
-    token: Record<string, any>;
+    token: GlobalToken;
     viewMode: string;
     videoLoading: boolean;
     onVideoLoaded: () => void;

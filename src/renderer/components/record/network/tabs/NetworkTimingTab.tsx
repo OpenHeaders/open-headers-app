@@ -12,16 +12,17 @@
 import React from 'react';
 import { Space, Typography } from 'antd';
 import { format24HTimeWithMs } from '../../../../utils';
+import type { NetworkRecord, RecordData, NetworkTimingData, GlobalToken } from '../types';
 
 const { Text } = Typography;
 
-interface NetworkTimingTabProps { request: Record<string, unknown>; record: Record<string, unknown>; token: Record<string, unknown>; }
+interface NetworkTimingTabProps { request: NetworkRecord; record: RecordData; token: GlobalToken; }
 const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => {
-    const duration = request.duration || (request.endTime - request.timestamp) || 0;
-    const timing = request.timing || {};
+    const duration = request.duration || ((request.endTime ?? 0) - request.timestamp) || 0;
+    const timing: NetworkTimingData = request.timing || {};
 
-    const formatTimeWithMs = (relativeMs) => {
-        const absoluteTime = new Date(record.metadata.startTime + relativeMs);
+    const formatTimeWithMs = (relativeMs: number) => {
+        const absoluteTime = new Date((record.metadata?.startTime ?? 0) + relativeMs);
         const formattedTime = format24HTimeWithMs(absoluteTime);
         return (
             <span>
@@ -31,7 +32,7 @@ const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => 
         );
     };
 
-    const renderTimingItem = (label, value, unit = 'ms') => {
+    const renderTimingItem = (label: string, value: number | undefined | null, unit = 'ms') => {
         if (value === undefined || value === null) return null;
         
         return (

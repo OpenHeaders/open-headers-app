@@ -23,12 +23,13 @@ const ENVIRONMENT_OPTIONS = {
     FULL: 'full'
 };
 
+interface WorkspaceModalProps { visible: boolean; editingWorkspace: Record<string, unknown> | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
 const WorkspaceModal = ({
     visible,
     editingWorkspace,
     onCancel,
     onSuccess
-}) => {
+}: WorkspaceModalProps) => {
     const [form] = Form.useForm();
     const { message } = App.useApp();
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);

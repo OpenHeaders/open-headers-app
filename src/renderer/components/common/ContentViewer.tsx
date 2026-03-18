@@ -43,7 +43,16 @@ const { Text } = Typography;
  * @example
  * <ContentViewer source={sourceData} open={isOpen} onClose={handleClose} />
  */
-const ContentViewer = ({ source, open, onClose }) => {
+interface ContentViewerSource {
+    sourcePath?: string;
+    sourceType?: string;
+    sourceMethod?: string;
+    content?: string;
+    originalResponse?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+interface ContentViewerProps { source: ContentViewerSource | null; open: boolean; onClose: () => void; }
+const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
     const [activeTab, setActiveTab] = useState('content');
     const [copyingContent, setCopyingContent] = useState(false);
     const [copyingJson, setCopyingJson] = useState(false);

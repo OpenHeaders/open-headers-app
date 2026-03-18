@@ -18,7 +18,8 @@ const { useToken } = theme;
  * 
  * @param {string} exportType - Current export type ('json' or 'video')
  */
-const ExportInfoCard = ({ exportType }) => {
+interface ExportInfoCardProps { exportType: string; }
+const ExportInfoCard = ({ exportType }: ExportInfoCardProps) => {
     const { token } = useToken();
     
     // Only show info for JSON exports - video exports are self-explanatory

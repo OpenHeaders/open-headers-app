@@ -10,7 +10,8 @@ const { Text, Title } = Typography;
  * @param {Object} selectedItems - Object containing selection state for each item type
  * @param {function} onItemChange - Handler for item selection changes
  */
-const ExportItemsSelector = ({ selectedItems, onItemChange }) => {
+interface ExportItemsSelectorProps { selectedItems: Record<string, boolean>; onItemChange: (key: string) => void; }
+const ExportItemsSelector = ({ selectedItems, onItemChange }: ExportItemsSelectorProps) => {
     return (
         <Card size="small" title={<Title level={5} style={{ margin: 0 }}>What to Export</Title>}>
             <Space direction="vertical" style={{ width: '100%' }}>

@@ -11,12 +11,35 @@ import AuthenticationForm from './AuthenticationForm';
 
 const { Text } = Typography;
 
+interface WorkspaceAuthData {
+    token?: string;
+    tokenType?: string;
+    username?: string;
+    password?: string;
+    sshKeySource?: string;
+    sshKey?: string;
+    sshKeyPath?: string;
+}
+interface WorkspaceData {
+    id?: string;
+    name?: string;
+    description?: string;
+    type?: string;
+    gitUrl?: string;
+    gitBranch?: string;
+    gitPath?: string;
+    authType?: string;
+    autoSync?: boolean;
+    authData?: WorkspaceAuthData;
+    [key: string]: unknown;
+}
+interface WorkspaceEditModalProps { visible: boolean; workspace: WorkspaceData | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
 const WorkspaceEditModal = ({
     visible,
     workspace,
     onCancel,
     onSuccess
-}) => {
+}: WorkspaceEditModalProps) => {
     const [form] = Form.useForm();
     const { message } = App.useApp();
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);

@@ -12,7 +12,8 @@ const { Text, Title } = Typography;
  * @param {function} onFileFormatChange - Handler for file format changes
  * @param {string} environmentOption - Environment export option affecting availability
  */
-const FileFormatSelector = ({ fileFormat, onFileFormatChange, environmentOption }) => {
+interface FileFormatSelectorProps { fileFormat: string; onFileFormatChange: (format: string) => void; environmentOption: string; }
+const FileFormatSelector = ({ fileFormat, onFileFormatChange, environmentOption }: FileFormatSelectorProps) => {
     return (
         <Card size="small" title={<Title level={5} style={{ margin: 0 }}>File Format</Title>}>
             <Radio.Group

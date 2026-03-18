@@ -23,7 +23,8 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {Object} screenRecordingPermission - Screen recording permission state
  * @param {function} onChange - Callback function for handling setting changes
  */
-const GeneralSettings = ({ formValues, screenRecordingPermission, onChange }) => {
+interface GeneralSettingsProps { formValues: Record<string, unknown>; screenRecordingPermission: Record<string, unknown>; onChange: (key: string, value: unknown) => void; }
+const GeneralSettings = ({ formValues, screenRecordingPermission, onChange }: GeneralSettingsProps) => {
     // Get settings configuration for general section
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
 
