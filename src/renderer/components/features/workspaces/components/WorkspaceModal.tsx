@@ -12,7 +12,7 @@ import GitStatusAlert from './GitStatusAlert';
 import ConnectionProgressModal from './ConnectionProgressModal';
 import AuthenticationForm from './AuthenticationForm';
 import WorkspaceCreationProgressModal from './WorkspaceCreationProgressModal';
-import { FILE_FORMATS, ExportService } from '../../../../services/export-import';
+import { FILE_FORMATS, ExportService, type ExportData } from '../../../../services/export-import';
 
 const { Text, Title } = Typography;
 
@@ -289,26 +289,26 @@ const WorkspaceModal = ({
                     sources: sources || [],
                     activeWorkspaceId: workspaceContext.activeWorkspaceId,
                     exportSources: exportSources,
-                    removeSource: () => {}, // Not needed for export
+                    removeSource: async () => true, // Not needed for export
                     workspaces: workspaceContext.workspaces,
                     createWorkspace: workspaceContext.createWorkspace,
                     switchWorkspace: workspaceContext.switchWorkspace,
                     environments: environments,
-                    createEnvironment: () => {}, // Not needed for export
-                    setVariable: () => {}, // Not needed for export
+                    createEnvironment: async () => true, // Not needed for export
+                    setVariable: async () => true, // Not needed for export
                     generateEnvironmentSchema: generateEnvironmentSchema
                 });
                 
                 // Prepare export options
                 const exportOptions = {
                     selectedItems,
-                    environmentOption: values.environmentOption || ENVIRONMENT_OPTIONS.SCHEMA,
-                    fileFormat: values.fileFormat || FILE_FORMATS.SINGLE,
+                    environmentOption: (values.environmentOption as string) || ENVIRONMENT_OPTIONS.SCHEMA,
+                    fileFormat: (values.fileFormat as string) || FILE_FORMATS.SINGLE,
                     appVersion: await window.electronAPI.getAppVersion()
                 };
                 
                 // Use private method to gather export data without triggering file save
-                const exportData: Record<string, any> = await exportService._gatherExportData(exportOptions);
+                const exportData: ExportData = await exportService._gatherExportData(exportOptions);
                 
                 // Sanitize sources for team workspaces - remove local execution data
                 if (exportData.sources && Array.isArray(exportData.sources)) {

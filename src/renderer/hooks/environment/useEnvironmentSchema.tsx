@@ -10,11 +10,13 @@ interface VariableDefinition {
   sensitive: boolean;
   usedIn: string[];
   example?: string;
+  [key: string]: unknown;
 }
 
 interface EnvironmentSchema {
   environments: Record<string, { variables: Array<{ name: string; isSecret: boolean }> }>;
   variableDefinitions: Record<string, VariableDefinition>;
+  [key: string]: unknown;
 }
 
 interface SourceData {

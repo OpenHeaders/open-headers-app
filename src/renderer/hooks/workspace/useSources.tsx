@@ -5,7 +5,7 @@ import {showMessage} from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSources');
 
-interface SourceData {
+export interface SourceData {
   sourceId: string;
   sourceType: string;
   sourcePath?: string;

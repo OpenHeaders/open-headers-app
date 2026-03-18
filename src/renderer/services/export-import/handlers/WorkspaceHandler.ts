@@ -8,18 +8,45 @@
 import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
 import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection';
 import { DEFAULTS } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, WorkspaceData, ExportOptions } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceHandler');
+
+/** Options for workspace import operations */
+interface WorkspaceImportOptions {
+  importMode?: string;
+  isGitSync?: boolean;
+  includeCredentials?: boolean;
+  switchToNewWorkspace?: boolean;
+  [key: string]: unknown;
+}
+
+/** Auth data structure for workspace credentials */
+interface AuthData {
+  type?: string;
+  token?: string;
+  tokens?: {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: string;
+    tokenType?: string;
+    [key: string]: unknown;
+  };
+  debugInfo?: unknown;
+  lastError?: unknown;
+  internalTokens?: unknown;
+  [key: string]: unknown;
+}
 
 /**
  * Workspace Handler Class
  * Manages export and import operations for workspace configurations
  */
 export class WorkspaceHandler {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
   }
 
@@ -28,7 +55,7 @@ export class WorkspaceHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Object|null>} - Workspace data or null if not selected
    */
-  async exportWorkspace(options: { includeWorkspace?: boolean; includeCredentials?: boolean; currentWorkspace?: Record<string, any> }) {
+  async exportWorkspace(options: ExportOptions) {
     const { includeWorkspace, includeCredentials, currentWorkspace } = options;
     
     if (!includeWorkspace || !currentWorkspace) {
@@ -37,7 +64,7 @@ export class WorkspaceHandler {
     }
 
     try {
-      const workspaceData: Record<string, any> = {
+      const workspaceData: WorkspaceData = {
         name: currentWorkspace.name,
         description: currentWorkspace.description,
         type: currentWorkspace.type || DEFAULTS.WORKSPACE_TYPE,
@@ -50,7 +77,7 @@ export class WorkspaceHandler {
       
       // Only include credentials if explicitly requested
       if (includeCredentials && currentWorkspace.authData) {
-        workspaceData.authData = this._sanitizeAuthData(currentWorkspace.authData);
+        workspaceData.authData = this._sanitizeAuthData(currentWorkspace.authData as AuthData);
       }
 
       log.info(`Exporting workspace configuration: ${workspaceData.name} (${workspaceData.type})`);
@@ -67,7 +94,7 @@ export class WorkspaceHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics with created workspace info
    */
-  async importWorkspace(workspaceInfo: Record<string, any> | null, options: Record<string, any>) {
+  async importWorkspace(workspaceInfo: WorkspaceData | null, options: WorkspaceImportOptions) {
     const stats: { createdWorkspace: Record<string, unknown> | null; errors: Array<{ workspace: string; error: string }> } = {
       createdWorkspace: null,
       errors: []
@@ -84,7 +111,7 @@ export class WorkspaceHandler {
       const error = new Error(`Invalid workspace configuration: ${validation.error}`);
       log.error('Failed to import workspace:', error);
       stats.errors.push({
-        workspace: workspaceInfo.name,
+        workspace: workspaceInfo.name as string,
         error: error.message
       });
       return stats;
@@ -119,22 +146,22 @@ export class WorkspaceHandler {
    * @returns {Promise<Object>} - Created workspace object
    * @private
    */
-  async _createWorkspaceFromImport(workspaceInfo: Record<string, any>, options: Record<string, any>) {
+  async _createWorkspaceFromImport(workspaceInfo: WorkspaceData, options: WorkspaceImportOptions) {
     const { workspaces, createWorkspace } = this.dependencies;
 
     // Check if workspace with same name exists and generate unique name if needed
-    let workspaceName = workspaceInfo.name;
-    if (isWorkspaceNameDuplicate(workspaceName, workspaces)) {
+    let workspaceName = workspaceInfo.name as string;
+    if (isWorkspaceNameDuplicate(workspaceName, workspaces as unknown as { name: string }[])) {
       workspaceName = generateUniqueName(
-        workspaceInfo.name,
-        workspaces.map((w: Record<string, unknown>) => w.name),
+        workspaceInfo.name as string,
+        workspaces.map(w => w.name as string),
         'Imported'
       );
       log.info(`Workspace name '${workspaceInfo.name}' already exists, using '${workspaceName}'`);
     }
     
     // Prepare workspace object
-    const workspace: Record<string, any> = {
+    const workspace: WorkspaceData = {
       id: this._generateWorkspaceId(),
       name: workspaceName,
       description: workspaceInfo.description || '',
@@ -150,7 +177,7 @@ export class WorkspaceHandler {
 
     // Include auth data if provided and credentials are allowed
     if (workspaceInfo.authData && this._shouldImportCredentials(options)) {
-      workspace.authData = this._validateAndSanitizeAuthData(workspaceInfo.authData);
+      workspace.authData = this._validateAndSanitizeAuthData(workspaceInfo.authData as AuthData);
     }
 
     // Create the workspace using the dependency function
@@ -169,11 +196,11 @@ export class WorkspaceHandler {
    * @returns {Promise<void>}
    * @private
    */
-  async _switchToWorkspace(workspace: Record<string, any>) {
+  async _switchToWorkspace(workspace: WorkspaceData) {
     try {
       const { switchWorkspace } = this.dependencies;
       if (switchWorkspace) {
-        await switchWorkspace(workspace.id, workspace);
+        await switchWorkspace(workspace.id as string);
         log.debug(`Switched to imported workspace: ${workspace.name}`);
       }
     } catch (error) {
@@ -188,7 +215,7 @@ export class WorkspaceHandler {
    * @returns {boolean} - Whether to import credentials
    * @private
    */
-  _shouldImportCredentials(options: Record<string, any>) {
+  _shouldImportCredentials(options: WorkspaceImportOptions) {
     // For Git sync operations, always import credentials if present
     if (options.isGitSync) {
       return true;
@@ -204,18 +231,18 @@ export class WorkspaceHandler {
    * @returns {Object} - Sanitized authentication data
    * @private
    */
-  _sanitizeAuthData(authData: Record<string, any>) {
+  _sanitizeAuthData(authData: AuthData): AuthData {
     if (!authData || typeof authData !== 'object') {
       return {};
     }
 
-    const sanitized = { ...authData };
-    
+    const sanitized: AuthData = { ...authData };
+
     // Remove any potentially sensitive debugging information
     delete sanitized.debugInfo;
     delete sanitized.lastError;
     delete sanitized.internalTokens;
-    
+
     // Ensure tokens are properly structured
     if (sanitized.tokens && typeof sanitized.tokens === 'object') {
       // Only include essential token fields, not internal metadata
@@ -232,7 +259,7 @@ export class WorkspaceHandler {
    * @returns {Object} - Validated and sanitized authentication data
    * @private
    */
-  _validateAndSanitizeAuthData(authData: Record<string, any>) {
+  _validateAndSanitizeAuthData(authData: AuthData): AuthData {
     if (!authData || typeof authData !== 'object') {
       throw new Error('Authentication data must be an object');
     }
@@ -265,7 +292,7 @@ export class WorkspaceHandler {
    * @param {Object} workspaceData - Workspace data object
    * @returns {Object} - Statistics object
    */
-  getWorkspaceStatistics(workspaceData: Record<string, any> | null) {
+  getWorkspaceStatistics(workspaceData: WorkspaceData | null) {
     if (!workspaceData) {
       return { 
         hasWorkspace: false 
@@ -288,7 +315,7 @@ export class WorkspaceHandler {
    * @param {Object} workspaceData - Workspace data to validate
    * @returns {Object} - Validation result
    */
-  validateWorkspaceForExport(workspaceData: Record<string, any> | null) {
+  validateWorkspaceForExport(workspaceData: WorkspaceData | null) {
     if (!workspaceData) {
       return { success: true }; // No workspace data is valid
     }

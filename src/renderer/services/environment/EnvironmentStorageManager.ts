@@ -5,8 +5,8 @@ import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentStorageManager');
 
 interface StorageAPI {
-  loadFromStorage: (...args: any[]) => Promise<any>;
-  saveToStorage: (...args: any[]) => Promise<any>;
+  loadFromStorage: (filename: string) => Promise<string | null>;
+  saveToStorage: (filename: string, content: string) => Promise<void>;
 }
 
 class EnvironmentStorageManager {

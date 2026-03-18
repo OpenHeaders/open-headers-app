@@ -18,6 +18,7 @@ import {
 import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig';
+import type { ExportImportDependencies, ExportData, ExportOptions, SourceData, RuleEntry } from './types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ExportService');
@@ -27,14 +28,14 @@ const log = createLogger('ExportService');
  * Orchestrates the complete export process for all data types
  */
 export class ExportService {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
   sourcesHandler: SourcesHandler;
   proxyRulesHandler: ProxyRulesHandler;
   rulesHandler: RulesHandler;
   environmentsHandler: EnvironmentsHandler;
   workspaceHandler: WorkspaceHandler;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
 
     // Initialize handlers
@@ -50,7 +51,7 @@ export class ExportService {
    * @param {Object} exportOptions - Export configuration options
    * @returns {Promise<void>}
    */
-  async execute(exportOptions: Record<string, any>) {
+  async execute(exportOptions: ExportOptions) {
     const startTime = Date.now();
     log.info('Starting export process', { options: this._sanitizeOptionsForLogging(exportOptions) });
 
@@ -90,10 +91,10 @@ export class ExportService {
    * @returns {Promise<Object>} - Collected export data
    * @private
    */
-  async _gatherExportData(exportOptions: Record<string, any>) {
+  async _gatherExportData(exportOptions: ExportOptions): Promise<ExportData> {
     const { selectedItems, appVersion } = exportOptions;
-    
-    const exportData: Record<string, any> = {
+
+    const exportData: ExportData = {
       version: appVersion || DEFAULTS.APP_VERSION
     };
 
@@ -141,11 +142,14 @@ export class ExportService {
     // Merge results into export data
     results.forEach(({ key, data }) => {
       if (data !== null) {
-        if (key === 'rules' && data.rules && data.rulesMetadata) {
-          exportData.rules = data.rules;
-          exportData.rulesMetadata = data.rulesMetadata;
-        } else {
-          exportData[key] = data;
+        if (key === 'sources') {
+          exportData.sources = data as SourceData[];
+        } else if (key === 'proxyRules') {
+          exportData.proxyRules = data as Record<string, unknown>[];
+        } else if (key === 'rules') {
+          const rulesData = data as { rules?: Record<string, RuleEntry[]>; rulesMetadata?: Record<string, unknown> };
+          if (rulesData.rules) exportData.rules = rulesData.rules;
+          if (rulesData.rulesMetadata) exportData.rulesMetadata = rulesData.rulesMetadata;
         }
       }
     });
@@ -163,7 +167,7 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array of written file paths
    * @private
    */
-  async _handleFileExport(exportData: Record<string, any>, exportOptions: Record<string, any>) {
+  async _handleFileExport(exportData: ExportData, exportOptions: ExportOptions) {
     const { fileFormat } = exportOptions;
 
     if (fileFormat === FILE_FORMATS.SINGLE) {
@@ -179,12 +183,12 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array with single file path
    * @private
    */
-  async _handleSingleFileExport(exportData: Record<string, any>) {
+  async _handleSingleFileExport(exportData: ExportData) {
     const filename = generateTimestampedFilename('open-headers-config', '', 'json');
     
     const filePath = await handleSingleFileExport({
       filename,
-      data: exportData
+      data: exportData as unknown as Record<string, unknown>
     });
 
     return [filePath];
@@ -197,21 +201,21 @@ export class ExportService {
    * @returns {Promise<Array<string>>} - Array of written file paths
    * @private
    */
-  async _handleSeparateFilesExport(exportData: Record<string, any>, exportOptions: Record<string, any>) {
+  async _handleSeparateFilesExport(exportData: ExportData, exportOptions: ExportOptions) {
     const { environmentOption } = exportOptions;
     
     // Separate environment data for separate file
-    let environmentData = null;
-    const mainData = { ...exportData };
-    
+    let environmentData: Partial<ExportData> | null = null;
+    const mainData: ExportData = { ...exportData };
+
     if (environmentOption !== 'none' && (exportData.environmentSchema || exportData.environments)) {
-      environmentData = {} as Record<string, unknown>;
+      environmentData = {};
       if (exportData.environmentSchema) {
-        (environmentData as Record<string, unknown>).environmentSchema = exportData.environmentSchema;
+        environmentData.environmentSchema = exportData.environmentSchema;
         delete mainData.environmentSchema;
       }
       if (exportData.environments) {
-        (environmentData as Record<string, unknown>).environments = exportData.environments;
+        environmentData.environments = exportData.environments;
         delete mainData.environments;
       }
     }
@@ -223,8 +227,8 @@ export class ExportService {
       title: 'Export Configuration',
       mainFilename,
       environmentFilename: envFilename,
-      mainData,
-      environmentData: environmentData ?? undefined
+      mainData: mainData as unknown as Record<string, unknown>,
+      environmentData: environmentData ? environmentData as unknown as Record<string, unknown> : undefined
     });
   }
 
@@ -234,7 +238,7 @@ export class ExportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateExportOptions(exportOptions: Record<string, any>) {
+  _validateExportOptions(exportOptions: ExportOptions) {
     if (!exportOptions || typeof exportOptions !== 'object') {
       throw new Error('Export options must be provided as an object');
     }
@@ -263,7 +267,7 @@ export class ExportService {
    * @throws {Error} - If validation fails
    * @private
    */
-  _validateExportData(exportData: Record<string, any>, exportOptions: Record<string, any>) {
+  _validateExportData(exportData: ExportData, exportOptions: ExportOptions) {
     const { selectedItems } = exportOptions;
     const validationErrors = [];
 
@@ -319,7 +323,7 @@ export class ExportService {
    * @returns {number} - Total item count
    * @private
    */
-  _countExportItems(exportData: Record<string, any>) {
+  _countExportItems(exportData: ExportData) {
     let count = 0;
 
     if (exportData.sources && Array.isArray(exportData.sources)) {
@@ -330,18 +334,17 @@ export class ExportService {
       count += exportData.proxyRules.length;
     }
 
-    if (exportData.rules && typeof exportData.rules === 'object') {
-      count += (Object.values(exportData.rules) as any[]).reduce((sum: number, rules: any) =>
-        sum + (Array.isArray(rules) ? rules.length : 0), 0) as number;
+    if (exportData.rules && typeof exportData.rules === 'object' && !Array.isArray(exportData.rules)) {
+      count += Object.values(exportData.rules).reduce((sum, rules) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
     }
 
-    if (exportData.environments && typeof exportData.environments === 'object') {
-      count += (Object.values(exportData.environments) as any[]).reduce((sum: number, env: any) => {
+    if (exportData.environments && typeof exportData.environments === 'object' && !Array.isArray(exportData.environments)) {
+      count += Object.values(exportData.environments).reduce((sum, env) => {
         if (env && typeof env === 'object' && !Array.isArray(env)) {
           return sum + Object.keys(env).length;
         }
         return sum;
-      }, 0) as number;
+      }, 0);
     }
 
     if (exportData.workspace) {
@@ -357,7 +360,7 @@ export class ExportService {
    * @returns {string} - Human-readable size estimate
    * @private
    */
-  _calculateExportSize(exportData: Record<string, any>) {
+  _calculateExportSize(exportData: ExportData) {
     try {
       const jsonString = JSON.stringify(exportData);
       const bytes = new Blob([jsonString]).size;
@@ -376,7 +379,7 @@ export class ExportService {
    * @returns {Object} - Sanitized options for logging
    * @private
    */
-  _sanitizeOptionsForLogging(exportOptions: Record<string, any>) {
+  _sanitizeOptionsForLogging(exportOptions: ExportOptions) {
     const sanitized = { ...exportOptions };
     
     // Remove potentially sensitive workspace data
@@ -395,12 +398,12 @@ export class ExportService {
    * @param {Object} exportData - Export data to analyze
    * @returns {Object} - Comprehensive export statistics
    */
-  getExportStatistics(exportData: Record<string, any>) {
-    const stats: Record<string, any> = {
+  getExportStatistics(exportData: ExportData) {
+    const stats = {
       version: exportData.version,
       totalItems: this._countExportItems(exportData),
       estimatedSize: this._calculateExportSize(exportData),
-      dataTypes: {} as Record<string, any>
+      dataTypes: {} as Record<string, unknown>
     };
 
     if (exportData.sources) {

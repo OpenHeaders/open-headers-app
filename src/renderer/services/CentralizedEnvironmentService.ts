@@ -271,7 +271,7 @@ class CentralizedEnvironmentService {
   /**
    * Set variable in current environment
    */
-  async setVariable(name: string, value: string, isSecret = false) {
+  async setVariable(name: string, value: string | null, isSecret = false) {
     const state = this.stateManager.getState();
     return this.setVariableInEnvironment(name, value, state.activeEnvironment, isSecret);
   }
@@ -279,7 +279,7 @@ class CentralizedEnvironmentService {
   /**
    * Set variable in a specific environment
    */
-  async setVariableInEnvironment(name: string, value: string, environmentName: string, isSecret = false) {
+  async setVariableInEnvironment(name: string, value: string | null, environmentName: string, isSecret = false) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.setVariable(
       state.environments as never,

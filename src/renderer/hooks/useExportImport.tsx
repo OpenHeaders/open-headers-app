@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { createExportImportServices, validateDependencies, ExportService, ImportService } from '../services/export-import';
+import type { ExportImportDependencies, ExportOptions, ImportOptions } from '../services/export-import';
 import { createLogger } from '../utils/error-handling/logger';
 
 const log = createLogger('useExportImport');
@@ -14,29 +15,6 @@ const log = createLogger('useExportImport');
 interface LoadingState {
   export: boolean;
   import: boolean;
-}
-
-/** Dependencies passed to the export/import hook.
- *  Uses broad callable types for functions that are simply forwarded
- *  to ExportService/ImportService which accept `Record<string, unknown>`.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- required for variance compatibility with hook callers
-type DependencyFn = (...args: never[]) => unknown;
-
-interface ExportImportDependencies {
-  appVersion: string;
-  sources: ReadonlyArray<Record<string, unknown>>;
-  activeWorkspaceId: string;
-  exportSources: DependencyFn;
-  removeSource: (sourceId: string) => Promise<boolean>;
-  workspaces: ReadonlyArray<Record<string, unknown>>;
-  createWorkspace: (workspace: Record<string, unknown>) => Promise<unknown>;
-  switchWorkspace: (workspaceId: string) => Promise<boolean>;
-  environments: Record<string, unknown>;
-  createEnvironment: (name: string) => Promise<boolean>;
-  setVariable: (name: string, value: string | null, environment?: string | null, isSecret?: boolean) => Promise<boolean>;
-  generateEnvironmentSchema: DependencyFn;
-  [key: string]: unknown;
 }
 
 interface UseExportImportReturn {
@@ -50,8 +28,8 @@ interface UseExportImportReturn {
   hideImportModal: () => void;
   setExportModalVisible: (visible: boolean) => void;
   setImportModalVisible: (visible: boolean) => void;
-  handleExport: (exportOptions: Record<string, unknown>) => Promise<void>;
-  handleImport: (importOptions: Record<string, unknown>) => Promise<void>;
+  handleExport: (exportOptions: ExportOptions) => Promise<void>;
+  handleImport: (importOptions: ImportOptions) => Promise<void>;
   exportService: ExportService | null;
   importService: ImportService | null;
   dependencyValidation: { success: boolean; error?: string };
@@ -112,7 +90,7 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
   }, []);
 
   // Export Handler
-  const handleExport = useCallback(async (exportOptions: Record<string, unknown>): Promise<void> => {
+  const handleExport = useCallback(async (exportOptions: ExportOptions): Promise<void> => {
     if (!services.exportService) {
       log.error('Cannot handle export: export service not available');
       throw new Error('Export service is not available. Please check your configuration.');
@@ -137,7 +115,7 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
   }, [services.exportService]);
 
   // Import Handler
-  const handleImport = useCallback(async (importOptions: Record<string, unknown>): Promise<void> => {
+  const handleImport = useCallback(async (importOptions: ImportOptions): Promise<void> => {
     if (!services.importService) {
       log.error('Cannot handle import: import service not available');
       throw new Error('Import service is not available. Please check your configuration.');
@@ -151,7 +129,7 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
         isGitSync: importOptions.isGitSync
       });
 
-      await services.importService.execute(importOptions as Parameters<typeof services.importService.execute>[0]);
+      await services.importService.execute(importOptions);
 
       // Close modal on successful import (unless it's a Git sync operation)
       if (!importOptions.isGitSync) {

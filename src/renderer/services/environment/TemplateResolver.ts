@@ -90,7 +90,7 @@ class TemplateResolver {
   /**
    * Resolve template in an object recursively
    */
-  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}): any {
+  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}): unknown {
     if (!obj || typeof obj !== 'object') {
       return this.resolveTemplate(obj as string, variables, options);
     }
@@ -99,7 +99,7 @@ class TemplateResolver {
       return obj.map(item => this.resolveObject(item, variables, options));
     }
 
-    const resolved: Record<string, any> = {};
+    const resolved: Record<string, unknown> = {};
     const allMissingVars: string[] = [];
 
     Object.entries(obj).forEach(([key, value]) => {

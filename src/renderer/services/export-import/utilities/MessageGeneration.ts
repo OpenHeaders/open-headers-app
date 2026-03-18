@@ -15,6 +15,7 @@
  */
 
 import { SUCCESS_MESSAGES, FILE_FORMATS } from '../core/ExportImportConfig';
+import type { ExportData, ExportOptions, ImportData, ImportOptions } from '../core/types';
 import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 
 /**
@@ -28,7 +29,7 @@ import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
  * @param {Array<string>} filePaths - Paths of files that were written
  * @returns {string} - Formatted success message
  */
-export function generateExportSuccessMessage(options: Record<string, any>, exportedData: Record<string, any>, filePaths: string[]) {
+export function generateExportSuccessMessage(options: ExportOptions, exportedData: ExportData, filePaths: string[]) {
   const { selectedItems, fileFormat, environmentOption, includeWorkspace, includeCredentials } = options;
   const exportedItems = [];
 
@@ -39,7 +40,7 @@ export function generateExportSuccessMessage(options: Record<string, any>, expor
 
   // Add rules info
   if (selectedItems.rules && exportedData.rules) {
-    const totalRules = Object.values(exportedData.rules).reduce((sum: number, ruleArray: any) => sum + ruleArray.length, 0);
+    const totalRules = Object.values(exportedData.rules).reduce((sum, ruleArray) => sum + ruleArray.length, 0);
     exportedItems.push(`${totalRules} rule(s)`);
   }
 
@@ -188,7 +189,7 @@ export function generateImportSummary(importStats: Record<string, any>) {
  * @param {Object} options - Import options
  * @returns {string|null} - Warning message or null if no warnings
  */
-export function generateImportWarnings(importData: Record<string, any>, options: Record<string, any>) {
+export function generateImportWarnings(importData: ImportData, options: ImportOptions) {
   const warnings = [];
 
   // Check for version compatibility
@@ -199,7 +200,7 @@ export function generateImportWarnings(importData: Record<string, any>, options:
   // Check for large datasets
   const totalItems = (importData.sources?.length || 0) + 
                     (importData.proxyRules?.length || 0) + 
-                    (Object.values(importData.rules || {}).reduce((sum: number, rules: any) => sum + rules.length, 0));
+                    (Object.values(importData.rules || {}).reduce((sum, rules) => sum + rules.length, 0));
   
   if (totalItems > 100) {
     warnings.push(`Large dataset detected (${totalItems} items), import may take longer than usual`);

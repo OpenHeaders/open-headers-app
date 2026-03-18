@@ -6,6 +6,7 @@
  */
 
 import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
+import type { ExportImportDependencies, ExportOptions } from '../core/types';
 import { validateProxyRule } from '../utilities/ValidationUtils';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 
@@ -17,9 +18,9 @@ const log = createLogger('ProxyRulesHandler');
  * Manages export and import operations for proxy rule configurations
  */
 export class ProxyRulesHandler {
-  dependencies: Record<string, any>;
+  dependencies: ExportImportDependencies;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
   }
 
@@ -28,7 +29,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of proxy rules or null if not selected
    */
-  async exportProxyRules(options: Record<string, any>) {
+  async exportProxyRules(options: ExportOptions) {
     const { selectedItems } = options;
 
     if (!selectedItems.proxyRules) {

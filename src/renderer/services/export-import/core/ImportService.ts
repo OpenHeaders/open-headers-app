@@ -18,6 +18,7 @@ import {
 } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, ImportData } from './types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ImportService');
@@ -30,19 +31,6 @@ interface ImportOptions {
   importMode?: string;
   isGitSync?: boolean;
   workspaceInfo?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-/** Import data parsed from file - uses Record<string, any> for compatibility with handler-specific ImportData types */
-interface ImportData {
-  version?: string;
-  sources?: Record<string, unknown>[];
-  proxyRules?: Record<string, unknown>[];
-  rules?: Record<string, Array<Record<string, unknown>>>;
-  rulesMetadata?: Record<string, unknown>;
-  environments?: Record<string, Record<string, Record<string, unknown>>>;
-  environmentSchema?: Record<string, unknown>;
-  workspace?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -66,14 +54,14 @@ interface ImportStats {
  * Orchestrates the complete import process for all data types
  */
 export class ImportService {
-  dependencies: Record<string, unknown>;
+  dependencies: ExportImportDependencies;
   sourcesHandler: SourcesHandler;
   proxyRulesHandler: ProxyRulesHandler;
   rulesHandler: RulesHandler;
   environmentsHandler: EnvironmentsHandler;
   workspaceHandler: WorkspaceHandler;
 
-  constructor(dependencies: Record<string, unknown>) {
+  constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
 
     // Initialize handlers
