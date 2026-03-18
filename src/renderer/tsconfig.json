@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowJs": false,
     "checkJs": false,
-    "strict": false,
+    "strict": true,
     "target": "ES2022",
     "module": "commonjs",
     "moduleResolution": "node",
