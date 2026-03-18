@@ -1,6 +1,5 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const WS = require('ws');
+import WS from 'ws';
 import electron from 'electron';
 import https from 'https';
 import http from 'http';
@@ -379,7 +378,7 @@ class WebSocketService {
 
     // ── Shared utilities ──────────────────────────
 
-    _handleFocusApp(navigation: any): void {
+    async _handleFocusApp(navigation: Record<string, unknown>): Promise<void> {
         try {
             log.info('_handleFocusApp called with navigation:', navigation);
             const { BrowserWindow } = electron;
@@ -387,8 +386,7 @@ class WebSocketService {
             if (windows.length === 0) { log.warn('No windows available to focus'); return; }
 
             const mainWindow = windows[0];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const windowsFocusHelper = require('../../main/modules/utils/windowsFocus').default;
+            const windowsFocusHelper = (await import('../../main/modules/utils/windowsFocus')).default;
             windowsFocusHelper.focusWindow(mainWindow);
 
             if (navigation && (navigation.tab || navigation.subTab)) {

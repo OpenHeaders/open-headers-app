@@ -120,10 +120,9 @@ class WSEnvironmentHandler {
     /**
      * Synchronize proxy service with current state (env vars, rules, sources)
      */
-    syncProxyService(): void {
+    async syncProxyService(): Promise<void> {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const proxyService = require('../proxy/ProxyService').default;
+            const proxyService = (await import('../proxy/ProxyService')).default;
 
             const envVars = this.loadEnvironmentVariables();
             if (envVars) {

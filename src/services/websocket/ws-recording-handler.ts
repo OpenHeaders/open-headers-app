@@ -3,8 +3,7 @@
  * Manages video recording lifecycle and workflow save from browser extensions
  */
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const WebSocket = require('ws');
+import WebSocket from 'ws';
 import electron from 'electron';
 import fs from 'fs';
 import path from 'path';

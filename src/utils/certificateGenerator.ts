@@ -35,8 +35,7 @@ class CertificateGenerator {
       await fs.promises.mkdir(certDir, { recursive: true });
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const forge = require('node-forge');
+        const forge = await import('node-forge');
         this.logger.info('[CertificateGenerator] Using node-forge for certificate generation');
         return await this.generateWithForge(keyPath, certPath, forge);
       } catch (error) {
