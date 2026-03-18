@@ -66,14 +66,14 @@ interface ImportStats {
  * Orchestrates the complete import process for all data types
  */
 export class ImportService {
-  dependencies: Record<string, any>;
+  dependencies: Record<string, unknown>;
   sourcesHandler: SourcesHandler;
   proxyRulesHandler: ProxyRulesHandler;
   rulesHandler: RulesHandler;
   environmentsHandler: EnvironmentsHandler;
   workspaceHandler: WorkspaceHandler;
 
-  constructor(dependencies: Record<string, any>) {
+  constructor(dependencies: Record<string, unknown>) {
     this.dependencies = dependencies;
 
     // Initialize handlers
@@ -138,30 +138,33 @@ export class ImportService {
    */
   async _parseImportFiles(importOptions: ImportOptions) {
     // Parse main file content
-    const mainFileResult = validateAndParseFileContent(importOptions.fileContent) as any;
+    const mainFileResult = validateAndParseFileContent(importOptions.fileContent) as { success: boolean; data?: Record<string, unknown>; error?: string };
     if (!mainFileResult.success) {
       throw new Error(`Main file parsing failed: ${mainFileResult.error}`);
     }
 
-    const importData = mainFileResult.data;
-    let envData: any = null;
+    if (!mainFileResult.data) {
+      throw new Error('Main file parsing returned no data');
+    }
+    const importData = mainFileResult.data as ImportData;
+    let envData: Record<string, unknown> | null = null;
 
     // Parse environment file if provided
     if (importOptions.envFileContent) {
-      const envFileResult = validateAndParseFileContent(importOptions.envFileContent) as any;
+      const envFileResult = validateAndParseFileContent(importOptions.envFileContent) as { success: boolean; data?: Record<string, unknown>; error?: string };
       if (!envFileResult.success) {
         throw new Error(`Environment file parsing failed: ${envFileResult.error}`);
       }
-      envData = envFileResult.data;
+      envData = envFileResult.data ?? null;
     }
 
     // Merge environment data if from separate file
     if (envData) {
       if (envData.environmentSchema) {
-        importData.environmentSchema = envData.environmentSchema;
+        importData.environmentSchema = envData.environmentSchema as ImportData['environmentSchema'];
       }
       if (envData.environments) {
-        importData.environments = envData.environments;
+        importData.environments = envData.environments as ImportData['environments'];
       }
     }
 
@@ -343,7 +346,7 @@ export class ImportService {
    * @private
    */
   _validateImportPayload(importData: ImportData) {
-    const validation = validateImportPayload(importData) as any;
+    const validation = validateImportPayload(importData) as { success: boolean; error?: string; warnings?: string[] };
     if (!validation.success) {
       throw new Error(`Import data validation failed: ${validation.error}`);
     }
@@ -386,12 +389,12 @@ export class ImportService {
    * @param {Object} importStats - Import statistics to analyze
    * @returns {Object} - Comprehensive import statistics
    */
-  getImportStatistics(importStats: Record<string, any>) {
-    const stats: Record<string, any> = {
+  getImportStatistics(importStats: Record<string, any>) {  // eslint-disable-line -- handler stats have heterogeneous shapes
+    const stats: Record<string, any> = {  // eslint-disable-line -- complex nested stats object
       totalImported: 0,
       totalSkipped: 0,
       totalErrors: importStats.errors ? importStats.errors.length : 0,
-      dataTypes: {} as Record<string, any>
+      dataTypes: {} as Record<string, any>  // eslint-disable-line
     };
 
     // Sources statistics
