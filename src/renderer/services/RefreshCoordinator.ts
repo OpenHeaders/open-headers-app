@@ -3,12 +3,26 @@ const log = createLogger('RefreshCoordinator');
 import timeManager from './TimeManager';
 import { ConcurrentMap, Mutex } from '../utils/error-handling/ConcurrencyControl';
 
+interface ActiveRefresh {
+  startTime: number;
+  reason: string;
+  priority: string;
+}
+
+interface QueuedRefresh {
+  refreshFn: (id: string) => Promise<unknown>;
+  options: Record<string, unknown>;
+  resolve: (value: unknown) => void;
+  reject: (reason: unknown) => void;
+  timestamp: number;
+}
+
 /**
  * Improved RefreshCoordinator with proper queue limits and concurrency control
  */
 class RefreshCoordinator {
-  activeRefreshes: InstanceType<typeof ConcurrentMap>;
-  refreshQueue: InstanceType<typeof ConcurrentMap>;
+  activeRefreshes: ConcurrentMap<ActiveRefresh>;
+  refreshQueue: ConcurrentMap<QueuedRefresh[]>;
   queueMutex: InstanceType<typeof Mutex>;
   MAX_QUEUE_SIZE: number;
   metrics: {
@@ -23,8 +37,8 @@ class RefreshCoordinator {
 
   constructor() {
     // Thread-safe data structures
-    this.activeRefreshes = new ConcurrentMap('activeRefreshes');
-    this.refreshQueue = new ConcurrentMap('refreshQueue');
+    this.activeRefreshes = new ConcurrentMap<ActiveRefresh>('activeRefreshes');
+    this.refreshQueue = new ConcurrentMap<QueuedRefresh[]>('refreshQueue');
     this.queueMutex = new Mutex('queue');
 
     // Configuration
