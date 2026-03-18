@@ -53,11 +53,12 @@ interface UseSourcesReturn {
  * Hook for source management
  */
 export function useSources(): UseSourcesReturn {
-  const { sources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
+  const { sources: rawSources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
+  const sources = rawSources as SourceData[];
 
   const addSource = useCallback(async (sourceData: Record<string, unknown>): Promise<SourceData | null> => {
     try {
-      return await service.addSource(sourceData);
+      return await service.addSource(sourceData) as SourceData;
     } catch (error: unknown) {
       showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
@@ -67,7 +68,7 @@ export function useSources(): UseSourcesReturn {
   const updateSource = useCallback(async (sourceId: string, updates: Record<string, unknown>): Promise<SourceData | null> => {
     try {
       log.debug('updateSource called', { sourceId, updates });
-      const updatedSource = await service.updateSource(sourceId, updates);
+      const updatedSource = await service.updateSource(sourceId, updates) as SourceData | null;
       log.debug('updateSource returning', {
         sourceId,
         updatedSource: !!updatedSource,

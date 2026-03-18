@@ -42,12 +42,13 @@ interface UseWorkspacesReturn {
  */
 export function useWorkspaces(): UseWorkspacesReturn {
   const {
-    workspaces,
+    workspaces: rawWorkspaces,
     activeWorkspaceId,
     syncStatus,
     loading,
     service
   } = useCentralizedWorkspace();
+  const workspaces = rawWorkspaces as WorkspaceData[];
 
   const createWorkspace = useCallback(async (workspace: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
     try {
@@ -112,7 +113,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
       if (result) {
         // If this is the active workspace and it's a git workspace, notify main process
         // to handle auto-sync changes
-        const workspace = service.state.workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+        const workspace = (service.state.workspaces as WorkspaceData[]).find((w: WorkspaceData) => w.id === workspaceId);
         if (workspaceId === activeWorkspaceId && workspace?.type === 'git') {
           if (window.electronAPI && window.electronAPI.send) {
             window.electronAPI.send('workspace-updated', {
@@ -248,7 +249,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
   return {
     workspaces,
     activeWorkspaceId,
-    syncStatus,
+    syncStatus: syncStatus as Record<string, WorkspaceSyncStatusEntry>,
     loading,
     createWorkspace,
     switchWorkspace,

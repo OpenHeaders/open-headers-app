@@ -3,23 +3,23 @@
  */
 import { createLogger } from '../../utils/error-handling/logger';
 
-class BaseStateManager {
+class BaseStateManager<TState extends Record<string, unknown> = Record<string, unknown>> {
   serviceName: string;
   log: ReturnType<typeof createLogger>;
-  listeners: Set<(state: any, changedKeys: string[]) => void>;
-  state: Record<string, any>;
+  listeners: Set<(state: TState, changedKeys: string[]) => void>;
+  state: TState;
 
   constructor(serviceName: string) {
     this.serviceName = serviceName;
     this.log = createLogger(serviceName);
     this.listeners = new Set();
-    this.state = {};
+    this.state = {} as TState;
   }
 
   /**
    * Subscribe to state changes
    */
-  subscribe(listener: (state: any, changedKeys: string[]) => void) {
+  subscribe(listener: (state: TState, changedKeys: string[]) => void) {
     this.listeners.add(listener);
     // Immediately call with current state
     listener(this.getState(), []);
@@ -43,7 +43,7 @@ class BaseStateManager {
   /**
    * Get current state (immutable copy)
    */
-  getState() {
+  getState(): TState {
     // TODO: Consider using a proper deep clone library for performance
     return JSON.parse(JSON.stringify(this.state));
   }
@@ -51,7 +51,7 @@ class BaseStateManager {
   /**
    * Update state and notify listeners
    */
-  setState(updates: Record<string, any>, changedKeys: string[] = []) {
+  setState(updates: Partial<TState>, changedKeys: string[] = []) {
     this.state = { ...this.state, ...updates };
     this.notifyListeners(changedKeys);
   }

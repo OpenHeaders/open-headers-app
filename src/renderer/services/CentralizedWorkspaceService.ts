@@ -23,7 +23,22 @@ import {
 
 const log = createLogger('CentralizedWorkspaceService');
 
-class CentralizedWorkspaceService extends BaseStateManager {
+export interface WorkspaceServiceState {
+  initialized: boolean;
+  loading: boolean;
+  error: string | null;
+  workspaces: Record<string, unknown>[];
+  activeWorkspaceId: string;
+  isWorkspaceSwitching: boolean;
+  syncStatus: Record<string, unknown>;
+  sources: Record<string, unknown>[];
+  rules: { header: Record<string, unknown>[]; request: Record<string, unknown>[]; response: Record<string, unknown>[] };
+  proxyRules: Record<string, unknown>[];
+  lastSaved: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState> {
   workspaceManager: InstanceType<typeof WorkspaceManager>;
   sourceManager: InstanceType<typeof SourceManager>;
   rulesManager: InstanceType<typeof RulesManager>;
@@ -436,7 +451,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Save sources
    */
   async saveSources() {
-    await this.sourceManager.saveSources(this.state.activeWorkspaceId, this.state.sources);
+    await this.sourceManager.saveSources(this.state.activeWorkspaceId, this.state.sources as never);
     this.autoSaveManager.markClean('sources');
     this.state.lastSaved.sources = Date.now();
   }
@@ -445,7 +460,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Save rules
    */
   async saveRules() {
-    await this.rulesManager.saveRules(this.state.activeWorkspaceId, this.state.rules);
+    await this.rulesManager.saveRules(this.state.activeWorkspaceId, this.state.rules as never);
     this.autoSaveManager.markClean('rules');
     this.state.lastSaved.rules = Date.now();
   }
@@ -454,7 +469,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Save proxy rules
    */
   async saveProxyRules() {
-    await this.rulesManager.saveProxyRules(this.state.activeWorkspaceId, this.state.proxyRules);
+    await this.rulesManager.saveProxyRules(this.state.activeWorkspaceId, this.state.proxyRules as never);
     this.autoSaveManager.markClean('proxyRules');
     this.state.lastSaved.proxyRules = Date.now();
   }
@@ -466,9 +481,9 @@ class CentralizedWorkspaceService extends BaseStateManager {
    */
   async addSource(sourceData: Record<string, unknown>) {
     const sources = [...this.state.sources];
-    const newSource = await this.sourceManager.addSource(sources, sourceData as { sourceType: string; sourcePath: string; [key: string]: unknown });
-    
-    sources.push(newSource);
+    const newSource = await this.sourceManager.addSource(sources as never, sourceData as never);
+
+    sources.push(newSource as Record<string, unknown>);
     this.setState({ sources }, ['sources']);
     
     // Save immediately to avoid race condition with refresh
@@ -597,7 +612,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Add a header rule
    */
   async addHeaderRule(ruleData: Record<string, unknown>) {
-    const rules = this.rulesManager.addHeaderRule(this.state.rules, ruleData);
+    const rules = this.rulesManager.addHeaderRule(this.state.rules as never, ruleData);
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
@@ -612,7 +627,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Update a header rule
    */
   async updateHeaderRule(ruleId: string, updates: Record<string, unknown>) {
-    const rules = this.rulesManager.updateHeaderRule(this.state.rules, ruleId, updates);
+    const rules = this.rulesManager.updateHeaderRule(this.state.rules as never, ruleId, updates);
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
@@ -627,7 +642,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Remove a header rule
    */
   async removeHeaderRule(ruleId: string) {
-    const rules = this.rulesManager.removeHeaderRule(this.state.rules, ruleId);
+    const rules = this.rulesManager.removeHeaderRule(this.state.rules as never, ruleId);
     this.setState({ rules }, ['rules']);
     
     // Update workspace metadata
@@ -665,7 +680,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     this.setState({ proxyRules }, ['proxyRules']);
     
     if (rule) {
-      await this.rulesManager.syncProxyRule(rule, 'remove');
+      await this.rulesManager.syncProxyRule(rule as never, 'remove');
     }
     
     // Update workspace metadata
@@ -954,7 +969,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Check and activate sources that have their dependencies met
    */
   async activateReadySources() {
-    const result = await this.sourceManager.activateReadySources(this.state.sources);
+    const result = await this.sourceManager.activateReadySources(this.state.sources as never);
     
     if (result.hasChanges) {
       this.setState({ sources: result.sources }, ['sources']);

@@ -21,7 +21,7 @@ interface UseHeaderRulesReturn {
  */
 export function useHeaderRules(): UseHeaderRulesReturn {
   const { rules, service } = useCentralizedWorkspace();
-  const headerRules = rules.header || [];
+  const headerRules = (rules.header || []) as HeaderRule[];
 
   const addRule = useCallback(async (ruleData: Record<string, unknown>): Promise<boolean> => {
     try {

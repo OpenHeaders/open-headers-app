@@ -282,7 +282,7 @@ class CentralizedEnvironmentService {
   async setVariableInEnvironment(name: string, value: string, environmentName: string, isSecret = false) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.setVariable(
-      state.environments,
+      state.environments as never,
       environmentName,
       name,
       value,
