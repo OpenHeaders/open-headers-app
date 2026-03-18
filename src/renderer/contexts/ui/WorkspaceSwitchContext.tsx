@@ -6,15 +6,22 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
  * Provides simple state management for workspace switching with 1-second overlay.
  */
 
+interface TargetWorkspace {
+  id?: string;
+  name?: string;
+  type?: string;
+  [key: string]: unknown;
+}
+
 interface SwitchState {
   switching: boolean;
-  targetWorkspace: any;
+  targetWorkspace: TargetWorkspace | null;
   startTime?: number;
 }
 
 interface WorkspaceSwitchContextValue {
   switchState: SwitchState;
-  startSwitch: (targetWorkspace: any) => void;
+  startSwitch: (targetWorkspace: TargetWorkspace | null) => void;
   completeSwitch: () => void;
   manualClose: () => void;
 }
@@ -30,7 +37,7 @@ export const WorkspaceSwitchProvider: React.FC<{ children: React.ReactNode }> = 
     /**
      * Start workspace switching process
      */
-    const startSwitch = useCallback((targetWorkspace: any) => {
+    const startSwitch = useCallback((targetWorkspace: TargetWorkspace | null) => {
         setSwitchState({
             switching: true,
             targetWorkspace,
