@@ -13,7 +13,7 @@ import { createLogger } from '../../../../utils/error-handling/logger';
 
 const log = createLogger('useVideoLoader');
 
-export const useVideoLoader = (record, viewMode) => {
+export const useVideoLoader = (record: { metadata?: { recordId?: string; [key: string]: unknown }; [key: string]: unknown }, viewMode: string) => {
     const [hasVideo, setHasVideo] = useState(false);
     const [videoLoading, setVideoLoading] = useState(true);
     const videoRef = useRef(null);
@@ -79,7 +79,7 @@ export const useVideoLoader = (record, viewMode) => {
     /**
      * Handle video loading error
      */
-    const handleVideoError = (error) => {
+    const handleVideoError = (error: unknown) => {
         log.error('Video loading error:', error);
         setVideoLoading(false);
     };

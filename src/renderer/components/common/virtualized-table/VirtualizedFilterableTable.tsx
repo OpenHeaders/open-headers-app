@@ -87,7 +87,7 @@ const VirtualizedFilterableTable = forwardRef(({
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
-    scrollToItem: (index) => {
+    scrollToItem: (index: number) => {
       listRef.current?.scrollToItem(index, 'center');
     }
   }));

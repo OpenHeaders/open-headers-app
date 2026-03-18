@@ -228,7 +228,7 @@ export function generateImportWarnings(importData: Record<string, any>, options:
  * @param {Array<string>} environmentNames - Names of environments affected
  * @returns {string|null} - Formatted message or null if no variables created
  */
-export function generateEnvironmentVariablesMessage(count, environmentNames = []) {
+export function generateEnvironmentVariablesMessage(count: number, environmentNames = []) {
   if (count === 0) {
     return null;
   }

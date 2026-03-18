@@ -46,6 +46,7 @@ interface RulesStorage {
     lastUpdated: string;
     [key: string]: unknown;
   };
+  [key: string]: unknown;
 }
 
 /** Import statistics per type */

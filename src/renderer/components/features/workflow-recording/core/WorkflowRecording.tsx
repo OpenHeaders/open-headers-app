@@ -74,10 +74,10 @@ const WorkflowRecording = ({
      * Handles viewing a specific record
      * @param {Object} recordData - Record to view
      */
-    const handleViewRecord = async (recordData) => {
+    const handleViewRecord = async (recordData: { id?: string; [key: string]: unknown }) => {
         try {
             // Load the full record data
-            const fullRecord = await window.electronAPI.loadRecording(recordData.id);
+            const fullRecord = await window.electronAPI.loadRecording(recordData.id as string);
             if (fullRecord && fullRecord.record) {
                 // Convert new format to old format if needed
                 const convertedRecord = convertNewRecordingFormat(fullRecord.record);
@@ -93,7 +93,7 @@ const WorkflowRecording = ({
      * Handles record deletion
      * @param {string} recordId - ID of deleted record
      */
-    const handleRecordDeleted = (recordId) => {
+    const handleRecordDeleted = (recordId: string) => {
         // If the currently viewed record is deleted, show upload view
         if (record && (record.metadata?.recordId === recordId || record.id === recordId)) {
             onRecordChange(null);

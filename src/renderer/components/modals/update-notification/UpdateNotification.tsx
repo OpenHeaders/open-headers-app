@@ -64,7 +64,7 @@ const UpdateNotification = forwardRef((props, ref) => {
      * @param {string} message - Log message
      * @param {*} data - Optional data to log
      */
-    const debugLog = (message, data = null) => {
+    const debugLog = (message: string, data = null) => {
         // No-op: debug logging disabled for update notifications
     };
 

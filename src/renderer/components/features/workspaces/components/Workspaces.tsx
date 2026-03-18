@@ -68,7 +68,7 @@ const Workspaces = () => {
         handleDeleteWorkspace,
         handleCloneToPersonal,
         handleSyncWorkspace
-    } = useWorkspaceActions(workspaceContext);
+    } = useWorkspaceActions(workspaceContext as unknown as Parameters<typeof useWorkspaceActions>[0]);
     
     
     /**
@@ -83,7 +83,7 @@ const Workspaces = () => {
      * Handles editing an existing workspace
      * @param {Object} workspace - Workspace object to edit
      */
-    const handleEditWorkspace = (workspace) => {
+    const handleEditWorkspace = (workspace: Record<string,unknown>) => {
         setEditingWorkspace(workspace);
         setModalVisible(true);
     };
@@ -100,7 +100,7 @@ const Workspaces = () => {
      * Handles successful workspace creation
      * @param {string} workspaceId - ID of the created workspace
      */
-    const handleWorkspaceSuccess = (workspaceId) => {
+    const handleWorkspaceSuccess = (workspaceId: string) => {
         console.log('Workspace created successfully:', workspaceId);
         setModalVisible(false);
         setEditingWorkspace(null);
@@ -110,7 +110,7 @@ const Workspaces = () => {
      * Handles sharing a workspace by generating and displaying invite links
      * @param {Object} workspace - Workspace object to share
      */
-    const handleShareWorkspace = async (workspace) => {
+    const handleShareWorkspace = async (workspace: Record<string,unknown>) => {
         try {
             // Generate initial invite without auth data
             const result = await window.electronAPI.generateTeamWorkspaceInvite({
@@ -124,7 +124,7 @@ const Workspaces = () => {
                 modal.info({
                     title: (
                         <Space>
-                            Share access to Team Workspace <TeamOutlined /> {workspace.name}
+                            Share access to Team Workspace <TeamOutlined /> {workspace.name as string}
                         </Space>
                     ),
                     content: (
@@ -134,7 +134,7 @@ const Workspaces = () => {
                                 const [includeAuth, setIncludeAuth] = useState(false);
                                 const [appLink, setAppLink] = useState(currentAppLink);
                                 
-                                const handleChange = async (type, auth) => {
+                                const handleChange = async (type: string, auth: boolean) => {
                                     if (type === 'web' && auth) {
                                         // Web links cannot include auth
                                         auth = false;
@@ -204,7 +204,7 @@ const Workspaces = () => {
                                                     onChange={async (e) => {
                                                         const checked = e.target.checked;
                                                         setIncludeAuth(checked);
-                                                        await handleChange('app', checked);
+                                                        await handleChange('app', checked as boolean);
                                                     }}
                                                     style={{ display: 'flex', alignItems: 'center' }}
                                                 >

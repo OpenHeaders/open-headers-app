@@ -28,7 +28,7 @@
  * formatContent('plain text') // Returns 'plain text'
  * formatContent('') // Returns 'No content available'
  */
-export function formatContent(content) {
+export function formatContent(content: string) {
     try {
         // Detect JSON-like content by checking if it starts with { or [
         if (
@@ -65,7 +65,7 @@ export function formatContent(content) {
  * formatJson('<!DOCTYPE html>') // Returns original HTML
  * formatJson('') // Returns 'No response content available'
  */
-export function formatJson(jsonString) {
+export function formatJson(jsonString: string) {
     try {
         if (typeof jsonString !== 'string' || !jsonString.trim()) {
             return 'No response content available';
@@ -104,7 +104,7 @@ export function formatJson(jsonString) {
  * isJsonContent('plain text') // Returns false
  * isJsonContent('') // Returns false
  */
-export function isJsonContent(content) {
+export function isJsonContent(content: string) {
     if (typeof content !== 'string' || !content.trim()) {
         return false;
     }
@@ -125,7 +125,7 @@ export function isJsonContent(content) {
  * safeJsonParse('invalid json') // Returns 'invalid json'
  * safeJsonParse('') // Returns ''
  */
-export function safeJsonParse(content) {
+export function safeJsonParse(content: string) {
     try {
         if (typeof content === 'string' && content.trim()) {
             return JSON.parse(content);

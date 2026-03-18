@@ -33,7 +33,7 @@ const DomainSection = ({
                         const variables = envContext.getAllVariables();
                         const invalidDomains = [];
                         
-                        value.forEach((domain, index) => {
+                        value.forEach((domain: string, index: number) => {
                             const validation = validateEnvironmentVariables(domain, variables);
                             if (validation.hasVars && !validation.isValid) {
                                 invalidDomains.push(`${domain} (${formatMissingVariables(validation.missingVars)})`);
@@ -51,10 +51,10 @@ const DomainSection = ({
             style={{ marginBottom: 20 }}
         >
             <DomainTags 
-                onValidate={(domains) => {
+                onValidate={(domains: string[]) => {
                     if (envContext.environmentsReady) {
                         const variables = envContext.getAllVariables();
-                        const validations = domains.map(domain => 
+                        const validations = domains.map((domain: string) =>
                             validateEnvironmentVariables(domain, variables)
                         );
                         setDomainValidation(validations);

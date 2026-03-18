@@ -22,7 +22,7 @@ class BroadcastManager {
   /**
    * Broadcast current state to WebSocket and proxy
    */
-  async broadcastState(sources, headerRules, { includeWebSocket = false } = {}) {
+  async broadcastState(sources: Record<string, unknown>[], headerRules: Record<string, unknown>[], { includeWebSocket = false } = {}) {
     try {
       // WebSocket source broadcasting is normally handled by WebSocketContext
       // (with cleaning, debouncing, and change detection).

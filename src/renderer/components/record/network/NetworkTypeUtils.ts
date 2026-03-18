@@ -10,7 +10,7 @@
  * @param {Object} req - Network request record
  * @returns {string} Formatted request type
  */
-export const getTypeFromRecord = (req) => {
+export const getTypeFromRecord = (req: { type?: string; status?: number; method?: string; responseHeaders?: Record<string, string>; [key: string]: unknown }) => {
     if (!req || typeof req !== 'object') {
         return 'unknown';
     }
@@ -40,7 +40,7 @@ export const getTypeFromRecord = (req) => {
             if (mimeType.includes('html')) return 'xhr';
         }
 
-        return typeMap[type] || type;
+        return (typeMap as Record<string, string>)[type as string] || type;
     }
 
     // Fallback based on MIME type and other indicators
@@ -69,7 +69,7 @@ export const getTypeFromRecord = (req) => {
  * @param {Array} networkRecords - Array of network request records
  * @returns {Array} Sorted array of unique type values
  */
-export const getUniqueTypes = (networkRecords) => {
+export const getUniqueTypes = (networkRecords: { [key: string]: unknown }[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }
@@ -86,11 +86,11 @@ export const getUniqueTypes = (networkRecords) => {
  * @param {Array} networkRecords - Array of network request records
  * @returns {Array} Sorted array of unique status groups
  */
-export const getUniqueStatusGroups = (networkRecords) => {
+export const getUniqueStatusGroups = (networkRecords: { status?: number; error?: unknown; [key: string]: unknown }[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }
-    
+
     const statusGroups = new Set();
     for (const req of networkRecords) {
         if (req.error) statusGroups.add('Failed');
@@ -109,7 +109,7 @@ export const getUniqueStatusGroups = (networkRecords) => {
  * @param {Array} networkRecords - Array of network request records
  * @returns {Array} Sorted array of unique method values
  */
-export const getUniqueMethods = (networkRecords) => {
+export const getUniqueMethods = (networkRecords: { method?: string; [key: string]: unknown }[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }

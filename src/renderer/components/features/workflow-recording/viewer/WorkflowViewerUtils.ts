@@ -90,8 +90,8 @@ export const createAutoScrollHandler = () => {
  * @param {Function} setAutoScroll - Function to set auto-scroll state
  * @returns {Object} Handler functions
  */
-export const createHighlightHandlers = (setAutoHighlight, setAutoScroll) => {
-  const handleAutoHighlightChange = (checked) => {
+export const createHighlightHandlers = (setAutoHighlight: (value: boolean) => void, setAutoScroll: (value: boolean) => void) => {
+  const handleAutoHighlightChange = (checked: boolean) => {
     setAutoHighlight(checked);
     // If auto-highlight is turned off, also turn off auto-scroll
     if (!checked) {

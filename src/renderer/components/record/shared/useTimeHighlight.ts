@@ -22,13 +22,13 @@ export const useTimeHighlight = (
      * @param {Array} allEntries - All entries for comparison
      * @returns {boolean} Whether this entry is the current active entry
      */
-    const isCurrentEntry = (entry, allEntries) => {
+    const isCurrentEntry = (entry: Record<string, unknown>, allEntries: Record<string, unknown>[]) => {
         if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
             return false;
         }
 
         const activeEntries = allEntries.filter(
-            item => item[timestampProperty] <= activeTime
+            (item: Record<string, unknown>) => (item[timestampProperty] as number) <= activeTime
         );
         
         if (activeEntries.length === 0) {
@@ -46,14 +46,14 @@ export const useTimeHighlight = (
      * @param {string} baseClass - Base CSS class name
      * @returns {string} Space-separated CSS class names
      */
-    const getRowClassName = (entry, allEntries, baseClass = '') => {
+    const getRowClassName = (entry: Record<string, unknown>, allEntries: Record<string, unknown>[], baseClass = '') => {
         const classes = baseClass ? [baseClass] : [];
 
         if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
             return classes.join(' ');
         }
 
-        if (entry[timestampProperty] <= activeTime) {
+        if ((entry[timestampProperty] as number) <= activeTime) {
             classes.push('entry-active');
             
             if (isCurrentEntry(entry, allEntries)) {

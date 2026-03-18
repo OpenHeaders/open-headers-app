@@ -27,7 +27,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
   const { stage, progress = 0, details = {} } = processing;
 
   // Map resource types to user-friendly names
-  const getResourceTypeDisplay = (type) => {
+  const getResourceTypeDisplay = (type: string) => {
     const typeMap = {
       'stylesheet': 'CSS stylesheets',
       'font': 'Web fonts',

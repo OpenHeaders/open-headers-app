@@ -127,7 +127,7 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
 /**
  * Get human-readable explanation of exponential backoff
  */
-function getBackoffExplanation(openings) {
+function getBackoffExplanation(openings: number) {
   if (openings <= 1) return null;
   
   const examples = [

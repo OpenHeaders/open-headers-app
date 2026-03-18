@@ -90,7 +90,7 @@ export const useCliServer = ({ active = false } = {}) => {
     /**
      * Update port (only when server is stopped)
      */
-    const updatePort = useCallback((port) => {
+    const updatePort = useCallback((port: number) => {
         setStatus(prev => ({ ...prev, port: Number(port) }));
     }, []);
 

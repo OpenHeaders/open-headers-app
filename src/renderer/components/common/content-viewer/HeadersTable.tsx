@@ -55,14 +55,14 @@ export function HeadersTable({ headers, className = "headers-table" }: HeadersTa
             dataIndex: 'name',
             key: 'name',
             width: '40%',
-            render: (text) => <Text strong style={{ fontSize: 12 }}>{text}</Text>
+            render: (text: string) => <Text strong style={{ fontSize: 12 }}>{text}</Text>
         },
         {
             title: 'Value',
             dataIndex: 'value',
             key: 'value',
             width: '60%',
-            render: (text) => <Text style={{ fontSize: 12, wordBreak: 'break-all' }}>{text}</Text>
+            render: (text: string) => <Text style={{ fontSize: 12, wordBreak: 'break-all' }}>{text}</Text>
         }
     ];
 

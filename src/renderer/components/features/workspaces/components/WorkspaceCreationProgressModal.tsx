@@ -37,7 +37,7 @@ const WorkspaceCreationProgressModal = ({
         }
     };
 
-    const getStepStatus = (stepNumber) => {
+    const getStepStatus = (stepNumber: number) => {
         if (!progress) return 'wait';
         
         const currentStep = progress.step;

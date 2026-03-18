@@ -97,7 +97,7 @@ const SettingItem = forwardRef(({
      * Handle setting value changes
      * @param {*} newValue - New value for the setting
      */
-    const handleChange = (newValue) => {
+    const handleChange = (newValue: unknown) => {
         onChange(fieldName, newValue);
     };
 

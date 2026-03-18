@@ -26,7 +26,7 @@ const BrowserConnectionStatus = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     // Browser icon mapping
-    const getBrowserIcon = (browser) => {
+    const getBrowserIcon = (browser: string) => {
         const icons = {
             'chrome': <ChromeOutlined />,
             'firefox': <CompassOutlined />,
@@ -38,7 +38,7 @@ const BrowserConnectionStatus = () => {
     };
 
     // Browser display name mapping
-    const getBrowserName = (browser) => {
+    const getBrowserName = (browser: string) => {
         const names = {
             'chrome': 'Chrome',
             'firefox': 'Firefox',
@@ -102,7 +102,7 @@ const BrowserConnectionStatus = () => {
 
         // Listen for connection status updates from main process
         let unsubscribe;
-        const handleStatusUpdate = (status) => {
+        const handleStatusUpdate = (status: { totalConnections: number; browserCounts: Record<string, number>; clients: unknown[]; wsServerRunning: boolean; wssServerRunning: boolean }) => {
             setConnectionStatus(status);
             setIsLoading(false);
         };

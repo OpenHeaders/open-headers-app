@@ -19,7 +19,7 @@ class SyncManager {
   /**
    * Wait for initial sync of a Git workspace
    */
-  async waitForInitialSync(workspaceId, timeoutMs = 30000) {
+  async waitForInitialSync(workspaceId: string, timeoutMs = 30000) {
     log.info(`[SyncManager] Waiting for initial sync of workspace ${workspaceId}...`);
     
     return new Promise<void>((resolve, reject) => {
@@ -90,7 +90,7 @@ class SyncManager {
   /**
    * Check if workspace needs initial sync
    */
-  async needsInitialSync(workspaceId) {
+  async needsInitialSync(workspaceId: string) {
     try {
       const sourcesData = await this.electronAPI.loadFromStorage(`workspaces/${workspaceId}/sources.json`);
       
@@ -113,7 +113,7 @@ class SyncManager {
   /**
    * Setup sync status listener
    */
-  setupSyncListener(onSyncComplete) {
+  setupSyncListener(onSyncComplete: (data: Record<string, unknown>) => void) {
     if (!this.electronAPI || !this.electronAPI.onWorkspaceSyncCompleted) {
       log.warn('Workspace sync listener not available in electronAPI');
       return () => {};

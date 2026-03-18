@@ -13,7 +13,7 @@ const log = createLogger('SyncOperations');
  * @param {Object} workspaceContext - Workspace context object
  * @returns {Object} Sync operations and utilities
  */
-export const useSyncOperations = (workspaceContext) => {
+export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string) => Promise<unknown>; switchWorkspace: (id: string) => Promise<unknown>; [key: string]: unknown }) => {
     const { message } = App.useApp();
     const { syncWorkspace, switchWorkspace } = workspaceContext;
     
@@ -54,8 +54,8 @@ export const useSyncOperations = (workspaceContext) => {
                         
                         if (data.success) {
                             log.info(`[Workspaces] Switching to newly synced Git workspace: ${workspaceId}`);
-                            switchWorkspace(workspaceId).catch(error => {
-                                log.error(`[Workspaces] Failed to switch to Git workspace: ${error.message}`);
+                            switchWorkspace(workspaceId).catch((error: unknown) => {
+                                log.error(`[Workspaces] Failed to switch to Git workspace: ${(error as Error).message}`);
                                 void message.error('Failed to switch to new workspace');
                             });
                         } else {
@@ -90,13 +90,13 @@ export const useSyncOperations = (workspaceContext) => {
      * @param {Object} workspace - Workspace object
      * @param {Object} syncListeners - Sync listeners object
      */
-    const handleWorkspaceSwitch = async (result, workspace, syncListeners) => {
-        const workspaceId = result.id || workspace.id;
-        
+    const handleWorkspaceSwitch = async (result: { id?: string; [key: string]: unknown }, workspace: { id?: string; type?: string; [key: string]: unknown }, syncListeners: { setupListeners: (id: string) => void; startTimeout: (id: string) => void; messageKey: string; cleanup: () => void } | null) => {
+        const workspaceId = (result.id || workspace.id) as string;
+
         if (workspace.type === 'git' && syncListeners) {
             syncListeners.setupListeners(workspaceId);
             syncListeners.startTimeout(workspaceId);
-            
+
             message.loading({
                 content: 'Syncing workspace from Git repository...',
                 key: syncListeners.messageKey,
@@ -112,13 +112,13 @@ export const useSyncOperations = (workspaceContext) => {
      * Handles workspace sync
      * @param {Object} workspace - Workspace to sync
      */
-    const handleSyncWorkspace = async (workspace) => {
+    const handleSyncWorkspace = async (workspace: { id?: string; type?: string; [key: string]: unknown }) => {
         if (workspace.type !== 'git') {
             return;
         }
 
         // Call syncWorkspace which will handle its own success/error notifications
-        await syncWorkspace(workspace.id);
+        await syncWorkspace(workspace.id as string);
     };
     
     return {

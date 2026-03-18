@@ -129,7 +129,7 @@ const HttpOptions = forwardRef(({
     // Create helper functions
     const getTotpStateFromForm = createTotpStateHelper(form);
     
-    const validateVariableExistsCallback = useCallback((value) => {
+    const validateVariableExistsCallback = useCallback((value: string) => {
         return validateVariableExists(value, envContext, form);
     }, [envContext, form]);
 
@@ -254,7 +254,7 @@ const HttpOptions = forwardRef(({
                     (jsonFilter?.path || '').trim() : ''
             };
         },
-        forceJsonFilterState: (enabled, path) => {
+        forceJsonFilterState: (enabled: boolean, path: string) => {
             const normalizedEnabled = Boolean(enabled);
             const normalizedPath = normalizedEnabled ? (path || '') : '';
             setJsonFilterEnabled(normalizedEnabled);
@@ -266,7 +266,7 @@ const HttpOptions = forwardRef(({
             return true;
         },
         handleTestRequest: handleTestRequest,
-        handleTestRequestWithParams: (sourcePath, sourceMethod, progressCallback, cleanupCallback) => 
+        handleTestRequestWithParams: (sourcePath: string, sourceMethod: string, progressCallback: (progress: number) => void, cleanupCallback: () => void) =>
             handleTestRequest(sourcePath, sourceMethod, progressCallback, cleanupCallback)
     }));
 

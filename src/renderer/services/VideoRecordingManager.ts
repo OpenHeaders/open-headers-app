@@ -34,7 +34,7 @@ class VideoRecordingManager {
         // Listen for start recording command
         window.electronAPI.onStartVideoRecording(async (data) => {
             console.log('[VideoRecordingManager] Received start recording request:', data);
-            const result = await this.startRecording(data);
+            const result = await this.startRecording(data as { sourceId?: string; captureType?: string; recordingId: string; recordingDir: string; url?: string; title?: string });
             
             // Send result back to main process
             window.electronAPI.sendVideoRecordingStarted(data.responseChannel, result);
@@ -55,7 +55,7 @@ class VideoRecordingManager {
      * @param {Object} options Recording options
      * @returns {Object} Result object
      */
-    async startRecording(options) {
+    async startRecording(options: { sourceId?: string; captureType?: string; recordingId: string; recordingDir: string; url?: string; title?: string }) {
         const { sourceId, captureType, recordingId, recordingDir, url, title } = options;
 
         try {
@@ -215,7 +215,7 @@ class VideoRecordingManager {
      * @param {string} recordingId Recording ID
      * @returns {Object} Result object
      */
-    async stopRecording(recordingId) {
+    async stopRecording(recordingId: string) {
         try {
             const recording = this.activeRecordings.get(recordingId);
             if (!recording) {
@@ -259,9 +259,9 @@ class VideoRecordingManager {
                         await window.electronAPI.writeFile(videoPath, buffer);
                         
                         console.log(`[VideoRecordingManager] Video saved to: ${videoPath}`);
-                        
+
                         // Clean up
-                        stream.getTracks().forEach(track => track.stop());
+                        stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
                         
                         // Remove from active recordings
                         this.activeRecordings.delete(recordingId);

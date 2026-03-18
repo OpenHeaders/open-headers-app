@@ -96,12 +96,12 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
     const handleTagClose = createTagCloseHandler(value, onChange);
     
     // Override the default edit handlers to support validation
-    const handleEdit = (index, tag) => {
+    const handleEdit = (index: number, tag: string) => {
         setEditInputIndex(index);
         setEditInputValue(tag);
     };
 
-    const handleEditChange = (e) => {
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setEditInputValue(e.target.value);
     };
 
@@ -115,7 +115,7 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
         setEditInputValue('');
     };
 
-    const handleEditKeyDown = (e) => {
+    const handleEditKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             handleEditConfirm();
         } else if (e.key === 'Escape') {
@@ -135,7 +135,7 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
     });
 
     // Override input change handler to include validation feedback
-    const handleInputChange = (e) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.value;
         setInputValue(newValue);
         

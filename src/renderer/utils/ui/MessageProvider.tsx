@@ -19,7 +19,7 @@ export const MessageProvider = ({ children }: MessageProviderProps) => {
     const [messageApi, contextHolder] = message.useMessage();
 
     // Export the message API through context
-    const showMessage = (type, content, duration = 3) => {
+    const showMessage = (type: string, content: string, duration = 3) => {
         // Create a message key for deduplication
         const messageKey = `${type}:${content}`;
 

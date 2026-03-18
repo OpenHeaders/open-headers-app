@@ -313,7 +313,7 @@ class TimeManager {
   /**
    * Register a time event listener
    */
-  addListener(callback) {
+  addListener(callback: (...args: unknown[]) => void) {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
   }
@@ -321,7 +321,7 @@ class TimeManager {
   /**
    * Notify all listeners of time events
    */
-  notifyListeners(events) {
+  notifyListeners(events: { type: string; [key: string]: unknown }[]) {
     for (const event of events) {
       log.info(`Time event detected: ${event.type}`, event);
     }
@@ -457,7 +457,7 @@ class TimeManager {
    * Measure elapsed time since a start point (using monotonic time)
    * This is immune to system clock changes
    */
-  getElapsedTime(startTime) {
+  getElapsedTime(startTime: number) {
     return performance.now() - startTime;
   }
   

@@ -15,7 +15,7 @@ interface StorageTypeCellProps { type: string; }
 const StorageTypeCell = ({ type }: StorageTypeCellProps) => {
     const tooltip = getTypeTooltip(type);
     
-    const getDisplayName = (storageType) => {
+    const getDisplayName = (storageType: string) => {
         switch (storageType) {
             case 'localStorage': return 'Local';
             case 'sessionStorage': return 'Session';

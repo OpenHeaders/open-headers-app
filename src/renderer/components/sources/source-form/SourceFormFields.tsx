@@ -187,7 +187,7 @@ export const StickyHeader = ({ isVisible, addButton }: StickyHeaderProps) => {
  * const label = getSourcePathLabel('file'); // Returns "File Path"
  * const label = getSourcePathLabel('http'); // Returns "URL"
  */
-export const getSourcePathLabel = (sourceType) => {
+export const getSourcePathLabel = (sourceType: string) => {
     switch (sourceType) {
         case 'file':
             return 'File Path';
@@ -213,7 +213,7 @@ export const getSourcePathLabel = (sourceType) => {
  * const message = getSourcePathValidationMessage('file'); 
  * // Returns "Please enter a file path"
  */
-export const getSourcePathValidationMessage = (sourceType) => {
+export const getSourcePathValidationMessage = (sourceType: string) => {
     switch (sourceType) {
         case 'file':
             return 'Please enter a file path';

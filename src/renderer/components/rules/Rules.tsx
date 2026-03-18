@@ -26,7 +26,7 @@ const Rules = () => {
     }, [navigationIntent]);
     
     // Clear highlight when switching tabs
-    const handleTabChange = (key) => {
+    const handleTabChange = (key: string) => {
         setActiveTab(key);
         // Clear highlights for all rule types
         clearHighlight(TARGETS.RULES_HEADERS);

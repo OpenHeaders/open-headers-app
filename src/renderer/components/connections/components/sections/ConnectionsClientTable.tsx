@@ -9,7 +9,7 @@ const { Title, Text } = Typography;
 /**
  * Trim trailing .0 segments from version strings (e.g. "146.0.0.0" → "146")
  */
-const trimVersion = (version) => {
+const trimVersion = (version: string) => {
     if (!version) return '';
     return version.replace(/(\.0)+$/, '');
 };
@@ -18,7 +18,7 @@ const trimVersion = (version) => {
  * Get browser display name and icon
  * (aligned with BrowserConnectionStatus in footer)
  */
-const getBrowserDisplay = (browser) => {
+const getBrowserDisplay = (browser: string) => {
     const browserMap = {
         chrome: { name: 'Chrome', icon: <ChromeOutlined /> },
         firefox: { name: 'Firefox', icon: <CompassOutlined /> },

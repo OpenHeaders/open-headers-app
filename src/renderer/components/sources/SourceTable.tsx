@@ -165,8 +165,8 @@ const SourceTable = ({
 
     // Refresh status text helper with extracted logic
     // Wrapper function that provides all necessary dependencies
-    const getRefreshStatus = (source) => getRefreshStatusText(
-        source, 
+    const getRefreshStatus = (source: Record<string,unknown>) => getRefreshStatusText(
+        source as unknown as Parameters<typeof getRefreshStatusText>[0],
         refreshManager, 
         refreshDisplayStates, 
         refreshingSourceId, 
@@ -276,7 +276,7 @@ const SourceTable = ({
         <VirtualizedSimpleTable
             dataSource={sources}
             columns={columns}
-            rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
+            rowKey={(record: Record<string,unknown>) => `source-${record.sourceId}-${record.sourceType}`}
             height={400}
             rowHeight={90} // Increased for multi-line content display
         />
@@ -284,7 +284,7 @@ const SourceTable = ({
         <Table
             dataSource={sources}
             columns={columns}
-            rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
+            rowKey={(record: Record<string,unknown>) => `source-${record.sourceId}-${record.sourceType}`}
             pagination={false}
             locale={{ emptyText }}
             size="small"

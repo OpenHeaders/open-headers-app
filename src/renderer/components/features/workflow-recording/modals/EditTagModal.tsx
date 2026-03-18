@@ -23,7 +23,7 @@ interface EditTagModalProps {
     visible: boolean;
     recordId: string;
     recordUrl: string;
-    currentTag: string | Record<string, any>;
+    currentTag: string | { name?: string; url?: string; [key: string]: unknown };
     onSave: (...args: any[]) => Promise<any>;
     onCancel: () => void;
 }
@@ -40,8 +40,9 @@ const EditTagModal = ({
     const [loading, setLoading] = useState(false);
 
     // Parse tag data - always object with name/url
-    const getTagData = (tag) => {
+    const getTagData = (tag: string | { name?: string; url?: string; [key: string]: unknown } | null) => {
         if (!tag) return { name: '', url: '' };
+        if (typeof tag === 'string') return { name: tag, url: '' };
         return { name: tag.name || '', url: tag.url || '' };
     };
 

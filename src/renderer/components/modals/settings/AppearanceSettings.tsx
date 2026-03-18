@@ -40,12 +40,12 @@ const AppearanceSettings = ({ formValues, screenRecordingPermission, onChange }:
      * @param {Array} items - Array of setting configuration objects
      * @returns {React.ReactNode} Rendered setting items
      */
-    const renderSettingItems = (items) => (
+    const renderSettingItems = (items: { fieldName: string; title: string; [key: string]: unknown }[]) => (
         <>
-            {items.map((setting, index) => (
+            {items.map((setting, index: number) => (
                 <SettingItem
                     key={`${setting.fieldName}-${index}`}
-                    {...setting}
+                    {...setting as React.ComponentProps<typeof SettingItem>}
                     onChange={onChange}
                 />
             ))}

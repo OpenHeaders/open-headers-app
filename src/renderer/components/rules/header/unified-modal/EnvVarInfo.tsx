@@ -61,7 +61,7 @@ const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<strin
                         
                         return (
                             <Text key={field} type={validation.isValid ? "secondary" : "danger"}>
-                                • {fieldLabel} uses: {validation.usedVars.map(v => `{{${v}}}`).join(', ')}
+                                • {fieldLabel} uses: {validation.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                                 {!validation.isValid && ` (missing: ${validation.missingVars.join(', ')})`}
                             </Text>
                         );

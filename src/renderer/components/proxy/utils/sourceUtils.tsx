@@ -22,9 +22,9 @@ import {
  * @param {Object} source - Source object with sourceType property
  * @returns {JSX.Element} Ant Design icon component
  */
-export const getSourceIcon = (source) => {
+export const getSourceIcon = (source: { sourceType?: string; [key: string]: unknown }) => {
     const sourceType = source.sourceType || '';
-    
+
     if (sourceType.toLowerCase().includes('http')) {
         return <GlobalOutlined style={{ marginRight: 4 }} />;
     } else if (sourceType.toLowerCase().includes('file')) {
@@ -46,7 +46,7 @@ export const getSourceIcon = (source) => {
  * @param {Object} source - Source object with tag, path, type, and ID
  * @returns {string} Formatted display string
  */
-export const formatSourceDisplay = (source) => {
+export const formatSourceDisplay = (source: { sourceTag?: string; sourcePath?: string; sourceType?: string; sourceId?: string; [key: string]: unknown }) => {
     const tag = source.sourceTag || '';
     const path = source.sourcePath || '';
     const type = source.sourceType || '';
@@ -79,7 +79,7 @@ export const formatSourceDisplay = (source) => {
  * @param {Array} sources - Available sources array
  * @returns {string} Source display name (tag or path)
  */
-export const getSourceName = (sourceId, sources) => {
-    const source = sources.find(s => s.sourceId === sourceId);
+export const getSourceName = (sourceId: string, sources: Record<string,unknown>[]) => {
+    const source = sources.find((s: Record<string,unknown>) => s.sourceId === sourceId);
     return source ? (source.sourceTag || source.sourcePath) : 'Unknown Source';
 };

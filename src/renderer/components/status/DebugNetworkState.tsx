@@ -29,7 +29,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
         const interval = setInterval(fetchNetworkState, 2000);
 
         // Listen for network state changes
-        const handleNetworkSync = (event) => {
+        const handleNetworkSync = (event: Record<string, unknown>) => {
             if (event.state) {
                 setNetworkState(event.state);
                 setLastUpdate(new Date());
@@ -151,7 +151,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
                                 <div>Primary: {networkState.primaryInterface || 'None'}</div>
                                 {networkState.interfaces && networkState.interfaces.length > 0 ? (
                                     <div style={{ fontSize: 10, color: '#ccc' }}>
-                                        {networkState.interfaces.slice(0, 4).map((iface, idx) => (
+                                        {networkState.interfaces.slice(0, 4).map((iface: Record<string, unknown>, idx: number) => (
                                             <div key={idx}>
                                                 {Array.isArray(iface) ? iface[0] : iface.name || iface}
                                             </div>

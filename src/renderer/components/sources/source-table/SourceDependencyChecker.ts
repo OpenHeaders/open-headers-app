@@ -39,7 +39,7 @@
  * const missingDeps = checkSourceDependencies(source, { API_KEY: 'value' });
  * // Returns: ['env:MISSING_VAR', 'totp:secret']
  */
-export const checkSourceDependencies = (source, envVars) => {
+export const checkSourceDependencies = (source: { requestOptions?: { totpSecret?: string; [key: string]: unknown }; [key: string]: unknown }, envVars: Record<string,string>) => {
     // Array to collect all missing dependencies
     const missingDeps = [];
     
@@ -92,7 +92,7 @@ export const checkSourceDependencies = (source, envVars) => {
  * const hasTemplates = isTemplateSource({ sourceType: 'http', url: '{{API_URL}}/data' });
  * // Returns: true
  */
-export const isTemplateSource = (source) => {
+export const isTemplateSource = (source: Record<string,unknown>) => {
     // Quick check for template variable usage in source configuration
     // Only HTTP sources support template variables
     if (source.sourceType !== 'http') return false;

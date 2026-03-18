@@ -32,7 +32,7 @@ export * from './utilities/DuplicateDetection';
  * @param {Object} dependencies - Application dependencies
  * @returns {Object} - Object containing both services
  */
-export function createExportImportServices(dependencies) {
+export function createExportImportServices(dependencies: { [key: string]: unknown }) {
   return {
     exportService: new ExportService(dependencies),
     importService: new ImportService(dependencies)
@@ -44,7 +44,7 @@ export function createExportImportServices(dependencies) {
  * @param {Object} dependencies - Dependencies to validate
  * @returns {Object} - Validation result
  */
-export function validateDependencies(dependencies) {
+export function validateDependencies(dependencies: { [key: string]: unknown }) {
   const required = [
     'sources', 
     'activeWorkspaceId',

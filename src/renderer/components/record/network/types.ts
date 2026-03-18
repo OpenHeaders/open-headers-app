@@ -29,6 +29,7 @@ export interface NetworkRecord {
     key?: string;
     remoteAddress?: string;
     timing?: NetworkTimingData;
+    [key: string]: unknown;
 }
 
 export interface RecordData {

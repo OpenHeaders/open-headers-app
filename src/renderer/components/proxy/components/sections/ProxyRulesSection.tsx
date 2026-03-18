@@ -78,7 +78,7 @@ const ProxyRulesSection = ({
      * Handle edit existing rule action
      * Sets the rule to edit and opens modal for editing
      */
-    const handleEditRule = (rule) => {
+    const handleEditRule = (rule: Record<string,unknown>) => {
         setEditingRule(rule);
         setModalVisible(true);
     };
@@ -87,7 +87,7 @@ const ProxyRulesSection = ({
      * Handle rule save operation
      * Delegates to parent callback and closes modal on success
      */
-    const handleSaveRule = async (rule) => {
+    const handleSaveRule = async (rule: Record<string,unknown>) => {
         const success = await onSaveRule(rule);
         if (success) {
             setModalVisible(false);

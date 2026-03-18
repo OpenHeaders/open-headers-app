@@ -10,7 +10,7 @@
  * @param {string} action - Storage action ('set', 'remove', 'clear')
  * @returns {string} Ant Design color name
  */
-export const getActionColor = (action) => {
+export const getActionColor = (action: string) => {
     if (!action || typeof action !== 'string') {
         return 'default';
     }
@@ -28,7 +28,7 @@ export const getActionColor = (action) => {
  * @param {string} type - Storage type ('localStorage', 'sessionStorage', 'cookie')
  * @returns {string} Ant Design color name
  */
-export const getTypeColor = (type) => {
+export const getTypeColor = (type: string) => {
     if (!type || typeof type !== 'string') {
         return 'default';
     }
@@ -46,7 +46,7 @@ export const getTypeColor = (type) => {
  * @param {any} value - Storage value to format
  * @returns {string} Formatted value string
  */
-export const formatValue = (value) => {
+export const formatValue = (value: unknown) => {
     if (value === null || value === undefined) return '';
     if (typeof value === 'object') {
         try {
@@ -69,7 +69,7 @@ export const formatValue = (value) => {
  * @param {string} action - Storage action
  * @returns {string} Tooltip description
  */
-export const getActionTooltip = (action) => {
+export const getActionTooltip = (action: string) => {
     const tooltips = {
         'set': 'Storage value was created or updated',
         'remove': 'Storage value was deleted',
@@ -83,7 +83,7 @@ export const getActionTooltip = (action) => {
  * @param {string} type - Storage type
  * @returns {string} Tooltip description
  */
-export const getTypeTooltip = (type) => {
+export const getTypeTooltip = (type: string) => {
     const tooltips = {
         'localStorage': 'Persistent storage that survives browser restarts',
         'sessionStorage': 'Temporary storage cleared when the tab closes',

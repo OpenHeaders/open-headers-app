@@ -9,7 +9,7 @@
  * Validate header name field
  * Required for custom headers, not needed for header rule references
  */
-export const createHeaderNameValidator = (headerType) => (_, value) => {
+export const createHeaderNameValidator = (headerType: string) => (_: unknown, value: string) => {
     if (headerType === 'custom' && (!value || !value.trim())) {
         return Promise.reject('Header name is required');
     }
@@ -20,7 +20,7 @@ export const createHeaderNameValidator = (headerType) => (_, value) => {
  * Validate header value field
  * Required for static custom headers, not needed for dynamic or reference headers
  */
-export const createHeaderValueValidator = (headerType, valueType) => (_, value) => {
+export const createHeaderValueValidator = (headerType: string, valueType: string) => (_: unknown, value: string) => {
     if (headerType === 'custom' && valueType === 'static' && (!value || !value.trim())) {
         return Promise.reject('Header value is required');
     }

@@ -26,7 +26,7 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploa
     multiple: false,
     accept: Object.values(SUPPORTED_FILE_TYPES).join(','),
     showUploadList: false,
-    beforeUpload: (file) => {
+    beforeUpload: (file: File) => {
       handleWorkflowImport(file, onImportSuccess, onImportError).catch(console.error);
       return false; // Prevent default upload behavior
     }

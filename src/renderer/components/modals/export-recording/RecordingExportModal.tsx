@@ -182,7 +182,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
     /**
      * Handle WebM export (direct copy)
      */
-    const handleWebMExport = async (recordingPath, filePath) => {
+    const handleWebMExport = async (recordingPath: string, filePath: string) => {
         setExportStatus('saving');
         try {
             // Read video file as binary (Buffer)
@@ -198,7 +198,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
     /**
      * Handle MP4 export (with FFmpeg conversion)
      */
-    const handleMP4Export = async (recordingPath, filePath) => {
+    const handleMP4Export = async (recordingPath: string, filePath: string) => {
         // Download FFmpeg if not available
         if (!ffmpegAvailable) {
             setExportStatus('downloading');

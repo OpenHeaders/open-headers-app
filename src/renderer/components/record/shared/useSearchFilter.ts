@@ -38,7 +38,7 @@ export const useSearchFilter = (defaultSearchValue = '') => {
      * Update search value
      * @param {string} value - New search value
      */
-    const updateSearchValue = (value) => {
+    const updateSearchValue = (value: string) => {
         setSearchValue(value);
     };
 
@@ -54,13 +54,13 @@ export const useSearchFilter = (defaultSearchValue = '') => {
      * @param {Function} searchableFieldsExtractor - Function to extract searchable fields from record
      * @returns {Function} Filter function for table
      */
-    const createFilterFunction = (searchableFieldsExtractor) => {
-        return (value, record) => {
+    const createFilterFunction = (searchableFieldsExtractor: (record: Record<string, unknown>) => string[]) => {
+        return (value: string, record: Record<string, unknown>) => {
             if (!value) return true;
             
             const searchValue = value.toLowerCase();
             const searchableFields = searchableFieldsExtractor(record);
-            const matches = searchableFields.some(field => 
+            const matches = searchableFields.some((field: string) =>
                 String(field).toLowerCase().includes(searchValue)
             );
             

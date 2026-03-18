@@ -81,7 +81,7 @@ export const OVERDUE_RETRY_CONFIG = {
  * @param {number} maxJitter - Maximum jitter in milliseconds
  * @returns {number} Calculated delay with jitter
  */
-export const calculateDelayWithJitter = (baseDelay, maxJitter) => {
+export const calculateDelayWithJitter = (baseDelay: number, maxJitter: number) => {
     return baseDelay + Math.floor(Math.random() * maxJitter);
 };
 
@@ -93,6 +93,6 @@ export const calculateDelayWithJitter = (baseDelay, maxJitter) => {
  * @param {string|number} sourceId - Source identifier
  * @returns {string} Formatted circuit breaker key
  */
-export const formatCircuitBreakerKey = (sourceType, sourceId) => {
+export const formatCircuitBreakerKey = (sourceType: string, sourceId: string) => {
     return `${sourceType}-${sourceId}`;
 };
