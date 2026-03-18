@@ -37,16 +37,16 @@ class VideoRecordingManager {
             const result = await this.startRecording(data as { sourceId?: string; captureType?: string; recordingId: string; recordingDir: string; url?: string; title?: string });
             
             // Send result back to main process
-            window.electronAPI.sendVideoRecordingStarted(data.responseChannel, result);
+            window.electronAPI.sendVideoRecordingStarted(String(data.responseChannel), result);
         });
 
         // Listen for stop recording command
         window.electronAPI.onStopVideoRecording(async (data) => {
             console.log('[VideoRecordingManager] Received stop recording request:', data);
-            const result = await this.stopRecording(data.recordingId);
-            
+            const result = await this.stopRecording(String(data.recordingId));
+
             // Send result back to main process
-            window.electronAPI.sendVideoRecordingStopped(data.responseChannel, result);
+            window.electronAPI.sendVideoRecordingStopped(String(data.responseChannel), result);
         });
     }
 
