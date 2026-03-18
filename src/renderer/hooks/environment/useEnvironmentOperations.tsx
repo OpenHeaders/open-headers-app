@@ -25,8 +25,8 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
       await service.createEnvironment(name);
       showMessage('success', `Environment '${name}' created`);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -36,8 +36,8 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
       await service.deleteEnvironment(name);
       showMessage('success', `Environment '${name}' deleted`);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -47,8 +47,8 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
       await service.switchEnvironment(name);
       showMessage('success', `Switched to '${name}' environment`);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -75,8 +75,8 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
 
       showMessage('success', `Environment '${sourceEnv}' cloned to '${newName}'`);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service, environments]);

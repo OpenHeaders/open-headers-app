@@ -355,11 +355,11 @@ const WorkspaceModal = ({
                     files,
                     message: `Initialize Open Headers configuration for ${values.name}`
                 };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('Failed to prepare export data:', error);
-                console.error('Error details:', error.stack);
+                console.error('Error details:', (error as Error).stack);
                 message.error({
-                    content: `Failed to prepare configuration data: ${error.message}`,
+                    content: `Failed to prepare configuration data: ${error instanceof Error ? error.message : String(error)}`,
                     duration: 8
                 });
                 return;

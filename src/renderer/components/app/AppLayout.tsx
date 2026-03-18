@@ -85,7 +85,7 @@ export function AppLayout({
           onRemoveSource={onRemoveSource}
           onRefreshSource={onRefreshSource}
           onUpdateSource={onUpdateSource}
-          tutorialMode={(settings as any)?.tutorialMode}
+          tutorialMode={Boolean((settings as Record<string, unknown>)?.tutorialMode)}
         />
       </Content>
 
@@ -93,7 +93,7 @@ export function AppLayout({
         appVersion={appVersion}
         theme={token}
         debugComponents={
-          (settings as any)?.developerMode && (
+          !!(settings as Record<string, unknown>)?.developerMode && (
             <>
               <CircuitBreakerStatus inFooter={true} />
               <DebugSourceInfo inFooter={true} />

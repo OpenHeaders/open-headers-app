@@ -86,7 +86,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
      * Render console log message with actions
      */
     const renderMessage = (args: unknown[], consoleRecord: ConsoleRecord) => {
-        const message = args.map((arg: unknown) => formatConsoleArg(arg as any)).join(' ');
+        const message = args.map((arg: unknown) => formatConsoleArg(arg as never)).join(' ');
         const needsExpansion = message.length > 150;
         const displayMessage = needsExpansion ? message.substring(0, 150) + '...' : message;
 

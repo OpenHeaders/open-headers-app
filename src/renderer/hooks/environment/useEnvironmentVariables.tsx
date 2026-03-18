@@ -28,8 +28,8 @@ export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
         await service.setVariable(name, value, isSecret);
       }
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service, activeEnvironment]);
