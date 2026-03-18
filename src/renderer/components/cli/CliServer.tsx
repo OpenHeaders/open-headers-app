@@ -45,7 +45,7 @@ const CliServer = ({ active }: CliServerProps) => {
                 loading={loading}
                 tutorialMode={settings?.tutorialMode}
                 onToggleServer={toggleServer}
-                onUpdatePort={updatePort}
+                onUpdatePort={(port) => { if (port !== null) updatePort(port); }}
                 onRegenerateToken={regenerateToken}
             />
 

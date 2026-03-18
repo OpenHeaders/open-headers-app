@@ -188,7 +188,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                         size="small"
                         style={{ width: '100%' }}
                         filterOption={(inputValue, option) =>
-                            option.value.toLowerCase().includes(inputValue.toLowerCase())
+                            option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
                         }
                         onBlur={(e) => {
                             const fieldValue = (e.target as HTMLInputElement).value;

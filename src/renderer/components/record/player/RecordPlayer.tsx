@@ -71,10 +71,10 @@ const RecordPlayer = ({
         rrwebPlayer,
         viewMode,
         autoHighlight,
-        processRecordForProxy,
-        createConsoleOverrides,
-        onPlaybackTimeChange,
-        onPlayingStateChange
+        processRecordForProxy ?? (async (record: Record<string, unknown>) => record),
+        createConsoleOverrides ?? (() => () => {}),
+        onPlaybackTimeChange ?? null,
+        onPlayingStateChange ?? null
     );
 
     if (!record) return null;

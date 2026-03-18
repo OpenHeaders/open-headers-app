@@ -94,7 +94,7 @@ const WorkspaceStatus = () => {
         );
     }
     
-    const menu = { items: finalMenuItems };
+    const menu: React.ComponentProps<typeof Dropdown>['menu'] = { items: finalMenuItems as NonNullable<React.ComponentProps<typeof Dropdown>['menu']>['items'] };
     
     const handleShareWorkspace = () => {
         setShareModalVisible(true);

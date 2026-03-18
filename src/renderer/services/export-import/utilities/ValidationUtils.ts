@@ -94,7 +94,7 @@ export function validateAndParseFileContent(fileContent: string): ValidationResu
   } catch (error) {
     return {
       success: false,
-      error: `Invalid JSON format: ${error.message}`
+      error: `Invalid JSON format: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

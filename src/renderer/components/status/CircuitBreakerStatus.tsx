@@ -31,7 +31,7 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
         const updateStatus = () => {
             try {
                 const status = adaptiveCircuitBreakerManager.getAllStatus();
-                setBreakers(status || {});
+                setBreakers((status || {}) as Record<string, BreakerInfo>);
             } catch (error) {
                 console.error('Error getting circuit breaker status:', error);
             }

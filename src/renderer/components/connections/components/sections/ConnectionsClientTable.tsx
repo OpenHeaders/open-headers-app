@@ -28,7 +28,7 @@ const getBrowserDisplay = (browser: string) => {
         opera: { name: 'Opera', icon: <GlobalOutlined /> },
         unknown: { name: 'Unknown', icon: <ApiOutlined /> }
     };
-    return browserMap[browser] || browserMap.unknown;
+    return browserMap[browser as keyof typeof browserMap] || browserMap.unknown;
 };
 
 /**
@@ -81,7 +81,7 @@ const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
             render: (platform: string) => {
                 if (!platform || platform === 'unknown') return <Text type="secondary" style={{ fontSize: 12 }}>-</Text>;
                 const labels = { windows: 'Windows', macos: 'macOS', linux: 'Linux' };
-                return <Text type="secondary" style={{ fontSize: 12 }}>{labels[platform] || platform}</Text>;
+                return <Text type="secondary" style={{ fontSize: 12 }}>{labels[platform as keyof typeof labels] || platform}</Text>;
             }
         },
         {

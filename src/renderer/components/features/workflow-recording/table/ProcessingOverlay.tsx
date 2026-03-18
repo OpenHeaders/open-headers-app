@@ -35,7 +35,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
       'image': 'Images',
       'other': 'Other resources'
     };
-    return typeMap[type] || type;
+    return typeMap[type as keyof typeof typeMap] || type;
   };
 
   // Get stage-specific content
@@ -96,8 +96,8 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
 
       case 'prefetching':
         const resourceType = details.currentType ? getResourceTypeDisplay(details.currentType) : 'resources';
-        const fileName = details.currentResource ? 
-          details.currentResource.split('/').pop().substring(0, 50) : '';
+        const fileName = details.currentResource ?
+          (details.currentResource.split('/').pop() ?? '').substring(0, 50) : '';
         
         return (
           <div style={{ textAlign: 'center', width: '100%' }}>
@@ -132,10 +132,10 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
                     <div>
                       <strong>{details.completed + (details.failed || 0)}</strong> of <strong>{details.total}</strong> resources processed
                     </div>
-                    {(details.failed > 0 || details.completed > 0) && (
+                    {((details.failed ?? 0) > 0 || (details.completed ?? 0) > 0) && (
                       <div style={{ fontSize: '13px' }}>
                         <span style={{ color: '#52c41a' }}>✓ {details.completed} cached successfully</span>
-                        {details.failed > 0 && (
+                        {(details.failed ?? 0) > 0 && (
                           <>
                             {' • '}
                             <span style={{ color: '#ff4d4f' }}>✗ {details.failed} failed</span>

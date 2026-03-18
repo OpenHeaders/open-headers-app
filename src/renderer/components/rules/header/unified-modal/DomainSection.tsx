@@ -31,8 +31,8 @@ const DomainSection = ({
                     // Validate environment variables in domains
                     if (envContext.environmentsReady) {
                         const variables = envContext.getAllVariables();
-                        const invalidDomains = [];
-                        
+                        const invalidDomains: string[] = [];
+
                         value.forEach((domain: string, index: number) => {
                             const validation = validateEnvironmentVariables(domain, variables);
                             if (validation.hasVars && !validation.isValid) {

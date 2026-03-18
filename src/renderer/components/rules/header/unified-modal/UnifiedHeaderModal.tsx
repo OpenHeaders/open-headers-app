@@ -55,7 +55,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
     const [headerType, setHeaderType] = useState('request');
     const [valueType, setValueType] = useState('static');
     const [envVarValidation, setEnvVarValidation] = useState({});
-    const [domainValidation, setDomainValidation] = useState([]);
+    const [domainValidation, setDomainValidation] = useState<unknown[]>([]);
     
     // Cookie-specific state
     const [expirationMode, setExpirationMode] = useState('session');

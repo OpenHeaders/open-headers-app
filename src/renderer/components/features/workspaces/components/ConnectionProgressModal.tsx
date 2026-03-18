@@ -22,9 +22,9 @@ const ConnectionProgressModal = ({
     testResult = null
 }: ConnectionProgressModalProps) => {
     const [autoCloseCountdown, setAutoCloseCountdown] = useState(0);
-    const autoCloseTimerRef = useRef(null);
-    const countdownTimerRef = useRef(null);
-    const progressContainerRef = useRef(null);
+    const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const progressContainerRef = useRef<HTMLDivElement | null>(null);
 
     // Start auto-close countdown when test completes
     useEffect(() => {

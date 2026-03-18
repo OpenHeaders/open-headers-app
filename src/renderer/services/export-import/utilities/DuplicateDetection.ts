@@ -122,7 +122,7 @@ export function isProxyRuleDuplicate(rule: ImportProxyRule | null, existingRules
 
     // Check each header for match
     return rule.headers.every((importHeader: ImportHeader) => {
-      return existingRule.headers.some((existingHeader: ImportHeader) => {
+      return existingRule.headers!.some((existingHeader: ImportHeader) => {
         return areHeadersEqual(existingHeader, importHeader);
       });
     });

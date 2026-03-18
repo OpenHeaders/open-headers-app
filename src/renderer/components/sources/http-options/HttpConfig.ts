@@ -172,8 +172,8 @@ export const createRefreshTypeHandler = ({
     customIntervalRef,
     refreshEnabledRef,
     form
-}: RefreshTypeHandlerParams) => (e: { target: { value: string } }) => {
-    const newType = e.target.value;
+}: RefreshTypeHandlerParams) => (e: { target: { value?: string } }) => {
+    const newType = e.target.value ?? '';
     // Update both state and ref
     setRefreshType(newType);
     refreshTypeRef.current = newType;
@@ -231,9 +231,9 @@ export const createCustomIntervalHandler = ({
     customIntervalRef,
     refreshEnabledRef,
     form
-}: CustomIntervalHandlerParams) => (value: number) => {
+}: CustomIntervalHandlerParams) => (value: number | null) => {
     // Ensure value is a positive number
-    const interval = value > 0 ? value : 1;
+    const interval = (value ?? 0) > 0 ? (value ?? 1) : 1;
     // Update both state and ref
     setCustomInterval(interval);
     customIntervalRef.current = interval;

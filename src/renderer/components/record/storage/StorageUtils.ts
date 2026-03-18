@@ -75,7 +75,7 @@ export const getActionTooltip = (action: string) => {
         'remove': 'Storage value was deleted',
         'clear': 'All storage entries were deleted at once'
     };
-    return tooltips[action] || 'Storage action';
+    return tooltips[action as keyof typeof tooltips] || 'Storage action';
 };
 
 /**
@@ -89,5 +89,5 @@ export const getTypeTooltip = (type: string) => {
         'sessionStorage': 'Temporary storage cleared when the tab closes',
         'cookie': 'Small data sent with HTTP requests'
     };
-    return tooltips[type] || 'Storage type';
+    return tooltips[type as keyof typeof tooltips] || 'Storage type';
 };

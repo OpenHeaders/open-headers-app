@@ -39,8 +39,8 @@ interface WorkflowSettingsProps {
 
 const WorkflowSettings = ({ formValues, screenRecordingPermission, onChange, initialAction }: WorkflowSettingsProps) => {
     // Get settings configuration for workflows section
-    const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
-    const hotkeyRef = useRef(null);
+    const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission as Record<string, unknown>);
+    const hotkeyRef = useRef<{ triggerEdit?: () => void } | null>(null);
 
     // Handle initial action to trigger hotkey edit
     useEffect(() => {

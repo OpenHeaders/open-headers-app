@@ -753,7 +753,7 @@ class WorkspaceCreationStateMachine {
         switch (action.type) {
             case 'delete_workspace':
                 if (window.electronAPI?.deleteWorkspace) {
-                    await window.electronAPI.deleteWorkspace(action.workspaceId);
+                    await window.electronAPI.deleteWorkspace(action.workspaceId ?? '');
                 } else {
                     console.warn('deleteWorkspace function not available in electronAPI');
                 }

@@ -250,7 +250,7 @@ const CliServerControls = ({
                                     <Button type="text" size="small" icon={<CopyOutlined />} onClick={handleCopyPath} />
                                 </Tooltip>
                                 <Tooltip title="Reveal in file manager">
-                                    <Button type="text" size="small" icon={<FolderOpenOutlined />} onClick={() => window.electronAPI.showItemInFolder(status.discoveryPath)} />
+                                    <Button type="text" size="small" icon={<FolderOpenOutlined />} onClick={() => window.electronAPI.showItemInFolder(status.discoveryPath ?? '')} />
                                 </Tooltip>
                             </Space>
                         )}

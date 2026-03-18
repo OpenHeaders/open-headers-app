@@ -102,7 +102,7 @@ const GitStatusAlert = ({
                     Git is installed and ready
                 </span>
             }
-            description={`Git found at: ${gitStatus.gitPath || 'System PATH'}`}
+            description={`Git found at: ${gitStatus?.gitPath || 'System PATH'}`}
             type="success"
             style={{ marginBottom: 16 }}
         />

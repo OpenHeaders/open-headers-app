@@ -112,10 +112,10 @@ const NetworkHeadersTab = ({ request, token }: NetworkHeadersTabProps) => {
                     </div>
 
                     {/* Response Headers */}
-                    {renderHeaderSection('Response Headers', request.responseHeaders)}
+                    {request.responseHeaders && renderHeaderSection('Response Headers', request.responseHeaders)}
 
                     {/* Request Headers */}
-                    {renderHeaderSection('Request Headers', request.requestHeaders)}
+                    {request.requestHeaders && renderHeaderSection('Request Headers', request.requestHeaders)}
                 </Space>
             </div>
         </div>

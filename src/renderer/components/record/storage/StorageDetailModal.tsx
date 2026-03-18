@@ -159,11 +159,11 @@ const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: Sto
         <Modal
             title={
                 <Space>
-                    <Tag color={getTypeColor(selectedEntry?.type)}>
-                        {selectedEntry?.type === 'localStorage' ? 'LOCAL STORAGE' : 
+                    <Tag color={getTypeColor(selectedEntry?.type ?? '')}>
+                        {selectedEntry?.type === 'localStorage' ? 'LOCAL STORAGE' :
                          selectedEntry?.type === 'sessionStorage' ? 'SESSION STORAGE' : 'COOKIE'}
                     </Tag>
-                    <Tag color={getActionColor(selectedEntry?.action)}>
+                    <Tag color={getActionColor(selectedEntry?.action ?? '')}>
                         {selectedEntry?.action?.toUpperCase()}
                     </Tag>
                     <Text>{selectedEntry?.name}</Text>

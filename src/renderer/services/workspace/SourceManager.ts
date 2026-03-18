@@ -110,13 +110,13 @@ class SourceManager {
 
     // Generate ID
     const maxId = sources.reduce((max: number, src: SourceData) => {
-      const id = parseInt(src.sourceId);
+      const id = parseInt(src.sourceId ?? '0');
       return id > max ? id : max;
     }, 0);
     
     // Evaluate dependencies for HTTP sources
     let activationState = 'active';
-    let missingDependencies = [];
+    let missingDependencies: string[] = [];
     
     if (sourceData.sourceType === 'http') {
       const deps = await this.evaluateSourceDependencies(sourceData);
@@ -197,7 +197,7 @@ class SourceManager {
     try {
       await this.environmentService.waitForReady(3000);
     } catch (error) {
-      log.debug('Environment service not ready when evaluating source dependencies:', error.message);
+      log.debug('Environment service not ready when evaluating source dependencies:', error instanceof Error ? error.message : String(error));
       // If service isn't ready, consider all required vars as missing
       return {
         ready: false,
