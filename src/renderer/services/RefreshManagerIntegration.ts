@@ -100,7 +100,7 @@ class RefreshManagerIntegration {
         // Subscribe to workspace state changes
         this.sourceSubscriptionCleanup = workspaceService.subscribe((state, changedKeys) => {
             if (changedKeys.includes('sources')) {
-                this.syncSourceChanges(state.sources).catch(err => {
+                this.syncSourceChanges(state.sources as SourceData[]).catch(err => {
                     log.error('Error syncing source changes:', err);
                 });
             }
@@ -117,7 +117,7 @@ class RefreshManagerIntegration {
                 // When env vars change, resync sources to update stored resolved values
                 // This does NOT trigger immediate refreshes - new values will be used on next scheduled refresh
                 const workspaceState = workspaceService.getState();
-                this.syncSourceChanges(workspaceState.sources).catch(err => {
+                this.syncSourceChanges(workspaceState.sources as SourceData[]).catch(err => {
                     log.error('Error syncing sources after env change:', err);
                 });
             }, 500); // Wait 500ms after last env change
@@ -352,10 +352,10 @@ class RefreshManagerIntegration {
         for (const source of sources) {
             if (source.sourceType === 'http') {
                 // Add all HTTP sources (even if auto-refresh is disabled)
-                await refreshManager.addSource(source);
+                await refreshManager.addSource(source as never);
 
                 // Track complete source data including resolved values
-                this.trackSourceData(source);
+                this.trackSourceData(source as never);
             }
         }
     }

@@ -93,7 +93,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
             log.debug('RefreshManager update callback:', { sourceId, hasContent: !!content, additionalData });
 
             // Get the source to check if it has a JSON filter
-            const source = getCentralizedWorkspaceService().getState().sources.find((s: SourceData) => s.sourceId === String(sourceId));
+            const source = (getCentralizedWorkspaceService().getState().sources as SourceData[]).find((s: SourceData) => s.sourceId === String(sourceId));
 
             // Build updates object
             const updates: Record<string, unknown> = {};

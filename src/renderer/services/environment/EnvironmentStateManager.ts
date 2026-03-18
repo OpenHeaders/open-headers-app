@@ -5,7 +5,17 @@ import BaseStateManager from '../workspace/BaseStateManager';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentStateManager');
 
-class EnvironmentStateManager extends BaseStateManager {
+export interface EnvironmentServiceState {
+  currentWorkspaceId: string;
+  environments: Record<string, Record<string, unknown>>;
+  activeEnvironment: string;
+  isLoading: boolean;
+  isReady: boolean;
+  error: string | null;
+  [key: string]: unknown;
+}
+
+class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> {
   initPromise: Promise<unknown> | null;
   loadPromises: Map<string, Promise<unknown>>;
   hasLoadedInitialData: boolean;
@@ -40,7 +50,7 @@ class EnvironmentStateManager extends BaseStateManager {
   /**
    * Get current state (immutable copy)
    */
-  getState(): Record<string, any> {
+  getState(): EnvironmentServiceState {
     return {
       ...this.state,
       environments: { ...this.state.environments }
