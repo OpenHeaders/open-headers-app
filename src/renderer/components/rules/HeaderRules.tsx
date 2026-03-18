@@ -44,11 +44,33 @@ const log = createLogger('HeaderRules');
 
 const { Title, Text } = Typography;
 
+interface HeaderRule {
+    id: string;
+    headerName: string;
+    headerValue?: string;
+    isEnabled: boolean;
+    isDynamic?: boolean;
+    isResponse?: boolean;
+    sourceId?: string;
+    prefix?: string;
+    suffix?: string;
+    hasEnvVars?: boolean;
+    envVars?: string[];
+    domains?: string[];
+    tag?: string;
+    cookieName?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    [key: string]: unknown;
+}
+
+type PlaceholderType = 'source_not_found' | 'empty_source' | 'empty_value' | 'missing_env_vars' | null;
+
 const HeaderRules = () => {
-    const [rules, setRules] = useState([]);
+    const [rules, setRules] = useState<HeaderRule[]>([]);
     const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingRule, setEditingRule] = useState(null);
+    const [editingRule, setEditingRule] = useState<HeaderRule | null>(null);
     
     // Get sources from context
     const { sources } = useSources();
@@ -58,7 +80,7 @@ const HeaderRules = () => {
     const tutorialMode = settings?.tutorialMode !== undefined ? settings.tutorialMode : true;
     
     // Use ref to always have access to current rules
-    const rulesRef = useRef(rules);
+    const rulesRef = useRef<HeaderRule[]>(rules);
     useEffect(() => {
         rulesRef.current = rules;
     }, [rules]);
@@ -193,7 +215,7 @@ const HeaderRules = () => {
     const loadRules = async () => {
         try {
             setLoading(true);
-            let headerRules;
+            let headerRules: HeaderRule[];
             
             // Add small delay to ensure workspace data is written
             await new Promise(resolve => setTimeout(resolve, 50));
@@ -223,7 +245,7 @@ const HeaderRules = () => {
     };
 
     // Save rules to storage and sync to extension
-    const saveRules = useCallback(async (newRules: Record<string, any>[]) => {
+    const saveRules = useCallback(async (newRules: HeaderRule[]) => {
         try {
             // Load existing rules storage or create new one
             let rulesStorage;
@@ -238,7 +260,7 @@ const HeaderRules = () => {
             // Update header rules
             rulesStorage.rules[RULE_TYPES.HEADER] = newRules;
             rulesStorage.metadata.totalRules = Object.values(rulesStorage.rules)
-                .reduce((sum: number, rules: any) => sum + rules.length, 0);
+                .reduce((sum: number, rulesList: unknown) => sum + (rulesList as unknown[]).length, 0);
             rulesStorage.metadata.lastUpdated = new Date().toISOString();
             
             // Save in new format
@@ -277,7 +299,7 @@ const HeaderRules = () => {
     // Handle add/edit rule (generic header rule)
     const handleSaveRule = async (ruleData: Record<string, unknown>) => {
         try {
-            let newRules;
+            let newRules: HeaderRule[];
             if (editingRule) {
                 // Update existing rule using createRule to ensure proper structure
                 const updatedRule = createRule(RULE_TYPES.HEADER, {
@@ -286,14 +308,14 @@ const HeaderRules = () => {
                     id: editingRule.id,
                     createdAt: editingRule.createdAt,
                     updatedAt: new Date().toISOString()
-                });
-                newRules = rules.map(rule => 
+                }) as HeaderRule;
+                newRules = rules.map(rule =>
                     rule.id === editingRule.id ? updatedRule : rule
                 );
                 showMessage('success', 'Rule updated successfully');
             } else {
                 // Add new rule using createRule
-                const newRule = createRule(RULE_TYPES.HEADER, ruleData);
+                const newRule = createRule(RULE_TYPES.HEADER, ruleData) as HeaderRule;
                 newRules = [...rules, newRule];
                 showMessage('success', 'Rule added successfully');
             }
@@ -361,8 +383,18 @@ const HeaderRules = () => {
     };
 
     // Get dynamic value info for a rule including environment variable resolution
-    const getDynamicValueInfo = (rule: Record<string, any>) => {
-        const result = {
+    const getDynamicValueInfo = (rule: HeaderRule) => {
+        const result: {
+            actualValue: string;
+            sourceInfo: string;
+            sourceTag: string;
+            available: boolean;
+            placeholderType: PlaceholderType;
+            hasEnvVars: boolean;
+            envVarInfo: { missingVars: string[]; totalVars: string[] } | null;
+            activationState: string;
+            missingDependencies: string[];
+        } = {
             actualValue: '',
             sourceInfo: '',
             sourceTag: '',
@@ -416,7 +448,7 @@ const HeaderRules = () => {
                     } else if (envContext.environmentsReady) {
                         const variables = envContext.getAllVariables();
                         const preview = getResolvedPreview(rule.headerValue, variables);
-                        result.actualValue = preview.text;
+                        result.actualValue = preview.text ?? '';
                     } else {
                         result.actualValue = rule.headerValue;
                     }
@@ -459,11 +491,11 @@ const HeaderRules = () => {
             const variables = envContext.getAllVariables();
             if (prefix && prefix.includes('{{')) {
                 const prefixPreview = getResolvedPreview(prefix, variables);
-                prefix = prefixPreview.text;
+                prefix = prefixPreview.text ?? '';
             }
             if (suffix && suffix.includes('{{')) {
                 const suffixPreview = getResolvedPreview(suffix, variables);
-                suffix = suffixPreview.text;
+                suffix = suffixPreview.text ?? '';
             }
         }
         
@@ -488,7 +520,7 @@ const HeaderRules = () => {
             title: 'Type',
             key: 'type',
             width: 180,
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
 
                 return (
@@ -566,7 +598,7 @@ const HeaderRules = () => {
             title: 'Source',
             key: 'source',
             width: 200,
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
 
                 if (!record.isDynamic) {
@@ -637,8 +669,8 @@ const HeaderRules = () => {
             dataIndex: 'headerName',
             key: 'headerName',
             width: 160,
-            sorter: (a: Record<string, any>, b: Record<string, any>) => (a.headerName as string).localeCompare(b.headerName as string),
-            render: (text: string, record: Record<string, any>) => {
+            sorter: (a: HeaderRule, b: HeaderRule) => a.headerName.localeCompare(b.headerName),
+            render: (text: string, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType && record.isEnabled;
                 
@@ -651,7 +683,7 @@ const HeaderRules = () => {
                     } else if (envContext.environmentsReady) {
                         const variables = envContext.getAllVariables();
                         const preview = getResolvedPreview(record.headerName, variables);
-                        headerNameDisplay = preview.text;
+                        headerNameDisplay = preview.text ?? '';
                     }
                 }
 
@@ -696,13 +728,13 @@ const HeaderRules = () => {
             dataIndex: 'headerValue',
             key: 'value',
             width: 200,
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
                 const hasPlaceholder = info.placeholderType;
 
                 let tooltipMessage: string | null = null;
-                let textColor = undefined;
-                let icon = null;
+                let textColor: 'secondary' | 'success' | 'warning' | 'danger' | undefined = undefined;
+                let icon: React.ReactNode = null;
 
                 if (hasPlaceholder && info.activationState !== 'waiting_for_deps') {
                     switch (info.placeholderType) {
@@ -769,8 +801,8 @@ const HeaderRules = () => {
             dataIndex: 'domains',
             key: 'domains',
             width: 140,
-            sorter: (a: Record<string, any>, b: Record<string, any>) => (a.domains as string[]).join(',').localeCompare((b.domains as string[]).join(',')),
-            render: (domains: string[], record: Record<string, any>) => {
+            sorter: (a: HeaderRule, b: HeaderRule) => (a.domains || []).join(',').localeCompare((b.domains || []).join(',')),
+            render: (domains: string[], record: HeaderRule) => {
                 // Check if rule has missing dependencies
                 const info = getDynamicValueInfo(record);
                 const hasMissingDeps = info.activationState === 'waiting_for_deps';
@@ -784,13 +816,14 @@ const HeaderRules = () => {
                     resolvedDomains = domains.flatMap((domain: string) => {
                         if (domain && domain.includes('{{')) {
                             const preview = getResolvedPreview(domain, variables);
+                            const previewText = preview.text ?? '';
                             // Check if domain has unresolved variables
-                            if (preview.text.includes('{{') && preview.text.includes('}}')) {
+                            if (previewText.includes('{{') && previewText.includes('}}')) {
                                 hasUnresolvedVars = true;
                                 return domain; // Return original domain if unresolved
                             }
                             // Split comma-separated domains from resolved env vars
-                            return preview.text.split(',').map(d => d.trim()).filter(d => d);
+                            return previewText.split(',').map(d => d.trim()).filter(d => d);
                         }
                         return domain;
                     });
@@ -839,7 +872,7 @@ const HeaderRules = () => {
             key: 'status',
             width: 80,
             align: 'center',
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
                 const isWaitingForDeps = info.activationState === 'waiting_for_deps';
 
@@ -861,7 +894,7 @@ const HeaderRules = () => {
             width: 120,
             align: 'center',
             fixed: 'right',
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: HeaderRule) => {
                 const info = getDynamicValueInfo(record);
 
                 const handleCopyValue = async () => {

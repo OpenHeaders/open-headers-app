@@ -60,7 +60,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
     const [exportStatus, setExportStatus] = useState(''); // 'downloading' | 'converting' | 'saving'
     
     // FFmpeg related state
-    const [ffmpegAvailable, setFfmpegAvailable] = useState(null);
+    const [ffmpegAvailable, setFfmpegAvailable] = useState<boolean | null>(null);
     const [installStatus, setInstallStatus] = useState(''); // 'downloading' | 'extracting' | 'verifying'
     
     // Progress tracking state
@@ -137,7 +137,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
         
         try {
             // Generate filename
-            const timestamp = new Date(record.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
+            const timestamp = new Date(record!.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
             const extension = videoFormat === 'mp4' ? 'mp4' : 'webm';
             const filename = `open-headers_recording_${timestamp}.${extension}`;
             
@@ -159,7 +159,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
 
             // Get recording path
             const appPath = await window.electronAPI.getAppPath();
-            const recordingPath = `${appPath}/recordings/${record.id}/video.webm`;
+            const recordingPath = `${appPath}/recordings/${record!.id}/video.webm`;
 
             if (videoFormat === 'webm') {
                 // Direct copy for WebM
@@ -170,7 +170,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
             }
         } catch (error) {
             console.error('Failed to export video:', error);
-            errorMessage('Failed to export video: ' + error.message);
+            errorMessage('Failed to export video: ' + (error instanceof Error ? error.message : String(error)));
         } finally {
             setIsExporting(false);
             setExportStatus('');
@@ -191,7 +191,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
             successMessage('Video exported as WebM successfully');
             onCancel();
         } catch (error) {
-            throw new Error(`Failed to copy video file: ${error.message}`);
+            throw new Error(`Failed to copy video file: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
@@ -250,7 +250,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
      * Check if export button should be disabled
      */
     const isExportDisabled = () => {
-        return (exportType === 'video' && !record.hasVideo) || 
+        return (exportType === 'video' && !record?.hasVideo) ||
                isExporting ||
                (exportType === 'video' && videoFormat === 'mp4' && ffmpegAvailable === false);
     };

@@ -30,20 +30,32 @@ const TeamWorkspaceAcceptInviteModal = ({
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);
     const [sshKeySource, setSshKeySource] = useState(DEFAULT_VALUES.sshKeySource);
     const [connectionTested, setConnectionTested] = useState(false);
-    const [gitStatus, setGitStatus] = useState(null);
-    const [connectionProgress, setConnectionProgress] = useState([]);
+    const [gitStatus, setGitStatus] = useState<{ isInstalled: boolean; gitPath?: string; error?: string } | null>(null);
+    const [connectionProgress, setConnectionProgress] = useState<{ step: string; status: string; details?: string; progress?: number }[]>([]);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState(null);
-    const [expandedKeys, setExpandedKeys] = useState([]);
-    const unsubscribeProgressRef = useRef(null);
-    const progressUnsubscribeRef = useRef(null);
+    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const unsubscribeProgressRef = useRef<(() => void) | null>(null);
+    const progressUnsubscribeRef = useRef<(() => void) | null>(null);
     
     const workspaceContext = useWorkspaces();
     
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        });
+        }) as {
+            gitService: {
+                getStatus: () => Promise<Record<string, unknown>>;
+                install: () => Promise<{ success: boolean }>;
+                testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; [key: string]: unknown }>;
+                subscribeToConnectionProgress?: () => (() => void);
+                onProgress?: (callback: (event: { type: string; data: Record<string, unknown> }) => void) => (() => void);
+                [key: string]: unknown;
+            };
+            workspaceService: Record<string, unknown>;
+            syncService: Record<string, unknown>;
+            cleanup: () => void;
+        } | null;
     }, [workspaceContext]);
     
     const {
@@ -163,11 +175,11 @@ const TeamWorkspaceAcceptInviteModal = ({
 
     const checkGitStatus = async () => {
         try {
-            const status = await services.gitService.getStatus();
-            setGitStatus(status);
+            const status = await services!.gitService.getStatus();
+            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
         } catch (error) {
             console.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: error.message });
+            setGitStatus({ isInstalled: false, error: (error instanceof Error ? error.message : String(error)) });
         }
     };
 
@@ -272,17 +284,17 @@ const TeamWorkspaceAcceptInviteModal = ({
             setConnectionTested(false);
             setConnectionTestResult(null);
             
-            unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress?.();
-            
-            progressUnsubscribeRef.current = services.gitService.onProgress?.((event: { type: string; data: Record<string, any> }) => {
+            unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress?.() ?? null;
+
+            progressUnsubscribeRef.current = services!.gitService.onProgress?.((event: { type: string; data: Record<string, unknown> }) => {
                 if (event.type === 'git-connection') {
-                    setConnectionProgress(event.data.summary || []);
+                    setConnectionProgress((event.data.summary as { step: string; status: string; details?: string; progress?: number }[]) || []);
                 }
-            });
-            
+            }) ?? null;
+
             const authData = await prepareAuthData(values, values.authType || 'none');
-            
-            const result = await services.gitService.testConnection({
+
+            const result = await services!.gitService.testConnection({
                 url: values.gitUrl,
                 branch: values.gitBranch || 'main',
                 authType: values.authType || 'none',
@@ -292,11 +304,11 @@ const TeamWorkspaceAcceptInviteModal = ({
             });
             
             setConnectionTested(result.success);
-            setConnectionTestResult(result);
+            setConnectionTestResult(result as { success: boolean; message?: string; error?: string });
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
-            setConnectionTestResult({ success: false, error: error.message });
+            setConnectionTestResult({ success: false, error: (error instanceof Error ? error.message : String(error)) });
             setIsTestingConnection(false);
         }
     };
@@ -324,7 +336,7 @@ const TeamWorkspaceAcceptInviteModal = ({
 
     const handleInstallGit = async () => {
         try {
-            const result = await services.gitService.install();
+            const result = await services!.gitService.install();
             if (result.success) {
                 await checkGitStatus();
             }
@@ -379,7 +391,7 @@ const TeamWorkspaceAcceptInviteModal = ({
             await createWorkspace(formDataWithInviteMetadata);
         } catch (error) {
             console.error('Failed to create workspace:', error);
-            message.error(`Failed to join workspace: ${error.message}`);
+            message.error(`Failed to join workspace: ${error instanceof Error ? error.message : String(error)}`);
         }
     };
 
@@ -597,9 +609,9 @@ const TeamWorkspaceAcceptInviteModal = ({
                     </div>
 
                     {/* Collapsible section for ALL technical details including authentication */}
-                    <Collapse 
+                    <Collapse
                         activeKey={expandedKeys}
-                        onChange={setExpandedKeys}
+                        onChange={(keys) => setExpandedKeys(Array.isArray(keys) ? keys : [keys])}
                         style={{ marginBottom: 16 }}
                         expandIcon={() => null}
                         items={[{

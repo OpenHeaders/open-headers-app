@@ -1,7 +1,36 @@
 import React, { useState, useEffect } from 'react';
 
-export const DebugNetworkState = ({ inFooter = false }) => {
-    const [networkState, setNetworkState] = useState(null);
+interface NetworkDiagnostics {
+    dnsResolvable?: boolean;
+    internetReachable?: boolean;
+    latency?: number;
+    captivePortal?: boolean;
+}
+
+interface NetworkInterface {
+    name?: string;
+    [key: string]: unknown;
+}
+
+interface NetworkStateData {
+    isOnline?: boolean;
+    networkQuality?: string;
+    connectionType?: string;
+    vpnActive?: boolean;
+    version?: number;
+    diagnostics?: NetworkDiagnostics;
+    primaryInterface?: string;
+    interfaces?: (NetworkInterface | string | [string, NetworkInterface])[];
+    lastUpdate?: number;
+    error?: string;
+}
+
+interface DebugNetworkStateProps {
+    inFooter?: boolean;
+}
+
+export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) => {
+    const [networkState, setNetworkState] = useState<NetworkStateData | null>(null);
     const [lastUpdate, setLastUpdate] = useState(new Date());
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -9,7 +38,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
         try {
             if (window.electronAPI && window.electronAPI.getNetworkState) {
                 const state = await window.electronAPI.getNetworkState();
-                setNetworkState(state);
+                setNetworkState(state as NetworkStateData);
                 setLastUpdate(new Date());
             } else {
                 console.error('electronAPI.getNetworkState not available');
@@ -17,7 +46,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
             }
         } catch (error) {
             console.error('Failed to get network state:', error);
-            setNetworkState({ error: error.message });
+            setNetworkState({ error: (error as Error).message });
         }
     };
 
@@ -31,7 +60,7 @@ export const DebugNetworkState = ({ inFooter = false }) => {
         // Listen for network state changes
         const handleNetworkSync = (event: Record<string, unknown>) => {
             if (event.state) {
-                setNetworkState(event.state);
+                setNetworkState(event.state as NetworkStateData);
                 setLastUpdate(new Date());
             }
         };
@@ -151,9 +180,9 @@ export const DebugNetworkState = ({ inFooter = false }) => {
                                 <div>Primary: {networkState.primaryInterface || 'None'}</div>
                                 {networkState.interfaces && networkState.interfaces.length > 0 ? (
                                     <div style={{ fontSize: 10, color: '#ccc' }}>
-                                        {networkState.interfaces.slice(0, 4).map((iface: Record<string, unknown>, idx: number) => (
+                                        {networkState.interfaces.slice(0, 4).map((iface, idx: number) => (
                                             <div key={idx}>
-                                                {Array.isArray(iface) ? iface[0] : iface.name || iface}
+                                                {Array.isArray(iface) ? iface[0] : typeof iface === 'object' && iface !== null ? (iface as NetworkInterface).name || String(iface) : String(iface)}
                                             </div>
                                         ))}
                                         {networkState.interfaces.length > 4 && <div>+{networkState.interfaces.length - 4} more</div>}

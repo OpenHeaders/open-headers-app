@@ -60,10 +60,10 @@ export const usePlayerManager = (
     onPlaybackTimeChange: ((time: number) => void) | null,
     onPlayingStateChange: ((playing: boolean) => void) | null
 ) => {
-    const [player, setPlayer] = useState(null);
-    const playerContainerRef = useRef(null);
+    const [player, setPlayer] = useState<RRWebPlayerInstance | null>(null);
+    const playerContainerRef = useRef<HTMLDivElement | null>(null);
     const isInitializingRef = useRef(false);
-    const recordIdRef = useRef(null);
+    const recordIdRef = useRef<string | null>(null);
     const lastPlaybackTimeRef = useRef(0);
     const wasPlayingRef = useRef(false);
     const autoHighlightKeyRef = useRef(autoHighlight);
@@ -171,14 +171,15 @@ export const usePlayerManager = (
 
                 // Intercept iframe creation to fix sandbox issues and inject console overrides
                 const originalCreateElement = document.createElement;
-                const iframeRefs = [];
+                const iframeRefs: HTMLIFrameElement[] = [];
                 
                 document.createElement = function(tagName: string) {
                     const element = originalCreateElement.call(document, tagName);
                     
                     if (tagName.toLowerCase() === 'iframe') {
+                        const iframeElement = element as unknown as HTMLIFrameElement;
                         // Store reference for cleanup
-                        iframeRefs.push(element);
+                        iframeRefs.push(iframeElement);
                         
                         // Override setAttribute to intercept sandbox attribute
                         const originalSetAttribute = element.setAttribute;
@@ -197,12 +198,12 @@ export const usePlayerManager = (
                         };
                         
                         // When iframe loads, inject console overrides into it
-                        element.addEventListener('load', () => {
+                        iframeElement.addEventListener('load', () => {
                             try {
-                                const iframeWindow = element.contentWindow;
-                                if (iframeWindow && element.contentDocument) {
+                                const iframeWindow = iframeElement.contentWindow;
+                                if (iframeWindow && iframeElement.contentDocument) {
                                     // Inject styles to prevent font loading warnings
-                                    const style = element.contentDocument.createElement('style');
+                                    const style = iframeElement.contentDocument.createElement('style');
                                     style.textContent = `
                                         @font-face {
                                             font-display: optional !important;
@@ -211,18 +212,18 @@ export const usePlayerManager = (
                                             font-display: optional !important;
                                         }
                                     `;
-                                    if (element.contentDocument.head) {
-                                        element.contentDocument.head.appendChild(style);
+                                    if (iframeElement.contentDocument.head) {
+                                        iframeElement.contentDocument.head.appendChild(style);
                                     }
-                                    
+
                                     // Inject console overrides into iframe
-                                    const script = element.contentDocument.createElement('script');
+                                    const script = iframeElement.contentDocument.createElement('script');
                                     script.textContent = `
                                         (() => {
                                             const originalError = console.error;
                                             const originalWarn = console.warn;
                                             const originalLog = console.log;
-                                            
+
                                             const suppressPatterns = [
                                                 'Blocked script execution',
                                                 'sandboxed and the \\'allow-scripts\\'',
@@ -233,24 +234,24 @@ export const usePlayerManager = (
                                                 'An iframe which has both allow-scripts and allow-same-origin',
                                                 'can escape its sandboxing'
                                             ];
-                                            
+
                                             const shouldSuppress = (args) => {
                                                 const message = args[0]?.toString() || '';
                                                 return suppressPatterns.some(pattern => message.includes(pattern));
                                             };
-                                            
+
                                             console.error = function(...args) {
                                                 if (!shouldSuppress(args)) {
                                                     originalError.apply(console, args);
                                                 }
                                             };
-                                            
+
                                             console.warn = function(...args) {
                                                 if (!shouldSuppress(args)) {
                                                     originalWarn.apply(console, args);
                                                 }
                                             };
-                                            
+
                                             console.log = function(...args) {
                                                 if (!shouldSuppress(args)) {
                                                     originalLog.apply(console, args);
@@ -258,10 +259,10 @@ export const usePlayerManager = (
                                             };
                                         })();
                                     `;
-                                    if (element.contentDocument.head) {
-                                        element.contentDocument.head.appendChild(script);
-                                    } else if (element.contentDocument.body) {
-                                        element.contentDocument.body.appendChild(script);
+                                    if (iframeElement.contentDocument.head) {
+                                        iframeElement.contentDocument.head.appendChild(script);
+                                    } else if (iframeElement.contentDocument.body) {
+                                        iframeElement.contentDocument.body.appendChild(script);
                                     }
                                 }
                             } catch (e) {
@@ -291,7 +292,7 @@ export const usePlayerManager = (
                 const { width, height } = record.metadata.viewport || { width: 1024, height: 768 };
                 const containerWidth = playerContainerRef.current.offsetWidth;
                 const containerHeight = 450;
-                const scale = calculateViewportScale(record.metadata.viewport, containerWidth, containerHeight);
+                const scale = calculateViewportScale(record.metadata.viewport ?? { width: 1024, height: 768 }, containerWidth, containerHeight);
 
                 // Process the recording through proxy if running
                 // Note: The recording should already be preprocessed when saved

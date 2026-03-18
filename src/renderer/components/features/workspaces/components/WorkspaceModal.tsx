@@ -35,12 +35,12 @@ const WorkspaceModal = ({
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);
     const [sshKeySource, setSshKeySource] = useState(DEFAULT_VALUES.sshKeySource);
     const [connectionTested, setConnectionTested] = useState(false);
-    const [gitStatus, setGitStatus] = useState(null);
-    const [connectionProgress, setConnectionProgress] = useState([]);
+    const [gitStatus, setGitStatus] = useState<{ isInstalled: boolean; gitPath?: string; error?: string } | null>(null);
+    const [connectionProgress, setConnectionProgress] = useState<{ step: string; status: string; details?: string; progress?: number }[]>([]);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState(null);
-    const unsubscribeProgressRef = useRef(null);
-    const progressUnsubscribeRef = useRef(null);
+    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+    const unsubscribeProgressRef = useRef<(() => void) | null>(null);
+    const progressUnsubscribeRef = useRef<(() => void) | null>(null);
     
     // Export options state
     const [selectedItems, setSelectedItems] = useState({
@@ -56,7 +56,19 @@ const WorkspaceModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        });
+        }) as {
+            gitService: {
+                getStatus: () => Promise<Record<string, unknown>>;
+                install: () => Promise<{ success: boolean }>;
+                testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; [key: string]: unknown }>;
+                subscribeToConnectionProgress: () => (() => void);
+                onProgress: (callback: (event: { type: string; data: { summary?: { step: string; status: string; details?: string; progress?: number }[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void);
+                [key: string]: unknown;
+            };
+            workspaceService: Record<string, unknown>;
+            syncService: Record<string, unknown>;
+            cleanup: () => void;
+        } | null;
     }, [workspaceContext]);
     
     useEffect(() => {
@@ -135,17 +147,17 @@ const WorkspaceModal = ({
     
     const checkGitStatus = async () => {
         try {
-            const status = await services.gitService.getStatus();
-            setGitStatus(status);
+            const status = await services!.gitService.getStatus();
+            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
         } catch (error) {
             console.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: error.message });
+            setGitStatus({ isInstalled: false, error: (error instanceof Error ? error.message : String(error)) });
         }
     };
     
     const handleInstallGit = async () => {
         try {
-            const result = await services.gitService.install();
+            const result = await services!.gitService.install();
             if (result.success) {
                 await checkGitStatus();
             }
@@ -231,17 +243,17 @@ const WorkspaceModal = ({
             setConnectionTested(false);
             setConnectionTestResult(null);
             
-            unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress();
-            
-            progressUnsubscribeRef.current = services.gitService.onProgress((event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => {
+            unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress();
+
+            progressUnsubscribeRef.current = services!.gitService.onProgress((event: { type: string; data: { summary?: { step: string; status: string; details?: string; progress?: number }[]; [key: string]: unknown }; [key: string]: unknown }) => {
                 if (event.type === 'git-connection') {
                     setConnectionProgress(event.data.summary || []);
                 }
             });
-            
+
             const authData = await prepareAuthData(values, values.authType || 'none');
-            
-            const result = await services.gitService.testConnection({
+
+            const result = await services!.gitService.testConnection({
                 url: values.gitUrl,
                 branch: values.gitBranch || 'main',
                 authType: values.authType || 'none',
@@ -251,15 +263,15 @@ const WorkspaceModal = ({
             });
             
             setConnectionTested(result.success);
-            setConnectionTestResult(result);
+            setConnectionTestResult(result as { success: boolean; message?: string; error?: string });
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
-            setConnectionTestResult({ success: false, error: error.message });
+            setConnectionTestResult({ success: false, error: (error instanceof Error ? error.message : String(error)) });
             setIsTestingConnection(false);
         }
     };
-    
+
     const handleBrowseSSHKey = async () => {
         const filePath = await window.electronAPI.openFileDialog();
         if (filePath) {

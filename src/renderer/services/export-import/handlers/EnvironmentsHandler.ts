@@ -104,7 +104,7 @@ export class EnvironmentsHandler {
       return null;
     } catch (error) {
       log.error('Failed to export environments:', error);
-      throw new Error(`Failed to export environments: ${error.message}`);
+      throw new Error(`Failed to export environments: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -183,7 +183,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Import statistics
    */
   async importEnvironments(importData: ImportData, options: ImportOptions) {
-    const stats = {
+    const stats: ImportStats = {
       environmentsImported: 0,
       variablesCreated: 0,
       errors: []
@@ -216,7 +216,7 @@ export class EnvironmentsHandler {
       return stats;
     } catch (error) {
       log.error('Failed to import environments:', error);
-      throw new Error(`Failed to import environments: ${error.message}`);
+      throw new Error(`Failed to import environments: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -228,7 +228,7 @@ export class EnvironmentsHandler {
    * @private
    */
   async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariableData>>, options: ImportOptions) {
-    const stats = {
+    const stats: ImportStats = {
       environmentsImported: 0,
       variablesCreated: 0,
       errors: []
@@ -275,7 +275,7 @@ export class EnvironmentsHandler {
             stats.errors.push({
               environment: envName,
               variable: varName,
-              error: error.message
+              error: error instanceof Error ? error.message : String(error)
             });
           }
         }
@@ -289,7 +289,7 @@ export class EnvironmentsHandler {
             log.error(`Failed to batch import variables in environment ${envName}:`, error);
             stats.errors.push({
               environment: envName,
-              error: `Batch import failed: ${error.message}`
+              error: `Batch import failed: ${error instanceof Error ? error.message : String(error)}`
             });
           }
         }
@@ -299,7 +299,7 @@ export class EnvironmentsHandler {
         log.error(`Failed to import environment ${envName}:`, error);
         stats.errors.push({
           environment: envName,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
@@ -315,7 +315,7 @@ export class EnvironmentsHandler {
    * @private
    */
   async _importEnvironmentSchema(schemaData: EnvironmentSchema, options: ImportOptions) {
-    const stats = {
+    const stats: ImportStats = {
       environmentsImported: 0,
       variablesCreated: 0,
       errors: []
@@ -389,7 +389,7 @@ export class EnvironmentsHandler {
         log.error(`Failed to process environment ${envName} from schema:`, error);
         stats.errors.push({
           environment: envName,
-          error: error.message
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
@@ -405,7 +405,7 @@ export class EnvironmentsHandler {
    * @private
    */
   async _createVariablesFromSchema(envName: string, variableDefinitions: VariableDefinition[]) {
-    const stats = {
+    const stats: { variablesCreated: number; errors: ImportStats['errors'] } = {
       variablesCreated: 0,
       errors: []
     };
@@ -427,7 +427,7 @@ export class EnvironmentsHandler {
           stats.errors.push({
             environment: envName,
             variable: varDef.name,
-            error: validation.error
+            error: validation.error ?? 'Validation failed'
           });
         }
       }
@@ -443,7 +443,7 @@ export class EnvironmentsHandler {
         log.error(`Failed to batch create variables in environment ${envName}:`, error);
         stats.errors.push({
           environment: envName,
-          error: `Batch creation failed: ${error.message}`
+          error: `Batch creation failed: ${error instanceof Error ? error.message : String(error)}`
         });
       }
     }

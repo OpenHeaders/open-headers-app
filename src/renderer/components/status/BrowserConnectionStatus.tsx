@@ -12,9 +12,30 @@ import {
 
 import './BrowserConnectionStatus.css';
 
+interface ClientInfo {
+    id: string;
+    browser: string;
+    browserVersion: string;
+    platform: string;
+    connectionType: string;
+    connectedAt: number;
+    lastActivity: number;
+    extensionVersion: string;
+}
+
+interface ConnectionStatus {
+    totalConnections: number;
+    browserCounts: Record<string, number>;
+    clients: ClientInfo[];
+    wsServerRunning: boolean;
+    wssServerRunning: boolean;
+}
+
+type BrowserKey = 'chrome' | 'firefox' | 'edge' | 'safari' | 'unknown';
+
 const BrowserConnectionStatus = () => {
     const { settings } = useSettings();
-    const [connectionStatus, setConnectionStatus] = useState({
+    const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
         totalConnections: 0,
         browserCounts: {},
         clients: [],
@@ -27,26 +48,26 @@ const BrowserConnectionStatus = () => {
 
     // Browser icon mapping
     const getBrowserIcon = (browser: string) => {
-        const icons = {
+        const icons: Record<BrowserKey, React.ReactElement> = {
             'chrome': <ChromeOutlined />,
             'firefox': <CompassOutlined />,
             'edge': <IeOutlined />,
             'safari': <GlobalOutlined />,
             'unknown': <ApiOutlined />
         };
-        return icons[browser] || icons['unknown'];
+        return icons[browser as BrowserKey] || icons['unknown'];
     };
 
     // Browser display name mapping
     const getBrowserName = (browser: string) => {
-        const names = {
+        const names: Record<BrowserKey, string> = {
             'chrome': 'Chrome',
             'firefox': 'Firefox',
             'edge': 'Edge',
             'safari': 'Safari',
             'unknown': 'Unknown'
         };
-        return names[browser] || 'Unknown';
+        return names[browser as BrowserKey] || 'Unknown';
     };
 
     // Fetch connection status
@@ -101,14 +122,16 @@ const BrowserConnectionStatus = () => {
         }, 5000);
 
         // Listen for connection status updates from main process
-        let unsubscribe;
-        const handleStatusUpdate = (status: { totalConnections: number; browserCounts: Record<string, number>; clients: unknown[]; wsServerRunning: boolean; wssServerRunning: boolean }) => {
+        let unsubscribe: (() => void) | undefined;
+        const handleStatusUpdate = (status: ConnectionStatus) => {
             setConnectionStatus(status);
             setIsLoading(false);
         };
 
         if (window.electronAPI && window.electronAPI.onWsConnectionStatusChanged) {
-            unsubscribe = window.electronAPI.onWsConnectionStatusChanged(handleStatusUpdate);
+            unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data: Record<string, unknown>) => {
+                handleStatusUpdate(data as unknown as ConnectionStatus);
+            });
         }
 
         return () => {
