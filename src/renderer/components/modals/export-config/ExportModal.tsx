@@ -30,7 +30,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     const [environmentOption, setEnvironmentOption] = useState('schema'); // 'none', 'schema', 'full'
     const [fileFormat, setFileFormat] = useState('single'); // 'single', 'separate'
     const [exportPurpose, setExportPurpose] = useState('team'); // 'team', 'backup'
-    const [selectedEnvironments, setSelectedEnvironments] = useState({});
+    const [selectedEnvironments, setSelectedEnvironments] = useState<Record<string, boolean>>({});
     const [includeWorkspace, setIncludeWorkspace] = useState(false);
     const [includeCredentials, setIncludeCredentials] = useState(false);
     
@@ -44,7 +44,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     useEffect(() => {
         if (visible && environmentsReady && environments) {
             // Select all environments by default
-            const allSelected = {};
+            const allSelected: Record<string, boolean> = {};
             Object.keys(environments).forEach(envName => {
                 allSelected[envName] = true;
             });
@@ -89,7 +89,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     const handleItemChange = (item: string) => {
         setSelectedItems(prev => ({
             ...prev,
-            [item]: !prev[item]
+            [item]: !(prev as Record<string, boolean>)[item]
         }));
     };
 
@@ -121,7 +121,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
      * Select all environments
      */
     const handleSelectAllEnvironments = () => {
-        const allSelected = {};
+        const allSelected: Record<string, boolean> = {};
         Object.keys(environments).forEach(envName => {
             allSelected[envName] = true;
         });

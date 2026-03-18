@@ -63,7 +63,7 @@ class VideoRecordingManager {
             await this.loadSettings();
             
             // Check if video recording is enabled
-            if (!this.settings.videoRecording) {
+            if (!this.settings?.videoRecording) {
                 console.log('[VideoRecordingManager] Video recording is disabled in settings');
                 return { success: false, error: 'Video recording is disabled' };
             }
@@ -74,7 +74,7 @@ class VideoRecordingManager {
             }
 
             // Use quality from settings
-            const videoQuality = this.settings.videoQuality || 'high';
+            const videoQuality = this.settings?.videoQuality || 'high';
 
             // Get the video stream without forcing dimensions
             // This will capture at the native resolution of the source
@@ -161,7 +161,7 @@ class VideoRecordingManager {
                 videoBitsPerSecond: bitrate,
               } as MediaRecorderOptions);
 
-            const chunks = [];
+            const chunks: Blob[] = [];
 
             // Handle data available
             mediaRecorder.ondataavailable = (event) => {
@@ -206,7 +206,7 @@ class VideoRecordingManager {
 
         } catch (error) {
             console.error('[VideoRecordingManager] Error starting recording:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
 
@@ -252,7 +252,7 @@ class VideoRecordingManager {
                         
                         // Get recording directory from the stored info
                         const recordingInfo = this.activeRecordings.get(recordingId);
-                        const recordingDir = recordingInfo.recordingDir;
+                        const recordingDir = recordingInfo?.recordingDir;
                         const videoPath = `${recordingDir}/video.webm`;
                         
                         // Save video file - ensure it's written as binary
@@ -273,7 +273,7 @@ class VideoRecordingManager {
                         });
                     } catch (error) {
                         console.error('[VideoRecordingManager] Error saving video:', error);
-                        resolve({ success: false, error: error.message });
+                        resolve({ success: false, error: error instanceof Error ? error.message : String(error) });
                     }
                 };
 
@@ -283,7 +283,7 @@ class VideoRecordingManager {
 
         } catch (error) {
             console.error('[VideoRecordingManager] Error stopping recording:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: error instanceof Error ? error.message : String(error) };
         }
     }
 

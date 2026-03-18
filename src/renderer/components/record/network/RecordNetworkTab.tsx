@@ -46,8 +46,8 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     const { token } = theme.useToken();
 
     // UI state
-    const [selectedRequestId, setSelectedRequestId] = useState(null);
-    const [networkFilters, setNetworkFilters] = useState({
+    const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+    const [networkFilters, setNetworkFilters] = useState<{ status: (string | number | boolean)[] | null; method: (string | number | boolean)[] | null; type: (string | number | boolean)[] | null }>({
         status: [],
         method: [],
         type: []
@@ -169,8 +169,8 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <span>Name</span>
                     <NetworkFilterTags 
-                        showInverseTag={searchFilter.searchValue && searchFilter.inverseFilter}
-                        showSearchTag={searchFilter.searchValue && !searchFilter.inverseFilter}
+                        showInverseTag={!!searchFilter.searchValue && searchFilter.inverseFilter}
+                        showSearchTag={!!searchFilter.searchValue && !searchFilter.inverseFilter}
                         bodyFilters={bodyFilters}
                     />
                     <Tooltip title={searchFilter.searchValue ? 
@@ -227,7 +227,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             width: selectedRequest ? 140 : 250,
             ellipsis: true,
             filteredValue: searchFilter.searchValue ? [searchFilter.searchValue] : null,
-            onFilter: searchFilter.createFilterFunction(extractSearchableFields),
+            onFilter: searchFilter.createFilterFunction(extractSearchableFields as (record: Record<string, unknown>) => string[]),
             render: (url: string, networkRecord: NetworkRecord) => (
                 <NetworkRequestCell url={url} record={networkRecord} token={token} />
             )
@@ -295,7 +295,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             width: 100,
             align: 'right' as const,
             render: (duration: number, networkRecord: NetworkRecord) => {
-                const ms = duration || (networkRecord.endTime - networkRecord.timestamp) || 0;
+                const ms = duration || ((networkRecord.endTime ?? 0) - networkRecord.timestamp) || 0;
                 return <Text style={{ fontSize: '12px' }}>{formatMilliseconds(ms)}</Text>;
             }
         }])
@@ -328,14 +328,15 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     // Use virtualization for large datasets (more than 100 requests)
     const useVirtualization = tableDataSource.length > 100;
 
-    // Complete table props
-    const tableProps: any = {
-        ...createStandardTableProps(
-            tableDataSource as any,
-            columns as any,
-            handleTableChange as any,
-            generateRowClassName as any
-        ),
+    // Complete table props - use type assertions to bridge between NetworkRecord and TableRecord
+    const standardProps = createStandardTableProps(
+        tableDataSource as unknown as { timestamp: number; [key: string]: unknown }[],
+        columns as unknown as Parameters<typeof createStandardTableProps>[1],
+        handleTableChange as unknown as Parameters<typeof createStandardTableProps>[2],
+        generateRowClassName as unknown as Parameters<typeof createStandardTableProps>[3]
+    );
+    const tableProps = {
+        ...standardProps,
         rowSelection: {
             type: 'radio' as const,
             selectedRowKeys: selectedRequestId ?
@@ -394,7 +395,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                                     }
                                 />
                             ) : (
-                                <Table {...tableProps} />
+                                <Table {...tableProps as Record<string, unknown>} />
                             )}
                         </div>
                         <RecordNetworkDetails
@@ -416,7 +417,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                             }
                         />
                     ) : (
-                        <Table {...tableProps} />
+                        <Table {...tableProps as Record<string, unknown>} />
                     )
                 )}
             </div>

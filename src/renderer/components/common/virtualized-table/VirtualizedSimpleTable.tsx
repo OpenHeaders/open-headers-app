@@ -59,7 +59,7 @@ interface VirtualizedSimpleTableProps {
   [key: string]: any;
 }
 
-const VirtualizedSimpleTable = forwardRef(({
+const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(({
   columns,
   dataSource,
   rowHeight = 54,
@@ -70,7 +70,7 @@ const VirtualizedSimpleTable = forwardRef(({
   expandable,
   scroll,
   ...restProps
-}: VirtualizedSimpleTableProps, ref) => {
+}, ref) => {
   // Row renderer for react-window virtualization
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const record = dataSource[index];
@@ -108,10 +108,10 @@ const VirtualizedSimpleTable = forwardRef(({
                 if (checked) {
                   newKeys = [...currentKeys, key];
                 } else {
-                  newKeys = currentKeys.filter(k => k !== key);
+                  newKeys = currentKeys.filter((k: React.Key) => k !== key);
                 }
                 
-                rowSelection.onChange?.(newKeys, dataSource.filter(item => {
+                rowSelection.onChange?.(newKeys, dataSource.filter((item: Record<string, unknown>) => {
                   const itemKey = typeof rowKey === 'function' ? rowKey(item) : item[rowKey];
                   return newKeys.includes(itemKey);
                 }));
@@ -121,8 +121,8 @@ const VirtualizedSimpleTable = forwardRef(({
         )}
         
         {/* Render cells */}
-        {columns.map((column, colIndex) => {
-          const value = record[column.dataIndex];
+        {columns.map((column: SimpleColumnDef, colIndex: number) => {
+          const value = column.dataIndex ? record[column.dataIndex] : undefined;
           const cellContent = column.render ? column.render(value, record, index) : value;
           
           return (
@@ -150,17 +150,17 @@ const VirtualizedSimpleTable = forwardRef(({
         <div className="virtual-table-header-cell selection-cell" style={{ width: 60 }}>
           <input
             type="checkbox"
-            checked={rowSelection?.selectedRowKeys?.length === dataSource.length}
+            checked={(rowSelection?.selectedRowKeys?.length ?? 0) === dataSource.length}
             ref={(checkbox) => {
               if (checkbox) {
-                checkbox.indeterminate = rowSelection?.selectedRowKeys?.length > 0 && rowSelection?.selectedRowKeys?.length < dataSource.length;
+                checkbox.indeterminate = (rowSelection?.selectedRowKeys?.length ?? 0) > 0 && (rowSelection?.selectedRowKeys?.length ?? 0) < dataSource.length;
               }
             }}
             onChange={(e) => {
               const checked = e.target.checked;
               if (checked) {
-                const allKeys = dataSource.map(item => 
-                  typeof rowKey === 'function' ? rowKey(item) : item[rowKey]
+                const allKeys = dataSource.map((item: Record<string, unknown>) =>
+                  typeof rowKey === 'function' ? rowKey(item) : item[rowKey] as React.Key
                 );
                 rowSelection.onChange?.(allKeys, dataSource);
               } else {
@@ -170,7 +170,7 @@ const VirtualizedSimpleTable = forwardRef(({
           />
         </div>
       )}
-      {columns.map((column, index) => (
+      {columns.map((column: SimpleColumnDef, index: number) => (
         <div
           key={column.key || column.dataIndex || index}
           className="virtual-table-header-cell"

@@ -52,10 +52,10 @@ interface PermissionRequest {
 
 /** Permission alert configuration */
 interface PermissionAlertConfig {
-    type: string;
-    message: string;
-    description: string;
-    action: {
+    type?: 'error' | 'info' | 'success' | 'warning';
+    message?: string;
+    description?: string;
+    action?: {
         text: string;
         onClick: () => void;
     };
@@ -125,8 +125,8 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
     
     // UI state
     const [activeTab, setActiveTab] = useState('1');
-    const [screenRecordingPermission, setScreenRecordingPermission] = useState(null);
-    const [permissionAlert, setPermissionAlert] = useState(null);
+    const [screenRecordingPermission, setScreenRecordingPermission] = useState<Record<string, unknown> | null>(null);
+    const [permissionAlert, setPermissionAlert] = useState<PermissionAlertConfig | null>(null);
 
     // Initialize form values when modal opens
     useEffect(() => {
@@ -387,7 +387,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             children: (
                 <GeneralSettings
                     formValues={formValues}
-                    screenRecordingPermission={screenRecordingPermission}
+                    screenRecordingPermission={screenRecordingPermission ?? {}}
                     onChange={handleFieldChange}
                 />
             )
@@ -403,7 +403,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             children: (
                 <AppearanceSettings
                     formValues={formValues}
-                    screenRecordingPermission={screenRecordingPermission}
+                    screenRecordingPermission={screenRecordingPermission ?? {}}
                     onChange={handleFieldChange}
                 />
             )
@@ -419,9 +419,9 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             children: (
                 <WorkflowSettings
                     formValues={formValues}
-                    screenRecordingPermission={screenRecordingPermission}
+                    screenRecordingPermission={screenRecordingPermission as { hasPermission: boolean; canRequest: boolean } | null}
                     onChange={handleFieldChange}
-                    initialAction={initialAction}
+                    initialAction={initialAction ?? null}
                 />
             )
         },
@@ -436,7 +436,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             children: (
                 <DeveloperSettings
                     formValues={formValues}
-                    screenRecordingPermission={screenRecordingPermission}
+                    screenRecordingPermission={screenRecordingPermission ?? {}}
                     onChange={handleFieldChange}
                 />
             )

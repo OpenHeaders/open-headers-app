@@ -74,11 +74,11 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
         // For header rule references, show the domains from the referenced rule
         const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
         domains = headerRule?.domains || [];
-        hasEnvVars = headerRule?.hasEnvVars || false;
+        hasEnvVars = headerRule?.hasEnvVars ?? false;
     } else {
         // For custom headers, show the proxy rule's own domains
         domains = record.domains;
-        hasEnvVars = domains?.some(d => d && d.includes('{{'));
+        hasEnvVars = domains?.some(d => d && d.includes('{{')) ?? false;
     }
     
     // Resolve domains with env vars if needed
@@ -89,7 +89,7 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
             if (domain && domain.includes('{{')) {
                 const preview = getResolvedPreview(domain, variables);
                 // Split comma-separated domains from resolved env vars
-                return preview.text.split(',').map(d => d.trim()).filter(d => d);
+                return (preview.text ?? '').split(',').map(d => d.trim()).filter(d => d);
             }
             return domain;
         });
@@ -185,46 +185,46 @@ const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRu
     }
     
     // Resolve header name if it has env vars
-    let displayName = headerInfo.name;
+    let displayName: string | undefined = headerInfo.name;
     const nameHasEnvVars = headerInfo.name && headerInfo.name.includes('{{');
     if (nameHasEnvVars && envContext.environmentsReady) {
         const variables = envContext.getAllVariables();
         const preview = getResolvedPreview(headerInfo.name, variables);
-        displayName = preview.text;
+        displayName = preview.text ?? '';
     }
-    
+
     // Resolve header value
-    let displayValue = headerInfo.value;
+    let displayValue: string | undefined = headerInfo.value;
     let resolvedFullValue = '';
     let sourceValue = '';
-    
+
     if (headerInfo.isDynamic && headerInfo.sourceId) {
         // For dynamic values, get the source content
         const source = sources?.find(s => s.sourceId === String(headerInfo.sourceId));
         sourceValue = source?.sourceContent || '[SOURCE_NOT_FOUND]';
-        
+
         // Resolve prefix/suffix if they have env vars
-        let displayPrefix = headerInfo.prefix || '';
-        let displaySuffix = headerInfo.suffix || '';
+        let displayPrefix: string = headerInfo.prefix || '';
+        let displaySuffix: string = headerInfo.suffix || '';
         if (envContext.environmentsReady) {
             const variables = envContext.getAllVariables();
             if (displayPrefix && displayPrefix.includes('{{')) {
                 const preview = getResolvedPreview(displayPrefix, variables);
-                displayPrefix = preview.text;
+                displayPrefix = preview.text ?? '';
             }
             if (displaySuffix && displaySuffix.includes('{{')) {
                 const preview = getResolvedPreview(displaySuffix, variables);
-                displaySuffix = preview.text;
+                displaySuffix = preview.text ?? '';
             }
         }
-        
+
         // Build the full resolved value
         resolvedFullValue = `${displayPrefix}${sourceValue}${displaySuffix}`;
     } else if (headerInfo.value && headerInfo.value.includes('{{') && envContext.environmentsReady) {
         // For static values with env vars
         const variables = envContext.getAllVariables();
         const preview = getResolvedPreview(headerInfo.value, variables);
-        displayValue = preview.text;
+        displayValue = preview.text ?? '';
         resolvedFullValue = displayValue;
     } else {
         // For plain static values
@@ -272,15 +272,15 @@ export const createTypeColumn = (headerRules: HeaderRule[]) => ({
         if (record.headerRuleId) {
             // Check if referenced header rule has env vars
             const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
-            hasEnvVars = headerRule?.hasEnvVars || false;
+            hasEnvVars = headerRule?.hasEnvVars ?? false;
         } else {
             // Check if custom rule has env vars in any field
-            hasEnvVars = record.hasEnvVars || 
+            hasEnvVars = !!(record.hasEnvVars ||
                         (record.headerName && record.headerName.includes('{{')) ||
                         (record.headerValue && record.headerValue.includes('{{')) ||
                         (record.prefix && record.prefix.includes('{{')) ||
                         (record.suffix && record.suffix.includes('{{')) ||
-                        (record.domains && record.domains.some(d => d && d.includes('{{')));
+                        (record.domains && record.domains.some(d => d && d.includes('{{'))));
         }
         
         return (

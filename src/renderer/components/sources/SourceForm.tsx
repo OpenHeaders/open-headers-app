@@ -78,14 +78,14 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
     const [filePath, setFilePath] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [testing, setTesting] = useState(false);
-    const [testProgress, setTestProgress] = useState(null); // { attempt: 1, maxAttempts: 3, startTime: Date.now() }
+    const [testProgress, setTestProgress] = useState<{ attempt: number; maxAttempts: number; startTime: number } | null>(null);
     const [isSticky, setIsSticky] = useState(false);
     const [totpEnabled, setTotpEnabled] = useState(false);
     const [totpSecret, setTotpSecret] = useState('');
 
     // Component refs for DOM access and external component interaction
     const formCardRef = useRef(null);
-    const httpOptionsRef = useRef(null);
+    const httpOptionsRef = useRef<{ handleTestRequestWithParams?: (sourcePath: string, sourceMethod: string, progressCallback: (progress: number, maxAttempts: number) => void, cleanupCallback: () => void) => void; forceTotpState?: (enabled: boolean, secret: string) => void; validateFields?: () => void } | null>(null);
     const tempSourceIdRef = useRef(generateTempSourceId());
     
     // External service hooks

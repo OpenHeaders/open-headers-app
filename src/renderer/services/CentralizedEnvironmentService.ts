@@ -97,7 +97,7 @@ class CentralizedEnvironmentService {
       this.stateManager.setState({ 
         isReady: false, 
         isLoading: false, 
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -108,26 +108,27 @@ class CentralizedEnvironmentService {
    */
   async loadWorkspaceEnvironments(workspaceId: string | null) {
     // Check if we're already loading this workspace
-    if (this.stateManager.isLoadingWorkspace(workspaceId)) {
+    const wsId = workspaceId ?? '';
+    if (this.stateManager.isLoadingWorkspace(wsId)) {
       log.debug(`Already loading workspace ${workspaceId}, reusing promise`);
-      return this.stateManager.getLoadPromise(workspaceId);
+      return this.stateManager.getLoadPromise(wsId);
     }
 
     // Create new load promise
     const loadPromise = this._doLoadWorkspace(workspaceId);
-    this.stateManager.setLoadPromise(workspaceId, loadPromise);
+    this.stateManager.setLoadPromise(wsId, loadPromise);
 
     try {
       return await loadPromise;
     } finally {
       // Clean up promise after completion
-      this.stateManager.clearLoadPromise(workspaceId);
+      this.stateManager.clearLoadPromise(wsId);
     }
   }
 
   async _doLoadWorkspace(workspaceId: string | null) {
     try {
-      const data = await this.storageManager.loadEnvironments(workspaceId);
+      const data = await this.storageManager.loadEnvironments(workspaceId ?? '');
       
       this.stateManager.setState({
         currentWorkspaceId: workspaceId,
@@ -208,7 +209,7 @@ class CentralizedEnvironmentService {
       this.stateManager.setState({ 
         isLoading: false, 
         isReady: true, // Mark as ready even on error to prevent blocking
-        error: error.message 
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   }
@@ -264,7 +265,7 @@ class CentralizedEnvironmentService {
     });
     
     // Return just the resolved string for backward compatibility
-    return typeof result === 'string' ? result : result.resolved;
+    return typeof result === 'string' ? result : result?.resolved ?? '';
   }
 
   /**
@@ -381,7 +382,7 @@ class CentralizedEnvironmentService {
     );
 
     // If we're deleting the active environment, switch to Default
-    let updates: { environments: any; activeEnvironment?: string } = { environments: updatedEnvironments };
+    let updates: { environments: Record<string, unknown>; activeEnvironment?: string } = { environments: updatedEnvironments };
     const wasActiveEnvironment = state.activeEnvironment === name;
     if (wasActiveEnvironment) {
       updates.activeEnvironment = 'Default';

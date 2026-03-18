@@ -57,7 +57,7 @@ interface ImportStats {
   environmentsImported: number;
   variablesCreated: number;
   errors: Array<{ error: string; [key: string]: unknown }>;
-  createdWorkspace?: { name: string; type: string } | null;
+  createdWorkspace?: Record<string, unknown> | null;
   [key: string]: unknown;
 }
 
@@ -125,7 +125,7 @@ export class ImportService {
 
     } catch (error) {
       log.error('Import process failed:', error);
-      showMessage('error', `Import failed: ${error.message}`);
+      showMessage('error', `Import failed: ${(error as Error).message}`);
       throw error;
     }
   }
@@ -187,7 +187,7 @@ export class ImportService {
     }
 
     const workspaceInfo = importOptions.workspaceInfo || importData.workspace;
-    return await this.workspaceHandler.importWorkspace(workspaceInfo, importOptions);
+    return await this.workspaceHandler.importWorkspace(workspaceInfo ?? null, importOptions);
   }
 
   /**

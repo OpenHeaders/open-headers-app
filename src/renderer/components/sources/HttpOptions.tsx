@@ -94,7 +94,7 @@ const HttpOptions = forwardRef(({
     const [testResponseVisible, setTestResponseVisible] = useState(false);
     const [testResponseContent, setTestResponseContent] = useState('');
     const [testing, setTesting] = useState(false);
-    const [, setRawResponse] = useState(null);
+    const [, setRawResponse] = useState<string | null>(null);
     
     // Source IDs
     const effectiveSourceId = sourceId || `temp-${Date.now()}`;
@@ -115,7 +115,7 @@ const HttpOptions = forwardRef(({
 
     // TOTP state
     const [totpCode, setTotpCode] = useState('------');
-    const [totpError, setTotpError] = useState(null);
+    const [totpError, setTotpError] = useState<string | null>(null);
     const [totpTesting, setTotpTesting] = useState(false);
     const [totpPreviewVisible, setTotpPreviewVisible] = useState(false);
     const [timeRemaining, setTimeRemaining] = useState(30);

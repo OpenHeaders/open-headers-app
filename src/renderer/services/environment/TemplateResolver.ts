@@ -26,7 +26,7 @@ class TemplateResolver {
       logMissing = true 
     } = options;
     
-    const missingVars = [];
+    const missingVars: string[] = [];
     
     const resolved = template.replace(this.variablePattern, (match, varName) => {
       if (variables.hasOwnProperty(varName)) {
@@ -105,8 +105,12 @@ class TemplateResolver {
     Object.entries(obj).forEach(([key, value]) => {
       if (typeof value === 'string') {
         const result = this.resolveTemplate(value, variables, options);
-        resolved[key] = typeof result === 'string' ? result : result.resolved;
-        if (typeof result !== 'string' && result.missingVars) {
+        if (result === null || typeof result === 'string') {
+          resolved[key] = result;
+        } else {
+          resolved[key] = result.resolved;
+        }
+        if (result !== null && typeof result !== 'string' && result.missingVars) {
           allMissingVars.push(...result.missingVars);
         }
       } else if (typeof value === 'object') {

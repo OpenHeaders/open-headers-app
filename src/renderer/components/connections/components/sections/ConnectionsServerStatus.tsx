@@ -30,7 +30,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
     const { message } = App.useApp();
     const [fingerprintCopied, setFingerprintCopied] = useState(false);
     const [pathCopied, setPathCopied] = useState(false);
-    const [certTrusted, setCertTrusted] = useState(null); // null = loading, true/false
+    const [certTrusted, setCertTrusted] = useState<boolean | null>(null); // null = loading, true/false
     const [trustLoading, setTrustLoading] = useState(false);
 
     const checkTrust = useCallback(async () => {
@@ -61,7 +61,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
                 message.error(result.error || 'Failed to trust certificate');
             }
         } catch (err) {
-            message.error(err.message || 'Failed to trust certificate');
+            message.error(err instanceof Error ? err.message : 'Failed to trust certificate');
         } finally {
             setTrustLoading(false);
             // Re-check trust status
@@ -82,7 +82,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
                 message.error(result.error || 'Failed to remove certificate');
             }
         } catch (err) {
-            message.error(err.message || 'Failed to remove certificate');
+            message.error(err instanceof Error ? err.message : 'Failed to remove certificate');
         } finally {
             setTrustLoading(false);
             setTimeout(checkTrust, 500);
@@ -229,7 +229,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
                             // Parse subject: "O=OpenHeaders\nCN=localhost" → "OpenHeaders (localhost)"
                             let subject = null;
                             if (status.certificateSubject) {
-                                const parts = {};
+                                const parts: Record<string, string> = {};
                                 status.certificateSubject.split('\n').forEach(line => {
                                     const [key, ...val] = line.split('=');
                                     if (key && val.length) parts[key.trim()] = val.join('=').trim();

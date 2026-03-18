@@ -55,9 +55,9 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
                 includeValues
             });
             
-            if (result.success) {
+            if (result.success && result.links) {
                 setAppLink(result.links.appLink);
-                
+
                 // Warn if URL is too long for Windows
                 if (result.links.appLink.length > 2000) {
                     message.warning('The generated URL is very long and may not work on Windows. Consider sharing without values or splitting into smaller environments.');

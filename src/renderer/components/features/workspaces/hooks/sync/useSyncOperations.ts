@@ -24,7 +24,7 @@ export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string
     const setupSyncListeners = () => {
         const syncMessageKey = 'workspace-syncing';
         let syncHandled = false;
-        let timeoutId = null;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
         
         const syncListeners: {
             messageKey: string;

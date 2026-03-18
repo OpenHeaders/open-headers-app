@@ -371,7 +371,7 @@ class TimeManager {
   /**
    * Check if date is in DST (approximation)
    */
-  isDST(timestamp = null) {
+  isDST(timestamp: number | null = null) {
     const ts = timestamp || this.now();
     const date = this.getDate(ts);
     const jan = this.getDate(date.getTime());
@@ -441,7 +441,7 @@ class TimeManager {
   /**
    * Get current Date object - replacement for new Date()
    */
-  getDate(timestamp = null) {
+  getDate(timestamp: number | null = null) {
     return timestamp ? new Date(timestamp) : new Date();
   }
   

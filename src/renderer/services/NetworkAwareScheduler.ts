@@ -134,7 +134,7 @@ class NetworkAwareScheduler {
       intervalMs,
       lastRefresh: existingSchedule?.lastRefresh ||
                    (source.refreshOptions?.lastRefresh
-                    ? timeManager.getDate(source.refreshOptions.lastRefresh as number | null).getTime()
+                    ? timeManager.getDate(source.refreshOptions.lastRefresh as number | null | undefined).getTime()
                     : null),
       nextRefresh: null,
       retryCount: 0,

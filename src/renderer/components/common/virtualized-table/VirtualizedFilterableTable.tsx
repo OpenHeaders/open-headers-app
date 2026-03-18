@@ -68,7 +68,7 @@ interface VirtualizedFilterableTableProps {
   [key: string]: any;
 }
 
-const VirtualizedFilterableTable = forwardRef(({
+const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTableProps>(({
   columns,
   dataSource,
   rowHeight = 54,
@@ -82,7 +82,7 @@ const VirtualizedFilterableTable = forwardRef(({
   scroll,
   selectedRowKeys = [],
   ...restProps
-}: VirtualizedFilterableTableProps, ref) => {
+}, ref) => {
   const listRef = React.useRef<any>();
 
   // Expose methods to parent
@@ -102,10 +102,10 @@ const VirtualizedFilterableTable = forwardRef(({
     let filtered = [...dataSource];
 
     // Apply column filters
-    columns.forEach(column => {
-      if (column.onFilter && column.filteredValue?.length > 0) {
-        filtered = filtered.filter(record => {
-          return column.filteredValue.some(value => column.onFilter(value, record));
+    columns.forEach((column: ColumnDef) => {
+      if (column.onFilter && (column.filteredValue?.length ?? 0) > 0) {
+        filtered = filtered.filter((record: Record<string, unknown>) => {
+          return column.filteredValue!.some((value: unknown) => column.onFilter!(value, record));
         });
       }
     });
@@ -158,7 +158,7 @@ const VirtualizedFilterableTable = forwardRef(({
                   // Get all selected records based on current keys
                   const newSelectedKeys = checked 
                     ? [...(rowSelection.selectedRowKeys || []), key]
-                    : (rowSelection.selectedRowKeys || []).filter(k => k !== key);
+                    : (rowSelection.selectedRowKeys || []).filter((k: React.Key) => k !== key);
                   
                   const newSelectedRows = processedData.filter(item => {
                     const itemKey = typeof rowKey === 'function' ? rowKey(item) : item[rowKey];
@@ -174,15 +174,15 @@ const VirtualizedFilterableTable = forwardRef(({
         )}
         
         {/* Render cells */}
-        {columns.map((column, colIndex) => {
-          let value;
+        {columns.map((column: ColumnDef, colIndex: number) => {
+          let value: unknown;
           if (column.dataIndex) {
             value = record[column.dataIndex];
           }
           
-          const cellContent = column.render 
-            ? column.render(value, record, index) 
-            : value;
+          const cellContent = column.render
+            ? column.render(value, record, index)
+            : value as React.ReactNode;
           
           return (
             <div
@@ -218,10 +218,10 @@ const VirtualizedFilterableTable = forwardRef(({
           {rowSelection.type !== 'radio' && (
             <input
               type="checkbox"
-              checked={rowSelection?.selectedRowKeys?.length === processedData.length && processedData.length > 0}
+              checked={(rowSelection?.selectedRowKeys?.length ?? 0) === processedData.length && processedData.length > 0}
               ref={(checkbox) => {
                 if (checkbox) {
-                  checkbox.indeterminate = rowSelection?.selectedRowKeys?.length > 0 && rowSelection?.selectedRowKeys?.length < processedData.length;
+                  checkbox.indeterminate = (rowSelection?.selectedRowKeys?.length ?? 0) > 0 && (rowSelection?.selectedRowKeys?.length ?? 0) < processedData.length;
                 }
               }}
               onChange={(e) => {
@@ -237,7 +237,7 @@ const VirtualizedFilterableTable = forwardRef(({
           )}
         </div>
       )}
-      {columns.map((column, index) => (
+      {columns.map((column: ColumnDef, index: number) => (
         <div
           key={column.key || column.dataIndex || index}
           className="virtual-table-header-cell"

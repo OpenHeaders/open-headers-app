@@ -74,12 +74,12 @@ const WorkspacesTable = ({
 }: WorkspacesTableProps) => {
     const { message } = App.useApp();
     const [shareModalVisible, setShareModalVisible] = useState(false);
-    const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+    const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceRecord | null>(null);
     const [, forceUpdate] = useState({});
     
     // Update relative time display with dynamic intervals
     useEffect(() => {
-        let interval;
+        let interval: ReturnType<typeof setInterval> | null = null;
         
         const startInterval = () => {
             if (document.visibilityState === 'visible') {
@@ -158,7 +158,7 @@ const WorkspacesTable = ({
         document.addEventListener('visibilitychange', handleVisibilityChange);
         
         // Schedule dynamic restart checks
-        let restartTimer;
+        let restartTimer: ReturnType<typeof setTimeout> | null = null;
         const scheduleRestartCheck = () => {
             const checkInterval = getRestartCheckInterval();
             restartTimer = setTimeout(() => {

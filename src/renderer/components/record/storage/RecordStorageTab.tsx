@@ -66,13 +66,13 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Modal state
     const [valueModalVisible, setValueModalVisible] = useState(false);
-    const [selectedEntry, setSelectedEntry] = useState(null);
+    const [selectedEntry, setSelectedEntry] = useState<StorageRecord | null>(null);
     
     // Filter state
-    const [typeFilter, setTypeFilter] = useState([]);
-    const [actionFilter, setActionFilter] = useState([]);
-    const [domainFilter, setDomainFilter] = useState([]);
-    const [attributeFilter, setAttributeFilter] = useState([]);
+    const [typeFilter, setTypeFilter] = useState<string[]>([]);
+    const [actionFilter, setActionFilter] = useState<string[]>([]);
+    const [domainFilter, setDomainFilter] = useState<string[]>([]);
+    const [attributeFilter, setAttributeFilter] = useState<string[]>([]);
 
     // Search functionality
     const searchFilter = useSearchFilter();
@@ -88,21 +88,22 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Show storage detail modal
      */
-    const showValueModal = (entry: StorageRecord) => {
-        setSelectedEntry(entry);
+    const showValueModal = (entry: Record<string, unknown>) => {
+        setSelectedEntry(entry as StorageRecord);
         setValueModalVisible(true);
     };
 
     /**
      * Extract searchable fields from storage record
      */
-    const extractSearchableFields = (storageRecord: StorageRecord) => {
+    const extractSearchableFields = (record: Record<string, unknown>) => {
+        const storageRecord = record as StorageRecord;
         return [
             storageRecord.name.toLowerCase(),
             storageRecord.domain.toLowerCase(),
             formatValue(storageRecord.value).toLowerCase(),
             formatValue(storageRecord.oldValue).toLowerCase(),
-            (storageRecord.metadata?.url || '').toLowerCase()
+            ((storageRecord.metadata?.url as string) || '').toLowerCase()
         ];
     };
 
@@ -359,7 +360,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
             <StorageDetailModal
                 visible={valueModalVisible}
-                selectedEntry={selectedEntry}
+                selectedEntry={selectedEntry as Parameters<typeof StorageDetailModal>[0]['selectedEntry']}
                 onClose={() => setValueModalVisible(false)}
                 messageApi={messageApi}
             />
