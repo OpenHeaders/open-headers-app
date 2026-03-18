@@ -21,14 +21,14 @@ test.beforeAll(async () => {
 
     app = await electron.launch({
         args: [
-            path.join(__dirname, '..'),
-            // Allow multiple instances for testing (bypass requestSingleInstanceLock)
-            '--allow-multiple-instances',
+            // Point to project root (Electron loads package.json → main field)
+            path.join(__dirname, '..', '..'),
         ],
         env: {
             ...process.env,
             NODE_ENV: 'development',
-            // Use a separate userData dir so tests don't interfere with dev instance
+            // Isolate test userData so single-instance lock doesn't conflict
+            // with a running dev/prod instance (main.ts reads this before the lock)
             ELECTRON_USER_DATA_DIR: path.join(__dirname, '..', '.e2e-userdata'),
         },
         timeout: 60000,
@@ -58,7 +58,11 @@ test.describe('App Launch', () => {
     });
 
     test('window has reasonable dimensions', async () => {
-        const { width, height } = page.viewportSize() || { width: 0, height: 0 };
+        // Use evaluate to get actual window dimensions (viewportSize() returns null for Electron)
+        const { width, height } = await page.evaluate(() => ({
+            width: window.innerWidth,
+            height: window.innerHeight,
+        }));
         expect(width).toBeGreaterThan(800);
         expect(height).toBeGreaterThan(500);
     });

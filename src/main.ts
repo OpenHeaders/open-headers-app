@@ -33,6 +33,13 @@ let mainWindow: any = null;
 
 // Windows focus helper is initialized and will handle focus enhancement automatically
 
+// Allow E2E tests to use an isolated userData dir so the single-instance lock
+// doesn't conflict with a running dev/prod instance. This must happen BEFORE
+// requestSingleInstanceLock() because Electron scopes the lock to userData.
+if (process.env.ELECTRON_USER_DATA_DIR) {
+    app.setPath('userData', process.env.ELECTRON_USER_DATA_DIR);
+}
+
 // Ensure only one instance runs at a time
 const gotTheLock = app.requestSingleInstanceLock();
 
