@@ -9,12 +9,12 @@ const { Text } = Typography;
  */
 interface EnvironmentInfo {
     varCount: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface ImportEnvironmentSelectorProps {
-    selectedItems: { environments?: boolean; [key: string]: any };
-    combinedEnvInfo: { hasEnvironments: boolean; [key: string]: any };
+    selectedItems: { environments?: boolean; [key: string]: unknown };
+    combinedEnvInfo: { hasEnvironments: boolean; [key: string]: unknown };
     availableEnvironments: Record<string, EnvironmentInfo>;
     selectedEnvironments: Record<string, boolean>;
     onEnvironmentSelectionChange: (envName: string, checked: boolean) => void;

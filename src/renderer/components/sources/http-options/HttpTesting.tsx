@@ -40,7 +40,7 @@ interface HttpTestHandlerParams {
     getTotpStateFromForm: () => TotpState;
     getCooldownSeconds: (sourceId: string) => number;
     checkIfRequestUsesTotp: (url: string, method: string, requestOptions: Record<string, unknown>) => boolean;
-    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; resolveTemplate: (text: string) => string; [key: string]: any };
+    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; resolveTemplate: (text: string) => string; [key: string]: unknown };
     http: { testRequest: (url: string, method: string, requestOptions: Record<string, any>, jsonFilter: { enabled: boolean; path: string }, sourceId: string, progressCallback: ((progress: number) => void) | null, cleanupCallback: (() => void) | null) => Promise<string> };
     setTesting: (testing: boolean) => void;
     onTestingChange?: (testing: boolean) => void;

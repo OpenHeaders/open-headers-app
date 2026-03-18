@@ -6,7 +6,7 @@ interface EnvironmentCoreState {
   activeEnvironment: string;
   isLoading: boolean;
   isReady: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UseEnvironmentCoreReturn extends EnvironmentCoreState {

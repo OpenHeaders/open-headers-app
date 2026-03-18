@@ -21,7 +21,7 @@ interface EnvironmentSchema {
 interface ExportOptions {
   environmentOption?: string;
   selectedEnvironments?: string[];
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ImportOptions {

@@ -53,7 +53,7 @@ interface HttpOptionsRef {
 interface FormSubmissionParams {
     setSubmitting: (submitting: boolean) => void;
     form: FormInstance;
-    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; [key: string]: any };
+    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; [key: string]: unknown };
     onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
     untrackTotpSecret: (sourceId: string) => void;
     testSourceId: string;

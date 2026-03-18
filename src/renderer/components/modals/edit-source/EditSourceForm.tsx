@@ -11,7 +11,7 @@ const log = createLogger('EditSourceForm');
 interface EditSourceFormProps {
     form: FormInstance;
     source: { sourceId: string; [key: string]: unknown };
-    envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string>; activeEnvironment: string; [key: string]: any };
+    envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string>; activeEnvironment: string; [key: string]: unknown };
     totpEnabled: boolean;
     totpSecret: string;
     refreshNow: boolean;
