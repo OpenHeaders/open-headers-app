@@ -13,7 +13,8 @@ const recentMessages = new Set();
 /**
  * MessageProvider component that provides a global message API
  */
-export const MessageProvider = ({ children }) => {
+interface MessageProviderProps { children: React.ReactNode; }
+export const MessageProvider = ({ children }: MessageProviderProps) => {
     // Get message API from Ant Design
     const [messageApi, contextHolder] = message.useMessage();
 

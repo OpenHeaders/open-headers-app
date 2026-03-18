@@ -25,7 +25,8 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
  * @param {Function} props.validateVariableExists - Variable validation function
  * @returns {JSX.Element} Headers tab component
  */
-const HttpHeadersTab = ({ validateVariableExists }) => {
+interface HttpHeadersTabProps { validateVariableExists: (value: string) => { valid: boolean; error?: string }; }
+const HttpHeadersTab = ({ validateVariableExists }: HttpHeadersTabProps) => {
     return (
         <Form.List name={['requestOptions', 'headers']}>
             {(fields, { add, remove }) => (

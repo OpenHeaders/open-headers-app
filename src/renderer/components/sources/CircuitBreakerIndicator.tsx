@@ -23,7 +23,8 @@ import {
  * @param {boolean} props.showDetails - Whether to show detailed information
  * @returns {JSX.Element|null} Circuit breaker indicator or null if not applicable
  */
-const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }) => {
+interface CircuitBreakerIndicatorProps { circuitBreaker: { state: string; isOpen: boolean; timeUntilNextAttempt?: number; consecutiveOpenings?: number; failureCount: number } | null; showDetails?: boolean; }
+const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: CircuitBreakerIndicatorProps) => {
   if (!circuitBreaker) {
     return null;
   }
@@ -147,7 +148,8 @@ function getBackoffExplanation(openings) {
  * CircuitBreakerStatus - Inline status for source tables
  * Shows a compact indicator that can be used in table cells
  */
-export const CircuitBreakerStatus = ({ refreshStatus }) => {
+interface CircuitBreakerStatusProps { refreshStatus: { circuitBreaker?: { isOpen: boolean; timeUntilNextAttempt?: number } } | null; }
+export const CircuitBreakerStatus = ({ refreshStatus }: CircuitBreakerStatusProps) => {
   if (!refreshStatus?.circuitBreaker || !refreshStatus.circuitBreaker.isOpen) {
     return null;
   }

@@ -5,7 +5,8 @@ import ConnectionsServer from '../connections/ConnectionsServer';
 import ProxyServer from '../proxy/ProxyServer';
 import CliServer from '../cli/CliServer';
 
-const ServerConfig = ({ activeParentTab }) => {
+interface ServerConfigProps { activeParentTab: string; }
+const ServerConfig = ({ activeParentTab }: ServerConfigProps) => {
     const [activeTab, setActiveTab] = useState('websocket');
 
     const items = [

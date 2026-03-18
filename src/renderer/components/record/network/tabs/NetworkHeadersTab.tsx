@@ -10,10 +10,11 @@
  */
 import React from 'react';
 import { Space, Typography } from 'antd';
+import type { NetworkRecord, GlobalToken } from '../types';
 
 const { Text } = Typography;
 
-interface NetworkHeadersTabProps { request: Record<string, unknown>; token: Record<string, unknown>; }
+interface NetworkHeadersTabProps { request: NetworkRecord; token: GlobalToken; }
 const NetworkHeadersTab = ({ request, token }: NetworkHeadersTabProps) => {
     const renderHeaderSection = (title: string, headers: Record<string, string>) => {
         if (!headers || Object.keys(headers).length === 0) return null;

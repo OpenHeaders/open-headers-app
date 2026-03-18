@@ -11,7 +11,8 @@ const { Text, Title } = Typography;
  * @param {string} exportPurpose - Current export purpose ('team' or 'backup')
  * @param {function} onPurposeChange - Handler for purpose selection changes
  */
-const ExportPurposeSelector = ({ exportPurpose, onPurposeChange }) => {
+interface ExportPurposeSelectorProps { exportPurpose: string; onPurposeChange: (purpose: string) => void; }
+const ExportPurposeSelector = ({ exportPurpose, onPurposeChange }: ExportPurposeSelectorProps) => {
     return (
         <div>
             <Title level={5} style={{ marginBottom: 12 }}>Export Purpose</Title>

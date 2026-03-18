@@ -7,7 +7,9 @@ import BrowserConnectionStatus from '../status/BrowserConnectionStatus';
 const { Footer } = Layout;
 const { Text } = Typography;
 
-export function AppFooter({ appVersion, theme, debugComponents }) {
+import type { GlobalToken } from 'antd/es/theme/interface';
+interface AppFooterProps { appVersion: string; theme: GlobalToken; debugComponents: React.ReactNode; }
+export function AppFooter({ appVersion, theme, debugComponents }: AppFooterProps) {
   return (
     <Footer className="app-footer" style={{
       padding: '8px 24px',

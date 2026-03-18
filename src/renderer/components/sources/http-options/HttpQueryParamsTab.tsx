@@ -25,7 +25,8 @@ import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
  * @param {Function} props.validateVariableExists - Variable validation function
  * @returns {JSX.Element} Query parameters tab component
  */
-const HttpQueryParamsTab = ({ validateVariableExists }) => {
+interface HttpQueryParamsTabProps { validateVariableExists: (value: string) => { valid: boolean; error?: string }; }
+const HttpQueryParamsTab = ({ validateVariableExists }: HttpQueryParamsTabProps) => {
     return (
         <Form.List name={['requestOptions', 'queryParams']}>
             {(fields, { add, remove }) => (

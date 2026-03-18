@@ -12,8 +12,10 @@
 import React, { useMemo } from 'react';
 import { Dropdown, Button, Tooltip, Checkbox } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
+import type { GlobalToken } from './types';
 
-interface NetworkBodyFiltersProps { bodyFilters: { hasRequestBody: boolean; hasResponseBody: boolean }; onBodyFiltersChange: (filters: { hasRequestBody: boolean; hasResponseBody: boolean }) => void; token: Record<string, unknown>; }
+interface BodyFilters { hasRequestBody: boolean; hasResponseBody: boolean; }
+interface NetworkBodyFiltersProps { bodyFilters: BodyFilters; onBodyFiltersChange: (filters: BodyFilters | ((prev: BodyFilters) => BodyFilters)) => void; token: GlobalToken; }
 const NetworkBodyFilters = ({ bodyFilters, onBodyFiltersChange, token }: NetworkBodyFiltersProps) => {
     // Check if body filters are active
     const isBodyFilterActive = bodyFilters.hasRequestBody || bodyFilters.hasResponseBody;

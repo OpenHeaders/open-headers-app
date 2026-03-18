@@ -50,6 +50,7 @@ interface StorageRecord {
 interface RecordData {
     storage: StorageRecord[];
     startTime?: number;
+    [key: string]: unknown;
 }
 
 interface RecordStorageTabProps {

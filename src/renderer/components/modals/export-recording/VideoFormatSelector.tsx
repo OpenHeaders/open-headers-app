@@ -25,7 +25,8 @@ const { useToken } = theme;
  * @param {function} onVideoFormatChange - Callback function when format selection changes
  * @param {boolean} isExporting - Whether export process is active (disables format selection)
  */
-const VideoFormatSelector = ({ videoFormat, onVideoFormatChange, isExporting }) => {
+interface VideoFormatSelectorProps { videoFormat: string; onVideoFormatChange: (format: string) => void; isExporting: boolean; }
+const VideoFormatSelector = ({ videoFormat, onVideoFormatChange, isExporting }: VideoFormatSelectorProps) => {
     const { token } = useToken();
     return (
         <div style={{ 

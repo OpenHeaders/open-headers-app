@@ -26,7 +26,17 @@ import DomainSection from './DomainSection';
 import EnvVarInfo from './EnvVarInfo';
 import { buildHeaderValue, parseHeaderValue } from './utils';
 
-const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }) => {
+interface HeaderRuleValues {
+    headerName?: string;
+    headerValue?: string;
+    cookieName?: string;
+    cookieValue?: string;
+    tag?: string;
+    domains?: string[];
+    [key: string]: unknown;
+}
+interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: Record<string, unknown>) => void; initialValues: HeaderRuleValues | null; }
+const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: UnifiedHeaderModalProps) => {
     const [form] = Form.useForm();
     const envContext = useEnvironments();
     const { token } = theme.useToken();

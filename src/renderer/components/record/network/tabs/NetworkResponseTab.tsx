@@ -10,10 +10,11 @@
  */
 import React from 'react';
 import { Space, Typography } from 'antd';
+import type { NetworkRecord, GlobalToken } from '../types';
 
 const { Text } = Typography;
 
-interface NetworkResponseTabProps { request: Record<string, unknown>; token: Record<string, unknown>; }
+interface NetworkResponseTabProps { request: NetworkRecord; token: GlobalToken; }
 const NetworkResponseTab = ({ request, token }: NetworkResponseTabProps) => {
     if (!request.responseBody) {
         return (

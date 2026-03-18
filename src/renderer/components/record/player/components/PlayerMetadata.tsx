@@ -16,7 +16,15 @@ import { formatDuration, format24HTimeWithMs } from '../../../../utils';
 
 const { Text } = Typography;
 
-const PlayerMetadata = ({ record, hasVideo }) => {
+interface PlayerMetadataProps {
+    record: {
+        metadata?: { startTime?: number; timestamp?: number; url?: string; duration?: number; viewport?: { width: number; height: number } };
+        events?: unknown[];
+        [key: string]: unknown;
+    } | null;
+    hasVideo: boolean;
+}
+const PlayerMetadata = ({ record, hasVideo }: PlayerMetadataProps) => {
     if (!record || hasVideo) return null;
 
     const startTime = new Date(record.metadata?.startTime || record.metadata?.timestamp || Date.now());

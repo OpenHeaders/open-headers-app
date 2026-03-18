@@ -24,39 +24,16 @@ import NetworkFilterTags from './NetworkFilterTags';
 import NetworkRequestCell from './NetworkRequestCell';
 import NetworkStatusCell from './NetworkStatusCell';
 import VirtualizedFilterableTable from '../../common/virtualized-table/VirtualizedFilterableTable';
-import { 
-    getTypeFromRecord, 
-    getUniqueTypes, 
-    getUniqueStatusGroups, 
-    getUniqueMethods 
+import {
+    getTypeFromRecord,
+    getUniqueTypes,
+    getUniqueStatusGroups,
+    getUniqueMethods
 } from './NetworkTypeUtils';
 import { createStandardTableProps } from '../shared';
+import type { NetworkRecord, RecordData } from './types';
 
 const { Text } = Typography;
-
-interface NetworkRecord {
-    id: string;
-    url: string;
-    method: string;
-    status: number;
-    timestamp: number;
-    endTime?: number;
-    duration?: number;
-    size?: number;
-    responseSize?: number;
-    type?: string;
-    error?: boolean;
-    requestHeaders?: Record<string, string>;
-    responseHeaders?: Record<string, string>;
-    requestBody?: string | Record<string, unknown>;
-    responseBody?: string | Record<string, unknown>;
-    key?: string;
-}
-
-interface RecordData {
-    network: NetworkRecord[];
-    startTime?: number;
-}
 
 interface RecordNetworkTabProps {
     record: RecordData;

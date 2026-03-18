@@ -12,10 +12,11 @@
 import React from 'react';
 import { Typography } from 'antd';
 import { getDisplayName } from './utils/urlUtils';
+import type { NetworkRecord, GlobalToken } from './types';
 
 const { Text } = Typography;
 
-interface NetworkRequestCellProps { url: string; record: Record<string, unknown>; token: Record<string, unknown>; }
+interface NetworkRequestCellProps { url: string; record: NetworkRecord; token: GlobalToken; }
 const NetworkRequestCell = ({ url, record, token }: NetworkRequestCellProps) => {
     const displayName = getDisplayName(url, 'index');
 

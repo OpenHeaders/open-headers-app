@@ -4,7 +4,8 @@ import { formatDuration, format24HTimeWithMs } from '../../../utils';
 
 const { Text } = Typography;
 
-export const RecordInfoTab = ({ record }) => {
+interface RecordInfoTabProps { record: { metadata?: { startTime: number; duration?: number; url?: string; title?: string; userAgent?: string; recordId?: string; viewport?: { width: number; height: number } }; events?: unknown[]; console?: unknown[]; network?: unknown[]; storage?: { localStorage?: unknown[]; sessionStorage?: unknown[]; cookies?: unknown[] }; [key: string]: unknown }; }
+export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
     if (!record?.metadata) return null;
 
     const { metadata } = record;

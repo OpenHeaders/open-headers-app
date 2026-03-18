@@ -12,7 +12,8 @@ import { CliServerControls, CliServerLogs } from './components';
  * @param {boolean} props.active - Whether this tab is currently visible
  * @returns {JSX.Element} CLI server management interface
  */
-const CliServer = ({ active }) => {
+interface CliServerProps { active: boolean; }
+const CliServer = ({ active }: CliServerProps) => {
     const {
         // State
         status,

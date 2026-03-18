@@ -12,7 +12,8 @@ import { useSettings } from '../../contexts';
  * @param {boolean} props.active - Whether this tab is currently visible
  * @returns {JSX.Element} Connections management interface
  */
-const ConnectionsServer = ({ active }) => {
+interface ConnectionsServerProps { active: boolean; }
+const ConnectionsServer = ({ active }: ConnectionsServerProps) => {
     const { status } = useConnectionsServer({ active });
     const { settings } = useSettings();
 

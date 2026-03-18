@@ -19,7 +19,8 @@ const { Text } = Typography;
  * @param {function|undefined} onAdd - Optional callback for adding first rule
  * @returns {JSX.Element} Empty state component
  */
-const ProxyRuleTableEmpty = ({ onAdd }) => (
+interface ProxyRuleTableEmptyProps { onAdd?: () => void; }
+const ProxyRuleTableEmpty = ({ onAdd }: ProxyRuleTableEmptyProps) => (
     <Empty
         description="No proxy rules yet"
         image={Empty.PRESENTED_IMAGE_SIMPLE}

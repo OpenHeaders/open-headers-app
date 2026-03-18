@@ -70,7 +70,8 @@ const { Option } = Select;
  * @param {Function} props.onAddSource - Callback function for adding new sources
  * @returns {JSX.Element} Source form component
  */
-const SourceForm = ({ onAddSource }) => {
+interface SourceFormProps { onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>; }
+const SourceForm = ({ onAddSource }: SourceFormProps) => {
     // Form and component state
     const [form] = Form.useForm();
     const [sourceType, setSourceType] = useState('file');

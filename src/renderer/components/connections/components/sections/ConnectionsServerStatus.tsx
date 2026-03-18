@@ -15,7 +15,18 @@ const { Title, Text } = Typography;
  * @param {boolean} tutorialMode - Whether to show educational content
  * @returns {JSX.Element} Server status card
  */
-const ConnectionsServerStatus = ({ status, tutorialMode }) => {
+interface ConnectionsServerStatus {
+    wsServerRunning?: boolean;
+    wssServerRunning?: boolean;
+    wsPort?: number;
+    wssPort?: number;
+    certificateFingerprint?: string;
+    certificatePath?: string;
+    certificateSubject?: string;
+    certificateExpiry?: string;
+}
+interface ConnectionsServerStatusProps { status: ConnectionsServerStatus; tutorialMode: boolean; }
+const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStatusProps) => {
     const { message } = App.useApp();
     const [fingerprintCopied, setFingerprintCopied] = useState(false);
     const [pathCopied, setPathCopied] = useState(false);

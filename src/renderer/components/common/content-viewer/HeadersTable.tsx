@@ -33,7 +33,8 @@ const { Text } = Typography;
  * @example
  * <HeadersTable headers={{'Content-Type': 'application/json', 'Accept': 'text/html'}} />
  */
-export function HeadersTable({ headers, className = "headers-table" }) {
+interface HeadersTableProps { headers: Record<string, string> | null; className?: string; }
+export function HeadersTable({ headers, className = "headers-table" }: HeadersTableProps) {
     const { token } = theme.useToken();
 
     // Transform headers object into table-compatible data structure

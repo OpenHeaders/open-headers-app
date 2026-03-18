@@ -72,7 +72,7 @@ const VirtualizedSimpleTable = forwardRef(({
   ...restProps
 }: VirtualizedSimpleTableProps, ref) => {
   // Row renderer for react-window virtualization
-  const Row = useCallback(({ index, style }) => {
+  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const record = dataSource[index];
     const key = typeof rowKey === 'function' ? rowKey(record) : record[rowKey];
     

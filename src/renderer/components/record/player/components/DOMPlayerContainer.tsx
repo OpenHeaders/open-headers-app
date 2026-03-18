@@ -11,8 +11,9 @@
  */
 
 import React from 'react';
+import type { GlobalToken } from 'antd/es/theme/interface';
 
-interface DOMPlayerContainerProps { playerContainerRef: React.RefObject<HTMLDivElement>; token: Record<string, unknown>; viewMode: string; }
+interface DOMPlayerContainerProps { playerContainerRef: React.RefObject<HTMLDivElement>; token: GlobalToken; viewMode: string; }
 const DOMPlayerContainer = ({ playerContainerRef, token, viewMode }: DOMPlayerContainerProps) => {
     if (viewMode !== 'dom') return null;
 
