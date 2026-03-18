@@ -10,13 +10,10 @@ const { createLogger } = mainLogger;
 const fsPromises = fs.promises;
 
 // Lazy-loaded to avoid circular dependencies at startup
-const getLazyDeps = () => ({
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    appLifecycle: require('../../main/modules/app/lifecycle').default,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    proxyService: require('../proxy/ProxyService').default,
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    webSocketService: require('../websocket/ws-service').default,
+const getLazyDeps = async () => ({
+    appLifecycle: (await import('../../main/modules/app/lifecycle')).default,
+    proxyService: (await import('../proxy/ProxyService')).default,
+    webSocketService: (await import('../websocket/ws-service')).default,
 });
 
 const log = createLogger('CliSetup');
@@ -50,7 +47,7 @@ class CliSetupHandler {
     }
 
     async joinWorkspace(data: JoinWorkspaceData): Promise<{ success: boolean; workspaceId?: string; error?: string }> {
-        const { appLifecycle, proxyService, webSocketService } = getLazyDeps();
+        const { appLifecycle, proxyService, webSocketService } = await getLazyDeps();
         const gitSyncService = appLifecycle.getGitSyncService();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
 
@@ -160,7 +157,7 @@ class CliSetupHandler {
     }
 
     async importEnvironment(data: any): Promise<{ success: boolean; error?: string }> {
-        const { appLifecycle, proxyService } = getLazyDeps();
+        const { appLifecycle, proxyService } = await getLazyDeps();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
         if (!workspaceSettingsService) {
             return { success: false, error: 'Services not ready' };
@@ -242,7 +239,7 @@ class CliSetupHandler {
     }
 
     async _loadWorkspaceIntoServices(workspaceId: string): Promise<void> {
-        const { proxyService } = getLazyDeps();
+        const { proxyService } = await getLazyDeps();
         const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
 
         try {

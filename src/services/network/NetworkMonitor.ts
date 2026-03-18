@@ -160,7 +160,7 @@ class NetworkMonitor extends EventEmitter {
         log.info('Initializing comprehensive network monitoring...');
 
         // Create platform-specific monitor
-        this.platformMonitor = this.createPlatformMonitor();
+        this.platformMonitor = await this.createPlatformMonitor();
 
         // Perform initial check
         await this.performComprehensiveCheck();
@@ -171,9 +171,8 @@ class NetworkMonitor extends EventEmitter {
         return this.state;
     }
 
-    createPlatformMonitor(): EventEmitter & { start(): void; stop(): void; removeAllListeners(): any } {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const PlatformMonitors = require('./PlatformMonitors');
+    async createPlatformMonitor(): Promise<EventEmitter & { start(): void; stop(): void; removeAllListeners(): EventEmitter }> {
+        const PlatformMonitors = await import('./PlatformMonitors');
 
         switch (process.platform) {
             case 'darwin':

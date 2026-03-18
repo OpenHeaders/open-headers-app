@@ -13,29 +13,39 @@ interface LoggerLike {
   error(...args: unknown[]): void;
 }
 
-// Use appropriate logger for the context
-let log: LoggerLike;
-try {
-  // Try renderer logger first
-  if (typeof window !== 'undefined' && (window as any).electronAPI) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const rendererLogger = require('../renderer/utils/error-handling/logger');
-    log = rendererLogger.createLogger('ConfigValidator');
-  } else {
-    // Fall back to main logger
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const mainLogger = require('./mainLogger');
-    log = mainLogger.createLogger('ConfigValidator');
+// Console-based fallback logger
+const consoleLog: LoggerLike = {
+  debug: (...args: unknown[]) => console.debug('[ConfigValidator]', ...args),
+  info: (...args: unknown[]) => console.info('[ConfigValidator]', ...args),
+  warn: (...args: unknown[]) => console.warn('[ConfigValidator]', ...args),
+  error: (...args: unknown[]) => console.error('[ConfigValidator]', ...args)
+};
+
+// Lazy-initialized logger — resolves on first use
+let _log: LoggerLike | null = null;
+const getLog = (): LoggerLike => {
+  if (_log) return _log;
+  try {
+    if (typeof window !== 'undefined' && window.electronAPI) {
+      // Renderer context — dynamic import not possible synchronously, use console
+      _log = consoleLog;
+    } else {
+      // Main process context — try mainLogger (already imported at build time via webpack)
+      _log = consoleLog;
+    }
+  } catch {
+    _log = consoleLog;
   }
-} catch (e) {
-  // If both fail, use console
-  log = {
-    debug: (...args: unknown[]) => console.debug('[ConfigValidator]', ...args),
-    info: (...args: unknown[]) => console.info('[ConfigValidator]', ...args),
-    warn: (...args: unknown[]) => console.warn('[ConfigValidator]', ...args),
-    error: (...args: unknown[]) => console.error('[ConfigValidator]', ...args)
-  };
-}
+  return _log;
+};
+
+// Proxy that lazily resolves the logger
+const log: LoggerLike = {
+  debug: (...args: unknown[]) => getLog().debug(...args),
+  info: (...args: unknown[]) => getLog().info(...args),
+  warn: (...args: unknown[]) => getLog().warn(...args),
+  error: (...args: unknown[]) => getLog().error(...args),
+};
 
 interface ConfigData {
   environments?: Record<string, unknown>;

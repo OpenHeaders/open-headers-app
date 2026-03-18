@@ -245,9 +245,8 @@ if (!gotTheLock) {
         });
 
         // Runtime updates
-        ipcMain.on('updateWebSocketSources', (event: any, sources: any[]) => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const webSocketService = require('./services/websocket/ws-service').default;
+        ipcMain.on('updateWebSocketSources', async (event: any, sources: any[]) => {
+            const webSocketService = (await import('./services/websocket/ws-service')).default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
                 log.info(`Main: Sources with content: ${sources.filter((s: any) => s.sourceContent).length}`);
@@ -258,15 +257,13 @@ if (!gotTheLock) {
             webSocketService.updateSources(sources);
         });
 
-        ipcMain.on('proxy-update-source', (_: any, sourceId: string, value: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const proxyService = require('./services/proxy/ProxyService').default;
+        ipcMain.on('proxy-update-source', async (_: any, sourceId: string, value: any) => {
+            const proxyService = (await import('./services/proxy/ProxyService')).default;
             proxyService.updateSource(sourceId, value);
         });
 
-        ipcMain.on('proxy-update-sources', (_: any, sources: any[]) => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const proxyService = require('./services/proxy/ProxyService').default;
+        ipcMain.on('proxy-update-sources', async (_: any, sources: any[]) => {
+            const proxyService = (await import('./services/proxy/ProxyService')).default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
             }
@@ -278,8 +275,7 @@ if (!gotTheLock) {
 
         // Environment events - notify WebSocket service when environments change
         ipcMain.on('environment-switched', async (event: any, data: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const proxyService = require('./services/proxy/ProxyService').default;
+            const proxyService = (await import('./services/proxy/ProxyService')).default;
             log.info('Environment switched, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
@@ -309,9 +305,8 @@ if (!gotTheLock) {
             // Rules re-broadcast is handled by ws-environment-handler's IPC listener
         });
 
-        ipcMain.on('environment-variables-changed', (event: any, data: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const proxyService = require('./services/proxy/ProxyService').default;
+        ipcMain.on('environment-variables-changed', async (event: any, data: any) => {
+            const proxyService = (await import('./services/proxy/ProxyService')).default;
             log.info('Environment variables changed, notifying proxy service');
             // Update proxy service with new environment variables
             if (data && data.variables) {
@@ -443,12 +438,9 @@ if (!gotTheLock) {
         // Initialize global shortcuts
         await globalShortcuts.initialize(app);
 
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { AppStateMachine } = require('./services/core/AppStateMachine');
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const proxyService = require('./services/proxy/ProxyService').default;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const webSocketService = require('./services/websocket/ws-service').default;
+        const { AppStateMachine } = await import('./services/core/AppStateMachine');
+        const proxyService = (await import('./services/proxy/ProxyService')).default;
+        const webSocketService = (await import('./services/websocket/ws-service')).default;
 
         AppStateMachine.serversReady({
             proxy: proxyService.getStatus(),
