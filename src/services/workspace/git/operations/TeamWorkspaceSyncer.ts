@@ -562,8 +562,7 @@ class TeamWorkspaceSyncer {
 
     for (const pattern of possiblePaths) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const glob = require('glob');
+        const glob = (await import('glob')).default;
         const files: string[] = await new Promise((resolve, reject) => {
           glob(pattern, { cwd: repoDir }, (err: Error | null, matchedFiles: string[]) => {
             if (err) reject(err);

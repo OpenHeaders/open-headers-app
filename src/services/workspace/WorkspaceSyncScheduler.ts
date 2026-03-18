@@ -1105,8 +1105,7 @@ class WorkspaceSyncScheduler {
       // Notify WebSocket service to update browser extensions.
       // Skip when nothing changed to avoid redundant messages on every periodic sync.
       if (broadcastToExtensions) {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const webSocketService = require('../websocket/ws-service').default;
+        const webSocketService = (await import('../websocket/ws-service')).default;
         if (webSocketService && webSocketService.updateSources) {
           // Update sources -- use mergedSources (which preserves local sourceContent)
           // instead of data.sources (raw Git config without execution data).
@@ -1129,8 +1128,7 @@ class WorkspaceSyncScheduler {
 
       // Reload proxy rules if they were imported
       if (data.proxyRules && Array.isArray(data.proxyRules) && data.proxyRules.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const proxyService = require('../proxy/ProxyService').default;
+        const proxyService = (await import('../proxy/ProxyService')).default;
         // Only reload if this is the current workspace
         if (proxyService.ruleStore && proxyService.ruleStore.currentWorkspaceId === workspaceId) {
           await proxyService.ruleStore.load();
