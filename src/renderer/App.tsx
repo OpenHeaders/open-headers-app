@@ -11,6 +11,47 @@ import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
 import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
 import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
 
+/** Initial action to perform when settings modal opens */
+interface SettingsAction {
+    action: string;
+    value: unknown;
+}
+
+/** Data for a team workspace invite */
+interface InviteData {
+    workspaceName: string;
+    repoUrl: string;
+    inviterName?: string;
+    description?: string;
+    [key: string]: unknown;
+}
+
+/** Data for environment config import via protocol links */
+interface EnvironmentConfigData {
+    [key: string]: unknown;
+}
+
+/** Partial settings for saving */
+interface PartialSettings {
+    launchAtLogin?: boolean;
+    hideOnLaunch?: boolean;
+    showDockIcon?: boolean;
+    showStatusBarIcon?: boolean;
+    theme?: string;
+    autoStartProxy?: boolean;
+    proxyCacheEnabled?: boolean;
+    videoRecording?: boolean;
+    videoQuality?: string;
+    autoHighlightTableEntries?: boolean;
+    autoScrollTableEntries?: boolean;
+    compactMode?: boolean;
+    tutorialMode?: boolean;
+    developerMode?: boolean;
+    recordingHotkey?: string;
+    logLevel?: string;
+    [key: string]: string | boolean | undefined;
+}
+
 const AppComponent: React.FC = () => {
     // Core hooks
     const {
@@ -72,10 +113,10 @@ const AppComponent: React.FC = () => {
     // Component state
     const [settingsVisible, setSettingsVisible] = useState(false);
     const [settingsInitialTab, setSettingsInitialTab] = useState<string | null>(null);
-    const [settingsAction, setSettingsAction] = useState<any>(null);
+    const [settingsAction, setSettingsAction] = useState<SettingsAction | null>(null);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState('record-viewer');
-    const [currentRecord, setCurrentRecord] = useState<any>(null);
+    const [currentRecord, setCurrentRecord] = useState<Record<string, unknown> | null>(null);
     const [recordPlaybackTime, setRecordPlaybackTime] = useState(0);
     const [autoHighlight, setAutoHighlight] = useState(
         settings?.autoHighlightTableEntries !== undefined ? settings.autoHighlightTableEntries : false
@@ -85,10 +126,10 @@ const AppComponent: React.FC = () => {
 
     // Team workspace invite processing
     const [inviteModalVisible, setInviteModalVisible] = useState(false);
-    const [inviteData, setInviteData] = useState<any>(null);
+    const [inviteData, setInviteData] = useState<InviteData | null>(null);
 
     // Environment import data for protocol links
-    const [preloadedEnvData, setPreloadedEnvData] = useState<any>(null);
+    const [preloadedEnvData, setPreloadedEnvData] = useState<EnvironmentConfigData | null>(null);
 
     // Update autoHighlight when settings change
     useEffect(() => {
@@ -172,7 +213,7 @@ const AppComponent: React.FC = () => {
         setSettingsAction(null); // Reset action
     }, []);
 
-    const handleSettingsSave = useCallback(async (newSettings: any) => {
+    const handleSettingsSave = useCallback(async (newSettings: PartialSettings) => {
         const success = await saveSettings(newSettings);
         if (success) {
             setSettingsVisible(false);
@@ -211,7 +252,7 @@ const AppComponent: React.FC = () => {
     }, []);
 
     // Handle environment config import
-    const handleEnvironmentConfigImport = useCallback(async (envData: any) => {
+    const handleEnvironmentConfigImport = useCallback(async (envData: EnvironmentConfigData) => {
         if (envData) {
             try {
                 setPreloadedEnvData(envData);
@@ -219,43 +260,43 @@ const AppComponent: React.FC = () => {
                 setTimeout(() => {
                     showImportModal();
                 }, 100);
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('Failed to process environment config:', error);
-                showMessage('error', `Failed to process environment configuration: ${error.message}`);
+                showMessage('error', `Failed to process environment configuration: ${error instanceof Error ? error.message : String(error)}`);
             }
         }
     }, [showImportModal]);
 
     // Signal to main process that renderer is ready (once)
     useEffect(() => {
-        (window as any).electronAPI?.signalRendererReady?.();
+        window.electronAPI?.signalRendererReady?.();
     }, []);
 
     // Listen for team workspace invite and environment import events
     useEffect(() => {
-        const handleTeamWorkspaceInvite = (inviteData: any) => {
+        const handleTeamWorkspaceInvite = (inviteRaw: Record<string, unknown>) => {
             try {
-                if (!inviteData.workspaceName || !inviteData.repoUrl) {
+                if (!inviteRaw.workspaceName || !inviteRaw.repoUrl) {
                     throw new Error('Invalid invite data structure');
                 }
 
-                setInviteData(inviteData);
+                setInviteData(inviteRaw as unknown as InviteData);
                 setInviteModalVisible(true);
                 setActiveTab('workspaces');
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error('Error processing invite:', error);
-                showMessage('error', `Invalid invite: ${error.message}`);
+                showMessage('error', `Invalid invite: ${error instanceof Error ? error.message : String(error)}`);
             }
         };
 
-        const handleErrorMessage = (errorData: any) => {
-            showMessage('error', errorData.message);
+        const handleErrorMessage = (errorData: Record<string, unknown>) => {
+            showMessage('error', String(errorData.message));
         };
 
         // Set up event listeners
-        const cleanupInviteListener = (window as any).electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
-        const cleanupErrorListener = (window as any).electronAPI?.onShowErrorMessage?.(handleErrorMessage);
-        const cleanupEnvImportListener = (window as any).electronAPI?.onProcessEnvironmentConfigImport?.((envData: any) => {
+        const cleanupInviteListener = window.electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
+        const cleanupErrorListener = window.electronAPI?.onShowErrorMessage?.(handleErrorMessage);
+        const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData: Record<string, unknown>) => {
             handleEnvironmentConfigImport(envData);
         });
 

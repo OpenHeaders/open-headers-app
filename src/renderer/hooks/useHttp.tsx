@@ -10,13 +10,32 @@ interface JsonFilter {
   path?: string;
 }
 
+interface HeaderEntry {
+  key: string;
+  value?: string;
+}
+
+interface QueryParamEntry {
+  key: string;
+  value?: string;
+}
+
 interface RequestOptions {
-  headers?: any;
-  queryParams?: any;
-  body?: any;
+  headers?: HeaderEntry[] | Record<string, string>;
+  queryParams?: QueryParamEntry[] | Record<string, string>;
+  body?: string | Record<string, unknown>;
   contentType?: string;
   totpSecret?: string;
-  [key: string]: any;
+  [key: string]: unknown;
+}
+
+interface FormattedRequestOptions {
+  headers: Record<string, string>;
+  queryParams: Record<string, string>;
+  body?: string | Record<string, unknown>;
+  contentType: string;
+  totpSecret?: string;
+  [key: string]: unknown;
 }
 
 interface HttpResult {
@@ -27,6 +46,27 @@ interface HttpResult {
   filteredWith?: string;
   isFiltered?: boolean;
   duration?: number;
+}
+
+interface HttpErrorWithResponse extends Error {
+  statusCode?: number;
+  response?: {
+    statusCode?: number;
+    body?: string;
+    headers?: Record<string, string>;
+  };
+  isCooldownError?: boolean;
+  cooldownSeconds?: number;
+  originalError?: Error;
+}
+
+interface ParsedResponse {
+  statusCode?: number;
+  body?: string;
+  headers?: Record<string, string>;
+  error?: string;
+  error_description?: string;
+  message?: string;
 }
 
 interface UseHttpReturn {
@@ -46,7 +86,7 @@ interface UseHttpReturn {
     sourceId?: string | null,
     progressCallback?: ((loaded: number, total: number) => void) | null
   ) => Promise<string>;
-  applyJsonFilter: (body: any, jsonFilter: JsonFilter) => any;
+  applyJsonFilter: (body: string | Record<string, unknown>, jsonFilter: JsonFilter) => string | Record<string, unknown>;
 }
 
 /**
@@ -66,7 +106,7 @@ export function useHttp(): UseHttpReturn {
     /**
      * Parse JSON safely with better error messages
      */
-    const parseJSON = useCallback((text: string): any => {
+    const parseJSON = useCallback((text: string): ParsedResponse | null => {
         try {
             return JSON.parse(text);
         } catch (error) {
@@ -79,7 +119,7 @@ export function useHttp(): UseHttpReturn {
     /**
      * Apply JSON filter to a response body with improved error handling
      */
-    const applyJsonFilter = useCallback((body: any, jsonFilter: JsonFilter): any => {
+    const applyJsonFilter = useCallback((body: string | Record<string, unknown>, jsonFilter: JsonFilter): string | Record<string, unknown> => {
         // Always normalize the filter object to ensure consistent behavior
         const normalizedFilter = {
             enabled: jsonFilter?.enabled === true,
@@ -95,12 +135,13 @@ export function useHttp(): UseHttpReturn {
 
         try {
             // Ensure we're working with a parsed object
-            let jsonObj: any;
+            let jsonObj: Record<string, unknown>;
             if (typeof body === 'string') {
-                jsonObj = parseJSON(body);
-                if (!jsonObj) {
+                const parsed = parseJSON(body);
+                if (!parsed) {
                     return body;
                 }
+                jsonObj = parsed as unknown as Record<string, unknown>;
             } else {
                 jsonObj = body;
             }
@@ -128,7 +169,7 @@ export function useHttp(): UseHttpReturn {
 
             // Navigate through path parts
             const parts = path.split('.');
-            let current: any = jsonObj;
+            let current: unknown = jsonObj;
 
             for (const part of parts) {
                 // Check for array notation: property[index]
@@ -136,26 +177,28 @@ export function useHttp(): UseHttpReturn {
 
                 if (arrayMatch) {
                     const [_, propName, index] = arrayMatch;
+                    const currentObj = current as Record<string, unknown>;
 
-                    if (current[propName] === undefined) {
+                    if (currentObj[propName] === undefined) {
                         return `The field "${path}" was not found in the response.`;
                     }
 
-                    if (!Array.isArray(current[propName])) {
+                    if (!Array.isArray(currentObj[propName])) {
                         return `The field "${propName}" exists but is not an array.`;
                     }
 
                     const idx = parseInt(index, 10);
-                    if (idx >= current[propName].length) {
+                    if (idx >= (currentObj[propName] as unknown[]).length) {
                         return `The array index [${idx}] is out of bounds.`;
                     }
 
-                    current = current[propName][idx];
+                    current = (currentObj[propName] as unknown[])[idx];
                 } else {
-                    if (current[part] === undefined) {
+                    const currentObj = current as Record<string, unknown>;
+                    if (currentObj[part] === undefined) {
                         return `The field "${part}" was not found in the response.`;
                     }
-                    current = current[part];
+                    current = currentObj[part];
                 }
             }
 
@@ -165,9 +208,9 @@ export function useHttp(): UseHttpReturn {
             } else {
                 return String(current);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error applying JSON filter:', error);
-            return `Could not filter response: ${error.message}`;
+            return `Could not filter response: ${error instanceof Error ? error.message : String(error)}`;
         }
     }, [parseJSON]);
 
@@ -175,7 +218,7 @@ export function useHttp(): UseHttpReturn {
      * Substitute variables in text
      */
     const substituteVariables = useCallback((text: string | null | undefined, totpCode: string | null = null): string => {
-        if (!text) return text as any;
+        if (!text) return '';
 
         let result = text;
 
@@ -262,10 +305,11 @@ export function useHttp(): UseHttpReturn {
             };
 
             // Format options
-            const formattedOptions: any = {
+            const formattedOptions: FormattedRequestOptions = {
                 ...requestOptions,
                 headers: {},
-                queryParams: {}
+                queryParams: {},
+                contentType: requestOptions.contentType || 'application/json'
             };
 
             // Handle TOTP if present
@@ -276,7 +320,7 @@ export function useHttp(): UseHttpReturn {
                 const cooldownSeconds = getCooldownSeconds(sourceId);
                 if (cooldownSeconds > 0) {
                     log.debug(`[useHttp] TOTP cooldown active for ${sourceId}: ${cooldownSeconds} seconds`);
-                    const error: any = new Error(`TOTP cooldown active. Please wait ${cooldownSeconds} seconds before making another request.`);
+                    const error: HttpErrorWithResponse = new Error(`TOTP cooldown active. Please wait ${cooldownSeconds} seconds before making another request.`) as HttpErrorWithResponse;
                     error.isCooldownError = true;
                     error.cooldownSeconds = cooldownSeconds;
                     throw error;
@@ -285,7 +329,7 @@ export function useHttp(): UseHttpReturn {
                 // Substitute variables in TOTP secret
                 let substitutedSecret = substituteVariables(requestOptions.totpSecret, null);
                 const normalizedSecret = substitutedSecret.replace(/\s/g, '').replace(/=/g, '');
-                totpCode = await (window as any).generateTOTP(normalizedSecret, 30, 6, 0);
+                totpCode = await (window as unknown as { generateTOTP: (secret: string, period: number, digits: number, timeOffset: number) => Promise<string> }).generateTOTP(normalizedSecret, 30, 6, 0);
                 log.debug(`[useHttp] TOTP code generated for ${sourceId}: ${totpCode ? totpCode.substring(0, 3) + '***' : 'ERROR'}`);
 
                 if (!totpCode || totpCode === 'ERROR') {
@@ -315,7 +359,7 @@ export function useHttp(): UseHttpReturn {
 
             // Process headers from array format to object
             if (Array.isArray(requestOptions.headers)) {
-                requestOptions.headers.forEach((header: any) => {
+                (requestOptions.headers as HeaderEntry[]).forEach((header: HeaderEntry) => {
                     if (header && header.key) {
                         let headerValue = header.value || '';
                         headerValue = substituteVariables(headerValue, totpCode);
@@ -323,7 +367,7 @@ export function useHttp(): UseHttpReturn {
                     }
                 });
             } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                Object.entries(requestOptions.headers).forEach(([key, value]: [string, any]) => {
+                Object.entries(requestOptions.headers as Record<string, string>).forEach(([key, value]: [string, string]) => {
                     let headerValue = value || '';
                     headerValue = substituteVariables(headerValue, totpCode);
                     formattedOptions.headers[key] = headerValue;
@@ -332,7 +376,7 @@ export function useHttp(): UseHttpReturn {
 
             // Process query params from array format to object
             if (Array.isArray(requestOptions.queryParams)) {
-                requestOptions.queryParams.forEach((param: any) => {
+                (requestOptions.queryParams as QueryParamEntry[]).forEach((param: QueryParamEntry) => {
                     if (param && param.key) {
                         let paramValue = param.value || '';
                         paramValue = substituteVariables(paramValue, totpCode);
@@ -340,7 +384,7 @@ export function useHttp(): UseHttpReturn {
                     }
                 });
             } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                Object.entries(requestOptions.queryParams).forEach(([key, value]: [string, any]) => {
+                Object.entries(requestOptions.queryParams as Record<string, string>).forEach(([key, value]: [string, string]) => {
                     let paramValue = value || '';
                     paramValue = substituteVariables(paramValue, totpCode);
                     formattedOptions.queryParams[key] = paramValue;
@@ -361,7 +405,7 @@ export function useHttp(): UseHttpReturn {
                     formattedOptions.body = bodyContent;
                 } else if (typeof bodyContent === 'object') {
                     // Resolve environment variables in object bodies (JSON)
-                    bodyContent = resolveObjectTemplate(bodyContent);
+                    bodyContent = resolveObjectTemplate(bodyContent) as Record<string, unknown>;
 
                     // Then apply local variables and TOTP
                     const bodyStr = JSON.stringify(bodyContent);
@@ -385,7 +429,7 @@ export function useHttp(): UseHttpReturn {
             log.debug(`Request options:`, JSON.stringify(formattedOptions, null, 2));
 
             // Make request
-            const responseJson = await (window as any).electronAPI.makeHttpRequest(substitutedUrl, method, formattedOptions);
+            const responseJson = await window.electronAPI.makeHttpRequest(substitutedUrl, method, formattedOptions);
 
             // Process response
             log.debug('Raw response from main process:', responseJson);
@@ -399,9 +443,9 @@ export function useHttp(): UseHttpReturn {
             // We want to show the actual response in the UI
             const isTestRequest = sourceId.startsWith('test-');
             if (!isTestRequest && response.statusCode && response.statusCode >= 400) {
-                const error: any = new Error(`HTTP ${response.statusCode} error`);
+                const error: HttpErrorWithResponse = new Error(`HTTP ${response.statusCode} error`) as HttpErrorWithResponse;
                 error.statusCode = response.statusCode;
-                error.response = response;
+                error.response = response as HttpErrorWithResponse['response'];
                 throw error;
             }
 
@@ -417,7 +461,7 @@ export function useHttp(): UseHttpReturn {
             const requestDuration = Date.now() - requestStartTime;
 
             if (normalizedJsonFilter.enabled && normalizedJsonFilter.path && bodyContent) {
-                finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter);
+                finalContent = applyJsonFilter(bodyContent, normalizedJsonFilter) as string;
 
                 return {
                     content: finalContent,
@@ -473,7 +517,7 @@ export function useHttp(): UseHttpReturn {
 
             // Parse the raw response to get the actual status code
             let statusCode = 200;
-            let responseData: any;
+            let responseData: ParsedResponse;
             try {
                 responseData = JSON.parse(result.rawResponse!);
                 statusCode = responseData.statusCode || 200;
@@ -491,25 +535,27 @@ export function useHttp(): UseHttpReturn {
                 filteredWith: result.filteredWith,
                 duration: result.duration
             }, null, 2);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error("Test request error:", error);
 
+            const httpError = error as HttpErrorWithResponse;
+
             // Check if error has response data (from HTTP errors)
-            if (error.response) {
+            if (httpError.response) {
                 return JSON.stringify({
-                    statusCode: error.response.statusCode || error.statusCode || 0,
-                    body: error.response.body || '',
-                    headers: error.response.headers || {},
-                    error: error.message,
-                    details: error.originalError?.message
+                    statusCode: httpError.response.statusCode || httpError.statusCode || 0,
+                    body: httpError.response.body || '',
+                    headers: httpError.response.headers || {},
+                    error: httpError.message,
+                    details: httpError.originalError?.message
                 }, null, 2);
             }
 
             // Return error in a format the UI can display
             return JSON.stringify({
-                error: error.message,
-                statusCode: error.statusCode || 0,
-                details: error.originalError?.message
+                error: httpError.message,
+                statusCode: httpError.statusCode || 0,
+                details: httpError.originalError?.message
             }, null, 2);
         }
     }, [request]);

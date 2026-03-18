@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react';
 
 interface SaveFileOptions {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface UseFileSystemReturn {
@@ -25,9 +25,9 @@ export function useFileSystem(): UseFileSystemReturn {
      */
     const readFile = useCallback(async (filePath: string): Promise<string> => {
         try {
-            return await (window as any).electronAPI.readFile(filePath);
-        } catch (error: any) {
-            throw new Error(`Error reading file: ${error.message}`);
+            return String(await window.electronAPI.readFile(filePath));
+        } catch (error: unknown) {
+            throw new Error(`Error reading file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 
@@ -36,10 +36,10 @@ export function useFileSystem(): UseFileSystemReturn {
      */
     const writeFile = useCallback(async (filePath: string, content: string): Promise<boolean> => {
         try {
-            await (window as any).electronAPI.writeFile(filePath, content);
+            await window.electronAPI.writeFile(filePath, content);
             return true;
-        } catch (error: any) {
-            throw new Error(`Error writing to file: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error writing to file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 
@@ -49,14 +49,14 @@ export function useFileSystem(): UseFileSystemReturn {
     const watchFile = useCallback(async (sourceId: string, filePath: string): Promise<string> => {
         try {
             // Read initial content - this also sets up the watcher with polling in main process
-            const initialContent = await (window as any).electronAPI.watchFile(sourceId, filePath);
+            const initialContent = await window.electronAPI.watchFile(sourceId, filePath);
 
             // Store in active watchers
             activeWatchers.current.set(sourceId, filePath);
 
             return initialContent;
-        } catch (error: any) {
-            throw new Error(`Error watching file: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error watching file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 
@@ -66,13 +66,13 @@ export function useFileSystem(): UseFileSystemReturn {
     const unwatchFile = useCallback(async (sourceId: string, filePath: string): Promise<boolean> => {
         try {
             if (activeWatchers.current.has(sourceId)) {
-                await (window as any).electronAPI.unwatchFile(filePath);
+                await window.electronAPI.unwatchFile(filePath);
                 activeWatchers.current.delete(sourceId);
                 return true;
             }
             return false;
-        } catch (error: any) {
-            throw new Error(`Error unwatching file: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error unwatching file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 
@@ -81,10 +81,10 @@ export function useFileSystem(): UseFileSystemReturn {
      */
     const selectFile = useCallback(async (): Promise<string | null> => {
         try {
-            const filePath = await (window as any).electronAPI.openFileDialog();
+            const filePath = await window.electronAPI.openFileDialog();
             return filePath; // Will be null if user cancels
-        } catch (error: any) {
-            throw new Error(`Error selecting file: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error selecting file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, []);
 
@@ -93,13 +93,13 @@ export function useFileSystem(): UseFileSystemReturn {
      */
     const saveFile = useCallback(async (options: SaveFileOptions = {}, content?: string): Promise<string | null> => {
         try {
-            const filePath = await (window as any).electronAPI.saveFileDialog(options);
+            const filePath = await window.electronAPI.saveFileDialog(options);
             if (filePath && content) {
                 await writeFile(filePath, content);
             }
             return filePath; // Will be null if user cancels
-        } catch (error: any) {
-            throw new Error(`Error saving file: ${error.message}`);
+        } catch (error: unknown) {
+            throw new Error(`Error saving file: ${error instanceof Error ? error.message : String(error)}`);
         }
     }, [writeFile]);
 

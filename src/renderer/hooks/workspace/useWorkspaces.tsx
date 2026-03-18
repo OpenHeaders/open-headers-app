@@ -4,17 +4,37 @@ import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useWorkspaces');
 
+interface WorkspaceData {
+  id: string;
+  name: string;
+  type: string;
+  isPersonal?: boolean;
+  isTeam?: boolean;
+  gitUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  clonedFrom?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+interface WorkspaceSyncStatusEntry {
+  syncing: boolean;
+  lastSync?: string | null;
+  error?: string | null;
+}
+
 interface UseWorkspacesReturn {
-  workspaces: any[];
+  workspaces: WorkspaceData[];
   activeWorkspaceId: string;
-  syncStatus: Record<string, any>;
+  syncStatus: Record<string, WorkspaceSyncStatusEntry>;
   loading: boolean;
-  createWorkspace: (workspace: any) => Promise<any>;
+  createWorkspace: (workspace: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
   switchWorkspace: (workspaceId: string) => Promise<boolean>;
   deleteWorkspace: (workspaceId: string) => Promise<boolean>;
-  updateWorkspace: (workspaceId: string, updates: any) => Promise<boolean>;
+  updateWorkspace: (workspaceId: string, updates: Record<string, unknown>) => Promise<boolean>;
   syncWorkspace: (workspaceId: string, options?: { silent?: boolean }) => Promise<boolean>;
-  cloneWorkspaceToPersonal: (workspaceId: string, newName?: string | null) => Promise<any>;
+  cloneWorkspaceToPersonal: (workspaceId: string, newName?: string | null) => Promise<WorkspaceData | null>;
 }
 
 /**
@@ -29,21 +49,21 @@ export function useWorkspaces(): UseWorkspacesReturn {
     service
   } = useCentralizedWorkspace();
 
-  const createWorkspace = useCallback(async (workspace: any): Promise<any> => {
+  const createWorkspace = useCallback(async (workspace: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
     try {
       // Ensure workspace has an ID
-      const workspaceData = {
+      const workspaceData: Record<string, unknown> = {
         ...workspace,
-        id: workspace.id || Date.now().toString()
+        id: (workspace.id as string) || Date.now().toString()
       };
 
       // Use the service method to create workspace (handles validation, data init, and auto-switch)
       const result = await service.createWorkspace(workspaceData);
 
-      showMessage('success', `Workspace '${workspaceData.name}' created and activated`);
+      showMessage('success', `Workspace '${String(workspaceData.name || '')}' created and activated`);
       return result;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
     }
   }, [service]);
@@ -57,9 +77,9 @@ export function useWorkspaces(): UseWorkspacesReturn {
 
       log.info(`[useWorkspaces] Workspace switch completed successfully`);
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error(`[useWorkspaces] Workspace switch failed:`, error);
-      showMessage('error', `Failed to switch workspace: ${error.message}`);
+      showMessage('error', `Failed to switch workspace: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }, [service]);
@@ -78,13 +98,13 @@ export function useWorkspaces(): UseWorkspacesReturn {
         showMessage('success', 'Workspace deleted');
       }
       return result;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
 
-  const updateWorkspace = useCallback(async (workspaceId: string, updates: any): Promise<boolean> => {
+  const updateWorkspace = useCallback(async (workspaceId: string, updates: Record<string, unknown>): Promise<boolean> => {
     try {
       // Use the service method to update workspace
       const result = await service.updateWorkspace(workspaceId, updates);
@@ -92,10 +112,10 @@ export function useWorkspaces(): UseWorkspacesReturn {
       if (result) {
         // If this is the active workspace and it's a git workspace, notify main process
         // to handle auto-sync changes
-        const workspace = service.state.workspaces.find((w: any) => w.id === workspaceId);
+        const workspace = service.state.workspaces.find((w: WorkspaceData) => w.id === workspaceId);
         if (workspaceId === activeWorkspaceId && workspace?.type === 'git') {
-          if ((window as any).electronAPI && (window as any).electronAPI.send) {
-            (window as any).electronAPI.send('workspace-updated', {
+          if (window.electronAPI && window.electronAPI.send) {
+            window.electronAPI.send('workspace-updated', {
               workspaceId,
               workspace: { ...workspace, ...updates }
             });
@@ -105,15 +125,15 @@ export function useWorkspaces(): UseWorkspacesReturn {
         showMessage('success', 'Workspace updated');
       }
       return result;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service, activeWorkspaceId]);
 
   const syncWorkspace = useCallback(async (workspaceId: string, options: { silent?: boolean } = {}): Promise<boolean> => {
     try {
-      const workspace = workspaces.find((w: any) => w.id === workspaceId);
+      const workspace = workspaces.find((w: WorkspaceData) => w.id === workspaceId);
       if (!workspace) {
         throw new Error('Workspace not found');
       }
@@ -129,7 +149,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
       }, ['syncStatus']);
 
       // Call electron API to sync
-      const result = await (window as any).electronAPI.syncGitWorkspace(workspaceId);
+      const result = await window.electronAPI.syncGitWorkspace(workspaceId);
 
       if (result.success) {
         // Update sync status with last sync time - use service.state.syncStatus
@@ -159,7 +179,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
       }
 
       return result.success;
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Update sync status with error - use service.state.syncStatus
       // to get current state and avoid overwriting other workspaces' sync status
       service.setState({
@@ -167,19 +187,19 @@ export function useWorkspaces(): UseWorkspacesReturn {
           ...service.state.syncStatus,
           [workspaceId]: {
             syncing: false,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           }
         }
       }, ['syncStatus']);
 
-      showMessage('error', `Sync failed: ${error.message}`);
+      showMessage('error', `Sync failed: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }, [service, workspaces, activeWorkspaceId]);
 
-  const cloneWorkspaceToPersonal = useCallback(async (workspaceId: string, newName: string | null = null): Promise<any> => {
+  const cloneWorkspaceToPersonal = useCallback(async (workspaceId: string, newName: string | null = null): Promise<WorkspaceData | null> => {
     try {
-      const workspace = workspaces.find((w: any) => w.id === workspaceId);
+      const workspace = workspaces.find((w: WorkspaceData) => w.id === workspaceId);
       if (!workspace) {
         throw new Error('Workspace not found');
       }
@@ -218,9 +238,9 @@ export function useWorkspaces(): UseWorkspacesReturn {
       await service.switchWorkspace(newWorkspace.id);
 
       showMessage('success', `Created personal copy of '${workspace.name}' and switched to it`);
-      return newWorkspace;
-    } catch (error: any) {
-      showMessage('error', error.message);
+      return newWorkspace as WorkspaceData;
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
     }
   }, [service, workspaces, activeWorkspaceId]);

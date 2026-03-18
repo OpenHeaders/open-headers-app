@@ -5,17 +5,48 @@ import {showMessage} from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSources');
 
+interface SourceData {
+  sourceId: string;
+  sourceType: string;
+  sourcePath?: string;
+  sourceMethod?: string;
+  sourceName?: string;
+  sourceTag?: string;
+  sourceContent?: string;
+  requestOptions?: Record<string, unknown>;
+  jsonFilter?: {
+    enabled: boolean;
+    path?: string;
+    [key: string]: unknown;
+  };
+  refreshOptions?: RefreshOptions;
+  activationState?: string;
+  missingDependencies?: string[];
+  createdAt?: string;
+  isFiltered?: boolean;
+  filteredWith?: string | null;
+  needsInitialFetch?: boolean;
+  originalResponse?: string | null;
+  [key: string]: unknown;
+}
+
+interface RefreshOptions {
+  enabled?: boolean;
+  interval?: number;
+  [key: string]: unknown;
+}
+
 interface UseSourcesReturn {
-  sources: any[];
-  addSource: (sourceData: any) => Promise<any>;
-  updateSource: (sourceId: string, updates: any) => Promise<any>;
+  sources: SourceData[];
+  addSource: (sourceData: Record<string, unknown>) => Promise<SourceData | null>;
+  updateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;
   removeSource: (sourceId: string) => Promise<boolean>;
   updateSourceContent: (sourceId: string, content: string) => Promise<boolean>;
-  importSources: (newSources: any[], replace?: boolean) => Promise<boolean>;
+  importSources: (newSources: SourceData[], replace?: boolean) => Promise<boolean>;
   refreshSource: (sourceId: string) => Promise<boolean>;
-  updateRefreshOptions: (sourceId: string, options: any) => Promise<boolean>;
-  exportSources: () => any[];
-  shouldSuppressBroadcast: (sourcesToCheck: any[]) => boolean;
+  updateRefreshOptions: (sourceId: string, options: RefreshOptions) => Promise<boolean>;
+  exportSources: () => SourceData[];
+  shouldSuppressBroadcast: (sourcesToCheck: SourceData[]) => boolean;
 }
 
 /**
@@ -24,16 +55,16 @@ interface UseSourcesReturn {
 export function useSources(): UseSourcesReturn {
   const { sources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
 
-  const addSource = useCallback(async (sourceData: any): Promise<any> => {
+  const addSource = useCallback(async (sourceData: Record<string, unknown>): Promise<SourceData | null> => {
     try {
       return await service.addSource(sourceData);
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
     }
   }, [service]);
 
-  const updateSource = useCallback(async (sourceId: string, updates: any): Promise<any> => {
+  const updateSource = useCallback(async (sourceId: string, updates: Record<string, unknown>): Promise<SourceData | null> => {
     try {
       log.debug('updateSource called', { sourceId, updates });
       const updatedSource = await service.updateSource(sourceId, updates);
@@ -43,8 +74,8 @@ export function useSources(): UseSourcesReturn {
         sourceIdReturned: updatedSource?.sourceId
       });
       return updatedSource;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
     }
   }, [service]);
@@ -54,8 +85,8 @@ export function useSources(): UseSourcesReturn {
       await service.removeSource(sourceId);
       showMessage('success', 'Source removed');
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -64,13 +95,13 @@ export function useSources(): UseSourcesReturn {
     try {
       await service.updateSourceContent(sourceId, content);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
 
-  const importSources = useCallback(async (newSources: any[], replace: boolean = false): Promise<boolean> => {
+  const importSources = useCallback(async (newSources: SourceData[], replace: boolean = false): Promise<boolean> => {
     try {
       if (replace) {
         service.setState({ sources: newSources }, ['sources']);
@@ -82,8 +113,8 @@ export function useSources(): UseSourcesReturn {
       }
       showMessage('success', `Imported ${newSources.length} sources`);
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
@@ -91,17 +122,17 @@ export function useSources(): UseSourcesReturn {
   const refreshSource = useCallback(async (sourceId: string): Promise<boolean> => {
     try {
       // Get fresh sources from service to avoid stale closure issue
-      const currentSources = service.getState().sources;
-      const source = currentSources.find((s: any) => s.sourceId === sourceId);
+      const currentSources = service.getState().sources as SourceData[];
+      const source = currentSources.find((s: SourceData) => s.sourceId === sourceId);
       if (!source) {
-        log.error(`Source with ID ${sourceId} not found. Available sources:`, currentSources.map((s: any) => ({ id: s.sourceId, type: s.sourceType, path: s.sourcePath })));
+        log.error(`Source with ID ${sourceId} not found. Available sources:`, currentSources.map((s: SourceData) => ({ id: s.sourceId, type: s.sourceType, path: s.sourcePath })));
         throw new Error(`Source with ID ${sourceId} not found. It may still be saving.`);
       }
 
       // For file sources, re-read the file
       if (source.sourceType === 'file') {
-        const content = await (window as any).electronAPI.readFile(source.sourcePath);
-        await service.updateSourceContent(sourceId, content);
+        const content = await window.electronAPI.readFile(source.sourcePath || '');
+        await service.updateSourceContent(sourceId, String(content));
         showMessage('success', 'Source refreshed');
       }
       // For HTTP sources, we don't handle refresh here
@@ -112,34 +143,34 @@ export function useSources(): UseSourcesReturn {
       }
       // For env sources, re-read the environment variable
       else if (source.sourceType === 'env') {
-        const value = await (window as any).electronAPI.getEnvVariable(source.sourcePath);
+        const value = await window.electronAPI.getEnvVariable(source.sourcePath || '');
         await service.updateSourceContent(sourceId, value || '');
         showMessage('success', 'Source refreshed');
       }
 
       return true;
-    } catch (error: any) {
-      showMessage('error', `Failed to refresh source: ${error.message}`);
+    } catch (error: unknown) {
+      showMessage('error', `Failed to refresh source: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }, [service]);
 
-  const updateRefreshOptions = useCallback(async (sourceId: string, options: any): Promise<boolean> => {
+  const updateRefreshOptions = useCallback(async (sourceId: string, options: RefreshOptions): Promise<boolean> => {
     try {
       await service.updateSource(sourceId, { refreshOptions: options });
       return true;
-    } catch (error: any) {
-      showMessage('error', error.message);
+    } catch (error: unknown) {
+      showMessage('error', error instanceof Error ? error.message : String(error));
       return false;
     }
   }, [service]);
 
-  const exportSources = useCallback((): any[] => {
+  const exportSources = useCallback((): SourceData[] => {
     return sources;
   }, [sources]);
 
   // Function to check if broadcasts should be suppressed
-  const shouldSuppressBroadcast = useCallback((sourcesToCheck: any[]): boolean => {
+  const shouldSuppressBroadcast = useCallback((sourcesToCheck: SourceData[]): boolean => {
     // Suppress broadcasts during workspace switching
     if (isWorkspaceSwitching) {
       log.debug('Suppressing broadcast during workspace switch');

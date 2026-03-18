@@ -6,14 +6,14 @@ import { DATA_FORMAT_VERSION } from '../../../config/version';
 const log = createLogger('RulesManager');
 
 interface StorageAPI {
-  loadFromStorage: (...args: any[]) => Promise<any>;
-  saveToStorage: (...args: any[]) => Promise<any>;
+  loadFromStorage: (filename: string) => Promise<string | null>;
+  saveToStorage: (filename: string, content: string) => Promise<void>;
 }
 
 interface RulesElectronAPI {
-  updateWebSocketSources?: (...args: any[]) => void;
-  proxySaveRule?: (...args: any[]) => Promise<any>;
-  proxyDeleteRule?: (...args: any[]) => Promise<any>;
+  updateWebSocketSources?: (sources: unknown) => void;
+  proxySaveRule?: (rule: unknown) => Promise<{ success: boolean; error?: string }>;
+  proxyDeleteRule?: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface HeaderRule {
@@ -68,7 +68,7 @@ class RulesManager {
         version: DATA_FORMAT_VERSION,
         rules,
         metadata: {
-          totalRules: Object.values(rules).reduce((sum: number, ruleArray: any) => sum + ruleArray.length, 0),
+          totalRules: Object.values(rules).reduce((sum: number, ruleArray: HeaderRule[]) => sum + ruleArray.length, 0),
           lastUpdated: new Date().toISOString()
         }
       };

@@ -21,7 +21,7 @@ interface Settings {
   developerMode: boolean;
   recordingHotkey: string;
   logLevel: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface SettingsContextValue {
@@ -71,7 +71,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const storedSettings = await (window as any).electronAPI.getSettings();
+                const storedSettings = await window.electronAPI.getSettings() as Settings;
                 if (isMounted.current) {
                     setSettings(storedSettings);
                     if (storedSettings.logLevel) {
@@ -97,13 +97,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             setLoading(true);
 
             // Prepare settings object (merge with defaults to ensure all fields)
-            const settingsToSave: Settings = {
+            const settingsToSave = {
                 ...defaultSettings,
                 ...newSettings
-            };
+            } as Settings;
 
             // Save to main process
-            const result = await (window as any).electronAPI.saveSettings(settingsToSave);
+            const result = await window.electronAPI.saveSettings(settingsToSave);
 
             if (result.success) {
                 // Update local state
@@ -117,7 +117,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 // Apply auto-launch setting
-                await (window as any).electronAPI.setAutoLaunch(settingsToSave.launchAtLogin);
+                await window.electronAPI.setAutoLaunch(settingsToSave.launchAtLogin);
 
                 return true;
             } else {
@@ -126,10 +126,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 return false;
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error saving settings:', error);
             if (isMounted.current) {
-                showMessage('error', `Error saving settings: ${error.message}`);
+                showMessage('error', `Error saving settings: ${error instanceof Error ? error.message : String(error)}`);
             }
             return false;
         } finally {
@@ -141,11 +141,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     // Show/hide main window
     const showMainWindow = () => {
-        (window as any).electronAPI.showMainWindow();
+        window.electronAPI.showMainWindow();
     };
 
     const hideMainWindow = () => {
-        (window as any).electronAPI.hideMainWindow();
+        window.electronAPI.hideMainWindow();
     };
 
     // Context value

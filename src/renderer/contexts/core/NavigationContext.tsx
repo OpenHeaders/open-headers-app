@@ -9,7 +9,7 @@ interface NavigationIntent {
   target?: string;
   action?: string;
   itemId?: string;
-  data?: any;
+  data?: Record<string, unknown>;
   timestamp?: number;
 }
 
@@ -22,7 +22,7 @@ interface PendingAction {
   target: string;
   action: string;
   itemId: string;
-  data: any;
+  data: Record<string, unknown>;
   timestamp: number;
 }
 
@@ -30,8 +30,8 @@ interface NavigationContextValue {
   navigationIntent: NavigationIntent | null;
   navigate: (intent: NavigationIntent) => void;
   clearNavigationIntent: () => void;
-  registerActionHandler: (target: string, action: string, handler: (itemId: string, data: any) => void) => () => void;
-  executeAction: (target: string, action: string, itemId: string, data?: any) => void;
+  registerActionHandler: (target: string, action: string, handler: (itemId: string, data: Record<string, unknown>) => void) => () => void;
+  executeAction: (target: string, action: string, itemId: string, data?: Record<string, unknown>) => void;
   highlights: Record<string, HighlightInfo>;
   clearHighlight: (target: string) => void;
   clearAllHighlights: () => void;
@@ -81,7 +81,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [highlights, setHighlights] = useState<Record<string, HighlightInfo>>({});
 
     // State to track action handlers
-    const [actionHandlers, setActionHandlers] = useState<Record<string, (itemId: string, data: any) => void>>({});
+    const [actionHandlers, setActionHandlers] = useState<Record<string, (itemId: string, data: Record<string, unknown>) => void>>({});
 
     // Ref to store pending actions
     const pendingActionsRef = useRef<PendingAction[]>([]);
@@ -93,8 +93,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         log.info('Navigation requested:', intent);
 
         // Focus the window when navigation is triggered (same as protocol handler)
-        if ((window as any).electronAPI?.showMainWindow) {
-            (window as any).electronAPI.showMainWindow();
+        const win = window as unknown as { electronAPI?: { showMainWindow?: () => void } };
+        if (win.electronAPI?.showMainWindow) {
+            win.electronAPI.showMainWindow();
         }
 
         setNavigationIntent({
@@ -143,7 +144,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     /**
      * Register an action handler for a specific target
      */
-    const registerActionHandler = useCallback((target: string, action: string, handler: (itemId: string, data: any) => void): (() => void) => {
+    const registerActionHandler = useCallback((target: string, action: string, handler: (itemId: string, data: Record<string, unknown>) => void): (() => void) => {
         const key = `${target}.${action}`;
 
         setActionHandlers(prev => ({
@@ -183,7 +184,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     /**
      * Execute an action for a target
      */
-    const executeAction = useCallback((target: string, action: string, itemId: string, data: any = {}) => {
+    const executeAction = useCallback((target: string, action: string, itemId: string, data: Record<string, unknown> = {}) => {
         const key = `${target}.${action}`;
         const handler = actionHandlers[key];
 

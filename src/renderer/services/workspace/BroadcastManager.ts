@@ -5,11 +5,11 @@ import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('BroadcastManager');
 
 interface BroadcastElectronAPI {
-  updateWebSocketSources?: (...args: any[]) => void;
-  proxyUpdateHeaderRules?: (...args: any[]) => Promise<any>;
-  proxyUpdateSources?: (...args: any[]) => void;
-  proxyUpdateSource?: (...args: any[]) => void;
-  proxyClearRules?: () => Promise<any>;
+  updateWebSocketSources?: (sources: unknown) => void;
+  proxyUpdateHeaderRules?: (headerRules: unknown[]) => Promise<{ success: boolean; error?: string }>;
+  proxyUpdateSources?: (sources: unknown) => void;
+  proxyUpdateSource?: (sourceId: string, value: unknown) => void;
+  proxyClearRules?: () => Promise<{ success: boolean; error?: string }>;
 }
 
 class BroadcastManager {
@@ -45,7 +45,7 @@ class BroadcastManager {
         // Fallback to individual updates
         for (const source of sources) {
           if (source.sourceContent) {
-            this.electronAPI.proxyUpdateSource(source.sourceId, source.sourceContent);
+            this.electronAPI.proxyUpdateSource(source.sourceId as string, source.sourceContent);
           }
         }
       }
