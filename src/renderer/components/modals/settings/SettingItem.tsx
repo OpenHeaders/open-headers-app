@@ -65,7 +65,7 @@ const styles = {
  * @param {function} onChange - Callback function when setting value changes
  */
 interface SettingItemProps {
-    icon?: React.ComponentType<any>;
+    icon?: React.ComponentType<{ style?: React.CSSProperties }>;
     title: string;
     description?: string;
     fieldName: string;
@@ -75,8 +75,8 @@ interface SettingItemProps {
     type?: 'switch' | 'select' | 'text';
     options?: { value: string; label: string }[];
     placeholder?: string;
-    value?: any;
-    onChange?: (fieldName: string, newValue: any) => void;
+    value?: unknown;
+    onChange?: (fieldName: string, newValue: unknown) => void;
 }
 
 const SettingItem = forwardRef(({
@@ -98,7 +98,7 @@ const SettingItem = forwardRef(({
      * @param {*} newValue - New value for the setting
      */
     const handleChange = (newValue: unknown) => {
-        onChange(fieldName, newValue);
+        onChange?.(fieldName, newValue);
     };
 
     // Main setting content with responsive layout
@@ -106,11 +106,11 @@ const SettingItem = forwardRef(({
         <Row style={styles.settingRow(isActive && !disabled)} align="middle" justify="space-between">
             {/* Left side: Icon, title, and description */}
             <Col span={16}>
-                <div style={styles.label(isActive && !disabled && value)}>
-                    <Icon style={styles.icon(isActive && !disabled && value)} />
+                <div style={styles.label(isActive && !disabled && !!value)}>
+                    {Icon && <Icon style={styles.icon(isActive && !disabled && !!value)} />}
                     <Space direction="vertical" size={0}>
                         <span>{title}</span>
-                        <span style={styles.description(isActive && !disabled && value)}>{description}</span>
+                        <span style={styles.description(isActive && !disabled && !!value)}>{description}</span>
                     </Space>
                 </div>
             </Col>
@@ -118,7 +118,7 @@ const SettingItem = forwardRef(({
             <Col span={8} style={{ textAlign: 'right' }}>
                 {type === 'switch' ? (
                     <Switch
-                        checked={value}
+                        checked={value as boolean | undefined}
                         onChange={handleChange}
                         disabled={disabled}
                         checkedChildren="Enabled"
@@ -128,7 +128,7 @@ const SettingItem = forwardRef(({
                     <Select
                         style={{ width: 160 }}
                         options={options}
-                        value={value}
+                        value={value as string | undefined}
                         onChange={handleChange}
                         disabled={disabled}
                     />
@@ -136,14 +136,14 @@ const SettingItem = forwardRef(({
                     <Input
                         style={{ width: 200 }}
                         placeholder={placeholder}
-                        value={value}
+                        value={value as string | undefined}
                         onChange={(e) => handleChange(e.target.value)}
                         disabled={disabled}
                     />
                 ) : type === 'hotkey' ? (
                     <HotkeyInput
                         ref={ref}
-                        value={value}
+                        value={value as string | undefined}
                         onChange={handleChange}
                         disabled={disabled}
                     />

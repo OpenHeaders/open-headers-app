@@ -30,7 +30,7 @@ class AutoSaveManager {
    */
   markDirty(dataType: string) {
     if (dataType in this.isDirty) {
-      this.isDirty[dataType] = true;
+      this.isDirty[dataType as keyof typeof this.isDirty] = true;
     }
   }
 
@@ -39,7 +39,7 @@ class AutoSaveManager {
    */
   markClean(dataType: string) {
     if (dataType in this.isDirty) {
-      this.isDirty[dataType] = false;
+      this.isDirty[dataType as keyof typeof this.isDirty] = false;
     }
   }
 
@@ -91,7 +91,9 @@ class AutoSaveManager {
         // Process queued saves
         if (this.saveQueue.length > 0 && !this.workspaceSwitching) {
           const nextSave = this.saveQueue.shift();
-          this.scheduleAutoSave(nextSave);
+          if (nextSave) {
+            this.scheduleAutoSave(nextSave);
+          }
         }
       }
     }, 1000);
@@ -131,7 +133,7 @@ class AutoSaveManager {
     }
     
     // Clear all save timers
-    Object.values(this.saveTimers).forEach(timer => clearTimeout(timer));
+    Object.values(this.saveTimers).forEach(timer => { if (timer) clearTimeout(timer); });
     this.saveTimers = {};
   }
 

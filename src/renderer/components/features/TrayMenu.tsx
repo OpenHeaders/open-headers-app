@@ -45,9 +45,9 @@ const TrayMenu = () => {
 
         // Initialize unsubscribe functions for event listeners
         // These will hold the cleanup functions returned by event subscriptions
-        let unsubscribeShow;
-        let unsubscribeHide;
-        let unsubscribeQuit;
+        let unsubscribeShow: (() => void) | undefined;
+        let unsubscribeHide: (() => void) | undefined;
+        let unsubscribeQuit: (() => void) | undefined;
 
         // Defensive API availability check
         if (window.electronAPI) {

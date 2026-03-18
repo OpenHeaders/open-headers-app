@@ -1,6 +1,6 @@
 /**
  * Proxy Rules Handler for Export/Import Operations
- * 
+ *
  * This module handles the export and import of proxy rule configurations,
  * including complex duplicate detection based on URL patterns and headers.
  */
@@ -30,7 +30,7 @@ export class ProxyRulesHandler {
    */
   async exportProxyRules(options: Record<string, any>) {
     const { selectedItems } = options;
-    
+
     if (!selectedItems.proxyRules) {
       log.debug('Proxy rules not selected for export');
       return null;
@@ -38,7 +38,7 @@ export class ProxyRulesHandler {
 
     try {
       const proxyRules = await window.electronAPI.proxyGetRules();
-      
+
       // Filter out invalid proxy rules before export
       const validProxyRules = proxyRules.filter(rule => {
         const validation = validateProxyRule(rule);
@@ -48,12 +48,12 @@ export class ProxyRulesHandler {
         }
         return true;
       });
-      
+
       log.info(`Exporting ${validProxyRules.length} valid proxy rules (filtered ${proxyRules.length - validProxyRules.length} invalid)`);
       return validProxyRules;
     } catch (error) {
       log.error('Failed to export proxy rules:', error);
-      throw new Error(`Failed to export proxy rules: ${error.message}`);
+      throw new Error(`Failed to export proxy rules: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -64,7 +64,7 @@ export class ProxyRulesHandler {
    * @returns {Promise<Object>} - Import statistics
    */
   async importProxyRules(rulesToImport: Record<string, any>[], options: Record<string, any>) {
-    const stats = {
+    const stats: { imported: number; skipped: number; errors: Array<{ pattern: string; error: string }> } = {
       imported: 0,
       skipped: 0,
       errors: []
@@ -83,9 +83,9 @@ export class ProxyRulesHandler {
     }
 
     // Get existing rules for duplicate detection (only needed in merge mode)
-    let existingRules = [];
+    let existingRules: Record<string, unknown>[] = [];
     if (options.importMode === IMPORT_MODES.MERGE) {
-      existingRules = await this._getExistingProxyRules();
+      existingRules = await this._getExistingProxyRules() as Record<string, unknown>[];
     }
 
     // Import rules one by one
@@ -100,8 +100,8 @@ export class ProxyRulesHandler {
       } catch (error) {
         log.error(`Failed to import proxy rule with pattern ${rule.pattern}:`, error);
         stats.errors.push({
-          pattern: rule.pattern,
-          error: error.message
+          pattern: rule.pattern as string,
+          error: error instanceof Error ? error.message : String(error)
         });
       }
     }
@@ -133,7 +133,7 @@ export class ProxyRulesHandler {
     // Check for duplicates in merge mode
     if (options.importMode === IMPORT_MODES.MERGE) {
       const isDuplicate = isProxyRuleDuplicate(rule, existingRules);
-      
+
       if (isDuplicate) {
         log.debug(`Skipping duplicate proxy rule with pattern: ${rule.pattern}`);
         return { skipped: true };
@@ -168,7 +168,7 @@ export class ProxyRulesHandler {
    */
   async _saveProxyRule(rule: Record<string, any>) {
     const saveResult = await window.electronAPI.proxySaveRule(rule);
-    
+
     if (!saveResult || !saveResult.success) {
       throw new Error('Proxy rule save operation failed');
     }
@@ -183,7 +183,7 @@ export class ProxyRulesHandler {
     try {
       const existingRules = await this._getExistingProxyRules();
       log.info(`Clearing ${existingRules.length} existing proxy rules`);
-      
+
       for (const rule of existingRules) {
         try {
           await window.electronAPI.proxyDeleteRule((rule as Record<string, any>).id);
@@ -192,7 +192,7 @@ export class ProxyRulesHandler {
         }
       }
     } catch (error) {
-      throw new Error(`Failed to clear existing proxy rules: ${error.message}`);
+      throw new Error(`Failed to clear existing proxy rules: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -228,7 +228,7 @@ export class ProxyRulesHandler {
       };
     }
 
-    const errors = [];
+    const errors: string[] = [];
     rules.forEach((rule, index) => {
       const validation = validateProxyRule(rule);
       if (!validation.success) {
@@ -253,11 +253,11 @@ export class ProxyRulesHandler {
    */
   getProxyRulesStatistics(rules: Record<string, any>[]) {
     if (!Array.isArray(rules)) {
-      return { 
-        total: 0, 
-        withHeaders: 0, 
+      return {
+        total: 0,
+        withHeaders: 0,
         patterns: [],
-        averageHeadersPerRule: 0 
+        averageHeadersPerRule: 0
       };
     }
 
@@ -272,15 +272,15 @@ export class ProxyRulesHandler {
       if (rule.pattern) {
         stats.patterns.push(rule.pattern);
       }
-      
+
       if (rule.headers && Array.isArray(rule.headers) && rule.headers.length > 0) {
         stats.withHeaders++;
         stats.totalHeaders += rule.headers.length;
       }
     });
 
-    stats.averageHeadersPerRule = stats.withHeaders > 0 
-      ? Math.round(stats.totalHeaders / stats.withHeaders * 100) / 100 
+    stats.averageHeadersPerRule = stats.withHeaders > 0
+      ? Math.round(stats.totalHeaders / stats.withHeaders * 100) / 100
       : 0;
 
     return stats;
@@ -296,18 +296,19 @@ export class ProxyRulesHandler {
       return { warnings: [], suggestions: [] };
     }
 
-    const warnings = [];
-    const suggestions = [];
-    const patternCounts = {};
+    const warnings: string[] = [];
+    const suggestions: string[] = [];
+    const patternCounts: Record<string, number> = {};
 
     // Check for duplicate patterns
     rules.forEach(rule => {
       if (rule.pattern) {
-        patternCounts[rule.pattern] = (patternCounts[rule.pattern] || 0) + 1;
+        const pattern = rule.pattern as string;
+        patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
       }
     });
 
-    Object.entries(patternCounts).forEach(([pattern, count]: [string, any]) => {
+    Object.entries(patternCounts).forEach(([pattern, count]) => {
       if (count > 1) {
         warnings.push(`Pattern "${pattern}" appears ${count} times`);
         suggestions.push(`Consider consolidating rules with pattern "${pattern}"`);

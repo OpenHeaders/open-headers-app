@@ -16,17 +16,20 @@ export const useCliServer = ({ active = false } = {}) => {
     const { settings } = useSettings();
 
     // CLI server state
-    const [status, setStatus] = useState({
+    const [status, setStatus] = useState<{
+        running: boolean; port: number; discoveryPath: string;
+        token: string; startedAt: number | null; totalRequests: number;
+    }>({
         running: false, port: 59213, discoveryPath: '',
         token: '', startedAt: null, totalRequests: 0
     });
-    const [logs, setLogs] = useState([]);
+    const [logs, setLogs] = useState<{ timestamp: number; method: string; path: string; statusCode: number; [key: string]: unknown }[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Log filters
-    const [filterMethod, setFilterMethod] = useState(null);
+    const [filterMethod, setFilterMethod] = useState<string | null>(null);
     const [filterEndpoint, setFilterEndpoint] = useState('');
-    const [filterStatus, setFilterStatus] = useState(null);
+    const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
     /**
      * Filtered logs based on current filter state
@@ -61,7 +64,7 @@ export const useCliServer = ({ active = false } = {}) => {
     const loadLogs = useCallback(async () => {
         try {
             const result = await window.electronAPI.cliApiGetLogs();
-            setLogs(result || []);
+            setLogs((result || []) as typeof logs);
         } catch (error) {
             console.error('Failed to load CLI API logs:', error);
         }

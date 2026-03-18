@@ -15,9 +15,9 @@ interface SourceData {
     sourcePath?: string;
     sourceMethod?: string;
     sourceContent?: string;
-    requestOptions?: { headers?: Record<string, string>; body?: string; [key: string]: unknown } | null;
-    jsonFilter?: { enabled?: boolean; path?: string; [key: string]: unknown } | null;
-    refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown } | null;
+    requestOptions?: Record<string, unknown>;
+    jsonFilter?: Record<string, unknown>;
+    refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown };
     activationState?: string;
     needsInitialFetch?: boolean;
     [key: string]: unknown;
@@ -63,23 +63,23 @@ class RefreshManagerIntegration {
         }
 
         this.initializing = true;
-        
+
         try {
             this.httpService = httpService;
             this.updateCallback = updateCallback;
 
             // Initialize RefreshManager
             await refreshManager.initialize(this.httpService, this.updateCallback);
-            
+
             // Subscribe to workspace service to sync sources
             this.subscribeToSourceChanges();
-            
+
             // Listen for source activation events
             this.setupSourceActivationListener();
-            
+
             // Add all existing HTTP sources
             await this.syncAllSources();
-            
+
             this.initialized = true;
             log.info('RefreshManagerIntegration initialized successfully');
         } catch (error) {
@@ -96,7 +96,7 @@ class RefreshManagerIntegration {
     subscribeToSourceChanges() {
         const workspaceService = getCentralizedWorkspaceService();
         const envService = getCentralizedEnvironmentService();
-        
+
         // Subscribe to workspace state changes
         this.sourceSubscriptionCleanup = workspaceService.subscribe((state, changedKeys) => {
             if (changedKeys.includes('sources')) {
@@ -105,14 +105,14 @@ class RefreshManagerIntegration {
                 });
             }
         });
-        
+
         // Also subscribe to environment changes to detect env var value changes
         this.envSubscriptionCleanup = envService.subscribe(() => {
             // Debounce environment changes to avoid excessive processing
             if (this.envChangeDebounceTimer) {
                 clearTimeout(this.envChangeDebounceTimer);
             }
-            
+
             this.envChangeDebounceTimer = setTimeout(() => {
                 // When env vars change, resync sources to update stored resolved values
                 // This does NOT trigger immediate refreshes - new values will be used on next scheduled refresh
@@ -123,7 +123,7 @@ class RefreshManagerIntegration {
             }, 500); // Wait 500ms after last env change
         });
     }
-    
+
     /**
      * Track source data in lastSeenSources map
      */
@@ -139,13 +139,13 @@ class RefreshManagerIntegration {
             resolvedData: resolvedData
         });
     }
-    
+
     /**
      * Resolve environment variables in source data
      */
     resolveSourceData(source: SourceData): ResolvedSourceData {
         const envService = getCentralizedEnvironmentService();
-        
+
         // Helper to resolve object templates
         const resolveObjectTemplate = (obj: unknown): unknown => {
             if (!obj || typeof obj !== 'object') {
@@ -156,7 +156,7 @@ class RefreshManagerIntegration {
                 return obj.map(item => resolveObjectTemplate(item));
             }
 
-            const resolved = {};
+            const resolved: Record<string, unknown> = {};
             for (const [key, value] of Object.entries(obj)) {
                 if (typeof value === 'string') {
                     resolved[key] = envService.resolveTemplate(value);
@@ -168,19 +168,19 @@ class RefreshManagerIntegration {
             }
             return resolved;
         };
-        
+
         // Resolve URL
         const resolvedPath = envService.resolveTemplate(source.sourcePath || '');
-        
+
         // Resolve headers and other request options
-        let resolvedRequestOptions = source.requestOptions ? {...source.requestOptions} : {};
+        const resolvedRequestOptions: Record<string, unknown> = source.requestOptions ? {...source.requestOptions} : {};
         if (resolvedRequestOptions.headers) {
             resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers) as Record<string, string>;
         }
-        if (resolvedRequestOptions.body) {
+        if (resolvedRequestOptions.body && typeof resolvedRequestOptions.body === 'string') {
             resolvedRequestOptions.body = envService.resolveTemplate(resolvedRequestOptions.body);
         }
-        
+
         return {
             sourcePath: resolvedPath,
             requestOptions: resolvedRequestOptions
@@ -201,13 +201,13 @@ class RefreshManagerIntegration {
         if (this.sourceChangeDebounceTimers.has('global')) {
             clearTimeout(this.sourceChangeDebounceTimers.get('global'));
         }
-        
+
         this.sourceChangeDebounceTimers.set('global', setTimeout(async () => {
             await this._performSourceSync(sources);
             this.sourceChangeDebounceTimers.delete('global');
         }, 100));
     }
-    
+
     async _performSourceSync(sources: SourceData[]) {
         // Track which sources we've seen to detect real changes
         const currentSourceIds = new Set();
@@ -215,41 +215,41 @@ class RefreshManagerIntegration {
         for (const source of sources) {
             if (source.sourceType === 'http') {
                 currentSourceIds.add(source.sourceId);
-                
+
                 const lastSeen = this.lastSeenSources.get(source.sourceId);
-                
+
                 // Check if this is a new source or if any relevant fields have changed
-                const sourceDataChanged = !lastSeen || 
+                const sourceDataChanged = !lastSeen ||
                     lastSeen.sourcePath !== source.sourcePath ||
                     lastSeen.sourceMethod !== source.sourceMethod ||
                     JSON.stringify(lastSeen.requestOptions) !== JSON.stringify(source.requestOptions) ||
                     JSON.stringify(lastSeen.jsonFilter) !== JSON.stringify(source.jsonFilter);
-                
+
                 // Check if activation state changed
                 const activationStateChanged = !lastSeen || lastSeen.activationState !== source.activationState;
-                
+
                 // Check if resolved values changed (after env var substitution)
                 let resolvedValuesChanged = false;
                 if (lastSeen && (source.sourcePath?.includes('{{') || JSON.stringify(source.requestOptions || {}).includes('{{'))) {
                     const currentResolved = this.resolveSourceData(source);
                     const lastResolved = lastSeen.resolvedData;
-                    
+
                     if (lastResolved) {
-                        resolvedValuesChanged = 
+                        resolvedValuesChanged =
                             currentResolved.sourcePath !== lastResolved.sourcePath ||
                             JSON.stringify(currentResolved.requestOptions) !== JSON.stringify(lastResolved.requestOptions);
-                            
+
                         if (resolvedValuesChanged) {
                             log.info(`Environment variable values changed for source ${source.sourceId}`);
                         }
                     }
                 }
-                
+
                 // Only check enabled and interval, ignore timing fields like lastRefresh/nextRefresh
-                const refreshSettingsChanged = !lastSeen || 
+                const refreshSettingsChanged = !lastSeen ||
                     lastSeen.refreshOptions?.enabled !== source.refreshOptions?.enabled ||
                     lastSeen.refreshOptions?.interval !== source.refreshOptions?.interval;
-                
+
                 if (!lastSeen || sourceDataChanged || refreshSettingsChanged || resolvedValuesChanged || activationStateChanged) {
                     // Log what changed
                     if (!lastSeen) {
@@ -273,10 +273,10 @@ class RefreshManagerIntegration {
                             log.debug(`Source ${source.sourceId} resolved values changed`);
                         }
                     }
-                    
+
                     // Update the source in RefreshManager
                     await refreshManager.updateSource(source);
-                    
+
                     // Log environment variable changes but don't trigger immediate refresh
                     // The new values will be used on the next scheduled refresh
                     if (resolvedValuesChanged && lastSeen) {
@@ -286,13 +286,13 @@ class RefreshManagerIntegration {
                             log.info(`Environment variables changed for source ${source.sourceId}, but auto-refresh is disabled`);
                         }
                     }
-                    
+
                     // Store a complete copy of the source data we've seen, including resolved values
                     this.trackSourceData(source);
                 }
             }
         }
-        
+
         // Remove sources that no longer exist
         for (const [sourceId] of this.lastSeenSources) {
             if (!currentSourceIds.has(sourceId)) {
@@ -309,13 +309,13 @@ class RefreshManagerIntegration {
         const handleSourceActivation = async (event: CustomEvent<{ sourceId: string; source: SourceData }>) => {
             const { sourceId, source } = event.detail;
             log.info(`Source ${sourceId} activated, adding to RefreshManager`);
-            
+
             // Add the newly activated source
             await refreshManager.addSource(source);
-            
+
             // Track it
             this.trackSourceData(source);
-            
+
             // Trigger immediate refresh only if this is truly the first fetch
             // or if the source was activated due to dependency resolution
             if (source.needsInitialFetch) {
@@ -331,29 +331,29 @@ class RefreshManagerIntegration {
                 });
             }
         };
-        
-        window.addEventListener('source-activated', handleSourceActivation as EventListener);
+
+        window.addEventListener('source-activated', handleSourceActivation as unknown as EventListener);
 
         // Store cleanup function
         if (!this.sourceActivationCleanup) {
             this.sourceActivationCleanup = () => {
-                window.removeEventListener('source-activated', handleSourceActivation as EventListener);
+                window.removeEventListener('source-activated', handleSourceActivation as unknown as EventListener);
             };
         }
     }
-    
+
     /**
      * Sync all sources on initialization
      */
     async syncAllSources() {
         const workspaceService = getCentralizedWorkspaceService();
         const { sources } = workspaceService.getState();
-        
+
         for (const source of sources) {
             if (source.sourceType === 'http') {
                 // Add all HTTP sources (even if auto-refresh is disabled)
                 await refreshManager.addSource(source);
-                
+
                 // Track complete source data including resolved values
                 this.trackSourceData(source);
             }
@@ -419,18 +419,18 @@ class RefreshManagerIntegration {
         if (!this.initialized || !refreshManager.isInitialized) {
             return;
         }
-        
+
         log.info('Cleaning up all sources before workspace switch');
-        
+
         // Remove all sources from RefreshManager
         for (const [sourceId] of this.lastSeenSources) {
             await refreshManager.removeSource(sourceId);
         }
-        
+
         // Clear our tracking
         this.lastSeenSources.clear();
     }
-    
+
     /**
      * Cleanup and destroy
      */
@@ -440,7 +440,7 @@ class RefreshManagerIntegration {
             clearTimeout(this.envChangeDebounceTimer);
             this.envChangeDebounceTimer = null;
         }
-        
+
         // Clear all source change debounce timers
         for (const [, timer] of this.sourceChangeDebounceTimers) {
             clearTimeout(timer);
@@ -456,7 +456,7 @@ class RefreshManagerIntegration {
             this.envSubscriptionCleanup();
             this.envSubscriptionCleanup = null;
         }
-        
+
         if (this.sourceActivationCleanup) {
             this.sourceActivationCleanup();
             this.sourceActivationCleanup = null;
@@ -470,7 +470,7 @@ class RefreshManagerIntegration {
         this.httpService = null;
         this.updateCallback = null;
         this.lastSeenSources.clear();
-        
+
         log.info('RefreshManagerIntegration destroyed');
     }
 
@@ -480,7 +480,7 @@ class RefreshManagerIntegration {
     isReady() {
         return this.initialized && refreshManager.isInitialized;
     }
-    
+
     /**
      * Get time until next refresh for a source
      */
@@ -490,7 +490,7 @@ class RefreshManagerIntegration {
         }
         return refreshManager.getTimeUntilRefresh(sourceId, sourceData);
     }
-    
+
     /**
      * Get refresh status for a source
      */

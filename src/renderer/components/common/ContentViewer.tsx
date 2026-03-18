@@ -58,20 +58,24 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
     const [copyingJson, setCopyingJson] = useState(false);
 
     // Store our own internal copy of content to avoid the intermediate "Refreshing..." state
-    const [internalContent, setInternalContent] = useState(null);
-    const [internalOriginalResponse, setInternalOriginalResponse] = useState(null);
-    const [responseHeaders, setResponseHeaders] = useState(null);
+    const [internalContent, setInternalContent] = useState<string | null>(null);
+    const [internalOriginalResponse, setInternalOriginalResponse] = useState<string | null>(null);
+    const [responseHeaders, setResponseHeaders] = useState<Record<string, string> | null>(null);
 
     // Initialize or update internal content when source changes
     useEffect(() => {
         if (source) {
             // Only update internal content when it changes
-            if (source.sourceContent !== internalContent) {
-                setInternalContent(source.sourceContent);
+            const sourceContent = (source.sourceContent as string | undefined) ?? null;
+            if (sourceContent !== internalContent) {
+                setInternalContent(sourceContent);
             }
 
-            if (source.originalResponse !== internalOriginalResponse) {
-                setInternalOriginalResponse(source.originalResponse);
+            const originalResponseStr = source.originalResponse
+                ? (typeof source.originalResponse === 'string' ? source.originalResponse : JSON.stringify(source.originalResponse))
+                : null;
+            if (originalResponseStr !== internalOriginalResponse) {
+                setInternalOriginalResponse(originalResponseStr);
             }
 
             // Extract headers from source using the HeaderExtractor utility
@@ -147,7 +151,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
                             size="small"
                             icon={copyingContent ? <CheckOutlined /> : <CopyOutlined />}
                             onClick={() => handleCopyContent(internalContent || '')}
-                            type={(copyingContent ? "success" : "default") as any}
+                            type="default"
                             style={{ marginLeft: 'auto' }}
                         >
                             {copyingContent ? 'Copied!' : 'Copy'}
@@ -165,7 +169,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word'
                     }}>
-                        {formatContent(internalContent)}
+                        {formatContent(internalContent ?? '')}
                     </pre>
                 </Card>
             )}
