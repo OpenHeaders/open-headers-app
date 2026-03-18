@@ -56,9 +56,9 @@ const Environments = () => {
   const [showAddVariableModal, setShowAddVariableModal] = useState(false);
 
   // Data states
-  const [variableUsage, setVariableUsage] = useState({});
-  const [missingVariables, setMissingVariables] = useState([]);
-  const [rules, setRules] = useState(null);
+  const [variableUsage, setVariableUsage] = useState<Record<string, string[]>>({});
+  const [missingVariables, setMissingVariables] = useState<string[]>([]);
+  const [rules, setRules] = useState<{ header?: Array<Record<string, unknown>>; [key: string]: unknown } | null>(null);
 
   /**
    * Load rules to check for environment variable usage
@@ -71,8 +71,8 @@ const Environments = () => {
         const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
         const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
         if (rulesData) {
-          const rulesStorage = JSON.parse(rulesData);
-          setRules(rulesStorage.rules || {});
+          const rulesStorage = JSON.parse(rulesData) as Record<string, unknown>;
+          setRules((rulesStorage.rules as typeof rules) ?? {});
         } else {
           setRules({});
         }
@@ -105,9 +105,9 @@ const Environments = () => {
     
     // Add usage from rules
     if (rules && rules.header) {
-      rules.header.forEach((rule: Record<string, any>) => {
+      rules.header.forEach((rule: Record<string, unknown>) => {
         if (rule.hasEnvVars && rule.envVars) {
-          rule.envVars.forEach((varName: string) => {
+          (rule.envVars as string[]).forEach((varName: string) => {
             if (!usage[varName]) {
               usage[varName] = [];
             }
@@ -134,10 +134,11 @@ const Environments = () => {
    * Listens for environment schema updates from team workspace sync
    */
   useEffect(() => {
-    const handleSchemaUpdate = (event: CustomEvent) => {
-      const { requiredVariables } = event.detail;
+    const handleSchemaUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { requiredVariables } = customEvent.detail;
       if (requiredVariables && requiredVariables.length > 0) {
-        showMessage('info', 
+        showMessage('info',
           `Team workspace requires ${requiredVariables.length} environment variable(s). ` +
           `Please configure them in the Environments tab.`
         );
@@ -189,18 +190,19 @@ const Environments = () => {
    * @param {string} oldName - Original variable name
    * @param {Object} newData - New variable data
    */
-  const handleEditVariable = async (oldName: string, newData: { name: string; value: string; isSecret?: boolean; [key: string]: unknown }) => {
+  const handleEditVariable = async (oldName: string, newData: unknown) => {
+    const data = newData as { name: string; value: string; isSecret?: boolean; [key: string]: unknown };
     try {
       // If name changed, delete old and create new
-      if (oldName !== newData.name) {
+      if (oldName !== data.name) {
         const deleteSuccess = await deleteVariable(oldName);
         if (!deleteSuccess) {
           showMessage('error', 'Failed to rename variable');
           return;
         }
       }
-      
-      const success = await setVariable(newData.name, newData.value, null, newData.isSecret);
+
+      const success = await setVariable(data.name, data.value, null, data.isSecret);
       if (success) {
         showMessage('success', 'Variable updated successfully');
       }
@@ -295,7 +297,7 @@ const Environments = () => {
             missingVariables={missingVariables}
             variableUsage={variableUsage}
             sources={sources}
-            rules={rules}
+            rules={(rules ?? {}) as { header?: Array<{ id: string; headerName?: string }>; [key: string]: unknown }}
             onAddVariable={() => setShowAddVariableModal(true)}
             onEditVariable={handleEditVariable}
             onDeleteVariable={deleteVariable}

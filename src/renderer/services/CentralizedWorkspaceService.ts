@@ -147,10 +147,10 @@ class CentralizedWorkspaceService extends BaseStateManager {
       return true;
     } catch (error) {
       log.error('Initialization failed:', error);
-      this.setState({ 
-        initialized: false, 
-        loading: false, 
-        error: error.message 
+      this.setState({
+        initialized: false,
+        loading: false,
+        error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
@@ -304,7 +304,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
           await new Promise(resolve => setTimeout(resolve, 500));
           log.info('Initial sync completed, proceeding to load workspace data');
         } catch (error) {
-          log.warn('Initial sync failed or timed out:', error.message);
+          log.warn('Initial sync failed or timed out:', error instanceof Error ? error.message : String(error));
           updateProgress('syncing', 75, 'Git sync timed out, continuing...', true);
           // Continue anyway - workspace might still be usable
         }
@@ -343,11 +343,12 @@ class CentralizedWorkspaceService extends BaseStateManager {
       log.error('Failed to switch workspace:', error);
       
       // Update progress with error
+      const errorMessage = error instanceof Error ? error.message : String(error);
       if (progressCallback) {
-        progressCallback('error', 0, `Error: ${error.message}`, false);
+        progressCallback('error', 0, `Error: ${errorMessage}`, false);
       }
       window.dispatchEvent(new CustomEvent('workspace-switch-error', {
-        detail: { error: error.message, workspaceId, previousWorkspaceId }
+        detail: { error: errorMessage, workspaceId, previousWorkspaceId }
       }));
       
       // Attempt to recover by switching back to previous workspace
@@ -364,7 +365,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
         this.setState({ activeWorkspaceId: 'default-personal' }, ['activeWorkspaceId']);
       }
       
-      this.setState({ loading: false, error: error.message, isWorkspaceSwitching: false });
+      this.setState({ loading: false, error: errorMessage, isWorkspaceSwitching: false });
       // Re-enable auto-save even on error
       this.autoSaveManager.setWorkspaceSwitching(false);
       throw error;
@@ -487,28 +488,29 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Update a source
    */
   async updateSource(sourceId: string, updates: Record<string, any>) {
-    let updatedSource = null;
-    const sources = this.state.sources.map((source: Record<string, any>) => {
+    let updatedSource: Record<string, unknown> | null = null;
+    const sources = this.state.sources.map((source: Record<string, unknown>) => {
       if (source.sourceId === String(sourceId)) {
-        const mergedUpdates = { ...updates };
+        const mergedUpdates: Record<string, unknown> = { ...updates };
         if (updates.refreshOptions && source.refreshOptions) {
           mergedUpdates.refreshOptions = {
-            ...source.refreshOptions,
-            ...updates.refreshOptions
+            ...(source.refreshOptions as Record<string, unknown>),
+            ...(updates.refreshOptions as Record<string, unknown>)
           };
         }
-        
+
         updatedSource = { ...source, ...mergedUpdates, updatedAt: new Date().toISOString() };
-        
+
         // Schedule dependency check if needed
         if (updatedSource.sourceType === 'http' && updatedSource.activationState === 'waiting_for_deps') {
-          this.sourceManager.evaluateSourceDependencies(updatedSource).then(deps => {
+          const capturedSource = updatedSource;
+          this.sourceManager.evaluateSourceDependencies(capturedSource as { sourceType: string; sourcePath: string; [key: string]: unknown }).then(deps => {
             if (deps.ready) {
-              this.updateSourceActivation(updatedSource.sourceId, true);
+              this.updateSourceActivation(capturedSource.sourceId as string, true);
             }
           });
         }
-        
+
         return updatedSource;
       }
       return source;
@@ -523,8 +525,10 @@ class CentralizedWorkspaceService extends BaseStateManager {
     });
     
     // Broadcast the source update to proxy if it has content
-    if (updatedSource && updatedSource.sourceContent && window.electronAPI?.proxyUpdateSource) {
-      window.electronAPI.proxyUpdateSource(updatedSource.sourceId, updatedSource.sourceContent);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+    const finalSource = updatedSource as Record<string, unknown> | null;
+    if (finalSource && finalSource.sourceContent && window.electronAPI?.proxyUpdateSource) {
+      window.electronAPI.proxyUpdateSource(finalSource.sourceId as string, finalSource.sourceContent as string);
     }
     
     return updatedSource;
@@ -896,7 +900,7 @@ class CentralizedWorkspaceService extends BaseStateManager {
     } catch (error) {
       return {
         isValid: false,
-        error: error.message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -981,56 +985,57 @@ class CentralizedWorkspaceService extends BaseStateManager {
    * Setup workspace sync listener
    */
   setupSyncListener() {
-    const unsubscribe = this.syncManager.setupSyncListener((data: { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: Record<string, any>; hasChanges?: boolean }) => {
-      const currentSyncStatus: Record<string, any> = { ...(this.state.syncStatus as Record<string, any>) };
-      
-      if (data.success) {
+    const unsubscribe = this.syncManager.setupSyncListener((data: Record<string, unknown>) => {
+      const syncData = data as { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: Record<string, unknown>; hasChanges?: boolean };
+      const currentSyncStatus: Record<string, Record<string, unknown>> = { ...(this.state.syncStatus as Record<string, Record<string, unknown>>) };
+
+      if (syncData.success) {
         // Only update lastSync if it's explicitly provided (meaning actual sync happened with changes)
-        const statusUpdate: Record<string, any> = {
+        const statusUpdate: Record<string, unknown> = {
           syncing: false,
           error: null
         };
 
         // Only update lastSync and commit info if provided
-        if (data.timestamp) {
-          statusUpdate.lastSync = new Date(data.timestamp).toISOString();
+        if (syncData.timestamp) {
+          statusUpdate.lastSync = new Date(syncData.timestamp).toISOString();
         }
-        if (data.commitInfo?.commitHash) {
-          statusUpdate.lastCommit = data.commitInfo.commitHash;
-          statusUpdate.commitInfo = data.commitInfo;
+        if (syncData.commitInfo?.commitHash) {
+          statusUpdate.lastCommit = syncData.commitInfo.commitHash;
+          statusUpdate.commitInfo = syncData.commitInfo;
         }
-        
+
         // Merge with existing status to preserve lastSync if not updated
-        currentSyncStatus[data.workspaceId] = {
-          ...currentSyncStatus[data.workspaceId],
+        currentSyncStatus[syncData.workspaceId] = {
+          ...currentSyncStatus[syncData.workspaceId],
           ...statusUpdate
         };
-        
-        if (data.workspaceId === this.state.activeWorkspaceId) {
+
+        if (syncData.workspaceId === this.state.activeWorkspaceId) {
           log.info('Reloading active workspace data after sync');
-          
+
           // Only clean up circuit breakers if there were actual changes
           // This preserves retry state across syncs that don't change configuration
-          const hasChanges = data.hasChanges !== false; // Check if sync reported changes
-          
+          const hasChanges = syncData.hasChanges !== false; // Check if sync reported changes
+
           if (hasChanges) {
             // Dispatch event to clean up circuit breakers before reloading
             window.dispatchEvent(new CustomEvent('workspace-syncing', {
-              detail: { workspaceId: data.workspaceId, reason: 'git-sync' }
+              detail: { workspaceId: syncData.workspaceId, reason: 'git-sync' }
             }));
           }
-          
-          this.loadWorkspaceData(data.workspaceId).catch(error => {
+
+          this.loadWorkspaceData(syncData.workspaceId as string).catch(error => {
             log.error('Failed to reload workspace data after sync:', error);
           });
         }
       } else {
-        currentSyncStatus[data.workspaceId] = {
+        currentSyncStatus[syncData.workspaceId] = {
           syncing: false,
-          error: data.error || 'Sync failed'
+          error: syncData.error || 'Sync failed'
         };
       }
-      
+
       this.setState({ syncStatus: currentSyncStatus }, ['syncStatus']);
     });
     
@@ -1064,59 +1069,61 @@ class CentralizedWorkspaceService extends BaseStateManager {
   setupCliJoinListener() {
     if (!window.electronAPI?.onCliWorkspaceJoined) return;
 
-    const unsubscribe = window.electronAPI.onCliWorkspaceJoined(async (data: { workspaceId: string }) => {
-      const { workspaceId } = data;
+    const unsubscribe = window.electronAPI.onCliWorkspaceJoined((data: Record<string, unknown>) => {
+      const workspaceId = data.workspaceId as string;
       log.info(`CLI workspace joined: ${workspaceId}, reloading workspace state`);
 
-      try {
-        const previousWorkspaceId = this.state.activeWorkspaceId;
+      void (async () => {
+        try {
+          const previousWorkspaceId = this.state.activeWorkspaceId;
 
-        // Pause auto-save to prevent writing empty state to old workspace
-        this.setState({ isWorkspaceSwitching: true });
-        this.autoSaveManager.setWorkspaceSwitching(true);
+          // Pause auto-save to prevent writing empty state to old workspace
+          this.setState({ isWorkspaceSwitching: true });
+          this.autoSaveManager.setWorkspaceSwitching(true);
 
-        // Save any pending changes for the current workspace
-        await this.autoSaveManager.waitForSaves();
-        await this.saveAll();
+          // Save any pending changes for the current workspace
+          await this.autoSaveManager.waitForSaves();
+          await this.saveAll();
 
-        // Notify RefreshManager to clean up sources
-        window.dispatchEvent(new CustomEvent('workspace-switching', {
-          detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
-        }));
+          // Notify RefreshManager to clean up sources
+          window.dispatchEvent(new CustomEvent('workspace-switching', {
+            detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
+          }));
 
-        // Clear current workspace data
-        await this.clearAllData();
+          // Clear current workspace data
+          await this.clearAllData();
 
-        // Reload workspace list from disk (CLI already saved the new workspace)
-        const workspaceConfig = await this.workspaceManager.loadWorkspaces();
+          // Reload workspace list from disk (CLI already saved the new workspace)
+          const workspaceConfig = await this.workspaceManager.loadWorkspaces();
 
-        // Update state with reloaded workspace list and new active ID
-        this.setState({
-          workspaces: workspaceConfig.workspaces,
-          activeWorkspaceId: workspaceConfig.activeWorkspaceId,
-          syncStatus: workspaceConfig.syncStatus
-        }, ['workspaces', 'activeWorkspaceId', 'syncStatus']);
+          // Update state with reloaded workspace list and new active ID
+          this.setState({
+            workspaces: workspaceConfig.workspaces,
+            activeWorkspaceId: workspaceConfig.activeWorkspaceId,
+            syncStatus: workspaceConfig.syncStatus
+          }, ['workspaces', 'activeWorkspaceId', 'syncStatus']);
 
-        // Load the new workspace data (sources, rules, proxy rules)
-        await this.loadWorkspaceData(workspaceConfig.activeWorkspaceId);
+          // Load the new workspace data (sources, rules, proxy rules)
+          await this.loadWorkspaceData(workspaceConfig.activeWorkspaceId);
 
-        // Notify other renderer components about the switch
-        window.dispatchEvent(new CustomEvent('workspace-switched', {
-          detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
-        }));
-        window.dispatchEvent(new CustomEvent('workspace-data-applied', {
-          detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
-        }));
+          // Notify other renderer components about the switch
+          window.dispatchEvent(new CustomEvent('workspace-switched', {
+            detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
+          }));
+          window.dispatchEvent(new CustomEvent('workspace-data-applied', {
+            detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
+          }));
 
-        this.setState({ loading: false, isWorkspaceSwitching: false });
-        this.autoSaveManager.setWorkspaceSwitching(false);
+          this.setState({ loading: false, isWorkspaceSwitching: false });
+          this.autoSaveManager.setWorkspaceSwitching(false);
 
-        log.info(`CLI workspace switch complete: ${previousWorkspaceId} → ${workspaceConfig.activeWorkspaceId}`);
-      } catch (error) {
-        log.error('Failed to handle CLI workspace join:', error);
-        this.setState({ isWorkspaceSwitching: false });
-        this.autoSaveManager.setWorkspaceSwitching(false);
-      }
+          log.info(`CLI workspace switch complete: ${previousWorkspaceId} → ${workspaceConfig.activeWorkspaceId}`);
+        } catch (error) {
+          log.error('Failed to handle CLI workspace join:', error);
+          this.setState({ isWorkspaceSwitching: false });
+          this.autoSaveManager.setWorkspaceSwitching(false);
+        }
+      })();
     });
 
     this.eventCleanup.push(unsubscribe);

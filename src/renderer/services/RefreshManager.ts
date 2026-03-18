@@ -59,6 +59,9 @@ interface HttpService {
 
 /** Update callback type */
 type OnUpdateCallback = (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => void;
+/** Scheduler-compatible source type */
+type SchedulerSource = { sourceId: string; sourceType: string; refreshOptions?: { interval?: string | number; lastRefresh?: string | number; alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } };
+
 import NetworkAwareScheduler from './NetworkAwareScheduler';
 import RefreshCoordinator from './RefreshCoordinator';
 import timeManager from './TimeManager';
@@ -72,14 +75,14 @@ import { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } from '../constants/re
 class RefreshManager {
   isInitialized: boolean;
   sources: InstanceType<typeof ConcurrentMap>;
-  httpService: any;
-  onUpdateCallback: ((sourceId: string, content: any, additionalData: Record<string, any>) => void) | null;
+  httpService: HttpService | null;
+  onUpdateCallback: OnUpdateCallback | null;
   scheduler: InstanceType<typeof NetworkAwareScheduler>;
   coordinator: InstanceType<typeof RefreshCoordinator>;
   deduplicator: InstanceType<typeof RequestDeduplicator>;
   eventCleanup: Array<() => void>;
-  _cachedSchedules: Map<string, any>;
-  _statusCache: Map<string, any>;
+  _cachedSchedules: Map<string, ScheduleEntry>;
+  _statusCache: Map<string, Record<string, unknown>>;
   _overdueChecks?: Map<string, number>;
   lastCacheUpdate: number;
   cacheUpdateInterval: ReturnType<typeof setInterval> | null;
@@ -182,7 +185,7 @@ class RefreshManager {
   setupEventListeners() {
     if (typeof window !== 'undefined' && window.electronAPI) {
       if (window.electronAPI.onNetworkStateSync) {
-        const networkHandler = this.handleNetworkStateSync;
+        const networkHandler = this.handleNetworkStateSync as unknown as (data: Record<string, unknown>) => void;
         const cleanup = window.electronAPI.onNetworkStateSync(networkHandler);
         this.eventCleanup.push(cleanup);
       }
@@ -317,8 +320,8 @@ class RefreshManager {
 
     await this.sources.set(sourceId, normalizedSource);
 
-    if (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0) {
-      await this.scheduler.scheduleSource(normalizedSource);
+    if (source.refreshOptions?.enabled && source.refreshOptions?.interval && source.refreshOptions.interval > 0) {
+      await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
 
       if (!source.refreshOptions?.lastRefresh) {
         log.info(`Triggering immediate refresh for new source ${sourceId}`);
@@ -358,12 +361,12 @@ class RefreshManager {
 
     await this.sources.set(sourceId, normalizedSource);
 
-    const wasEnabled = existingSource.refreshOptions?.enabled && existingSource.refreshOptions?.interval > 0;
-    const isEnabled = normalizedSource.refreshOptions?.enabled && normalizedSource.refreshOptions?.interval > 0;
+    const wasEnabled = existingSource.refreshOptions?.enabled && (existingSource.refreshOptions?.interval ?? 0) > 0;
+    const isEnabled = normalizedSource.refreshOptions?.enabled && (normalizedSource.refreshOptions?.interval ?? 0) > 0;
 
     if (!wasEnabled && isEnabled) {
       log.info(`Auto-refresh enabled for ${sourceId}`);
-      await this.scheduler.scheduleSource(normalizedSource);
+      await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
 
       if (!normalizedSource.refreshOptions?.lastRefresh || !normalizedSource.sourceContent) {
         log.info(`Triggering immediate refresh for source ${sourceId} after enabling auto-refresh`);
@@ -387,7 +390,7 @@ class RefreshManager {
       await this.updateScheduleCache();
     } else if (isEnabled) {
       const oldInterval = existingSource.refreshOptions?.interval;
-      const newInterval = normalizedSource.refreshOptions.interval;
+      const newInterval = normalizedSource.refreshOptions!.interval!;
 
       if (oldInterval !== newInterval) {
         log.info(`Interval changed for ${sourceId}: ${oldInterval} -> ${newInterval}`);
@@ -408,7 +411,7 @@ class RefreshManager {
       }
 
       if (!normalizedSource.refreshOptions?.preserveTiming) {
-        await this.scheduler.scheduleSource(normalizedSource);
+        await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
         log.info(`Rescheduled source ${sourceId} with new interval`);
       } else {
         log.info(`Preserving existing timer for ${sourceId}, only updating interval`);
@@ -439,8 +442,8 @@ class RefreshManager {
 
           await this.scheduler.schedules.set(sourceId, schedule);
 
-          normalizedSource.refreshOptions.lastRefresh = schedule.lastRefresh;
-          normalizedSource.refreshOptions.nextRefresh = schedule.nextRefresh;
+          normalizedSource.refreshOptions!.lastRefresh = schedule.lastRefresh;
+          normalizedSource.refreshOptions!.nextRefresh = schedule.nextRefresh;
           await this.sources.set(sourceId, normalizedSource);
 
           await this.scheduler.calculateAndScheduleNextRefresh(sourceId);
@@ -487,7 +490,7 @@ class RefreshManager {
     log.debug(`Removed source ${sourceId}`);
   }
 
-  async refreshSource(sourceId: string, options: Record<string, any> = {}) {
+  async refreshSource(sourceId: string, options: Record<string, unknown> = {}) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const source = await this.sources.get(sourceId);
@@ -506,14 +509,14 @@ class RefreshManager {
             ...options,
             timeout: await this.getNetworkTimeout()
           }
-      ) as { success: boolean; [key: string]: any };
+      ) as { success: boolean; [key: string]: unknown };
 
       if (result.success) {
         this.lastCacheUpdate = 0;
         await this.updateScheduleCache();
 
         const manualReasons = ['manual', 'env-change', 'interval-changed-overdue', 'auto-refresh-enabled'];
-        if (manualReasons.includes(options.reason) && source.refreshOptions?.enabled) {
+        if (manualReasons.includes(options.reason as string) && source.refreshOptions?.enabled) {
           log.info(`Manual-type refresh completed for ${sourceId} (reason: ${options.reason}), updating schedule`);
           await this.scheduler.updateLastRefresh(sourceId, timeManager.now());
         }
@@ -523,14 +526,14 @@ class RefreshManager {
     });
   }
 
-  async performRefresh(sourceId: string, source: any, options: { reason?: string } = {}) {
+  async performRefresh(sourceId: string, source: RefreshSource, options: { reason?: string } = {}) {
     const startTime = timeManager.now();
     const { reason = 'auto' } = options;
     const isManualRefresh = reason === 'manual';
 
 
     const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
 
     const circuitStatus = circuitBreaker.getStatus();
     const isRetry = reason === 'circuit-breaker-retry' ||
@@ -553,7 +556,7 @@ class RefreshManager {
     if (!this._statusCache.has(sourceId)) {
       this._statusCache.set(sourceId, {});
     }
-    const statusCache = this._statusCache.get(sourceId);
+    const statusCache = this._statusCache.get(sourceId)!;
     statusCache.isRefreshing = true;
     statusCache.isRetry = isRetry;
     statusCache.attemptNumber = attemptNumber;
@@ -575,7 +578,7 @@ class RefreshManager {
           timeout
         };
 
-        const httpResult = await this.httpService.request(
+        const httpResult = await this.httpService!.request(
             source.sourceId,
             source.sourcePath,
             source.sourceMethod,
@@ -626,7 +629,7 @@ class RefreshManager {
       });
 
       if (this._statusCache.has(sourceId)) {
-        const statusCache = this._statusCache.get(sourceId);
+        const statusCache = this._statusCache.get(sourceId)!;
         statusCache.isRefreshing = false;
         statusCache.isRetry = false;
         statusCache.attemptNumber = 0;
@@ -646,24 +649,24 @@ class RefreshManager {
           isRefreshing: false,
           lastRefresh: timeManager.now(),
           success: false,
-          error: error.message,
+          error: (error as Error).message,
           failureCount: circuitStatusAfter.failureCount
         }
       });
 
       if (this._statusCache.has(sourceId)) {
-        const statusCache = this._statusCache.get(sourceId);
+        const statusCache = this._statusCache.get(sourceId)!;
         statusCache.isRefreshing = false;
         statusCache.failureCount = circuitStatusAfter.failureCount;
       }
 
       // Schedule retry after failure
       // For manual refreshes without auto-refresh, we still want to retry on failures
-      if (circuitStatusAfter.failureCount < 3 || (source.refreshOptions?.enabled && source.refreshOptions?.interval > 0)) {
+      if (circuitStatusAfter.failureCount < 3 || (source.refreshOptions?.enabled && (source.refreshOptions?.interval ?? 0) > 0)) {
         log.info(`Scheduling retry after failure for source ${sourceId} (failure count: ${circuitStatusAfter.failureCount}, auto-refresh: ${source.refreshOptions?.enabled})`);
-        
+
         // For sources without auto-refresh, we need to temporarily add them to scheduler for retry
-        if (!source.refreshOptions?.enabled || source.refreshOptions?.interval <= 0) {
+        if (!source.refreshOptions?.enabled || (source.refreshOptions?.interval ?? 0) <= 0) {
           // Calculate retry delay immediately based on failure count
           const { INITIAL_RETRY_CONFIG } = await import('../constants/retryConfig');
           const baseDelay = INITIAL_RETRY_CONFIG.baseDelay;
@@ -671,14 +674,19 @@ class RefreshManager {
           const delay = baseDelay + Math.random() * maxJitter;
           
           // Create a temporary schedule just for retry attempts
-          const tempSchedule = {
+          const tempSchedule: ScheduleEntry = {
             sourceId,
             intervalMs: 60000, // Dummy interval, won't be used for regular scheduling
             lastRefresh: timeManager.now(),
             nextRefresh: timeManager.now() + delay, // Set immediate next refresh time
             retryCount: circuitStatusAfter.failureCount,
             maxRetries: 3,
+            backoffFactor: 1,
             failureCount: circuitStatusAfter.failureCount,
+            maxConsecutiveFailures: 3,
+            alignToMinute: false,
+            alignToHour: false,
+            alignToDay: false,
             isTemporary: true // Mark as temporary for cleanup after success
           };
           await this.scheduler.schedules.set(sourceId, tempSchedule);
@@ -730,7 +738,7 @@ class RefreshManager {
       reason: 'manual',
       priority: 'high',
       skipIfActive: false
-    }) as { success: boolean; [key: string]: any };
+    }) as { success: boolean; [key: string]: unknown };
 
     return result.success;
   }
@@ -805,7 +813,7 @@ class RefreshManager {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+    const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
     const circuitStatus = circuitBreaker.getStatus();
 
     if (!this._statusCache) {
@@ -852,7 +860,7 @@ class RefreshManager {
         if (source.sourceType === 'http') {
           const isRefreshing = this._statusCache.get(sourceId)?.isRefreshing || false;
           const circuitBreakerKey = formatCircuitBreakerKey('http', sourceId);
-          const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG);
+          const circuitBreaker = adaptiveCircuitBreakerManager.getBreaker(circuitBreakerKey, CIRCUIT_BREAKER_CONFIG)!;
           const circuitStatus = circuitBreaker.getStatus();
 
           this._statusCache.set(sourceId, {

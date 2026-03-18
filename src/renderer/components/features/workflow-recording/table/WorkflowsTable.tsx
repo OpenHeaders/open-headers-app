@@ -33,20 +33,67 @@ const { Text } = Typography;
  * @param {Function} props.onRecordDeleted - Callback when a record is deleted
  * @returns {React.ReactNode} Rendered component
  */
+interface WorkflowTag {
+    name?: string;
+    url?: string;
+    [key: string]: unknown;
+}
+
+interface WorkflowRecording {
+    id: string;
+    url?: string;
+    tag?: WorkflowTag | null;
+    description?: string;
+    currentDescription?: string;
+    currentTag?: string | WorkflowTag;
+    viewOnly?: boolean;
+    hasVideo?: boolean;
+    eventCount?: number;
+    timestamp?: string;
+    duration?: number;
+    size?: number;
+    source?: string;
+    metadata?: { url?: string; initialUrl?: string };
+    [key: string]: unknown;
+}
+
+interface ProcessingDetails {
+    eventCount?: number;
+    totalEvents?: number;
+    phase?: string;
+    resourcesFound?: number;
+    eventsProcessed?: number;
+}
+
+interface ProcessingState {
+    stage?: string;
+    progress?: number;
+    details?: ProcessingDetails;
+}
+
+interface EditingRecord {
+    id: string;
+    url?: string;
+    tag?: string | WorkflowTag | null;
+    currentDescription?: string;
+    currentTag?: string | WorkflowTag;
+    viewOnly?: boolean;
+}
+
 interface WorkflowsTableProps {
-    onViewRecord: (record: Record<string, any>) => void;
+    onViewRecord: (record: WorkflowRecording) => void;
     onRecordDeleted?: (recordId: string) => void;
 }
 
 const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) => {
-    const [workflowRecordings, setWorkflowRecordings] = useState([]);
+    const [workflowRecordings, setWorkflowRecordings] = useState<WorkflowRecording[]>([]);
     const [loading, setLoading] = useState(true);
     const [exportModalVisible, setExportModalVisible] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState(null);
-    const [processingRecords, setProcessingRecords] = useState({});
+    const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null);
+    const [processingRecords, setProcessingRecords] = useState<Record<string, ProcessingState>>({});
     const [descriptionModalVisible, setDescriptionModalVisible] = useState(false);
     const [tagModalVisible, setTagModalVisible] = useState(false);
-    const [editingRecord, setEditingRecord] = useState(null);
+    const [editingRecord, setEditingRecord] = useState<EditingRecord | null>(null);
     const { getHighlight, applyHighlight, TARGETS } = useNavigation();
     const { token } = theme.useToken();
 
@@ -55,7 +102,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      */
     const handleLoadWorkflowRecordings = async () => {
         setLoading(true);
-        const records = await loadWorkflowRecordings();
+        const records = await loadWorkflowRecordings() as WorkflowRecording[];
         setWorkflowRecordings(records);
         setLoading(false);
     };
@@ -80,8 +127,8 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles record export via modal
      * @param {Object} record - Record to export
      */
-    const handleExport = (record: Record<string, any>) => {
-        setSelectedRecord(record);
+    const handleExport = (record: WorkflowRecording) => {
+        setSelectedRecord(record as Record<string, unknown>);
         setExportModalVisible(true);
     };
 
@@ -89,7 +136,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles JSON export completion
      * @param {Object} record - Record metadata being exported
      */
-    const handleExportJson = async (record: Record<string, any>) => {
+    const handleExportJson = async (record: Record<string, unknown> | WorkflowRecording) => {
         try {
             const timestamp = new Date(record.timestamp as string).toISOString().replace(/:/g, '-').split('.')[0];
             const filename = `open-headers_recording_${timestamp}.json`;
@@ -161,40 +208,42 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         
         // Listen for recordings being processed
         const unsubscribeProcessing = window.electronAPI.onRecordingProcessing((processingRecord) => {
-            log.debug('[WorkflowsTable] Recording processing:', processingRecord.id);
+            const rec = processingRecord as unknown as WorkflowRecording;
+            log.debug('[WorkflowsTable] Recording processing:', rec.id);
             // Add the processing record to our table immediately
             setWorkflowRecordings(prev => {
                 // Check if record already exists
-                const existing = prev.find(r => r.id === processingRecord.id);
+                const existing = prev.find(r => r.id === rec.id);
                 if (existing) {
                     return prev;
                 }
                 // Add new processing record at the beginning
-                return [processingRecord, ...prev];
+                return [rec, ...prev];
             });
             // Track processing state with event count from the processing record
             setProcessingRecords(prev => ({
                 ...prev,
-                [processingRecord.id]: { 
-                    stage: 'preprocessing', 
+                [rec.id]: {
+                    stage: 'preprocessing',
                     progress: 0,
                     details: {
-                        eventCount: processingRecord.eventCount || 0
+                        eventCount: rec.eventCount || 0
                     }
                 }
             }));
         });
         
         // Listen for processing progress updates
-        const unsubscribeProgress = window.electronAPI.onRecordingProgress(({ recordId, stage, progress, details }) => {
+        const unsubscribeProgress = window.electronAPI.onRecordingProgress((data) => {
+            const { recordId, stage, progress, details } = data as { recordId: string; stage: string; progress: number; details?: ProcessingDetails };
             log.debug(`[WorkflowsTable] Recording progress: ${recordId} ${stage}`, progress);
             setProcessingRecords(prev => {
                 const existing = prev[recordId] || {};
                 return {
                     ...prev,
-                    [recordId]: { 
-                        stage, 
-                        progress, 
+                    [recordId]: {
+                        stage,
+                        progress,
                         details: {
                             ...existing.details,  // Preserve existing details like eventCount
                             ...details  // Merge in new details
@@ -202,7 +251,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
                     }
                 };
             });
-            
+
             // If complete, remove from processing and reload
             if (stage === 'complete') {
                 setTimeout(() => {
@@ -222,7 +271,8 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         });
         
         // Listen for deleted workflow recordings
-        const unsubscribeDeleted = window.electronAPI.onRecordingDeleted(({ recordId }) => {
+        const unsubscribeDeleted = window.electronAPI.onRecordingDeleted((data) => {
+            const { recordId } = data as { recordId: string };
             setWorkflowRecordings(prev => prev.filter(r => r.id !== recordId));
             setProcessingRecords(prev => {
                 const updated = { ...prev };
@@ -232,17 +282,18 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         });
         
         // Listen for metadata updates (e.g., when video recording completes or tag/description updates)
-        const unsubscribeMetadataUpdated = window.electronAPI.onRecordingMetadataUpdated((data) => {
+        const unsubscribeMetadataUpdated = window.electronAPI.onRecordingMetadataUpdated((rawData) => {
+            const data = rawData as { recordId?: string; recordingId?: string; metadata?: Record<string, unknown>; hasVideo?: boolean };
             if (data.metadata) {
                 // Full metadata update from updateRecordingMetadata
                 log.debug('[WorkflowsTable] Full metadata updated for recording:', data.recordId);
-                setWorkflowRecordings(prev => prev.map(r => 
-                    r.id === data.recordId ? { ...r, ...data.metadata } : r
+                setWorkflowRecordings(prev => prev.map(r =>
+                    r.id === data.recordId ? { ...r, ...data.metadata } as WorkflowRecording : r
                 ));
             } else if (data.hasVideo !== undefined) {
                 // Video status update
                 log.debug(`[WorkflowsTable] Video status updated for recording: ${data.recordingId} hasVideo: ${data.hasVideo}`);
-                setWorkflowRecordings(prev => prev.map(r => 
+                setWorkflowRecordings(prev => prev.map(r =>
                     r.id === data.recordingId ? { ...r, hasVideo: data.hasVideo } : r
                 ));
             }
@@ -269,24 +320,24 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             if (record) {
                 setEditingRecord({
                     id: recordId,
-                    url: updates.recordUrl || record.url,
-                    tag: updates.recordTag || record.tag,
-                    currentDescription: updates.currentDescription || record.description,
+                    url: (updates.recordUrl as string) || record.url,
+                    tag: (updates.recordTag as string) || record.tag,
+                    currentDescription: (updates.currentDescription as string) || record.description,
                     viewOnly: updates._action === 'viewDescription'
                 });
                 setDescriptionModalVisible(true);
             }
             return;
         }
-        
+
         // Check if this is a special action to open the tag modal
         if (updates._action === 'editTag') {
             const record = workflowRecordings.find(r => r.id === recordId);
             if (record) {
                 setEditingRecord({
                     id: recordId,
-                    url: updates.recordUrl || record.url,
-                    currentTag: updates.currentTag || record.tag
+                    url: (updates.recordUrl as string) || record.url,
+                    currentTag: (updates.currentTag as string) || record.tag || ''
                 });
                 setTagModalVisible(true);
             }
@@ -303,8 +354,8 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             await window.electronAPI.updateRecordingMetadata({ recordId, updates });
             
             // Update local state immediately for responsive UI
-            setWorkflowRecordings(prev => prev.map(r => 
-                r.id === recordId ? { ...r, ...updates } : r
+            setWorkflowRecordings(prev => prev.map(r =>
+                r.id === recordId ? { ...r, ...updates } as WorkflowRecording : r
             ));
             
             showMessage('success', 'Recording updated successfully');
@@ -340,11 +391,11 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
     // Create table columns
     const columns = createWorkflowColumns(
-        onViewRecord,
+        onViewRecord as (record: { id: string; timestamp: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
         handleDelete,
-        handleExport,
+        handleExport as (record: { id: string; timestamp: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
         handleUpdateMetadata,
-        processingRecords
+        processingRecords as unknown as Record<string, boolean>
     );
 
     return (
@@ -428,7 +479,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
                 
                 {/* Show overlay if any recording is being processed */}
                 {Object.keys(processingRecords).length > 0 && (
-                    <ProcessingOverlay processing={Object.values(processingRecords)[0]} />
+                    <ProcessingOverlay processing={Object.values(processingRecords)[0] as { stage?: string; progress?: number; details?: ProcessingDetails } | null} />
                 )}
             </div>
 
@@ -446,10 +497,10 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             {/* Edit Description Modal */}
             <EditDescriptionModal
                 visible={descriptionModalVisible}
-                recordId={editingRecord?.id}
-                recordUrl={editingRecord?.url}
-                recordTag={editingRecord?.tag}
-                currentDescription={editingRecord?.currentDescription}
+                recordId={editingRecord?.id ?? ''}
+                recordUrl={editingRecord?.url ?? ''}
+                recordTag={editingRecord?.tag as { name: string; url?: string } | null ?? null}
+                currentDescription={editingRecord?.currentDescription ?? ''}
                 viewOnly={editingRecord?.viewOnly}
                 onSave={handleSaveDescription}
                 onCancel={() => {
@@ -461,9 +512,9 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             {/* Edit Tag Modal */}
             <EditTagModal
                 visible={tagModalVisible}
-                recordId={editingRecord?.id}
-                recordUrl={editingRecord?.url}
-                currentTag={editingRecord?.currentTag}
+                recordId={editingRecord?.id ?? ''}
+                recordUrl={editingRecord?.url ?? ''}
+                currentTag={editingRecord?.currentTag ?? ''}
                 onSave={handleSaveTag}
                 onCancel={() => {
                     setTagModalVisible(false);

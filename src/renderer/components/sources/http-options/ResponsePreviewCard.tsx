@@ -48,7 +48,7 @@ const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }: Respo
             title={
                 <div className="response-card-header">
                     <span>Response Preview</span>
-                    {typeof testResponseContent === 'object' && testResponseContent.statusCode && (
+                    {typeof testResponseContent === 'object' && testResponseContent !== null && testResponseContent.statusCode && (
                         <span className="status-display">
                             Status Code <span className={`status-code status-${Math.floor(testResponseContent.statusCode / 100)}xx`}>
                                 {testResponseContent.statusCode} {getStatusText(testResponseContent.statusCode)}
@@ -66,130 +66,136 @@ const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }: Respo
             style={{ marginTop: 8 }}
             className="response-preview-card"
         >
-            {typeof testResponseContent === 'object' ? (
-                <Tabs
-                    defaultActiveKey="body"
-                    size="small"
-                    items={[
-                        {
-                            key: 'body',
-                            label: 'Body',
-                            children: (
-                                <div className="response-body">
-                                    {(() => {
-                                        try {
-                                            // Handle error responses first
-                                            if (testResponseContent.error) {
-                                                return (
-                                                    <div className="error-response">
-                                                        <div className="error-title">Request Error:</div>
-                                                        <div className="error-message">{testResponseContent.error}</div>
-                                                        {testResponseContent.details && (
-                                                            <div className="error-details">
-                                                                <div className="error-details-title">Details:</div>
-                                                                <div className="error-details-content">{testResponseContent.details}</div>
+            {typeof testResponseContent === 'object' && testResponseContent !== null ? (
+                (() => {
+                    const content = testResponseContent;
+                    return (
+                        <Tabs
+                            defaultActiveKey="body"
+                            size="small"
+                            items={[
+                                {
+                                    key: 'body',
+                                    label: 'Body',
+                                    children: (
+                                        <div className="response-body">
+                                            {(() => {
+                                                try {
+                                                    // Handle error responses first
+                                                    if (content.error) {
+                                                        return (
+                                                            <div className="error-response">
+                                                                <div className="error-title">Request Error:</div>
+                                                                <div className="error-message">{content.error}</div>
+                                                                {content.details && (
+                                                                    <div className="error-details">
+                                                                        <div className="error-details-title">Details:</div>
+                                                                        <div className="error-details-content">{content.details}</div>
+                                                                    </div>
+                                                                )}
+                                                                {content.retryStrategy && (
+                                                                    <div className="retry-info">
+                                                                        <div className="retry-info-title">Retry Strategy:</div>
+                                                                        <div className="retry-info-content">{content.retryStrategy.reason}</div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                        {testResponseContent.retryStrategy && (
-                                                            <div className="retry-info">
-                                                                <div className="retry-info-title">Retry Strategy:</div>
-                                                                <div className="retry-info-content">{testResponseContent.retryStrategy.reason}</div>
+                                                        );
+                                                    }
+
+                                                    // Check if it's filterable JSON
+                                                    if (content.filteredWith) {
+                                                        return (
+                                                            <div>
+                                                                <div className="filter-info">
+                                                                    [Filtered with path: {content.filteredWith}]
+                                                                </div>
+                                                                {formatContentByType(content.body, content.headers ?? null)}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            }
+                                                        );
+                                                    }
 
-                                            // Check if it's filterable JSON
-                                            if (testResponseContent.filteredWith) {
-                                                return (
-                                                    <div>
-                                                        <div className="filter-info">
-                                                            [Filtered with path: {testResponseContent.filteredWith}]
-                                                        </div>
-                                                        {formatContentByType(testResponseContent.body, testResponseContent.headers)}
-                                                    </div>
-                                                );
-                                            }
+                                                    // Standard body formatting
+                                                    const bodyContent = content.body;
+                                                    if (!bodyContent || bodyContent === '') {
+                                                        // Check if this is an error status code
+                                                        if (content.statusCode !== undefined && content.statusCode >= 400) {
+                                                            return (
+                                                                <div className="error-response">
+                                                                    <div className="error-title">HTTP Error {content.statusCode}:</div>
+                                                                    <div className="error-message">{getStatusText(content.statusCode)}</div>
+                                                                    <div className="error-details">
+                                                                        <div className="error-details-title">Response:</div>
+                                                                        <div className="error-details-content">No response body received</div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return <pre className="no-content">No response body received</pre>;
+                                                    }
 
-                                            // Standard body formatting
-                                            const bodyContent = testResponseContent.body;
-                                            if (!bodyContent || bodyContent === '') {
-                                                // Check if this is an error status code
-                                                if (testResponseContent.statusCode >= 400) {
+                                                    return formatContentByType(bodyContent, content.headers ?? null);
+                                                } catch (e) {
+                                                    const errorMessage = e instanceof Error ? e.message : String(e);
                                                     return (
                                                         <div className="error-response">
-                                                            <div className="error-title">HTTP Error {testResponseContent.statusCode}:</div>
-                                                            <div className="error-message">{getStatusText(testResponseContent.statusCode)}</div>
+                                                            <div className="error-title">Response Parsing Error:</div>
+                                                            <div className="error-message">{errorMessage}</div>
                                                             <div className="error-details">
-                                                                <div className="error-details-title">Response:</div>
-                                                                <div className="error-details-content">No response body received</div>
+                                                                <div className="error-details-title">Raw Content:</div>
+                                                                <pre className="error-details-content">{content.body || "No content"}</pre>
                                                             </div>
                                                         </div>
                                                     );
                                                 }
-                                                return <pre className="no-content">No response body received</pre>;
-                                            }
-
-                                            return formatContentByType(bodyContent, testResponseContent.headers);
-                                        } catch (e) {
-                                            return (
-                                                <div className="error-response">
-                                                    <div className="error-title">Response Parsing Error:</div>
-                                                    <div className="error-message">{e.message}</div>
-                                                    <div className="error-details">
-                                                        <div className="error-details-title">Raw Content:</div>
-                                                        <pre className="error-details-content">{testResponseContent.body || "No content"}</pre>
-                                                    </div>
-                                                </div>
-                                            );
-                                        }
-                                    })()}
-                                </div>
-                            )
-                        },
-                        {
-                            key: 'headers',
-                            label: 'Headers',
-                            children: (
-                                <div className="response-headers">
-                                    {testResponseContent.headers ? (
-                                        <table className="headers-table">
-                                            <thead>
-                                            <tr>
-                                                <th>Name</th>
-                                                <th>Value</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            {Object.entries(testResponseContent.headers).map(([key, value]) => (
-                                                <tr key={key}>
-                                                    <td>{key}</td>
-                                                    <td>{value as React.ReactNode}</td>
-                                                </tr>
-                                            ))}
-                                            </tbody>
-                                        </table>
-                                    ) : (
-                                        <div className="no-headers">No headers available</div>
-                                    )}
-                                </div>
-                            )
-                        },
-                        {
-                            key: 'raw',
-                            label: 'Raw',
-                            children: (
-                                <pre className="response-raw">
-                                    {JSON.stringify(testResponseContent, null, 2)}
-                                </pre>
-                            )
-                        }
-                    ]}
-                />
+                                            })()}
+                                        </div>
+                                    )
+                                },
+                                {
+                                    key: 'headers',
+                                    label: 'Headers',
+                                    children: (
+                                        <div className="response-headers">
+                                            {content.headers ? (
+                                                <table className="headers-table">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>Name</th>
+                                                        <th>Value</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {Object.entries(content.headers).map(([key, value]) => (
+                                                        <tr key={key}>
+                                                            <td>{key}</td>
+                                                            <td>{value as React.ReactNode}</td>
+                                                        </tr>
+                                                    ))}
+                                                    </tbody>
+                                                </table>
+                                            ) : (
+                                                <div className="no-headers">No headers available</div>
+                                            )}
+                                        </div>
+                                    )
+                                },
+                                {
+                                    key: 'raw',
+                                    label: 'Raw',
+                                    children: (
+                                        <pre className="response-raw">
+                                            {JSON.stringify(content, null, 2)}
+                                        </pre>
+                                    )
+                                }
+                            ]}
+                        />
+                    );
+                })()
             ) : (
                 <pre className="response-error">
-                    {testResponseContent}
+                    {String(testResponseContent ?? '')}
                 </pre>
             )}
         </Card>

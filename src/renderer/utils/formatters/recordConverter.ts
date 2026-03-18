@@ -121,7 +121,7 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
   if (!cookieStr.includes('path=') && !cookieStr.includes('max-age=') && 
       !cookieStr.includes('expires=') && cookieStr.includes('; ')) {
     // Multiple cookies format: "name1=value1; name2=value2"
-    const cookies = [];
+    const cookies: ParsedCookie[] = [];
     const pairs = cookieStr.split('; ');
     pairs.forEach((pair: string) => {
       const eqIndex = pair.indexOf('=');
@@ -217,11 +217,11 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
   }
 
   // Initialize arrays for different event types
-  const console = [];
-  const network = [];
-  const storage = [];
-  const rrwebEvents = [];
-  const navigationHistory = [];
+  const console: Array<Record<string, unknown>> = [];
+  const network: Array<Record<string, unknown>> = [];
+  const storage: StorageItem[] = [];
+  const rrwebEvents: EventData[] = [];
+  const navigationHistory: Array<{ timestamp: number; url?: string; title?: string; transitionType?: string }> = [];
   
   // Get the actual start time (considering pre-navigation adjustment)
   // If preNavTimeAdjustment exists, events are already adjusted, so we use the raw startTime
@@ -230,7 +230,7 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
   // Process each event based on its type
   record.events.forEach((event: RecordingEvent) => {
     // Calculate relative timestamp
-    const relativeTimestamp = event.timestamp - startTime;
+    const relativeTimestamp = event.timestamp - (startTime ?? 0);
     
     switch (event.type) {
       case 'console':
@@ -255,10 +255,10 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
               fullUrl = baseUrl.origin + event.data.url;
             } catch (e) {
               // If that fails, try to use the URL from metadata or navigation history
-              const recordUrl = record.url || record.metadata?.url || navigationHistory[0]?.url;
+              const recordUrl = record.url || (record.metadata?.url as string | undefined) || navigationHistory[0]?.url;
               if (recordUrl) {
                 try {
-                  const baseUrl = new URL(recordUrl);
+                  const baseUrl = new URL(recordUrl as string);
                   fullUrl = baseUrl.origin + event.data.url;
                 } catch (e2) {
                   // Keep relative URL if can't parse base
@@ -292,16 +292,16 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
             
             // Set timing information
             if (event.data.timing && event.data.timing.endTime) {
-              const responseTimestamp = event.timestamp - startTime;
+              const responseTimestamp = event.timestamp - (startTime ?? 0);
               request.endTime = responseTimestamp;
-              request.duration = event.data.timing.endTime - (request.timing?.startTime || 0);
+              request.duration = (event.data.timing.endTime as number) - ((request.timing as Record<string, unknown>)?.startTime as number || 0);
             }
             
             // For size, use response body length or responseSize from event
             if (event.data.responseSize) {
               request.size = event.data.responseSize;
             } else if (request.responseBody) {
-              request.size = request.responseBody.length;
+              request.size = (request.responseBody as string).length;
             }
           }
         }
@@ -323,12 +323,12 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
           // Map type from 'local'/'session' to 'localStorage'/'sessionStorage'
           const storageType = event.data.type === 'local' ? 'localStorage' :
                             event.data.type === 'session' ? 'sessionStorage' :
-                            event.data.type;
-                            
+                            (event.data.type || 'unknown');
+
           storage.push({
             timestamp: relativeTimestamp,
             type: storageType,
-            action: event.data.action, // set, remove, clear
+            action: event.data.action || 'unknown', // set, remove, clear
             key: event.data.key,
             name: event.data.key || (event.data.action === 'clear' ? '*' : ''),
             oldValue: event.data.oldValue,
@@ -371,7 +371,7 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
     recordId: record.id,
     startTime: record.startTime,
     endTime: record.endTime,
-    duration: record.endTime ? record.endTime - record.startTime : 0,
+    duration: record.endTime ? record.endTime - (record.startTime ?? 0) : 0,
     url: record.url || navigationHistory[0]?.url || '',
     viewport: record.viewport || { width: 1920, height: 1080 },
     userAgent: record.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown')
@@ -400,8 +400,8 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
  * Process storage events to match the old format expected by RecordStorageTab
  */
 export function processStorageEvents(storage: StorageItem[], record: RecordingRecord) {
-  const processedStorage = [];
-  
+  const processedStorage: StorageItem[] = [];
+
   storage.forEach((item: StorageItem) => {
     // URL should already be present from the converter, but fallback to record URL
     const itemUrl = item.url || record.url || null;
@@ -528,8 +528,8 @@ export function processStorageEvents(storage: StorageItem[], record: RecordingRe
  * Also track previous values for proper old/new value display
  */
 function deduplicateInitialStorage(storageEvents: StorageItem[]) {
-  const seenKeys = new Map(); // Map of type:key -> last known value
-  const processedEvents = [];
+  const seenKeys = new Map<string, unknown>(); // Map of type:key -> last known value
+  const processedEvents: StorageItem[] = [];
   
   // Find the timestamp of the first storage-initial event (recording start)
   let recordingStartTime = null;

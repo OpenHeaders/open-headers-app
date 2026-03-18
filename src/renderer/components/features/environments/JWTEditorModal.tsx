@@ -36,21 +36,21 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const [decodedPayload, setDecodedPayload] = useState('');
   const [signature, setSignature] = useState('');
   const [encodedToken, setEncodedToken] = useState('');
-  const [error, setError] = useState(null);
-  const [headerError, setHeaderError] = useState(null);
-  const [payloadError, setPayloadError] = useState(null);
-  const [expirationInfo, setExpirationInfo] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [headerError, setHeaderError] = useState<string | null>(null);
+  const [payloadError, setPayloadError] = useState<string | null>(null);
+  const [expirationInfo, setExpirationInfo] = useState<{ hasExpiration: boolean; isExpired?: boolean; expiresAt?: Date; expiresIn?: number } | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [originalToken, setOriginalToken] = useState('');
   const [useSecretKey, setUseSecretKey] = useState(false);
   const [secretKey, setSecretKey] = useState('');
-  const [signingError, setSigningError] = useState(null);
+  const [signingError, setSigningError] = useState<string | null>(null);
   const [algorithm, setAlgorithm] = useState('HS256');
   const [headerExpanded, setHeaderExpanded] = useState(false);
   const [variableType, setVariableType] = useState('default');
   const [editMode, setEditMode] = useState('decoded'); // 'decoded' or 'encoded'
   const [encodedInput, setEncodedInput] = useState('');
-  const [encodedInputError, setEncodedInputError] = useState(null);
+  const [encodedInputError, setEncodedInputError] = useState<string | null>(null);
 
   // Initialize with decoded token
   useEffect(() => {
@@ -81,7 +81,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
         const expInfo = getJWTExpiration(decoded.payload);
         setExpirationInfo(expInfo);
       } catch (err) {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : String(err));
         // Still show the original token even if it can't be decoded
         setEncodedToken(initialValue);
         setEncodedInput(initialValue);
@@ -114,7 +114,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       // Check if we're back to the original token
       setIsModified(newToken !== originalToken);
     } catch (err) {
-      setSigningError(err.message);
+      setSigningError(err instanceof Error ? err.message : String(err));
       // Still encode without signature as fallback
       const newToken = encodeJWT(headerObj, payloadObj, signature);
       setEncodedToken(newToken);
@@ -137,7 +137,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       setHeaderError(null);
       setError(null);
     } catch (err) {
-      setHeaderError(err.message);
+      setHeaderError(err instanceof Error ? err.message : String(err));
       // Still mark as modified when there's an error
       setIsModified(true);
     }
@@ -161,7 +161,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       const expInfo = getJWTExpiration(payloadObj);
       setExpirationInfo(expInfo);
     } catch (err) {
-      setPayloadError(err.message);
+      setPayloadError(err instanceof Error ? err.message : String(err));
       // Still mark as modified when there's an error
       setIsModified(true);
     }
@@ -271,7 +271,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       // Mark as modified if different from original
       setIsModified(newToken !== originalToken);
     } catch (err) {
-      setEncodedInputError(err.message);
+      setEncodedInputError(err instanceof Error ? err.message : String(err));
       setEncodedToken(newToken);
       // Mark as modified since we have an invalid token
       setIsModified(true);
@@ -339,7 +339,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                 <CloseCircleOutlined />
                 <Text strong>Token Expired</Text>
                 <Text type="secondary">
-                  Expired on {expiresAt.toLocaleString()}
+                  Expired on {expiresAt?.toLocaleString()}
                 </Text>
               </>
             ) : (
@@ -347,7 +347,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                 <CheckCircleOutlined />
                 <Text strong>Token Valid</Text>
                 <Text type="secondary">
-                  Expires on {expiresAt.toLocaleString()}
+                  Expires on {expiresAt?.toLocaleString()}
                 </Text>
               </>
             )}
@@ -366,10 +366,11 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const renderClaimsHelper = () => {
     try {
       const payload = validateJSON(decodedPayload);
+      const claimDescriptions = JWT_CLAIM_DESCRIPTIONS as Record<string, string>;
       const commonClaims = Object.keys(payload)
-        .filter(key => JWT_CLAIM_DESCRIPTIONS[key])
+        .filter(key => claimDescriptions[key])
         .map(key => (
-          <Tooltip key={key} title={JWT_CLAIM_DESCRIPTIONS[key]}>
+          <Tooltip key={key} title={claimDescriptions[key]}>
             <Tag color="blue">{key}</Tag>
           </Tooltip>
         ));
@@ -406,8 +407,8 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       onCancel={onCancel}
       width="90vw"
       okText="Save"
-      okButtonProps={{ 
-        disabled: hasErrors,
+      okButtonProps={{
+        disabled: !!hasErrors,
         type: 'primary'
       }}
       centered

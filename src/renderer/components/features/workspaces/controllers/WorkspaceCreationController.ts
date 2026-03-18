@@ -44,7 +44,7 @@ class WorkspaceCreationController {
         this.stateMachine.addListener(this.handleStateChange);
     }
 
-    async create(formData: Record<string, any>, options: Record<string, any> = {}) {
+    async create(formData: Record<string, unknown>, options: Record<string, unknown> = {}) {
         // Reset any existing operation
         this.reset();
         
@@ -63,20 +63,25 @@ class WorkspaceCreationController {
             
         } catch (error) {
             log.error('Workspace creation failed:', error);
-            this.stateMachine.setError(error);
-            
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
+
             // Attempt rollback if we're not already in error state
             if (this.stateMachine.getCurrentState() !== WORKSPACE_CREATION_STATES.ERROR) {
                 await this.stateMachine.executeRollback();
             }
-            
+
             throw error;
         }
     }
 
     async executeCreationFlow() {
         const { formData } = this.stateMachine.getContext();
-        
+
+        if (!formData) {
+            this.stateMachine.setError(new Error('No form data available'));
+            return;
+        }
+
         // Step 1: Form validation (auto-transition will handle VALIDATION_STARTED)
         await this.validateForm(formData);
         
@@ -119,17 +124,17 @@ class WorkspaceCreationController {
         this.stateMachine.transition(WORKSPACE_CREATION_EVENTS.WORKSPACE_ACTIVATED);
     }
 
-    async validateForm(formData: Record<string, any>) {
+    async validateForm(formData: Record<string, unknown>) {
         this.checkAborted();
 
         // Validate required fields
-        if (!formData.name?.trim()) {
+        if (!(formData.name as string)?.trim()) {
             const error = new Error('Workspace name is required');
             this.stateMachine.setError(error);
             return;
         }
 
-        if (formData.type === 'team' && !formData.gitUrl?.trim()) {
+        if (formData.type === 'team' && !(formData.gitUrl as string)?.trim()) {
             const error = new Error('Git repository URL is required for team workspaces');
             this.stateMachine.setError(error);
             return;
@@ -138,9 +143,9 @@ class WorkspaceCreationController {
         // Validate Git URL format if provided
         if (formData.gitUrl) {
             try {
-                await this.validateGitUrl(formData.gitUrl);
+                await this.validateGitUrl(formData.gitUrl as string);
             } catch (error) {
-                this.stateMachine.setError(error);
+                this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
                 return;
             }
         }
@@ -150,7 +155,7 @@ class WorkspaceCreationController {
         });
     }
 
-    async handleGitOperations(formData: Record<string, any>) {
+    async handleGitOperations(formData: Record<string, unknown>) {
         this.checkAborted();
         
         // Check Git status
@@ -184,7 +189,7 @@ class WorkspaceCreationController {
             
         } catch (error) {
             this.stateMachine.clearTimeout('git_status_check');
-            this.stateMachine.setError(error);
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     }
@@ -214,26 +219,26 @@ class WorkspaceCreationController {
             
         } catch (error) {
             this.stateMachine.clearTimeout('git_installation');
-            this.stateMachine.setError(error);
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     }
 
-    async testConnection(formData: Record<string, any>) {
+    async testConnection(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
             // Set timeout for connection test
             this.stateMachine.setTimeout('connection_test', 30000);
             
-            const authData = await prepareAuthData(formData, formData.authType);
-            
+            const authData = await prepareAuthData(formData, (formData.authType as string));
+
             const connectionConfig = {
                 url: formData.gitUrl,
-                branch: formData.gitBranch || 'main',
-                authType: formData.authType || 'none',
+                branch: (formData.gitBranch as string) || 'main',
+                authType: (formData.authType as string) || 'none',
                 authData,
-                filePath: formData.gitPath || 'config/open-headers.json'
+                filePath: (formData.gitPath as string) || 'config/open-headers.json'
             };
             
             const result = await this.dependencies.gitService.testConnection(connectionConfig);
@@ -253,23 +258,23 @@ class WorkspaceCreationController {
             
         } catch (error) {
             this.stateMachine.clearTimeout('connection_test');
-            this.stateMachine.setError(error);
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     }
 
-    async createWorkspace(formData: Record<string, any>) {
+    async createWorkspace(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
             // Set timeout for workspace creation
             this.stateMachine.setTimeout('workspace_creation', 30000);
             
-            const authData = formData.type === 'team' ? 
-                await prepareAuthData(formData, formData.authType) : 
+            const authData = formData.type === 'team' ?
+                await prepareAuthData(formData, (formData.authType as string)) :
                 undefined;
             
-            const workspaceData = prepareWorkspaceData(formData, null, authData);
+            const workspaceData = prepareWorkspaceData(formData, null, authData ?? {});
             
             const result = await this.dependencies.workspaceService.create(workspaceData);
             
@@ -288,14 +293,14 @@ class WorkspaceCreationController {
             
         } catch (error) {
             this.stateMachine.clearTimeout('workspace_creation');
-            this.stateMachine.setError(error);
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     }
 
     // Removed handlePostCreation since initial commit is now done before workspace creation
 
-    async performInitialCommit(formData: Record<string, any>) {
+    async performInitialCommit(formData: Record<string, unknown>) {
         this.checkAborted();
         
         try {
@@ -308,15 +313,16 @@ class WorkspaceCreationController {
             this.stateMachine.setTimeout('initial_commit', 45000);
             
             // Prepare auth data
-            const authData = await prepareAuthData(formData, formData.authType || 'none');
-            
+            const authData = await prepareAuthData(formData, (formData.authType as string) || 'none');
+
             // Commit configuration
+            const initialCommit = formData.initialCommit as Record<string, unknown>;
             const commitConfig = {
                 url: formData.gitUrl,
-                branch: formData.gitBranch || 'main',
-                path: formData.gitPath || 'config/',
-                files: formData.initialCommit.files,
-                message: formData.initialCommit.message,
+                branch: (formData.gitBranch as string) || 'main',
+                path: (formData.gitPath as string) || 'config/',
+                files: initialCommit.files,
+                message: initialCommit.message,
                 authType: formData.authType || 'none',
                 authData
             };
@@ -340,7 +346,7 @@ class WorkspaceCreationController {
         } catch (error) {
             this.stateMachine.clearTimeout('initial_commit');
             log.error('Initial commit failed:', error);
-            this.stateMachine.setError(error);
+            this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
             throw error;
         }
     }

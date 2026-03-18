@@ -45,23 +45,23 @@ const WorkspaceEditModal = ({
     const [authType, setAuthType] = useState(DEFAULT_VALUES.authType);
     const [sshKeySource, setSshKeySource] = useState(DEFAULT_VALUES.sshKeySource);
     const [connectionTested, setConnectionTested] = useState(false);
-    const [gitStatus, setGitStatus] = useState(null);
-    const [connectionProgress, setConnectionProgress] = useState([]);
+    const [gitStatus, setGitStatus] = useState<{ isInstalled: boolean; gitPath?: string; error?: string } | null>(null);
+    const [connectionProgress, setConnectionProgress] = useState<{ step: string; status: string; details?: string; progress?: number }[]>([]);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState(null);
-    const [expandedKeys, setExpandedKeys] = useState([]);
-    const unsubscribeProgressRef = useRef(null);
-    const progressUnsubscribeRef = useRef(null);
+    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; error?: string; [key: string]: unknown } | null>(null);
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const unsubscribeProgressRef = useRef<(() => void) | null>(null);
+    const progressUnsubscribeRef = useRef<(() => void) | null>(null);
     
     const workspaceContext = useWorkspaces();
     const { updateWorkspace } = workspaceContext;
-    
+
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        });
+        }) as { gitService: { getStatus: () => Promise<Record<string, unknown>>; install: () => Promise<{ success: boolean }>; subscribeToConnectionProgress: () => (() => void); onProgress: (listener: (event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void); testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; [key: string]: unknown }> }; workspaceService: Record<string, unknown>; syncService: Record<string, unknown>; cleanup: () => void } | null;
     }, [workspaceContext]);
-    
+
     useEffect(() => {
         return () => {
             if (services?.cleanup) {
@@ -71,7 +71,7 @@ const WorkspaceEditModal = ({
     }, [services]);
     
     const [isUpdating, setIsUpdating] = useState(false);
-    const [updateError, setUpdateError] = useState(null);
+    const [updateError, setUpdateError] = useState<{ message: string } | null>(null);
 
     const authTypeValue = Form.useWatch('authType', form);
     const sshKeySourceValue = Form.useWatch('sshKeySource', form);
@@ -91,7 +91,7 @@ const WorkspaceEditModal = ({
             const authData = workspace.authData || {};
             
             // Set form values from the workspace
-            const formValues: Record<string, any> = {
+            const formValues: Record<string, unknown> = {
                 name: workspace.name,
                 description: workspace.description,
                 type: workspace.type,
@@ -159,17 +159,17 @@ const WorkspaceEditModal = ({
     
     const checkGitStatus = async () => {
         try {
-            const status = await services.gitService.getStatus();
-            setGitStatus(status);
+            const status = await services!.gitService.getStatus();
+            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
         } catch (error) {
             console.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: error.message });
+            setGitStatus({ isInstalled: false, error: (error as Error).message });
         }
     };
     
     const handleInstallGit = async () => {
         try {
-            const result = await services.gitService.install();
+            const result = await services!.gitService.install();
             if (result.success) {
                 await checkGitStatus();
             }
@@ -256,17 +256,20 @@ const WorkspaceEditModal = ({
             setConnectionTested(false);
             setConnectionTestResult(null);
             
-            unsubscribeProgressRef.current = services.gitService.subscribeToConnectionProgress();
-            
-            progressUnsubscribeRef.current = services.gitService.onProgress((event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => {
+            unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress();
+
+            progressUnsubscribeRef.current = services!.gitService.onProgress((event: { type: string; data: { summary?: ({ step: string; status: string; details?: string; progress?: number } | string)[]; [key: string]: unknown }; [key: string]: unknown }) => {
                 if (event.type === 'git-connection') {
-                    setConnectionProgress(event.data.summary || []);
+                    const summary = event.data.summary || [];
+                    setConnectionProgress(summary.map(item =>
+                        typeof item === 'string' ? { step: item, status: 'done' } : item
+                    ));
                 }
             });
             
             const authData = await prepareAuthData(values, values.authType || 'none');
             
-            const result = await services.gitService.testConnection({
+            const result = await services!.gitService.testConnection({
                 url: values.gitUrl,
                 branch: values.gitBranch || 'main',
                 authType: values.authType || 'none',
@@ -280,7 +283,7 @@ const WorkspaceEditModal = ({
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
-            setConnectionTestResult({ success: false, error: error.message });
+            setConnectionTestResult({ success: false, error: (error as Error).message });
             setIsTestingConnection(false);
         }
     };
@@ -299,7 +302,7 @@ const WorkspaceEditModal = ({
             
             // Prepare auth data if it's a Git workspace
             let authData = null;
-            if (workspace.type === WORKSPACE_TYPES.GIT) {
+            if (workspace?.type === WORKSPACE_TYPES.GIT) {
                 try {
                     authData = await prepareAuthData(values, (values.authType as string) || 'none');
                 } catch (error) {
@@ -322,19 +325,19 @@ const WorkspaceEditModal = ({
             };
             
             // Update the workspace
-            const success = await updateWorkspace(workspace.id, updateValues);
-            
+            const success = await updateWorkspace(workspace!.id!, updateValues);
+
             if (success) {
                 message.success('Workspace updated successfully');
-                onSuccess?.(workspace.id);
+                onSuccess?.(workspace!.id);
                 handleCancel();
             } else {
                 throw new Error('Failed to update workspace');
             }
         } catch (error) {
             console.error('Workspace update failed:', error);
-            setUpdateError(error);
-            message.error(`Failed to update workspace: ${error.message}`);
+            setUpdateError(error as { message: string });
+            message.error(`Failed to update workspace: ${(error as Error).message}`);
         } finally {
             setIsUpdating(false);
         }
@@ -566,9 +569,9 @@ const WorkspaceEditModal = ({
                     </div>
 
                     {/* Collapsible section for ALL technical details */}
-                    <Collapse 
+                    <Collapse
                         activeKey={expandedKeys}
-                        onChange={setExpandedKeys}
+                        onChange={(keys) => setExpandedKeys(Array.isArray(keys) ? keys.map(String) : [String(keys)])}
                         style={{ marginBottom: 16 }}
                         expandIcon={() => null}
                         items={[{
