@@ -9,9 +9,8 @@ import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useWorkspaceSync');
 
-// Minimum time between sync notifications (in milliseconds)
-// This prevents notification spam when app returns from background with queued events
-const NOTIFICATION_DEBOUNCE_MS = 5000;
+// Delay before showing notification — coalesces rapid-fire events into one
+const NOTIFICATION_COALESCE_MS = 1000;
 
 interface UseWorkspaceSyncDeps {
   activeWorkspaceId: string;
@@ -21,11 +20,11 @@ interface UseWorkspaceSyncDeps {
  * Hook for managing workspace synchronization
  */
 export function useWorkspaceSync({ activeWorkspaceId }: UseWorkspaceSyncDeps): void {
-  // Track the last time we showed a notification to prevent spam
-  const lastNotificationTimeRef = useRef<number>(0);
+  // Pending notification timer — coalesces multiple events into a single notification
+  const pendingNotificationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const unsubscribe = (window as any).electronAPI.onWorkspaceDataUpdated((updateData: any) => {
+    const unsubscribe = (window as unknown as { electronAPI: { onWorkspaceDataUpdated: (cb: (data: { workspaceId: string; timestamp: number }) => void) => (() => void) } }).electronAPI.onWorkspaceDataUpdated((updateData) => {
       log.info('Received workspace data update notification:', {
         workspaceId: updateData.workspaceId,
         timestamp: updateData.timestamp
@@ -37,24 +36,27 @@ export function useWorkspaceSync({ activeWorkspaceId }: UseWorkspaceSyncDeps): v
       }
 
       // Dispatch custom event to notify components about data refresh
-      // (this should always happen regardless of notification debouncing)
+      // (this should always happen regardless of notification coalescing)
       window.dispatchEvent(new CustomEvent('workspace-data-refresh-needed', {
         detail: { workspaceId: activeWorkspaceId }
       }));
 
-      // Debounce notifications to prevent spam when returning from background
-      // When app wakes up from sleep/background, multiple queued sync events
-      // may arrive at once - we only want to show one notification
-      const now = Date.now();
-      if (now - lastNotificationTimeRef.current >= NOTIFICATION_DEBOUNCE_MS) {
-        lastNotificationTimeRef.current = now;
-        showMessage('success', 'Workspace synced successfully');
-      } else {
-        log.info('Suppressing duplicate sync notification (debounced)');
+      // Coalesce notifications: when multiple sync events arrive in a burst
+      // (e.g. app waking from background with queued IPC events), reset the
+      // timer on each event so only one notification shows after the burst settles.
+      if (pendingNotificationRef.current) {
+        clearTimeout(pendingNotificationRef.current);
       }
+      pendingNotificationRef.current = setTimeout(() => {
+        pendingNotificationRef.current = null;
+        showMessage('success', 'Workspace synced successfully');
+      }, NOTIFICATION_COALESCE_MS);
     });
 
     return () => {
+      if (pendingNotificationRef.current) {
+        clearTimeout(pendingNotificationRef.current);
+      }
       if (typeof unsubscribe === 'function') {
         unsubscribe();
       }
