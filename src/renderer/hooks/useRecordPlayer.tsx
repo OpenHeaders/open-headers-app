@@ -1,26 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-
-interface ProxyStatus {
-  running: boolean;
-  port: number;
-}
-
-type RrwebPlayerConstructor = new (config: Record<string, unknown>) => unknown;
-
-interface RrwebRecord {
-  [key: string]: unknown;
-}
+import type { RRWebPlayerConstructor, RecordData, ProxyStatus } from '../components/record/player/hooks/usePlayerManager';
 
 interface UseRecordPlayerReturn {
-  rrwebPlayer: RrwebPlayerConstructor | null;
+  rrwebPlayer: RRWebPlayerConstructor | null;
   loading: boolean;
   error: string | null;
-  processRecordForProxy: (record: RrwebRecord, proxyStatus: ProxyStatus) => Promise<RrwebRecord>;
+  processRecordForProxy: (record: RecordData, proxyStatus: ProxyStatus) => Promise<RecordData>;
   createConsoleOverrides: () => () => void;
 }
 
 export const useRecordPlayer = (): UseRecordPlayerReturn => {
-    const [rrwebPlayer, setRrwebPlayer] = useState<RrwebPlayerConstructor | null>(null);
+    const [rrwebPlayer, setRrwebPlayer] = useState<RRWebPlayerConstructor | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +55,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 const win = window as unknown as Record<string, unknown>;
                 const rrwebModule = win.rrwebPlayer as Record<string, unknown> | undefined;
                 if (rrwebModule) {
-                    const player = (rrwebModule.default || rrwebModule.Player || rrwebModule) as RrwebPlayerConstructor;
+                    const player = (rrwebModule.default || rrwebModule.Player || rrwebModule) as RRWebPlayerConstructor;
                     setRrwebPlayer(() => player);
                     return;
                 }
@@ -79,7 +69,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                         // The UMD bundle exports the player as default or Player property
                         const winRef = window as unknown as Record<string, unknown>;
                         const rrwebMod = winRef.rrwebPlayer as Record<string, unknown> | undefined;
-                        const player = (rrwebMod?.default || rrwebMod?.Player || rrwebMod) as RrwebPlayerConstructor;
+                        const player = (rrwebMod?.default || rrwebMod?.Player || rrwebMod) as RRWebPlayerConstructor;
                         setRrwebPlayer(() => player);
                         resolve();
                     };
@@ -109,7 +99,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
         };
     }, []);
 
-    const processRecordForProxy = useCallback(async (record: RrwebRecord, proxyStatus: ProxyStatus): Promise<RrwebRecord> => {
+    const processRecordForProxy = useCallback(async (record: RecordData, proxyStatus: ProxyStatus): Promise<RecordData> => {
         if (!proxyStatus.running) return record;
 
         const proxyUrl = `http://localhost:${proxyStatus.port}`;

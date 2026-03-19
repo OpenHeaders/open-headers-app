@@ -13,7 +13,7 @@ const log = createLogger('TimeManager');
  * - Wall-clock aligned scheduling
  */
 class TimeManager {
-  listeners: Set<(events: Array<Record<string, any>>) => void>;
+  listeners: Set<(events: Array<{ type: string; [key: string]: unknown }>) => void>;
   checkInterval: ReturnType<typeof setInterval> | null;
   isDestroyed: boolean;
   lastWallTime: number;

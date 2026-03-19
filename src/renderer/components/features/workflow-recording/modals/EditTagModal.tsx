@@ -24,7 +24,7 @@ interface EditTagModalProps {
     recordId: string;
     recordUrl: string;
     currentTag: string | { name?: string; url?: string; [key: string]: unknown };
-    onSave: (...args: any[]) => Promise<any>;
+    onSave: (tag: { name: string; url: string } | null) => Promise<void>;
     onCancel: () => void;
 }
 

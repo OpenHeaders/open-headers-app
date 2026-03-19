@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, type ThemeConfig } from 'antd';
+import type { MappingAlgorithm } from 'antd/es/theme/interface';
 import { useSettings } from './SettingsContext';
 import { createLogger } from '../../utils/error-handling/logger';
 
@@ -152,7 +153,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Configure Ant Design theme algorithms
     const getThemeAlgorithms = () => {
-        const algorithms: any[] = [];
+        const algorithms: MappingAlgorithm[] = [];
         const isDark = currentTheme === 'dark';
 
         // Add dark/light algorithm

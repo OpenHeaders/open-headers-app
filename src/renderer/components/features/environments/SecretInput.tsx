@@ -5,9 +5,11 @@
 
 import React, { useState, useEffect, forwardRef } from 'react';
 import { Input, Button } from 'antd';
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 
 const { TextArea } = Input;
+type TextAreaProps = React.ComponentProps<typeof TextArea>;
 
 // Global preferences for showing secrets (reset on app restart)
 let globalShowSecretsInEditMode = true;
@@ -25,18 +27,14 @@ let globalShowSecretsInModal = true;
  * @param {Object} props.style - Additional styles
  * @param {Object} restProps - Additional props to pass to TextArea
  */
-interface SecretInputProps {
-  value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
-  placeholder?: string;
+interface SecretInputOwnProps {
   showButton?: boolean;
   useGlobalPreference?: false | 'edit' | 'modal';
-  autoSize?: { minRows?: number; maxRows?: number };
-  style?: React.CSSProperties;
-  [key: string]: any;
 }
 
-const SecretInput = forwardRef<any, SecretInputProps>(({
+type SecretInputProps = SecretInputOwnProps & Omit<TextAreaProps, keyof SecretInputOwnProps>;
+
+const SecretInput = forwardRef<TextAreaRef, SecretInputProps>(({
   value,
   onChange,
   placeholder = "Enter value",

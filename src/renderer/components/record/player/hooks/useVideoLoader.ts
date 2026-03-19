@@ -13,7 +13,9 @@ import { createLogger } from '../../../../utils/error-handling/logger';
 
 const log = createLogger('useVideoLoader');
 
-export const useVideoLoader = (record: { metadata?: { recordId?: string; [key: string]: unknown }; [key: string]: unknown }, viewMode: string) => {
+import type { RecordData } from './usePlayerManager';
+
+export const useVideoLoader = (record: RecordData | null, viewMode: string) => {
     const [hasVideo, setHasVideo] = useState(false);
     const [videoLoading, setVideoLoading] = useState(true);
     const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -30,7 +32,7 @@ export const useVideoLoader = (record: { metadata?: { recordId?: string; [key: s
                 // Check if recording has video
                 const recordings = await window.electronAPI.loadRecordings();
                 const currentRecording = recordings.find(r => r.id === record.metadata?.recordId);
-                setHasVideo(!!(currentRecording as Record<string, any>)?.hasVideo);
+                setHasVideo(!!(currentRecording as { hasVideo?: boolean } | undefined)?.hasVideo);
             } catch (error) {
                 log.error('Error checking video availability:', error);
                 setHasVideo(false);

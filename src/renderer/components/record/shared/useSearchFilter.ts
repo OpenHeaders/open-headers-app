@@ -6,6 +6,7 @@
  * @returns {Object} Search and filter state and handlers
  */
 import { useState } from 'react';
+import type React from 'react';
 
 export const useSearchFilter = (defaultSearchValue = '') => {
     const [searchVisible, setSearchVisible] = useState(false);
@@ -55,10 +56,11 @@ export const useSearchFilter = (defaultSearchValue = '') => {
      * @returns {Function} Filter function for table
      */
     const createFilterFunction = (searchableFieldsExtractor: (record: Record<string, unknown>) => string[]) => {
-        return (value: string, record: Record<string, unknown>) => {
-            if (!value) return true;
-            
-            const searchValue = value.toLowerCase();
+        return (value: boolean | React.Key, record: Record<string, unknown>) => {
+            const strValue = value as string;
+            if (!strValue) return true;
+
+            const searchValue = strValue.toLowerCase();
             const searchableFields = searchableFieldsExtractor(record);
             const matches = searchableFields.some((field: string) =>
                 String(field).toLowerCase().includes(searchValue)

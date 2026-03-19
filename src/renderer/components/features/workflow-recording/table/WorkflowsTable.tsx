@@ -369,7 +369,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles saving description from modal
      * @param {string} description - New description value
      */
-    const handleSaveDescription = async (description: string) => {
+    const handleSaveDescription = async (description: string | null) => {
         if (!editingRecord) return;
         
         await handleUpdateMetadata(editingRecord.id, { description });
@@ -381,7 +381,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles saving tag from modal
      * @param {string|Object} tag - New tag value (string or {name, url})
      */
-    const handleSaveTag = async (tag: string | Record<string, string>) => {
+    const handleSaveTag = async (tag: { name: string; url: string } | null) => {
         if (!editingRecord) return;
         
         await handleUpdateMetadata(editingRecord.id, { tag });
@@ -391,9 +391,9 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
     // Create table columns
     const columns = createWorkflowColumns(
-        onViewRecord as (record: { id: string; timestamp: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
+        onViewRecord as (record: { id: string; timestamp?: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
         handleDelete,
-        handleExport as (record: { id: string; timestamp: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
+        handleExport as (record: { id: string; timestamp?: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
         handleUpdateMetadata,
         processingRecords as unknown as Record<string, boolean>
     );

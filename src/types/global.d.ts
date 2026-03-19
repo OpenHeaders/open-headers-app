@@ -199,7 +199,7 @@ interface ElectronAPI {
   onGitConnectionProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onGitCommitProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onGitInstallProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
-  onFileChanged: (callback: (data: Record<string, unknown>) => void) => (() => void);
+  onFileChanged: (callback: (sourceId: string, content: string) => void) => (() => void);
   onWorkspaceDataUpdated: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onWorkspaceSyncProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onWorkspaceSyncCompleted: (callback: (data: Record<string, unknown>) => void) => (() => void);

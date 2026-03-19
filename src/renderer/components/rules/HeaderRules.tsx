@@ -1,18 +1,19 @@
 import { useSources, useWorkspaces, useNavigation, useSettings, useEnvironments } from '../../contexts';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
-    Card, 
-    Button, 
-    Space, 
-    Table, 
-    Tag, 
-    Switch, 
-    Popconfirm, 
+    Card,
+    Button,
+    Space,
+    Table,
+    Tag,
+    Switch,
+    Popconfirm,
     Typography,
     Empty,
     Tooltip,
     Alert
 } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { 
     PlusOutlined, 
     EditOutlined, 
@@ -515,7 +516,7 @@ const HeaderRules = () => {
     };
 
     // Table columns matching browser extension
-    const columns: any[] = [
+    const columns: ColumnsType<HeaderRule> = [
         {
             title: 'Type',
             key: 'type',

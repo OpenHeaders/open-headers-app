@@ -18,17 +18,17 @@ interface NavigationRequest {
   value?: string | boolean;
 }
 
-interface NavigationIntent {
+export interface NavigationIntent {
   tab?: string;
   subTab?: string;
-  target?: string | null;
-  action?: string | null;
+  target?: string;
+  action?: string;
   itemId?: string;
 }
 
-interface SettingsAction {
+export interface SettingsAction {
   action: string;
-  value?: boolean;
+  value?: unknown;
 }
 
 interface UseNavigationDeps {
@@ -73,7 +73,7 @@ export function useNavigation({
         setActiveTab(navigation.tab);
 
         if (navigation.subTab || navigation.itemId || navigation.action) {
-          let target: string | null = null;
+          let target: string | undefined;
 
           // Map navigation requests to appropriate targets
           target = mapNavigationToTarget(navigation, TARGETS);
@@ -107,7 +107,7 @@ export function useNavigation({
 /**
  * Maps navigation request to appropriate target
  */
-function mapNavigationToTarget(navigation: NavigationRequest, TARGETS: Record<string, string>): string | null {
+function mapNavigationToTarget(navigation: NavigationRequest, TARGETS: Record<string, string>): string | undefined {
   if (navigation.tab === 'rules') {
     switch (navigation.subTab) {
       case 'headers':
@@ -127,19 +127,19 @@ function mapNavigationToTarget(navigation: NavigationRequest, TARGETS: Record<st
         navigation.subTab = 'more';
         return TARGETS.RULES_MORE;
       default:
-        return null;
+        return undefined;
     }
   } else if (navigation.tab === 'record-viewer') {
     return TARGETS.RECORDS;
   }
 
-  return null;
+  return undefined;
 }
 
 /**
  * Maps navigation action to appropriate action constant
  */
-function mapNavigationAction(navigation: NavigationRequest, ACTIONS: Record<string, string>): string | null {
+function mapNavigationAction(navigation: NavigationRequest, ACTIONS: Record<string, string>): string | undefined {
   if (navigation.action) {
     switch (navigation.action) {
       case 'edit': return ACTIONS.EDIT;
@@ -154,7 +154,7 @@ function mapNavigationAction(navigation: NavigationRequest, ACTIONS: Record<stri
     return ACTIONS.HIGHLIGHT;
   }
 
-  return null;
+  return undefined;
 }
 
 /**

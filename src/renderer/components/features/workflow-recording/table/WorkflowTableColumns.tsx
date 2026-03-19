@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button, Space, Popconfirm, Tag, Tooltip, Progress, Spin, Input } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { 
   PlayCircleOutlined, 
   DeleteOutlined, 
@@ -143,9 +144,9 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
 /**
  * Component for Delete button with controlled tooltip
  */
-interface WorkflowRecord {
+export interface WorkflowRecord {
   id: string;
-  timestamp: string;
+  timestamp?: string;
   url?: string;
   metadata?: { url?: string; initialUrl?: string };
   hasVideo?: boolean;
@@ -199,13 +200,13 @@ const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: Workfl
  * @param {Object} processingRecords - Map of recordId to processing state
  * @returns {Array} Table columns configuration
  */
-export const createWorkflowColumns = (onView: (record: WorkflowRecord) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecord) => void, onUpdateMetadata: (id: string, data: Record<string, unknown>) => void, processingRecords: Record<string, boolean> = {}): any[] => [
+export const createWorkflowColumns = (onView: (record: WorkflowRecord) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecord) => void, onUpdateMetadata: (id: string, data: Record<string, unknown>) => void, processingRecords: Record<string, boolean> = {}): ColumnsType<WorkflowRecord> => [
   {
     title: 'Timestamp',
     dataIndex: 'timestamp',
     key: 'timestamp',
     render: (timestamp: string) => <TimestampCell timestamp={timestamp} />,
-    sorter: (a: WorkflowRecord, b: WorkflowRecord) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    sorter: (a: WorkflowRecord, b: WorkflowRecord) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime(),
     defaultSortOrder: 'ascend' as const,
     width: 200
   },

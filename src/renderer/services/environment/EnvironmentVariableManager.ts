@@ -4,13 +4,21 @@
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('EnvironmentVariableManager');
 
+interface EnvVariable {
+  value: string;
+  isSecret?: boolean;
+  updatedAt?: string;
+}
+
+type EnvStore = Record<string, Record<string, EnvVariable>>;
+
 class EnvironmentVariableManager {
   constructor() {}
 
   /**
    * Get all variables for an environment
    */
-  getAllVariables(environments: Record<string, Record<string, any>>, activeEnvironment: string) {
+  getAllVariables(environments: EnvStore, activeEnvironment: string) {
     const envVars = environments[activeEnvironment] || {};
     const result: Record<string, string> = {};
 
@@ -103,7 +111,7 @@ class EnvironmentVariableManager {
   /**
    * Export environment variables in a specific format
    */
-  exportEnvironment(environments: Record<string, Record<string, any>>, environmentName: string, format = 'json') {
+  exportEnvironment(environments: EnvStore, environmentName: string, format = 'json') {
     const env = environments[environmentName];
     if (!env) {
       throw new Error(`Environment '${environmentName}' does not exist`);
@@ -134,14 +142,14 @@ class EnvironmentVariableManager {
    * Import environment variables from different formats
    */
   importEnvironment(data: string, format = 'json') {
-    const variables: Record<string, any> = {};
+    const variables: Record<string, EnvVariable> = {};
 
     switch (format) {
       case 'json':
         const parsed = JSON.parse(data);
         Object.entries(parsed).forEach(([key, value]) => {
-          if (typeof value === 'object' && value !== null && (value as any).value !== undefined) {
-            variables[key] = value;
+          if (typeof value === 'object' && value !== null && (value as { value?: unknown }).value !== undefined) {
+            variables[key] = value as EnvVariable;
           } else {
             // Convert simple key-value to variable object
             variables[key] = {

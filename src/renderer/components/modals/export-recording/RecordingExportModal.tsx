@@ -46,8 +46,8 @@ import ExportInfoCard from './ExportInfoCard';
 interface RecordingExportModalProps {
     visible: boolean;
     onCancel: () => void;
-    record: Record<string, any> | null;
-    onExportJson: (...args: any[]) => void;
+    record: Record<string, unknown> | null;
+    onExportJson: (record: Record<string, unknown>) => void;
 }
 
 const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: RecordingExportModalProps) => {
@@ -121,7 +121,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
      */
     const handleExport = async () => {
         if (exportType === 'json') {
-            onExportJson(record);
+            onExportJson(record!);
             onCancel();
         } else {
             await handleVideoExport();
@@ -137,7 +137,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
         
         try {
             // Generate filename
-            const timestamp = new Date(record!.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
+            const timestamp = new Date(record!.timestamp as string | number).toISOString().replace(/:/g, '-').split('.')[0];
             const extension = videoFormat === 'mp4' ? 'mp4' : 'webm';
             const filename = `open-headers_recording_${timestamp}.${extension}`;
             
@@ -298,7 +298,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
                 <ExportInfoCard exportType={exportType} />
 
                 {/* Video Format Selection */}
-                {exportType === 'video' && record.hasVideo && (
+                {exportType === 'video' && Boolean(record?.hasVideo) && (
                     <VideoFormatSelector
                         videoFormat={videoFormat}
                         onVideoFormatChange={setVideoFormat}

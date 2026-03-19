@@ -3,7 +3,7 @@
  * This service ensures RefreshManager is initialized once and provides a clean interface
  */
 
-import refreshManager from './RefreshManager';
+import refreshManager, { type HttpService, type OnUpdateCallback } from './RefreshManager';
 import { getCentralizedWorkspaceService } from './CentralizedWorkspaceService';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
 import { createLogger } from '../utils/error-handling/logger';
@@ -28,14 +28,18 @@ interface ResolvedSourceData {
     requestOptions: Record<string, unknown>;
 }
 
+interface TrackedSourceData extends SourceData {
+    resolvedData?: ResolvedSourceData;
+}
+
 class RefreshManagerIntegration {
     initialized: boolean;
     initializing: boolean;
-    httpService: any;
-    updateCallback: ((sourceId: string, content: any, additionalData: Record<string, any>) => void) | null;
+    httpService: HttpService | null;
+    updateCallback: OnUpdateCallback | null;
     sourceSubscriptionCleanup: (() => void) | null;
     envSubscriptionCleanup: (() => void) | null;
-    lastSeenSources: Map<string, any>;
+    lastSeenSources: Map<string, TrackedSourceData>;
     envChangeDebounceTimer: ReturnType<typeof setTimeout> | null;
     sourceChangeDebounceTimers: Map<string, ReturnType<typeof setTimeout>>;
     sourceActivationCleanup?: (() => void) | null;
@@ -56,7 +60,7 @@ class RefreshManagerIntegration {
      * Initialize the RefreshManager with the required services
      * This should be called once when the app starts
      */
-    async initialize(httpService: Record<string, unknown>, updateCallback: (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => void) {
+    async initialize(httpService: HttpService, updateCallback: OnUpdateCallback) {
         if (this.initialized || this.initializing) {
             log.debug('RefreshManager already initialized or initializing');
             return;
@@ -132,12 +136,12 @@ class RefreshManagerIntegration {
         this.lastSeenSources.set(source.sourceId, {
             sourcePath: source.sourcePath,
             sourceMethod: source.sourceMethod,
-            requestOptions: source.requestOptions ? {...source.requestOptions} : null,
-            jsonFilter: source.jsonFilter ? {...source.jsonFilter} : null,
-            refreshOptions: source.refreshOptions ? {...source.refreshOptions} : null,
+            requestOptions: source.requestOptions ? {...source.requestOptions} : undefined,
+            jsonFilter: source.jsonFilter ? {...source.jsonFilter} : undefined,
+            refreshOptions: source.refreshOptions ? {...source.refreshOptions} : undefined,
             activationState: source.activationState,
             resolvedData: resolvedData
-        });
+        } as TrackedSourceData);
     }
 
     /**

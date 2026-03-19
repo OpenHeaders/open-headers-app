@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Modal, Form, Input, Radio } from 'antd';
+import type { FormInstance } from 'antd';
 import { 
   ENVIRONMENT_NAME_RULES, 
   VARIABLE_NAME_RULES, 
@@ -26,7 +27,7 @@ interface ModalProps {
     visible: boolean;
     onCancel: () => void;
     onOk: () => void;
-    form: any;
+    form: FormInstance;
 }
 
 export const CreateEnvironmentModal = ({ visible, onCancel, onOk, form }: ModalProps) => (

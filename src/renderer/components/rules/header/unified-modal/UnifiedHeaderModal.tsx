@@ -23,6 +23,7 @@ import FormHeader from './FormHeader';
 import ValueSection from './ValueSection';
 import CookieAttributes from './CookieAttributes';
 import DomainSection from './DomainSection';
+import type { DomainValidation } from '../../../features/domain-tags/DomainTagDisplay';
 import EnvVarInfo from './EnvVarInfo';
 import { buildHeaderValue, parseHeaderValue } from './utils';
 
@@ -55,7 +56,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
     const [headerType, setHeaderType] = useState('request');
     const [valueType, setValueType] = useState('static');
     const [envVarValidation, setEnvVarValidation] = useState({});
-    const [domainValidation, setDomainValidation] = useState<unknown[]>([]);
+    const [domainValidation, setDomainValidation] = useState<DomainValidation[]>([]);
     
     // Cookie-specific state
     const [expirationMode, setExpirationMode] = useState('session');
@@ -73,7 +74,11 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
                 if (initialValues) {
                     if (currentMode === 'cookie') {
                         // Parse cookie values
-                        const parsed = parseHeaderValue(initialValues.headerValue, 'cookie');
+                        const parsed = parseHeaderValue(initialValues.headerValue, 'cookie') as {
+                            name?: string; value?: string; path?: string; sameSite?: string;
+                            secure?: boolean; httpOnly?: boolean; expirationMode?: string;
+                            maxAge?: number; expires?: string;
+                        };
                         form.setFieldsValue({
                             cookieName: parsed.name || initialValues.cookieName || '',
                             cookieValue: parsed.value || initialValues.cookieValue || '',
@@ -88,15 +93,15 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
                             sourceId: initialValues.sourceId || '',
                             prefix: initialValues.prefix || '',
                             suffix: initialValues.suffix || '',
-                            expirationMode: parsed.expirationMode || initialValues.expirationMode || 'session',
-                            maxAge: parsed.maxAge || initialValues.maxAge,
-                            expires: (parsed.expires || initialValues.expires) ? 
-                                dayjs(parsed.expires || initialValues.expires) : undefined
+                            expirationMode: parsed.expirationMode || (initialValues.expirationMode as string | undefined) || 'session',
+                            maxAge: parsed.maxAge || (initialValues.maxAge as number | undefined),
+                            expires: (parsed.expires || initialValues.expires) ?
+                                dayjs(parsed.expires || (initialValues.expires as string | undefined)) : undefined
                         });
-                        setExpirationMode(parsed.expirationMode || initialValues.expirationMode || 'session');
-                        setSameSite(parsed.sameSite || initialValues.sameSite || 'Lax');
-                        setSecure(parsed.secure || initialValues.secure || false);
-                        setHttpOnly(parsed.httpOnly || initialValues.httpOnly || false);
+                        setExpirationMode(parsed.expirationMode || (initialValues.expirationMode as string | undefined) || 'session');
+                        setSameSite(parsed.sameSite || (initialValues.sameSite as string | undefined) || 'Lax');
+                        setSecure(parsed.secure || (initialValues.secure as boolean | undefined) || false);
+                        setHttpOnly(parsed.httpOnly || (initialValues.httpOnly as boolean | undefined) || false);
                     } else {
                         // Generic header values
                         form.setFieldsValue({

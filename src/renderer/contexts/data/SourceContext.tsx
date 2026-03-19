@@ -2,7 +2,7 @@ import React, { createContext } from 'react';
 import { useSources as useCentralizedSources } from '../../hooks/useCentralizedWorkspace';
 
 // Create and export the context
-export const SourceContext = createContext<any>(null);
+export const SourceContext = createContext<ReturnType<typeof useCentralizedSources> | null>(null);
 
 // Re-export the hook from centralized implementation
 export { useSources } from '../../hooks/useCentralizedWorkspace';

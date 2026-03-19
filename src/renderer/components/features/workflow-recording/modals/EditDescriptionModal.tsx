@@ -29,7 +29,7 @@ interface EditDescriptionModalProps {
     recordTag: { name: string; url?: string } | null;
     currentDescription: string;
     viewOnly?: boolean;
-    onSave: (...args: any[]) => Promise<any>;
+    onSave: (description: string | null) => Promise<void>;
     onCancel: () => void;
 }
 

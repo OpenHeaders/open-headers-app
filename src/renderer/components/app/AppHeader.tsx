@@ -1,5 +1,7 @@
 import React from 'react';
 import { Layout, Typography, Button, Space, Dropdown, Tag } from 'antd';
+import type { MenuProps } from 'antd';
+import type { GlobalToken } from 'antd/es/theme/interface';
 import {
     SettingOutlined,
     ExportOutlined,
@@ -22,7 +24,7 @@ interface AppHeaderProps {
   onCheckForUpdates: () => void;
   onOpenSettings: () => void;
   onOpenAbout: () => void;
-  theme: Record<string, any>;
+  theme: GlobalToken;
 }
 
 export function AppHeader({
@@ -33,7 +35,7 @@ export function AppHeader({
   onOpenAbout,
   theme
 }: AppHeaderProps) {
-  const actionsMenuItems: any[] = [
+  const actionsMenuItems: NonNullable<MenuProps['items']> = [
     {
       key: 'export',
       icon: <ExportOutlined />,

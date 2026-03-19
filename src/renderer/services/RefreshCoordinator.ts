@@ -69,7 +69,7 @@ class RefreshCoordinator {
   /**
    * Execute a refresh operation with coordination
    */
-  async executeRefresh(sourceId: string, refreshFn: (id: string) => Promise<any>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string } = {}) {
+  async executeRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string } = {}) {
     const {
       priority = 'normal',
       skipIfActive = true,

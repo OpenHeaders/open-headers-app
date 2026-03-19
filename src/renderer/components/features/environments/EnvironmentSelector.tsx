@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Row, Col, Space, Select, Button, Dropdown, Modal, Typography, Tag } from 'antd';
+import type { MenuProps } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -110,7 +111,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
    * Generates dropdown menu items for environment management
    */
   const getDropdownItems = () => {
-    const items: any[] = [
+    const items: NonNullable<MenuProps['items']> = [
       {
         key: 'new',
         icon: <PlusOutlined />,

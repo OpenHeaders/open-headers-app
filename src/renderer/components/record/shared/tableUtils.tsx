@@ -38,7 +38,7 @@ export const createTimestampColumn = (timestampRenderer: (value: number) => Reac
     key: 'timestamp',
     width,
     sorter: (a: TableRecord, b: TableRecord) => a.timestamp - b.timestamp,
-    defaultSortOrder: 'ascend',
+    defaultSortOrder: 'ascend' as const,
     render: timestampRenderer
 });
 
@@ -91,11 +91,11 @@ export const createSearchableColumnHeader = (
  * @param {Object} additionalProps - Additional table props
  * @returns {Object} Complete table props
  */
-export const createStandardTableProps = (
-    dataSource: TableRecord[],
-    columns: ColumnType<TableRecord>[],
-    onTableChange: TableProps<TableRecord>['onChange'],
-    rowClassNameGenerator: (record: TableRecord) => string,
+export const createStandardTableProps = <T extends TableRecord>(
+    dataSource: T[],
+    columns: ColumnType<T>[],
+    onTableChange: TableProps<T>['onChange'],
+    rowClassNameGenerator: (record: T) => string,
     additionalProps: Record<string, unknown> = {}
 ) => ({
     dataSource,

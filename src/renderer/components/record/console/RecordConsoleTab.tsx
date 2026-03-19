@@ -12,6 +12,7 @@
  */
 import React, { useState } from 'react';
 import { Table, Tag, Typography, theme, Empty, App, Button, Tooltip } from 'antd';
+import type { FilterValue } from 'antd/es/table/interface';
 import { SearchOutlined, ClearOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { formatConsoleArg } from '../../../utils';
 import { useSearchFilter } from '../shared/useSearchFilter';
@@ -160,7 +161,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'DEBUG', value: 'debug' }
             ],
             filteredValue: consoleLevelFilter,
-            onFilter: (value: string, record: ConsoleRecord) => record.level === value,
+            onFilter: (value: boolean | React.Key, record: ConsoleRecord) => record.level === (value as string),
             sorter: (a: ConsoleRecord, b: ConsoleRecord) => a.level.localeCompare(b.level),
             render: renderLevel
         },
@@ -263,8 +264,8 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
         }));
 
     // Table change handler
-    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
-        setConsoleLevelFilter(filters.level || []);
+    const handleTableChange = (_pagination: unknown, filters: Record<string, FilterValue | null>) => {
+        setConsoleLevelFilter((filters.level || []) as string[]);
     };
 
     // Row class name generator
@@ -275,10 +276,10 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Complete table props
     const tableProps = createStandardTableProps(
-        tableData as any,
-        columns as any,
-        handleTableChange as any,
-        generateRowClassName as any
+        tableData,
+        columns,
+        handleTableChange,
+        generateRowClassName
     );
 
     return (

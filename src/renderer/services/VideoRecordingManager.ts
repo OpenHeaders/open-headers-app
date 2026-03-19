@@ -2,8 +2,22 @@
  * Video Recording Manager for handling native WebM recording in renderer process
  */
 class VideoRecordingManager {
-    activeRecordings: Map<string, Record<string, any>>;
-    settings: Record<string, any> | null;
+    activeRecordings: Map<string, {
+        recordingId: string;
+        mediaRecorder: MediaRecorder;
+        stream: MediaStream;
+        chunks: Blob[];
+        startTime: number;
+        url?: string;
+        title?: string;
+        recordingDir: string;
+        bitrate: number;
+        quality: string;
+        resolution: string;
+        captureType: string;
+        [key: string]: unknown;
+    }>;
+    settings: Record<string, unknown> | null;
 
     constructor() {
         this.activeRecordings = new Map();
@@ -74,15 +88,15 @@ class VideoRecordingManager {
             }
 
             // Use quality from settings
-            const videoQuality = this.settings?.videoQuality || 'high';
+            const videoQuality = (this.settings?.videoQuality as string | undefined) || 'high';
 
             // Get the video stream without forcing dimensions
             // This will capture at the native resolution of the source
-            const stream = await (navigator.mediaDevices.getUserMedia as (constraints: any) => Promise<MediaStream>)({
+            const stream = await (navigator.mediaDevices.getUserMedia as (constraints: { video: { mandatory: { chromeMediaSource: string; chromeMediaSourceId: string; minFrameRate?: number; maxFrameRate?: number } }; audio: boolean }) => Promise<MediaStream>)({
                 video: {
                     mandatory: {
                         chromeMediaSource: 'desktop',
-                        chromeMediaSourceId: sourceId,
+                        chromeMediaSourceId: sourceId ?? '',
                         // Don't force dimensions - let it use native resolution
                         minFrameRate: 30,
                         maxFrameRate: 60
@@ -311,8 +325,8 @@ class VideoRecordingManager {
 const videoRecordingManager = new VideoRecordingManager();
 
 // Attach to window for debugging/console access if needed
-if (typeof window !== 'undefined' && (window as any).videoRecordingManager === undefined) {
-    (window as any).videoRecordingManager = videoRecordingManager;
+if (typeof window !== 'undefined' && (window as Window & { videoRecordingManager?: VideoRecordingManager }).videoRecordingManager === undefined) {
+    (window as Window & { videoRecordingManager?: VideoRecordingManager }).videoRecordingManager = videoRecordingManager;
 }
 
 // Service runs automatically via side-effect import - no export needed

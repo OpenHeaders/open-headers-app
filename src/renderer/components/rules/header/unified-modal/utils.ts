@@ -1,5 +1,20 @@
+interface HeaderFormValues {
+    headerValue?: string;
+    cookieName?: string;
+    cookieValue?: string;
+    sourceId?: string;
+    headerType?: string;
+    cookiePath?: string;
+    expirationMode?: string;
+    maxAge?: string | number;
+    expires?: { toDate?: () => Date } | string | Date;
+    sameSite?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+}
+
 // Build header value based on mode and type
-export const buildHeaderValue = (values: Record<string, any>, mode: string, valueType: string) => {
+export const buildHeaderValue = (values: HeaderFormValues, mode: string, valueType: string) => {
     if (mode === 'cookie') {
         return buildCookieValue(values, valueType === 'dynamic');
     }
@@ -7,7 +22,7 @@ export const buildHeaderValue = (values: Record<string, any>, mode: string, valu
 };
 
 // Parse header value based on mode
-export const parseHeaderValue = (headerValue: string | undefined, mode: string): Record<string, any> => {
+export const parseHeaderValue = (headerValue: string | undefined, mode: string): Record<string, unknown> => {
     if (mode === 'cookie') {
         return parseCookieValue(headerValue);
     }
@@ -15,9 +30,9 @@ export const parseHeaderValue = (headerValue: string | undefined, mode: string):
 };
 
 // Build cookie value string
-const buildCookieValue = (values: Record<string, any>, isDynamic = false) => {
+const buildCookieValue = (values: HeaderFormValues, isDynamic = false) => {
     let cookieString;
-    
+
     // Build name=value part
     if (isDynamic && values.sourceId) {
         // For dynamic values, we'll store a placeholder that gets replaced at runtime
@@ -25,7 +40,7 @@ const buildCookieValue = (values: Record<string, any>, isDynamic = false) => {
     } else {
         cookieString = `${values.cookieName}=${values.cookieValue}`;
     }
-    
+
     // Only add attributes for response cookies (Set-Cookie header)
     // Request cookies (Cookie header) only have name=value pairs
     if (values.headerType === 'response') {
@@ -35,7 +50,7 @@ const buildCookieValue = (values: Record<string, any>, isDynamic = false) => {
         } else {
             cookieString += '; Path=/';
         }
-        
+
         // Add expiration
         if (values.expirationMode === 'maxAge' && values.maxAge) {
             cookieString += `; Max-Age=${values.maxAge}`;
@@ -43,45 +58,46 @@ const buildCookieValue = (values: Record<string, any>, isDynamic = false) => {
             // Convert the date to UTC string
             // Handle both dayjs objects and string/date values
             let expiresDate;
-            if (values.expires.toDate) {
+            const expiresVal = values.expires as { toDate?: () => Date } | string | Date;
+            if (typeof expiresVal === 'object' && 'toDate' in expiresVal && typeof expiresVal.toDate === 'function') {
                 // It's a dayjs object
-                expiresDate = values.expires.toDate().toUTCString();
+                expiresDate = expiresVal.toDate().toUTCString();
             } else {
                 // It's a string or Date object
-                expiresDate = new Date(values.expires).toUTCString();
+                expiresDate = new Date(expiresVal as string | Date).toUTCString();
             }
             cookieString += `; Expires=${expiresDate}`;
         }
         // Session cookies don't have Max-Age or Expires
-        
+
         // Add SameSite
         if (values.sameSite) {
             cookieString += `; SameSite=${values.sameSite}`;
         }
-        
+
         // Add Secure flag
         if (values.secure) {
             cookieString += '; Secure';
         }
-        
+
         // Add HttpOnly flag
         if (values.httpOnly) {
             cookieString += '; HttpOnly';
         }
     }
-    
+
     return cookieString;
 };
 
 // Parse cookie value from Set-Cookie header
-const parseCookieValue = (cookieString: string | undefined): Record<string, any> => {
+const parseCookieValue = (cookieString: string | undefined): Record<string, unknown> => {
     if (!cookieString) return {};
 
     const parts = cookieString.split(';').map(p => p.trim());
     const [nameValue, ...attributes] = parts;
     const [name, value] = (nameValue || '').split('=');
 
-    const result: Record<string, any> = {
+    const result: Record<string, unknown> = {
         name: name || '',
         value: value || '',
         path: '/',
@@ -90,11 +106,11 @@ const parseCookieValue = (cookieString: string | undefined): Record<string, any>
         httpOnly: false,
         expirationMode: 'session'
     };
-    
+
     attributes.forEach(attr => {
         const [key, val] = attr.split('=');
         const lowerKey = (key || '').toLowerCase();
-        
+
         if (lowerKey === 'path') result.path = val;
         else if (lowerKey === 'samesite') result.sameSite = val;
         else if (lowerKey === 'secure') result.secure = true;
@@ -108,6 +124,6 @@ const parseCookieValue = (cookieString: string | undefined): Record<string, any>
             result.expirationMode = 'expires';
         }
     });
-    
+
     return result;
 };

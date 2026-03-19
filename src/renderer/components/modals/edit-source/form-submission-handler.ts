@@ -1,9 +1,17 @@
+import React from 'react';
+import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils';
 import { validateAllFormFields } from './form-validation';
 import timeManager from '../../../services/TimeManager';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('FormSubmissionHandler');
+
+interface HttpOptionsHandle {
+    getTotpState?: () => { enabled: boolean; secret?: string };
+    getJsonFilterState?: () => { enabled: boolean; path?: string };
+    getHeadersState?: () => Array<{ key: string; value: string }>;
+}
 
 /**
  * Handles the complex form submission logic for EditSourceModal
@@ -25,15 +33,15 @@ interface SourceData {
 }
 
 class FormSubmissionHandler {
-    form: any;
-    source: Record<string, any>;
-    envContext: Record<string, any>;
-    httpOptionsRef: React.MutableRefObject<any>;
+    form: FormInstance;
+    source: Record<string, unknown>;
+    envContext: Record<string, unknown>;
+    httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>;
     originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>;
     totpEnabled: boolean;
     totpSecret: string;
 
-    constructor(form: any, source: Record<string, any>, envContext: Record<string, any>, httpOptionsRef: React.MutableRefObject<any>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
+    constructor(form: FormInstance, source: Record<string, unknown>, envContext: Record<string, unknown>, httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
         this.form = form;
         this.source = source;
         this.envContext = envContext;
@@ -90,7 +98,7 @@ class FormSubmissionHandler {
         }
         
         // Perform comprehensive validation of all fields
-        await validateAllFormFields(this.form, this.envContext as Parameters<typeof validateAllFormFields>[1]);
+        await validateAllFormFields(this.form, this.envContext as unknown as Parameters<typeof validateAllFormFields>[1]);
         
         return values;
     }
@@ -159,12 +167,12 @@ class FormSubmissionHandler {
             sourceTag: values.sourceTag || '',
             sourceMethod: values.sourceMethod || 'GET',
             requestOptions: {
-                ...this.source.requestOptions,
+                ...(this.source.requestOptions as Record<string, unknown>),
                 ...values.requestOptions,
-                headers: values.requestOptions?.headers || this.source.requestOptions?.headers || [],
-                queryParams: values.requestOptions?.queryParams || this.source.requestOptions?.queryParams || [],
-                body: values.requestOptions?.body || this.source.requestOptions?.body || null,
-                contentType: values.requestOptions?.contentType || this.source.requestOptions?.contentType || 'application/json'
+                headers: values.requestOptions?.headers || (this.source.requestOptions as Record<string, unknown>)?.headers || [],
+                queryParams: values.requestOptions?.queryParams || (this.source.requestOptions as Record<string, unknown>)?.queryParams || [],
+                body: values.requestOptions?.body || (this.source.requestOptions as Record<string, unknown>)?.body || null,
+                contentType: values.requestOptions?.contentType || (this.source.requestOptions as Record<string, unknown>)?.contentType || 'application/json'
             },
             jsonFilter: normalizedJsonFilter,
             refreshOptions: values.refreshOptions || { enabled: false, interval: 0 },
@@ -234,9 +242,10 @@ class FormSubmissionHandler {
             sourceData.refreshOptions?.enabled !== this.originalValuesRef.current.enabled;
 
         // Set preserveTiming based on whether we want to keep the current timer running
+        const sourceRefreshOpts = this.source.refreshOptions as { nextRefresh?: number } | undefined;
         if (!hasEnabledChanged && !shouldRefreshNow &&
-            this.source.refreshOptions?.nextRefresh &&
-            this.source.refreshOptions.nextRefresh > timeManager.now()) {
+            sourceRefreshOpts?.nextRefresh &&
+            sourceRefreshOpts.nextRefresh > timeManager.now()) {
             
             if (!sourceData.refreshOptions) {
                 sourceData.refreshOptions = {};

@@ -21,7 +21,7 @@ import { Tag, Input, Tooltip, theme } from 'antd';
 import type { InputRef } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 
-interface DomainValidation {
+export interface DomainValidation {
     isValid: boolean;
     missingVars?: string[];
 }

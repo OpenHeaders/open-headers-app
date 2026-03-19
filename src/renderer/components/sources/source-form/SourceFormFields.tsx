@@ -44,7 +44,7 @@ import { PlusOutlined } from '@ant-design/icons';
  *   onBrowse={handleBrowse}
  * />
  */
-export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: string; filePath: string; onBrowse: () => void; value?: any; onChange?: any; [key: string]: unknown }) => {
+export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: string; filePath: string; onBrowse: () => void; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; [key: string]: unknown }) => {
     switch (sourceType) {
         case 'file':
             return (

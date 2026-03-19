@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AppLayout } from './components/app/AppLayout';
 import { useExportImport } from './hooks/useExportImport';
 import { useAppEffects } from './hooks/app';
+import type { InitialAction } from './components/modals/settings/SettingsModal';
 import { useSourceRefresh } from './hooks/sources';
 import { useSources, useEnvironments, useWorkspaces, useCentralizedWorkspace } from './hooks/useCentralizedWorkspace';
 import { useSettings, useNavigation, useRefreshManager, useWorkspaceSwitch } from './contexts';
@@ -10,12 +11,6 @@ import { showMessage } from './utils';
 import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
 import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
 import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
-
-/** Initial action to perform when settings modal opens */
-interface SettingsAction {
-    action: string;
-    value: unknown;
-}
 
 /** Data for a team workspace invite */
 interface InviteData {
@@ -49,7 +44,7 @@ interface PartialSettings {
     developerMode?: boolean;
     recordingHotkey?: string;
     logLevel?: string;
-    [key: string]: string | boolean | undefined;
+    [key: string]: unknown;
 }
 
 const AppComponent: React.FC = () => {
@@ -113,7 +108,7 @@ const AppComponent: React.FC = () => {
     // Component state
     const [settingsVisible, setSettingsVisible] = useState(false);
     const [settingsInitialTab, setSettingsInitialTab] = useState<string | null>(null);
-    const [settingsAction, setSettingsAction] = useState<SettingsAction | null>(null);
+    const [settingsAction, setSettingsAction] = useState<InitialAction | null>(null);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState('record-viewer');
     const [currentRecord, setCurrentRecord] = useState<Record<string, unknown> | null>(null);
@@ -351,7 +346,7 @@ const AppComponent: React.FC = () => {
                     onRecordChange={setCurrentRecord}
                     onPlaybackTimeChange={setRecordPlaybackTime}
                     onAutoHighlightChange={setAutoHighlight}
-                    onAddSource={handleAddSource}
+                    onAddSource={(data) => handleAddSource(data as Parameters<typeof handleAddSource>[0])}
                     onRemoveSource={removeSourceWithRefresh}
                     onRefreshSource={refreshSourceWithHttp}
                     onUpdateSource={updateSource}
@@ -368,8 +363,8 @@ const AppComponent: React.FC = () => {
                         setImportModalVisible(false);
                         setPreloadedEnvData(null); // Clear preloaded data
                     }}
-                    onHandleExport={handleExport}
-                    onHandleImport={handleImport}
+                    onHandleExport={(config) => { handleExport(config as Parameters<typeof handleExport>[0]); }}
+                    onHandleImport={(data) => handleImport(data as Parameters<typeof handleImport>[0])}
                     preloadedEnvData={preloadedEnvData}
                     // Refs
                     updateNotificationRef={updateNotificationRef}

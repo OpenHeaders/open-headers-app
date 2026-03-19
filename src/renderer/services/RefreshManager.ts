@@ -53,12 +53,12 @@ interface NetworkStateEvent {
 }
 
 /** HTTP service interface */
-interface HttpService {
+export interface HttpService {
   request: (sourceId: string, sourcePath: string | undefined, sourceMethod: string | undefined, requestOptions: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> }>;
 }
 
 /** Update callback type */
-type OnUpdateCallback = (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => void;
+export type OnUpdateCallback = (sourceId: string, content: string | null, additionalData: Record<string, unknown>) => void;
 /** Scheduler-compatible source type */
 type SchedulerSource = { sourceId: string; sourceType: string; refreshOptions?: { interval?: string | number; lastRefresh?: string | number; alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } };
 
@@ -843,9 +843,9 @@ class RefreshManager {
   }
 
 
-  notifyUI(sourceId: string, content: unknown, additionalData: Record<string, unknown> = {}) {
+  notifyUI(sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown> = {}) {
     if (!this.onUpdateCallback) return;
-    this.onUpdateCallback(sourceId, content, additionalData);
+    this.onUpdateCallback(sourceId, content ?? null, additionalData);
   }
   async updateScheduleCache() {
     try {

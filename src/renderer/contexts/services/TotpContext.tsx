@@ -4,9 +4,16 @@ import { createLogger } from '../../utils/error-handling/logger';
 
 const log = createLogger('TotpContext');
 
+interface RequestOptions {
+  headers?: Array<{ key: string; value: string }> | Record<string, string>;
+  queryParams?: Array<{ key: string; value: string }> | Record<string, string>;
+  body?: string;
+  [key: string]: unknown;
+}
+
 interface TotpContextValue {
   testingWithTotp: boolean;
-  checkIfRequestUsesTotp: (url: string, method: string, requestOptions: any) => boolean;
+  checkIfRequestUsesTotp: (url: string, method: string, requestOptions: RequestOptions) => boolean;
   canUseTotpForSource: (sourceId: string) => boolean;
   getCooldownSecondsForSource: (sourceId: string) => number;
   startTestingWithTotpForSource: (sourceId: string) => void;
@@ -47,7 +54,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const monitoringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Check if a request would use TOTP
-    const checkIfRequestUsesTotp = useCallback((url: string, method: string, requestOptions: any): boolean => {
+    const checkIfRequestUsesTotp = useCallback((url: string, method: string, requestOptions: RequestOptions): boolean => {
         // Check if [[TOTP_CODE]] is present anywhere
         const checkString = (str: string) => str && str.includes('[[TOTP_CODE]]');
 

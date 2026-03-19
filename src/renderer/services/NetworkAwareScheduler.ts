@@ -58,8 +58,8 @@ class NetworkAwareScheduler {
   timers: Map<string, ReturnType<typeof setTimeout>>;
   refreshSemaphore: InstanceType<typeof Semaphore>;
   overdueSemaphore: InstanceType<typeof Semaphore>;
-  refreshCallback: ((sourceId: string, options?: Record<string, any>) => Promise<any>) | null;
-  scheduleUpdateCallback: ((sourceId: string, schedule: any) => void) | null;
+  refreshCallback: ((sourceId: string, options?: { reason?: string }) => Promise<unknown>) | null;
+  scheduleUpdateCallback: ((sourceId: string, schedule: ScheduleEntry) => void) | null;
   lastNetworkState: { isOnline: boolean };
   isDestroyed: boolean;
   isPaused: boolean;
@@ -381,7 +381,8 @@ class NetworkAwareScheduler {
     try {
       const result = await this.refreshCallback(sourceId, { reason });
       
-      if (result && result.success !== false) {
+      const resultObj = result as { success?: boolean } | null | undefined;
+      if (!resultObj || resultObj.success !== false) {
         await this.updateScheduleOnSuccess(sourceId);
       } else {
         await this.updateScheduleOnFailure(sourceId);

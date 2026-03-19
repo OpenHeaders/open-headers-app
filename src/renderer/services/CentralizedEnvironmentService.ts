@@ -251,7 +251,7 @@ class CentralizedEnvironmentService {
       this.initialize().catch(err => log.error('Failed to initialize on getAllVariables:', err));
     }
 
-    return this.variableManager.getAllVariables(state.environments, state.activeEnvironment);
+    return this.variableManager.getAllVariables(state.environments as Parameters<typeof this.variableManager.getAllVariables>[0], state.activeEnvironment);
   }
 
   /**

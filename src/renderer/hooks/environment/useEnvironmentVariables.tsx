@@ -63,7 +63,7 @@ export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
     return result;
   }, [environments, activeEnvironment, isReady, service]);
 
-  const getAllVariablesWithMetadata = useCallback((environment: string | null = null): Record<string, any> => {
+  const getAllVariablesWithMetadata = useCallback((environment: string | null = null): Record<string, EnvironmentVariableEntry> => {
     const targetEnv = environment || activeEnvironment;
     const envData = environments[targetEnv] || {};
 

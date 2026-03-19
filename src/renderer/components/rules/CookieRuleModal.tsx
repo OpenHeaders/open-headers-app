@@ -26,12 +26,14 @@ import {
 import { useSources, useEnvironments } from '../../contexts';
 import { getSourceIcon, formatSourceDisplay } from '../proxy';
 import DomainTags from '../features/domain-tags';
+import type { DomainValidation } from '../features/domain-tags/DomainTagDisplay';
 import { showMessage } from '../../utils';
-import { 
+import {
     validateEnvironmentVariables,
     formatMissingVariables,
     getResolvedPreview,
-    extractVariablesFromRule
+    extractVariablesFromRule,
+    type EnvVarValidation
 } from '../../utils/validation/environment-variables';
 
 const { Option } = Select;
@@ -95,8 +97,8 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
     const [sameSite, setSameSite] = useState('Lax');
     const [secure, setSecure] = useState(false);
     const [httpOnly, setHttpOnly] = useState(false);
-    const [envVarValidation, setEnvVarValidation] = useState<Record<string, any>>({});
-    const [domainValidation, setDomainValidation] = useState<any[]>([]);
+    const [envVarValidation, setEnvVarValidation] = useState<Record<string, EnvVarValidation>>({});
+    const [domainValidation, setDomainValidation] = useState<DomainValidation[]>([]);
     const [cookiePath, setCookiePath] = useState('/');
     const formRef = useRef(null);
 

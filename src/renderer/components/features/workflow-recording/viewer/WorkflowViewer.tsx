@@ -8,6 +8,8 @@ import { Spin } from 'antd';
 
 import { useSettings } from '../../../../contexts';
 import { useRecordPlayer } from '../../../../hooks/useRecordPlayer';
+import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
+type RecordLike = Record<string, unknown>;
 import { RecordPlayer } from '../../../record';
 import WorkflowViewerTabs from './WorkflowViewerTabs';
 import {
@@ -30,8 +32,8 @@ import '../../../../styles/RecordViewer.css';
  * @returns {React.ReactNode} Rendered workflow viewer
  */
 interface WorkflowViewerProps {
-    record: any;
-    onRecordChange?: (record: any) => void;
+    record: RecordLike | null;
+    onRecordChange?: (record: RecordLike | null) => void;
     viewMode: string;
     playbackTime?: number;
     onPlaybackTimeChange?: (time: number) => void;
@@ -55,7 +57,7 @@ const WorkflowViewer = ({
   const { settings } = useSettings();
 
   // Internal state
-  const [internalRecord, setInternalRecord] = useState<Record<string, unknown> | null>(null);
+  const [internalRecord, setInternalRecord] = useState<RecordLike | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
   // Refs for component lifecycle and scroll management
@@ -63,7 +65,7 @@ const WorkflowViewer = ({
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isScrollingRef = useRef(false);
   const activeTabRef = useRef(TAB_KEYS.CONSOLE);
-  const previousRecordIdRef = useRef(null);
+  const previousRecordIdRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
 
   // Auto-highlight state management
@@ -80,7 +82,7 @@ const WorkflowViewer = ({
 
   // Record management
   const record = externalRecord !== undefined ? externalRecord : internalRecord;
-  const setRecord = (newRecord: Record<string, unknown>) => {
+  const setRecord = (newRecord: RecordLike) => {
     if (onRecordChange) {
       onRecordChange(newRecord);
     } else {
@@ -108,13 +110,13 @@ const WorkflowViewer = ({
 
   // Reset autoScroll when new record is loaded
   useEffect(() => {
-    const currentRecordId = record?.metadata?.recordId;
+    const currentRecordId = (record?.metadata as { recordId?: string } | undefined)?.recordId;
 
     if (currentRecordId && currentRecordId !== previousRecordIdRef.current) {
       setAutoScroll(settings?.autoScrollTableEntries !== undefined ? settings.autoScrollTableEntries : false);
       previousRecordIdRef.current = currentRecordId;
     }
-  }, [record?.metadata?.recordId, settings?.autoScrollTableEntries]);
+  }, [(record?.metadata as { recordId?: string } | undefined)?.recordId, settings?.autoScrollTableEntries]);
 
   // Auto-scroll effect
   useEffect(() => {
@@ -216,7 +218,7 @@ const WorkflowViewer = ({
     case VIEW_MODES.INFO:
       return (
           <RecordPlayer
-              record={record}
+              record={record as RecordData}
               rrwebPlayer={rrwebPlayer}
               loading={playerLoading}
               onPlaybackTimeChange={handlePlaybackTimeChange}
@@ -232,7 +234,7 @@ const WorkflowViewer = ({
     case VIEW_MODES.TABS:
       return (
           <WorkflowViewerTabs
-              record={record}
+              record={record as RecordData}
               viewMode={viewMode}
               activeTime={activeTime}
               autoHighlight={autoHighlight}
