@@ -132,7 +132,7 @@ class ErrorRecovery {
       const result = await strategy.call(this, error as Error & { retryAfter?: number; code?: string }, context, retryFn);
       this.resetRetryCount(context.operationId);
       return result;
-    } catch (recoveryError: any) {
+    } catch (recoveryError: unknown) {
       this.log.error(`Recovery failed for ${errorType} error:`, recoveryError);
       throw recoveryError;
     }
@@ -395,11 +395,11 @@ class ErrorRecovery {
           const result = await fn(...args);
           this.resetRetryCount(operationId);
           return result;
-        } catch (error: any) {
-          lastError = error;
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error : new Error(String(error));
 
           if (attempt < maxRetries) {
-            const errorType = this.classifyError(error);
+            const errorType = this.classifyError(lastError);
 
             // Some errors shouldn't be retried
             if (errorType === ErrorTypes.AUTH || errorType === ErrorTypes.CONFLICT) {

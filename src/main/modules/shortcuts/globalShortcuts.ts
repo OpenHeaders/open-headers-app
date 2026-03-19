@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { App } from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import path from 'path';
 import fs from 'fs';
@@ -18,11 +19,11 @@ class GlobalShortcuts {
     /**
      * Initialize global shortcuts
      */
-    async initialize(app: any) {
+    async initialize(app: App) {
         try {
             // Load settings to get the current hotkey
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: any = {};
+            let settings: Record<string, unknown> = {};
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
@@ -36,7 +37,7 @@ class GlobalShortcuts {
             const isEnabled = settings.recordingHotkeyEnabled !== undefined ? settings.recordingHotkeyEnabled : true;
 
             if (isEnabled) {
-                const hotkey = settings.recordingHotkey || 'CommandOrControl+Shift+E';
+                const hotkey = (settings.recordingHotkey as string) || 'CommandOrControl+Shift+E';
                 this.registerRecordingHotkey(hotkey);
             } else {
                 log.info('Recording hotkey is disabled in settings');

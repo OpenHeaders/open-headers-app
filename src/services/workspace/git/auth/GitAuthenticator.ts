@@ -12,10 +12,12 @@ const { createLogger } = mainLogger;
 
 const log = createLogger('GitAuthenticator');
 
+// Polymorphic dispatch — strategies have different result/param shapes
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface AuthStrategy {
-  setup: (url: string, authData: any) => Promise<any>;
-  validate?: (authData: any) => { valid: boolean; error?: string };
-  cleanup?: (authResult: any) => Promise<void>;
+  setup: (url: string, authData: Record<string, string>) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
+  validate?: (authData: Record<string, string>) => { valid: boolean; error?: string };
+  cleanup?: (authResult: any) => Promise<void>; // any: strategies accept different result types
 }
 
 interface SetupAuthResult {
@@ -72,7 +74,7 @@ class GitAuthenticator {
   /**
    * Cleanup authentication resources
    */
-  async cleanup(authType: string, authResult: any): Promise<void> {
+  async cleanup(authType: string, authResult: SetupAuthResult): Promise<void> {
     if (authType === 'none' || !authType) {
       return;
     }

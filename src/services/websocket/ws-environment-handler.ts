@@ -13,8 +13,8 @@ const log = createLogger('WSEnvironmentHandler');
 
 interface WSServiceLike {
     appDataPath: string | null;
-    rules: any;
-    sources: any[];
+    rules: Record<string, unknown> & { header?: Array<Record<string, unknown>> };
+    sources: Array<{ sourceId?: string; sourceContent?: string }>;
     ruleHandler: { broadcastRules(): void };
 }
 
@@ -51,8 +51,8 @@ class WSEnvironmentHandler {
 
                     if (environments[activeEnvironment]) {
                         const variables: Record<string, string> = {};
-                        Object.entries(environments[activeEnvironment]).forEach(([key, data]: [string, any]) => {
-                            variables[key] = typeof data === 'object' ? data.value : data;
+                        Object.entries(environments[activeEnvironment]).forEach(([key, data]: [string, unknown]) => {
+                            variables[key] = typeof data === 'object' && data !== null ? (data as Record<string, string>).value : String(data);
                         });
                         return variables;
                     } else {
@@ -97,7 +97,7 @@ class WSEnvironmentHandler {
 
             const broadcastIfEnvVars = () => {
                 if (this.wsService.rules && this.wsService.rules.header) {
-                    const hasEnvVars = this.wsService.rules.header.some((rule: any) => rule.hasEnvVars);
+                    const hasEnvVars = this.wsService.rules.header.some((rule) => rule.hasEnvVars);
                     if (hasEnvVars) {
                         this.wsService.ruleHandler.broadcastRules();
                     }
@@ -112,8 +112,8 @@ class WSEnvironmentHandler {
             // which loads fresh rules/sources and broadcasts — no need to duplicate here
 
             log.info('Environment change listener setup for WebSocket service');
-        } catch (error: any) {
-            log.warn('Could not setup environment listener:', error.message);
+        } catch (error: unknown) {
+            log.warn('Could not setup environment listener:', error);
         }
     }
 
@@ -130,7 +130,7 @@ class WSEnvironmentHandler {
             }
 
             if (this.wsService.rules && this.wsService.rules.header) {
-                proxyService.updateHeaderRules(this.wsService.rules.header);
+                proxyService.updateHeaderRules(this.wsService.rules.header as Parameters<typeof proxyService.updateHeaderRules>[0]);
             }
 
             if (this.wsService.sources && this.wsService.sources.length > 0) {

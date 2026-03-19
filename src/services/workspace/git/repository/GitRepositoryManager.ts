@@ -19,29 +19,29 @@ interface CloneOptions {
   targetDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, any>;
+  authData?: Record<string, string>;
   depth?: number;
   sparse?: boolean;
   sparsePatterns?: string[];
-  progressCallback?: (progress: any) => void;
+  progressCallback?: (progress: Record<string, unknown>) => void;
 }
 
 interface PullOptions {
   repoDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, any>;
-  progressCallback?: (progress: any) => void;
+  authData?: Record<string, string>;
+  progressCallback?: (progress: Record<string, unknown>) => void;
 }
 
 interface PushOptions {
   repoDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, any>;
+  authData?: Record<string, string>;
   force?: boolean;
   setUpstream?: boolean;
-  progressCallback?: (progress: any) => void;
+  progressCallback?: (progress: Record<string, unknown>) => void;
 }
 
 interface OperationResult {
@@ -490,7 +490,7 @@ class GitRepositoryManager {
   /**
    * Setup sparse checkout
    */
-  async setupSparseCheckout(repoDir: string, patterns: string[], env: NodeJS.ProcessEnv, progressCallback: (progress: any) => void): Promise<void> {
+  async setupSparseCheckout(repoDir: string, patterns: string[], env: NodeJS.ProcessEnv, progressCallback: (progress: Record<string, unknown>) => void): Promise<void> {
     log.info('Setting up sparse checkout with patterns:', patterns);
     progressCallback({ phase: 'sparse', message: 'Configuring sparse checkout...' });
 

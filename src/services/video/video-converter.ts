@@ -2,6 +2,7 @@ import child_process from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage as errMsg } from '../../types/common';
 
 const { spawn } = child_process;
 const { createLogger } = mainLogger;
@@ -23,7 +24,7 @@ interface ConversionResult {
 }
 
 interface VideoFormatInfo {
-    streams?: any[];
+    streams?: Array<Record<string, unknown>>;
     skipped?: boolean;
 }
 
@@ -331,8 +332,8 @@ class VideoConverter {
             // Use ffprobe to validate the video format
             await this.validateVideoFormat(inputPath);
 
-        } catch (error: any) {
-            if (error.code === 'ENOENT') {
+        } catch (error: unknown) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
                 throw new Error(`Input file not found: ${inputPath}`);
             }
             throw error;
@@ -377,8 +378,8 @@ class VideoConverter {
                         } else {
                             resolve(info);
                         }
-                    } catch (error: any) {
-                        reject(new Error('Failed to parse video info: ' + error.message));
+                    } catch (error: unknown) {
+                        reject(new Error('Failed to parse video info: ' + errMsg(error)));
                     }
                 } else {
                     log.error('ffprobe failed:', stderr);
@@ -386,7 +387,7 @@ class VideoConverter {
                 }
             });
 
-            ffprobe.on('error', (err: any) => {
+            ffprobe.on('error', (err: NodeJS.ErrnoException) => {
                 // If ffprobe doesn't exist, skip validation
                 if (err.code === 'ENOENT') {
                     log.warn('ffprobe not found, skipping format validation');

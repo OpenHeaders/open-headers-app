@@ -641,7 +641,7 @@ class NetworkMonitor extends EventEmitter {
                 }
             };
 
-            request.on('response', (response: any) => {
+            request.on('response', (response: Electron.IncomingMessage) => {
                 handleResponse(true, response.statusCode);
             });
 

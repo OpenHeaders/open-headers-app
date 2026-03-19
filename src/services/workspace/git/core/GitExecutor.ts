@@ -29,7 +29,7 @@ interface ExecuteOptions {
   maxBuffer?: number;
   env?: NodeJS.ProcessEnv;
   cwd?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExecuteResult {
@@ -110,7 +110,7 @@ class GitExecutor {
   /**
    * Enhance error with more context
    */
-  enhanceError(error: any, command: string): EnhancedError {
+  enhanceError(error: Error & { code?: string; killed?: boolean; signal?: string }, command: string): EnhancedError {
     const enhancedError: EnhancedError = new Error(error.message);
     enhancedError.command = command;
     enhancedError.code = error.code;
