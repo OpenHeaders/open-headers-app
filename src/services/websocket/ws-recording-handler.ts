@@ -5,11 +5,15 @@
 
 import WebSocket from 'ws';
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { preprocessRecordingForSave } from './utils/recordingPreprocessor';
+import type { RecordingData, RecordingMetadata as RecordingRecordMetadata } from './utils/recordingPreprocessor';
+import { errorMessage } from '../../types/common';
+import type { AppSettings } from '../../types/settings';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSRecordingHandler');
@@ -17,14 +21,76 @@ const log = createLogger('WSRecordingHandler');
 interface WSServiceLike {
     appDataPath: string | null;
     _broadcastToAll(message: string): number;
-    _handleFocusApp(navigation: any): void;
+    _handleFocusApp(navigation: Record<string, unknown>): void;
+}
+
+interface RecordingOptions {
+    recordingId: string;
+    url: string;
+    title: string;
+    windowId?: string;
+    tabId?: string;
+    timestamp?: number;
+    displayInfo?: Record<string, unknown>;
 }
 
 interface VideoCaptureServiceLike {
     initialize(appDataPath: string | null): Promise<void>;
-    startRecording(options: any): Promise<{ success: boolean; error?: string }>;
+    startRecording(options: RecordingOptions): Promise<{ success: boolean; error?: string }>;
     stopRecording(recordingId: string): Promise<{ success: boolean; error?: string }>;
     updateRecordingState(recordingId: string, state: string): Promise<void>;
+}
+
+interface ProcessingNotificationMeta {
+    url: string;
+    timestamp: number;
+    eventCount: number;
+}
+
+interface SavedRecordingMetadata {
+    id: string;
+    timestamp: number;
+    url: string;
+    duration: number;
+    eventCount: number;
+    size: number;
+    originalSize: number;
+    source: string;
+    metadata: RecordingRecordMetadata | undefined;
+    hasVideo: boolean;
+    hasProcessedVersion: boolean;
+    hasOriginalVersion: boolean;
+}
+
+interface SaveRecordingResult {
+    success: boolean;
+    recordId?: string;
+    metadata?: SavedRecordingMetadata;
+    error?: string;
+}
+
+interface StartSyncRecordingData {
+    recordingId: string;
+    url: string;
+    title: string;
+    windowId?: string;
+    tabId?: string;
+    timestamp?: number;
+    displayInfo?: Record<string, unknown>;
+}
+
+interface StopSyncRecordingData {
+    recordingId: string;
+}
+
+interface RecordingStateSyncData {
+    recordingId: string;
+    state: string;
+}
+
+interface SaveRecordingMessageData {
+    type: string;
+    recording: RecordingData;
 }
 
 class WSRecordingHandler {
@@ -54,17 +120,17 @@ class WSRecordingHandler {
     /**
      * Send video recording state to specific client
      */
-    async sendVideoRecordingState(ws: any): Promise<void> {
+    async sendVideoRecordingState(ws: WebSocket): Promise<void> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: any = {};
+            let settings: Partial<AppSettings> = {};
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(settingsData);
+                settings = JSON.parse(settingsData) as Partial<AppSettings>;
             } catch (error) {
                 log.debug('Settings file not found, using defaults');
             }
@@ -101,17 +167,17 @@ class WSRecordingHandler {
     /**
      * Send recording hotkey to client
      */
-    async sendRecordingHotkey(ws: any): Promise<void> {
+    async sendRecordingHotkey(ws: WebSocket): Promise<void> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
 
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: any = {};
+            let settings: Partial<AppSettings> = {};
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(settingsData);
+                settings = JSON.parse(settingsData) as Partial<AppSettings>;
             } catch (error) {
                 log.debug('Settings file not found, using defaults');
             }
@@ -152,7 +218,7 @@ class WSRecordingHandler {
     /**
      * Notify UI that a recording is being processed
      */
-    notifyRecordingProcessing(recordId: string, metadata: any): void {
+    notifyRecordingProcessing(recordId: string, metadata: ProcessingNotificationMeta): void {
         try {
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
@@ -170,7 +236,7 @@ class WSRecordingHandler {
                 hasProcessedVersion: false
             };
 
-            windows.forEach((window: any) => {
+            windows.forEach((window: BrowserWindowType) => {
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('recording-processing', processingNotification);
                     log.info('Sent recording-processing event to renderer');
@@ -184,12 +250,12 @@ class WSRecordingHandler {
     /**
      * Notify UI of recording processing progress
      */
-    notifyRecordingProgress(recordId: string, stage: string, progress: number, details: any = {}): void {
+    notifyRecordingProgress(recordId: string, stage: string, progress: number, details: Record<string, unknown> = {}): void {
         try {
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
 
-            windows.forEach((window: any) => {
+            windows.forEach((window: BrowserWindowType) => {
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('recording-progress', {
                         recordId,
@@ -207,7 +273,7 @@ class WSRecordingHandler {
     /**
      * Handle save recording from browser extension
      */
-    async handleSaveRecording(recordingData: any): Promise<{ success: boolean; recordId?: string; metadata?: any; error?: string }> {
+    async handleSaveRecording(recordingData: RecordingData): Promise<SaveRecordingResult> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
@@ -231,7 +297,7 @@ class WSRecordingHandler {
             const recordingDir = path.join(recordingsPath, recordId);
             await fsPromises.mkdir(recordingDir, { recursive: true });
 
-            let processedRecordingData: any;
+            let processedRecordingData: RecordingData;
             let hasProcessedVersion = false;
 
             try {
@@ -251,11 +317,11 @@ class WSRecordingHandler {
                     } else {
                         log.info('Proxy is not running, skipping resource prefetch');
                     }
-                } catch (error: any) {
-                    log.warn('Could not check proxy status:', error.message);
+                } catch (error: unknown) {
+                    log.warn('Could not check proxy status:', errorMessage(error));
                 }
 
-                const onProgress = (stage: string, progress: number, details: any) => {
+                const onProgress = (stage: string, progress: number, details?: Record<string, unknown>) => {
                     if (stage === 'preprocessing') {
                         const overallProgress = 10 + Math.round(progress * 0.15);
                         this.notifyRecordingProgress(recordId, 'preprocessing', overallProgress, {
@@ -278,10 +344,10 @@ class WSRecordingHandler {
                     eventCount: recordingData.record?.events?.length || 0
                 });
                 log.info(`Successfully preprocessed recording ${recordId}`);
-            } catch (preprocessError: any) {
+            } catch (preprocessError: unknown) {
                 log.error('Failed to preprocess recording:', preprocessError);
                 this.notifyRecordingProgress(recordId, 'error', 0);
-                throw new Error(`Preprocessing failed: ${preprocessError.message}`);
+                throw new Error(`Preprocessing failed: ${errorMessage(preprocessError)}`);
             }
 
             this.notifyRecordingProgress(recordId, 'saving', 80);
@@ -308,7 +374,7 @@ class WSRecordingHandler {
                 // No video metadata found
             }
 
-            const metadata = {
+            const metadata: SavedRecordingMetadata = {
                 id: recordId,
                 timestamp: recordingData.record?.metadata?.timestamp || Date.now(),
                 url: recordingData.record?.metadata?.url || 'Unknown',
@@ -331,7 +397,7 @@ class WSRecordingHandler {
             try {
                 const { BrowserWindow } = electron;
                 const windows = BrowserWindow.getAllWindows();
-                windows.forEach((window: any) => {
+                windows.forEach((window: BrowserWindowType) => {
                     if (window && !window.isDestroyed()) {
                         window.webContents.send('recording-received', metadata);
                         log.info('Sent recording-received event to renderer');
@@ -345,16 +411,16 @@ class WSRecordingHandler {
 
             log.info(`Recording saved successfully with ID: ${recordId}`);
             return { success: true, recordId: recordId, metadata };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error saving recording:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
     /**
      * Handle start sync recording request
      */
-    async handleStartSyncRecording(ws: any, data: any): Promise<void> {
+    async handleStartSyncRecording(ws: WebSocket, data: StartSyncRecordingData): Promise<void> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
@@ -364,7 +430,7 @@ class WSRecordingHandler {
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData);
+                const settings = JSON.parse(settingsData) as Partial<AppSettings>;
                 videoRecordingEnabled = settings.videoRecording || false;
             } catch (error) {
                 log.debug('Could not read settings file, assuming video recording is disabled');
@@ -399,16 +465,16 @@ class WSRecordingHandler {
                 log.error(`Failed to start video recording: ${result.error}`);
                 this._sendVideoRecordingStatus(ws, data.recordingId, 'error', result.error);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error handling start sync recording:', error);
-            this._sendVideoRecordingStatus(ws, data.recordingId, 'error', error.message);
+            this._sendVideoRecordingStatus(ws, data.recordingId, 'error', errorMessage(error));
         }
     }
 
     /**
      * Handle stop sync recording request
      */
-    async handleStopSyncRecording(ws: any, data: any): Promise<void> {
+    async handleStopSyncRecording(ws: WebSocket, data: StopSyncRecordingData): Promise<void> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
@@ -418,7 +484,7 @@ class WSRecordingHandler {
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData);
+                const settings = JSON.parse(settingsData) as Partial<AppSettings>;
                 videoRecordingEnabled = settings.videoRecording || false;
             } catch (error) {
                 log.debug('Could not read settings file, assuming video recording is disabled');
@@ -443,16 +509,16 @@ class WSRecordingHandler {
                 log.error(`Failed to stop video recording: ${result.error}`);
                 this._sendVideoRecordingStatus(ws, data.recordingId, 'error', result.error);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error handling stop sync recording:', error);
-            this._sendVideoRecordingStatus(ws, data.recordingId, 'error', error.message);
+            this._sendVideoRecordingStatus(ws, data.recordingId, 'error', errorMessage(error));
         }
     }
 
     /**
      * Handle recording state synchronization
      */
-    async handleRecordingStateSync(ws: any, data: any): Promise<void> {
+    async handleRecordingStateSync(_ws: WebSocket, data: RecordingStateSyncData): Promise<void> {
         try {
             if (!this.videoCaptureService) {
                 return;
@@ -468,19 +534,19 @@ class WSRecordingHandler {
      * Handle a saveRecording/saveWorkflow message from the extension
      * Preprocesses record ID, focuses app, notifies UI, saves, and responds
      */
-    handleSaveRecordingMessage(ws: any, data: any): void {
+    handleSaveRecordingMessage(ws: WebSocket, data: SaveRecordingMessageData): void {
         log.info(`Received ${data.type} request from extension`);
 
         // Ensure consistent record ID
         if (!data.recording?.record?.metadata?.recordId) {
             const generatedId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            if (!data.recording.record) data.recording.record = {};
+            if (!data.recording.record) data.recording.record = { events: [] };
             if (!data.recording.record.metadata) data.recording.record.metadata = {};
             data.recording.record.metadata.recordId = generatedId;
             log.info(`Generated record ID: ${generatedId}`);
         }
 
-        const recordId = data.recording.record.metadata.recordId;
+        const recordId = data.recording.record.metadata!.recordId!;
 
         log.info('Immediately navigating to records tab for:', recordId);
         this.wsService._handleFocusApp({
@@ -490,8 +556,8 @@ class WSRecordingHandler {
         });
 
         this.notifyRecordingProcessing(recordId, {
-            url: data.recording.record.metadata.url || 'Unknown',
-            timestamp: data.recording.record.metadata.timestamp || Date.now(),
+            url: data.recording.record.metadata?.url || 'Unknown',
+            timestamp: data.recording.record.metadata?.timestamp || Date.now(),
             eventCount: data.recording.record.events?.length || 0
         });
 
@@ -504,7 +570,7 @@ class WSRecordingHandler {
                     recordId: result.recordId
                 }));
             }
-        }).catch(error => {
+        }).catch((error: Error) => {
             log.error('Error handling save workflow:', error);
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({
@@ -519,7 +585,7 @@ class WSRecordingHandler {
     /**
      * Send video recording status to client
      */
-    _sendVideoRecordingStatus(ws: any, recordingId: string, status: string, error: string | null = null): void {
+    _sendVideoRecordingStatus(ws: WebSocket, recordingId: string, status: string, error: string | null | undefined = null): void {
         if (ws && ws.readyState === WebSocket.OPEN) {
             const message = {
                 type: 'videoRecordingStatus',

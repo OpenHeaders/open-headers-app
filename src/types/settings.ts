@@ -21,6 +21,7 @@ export interface AppSettings {
   tutorialMode: boolean;
   developerMode: boolean;
   recordingHotkey: string;
+  recordingHotkeyEnabled: boolean;
   logLevel: string;
   autoSyncWorkspaces?: boolean;
 }
