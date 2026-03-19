@@ -42,8 +42,13 @@ const { Title, Text } = Typography;
  * @param {function} onUpdatePort - Callback for port configuration changes
  * @returns {JSX.Element} Proxy server control panel
  */
+interface ProxyStatus {
+    running: boolean;
+    port: number;
+}
+
 interface ProxyServerControlsProps {
-    proxyStatus: Record<string, any>;
+    proxyStatus: ProxyStatus;
     loading: boolean;
     tutorialMode: boolean;
     onToggleProxy: () => void;

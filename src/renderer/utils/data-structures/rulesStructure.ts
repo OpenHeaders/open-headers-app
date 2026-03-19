@@ -43,7 +43,7 @@ interface RuleData {
     // URL-specific
     replacePattern?: string;
     redirectTo?: string;
-    modifyParams?: Array<Record<string, any>>;
+    modifyParams?: Array<{ key: string; value?: string; action?: string }>;
     action?: string;
 }
 

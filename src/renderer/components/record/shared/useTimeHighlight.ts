@@ -10,7 +10,6 @@
  * @returns {Object} Highlighting utilities and state
  */
 export const useTimeHighlight = (
-    record: Record<string, any> | null,
     viewMode: string,
     activeTime: number,
     autoHighlight = false,

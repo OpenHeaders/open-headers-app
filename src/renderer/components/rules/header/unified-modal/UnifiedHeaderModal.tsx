@@ -74,11 +74,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
                 if (initialValues) {
                     if (currentMode === 'cookie') {
                         // Parse cookie values
-                        const parsed = parseHeaderValue(initialValues.headerValue, 'cookie') as {
-                            name?: string; value?: string; path?: string; sameSite?: string;
-                            secure?: boolean; httpOnly?: boolean; expirationMode?: string;
-                            maxAge?: number; expires?: string;
-                        };
+                        const parsed = parseHeaderValue(initialValues.headerValue, 'cookie');
                         form.setFieldsValue({
                             cookieName: parsed.name || initialValues.cookieName || '',
                             cookieValue: parsed.value || initialValues.cookieValue || '',

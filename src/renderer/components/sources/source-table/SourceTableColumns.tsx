@@ -29,6 +29,7 @@
 
 import React from 'react';
 import { Button, Tag, Typography, Space, Popconfirm, Tooltip } from 'antd';
+import type { GlobalToken } from 'antd';
 import { ReloadOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { trimContent } from './SourceTableUtils';
 import { isTemplateSource } from './SourceDependencyChecker';
@@ -62,7 +63,7 @@ interface RefreshStatusInfo {
 }
 
 interface SourceTableColumnsParams {
-    token: Record<string, any>;
+    token: GlobalToken;
     getRefreshStatusText: (record: SourceRecord) => string | RefreshStatusInfo;
     handleViewContent: (record: SourceRecord) => void;
     handleEditSource: (record: SourceRecord) => void;
