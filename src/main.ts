@@ -1,8 +1,10 @@
 // Electron main process
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType, IpcMainInvokeEvent, IpcMainEvent, MenuItemConstructorOptions } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from './utils/mainLogger';
+import { errorMessage } from './types/common';
 
 const { app, ipcMain, Menu, shell } = electron;
 const { createLogger } = mainLogger;
@@ -29,7 +31,7 @@ import gitHandlers from './main/modules/ipc/handlers/gitHandlers';
 
 const log = createLogger('Main');
 
-let mainWindow: any = null;
+let mainWindow: BrowserWindowType | null = null;
 
 // Windows focus helper is initialized and will handle focus enhancement automatically
 
@@ -167,15 +169,15 @@ if (!gotTheLock) {
             if (!cliApiService) return { running: false, port: 59213, discoveryPath: '', token: '', startedAt: null, totalRequests: 0 };
             return cliApiService.getStatus();
         });
-        ipcMain.handle('cli-api-start', async (_event: any, port: number) => {
+        ipcMain.handle('cli-api-start', async (_event: IpcMainInvokeEvent, port: number) => {
             const cliApiService = appLifecycle.getCliApiService();
             if (!cliApiService) return { success: false, error: 'CLI API service not available' };
             try {
                 if (port) cliApiService.port = Number(port);
                 await cliApiService.start();
                 return { success: true, port: cliApiService.port };
-            } catch (err: any) {
-                return { success: false, error: err.message };
+            } catch (err: unknown) {
+                return { success: false, error: errorMessage(err) };
             }
         });
         ipcMain.handle('cli-api-stop', async () => {
@@ -184,8 +186,8 @@ if (!gotTheLock) {
             try {
                 await cliApiService.stop();
                 return { success: true };
-            } catch (err: any) {
-                return { success: false, error: err.message };
+            } catch (err: unknown) {
+                return { success: false, error: errorMessage(err) };
             }
         });
         ipcMain.handle('cli-api-get-logs', () => {
@@ -204,8 +206,8 @@ if (!gotTheLock) {
             try {
                 const token = await cliApiService.regenerateToken();
                 return { success: true, token };
-            } catch (err: any) {
-                return { success: false, error: err.message };
+            } catch (err: unknown) {
+                return { success: false, error: errorMessage(err) };
             }
         });
 
@@ -252,24 +254,24 @@ if (!gotTheLock) {
         });
 
         // Runtime updates
-        ipcMain.on('updateWebSocketSources', async (event: any, sources: any[]) => {
+        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string }>) => {
             const webSocketService = (await import('./services/websocket/ws-service')).default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
-                log.info(`Main: Sources with content: ${sources.filter((s: any) => s.sourceContent).length}`);
-                sources.forEach((source: any) => {
+                log.info(`Main: Sources with content: ${sources.filter((s) => s.sourceContent).length}`);
+                sources.forEach((source) => {
                     log.info(`  Main: Source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
                 });
             }
             webSocketService.updateSources(sources);
         });
 
-        ipcMain.on('proxy-update-source', async (_: any, sourceId: string, value: any) => {
+        ipcMain.on('proxy-update-source', async (_event: IpcMainEvent, sourceId: string, value: string) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             proxyService.updateSource(sourceId, value);
         });
 
-        ipcMain.on('proxy-update-sources', async (_: any, sources: any[]) => {
+        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string }>) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
@@ -281,7 +283,7 @@ if (!gotTheLock) {
         ipcMain.on('workspace-updated', workspaceHandlers.handleWorkspaceUpdated.bind(workspaceHandlers));
 
         // Environment events - notify WebSocket service when environments change
-        ipcMain.on('environment-switched', async (event: any, data: any) => {
+        ipcMain.on('environment-switched', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             log.info('Environment switched, notifying proxy service');
             // Update proxy service with new environment variables
@@ -305,14 +307,14 @@ if (!gotTheLock) {
                         log.info(`Re-loaded ${sources.length} sources after environment switch`);
                     }
                 }
-            } catch (error: any) {
-                log.warn('Could not re-load sources after environment switch:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not re-load sources after environment switch:', errorMessage(error));
             }
 
             // Rules re-broadcast is handled by ws-environment-handler's IPC listener
         });
 
-        ipcMain.on('environment-variables-changed', async (event: any, data: any) => {
+        ipcMain.on('environment-variables-changed', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             log.info('Environment variables changed, notifying proxy service');
             // Update proxy service with new environment variables
@@ -334,11 +336,11 @@ if (!gotTheLock) {
         mainWindow = windowManager.createWindow();
 
         // Store window reference for protocol handler
-        protocolHandler.setMainWindow(mainWindow);
+        protocolHandler.setMainWindow(mainWindow!);
 
         // Pass window reference to CLI API service for renderer notifications
         const cliApiService = appLifecycle.getCliApiService();
-        if (cliApiService) {
+        if (cliApiService && mainWindow) {
             cliApiService.setMainWindow(mainWindow);
         }
 
@@ -363,7 +365,7 @@ if (!gotTheLock) {
             }, 300);
         };
 
-        const appMenuTemplate: any[] = [
+        const appMenuTemplate = [
             // macOS app menu (About, Check for Updates, Settings, Services, Hide, Quit)
             ...(isMac ? [{
                 label: app.getName(),
@@ -435,7 +437,7 @@ if (!gotTheLock) {
                 ]
             }
         ];
-        Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate));
+        Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate as MenuItemConstructorOptions[]));
 
         await networkHandlers.initializeNetworkService();
         networkHandlers.setupNativeMonitoring();
@@ -460,9 +462,9 @@ if (!gotTheLock) {
         app.on('activate', () => {
             if (windowManager.getAllWindows().length === 0) {
                 mainWindow = windowManager.createWindow();
-                protocolHandler.setMainWindow(mainWindow);
+                protocolHandler.setMainWindow(mainWindow!);
                 const cliApi = appLifecycle.getCliApiService();
-                if (cliApi) cliApi.setMainWindow(mainWindow);
+                if (cliApi && mainWindow) cliApi.setMainWindow(mainWindow);
             } else {
                 windowManager.showWindow();
             }

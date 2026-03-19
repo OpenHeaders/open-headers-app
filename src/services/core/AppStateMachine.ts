@@ -65,15 +65,15 @@ interface StateHistoryEntry {
     previousState?: string | null;
     timestamp: number;
     event: string;
-    data?: any;
+    data?: Record<string, unknown>;
 }
 
 interface AppContext {
     startTime: number;
-    errors: Array<{ error: any; timestamp: number; state: string }>;
+    errors: Array<{ error: unknown; timestamp: number; state: string }>;
     retryCount: number;
-    services: Map<string, any> | any;
-    settings: any;
+    services: Map<string, unknown> | Record<string, unknown>;
+    settings: Record<string, unknown> | null;
 }
 
 class AppStateMachineImpl extends EventEmitter {
@@ -110,7 +110,7 @@ class AppStateMachineImpl extends EventEmitter {
         return transitions && Object.prototype.hasOwnProperty.call(transitions, event);
     }
 
-    transition(event: string, data: any = {}): boolean {
+    transition(event: string, data: Record<string, unknown> = {}): boolean {
         if (!this.canTransition(event)) {
             this.log.warn(`Invalid transition: ${event} from state ${this.currentState}`);
             return false;
@@ -159,32 +159,32 @@ class AppStateMachineImpl extends EventEmitter {
         try {
             this.emit('initializationStarted');
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Initialization failed:', error);
-            this.transition('ERROR', { error: error.message });
+            this.transition('ERROR', { error: String(error) });
             return false;
         }
     }
 
-    settingsLoaded(settings: any): boolean {
+    settingsLoaded(settings: Record<string, unknown>): boolean {
         this.context.settings = settings;
         return this.transition('SETTINGS_LOADED', { settings });
     }
 
     settingsReady(): boolean { return this.transition('SETTINGS_READY'); }
 
-    servicesReady(services: any): boolean {
+    servicesReady(services: Record<string, unknown>): boolean {
         this.context.services = services;
         return this.transition('SERVICES_READY', { services });
     }
 
-    serversReady(servers: any): boolean { return this.transition('SERVERS_READY', { servers }); }
-    workspaceChange(workspace: any): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
+    serversReady(servers: Record<string, unknown>): boolean { return this.transition('SERVERS_READY', { servers }); }
+    workspaceChange(workspace: Record<string, unknown>): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
     workspaceReady(): boolean { return this.transition('WORKSPACE_READY'); }
     networkLost(): boolean { return this.transition('NETWORK_LOST'); }
     networkRestored(): boolean { return this.transition('NETWORK_RESTORED'); }
 
-    error(error: any): boolean {
+    error(error: unknown): boolean {
         this.context.errors.push({ error, timestamp: timeManager.now(), state: this.currentState });
         return this.transition('ERROR', { error });
     }
