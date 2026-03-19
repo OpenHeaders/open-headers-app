@@ -25,13 +25,13 @@ const mainConfig = {
     module: {
         rules: [
             {
-                test: /\.(js|ts)$/,
+                test: /\.ts$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: 'babel-loader',
+                    loader: 'ts-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-typescript'],
-                        cacheDirectory: true
+                        transpileOnly: true,
+                        configFile: path.resolve(__dirname, 'tsconfig.json')
                     }
                 }
             }
@@ -103,13 +103,13 @@ const preloadConfig = {
     module: {
         rules: [
             {
-                test: /\.(js|ts)$/,
+                test: /\.ts$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: 'babel-loader',
+                    loader: 'ts-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-typescript'],
-                        cacheDirectory: true
+                        transpileOnly: true,
+                        configFile: path.resolve(__dirname, 'tsconfig.json')
                     }
                 }
             }
@@ -184,13 +184,13 @@ const rendererConfig = {
     module: {
         rules: [
             {
-                test: /\.(js|jsx|ts|tsx)$/,
+                test: /\.tsx?$/,
                 exclude: /node_modules/,
                 use: {
-                    loader: 'babel-loader',
+                    loader: 'ts-loader',
                     options: {
-                        presets: ['@babel/preset-env', '@babel/preset-react', '@babel/preset-typescript'],
-                        cacheDirectory: true
+                        transpileOnly: true,
+                        configFile: path.resolve(__dirname, 'src/renderer/tsconfig.json')
                     }
                 }
             },
