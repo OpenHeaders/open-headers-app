@@ -34,7 +34,7 @@
  * extractHeaders({headers: {'Content-Type': 'application/json'}}) // Returns headers directly
  * extractHeaders({originalResponse: '{"headers":{"Accept":"text/html"}}'}) // Parses from JSON
  */
-export function extractHeaders(source: { headers?: Record<string, string> | null; rawResponse?: string; originalResponse?: string | Record<string, unknown>; sourceContent?: string; [key: string]: unknown } | null) {
+export function extractHeaders(source: { headers?: Record<string, string> | null; rawResponse?: string; originalResponse?: string | Record<string, unknown>; sourceContent?: string | null; [key: string]: unknown } | null) {
     // Check if headers was explicitly cleared (null means error state)
     if (source?.headers === null) {
         return null;
@@ -184,7 +184,7 @@ function extractHeadersAggressive(content: string) {
  * @param {Object} source - Source object
  * @returns {Object} - Fallback headers
  */
-function generateFallbackHeaders(source: { sourceContent?: string; originalResponse?: string | Record<string, unknown>; [key: string]: unknown } | null) {
+function generateFallbackHeaders(source: { sourceContent?: string | null; originalResponse?: string | Record<string, unknown>; [key: string]: unknown } | null) {
     const fallbackHeaders: Record<string, string> = {};
 
     // Check if we can extract content-type from the response

@@ -41,7 +41,7 @@ interface InitLock {
 
 interface Source {
     sourceId: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
     [key: string]: unknown;
 }
 

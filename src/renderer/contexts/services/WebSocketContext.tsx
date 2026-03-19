@@ -17,7 +17,7 @@ interface SourceEntry {
     sourceType: string;
     sourcePath?: string;
     sourceTag?: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
     sourceMethod?: string;
     jsonFilter?: {
         enabled: boolean;
@@ -36,7 +36,7 @@ interface CleanedSource {
     sourceType: string;
     sourcePath?: string;
     sourceTag?: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
     sourceMethod?: string;
     jsonFilter?: {
         enabled: boolean | undefined;

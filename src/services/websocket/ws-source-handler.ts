@@ -14,7 +14,7 @@ const log = createLogger('WSSourceHandler');
 
 interface Source {
     sourceId?: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
     [key: string]: unknown;
 }
 

@@ -38,7 +38,7 @@ export interface HeaderRule {
 
 export interface ProxySource {
     sourceId: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
 }
 
 /**

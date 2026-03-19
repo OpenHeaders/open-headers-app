@@ -41,7 +41,7 @@ interface SourceRecord {
     sourceType: string;
     sourceTag?: string;
     sourcePath?: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
     activationState?: string;
     missingDependencies?: string[];
     refreshOptions?: { enabled?: boolean; [key: string]: unknown };
