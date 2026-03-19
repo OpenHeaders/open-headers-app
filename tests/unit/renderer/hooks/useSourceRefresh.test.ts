@@ -435,7 +435,7 @@ describe('useSourceRefresh', () => {
 
       expect(ok).toBe(true);
       expect(mockHttpRequest).not.toHaveBeenCalled();
-      expect(deps.addSource).toHaveBeenCalledWith(sourceData);
+      expect(deps.addSource).toHaveBeenCalledWith({ sourceId: '', ...sourceData });
 
       // Should trigger delayed refresh for file sources
       await act(async () => {

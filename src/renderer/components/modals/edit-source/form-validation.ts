@@ -1,7 +1,9 @@
 import { createLogger } from '../../../utils/error-handling/logger';
+import type { SourceHeader, SourceQueryParam, JsonFilter } from '../../../../types/source';
 const log = createLogger('FormValidation');
 
-interface EnvContext {
+/** Minimal environment context needed for form field validation */
+interface FormEnvContext {
     environmentsReady: boolean;
     getAllVariables: () => Record<string, string>;
     activeEnvironment: string;
@@ -11,25 +13,10 @@ interface FormInstance {
     getFieldValue: (name: string | string[]) => unknown;
 }
 
-interface HeaderEntry {
-    key?: string;
-    value?: string;
-}
-
-interface QueryParamEntry {
-    key?: string;
-    value?: string;
-}
-
-interface JsonFilterEntry {
-    enabled?: boolean;
-    path?: string;
-}
-
 /**
  * Validates environment variables in a value string
  */
-const validateEnvironmentVariables = (value: string, envContext: EnvContext): Promise<void> => {
+const validateEnvironmentVariables = (value: string, envContext: FormEnvContext): Promise<void> => {
     if (!value || typeof value !== 'string') return Promise.resolve();
     
     // Skip validation if environments aren't ready yet
@@ -93,7 +80,7 @@ const validateTotpCodePlaceholder = (value: string, form: FormInstance): Promise
  * @param {string} fieldName - Name of the field being validated (for error messages)
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateHeadersForVariables = (headers: HeaderEntry[] | null | undefined, envContext: EnvContext, fieldName = 'Header'): Promise<void> => {
+const validateHeadersForVariables = (headers: Partial<SourceHeader>[] | null | undefined, envContext: FormEnvContext, fieldName = 'Header'): Promise<void> => {
     if (!headers || !Array.isArray(headers)) return Promise.resolve();
     
     for (const [index, header] of headers.entries()) {
@@ -128,7 +115,7 @@ const validateHeadersForVariables = (headers: HeaderEntry[] | null | undefined, 
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateQueryParamsForVariables = (queryParams: QueryParamEntry[] | null | undefined, envContext: EnvContext): Promise<void> => {
+const validateQueryParamsForVariables = (queryParams: Partial<SourceQueryParam>[] | null | undefined, envContext: FormEnvContext): Promise<void> => {
     if (!queryParams || !Array.isArray(queryParams)) return Promise.resolve();
     
     for (const [index, param] of queryParams.entries()) {
@@ -158,7 +145,7 @@ const validateQueryParamsForVariables = (queryParams: QueryParamEntry[] | null |
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateBodyForVariables = (body: string | null | undefined, envContext: EnvContext): Promise<void> => {
+const validateBodyForVariables = (body: string | null | undefined, envContext: FormEnvContext): Promise<void> => {
     if (!body) return Promise.resolve();
     
     const envVarMatches = body.match(/{{([^}]+)}}/g);
@@ -183,7 +170,7 @@ const validateBodyForVariables = (body: string | null | undefined, envContext: E
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateJsonFilterForVariables = (jsonFilter: JsonFilterEntry | null | undefined, envContext: EnvContext): Promise<void> => {
+const validateJsonFilterForVariables = (jsonFilter: JsonFilter | null | undefined, envContext: FormEnvContext): Promise<void> => {
     if (!jsonFilter || !jsonFilter.enabled || !jsonFilter.path) return Promise.resolve();
     
     const envVarMatches = jsonFilter.path.match(/{{([^}]+)}}/g);
@@ -208,7 +195,7 @@ const validateJsonFilterForVariables = (jsonFilter: JsonFilterEntry | null | und
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if valid, rejects with error message if invalid
  */
-const validateTotpSecretForVariables = (totpSecret: string | null | undefined, envContext: EnvContext): Promise<void> => {
+const validateTotpSecretForVariables = (totpSecret: string | null | undefined, envContext: FormEnvContext): Promise<void> => {
     if (!totpSecret) return Promise.resolve();
     
     const envVarMatches = totpSecret.match(/{{([^}]+)}}/g);
@@ -233,13 +220,13 @@ const validateTotpSecretForVariables = (totpSecret: string | null | undefined, e
  * @param {Object} envContext - Environment context for variable validation
  * @returns {Promise<void>} - Resolves if all validations pass, rejects with first error encountered
  */
-const validateAllFormFields = async (form: FormInstance, envContext: EnvContext): Promise<void> => {
+const validateAllFormFields = async (form: FormInstance, envContext: FormEnvContext): Promise<void> => {
     // Validate headers
-    const headers = form.getFieldValue(['requestOptions', 'headers']) as HeaderEntry[] | undefined;
+    const headers = form.getFieldValue(['requestOptions', 'headers']) as SourceHeader[] | undefined;
     await validateHeadersForVariables(headers, envContext);
 
     // Validate query params
-    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']) as QueryParamEntry[] | undefined;
+    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']) as SourceQueryParam[] | undefined;
     await validateQueryParamsForVariables(queryParams, envContext);
 
     // Validate body
@@ -247,7 +234,7 @@ const validateAllFormFields = async (form: FormInstance, envContext: EnvContext)
     await validateBodyForVariables(body, envContext);
 
     // Validate JSON filter path
-    const jsonFilter = form.getFieldValue('jsonFilter') as JsonFilterEntry | undefined;
+    const jsonFilter = form.getFieldValue('jsonFilter') as JsonFilter | undefined;
     await validateJsonFilterForVariables(jsonFilter, envContext);
 
     // Validate TOTP secret

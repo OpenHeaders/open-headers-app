@@ -11,6 +11,7 @@
 
 import { createLogger } from '../utils/error-handling/logger';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
+import type { Source } from '../../types/source';
 import {
   BaseStateManager,
   WorkspaceManager,
@@ -31,7 +32,7 @@ export interface WorkspaceServiceState {
   activeWorkspaceId: string;
   isWorkspaceSwitching: boolean;
   syncStatus: Record<string, unknown>;
-  sources: Record<string, unknown>[];
+  sources: Source[];
   rules: { header: Record<string, unknown>[]; request: Record<string, unknown>[]; response: Record<string, unknown>[] };
   proxyRules: Record<string, unknown>[];
   lastSaved: Record<string, unknown>;
@@ -479,17 +480,17 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Add a new source
    */
-  async addSource(sourceData: Record<string, unknown>) {
+  async addSource(sourceData: Source) {
     const sources = [...this.state.sources];
-    const newSource = await this.sourceManager.addSource(sources as never, sourceData as never);
+    const newSource = await this.sourceManager.addSource(sources, sourceData);
 
-    sources.push(newSource as Record<string, unknown>);
+    sources.push(newSource);
     this.setState({ sources }, ['sources']);
-    
+
     // Save immediately to avoid race condition with refresh
     try {
       await this.saveSources();
-      
+
       // Update workspace metadata
       await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
         sourceCount: sources.length,
@@ -497,83 +498,84 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       });
     } catch (saveError) {
       // Rollback the change if save fails
-      this.setState({ sources: this.state.sources.filter((s: Record<string, unknown>) => s.sourceId !== newSource.sourceId) }, ['sources']);
+      this.setState({ sources: this.state.sources.filter((s) => s.sourceId !== newSource.sourceId) }, ['sources']);
       throw saveError;
     }
-    
+
     return newSource;
   }
 
   /**
    * Update a source
    */
-  async updateSource(sourceId: string, updates: Record<string, unknown>) {
-    let updatedSource: Record<string, unknown> | null = null;
-    const sources = this.state.sources.map((source: Record<string, unknown>) => {
+  async updateSource(sourceId: string, updates: Partial<Source>): Promise<Source | null> {
+    let result: Source | null = null;
+    const sources = this.state.sources.map((source) => {
       if (source.sourceId === String(sourceId)) {
-        const mergedUpdates: Record<string, unknown> = { ...updates };
+        const mergedUpdates: Partial<Source> = { ...updates };
         if (updates.refreshOptions && source.refreshOptions) {
           mergedUpdates.refreshOptions = {
-            ...(source.refreshOptions as Record<string, unknown>),
-            ...(updates.refreshOptions as Record<string, unknown>)
+            ...source.refreshOptions,
+            ...updates.refreshOptions
           };
         }
 
-        updatedSource = { ...source, ...mergedUpdates, updatedAt: new Date().toISOString() };
+        const updated: Source = { ...source, ...mergedUpdates, updatedAt: new Date().toISOString() };
 
         // Schedule dependency check if needed
-        if (updatedSource.sourceType === 'http' && updatedSource.activationState === 'waiting_for_deps') {
-          const capturedSource = updatedSource;
-          this.sourceManager.evaluateSourceDependencies(capturedSource as { sourceType: string; sourcePath: string; [key: string]: unknown }).then(deps => {
+        if (updated.sourceType === 'http' && updated.activationState === 'waiting_for_deps') {
+          this.sourceManager.evaluateSourceDependencies(updated).then(deps => {
             if (deps.ready) {
-              this.updateSourceActivation(capturedSource.sourceId as string, true);
+              this.updateSourceActivation(updated.sourceId, true);
             }
           });
         }
 
-        return updatedSource;
+        result = updated;
+        return updated;
       }
       return source;
     });
-    
+
     this.setState({ sources }, ['sources']);
-    
+
     // Update workspace metadata
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       sourceCount: sources.length,
       lastDataUpdate: new Date().toISOString()
     });
-    
+
     // Broadcast the source update to proxy if it has content
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    const finalSource = updatedSource as Record<string, unknown> | null;
-    if (finalSource && finalSource.sourceContent && window.electronAPI?.proxyUpdateSource) {
-      window.electronAPI.proxyUpdateSource(finalSource.sourceId as string, finalSource.sourceContent as string);
+    if (result) {
+      const updatedSource = result as Source;
+      if (updatedSource.sourceContent && window.electronAPI?.proxyUpdateSource) {
+        window.electronAPI.proxyUpdateSource(updatedSource.sourceId, updatedSource.sourceContent);
+      }
     }
-    
-    return updatedSource;
+
+    return result;
   }
 
   /**
    * Update source activation state
    */
   updateSourceActivation(sourceId: string, activate: boolean) {
-    const sources = this.state.sources.map((source: Record<string, unknown>) => {
+    const sources = this.state.sources.map((source) => {
       if (source.sourceId === String(sourceId)) {
-        const updated: Record<string, unknown> = {
+        const updated: Source = {
           ...source,
           activationState: activate ? 'active' : source.activationState,
           missingDependencies: activate ? [] : source.missingDependencies
         };
-        
+
         if (activate) {
           log.info(`Source ${sourceId} activated - all dependencies resolved`);
-          
+
           window.dispatchEvent(new CustomEvent('source-activated', {
             detail: { sourceId: updated.sourceId, source: updated }
           }));
         }
-        
+
         return updated;
       }
       return source;
@@ -586,7 +588,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Remove a source
    */
   async removeSource(sourceId: string) {
-    const sources = this.state.sources.filter((source: Record<string, unknown>) =>
+    const sources = this.state.sources.filter((source) =>
       source.sourceId !== String(sourceId)
     );
     

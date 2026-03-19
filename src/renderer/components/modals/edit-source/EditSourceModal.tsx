@@ -25,7 +25,7 @@ interface EditSourceModalProps {
     source: Source | null;
     open: boolean;
     onCancel: () => void;
-    onSave: (sourceData: Record<string, unknown> & { sourceId: string; refreshNow?: boolean }) => Promise<boolean>;
+    onSave: (sourceData: Source & { refreshNow: boolean }) => Promise<boolean>;
     refreshingSourceId: string | null;
 }
 
@@ -313,7 +313,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
             submissionHandler.totpEnabled = totpEnabled;
             submissionHandler.totpSecret = totpSecret;
 
-            const sourceData = await submissionHandler.handleSubmission(refreshNow) as Record<string, unknown> & { sourceId: string; refreshNow?: boolean };
+            const sourceData = await submissionHandler.handleSubmission(refreshNow);
 
             // Call parent save handler
             const success = await onSave(sourceData);

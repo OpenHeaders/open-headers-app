@@ -49,8 +49,9 @@ export interface RefreshOptions {
   enabled: boolean;
   type?: RefreshType;
   interval?: number;
-  lastRefresh?: number;
-  nextRefresh?: number;
+  lastRefresh?: number | null;
+  nextRefresh?: number | null;
+  preserveTiming?: boolean;
 }
 
 export interface RefreshStatus {
@@ -84,6 +85,8 @@ export interface Source {
   filteredWith?: string | null;
   needsInitialFetch?: boolean;
   originalResponse?: string | null;
+  /** HTTP response headers — populated after each fetch, used by ContentViewer */
+  responseHeaders?: Record<string, string> | null;
 }
 
 /** Data produced by the source creation form — no sourceId yet. */

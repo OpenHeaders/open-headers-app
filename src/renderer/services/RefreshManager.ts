@@ -1,30 +1,7 @@
 import { createLogger } from '../utils/error-handling/logger';
+import type { Source, SourceRequestOptions, JsonFilter, RefreshOptions } from '../../types/source';
+import type { HttpResult } from '../../types/http';
 const log = createLogger('RefreshManager');
-
-/** Refresh options for a source */
-interface RefreshOptions {
-  enabled?: boolean;
-  interval?: number;
-  lastRefresh?: number | null;
-  nextRefresh?: number | null;
-  preserveTiming?: boolean;
-  [key: string]: unknown;
-}
-
-/** Source configuration for refresh management */
-interface RefreshSource {
-  sourceId: string;
-  sourceType: string;
-  sourcePath?: string;
-  sourceMethod?: string;
-  sourceContent?: string | null;
-  refreshOptions?: RefreshOptions;
-  requestOptions?: Record<string, unknown>;
-  jsonFilter?: Record<string, unknown>;
-  activationState?: string;
-  missingDependencies?: string[];
-  [key: string]: unknown;
-}
 
 /** Schedule entry for a source */
 interface ScheduleEntry {
@@ -48,17 +25,59 @@ interface NetworkStateEvent {
   state: {
     isOnline: boolean;
     networkQuality?: string;
-    [key: string]: unknown;
   };
 }
 
-/** HTTP service interface */
+/** HTTP service interface — bridges useHttp to RefreshManager */
 export interface HttpService {
-  request: (sourceId: string, sourcePath: string | undefined, sourceMethod: string | undefined, requestOptions: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content: string; originalResponse?: string; rawResponse?: string; headers?: Record<string, string> }>;
+  request: (sourceId: string, sourcePath: string, sourceMethod?: string, requestOptions?: SourceRequestOptions & { timeout?: number }, jsonFilter?: JsonFilter) => Promise<HttpResult>;
 }
 
-/** Update callback type */
-export type OnUpdateCallback = (sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown>) => void;
+/** Update callback — carries source content + metadata back to the UI layer */
+export interface SourceUpdateData {
+  originalResponse?: string;
+  headers?: Record<string, string>;
+  refreshStatus?: {
+    isRefreshing: boolean;
+    lastRefresh?: number;
+    startTime?: number;
+    success?: boolean;
+    error?: string;
+    reason?: string;
+    isRetry?: boolean;
+    attemptNumber?: number;
+    totalAttempts?: number;
+    failureCount?: number;
+  };
+  refreshOptions?: Partial<RefreshOptions>;
+}
+
+export type OnUpdateCallback = (sourceId: string, content: string | null | undefined, additionalData: SourceUpdateData) => void;
+
+/** Circuit breaker status exposed to the UI */
+interface CircuitBreakerState {
+  state: string;
+  isOpen: boolean;
+  canManualBypass: boolean;
+  timeUntilNextAttempt: string | null;
+  timeUntilNextAttemptMs: number;
+  consecutiveOpenings: number;
+  currentTimeout: number;
+  failureCount: number;
+}
+
+/** Cached status for a source — used by getRefreshStatus() */
+interface SourceStatusCache {
+  isRefreshing?: boolean;
+  isOverdue?: boolean;
+  isPaused?: boolean;
+  consecutiveErrors?: number;
+  isRetry?: boolean;
+  attemptNumber?: number;
+  failureCount?: number;
+  circuitBreaker?: CircuitBreakerState;
+}
+
 /** Scheduler-compatible source type */
 type SchedulerSource = { sourceId: string; sourceType: string; refreshOptions?: { interval?: string | number; lastRefresh?: string | number; alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } };
 
@@ -74,7 +93,7 @@ import { CIRCUIT_BREAKER_CONFIG, formatCircuitBreakerKey } from '../constants/re
  */
 class RefreshManager {
   isInitialized: boolean;
-  sources: ConcurrentMap<RefreshSource>;
+  sources: ConcurrentMap<Source>;
   httpService: HttpService | null;
   onUpdateCallback: OnUpdateCallback | null;
   scheduler: InstanceType<typeof NetworkAwareScheduler>;
@@ -82,14 +101,14 @@ class RefreshManager {
   deduplicator: InstanceType<typeof RequestDeduplicator>;
   eventCleanup: Array<() => void>;
   _cachedSchedules: Map<string, ScheduleEntry>;
-  _statusCache: Map<string, Record<string, unknown>>;
+  _statusCache: Map<string, SourceStatusCache>;
   _overdueChecks?: Map<string, number>;
   lastCacheUpdate: number;
   cacheUpdateInterval: ReturnType<typeof setInterval> | null;
 
   constructor() {
     this.isInitialized = false;
-    this.sources = new ConcurrentMap<RefreshSource>('sources');
+    this.sources = new ConcurrentMap<Source>('sources');
 
     this.httpService = null;
     this.onUpdateCallback = null;
@@ -158,7 +177,7 @@ class RefreshManager {
           refreshOptions: {
             lastRefresh: schedule.lastRefresh,
             nextRefresh: schedule.nextRefresh,
-            interval: schedule.intervalMs ? Math.floor(schedule.intervalMs / 60000) : null
+            interval: schedule.intervalMs ? Math.floor(schedule.intervalMs / 60000) : undefined
           }
         });
       }
@@ -185,8 +204,7 @@ class RefreshManager {
   setupEventListeners() {
     if (typeof window !== 'undefined' && window.electronAPI) {
       if (window.electronAPI.onNetworkStateSync) {
-        const networkHandler = this.handleNetworkStateSync as unknown as (data: Record<string, unknown>) => void;
-        const cleanup = window.electronAPI.onNetworkStateSync(networkHandler);
+        const cleanup = window.electronAPI.onNetworkStateSync(this.handleNetworkStateSync as unknown as (data: Record<string, unknown>) => void);
         this.eventCleanup.push(cleanup);
       }
 
@@ -301,7 +319,7 @@ class RefreshManager {
     timeManager.pauseMonitoring();
   }
 
-  async addSource(source: RefreshSource) {
+  async addSource(source: Source) {
     if (!this.isInitialized || source.sourceType !== 'http') {
       return;
     }
@@ -335,7 +353,7 @@ class RefreshManager {
     }
   }
 
-  async updateSource(source: RefreshSource) {
+  async updateSource(source: Source) {
     if (source.sourceType !== 'http') return;
 
     if (source.activationState === 'waiting_for_deps') {
@@ -490,7 +508,7 @@ class RefreshManager {
     log.debug(`Removed source ${sourceId}`);
   }
 
-  async refreshSource(sourceId: string, options: Record<string, unknown> = {}) {
+  async refreshSource(sourceId: string, options: { reason?: string; priority?: string; skipIfActive?: boolean } = {}) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const source = await this.sources.get(sourceId);
@@ -509,7 +527,7 @@ class RefreshManager {
             ...options,
             timeout: await this.getNetworkTimeout()
           }
-      ) as { success: boolean; [key: string]: unknown };
+      ) as { success: boolean };
 
       if (result.success) {
         this.lastCacheUpdate = 0;
@@ -526,7 +544,7 @@ class RefreshManager {
     });
   }
 
-  async performRefresh(sourceId: string, source: RefreshSource, options: { reason?: string } = {}) {
+  async performRefresh(sourceId: string, source: Source, options: { reason?: string } = {}) {
     const startTime = timeManager.now();
     const { reason = 'auto' } = options;
     const isManualRefresh = reason === 'manual';
@@ -573,14 +591,14 @@ class RefreshManager {
 
         log.info(`Performing HTTP request for source ${sourceId} (reason: ${reason})`);
 
-        const requestOptions = {
+        const requestOptions: SourceRequestOptions & { timeout?: number } = {
           ...source.requestOptions,
           timeout
         };
 
         const httpResult = await this.httpService!.request(
             source.sourceId,
-            source.sourcePath,
+            source.sourcePath || '',
             source.sourceMethod,
             requestOptions,
             source.jsonFilter
@@ -738,13 +756,13 @@ class RefreshManager {
       reason: 'manual',
       priority: 'high',
       skipIfActive: false
-    }) as { success: boolean; [key: string]: unknown };
+    }) as { success: boolean };
 
     return result.success;
   }
 
 
-  getTimeUntilRefresh(sourceId: string, sourceData: RefreshSource | null = null) {
+  getTimeUntilRefresh(sourceId: string, sourceData: Source | null = null) {
     sourceId = RefreshManager.normalizeSourceId(sourceId);
 
     const schedule = this._cachedSchedules.get(sourceId);
@@ -843,7 +861,7 @@ class RefreshManager {
   }
 
 
-  notifyUI(sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown> = {}) {
+  notifyUI(sourceId: string, content: string | null | undefined, additionalData: SourceUpdateData = {}) {
     if (!this.onUpdateCallback) return;
     this.onUpdateCallback(sourceId, content, additionalData);
   }

@@ -6,6 +6,7 @@
  */
 
 import { formatTimeRemaining } from './SourceTableUtils';
+import type { Source } from '../../../../types/source';
 
 interface RefreshStatus {
     isRefreshing?: boolean;
@@ -33,18 +34,7 @@ interface TimeManager {
 
 interface RefreshManager {
     getRefreshStatus: (sourceId: string) => RefreshStatus | null;
-    getTimeUntilRefresh: (sourceId: string, source: SourceItem) => number;
-}
-
-interface SourceItem {
-    sourceId: string;
-    sourceType: string;
-    activationState?: string;
-    refreshOptions?: {
-        enabled?: boolean;
-        interval?: number;
-        lastRefresh?: number;
-    };
+    getTimeUntilRefresh: (sourceId: string, source: Source) => number;
 }
 
 interface Logger {
@@ -143,7 +133,7 @@ const formatHalfOpenStatus = (failureCount: number) => {
  * @param {Object} timeManager - Time manager instance
  * @returns {string|Object} Status text to display or object with text and circuitBreaker info
  */
-export const getRefreshStatusText = (source: SourceItem | null, refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager): string | { text: string; circuitBreaker?: CircuitBreakerStatus; isRefreshing?: boolean; isRetry?: boolean; isCircuitOpen?: boolean } => {
+export const getRefreshStatusText = (source: Source | null, refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager): string | { text: string; circuitBreaker?: CircuitBreakerStatus; isRefreshing?: boolean; isRetry?: boolean; isCircuitOpen?: boolean } => {
     // Early returns for invalid sources
     if (!source || source.sourceType !== 'http') {
         return '';
@@ -235,7 +225,7 @@ const getStatusTextForUpdate = ({
     refreshingSourceId,
     timeManager
 }: {
-    source: SourceItem;
+    source: Source;
     refreshStatus: RefreshStatus | null;
     refreshManager: RefreshManager;
     refreshDisplayStates: Record<string, DisplayState>;
@@ -297,12 +287,12 @@ const getStatusTextForUpdate = ({
  * @param {Object} timeManager - Time manager instance
  * @returns {Object} Updated display states
  */
-export const updateRefreshDisplayStates = (sources: SourceItem[], refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager) => {
+export const updateRefreshDisplayStates = (sources: Source[], refreshManager: RefreshManager, refreshDisplayStates: Record<string, DisplayState>, refreshingSourceId: string | null, timeManager: TimeManager) => {
     const now = timeManager.now();
     const newDisplayStates: Record<string, DisplayState> = {};
     let needsUpdate = false;
 
-    sources.forEach((source: SourceItem) => {
+    sources.forEach((source: Source) => {
         if (source.sourceType !== 'http') return;
         
         const refreshStatus = refreshManager.getRefreshStatus(source.sourceId);
@@ -339,8 +329,8 @@ export const updateRefreshDisplayStates = (sources: SourceItem[], refreshManager
  * @param {Object} log - Logger instance
  * @returns {Object} Cleaned display states
  */
-export const cleanupDisplayStates = (sources: SourceItem[], refreshDisplayStates: Record<string, DisplayState>, log: Logger) => {
-    const sourceIds = new Set(sources.map((s: SourceItem) => String(s.sourceId)));
+export const cleanupDisplayStates = (sources: Source[], refreshDisplayStates: Record<string, DisplayState>, log: Logger) => {
+    const sourceIds = new Set(sources.map((s: Source) => String(s.sourceId)));
     const filtered: Record<string, DisplayState> = {};
     let hasChanges = false;
     
