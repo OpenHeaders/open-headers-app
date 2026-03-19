@@ -11,13 +11,19 @@ import settingsHandlers from './settingsHandlers';
 import webSocketService from '../../../../services/websocket/ws-service';
 import proxyService from '../../../../services/proxy/ProxyService';
 import networkService from '../../../../services/network/NetworkService';
+import type { IpcInvokeEvent, IpcFireEvent, OperationResult } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
+import type { Workspace, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
+import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
+import type { RulesStorage } from '../../../../types/rules';
+import type { AppSettings } from '../../../../types/settings';
 
 const { app, shell, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceHandlers');
 
 class WorkspaceHandlers {
-    async handleDeleteWorkspaceFolder(_: any, workspaceId: string) {
+    async handleDeleteWorkspaceFolder(_: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
         try {
             const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
 
@@ -30,7 +36,7 @@ class WorkspaceHandlers {
 
             // Windows file locks may require retry attempts
             const maxRetries = process.platform === 'win32' ? 3 : 1;
-            let lastError: any;
+            let lastError: unknown;
 
             try {
                 for (let i = 0; i < maxRetries; i++) {
@@ -50,11 +56,12 @@ class WorkspaceHandlers {
 
                 if (lastError) {
                     log.error('Error deleting workspace folder after retries:', lastError);
-                    return { success: false, error: lastError.message };
+                    return { success: false, error: errorMessage(lastError) };
                 }
-            } catch (error: any) {
+                return { success: true };
+            } catch (error: unknown) {
                 log.error('Error deleting workspace folder:', error);
-                return { success: false, error: error.message };
+                return { success: false, error: errorMessage(error) };
             }
         } catch (error) {
             log.error('Error deleting workspace folder:', error);
@@ -62,10 +69,10 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleWorkspaceTestConnection(event: any, gitConfig: any) {
+    async handleWorkspaceTestConnection(event: IpcInvokeEvent, gitConfig: Record<string, unknown>) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
-            const onProgress = (update: any, summary: any) => {
+            const onProgress = (update: Record<string, unknown>, summary: Record<string, unknown>) => {
                 const window = BrowserWindow.fromWebContents(event.sender);
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('git-connection-progress', { update, summary });
@@ -73,13 +80,13 @@ class WorkspaceHandlers {
             };
 
             return await gitSyncService.testConnection({ ...gitConfig, onProgress });
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error testing workspace connection:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleWorkspaceSync(_: any, workspaceId: string) {
+    async handleWorkspaceSync(_: IpcInvokeEvent, workspaceId: string) {
         try {
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
             if (workspaceSyncScheduler) {
@@ -87,9 +94,9 @@ class WorkspaceHandlers {
             } else {
                 return { success: false, error: 'Workspace sync scheduler not initialized' };
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error syncing workspace:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -101,9 +108,9 @@ class WorkspaceHandlers {
             } else {
                 return { success: false, error: 'Workspace sync scheduler not initialized' };
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error syncing all workspaces:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -122,7 +129,7 @@ class WorkspaceHandlers {
 
     async handleWorkspaceAutoSyncEnabled() {
         try {
-            const settings: any = await settingsHandlers.handleGetSettings();
+            const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
             return settings.autoSyncWorkspaces !== false; // Default to true
         } catch (error) {
             log.error('Error checking auto-sync setting:', error);
@@ -130,14 +137,14 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleWorkspaceOpenFolder(_: any, workspaceId: string) {
+    async handleWorkspaceOpenFolder(_: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
         try {
             const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
             await shell.openPath(workspacePath);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error opening workspace folder:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -147,7 +154,7 @@ class WorkspaceHandlers {
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
             const serviceRegistryMod = (await import('../../../../services/core/ServiceRegistry')).default;
 
-            const health: any = {
+            const health: ServicesHealth = {
                 gitSync: false,
                 workspaceSyncScheduler: false,
                 networkService: false,
@@ -186,9 +193,9 @@ class WorkspaceHandlers {
             }
 
             return health;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Health check error:', error);
-            return { error: error.message };
+            return { error: errorMessage(error) };
         }
     }
 
@@ -210,7 +217,7 @@ class WorkspaceHandlers {
                 };
             }
             return webSocketService.getConnectionStatus();
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error getting WebSocket connection status:', error);
             return {
                 totalConnections: 0,
@@ -222,7 +229,7 @@ class WorkspaceHandlers {
                 wssPort: 59211,
                 certificateFingerprint: null,
                 certificatePath: null,
-                error: error.message
+                error: errorMessage(error)
             };
         }
     }
@@ -233,9 +240,9 @@ class WorkspaceHandlers {
                 return { trusted: false, error: 'WebSocket service not available' };
             }
             return await webSocketService.checkCertificateTrust();
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error checking certificate trust:', error);
-            return { trusted: false, error: error.message };
+            return { trusted: false, error: errorMessage(error) };
         }
     }
 
@@ -245,9 +252,9 @@ class WorkspaceHandlers {
                 return { success: false, error: 'WebSocket service not available' };
             }
             return await webSocketService.trustCertificate();
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error trusting certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -257,13 +264,13 @@ class WorkspaceHandlers {
                 return { success: false, error: 'WebSocket service not available' };
             }
             return await webSocketService.untrustCertificate();
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error untrusting certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleWorkspaceSwitched(event: any, workspaceId: string, skipInitialSync = false) {
+    async handleWorkspaceSwitched(event: IpcFireEvent | IpcInvokeEvent, workspaceId: string, skipInitialSync = false) {
         log.info(`Received workspace switch event: ${workspaceId}${skipInitialSync ? ' (skip initial sync)' : ''}`);
 
         // Switch proxy service to new workspace
@@ -275,12 +282,12 @@ class WorkspaceHandlers {
             try {
                 const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
                 const envData = await fs.promises.readFile(envPath, 'utf8');
-                const { environments, activeEnvironment } = JSON.parse(envData);
+                const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
                 const activeVars = environments[activeEnvironment] || {};
                 proxyService.updateEnvironmentVariables(activeVars);
                 log.info(`Loaded ${Object.keys(activeVars).length} environment variables for proxy service`);
-            } catch (error: any) {
-                log.warn('Could not load environment variables for proxy:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not load environment variables for proxy:', errorMessage(error));
                 proxyService.updateEnvironmentVariables({});
             }
 
@@ -288,26 +295,26 @@ class WorkspaceHandlers {
             try {
                 const sourcesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'sources.json');
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                const sources = JSON.parse(sourcesData);
+                const sources: unknown[] = JSON.parse(sourcesData);
                 if (Array.isArray(sources)) {
                     proxyService.updateSources(sources);
                     log.info(`Loaded ${sources.length} sources for proxy service`);
                 }
-            } catch (error: any) {
-                log.warn('Could not load sources for proxy:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not load sources for proxy:', errorMessage(error));
             }
 
             // Load header rules for the workspace
             try {
                 const rulesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'rules.json');
                 const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage = JSON.parse(rulesData);
+                const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: Record<string, unknown>[] } };
                 if (rulesStorage.rules && rulesStorage.rules.header) {
-                    proxyService.updateHeaderRules(rulesStorage.rules.header);
+                    proxyService.updateHeaderRules(rulesStorage.rules.header as import('../../../../services/proxy/ProxyService').HeaderRule[]);
                     log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
                 }
-            } catch (error: any) {
-                log.warn('Could not load header rules for proxy:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not load header rules for proxy:', errorMessage(error));
             }
         } catch (error) {
             log.error('Error switching proxy service workspace:', error);
@@ -328,7 +335,7 @@ class WorkspaceHandlers {
         // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
         if (!skipInitialSync) {
             const workspaces = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find((w: any) => w.id === workspaceId);
+            const workspace = workspaces.find((w: { id: string }) => w.id === workspaceId);
 
             if (workspace && workspace.type === 'git') {
                 const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
@@ -370,12 +377,12 @@ class WorkspaceHandlers {
                             isInitialSync: true,
                             timestamp: new Date().toISOString()
                         });
-                    } catch (error: any) {
+                    } catch (error: unknown) {
                         log.error('Initial sync failed:', error);
                         event.sender.send('workspace-sync-completed', {
                             workspaceId,
                             success: false,
-                            error: error.message,
+                            error: errorMessage(error),
                             isInitialSync: true,
                             timestamp: new Date().toISOString()
                         });
@@ -389,7 +396,7 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleWorkspaceUpdated(event: any, data: any) {
+    async handleWorkspaceUpdated(_event: IpcFireEvent, data: { workspaceId: string; workspace: Record<string, unknown> }) {
         log.info(`Received workspace update event:`, data);
         const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
         if (workspaceSyncScheduler && data.workspace) {
@@ -397,7 +404,7 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleInitializeWorkspaceSync(event: any, workspaceId: string) {
+    async handleInitializeWorkspaceSync(event: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
         try {
             log.info(`Initializing workspace sync for workspace: ${workspaceId}`);
 
@@ -408,16 +415,16 @@ class WorkspaceHandlers {
                 success: true,
                 message: 'Workspace sync initialized successfully'
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error initializing workspace sync:', error);
             return {
                 success: false,
-                error: error.message
+                error: errorMessage(error)
             };
         }
     }
 
-    async handleDeleteWorkspace(_: any, workspaceId: string) {
+    async handleDeleteWorkspace(_: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
         try {
             log.info(`Deleting workspace completely: ${workspaceId}`);
 
@@ -439,7 +446,7 @@ class WorkspaceHandlers {
 
             // Try to get workspaces first to verify the method exists
             const workspaces = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find((w: any) => w.id === workspaceId);
+            const workspace = workspaces.find((w: { id: string }) => w.id === workspaceId);
 
             if (!workspace) {
                 log.info(`Workspace ${workspaceId} not found in settings, considering it deleted`);
@@ -457,28 +464,28 @@ class WorkspaceHandlers {
                 success: true,
                 message: 'Workspace deleted successfully'
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error deleting workspace:', error);
             return {
                 success: false,
-                error: error.message
+                error: errorMessage(error)
             };
         }
     }
 
-    async handleGenerateTeamWorkspaceInvite(_: any, workspaceData: any) {
+    async handleGenerateTeamWorkspaceInvite(_: IpcInvokeEvent, workspaceData: Workspace & { includeAuthData?: boolean }) {
         try {
             log.info('Generating team workspace invite for:', workspaceData.name);
 
             // Create invite data
-            const inviteData: any = {
+            const inviteData: TeamWorkspaceInvite = {
                 version: DATA_FORMAT_VERSION,
                 workspaceName: workspaceData.name,
                 description: workspaceData.description,
-                repoUrl: workspaceData.gitUrl,
+                repoUrl: workspaceData.gitUrl || '',
                 branch: workspaceData.gitBranch || 'main',
                 configPath: workspaceData.gitPath || 'config/open-headers.json',
-                authType: workspaceData.authType, // Just the type hint, no actual credentials
+                authType: workspaceData.authType || 'none',
                 inviterName: await this.getUserName(),
                 inviteId: this.generateInviteId(),
                 createdAt: new Date().toISOString()
@@ -520,11 +527,11 @@ class WorkspaceHandlers {
                     webLink
                 }
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error generating team workspace invite:', error);
             return {
                 success: false,
-                error: error.message
+                error: errorMessage(error)
             };
         }
     }
@@ -553,12 +560,12 @@ class WorkspaceHandlers {
         return crypto.randomBytes(8).toString('hex');
     }
 
-    async handleGenerateEnvironmentConfigLink(_: any, environmentData: any) {
+    async handleGenerateEnvironmentConfigLink(_: IpcInvokeEvent, environmentData: { environments?: EnvironmentMap; environmentSchema?: EnvironmentSchema; includeValues?: boolean }) {
         try {
             log.info('Generating environment config share link');
 
             // Create environment data object (similar to export format)
-            const envConfigData: any = {
+            const envConfigData: EnvironmentConfigData = {
                 version: DATA_FORMAT_VERSION
                 // Removed exportedAt to save space
             };
@@ -572,40 +579,42 @@ class WorkspaceHandlers {
             if (environmentData.environments) {
                 if (environmentData.includeValues) {
                     // Include actual values but remove updatedAt timestamps
-                    envConfigData.environments = {};
-                    Object.entries(environmentData.environments).forEach(([envName, vars]: [string, any]) => {
-                        envConfigData.environments[envName] = {};
-                        Object.entries(vars).forEach(([varName, varData]: [string, any]) => {
+                    const envs: EnvironmentMap = {};
+                    Object.entries(environmentData.environments).forEach(([envName, vars]) => {
+                        envs[envName] = {};
+                        Object.entries(vars).forEach(([varName, varData]) => {
                             // Copy only essential fields (value and isSecret)
-                            envConfigData.environments[envName][varName] = {
+                            envs[envName][varName] = {
                                 value: varData.value,
-                                ...(varData.isSecret && { isSecret: varData.isSecret })
+                                isSecret: varData.isSecret
                             };
                         });
                     });
+                    envConfigData.environments = envs;
                 } else {
                     // Only include structure (schema) from environments
-                    envConfigData.environmentSchema = envConfigData.environmentSchema || { environments: {} };
+                    const schema: EnvironmentSchema = envConfigData.environmentSchema || { environments: {} };
 
                     // Extract schema from environment values
-                    Object.entries(environmentData.environments).forEach(([envName, vars]: [string, any]) => {
-                        if (!envConfigData.environmentSchema.environments[envName]) {
-                            envConfigData.environmentSchema.environments[envName] = { variables: [] };
+                    Object.entries(environmentData.environments).forEach(([envName, vars]) => {
+                        if (!schema.environments[envName]) {
+                            schema.environments[envName] = { variables: [] };
                         }
 
                         // Extract variable names and isSecret flags
-                        Object.entries(vars).forEach(([varName, varData]: [string, any]) => {
-                            const existingVar = envConfigData.environmentSchema.environments[envName].variables
-                                .find((v: any) => v.name === varName);
+                        Object.entries(vars).forEach(([varName, varData]) => {
+                            const existingVar = schema.environments[envName].variables
+                                .find((v: EnvironmentSchemaVariable) => v.name === varName);
 
                             if (!existingVar) {
-                                envConfigData.environmentSchema.environments[envName].variables.push({
+                                schema.environments[envName].variables.push({
                                     name: varName,
                                     isSecret: varData.isSecret || false
                                 });
                             }
                         });
                     });
+                    envConfigData.environmentSchema = schema;
                 }
             }
 
@@ -646,11 +655,11 @@ class WorkspaceHandlers {
                     dataSize
                 }
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error generating environment config link:', error);
             return {
                 success: false,
-                error: error.message
+                error: errorMessage(error)
             };
         }
     }

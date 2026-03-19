@@ -3,14 +3,32 @@ import querystring from 'querystring';
 import mainLogger from '../../../../utils/mainLogger';
 import networkService from '../../../../services/network/NetworkService';
 import timeManager from '../../../../services/core/TimeManager';
+import type { IpcInvokeEvent } from '../../../../types/common';
 
 const { net } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('HttpHandlers');
 
+interface HttpRequestOptions {
+    headers?: Record<string, string>;
+    queryParams?: Record<string, string | undefined | null>;
+    body?: string | Record<string, string>;
+    contentType?: string;
+    enableRetries?: boolean;
+    connectionOptions?: {
+        timeout?: number;
+        requestId?: string;
+    };
+}
+
+interface NetworkStateWithQuality {
+    isOnline: boolean;
+    networkQuality?: string;
+}
+
 class HttpHandlers {
-    handleMakeHttpRequest: (event: any, url: string, method: string, options?: any) => Promise<string>;
-    processFormData: (body: any, requestId: string) => any;
+    handleMakeHttpRequest: (event: IpcInvokeEvent, url: string, method: string, options?: HttpRequestOptions) => Promise<string>;
+    processFormData: (body: string | Record<string, string> | null, requestId: string) => string | null;
 
     constructor() {
         // Bind methods to ensure context is preserved
@@ -18,19 +36,19 @@ class HttpHandlers {
         this.processFormData = this._processFormData.bind(this);
     }
 
-    async _handleMakeHttpRequest(_: any, url: string, method: string, options: any = {}): Promise<string> {
+    async _handleMakeHttpRequest(_: IpcInvokeEvent, url: string, method: string, options: HttpRequestOptions = {}): Promise<string> {
         // Adapt request behavior based on current network conditions
-        const networkState = networkService ? networkService.getState() : { isOnline: true, networkQuality: 'good' };
+        const networkState: NetworkStateWithQuality = networkService ? networkService.getState() : { isOnline: true, networkQuality: 'good' };
         log.debug('handleMakeHttpRequest starting with network state:', {
             isOnline: networkState.isOnline,
-            quality: (networkState as any).networkQuality,
+            quality: networkState.networkQuality,
             requestUrl: url
         });
 
         // Disable HTTP-level retries by default since circuit breaker handles retry logic
         // Only enable retries if explicitly requested (which should be rare)
-        const MAX_RETRIES = options.enableRetries ? ((networkState as any).networkQuality === 'poor' ? 3 : 2) : 0;
-        const RETRY_DELAY = (networkState as any).networkQuality === 'poor' ? 1000 : 500;
+        const MAX_RETRIES = options.enableRetries ? (networkState.networkQuality === 'poor' ? 3 : 2) : 0;
+        const RETRY_DELAY = networkState.networkQuality === 'poor' ? 1000 : 500;
 
         if (MAX_RETRIES === 0) {
             log.debug(`HTTP retries disabled for request to ${url} (handled by circuit breaker)`);
@@ -50,7 +68,7 @@ class HttpHandlers {
                     if (options.queryParams) {
                         Object.entries(options.queryParams).forEach(([key, value]) => {
                             if (value !== undefined && value !== null) {
-                                parsedUrl.searchParams.append(key, value as string);
+                                parsedUrl.searchParams.append(key, value);
                             }
                         });
                     }
@@ -67,7 +85,7 @@ class HttpHandlers {
 
                     // Dynamic timeout adjustment based on network conditions
                     let timeoutMs = options.connectionOptions?.timeout || 15000;
-                    if ((networkState as any).networkQuality === 'poor') {
+                    if (networkState.networkQuality === 'poor') {
                         timeoutMs = Math.min(timeoutMs * 2, 60000);
                     }
 
@@ -75,7 +93,7 @@ class HttpHandlers {
 
                     timeoutId = setTimeout(() => {
                         request.abort();
-                        log.error(`[${requestId}] Request timed out after ${timeoutMs}ms (network: ${(networkState as any).networkQuality})`);
+                        log.error(`[${requestId}] Request timed out after ${timeoutMs}ms (network: ${networkState.networkQuality})`);
 
                         // Retry with exponential backoff if conditions allow
                         if (retryCount < MAX_RETRIES && networkState.isOnline) {
@@ -98,18 +116,18 @@ class HttpHandlers {
 
                     if (options.headers) {
                         Object.entries(options.headers).forEach(([key, value]) => {
-                            request.setHeader(key, value as string);
+                            request.setHeader(key, value);
                         });
                     }
 
                     request.setHeader('User-Agent', `OpenHeaders/${electron.app.getVersion()}`);
 
-                    log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1}, network: ${(networkState as any).networkQuality})`);
+                    log.info(`[${requestId}] Making HTTP ${method} request to ${parsedUrl.href} (attempt ${retryCount + 1}/${MAX_RETRIES + 1}, network: ${networkState.networkQuality})`);
 
                     let responseData = '';
                     let statusCode = 0;
 
-                    request.on('response', (response: any) => {
+                    request.on('response', (response) => {
                         if (timeoutId) {
                             clearTimeout(timeoutId);
                             timeoutId = null;
@@ -143,10 +161,10 @@ class HttpHandlers {
                                 }, delay);
                             } else {
                                 // Include current network state in response for client context
-                                const freshNetworkState = networkService ? networkService.getState() : networkState;
+                                const freshNetworkState: NetworkStateWithQuality = networkService ? networkService.getState() : networkState;
                                 log.debug('HTTP request succeeded, network state for response:', {
                                     isOnline: freshNetworkState.isOnline,
-                                    quality: (freshNetworkState as any).networkQuality,
+                                    quality: freshNetworkState.networkQuality,
                                     wasOnlineAtStart: networkState.isOnline
                                 });
                                 const formattedResponse = {
@@ -162,7 +180,7 @@ class HttpHandlers {
                     });
 
                     // Handle errors
-                    request.on('error', (error: any) => {
+                    request.on('error', (error: Error & { code?: string }) => {
                         // Clear timeout on error
                         if (timeoutId) {
                             clearTimeout(timeoutId);
@@ -219,11 +237,11 @@ class HttpHandlers {
 
                     // Process request body for methods that support it
                     if (['POST', 'PUT', 'PATCH'].includes(method) && options.body) {
-                        let requestBody: any = options.body;
+                        let requestBody: string | Buffer = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
 
                         // Transform body based on content type
                         if (options.contentType === 'application/x-www-form-urlencoded') {
-                            requestBody = self._processFormData(options.body, requestId);
+                            requestBody = self._processFormData(options.body, requestId) as string;
                             request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
                         }
                         else if (options.contentType === 'application/json') {
@@ -255,8 +273,10 @@ class HttpHandlers {
         return performRequest();
     }
 
-    _processFormData(body: any, requestId: string): any {
-        let formData: Record<string, string> = {};
+    _processFormData(body: string | Record<string, string> | null, requestId: string): string | null {
+        if (body === null || body === undefined) return body as null;
+
+        const formData: Record<string, string> = {};
 
         if (typeof body === 'string') {
             // Parse various form data string formats
@@ -292,12 +312,13 @@ class HttpHandlers {
                 log.info(`[${requestId}] Form data parsed with ${Object.keys(formData).length} fields`);
                 return result;
             }
+            return body;
         }
         else if (typeof body === 'object' && body !== null) {
             return querystring.stringify(body);
         }
 
-        return body;
+        return String(body);
     }
 }
 
