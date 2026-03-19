@@ -1,3 +1,15 @@
+export interface ParsedCookieValue {
+    name?: string;
+    value?: string;
+    path?: string;
+    sameSite?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    expirationMode?: string;
+    maxAge?: number;
+    expires?: string;
+}
+
 interface HeaderFormValues {
     headerValue?: string;
     cookieName?: string;
@@ -22,7 +34,7 @@ export const buildHeaderValue = (values: HeaderFormValues, mode: string, valueTy
 };
 
 // Parse header value based on mode
-export const parseHeaderValue = (headerValue: string | undefined, mode: string): Record<string, unknown> => {
+export const parseHeaderValue = (headerValue: string | undefined, mode: string): ParsedCookieValue => {
     if (mode === 'cookie') {
         return parseCookieValue(headerValue);
     }
@@ -90,14 +102,14 @@ const buildCookieValue = (values: HeaderFormValues, isDynamic = false) => {
 };
 
 // Parse cookie value from Set-Cookie header
-const parseCookieValue = (cookieString: string | undefined): Record<string, unknown> => {
+const parseCookieValue = (cookieString: string | undefined): ParsedCookieValue => {
     if (!cookieString) return {};
 
     const parts = cookieString.split(';').map(p => p.trim());
     const [nameValue, ...attributes] = parts;
     const [name, value] = (nameValue || '').split('=');
 
-    const result: Record<string, unknown> = {
+    const result: ParsedCookieValue = {
         name: name || '',
         value: value || '',
         path: '/',

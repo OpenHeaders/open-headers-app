@@ -60,7 +60,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     const searchFilter = useSearchFilter();
     
     // Time-based highlighting
-    const timeHighlight = useTimeHighlight(record, viewMode, activeTime, autoHighlight);
+    const timeHighlight = useTimeHighlight(viewMode, activeTime, autoHighlight);
 
     // Early return if no console logs
     if (!record?.console?.length) {
