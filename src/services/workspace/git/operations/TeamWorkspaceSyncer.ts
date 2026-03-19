@@ -6,6 +6,11 @@
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../../utils/mainLogger';
+import type { GitExecutor } from '../core/GitExecutor';
+import type { GitRepositoryManager, PullOptions, PushOptions, RepositoryStatus } from '../repository/GitRepositoryManager';
+import type { GitBranchManager } from '../repository/GitBranchManager';
+import type { CommitManager } from './CommitManager';
+import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -24,11 +29,16 @@ const SYNC_STATUS = {
 type SyncStatusType = typeof SYNC_STATUS[keyof typeof SYNC_STATUS];
 
 interface SyncDependencies {
-  repositoryManager: any;
-  branchManager: any;
-  commitManager: any;
-  configValidator: any;
-  executor: any;
+  repositoryManager: GitRepositoryManager;
+  branchManager: GitBranchManager;
+  commitManager: CommitManager;
+  configValidator: ConfigFileValidator;
+  executor: GitExecutor;
+}
+
+interface SyncProgressInfo {
+  phase: string;
+  message: string;
 }
 
 interface SyncOptions {
@@ -37,11 +47,19 @@ interface SyncOptions {
   repoDir: string;
   branch: string;
   authType?: string;
-  authData?: Record<string, any>;
+  authData?: Record<string, string>;
   autoResolve?: boolean;
-  progressCallback?: (progress: any) => void;
+  progressCallback?: (progress: SyncProgressInfo) => void;
   path?: string;
   url?: string;
+}
+
+interface WorkspaceConfigData {
+  sources: unknown[];
+  rules: Record<string, unknown>;
+  proxyRules: unknown[];
+  environmentSchema?: unknown;
+  environments?: unknown;
 }
 
 interface SyncResult {
@@ -49,12 +67,12 @@ interface SyncResult {
   status: SyncStatusType;
   message: string;
   changes?: boolean;
-  data?: any;
+  data?: WorkspaceConfigData | null;
   pulled?: number;
   pushed?: number;
   configValid?: boolean;
   configErrors?: string[];
-  error?: any;
+  error?: unknown;
   autoSync?: boolean;
   localChangesCommitted?: boolean;
   resolved?: boolean;
@@ -72,12 +90,50 @@ interface SyncStatusResult {
   error?: string;
 }
 
+interface HandlePullOptions {
+  repoDir: string;
+  branch: string;
+  authType: string;
+  authData: Record<string, string>;
+  status: SyncStatusResult;
+  progressCallback: (progress: SyncProgressInfo) => void;
+  path?: string;
+}
+
+interface HandlePushOptions {
+  repoDir: string;
+  branch: string;
+  authType: string;
+  authData: Record<string, string>;
+  status: SyncStatusResult;
+  progressCallback: (progress: SyncProgressInfo) => void;
+}
+
+interface HandleConflictOptions {
+  repoDir: string;
+  branch: string;
+  authType: string;
+  authData: Record<string, string> & { env?: NodeJS.ProcessEnv };
+  status: SyncStatusResult;
+  autoResolve: boolean;
+  progressCallback: (progress: SyncProgressInfo) => void;
+}
+
+interface SyncStats {
+  branch?: string;
+  hasLocalChanges?: boolean;
+  lastCommit?: RepositoryStatus['lastCommit'];
+  lastSync?: Date | null;
+  changes?: RepositoryStatus['changes'];
+  error?: string;
+}
+
 class TeamWorkspaceSyncer {
-  private repositoryManager: any;
-  private branchManager: any;
-  private commitManager: any;
-  private configValidator: any;
-  private executor: any;
+  private repositoryManager: GitRepositoryManager;
+  private branchManager: GitBranchManager;
+  private commitManager: CommitManager;
+  private configValidator: ConfigFileValidator;
+  private executor: GitExecutor;
 
   constructor(dependencies: SyncDependencies) {
     this.repositoryManager = dependencies.repositoryManager;
@@ -332,7 +388,7 @@ class TeamWorkspaceSyncer {
   /**
    * Handle pull operation
    */
-  async handlePull(options: any): Promise<SyncResult> {
+  async handlePull(options: HandlePullOptions): Promise<SyncResult> {
     const { repoDir, branch, authType, authData, status, progressCallback } = options;
 
     progressCallback({
@@ -345,7 +401,6 @@ class TeamWorkspaceSyncer {
       branch,
       authType,
       authData,
-      progressCallback
     });
 
     // Validate configuration after pull
@@ -362,7 +417,7 @@ class TeamWorkspaceSyncer {
     return {
       success: pullResult.success,
       status: SYNC_STATUS.UP_TO_DATE,
-      message: pullResult.message,
+      message: pullResult.message || 'Pull completed',
       changes: true,
       pulled: status.behind,
       configValid: validation.valid,
@@ -374,7 +429,7 @@ class TeamWorkspaceSyncer {
   /**
    * Handle push operation
    */
-  async handlePush(options: any): Promise<SyncResult> {
+  async handlePush(options: HandlePushOptions): Promise<SyncResult> {
     const { repoDir, branch, authType, authData, status, progressCallback } = options;
 
     progressCallback({
@@ -387,13 +442,12 @@ class TeamWorkspaceSyncer {
       branch,
       authType,
       authData,
-      progressCallback
     });
 
     return {
       success: pushResult.success,
       status: SYNC_STATUS.UP_TO_DATE,
-      message: pushResult.message,
+      message: pushResult.message || 'Push completed',
       changes: true,
       pushed: status.ahead
     };
@@ -402,7 +456,7 @@ class TeamWorkspaceSyncer {
   /**
    * Handle conflict resolution
    */
-  async handleConflict(options: any): Promise<SyncResult> {
+  async handleConflict(options: HandleConflictOptions): Promise<SyncResult> {
     const {
       repoDir,
       branch,
@@ -466,7 +520,6 @@ class TeamWorkspaceSyncer {
         branch,
         authType,
         authData,
-        progressCallback
       });
 
       return {
@@ -534,10 +587,13 @@ class TeamWorkspaceSyncer {
       }
 
       const metadata = await this.configValidator.loadJson(metadataPath);
-      const configPaths: Record<string, string> = {};
+      const configPaths: ConfigPaths = {};
 
-      for (const [key, relativePath] of Object.entries(metadata.configPaths || {})) {
-        configPaths[key] = path.join(repoDir, relativePath as string);
+      if (metadata && typeof metadata === 'object') {
+        const metaObj = metadata as { configPaths?: Record<string, string> };
+        for (const [key, relativePath] of Object.entries(metaObj.configPaths || {})) {
+          configPaths[key] = path.join(repoDir, relativePath);
+        }
       }
 
       return await this.configValidator.validateAll(configPaths, repoDir);
@@ -584,7 +640,7 @@ class TeamWorkspaceSyncer {
   /**
    * Get sync statistics
    */
-  async getSyncStats(repoDir: string): Promise<any> {
+  async getSyncStats(repoDir: string): Promise<SyncStats> {
     try {
       const status = await this.repositoryManager.getStatus(repoDir);
       const lastSync = await this.getLastSyncTime(repoDir);
@@ -626,7 +682,7 @@ class TeamWorkspaceSyncer {
   /**
    * Load workspace configuration from repository
    */
-  async loadWorkspaceConfig(repoDir: string, configPath: string): Promise<any> {
+  async loadWorkspaceConfig(repoDir: string, configPath: string): Promise<WorkspaceConfigData | null> {
     try {
       log.info(`Loading workspace config from ${repoDir}/${configPath}`);
 
@@ -638,7 +694,7 @@ class TeamWorkspaceSyncer {
         'openheaders.json'
       ];
 
-      let configData: any = null;
+      let configData: Record<string, unknown> | null = null;
       let configFile: string | null = null;
 
       // First check the config path directly
@@ -648,7 +704,7 @@ class TeamWorkspaceSyncer {
         const filePath = path.join(configDir, filename);
         try {
           const content = await fsPromises.readFile(filePath, 'utf8');
-          configData = JSON.parse(content);
+          configData = JSON.parse(content) as Record<string, unknown>;
           configFile = filePath;
           log.info(`Found config file: ${filePath}`);
           break;
@@ -663,10 +719,10 @@ class TeamWorkspaceSyncer {
       }
 
       // Extract relevant data for import
-      const result: any = {
-        sources: configData.sources || [],
-        rules: configData.rules || {},
-        proxyRules: configData.proxyRules || []
+      const result: WorkspaceConfigData = {
+        sources: (configData.sources as unknown[]) || [],
+        rules: (configData.rules as Record<string, unknown>) || {},
+        proxyRules: (configData.proxyRules as unknown[]) || []
       };
 
       // Handle environment schema
@@ -691,5 +747,5 @@ class TeamWorkspaceSyncer {
 }
 
 export { TeamWorkspaceSyncer, SYNC_STATUS };
-export type { SyncDependencies, SyncOptions, SyncResult, SyncStatusResult, SyncStatusType };
+export type { SyncDependencies, SyncOptions, SyncResult, SyncStatusResult, SyncStatusType, SyncProgressInfo, WorkspaceConfigData };
 export default TeamWorkspaceSyncer;
