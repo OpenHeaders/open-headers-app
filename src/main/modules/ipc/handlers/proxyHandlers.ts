@@ -3,7 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import proxyService from '../../../../services/proxy/ProxyService';
+import type { HeaderRule } from '../../../../services/proxy/ProxyService';
 import settingsHandlers from './settingsHandlers';
+import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
+import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
+import type { AppSettings } from '../../../../types/settings';
 
 const { app } = electron;
 const fsPromises = fs.promises;
@@ -12,13 +17,13 @@ const { createLogger } = mainLogger;
 const log = createLogger('ProxyHandlers');
 
 class ProxyHandlers {
-    async handleProxyStart(_: any, port: number | null) {
+    async handleProxyStart(_: IpcInvokeEvent | null, port: number | null) {
         try {
             const result = await proxyService.start(port ?? undefined);
             if (result.success) {
                 // Restore cache configuration from user settings
                 try {
-                    const settings: any = await settingsHandlers.handleGetSettings();
+                    const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
                     if (settings.proxyCacheEnabled !== undefined) {
                         proxyService.setCacheEnabled(settings.proxyCacheEnabled);
                     }
@@ -32,16 +37,16 @@ class ProxyHandlers {
                     // Get current workspace from settings
                     const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
                     const workspacesData = await fsPromises.readFile(workspacesPath, 'utf8');
-                    const { activeWorkspaceId } = JSON.parse(workspacesData);
+                    const { activeWorkspaceId } = JSON.parse(workspacesData) as { activeWorkspaceId?: string };
 
                     if (activeWorkspaceId) {
                         const envPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'environments.json');
                         const envData = await fsPromises.readFile(envPath, 'utf8');
-                        const { environments, activeEnvironment } = JSON.parse(envData);
+                        const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
                         const activeVars = environments[activeEnvironment] || {};
                         // Extract just the values from the environment variable objects
-                        const variables: Record<string, any> = {};
-                        Object.entries(activeVars).forEach(([key, data]: [string, any]) => {
+                        const variables: Record<string, string> = {};
+                        Object.entries(activeVars).forEach(([key, data]: [string, EnvironmentVariable]) => {
                             if (data && data.value !== undefined) {
                                 variables[key] = data.value;
                             }
@@ -53,47 +58,47 @@ class ProxyHandlers {
                         try {
                             const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
                             const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-                            const sources = JSON.parse(sourcesData);
+                            const sources: unknown[] = JSON.parse(sourcesData);
                             if (Array.isArray(sources)) {
                                 proxyService.updateSources(sources);
                                 log.info(`Loaded ${sources.length} sources for proxy service`);
                             }
-                        } catch (error: any) {
-                            log.warn('Could not load sources for proxy:', error.message);
+                        } catch (error: unknown) {
+                            log.warn('Could not load sources for proxy:', errorMessage(error));
                         }
 
                         // Load header rules for the current workspace
                         try {
                             const rulesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'rules.json');
                             const rulesData = await fsPromises.readFile(rulesPath, 'utf8');
-                            const rulesStorage = JSON.parse(rulesData);
+                            const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
                             if (rulesStorage.rules && rulesStorage.rules.header) {
                                 proxyService.updateHeaderRules(rulesStorage.rules.header);
                                 log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
                             }
-                        } catch (error: any) {
-                            log.warn('Could not load header rules for proxy:', error.message);
+                        } catch (error: unknown) {
+                            log.warn('Could not load header rules for proxy:', errorMessage(error));
                         }
                     }
-                } catch (error: any) {
-                    log.warn('Could not load environment variables for proxy:', error.message);
+                } catch (error: unknown) {
+                    log.warn('Could not load environment variables for proxy:', errorMessage(error));
                     proxyService.updateEnvironmentVariables({});
                 }
             }
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error starting proxy:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyStop() {
+    async handleProxyStop(): Promise<OperationResult> {
         try {
             await proxyService.stop();
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error stopping proxy:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -110,31 +115,31 @@ class ProxyHandlers {
         }
     }
 
-    async handleProxySaveRule(_: any, rule: any) {
+    async handleProxySaveRule(_: IpcInvokeEvent, rule: import('../../../../services/proxy/ProxyRuleStore').ProxyRule): Promise<OperationResult> {
         try {
             return await proxyService.saveRule(rule);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error saving proxy rule:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyDeleteRule(_: any, ruleId: string) {
+    async handleProxyDeleteRule(_: IpcInvokeEvent, ruleId: string): Promise<OperationResult> {
         try {
             return await proxyService.deleteRule(ruleId);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error deleting proxy rule:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyClearCache() {
+    async handleProxyClearCache(): Promise<OperationResult> {
         try {
             proxyService.clearCache();
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error clearing proxy cache:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -156,84 +161,84 @@ class ProxyHandlers {
         }
     }
 
-    async handleProxySetCacheEnabled(_: any, enabled: boolean) {
+    async handleProxySetCacheEnabled(_: IpcInvokeEvent, enabled: boolean): Promise<OperationResult> {
         try {
             proxyService.setCacheEnabled(enabled);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error setting cache enabled:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyUpdateHeaderRules(_: any, headerRules: any[]) {
+    async handleProxyUpdateHeaderRules(_: IpcInvokeEvent, headerRules: HeaderRule[]): Promise<OperationResult> {
         try {
             proxyService.updateHeaderRules(headerRules);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error updating header rules in proxy:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyClearRules() {
+    async handleProxyClearRules(): Promise<OperationResult> {
         try {
             proxyService.clearRules();
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error clearing proxy rules:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
 
-    async handleProxySetStrictSSL(_: any, enabled: boolean) {
+    async handleProxySetStrictSSL(_: IpcInvokeEvent, enabled: boolean): Promise<OperationResult> {
         try {
             proxyService.setStrictSSL(enabled);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error setting strict SSL:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyAddTrustedCertificate(_: any, fingerprint: string) {
+    async handleProxyAddTrustedCertificate(_: IpcInvokeEvent, fingerprint: string): Promise<OperationResult> {
         try {
             proxyService.addTrustedCertificate(fingerprint);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error adding trusted certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyRemoveTrustedCertificate(_: any, fingerprint: string) {
+    async handleProxyRemoveTrustedCertificate(_: IpcInvokeEvent, fingerprint: string): Promise<OperationResult> {
         try {
             proxyService.removeTrustedCertificate(fingerprint);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error removing trusted certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyAddCertificateException(_: any, domain: string, fingerprint: string) {
+    async handleProxyAddCertificateException(_: IpcInvokeEvent, domain: string, fingerprint: string): Promise<OperationResult> {
         try {
             proxyService.addCertificateException(domain, fingerprint);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error adding certificate exception:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleProxyRemoveCertificateException(_: any, domain: string) {
+    async handleProxyRemoveCertificateException(_: IpcInvokeEvent, domain: string): Promise<OperationResult> {
         try {
             proxyService.removeCertificateException(domain);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error removing certificate exception:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -252,12 +257,12 @@ class ProxyHandlers {
 
     async autoStartProxy() {
         try {
-            const settings: any = await settingsHandlers.handleGetSettings();
+            const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
             if (settings.autoStartProxy) {
                 log.info('Auto-starting proxy server based on settings');
-                const result: any = await this.handleProxyStart(null, null);
+                const result = await this.handleProxyStart(null, null);
                 if (result.success) {
-                    log.info('Proxy server auto-started successfully on port', result.port);
+                    log.info('Proxy server auto-started successfully on port', (result as { port?: number }).port);
                 }
             }
 

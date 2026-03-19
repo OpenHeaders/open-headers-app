@@ -1,17 +1,19 @@
 import electron from 'electron';
 import mainLogger from '../../../../utils/mainLogger';
 import appLifecycle from '../../app/lifecycle';
+import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
 
 const { BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('GitHandlers');
 
 class GitHandlers {
-    async handleTestGitConnection(event: any, config: any) {
+    async handleTestGitConnection(event: IpcInvokeEvent, config: Record<string, unknown>) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             // Send real-time progress updates to the renderer process
-            const onProgress = (update: any, summary: any) => {
+            const onProgress = (update: Record<string, unknown>, summary: Record<string, unknown>) => {
                 const window = BrowserWindow.fromWebContents(event.sender);
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('git-connection-progress', { update, summary });
@@ -19,9 +21,9 @@ class GitHandlers {
             };
 
             return await gitSyncService.testConnection({ ...config, onProgress });
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error testing Git connection:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -29,13 +31,13 @@ class GitHandlers {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             return await gitSyncService.getGitStatus();
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error getting Git status:', error);
-            return { isInstalled: false, error: error.message };
+            return { isInstalled: false, error: errorMessage(error) };
         }
     }
 
-    async handleInstallGit(event: any) {
+    async handleInstallGit(event: IpcInvokeEvent) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             const sendProgress = (message: string) => {
@@ -65,9 +67,9 @@ class GitHandlers {
             } else {
                 return { success: false, error: 'Failed to install Git. Please install manually.' };
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error installing Git:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         } finally {
             // Clean up progress callback to prevent memory leaks
             const gitSyncService = appLifecycle.getGitSyncService();
@@ -77,7 +79,7 @@ class GitHandlers {
         }
     }
 
-    async handleSyncGitWorkspace(_: any, workspaceId: string) {
+    async handleSyncGitWorkspace(_: IpcInvokeEvent, workspaceId: string) {
         try {
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
             const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
@@ -89,7 +91,7 @@ class GitHandlers {
             } else {
                 // Direct sync fallback when scheduler unavailable
                 const workspaces = await workspaceSettingsService.getWorkspaces();
-                const workspace = workspaces.find((w: any) => w.id === workspaceId);
+                const workspace = workspaces.find((w: { id: string }) => w.id === workspaceId);
                 if (!workspace) {
                     return { success: false, error: 'Workspace not found' };
                 }
@@ -104,28 +106,28 @@ class GitHandlers {
 
                 return await gitSyncService.syncWorkspace(config);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error syncing Git workspace:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleCleanupGitRepository(_: any, gitUrl: string) {
+    async handleCleanupGitRepository(_: IpcInvokeEvent, gitUrl: string): Promise<OperationResult> {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             await gitSyncService.cleanupRepository(gitUrl);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error cleaning up Git repository:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleCommitConfiguration(event: any, config: any) {
+    async handleCommitConfiguration(event: IpcInvokeEvent, config: Record<string, unknown>) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             // Send real-time progress updates to the renderer process
-            const onProgress = (update: any, summary: any) => {
+            const onProgress = (update: Record<string, unknown>, summary: Record<string, unknown>) => {
                 const window = BrowserWindow.fromWebContents(event.sender);
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('git-commit-progress', { update, summary });
@@ -133,29 +135,29 @@ class GitHandlers {
             };
 
             return await gitSyncService.commitConfiguration({ ...config, onProgress });
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error committing configuration:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleCreateBranch(_: any, config: any) {
+    async handleCreateBranch(_: IpcInvokeEvent, config: Record<string, unknown>) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             return await gitSyncService.createBranch(config);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error creating branch:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
-    async handleCheckWritePermissions(_: any, config: any) {
+    async handleCheckWritePermissions(_: IpcInvokeEvent, config: Record<string, unknown>) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             return await gitSyncService.checkWritePermissions(config);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error checking write permissions:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 }

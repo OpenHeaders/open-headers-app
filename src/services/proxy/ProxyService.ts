@@ -18,7 +18,7 @@ export interface HeaderRule {
     headerName?: string;
     headerValue?: string;
     isDynamic?: boolean;
-    sourceId?: string | number;
+    sourceId?: string | number | null;
     prefix?: string;
     suffix?: string;
     domains?: string[];

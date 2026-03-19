@@ -175,8 +175,9 @@ export const usePlayerManager = (
                 const originalCreateElement = document.createElement;
                 const iframeRefs: HTMLIFrameElement[] = [];
                 
-                document.createElement = function(tagName: string) {
-                    const element = originalCreateElement.call(document, tagName);
+                // Monkey-patch createElement to intercept iframe creation for sandboxing
+                (document as { createElement: (tagName: string) => HTMLElement }).createElement = function(tagName: string) {
+                    const element = (originalCreateElement as (tagName: string) => HTMLElement).call(document, tagName);
                     
                     if (tagName.toLowerCase() === 'iframe') {
                         const iframeElement = element as unknown as HTMLIFrameElement;

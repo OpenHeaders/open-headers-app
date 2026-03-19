@@ -1,23 +1,25 @@
 import electron from 'electron';
-import fs from 'fs';
 import path from 'path';
 import AutoLaunch from 'auto-launch';
 import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import trayManager from '../../tray/trayManager';
 import webSocketService from '../../../../services/websocket/ws-service';
+import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
+import type { AppSettings } from '../../../../types/settings';
 
 const { app, shell } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('SettingsHandlers');
 
 class SettingsHandlers {
-    async handleSaveSettings(_: any, settings: any) {
+    async handleSaveSettings(_: IpcInvokeEvent | null, settings: Partial<AppSettings> & Record<string, unknown>) {
         try {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
             // Ensure ALL boolean settings are properly typed
-            const booleanSettings = [
+            const booleanSettings: (keyof AppSettings)[] = [
                 'hideOnLaunch', 'showStatusBarIcon', 'showDockIcon', 'launchAtLogin',
                 'tutorialMode', 'autoStartProxy', 'proxyCacheEnabled',
                 'autoHighlightTableEntries', 'autoScrollTableEntries',
@@ -25,60 +27,61 @@ class SettingsHandlers {
                 'videoRecording', 'pendingVideoRecording'
             ];
 
+            const mutableSettings = { ...settings };
             booleanSettings.forEach(key => {
-                if (settings.hasOwnProperty(key)) {
-                    settings[key] = Boolean(settings[key]);
+                if (key in mutableSettings) {
+                    (mutableSettings as Record<string, unknown>)[key] = Boolean(mutableSettings[key]);
                 }
             });
 
-            await atomicWriter.writeJson(settingsPath, settings, { pretty: true });
+            await atomicWriter.writeJson(settingsPath, mutableSettings, { pretty: true });
 
             // Broadcast video recording state change to connected extensions
-            if (settings.hasOwnProperty('videoRecording')) {
-                webSocketService.broadcastVideoRecordingState(settings.videoRecording);
+            if ('videoRecording' in mutableSettings) {
+                webSocketService.broadcastVideoRecordingState(!!mutableSettings.videoRecording);
             }
 
             // Apply settings
-            trayManager.updateTray(settings);
+            trayManager.updateTray(mutableSettings);
 
             // Apply log level if changed
-            if (settings.logLevel) {
+            if (mutableSettings.logLevel) {
                 const { setGlobalLogLevel } = await import('../../../../utils/mainLogger');
-                setGlobalLogLevel(settings.logLevel);
+                setGlobalLogLevel(mutableSettings.logLevel);
             }
 
             // Update global recording hotkey if changed
-            if (settings.recordingHotkey || settings.hasOwnProperty('recordingHotkeyEnabled')) {
+            if (mutableSettings.recordingHotkey || 'recordingHotkeyEnabled' in mutableSettings) {
                 const globalShortcuts = (await import('../../shortcuts/globalShortcuts')).default;
 
                 // Update hotkey if it changed
-                if (settings.recordingHotkey) {
-                    await globalShortcuts.updateHotkey(settings.recordingHotkey);
+                if (mutableSettings.recordingHotkey) {
+                    await globalShortcuts.updateHotkey(mutableSettings.recordingHotkey);
                 }
 
                 // Update enabled state if it changed
-                if (settings.hasOwnProperty('recordingHotkeyEnabled')) {
+                if ('recordingHotkeyEnabled' in mutableSettings) {
                     await globalShortcuts.updateHotkeyEnabled(
-                        settings.recordingHotkeyEnabled,
-                        settings.recordingHotkey || 'CommandOrControl+Shift+E'
+                        mutableSettings.recordingHotkeyEnabled as boolean,
+                        mutableSettings.recordingHotkey || 'CommandOrControl+Shift+E'
                     );
                 }
 
                 // Broadcast the hotkey change to all connected extensions
                 webSocketService.broadcastRecordingHotkeyChange(
-                    settings.recordingHotkey || 'CommandOrControl+Shift+E',
-                    settings.recordingHotkeyEnabled !== undefined ? settings.recordingHotkeyEnabled : true
+                    mutableSettings.recordingHotkey || 'CommandOrControl+Shift+E',
+                    'recordingHotkeyEnabled' in mutableSettings ? !!mutableSettings.recordingHotkeyEnabled : true
                 );
             }
 
             return { success: true };
-        } catch (err: any) {
+        } catch (err: unknown) {
             log.error('Error saving settings:', err);
-            return { success: false, message: err.message };
+            return { success: false, message: errorMessage(err) };
         }
     }
 
-    async handleGetSettings() {
+    async handleGetSettings(): Promise<Partial<AppSettings>> {
         try {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
@@ -86,10 +89,10 @@ class SettingsHandlers {
             const settings = await atomicWriter.readJson(settingsPath);
 
             if (settings !== null) {
-                return settings;
+                return settings as Partial<AppSettings>;
             } else {
                 // Default settings
-                const defaultSettings = {
+                const defaultSettings: AppSettings = {
                     launchAtLogin: true,
                     hideOnLaunch: true,
                     showDockIcon: true,
@@ -118,7 +121,7 @@ class SettingsHandlers {
         }
     }
 
-    async handleSetAutoLaunch(_: any, enable: boolean) {
+    async handleSetAutoLaunch(_: IpcInvokeEvent, enable: boolean) {
         try {
             // Platform-specific args configuration
             let args = ['--hidden']; // Default for all platforms
@@ -133,7 +136,7 @@ class SettingsHandlers {
             const execPath = app.getPath('exe');
 
 
-            const autoLauncher = new (AutoLaunch as any)({
+            const autoLauncher = new (AutoLaunch as unknown as new (opts: { name: string; path: string; args: string[]; isHidden: boolean }) => { enable(): Promise<void>; disable(): Promise<void> })({
                 name: appName,
                 path: execPath,
                 args: args,
@@ -147,13 +150,13 @@ class SettingsHandlers {
             }
 
             return { success: true };
-        } catch (err: any) {
+        } catch (err: unknown) {
             log.error('Error setting auto launch:', err);
-            return { success: false, message: err.message };
+            return { success: false, message: errorMessage(err) };
         }
     }
 
-    async handleOpenExternal(_: any, url: string) {
+    async handleOpenExternal(_: IpcInvokeEvent, url: string): Promise<OperationResult> {
         try {
             // Validate URL to prevent security issues
             const validUrl = new URL(url);
@@ -183,9 +186,9 @@ class SettingsHandlers {
 
             await shell.openExternal(url);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error opening external URL:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 }

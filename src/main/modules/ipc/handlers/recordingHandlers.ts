@@ -5,10 +5,47 @@ import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import windowManager from '../../window/windowManager';
 import { preprocessRecordingForSave } from '../../../../services/websocket/utils/recordingPreprocessor';
+import type { IpcInvokeEvent } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
 
 const { app, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('RecordingHandlers');
+
+interface RecordingMetadata {
+    id: string;
+    timestamp: number;
+    url: string;
+    duration: number;
+    eventCount: number;
+    size: number;
+    source: string;
+    hasVideo: boolean;
+    hasProcessedVersion?: boolean;
+    tag?: string | null;
+    description?: string | null;
+    metadata?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
+interface RecordingData {
+    record: {
+        metadata: {
+            recordId?: string;
+            timestamp?: number;
+            url?: string;
+            initialUrl?: string;
+            duration?: number;
+            [key: string]: unknown;
+        };
+        events?: unknown[];
+        [key: string]: unknown;
+    };
+    source?: string;
+    tag?: string | null;
+    description?: string | null;
+    [key: string]: unknown;
+}
 
 class RecordingHandlers {
     async handleLoadRecordings() {
@@ -20,13 +57,13 @@ class RecordingHandlers {
 
             // Get all recording metadata files
             const files = await fs.promises.readdir(recordingsPath);
-            const recordings: any[] = [];
+            const recordings: RecordingMetadata[] = [];
 
             for (const file of files) {
                 if (file.endsWith('.meta.json')) {
                     try {
                         const metaPath = path.join(recordingsPath, file);
-                        const metaData = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+                        const metaData = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as RecordingMetadata;
 
                         // Check if video exists for this recording
                         if (metaData.hasVideo === undefined) {
@@ -73,7 +110,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleLoadRecording(_: any, recordId: string) {
+    async handleLoadRecording(_: IpcInvokeEvent, recordId: string) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             const recordDir = path.join(recordingsPath, recordId);
@@ -89,7 +126,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleSaveRecording(_: any, recordData: any) {
+    async handleSaveRecording(_: IpcInvokeEvent, recordData: RecordingData) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             await fs.promises.mkdir(recordingsPath, { recursive: true });
@@ -107,7 +144,7 @@ class RecordingHandlers {
             await atomicWriter.writeJson(recordPath, recordData);
 
             // Save metadata separately for quick listing
-            const metadata = {
+            const metadata: RecordingMetadata = {
                 id: recordId,
                 timestamp: recordData.record.metadata.timestamp || Date.now(),
                 url: recordData.record.metadata.url || recordData.record.metadata.initialUrl || 'Unknown',
@@ -134,7 +171,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleSaveUploadedRecording(_: any, recordData: any) {
+    async handleSaveUploadedRecording(_: IpcInvokeEvent, recordData: RecordingData) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             await fs.promises.mkdir(recordingsPath, { recursive: true });
@@ -180,12 +217,12 @@ class RecordingHandlers {
                 } else {
                     log.info('Proxy is not running, skipping resource prefetch');
                 }
-            } catch (error: any) {
-                log.warn('Could not check proxy status:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not check proxy status:', errorMessage(error));
             }
 
             // Create progress callback for prefetching
-            const onPrefetchProgress = (stage: string, progress: number, details: any) => {
+            const onPrefetchProgress = (stage: string, progress: number, details: Record<string, unknown>) => {
                 if (stage === 'prefetching') {
                     // Map prefetch progress from 0-100 to 25-75 in overall progress
                     const overallProgress = 25 + Math.round(progress * 0.5);
@@ -200,7 +237,7 @@ class RecordingHandlers {
 
             // Preprocess the uploaded recording
             log.info(`Preprocessing uploaded recording ${recordId}`);
-            const processedRecordingData = await preprocessRecordingForSave(recordData, {
+            const processedRecordingData = await preprocessRecordingForSave(recordData as Parameters<typeof preprocessRecordingForSave>[0], {
                 proxyPort,
                 onProgress: onPrefetchProgress
             });
@@ -216,7 +253,7 @@ class RecordingHandlers {
             await atomicWriter.writeJson(recordPath, processedRecordingData);
 
             // Save metadata separately for quick listing
-            const metadata = {
+            const metadata: RecordingMetadata = {
                 id: recordId,
                 timestamp: recordData.record?.metadata?.timestamp || Date.now(),
                 url: recordData.record?.metadata?.url || 'Unknown',
@@ -252,7 +289,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleDeleteRecording(_: any, recordId: string) {
+    async handleDeleteRecording(_: IpcInvokeEvent, recordId: string) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
 
@@ -262,7 +299,7 @@ class RecordingHandlers {
 
             // Delete the metadata file
             const metaPath = path.join(recordingsPath, `${recordId}.meta.json`);
-            await fs.promises.unlink(metaPath).catch((err: any) => {
+            await fs.promises.unlink(metaPath).catch((err: NodeJS.ErrnoException) => {
                 if (err.code !== 'ENOENT') throw err;
             });
 
@@ -279,7 +316,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleDownloadRecording(_: any, record: any) {
+    async handleDownloadRecording(_: IpcInvokeEvent, record: { id: string }) {
         try {
             const { dialog } = await import('electron');
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
@@ -314,7 +351,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleUpdateRecordingMetadata(_: any, { recordId, updates }: { recordId: string; updates: any }) {
+    async handleUpdateRecordingMetadata(_: IpcInvokeEvent, { recordId, updates }: { recordId: string; updates: Record<string, unknown> }) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             const metaPath = path.join(recordingsPath, `${recordId}.meta.json`);
@@ -325,7 +362,7 @@ class RecordingHandlers {
             }
 
             // Read existing metadata
-            const existingMetadata = JSON.parse(await fs.promises.readFile(metaPath, 'utf8'));
+            const existingMetadata = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as RecordingMetadata;
 
             // Update only the fields provided
             const updatedMetadata = {
