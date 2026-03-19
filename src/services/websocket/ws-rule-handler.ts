@@ -6,7 +6,9 @@
 import WebSocket from 'ws';
 import fs from 'fs';
 import path from 'path';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { DATA_FORMAT_VERSION } from '../../config/version';
 
@@ -28,12 +30,18 @@ interface HeaderRule {
     activationState?: string;
     missingDependencies?: string[];
     updatedAt?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface Rules {
     header?: HeaderRule[];
-    [key: string]: any;
+    [key: string]: unknown;
+}
+
+interface RulesStorage {
+    version?: string;
+    rules: Rules;
+    metadata?: Record<string, unknown>;
 }
 
 interface Source {
@@ -70,7 +78,7 @@ class WSRuleHandler {
     /**
      * Send rules to a specific client
      */
-    async sendRulesToClient(ws: any): Promise<void> {
+    async sendRulesToClient(ws: WebSocket): Promise<void> {
         return new Promise((resolve, reject) => {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 reject(new Error('WebSocket not in OPEN state'));
@@ -129,8 +137,8 @@ class WSRuleHandler {
         let environmentVariables: Record<string, string> | null = null;
         try {
             environmentVariables = envHandler.loadEnvironmentVariables();
-        } catch (error: any) {
-            log.warn('Failed to load environment variables:', error.message);
+        } catch (error: unknown) {
+            log.warn('Failed to load environment variables:', errorMessage(error));
         }
 
         if (populatedRules.header && Array.isArray(populatedRules.header)) {
@@ -294,10 +302,10 @@ class WSRuleHandler {
 
                 const rulesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'rules.json');
 
-                let rulesStorage: any;
+                let rulesStorage: RulesStorage;
                 try {
                     const existingData = await fs.promises.readFile(rulesPath, 'utf8');
-                    rulesStorage = JSON.parse(existingData);
+                    rulesStorage = JSON.parse(existingData) as RulesStorage;
                 } catch (e) {
                     rulesStorage = { version: DATA_FORMAT_VERSION, rules: this.wsService.rules, metadata: {} };
                 }
@@ -305,7 +313,7 @@ class WSRuleHandler {
                 rulesStorage.rules = this.wsService.rules;
                 rulesStorage.metadata = rulesStorage.metadata || {};
                 rulesStorage.metadata.totalRules = Object.values(this.wsService.rules)
-                    .reduce((sum: number, rules: any) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
+                    .reduce((sum: number, rules: unknown) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
                 rulesStorage.metadata.lastUpdated = new Date().toISOString();
 
                 await atomicWriter.writeJson(rulesPath, rulesStorage, { pretty: true });
@@ -320,7 +328,7 @@ class WSRuleHandler {
         try {
             const { BrowserWindow } = await import('electron');
             const windows = BrowserWindow.getAllWindows();
-            windows.forEach((window: any) => {
+            windows.forEach((window: BrowserWindowType) => {
                 if (window && !window.isDestroyed()) {
                     const rulesData = {
                         rules: { header: this.wsService.rules.header || [] },
