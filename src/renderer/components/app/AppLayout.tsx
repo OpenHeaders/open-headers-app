@@ -42,7 +42,7 @@ interface AppLayoutProps {
   onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
   onRemoveSource: (sourceId: string) => Promise<boolean>;
   onRefreshSource: (sourceId: string) => Promise<boolean>;
-  onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;
+  onUpdateSource: (sourceId: string, updates: Partial<SourceData>) => Promise<SourceData | null>;
   onExport: () => void;
   onImport: () => void;
   onCheckForUpdates: () => void;

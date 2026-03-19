@@ -63,7 +63,7 @@ interface SourceTableProps {
     sources: Source[];
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     onRefreshSource: (sourceId: string, updatedSource?: Source | null) => Promise<boolean>;
-    onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<Source | null>;
+    onUpdateSource: (sourceId: string, updates: Partial<Source>) => Promise<Source | null>;
 }
 
 const SourceTable = ({

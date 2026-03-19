@@ -8,17 +8,18 @@ import EditSourceModalFooter from './EditSourceModalFooter';
 import FormSubmissionHandler from './form-submission-handler';
 
 import { createLogger } from '../../../utils/error-handling/logger';
-import type { Source } from '../../../../types/source';
+import type { Source, SourceHeader } from '../../../../types/source';
+import type { EditSourceFormValues } from './form-submission-handler';
 const log = createLogger('EditSourceModal');
 
 interface HttpOptionsRef {
     validateFields?: () => void;
     forceTotpState?: (enabled: boolean, secret: string) => void;
-    forceHeadersState?: (headers: unknown[]) => void;
+    forceHeadersState?: (headers: Partial<SourceHeader>[]) => void;
     forceJsonFilterState?: (enabled: boolean, path: string) => void;
     getTotpState?: () => { enabled: boolean; secret?: string };
     getJsonFilterState?: () => { enabled: boolean; path?: string };
-    getHeadersState?: () => Array<{ key: string; value: string }>;
+    getHeadersState?: () => SourceHeader[];
 }
 
 interface EditSourceModalProps {
@@ -80,13 +81,13 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Store original values for comparison
             originalValuesRef.current = {
-                interval: (source.refreshOptions?.interval as number) || 0,
-                enabled: (source.refreshOptions?.enabled as boolean) || false
+                interval: source.refreshOptions?.interval || 0,
+                enabled: source.refreshOptions?.enabled || false
             };
 
             // Extract TOTP configuration
             const hasTotpSecret = !!(source.requestOptions?.totpSecret);
-            const extractedTotpSecret = (source.requestOptions?.totpSecret as string) || '';
+            const extractedTotpSecret = source.requestOptions?.totpSecret || '';
 
 
             // Update component state for TOTP
@@ -105,7 +106,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
             // Prepare JSON filter with type enforcement
             const jsonFilter = {
                 enabled: Boolean(source.jsonFilter?.enabled),
-                path: source.jsonFilter?.enabled ? ((source.jsonFilter.path as string) || '') : ''
+                path: source.jsonFilter?.enabled ? (source.jsonFilter.path || '') : ''
             };
 
             // Prepare initial form values
@@ -118,9 +119,9 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
                 jsonFilter: jsonFilter,
                 refreshOptions: {
                     ...source.refreshOptions,
-                    enabled: (source.refreshOptions?.enabled as boolean) || false,
-                    interval: (source.refreshOptions?.interval as number) || 15,
-                    type: (source.refreshOptions?.type as string) || 'preset'
+                    enabled: source.refreshOptions?.enabled || false,
+                    interval: source.refreshOptions?.interval || 15,
+                    type: source.refreshOptions?.type || 'preset'
                 },
                 enableTOTP: hasTotpSecret,
                 totpSecret: extractedTotpSecret
@@ -155,28 +156,31 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
      * Tracks form value changes to detect user edits
      * Updates form state reference and marks component as having user edits
      */
-    const handleFormChange = (changedValues: Record<string, unknown>) => {
+    const handleFormChange = (changedValues: Partial<EditSourceFormValues>) => {
         if (isInitializedRef.current) {
             setHasUserEdits(true);
 
             // Update form state reference with changed values
             if (changedValues.jsonFilter) {
-                formStateRef.current.jsonFilter = changedValues.jsonFilter as { enabled: boolean; path: string };
+                formStateRef.current.jsonFilter = {
+                    enabled: changedValues.jsonFilter.enabled,
+                    path: changedValues.jsonFilter.path || ''
+                };
             }
 
             if (changedValues.refreshOptions) {
                 formStateRef.current.refreshOptions = {
                     ...formStateRef.current.refreshOptions,
-                    ...(changedValues.refreshOptions as Record<string, unknown>)
+                    ...changedValues.refreshOptions
                 };
             }
 
-            if (Object.prototype.hasOwnProperty.call(changedValues, 'enableTOTP')) {
-                formStateRef.current.totpEnabled = changedValues.enableTOTP as boolean;
+            if (changedValues.enableTOTP !== undefined) {
+                formStateRef.current.totpEnabled = changedValues.enableTOTP;
             }
 
-            if (Object.prototype.hasOwnProperty.call(changedValues, 'totpSecret')) {
-                formStateRef.current.totpSecret = changedValues.totpSecret as string;
+            if (changedValues.totpSecret !== undefined) {
+                formStateRef.current.totpSecret = changedValues.totpSecret;
             }
         }
     };
@@ -252,7 +256,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Set up TOTP state if present in source
             if (source?.requestOptions?.totpSecret) {
-                const totpSecretValue = source.requestOptions.totpSecret as string;
+                const totpSecretValue = source.requestOptions.totpSecret;
                 setTimeout(() => {
                     if (instance.forceTotpState) {
                         instance.forceTotpState(true, totpSecretValue);
@@ -262,7 +266,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Set up headers if present in source
             if (source?.requestOptions?.headers && Array.isArray(source.requestOptions.headers)) {
-                const headersValue = source.requestOptions.headers as unknown[];
+                const headersValue = source.requestOptions.headers;
                 setTimeout(() => {
                     if (instance.forceHeadersState) {
                         instance.forceHeadersState(headersValue);
@@ -272,7 +276,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Set up JSON filter if present in source
             if (source?.jsonFilter?.enabled && source?.jsonFilter?.path) {
-                const jsonFilterPath = source.jsonFilter.path as string;
+                const jsonFilterPath = source.jsonFilter.path;
                 setTimeout(() => {
                     if (instance.forceJsonFilterState) {
                         instance.forceJsonFilterState(true, jsonFilterPath);

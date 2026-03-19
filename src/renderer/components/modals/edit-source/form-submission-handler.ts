@@ -15,7 +15,7 @@ interface HttpOptionsHandle {
 }
 
 /** Shape of form values returned by Ant Design form.getFieldsValue() */
-interface EditSourceFormValues {
+export interface EditSourceFormValues {
     sourceType?: SourceType;
     sourcePath?: string;
     sourceTag?: string;

@@ -534,7 +534,7 @@ class RefreshManager {
         await this.updateScheduleCache();
 
         const manualReasons = ['manual', 'env-change', 'interval-changed-overdue', 'auto-refresh-enabled'];
-        if (manualReasons.includes(options.reason as string) && source.refreshOptions?.enabled) {
+        if (options.reason && manualReasons.includes(options.reason) && source.refreshOptions?.enabled) {
           log.info(`Manual-type refresh completed for ${sourceId} (reason: ${options.reason}), updating schedule`);
           await this.scheduler.updateLastRefresh(sourceId, timeManager.now());
         }
