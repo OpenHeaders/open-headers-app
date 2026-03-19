@@ -58,7 +58,7 @@ export interface HttpService {
 }
 
 /** Update callback type */
-export type OnUpdateCallback = (sourceId: string, content: string | null, additionalData: Record<string, unknown>) => void;
+export type OnUpdateCallback = (sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown>) => void;
 /** Scheduler-compatible source type */
 type SchedulerSource = { sourceId: string; sourceType: string; refreshOptions?: { interval?: string | number; lastRefresh?: string | number; alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } };
 
@@ -845,7 +845,7 @@ class RefreshManager {
 
   notifyUI(sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown> = {}) {
     if (!this.onUpdateCallback) return;
-    this.onUpdateCallback(sourceId, content ?? null, additionalData);
+    this.onUpdateCallback(sourceId, content, additionalData);
   }
   async updateScheduleCache() {
     try {
