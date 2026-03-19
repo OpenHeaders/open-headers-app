@@ -23,15 +23,11 @@
 
 import { createLogger } from '../../../utils/error-handling/logger';
 import type { FormInstance } from 'antd';
+import type { EnvironmentContextLike } from '../../../../types/http';
 
 const log = createLogger('HttpValidation');
 
-interface EnvironmentContext {
-    environmentsReady: boolean;
-    activeEnvironment: string;
-    getAllVariables: () => Record<string, string>;
-    resolveTemplate: (text: string) => string;
-}
+type EnvironmentContext = EnvironmentContextLike;
 
 interface VariableValidationResult {
     valid: boolean;

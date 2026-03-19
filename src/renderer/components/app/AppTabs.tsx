@@ -16,6 +16,7 @@ import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
 import ServerConfig from '../server-config/ServerConfig';
 import type { SourceData } from '../../hooks/workspace/useSources';
+import type { NewSourceData } from '../sources/source-form';
 
 interface AppTabsProps {
     activeTab: string;
@@ -29,7 +30,7 @@ interface AppTabsProps {
     onPlaybackTimeChange: (time: number) => void;
     onAutoHighlightChange: (enabled: boolean) => void;
     sources: SourceData[];
-    onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+    onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     onRefreshSource: (sourceId: string) => Promise<boolean>;
     onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<SourceData | null>;

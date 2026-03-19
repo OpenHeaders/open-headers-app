@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 import { useHttp } from '../useHttp';
 import { showMessage } from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { NewSourceData } from '../../components/sources/source-form';
 const log = createLogger('useSourceRefresh');
 
 interface SourceData {
@@ -42,13 +43,13 @@ interface UseSourceRefreshDeps {
   updateSource: (sourceId: string, updates: SourceUpdates) => void;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (sourceData: SourceData) => Promise<SourceData | null>;
+  addSource: (sourceData: Record<string, unknown>) => Promise<SourceData | null>;
 }
 
 interface UseSourceRefreshReturn {
   handleHttpSourceRefresh: (sourceId: string, updatedSource?: SourceData | null) => Promise<boolean>;
   refreshSourceWithHttp: (sourceId: string) => Promise<boolean>;
-  handleAddSource: (sourceData: SourceData) => Promise<boolean>;
+  handleAddSource: (sourceData: NewSourceData) => Promise<boolean>;
 }
 
 /**
@@ -134,8 +135,11 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
   /**
    * Handle add source with initial content fetching for HTTP sources
    */
-  const handleAddSource = useCallback(async (sourceData: SourceData): Promise<boolean> => {
+  const handleAddSource = useCallback(async (sourceData: NewSourceData): Promise<boolean> => {
     log.debug('Adding source:', sourceData);
+
+    // Build the enriched source data (with content from initial fetch)
+    const enrichedData: Record<string, unknown> = { ...sourceData };
 
     // For HTTP sources, fetch content BEFORE adding the source
     if (sourceData.sourceType === 'http') {
@@ -146,30 +150,24 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
         // Make the HTTP request to get initial content
         const jsonFilter = { enabled: sourceData.jsonFilter?.enabled ?? false, path: sourceData.jsonFilter?.path };
         const result = await http.request(
-          'new-source-' + Date.now(), // Temporary ID for the request
+          'new-source-' + Date.now(),
           sourceData.sourcePath || '',
           sourceData.sourceMethod || 'GET',
           sourceData.requestOptions || {},
           jsonFilter
         );
 
-        // Add the content to the source data
-        sourceData.sourceContent = result.content;
-        sourceData.needsInitialFetch = false; // Already fetched
+        enrichedData.sourceContent = result.content;
+        enrichedData.needsInitialFetch = false;
 
-        // If there's a JSON filter, store the original response and filtering metadata
         if (result.isFiltered && result.originalResponse) {
-          sourceData.originalResponse = result.originalResponse;
-          sourceData.isFiltered = true;
-          sourceData.filteredWith = result.filteredWith;
+          enrichedData.originalResponse = result.originalResponse;
+          enrichedData.isFiltered = true;
+          enrichedData.filteredWith = result.filteredWith;
         }
 
-        // Set the lastRefresh timestamp so scheduler knows it was just fetched
-        if (sourceData.refreshOptions) {
-          sourceData.refreshOptions.lastRefresh = Date.now();
-        } else {
-          sourceData.refreshOptions = { lastRefresh: Date.now() };
-        }
+        const refreshOptions = { ...(sourceData.refreshOptions || { enabled: false }), lastRefresh: Date.now() };
+        enrichedData.refreshOptions = refreshOptions;
 
         log.debug('Initial content fetched successfully');
       } catch (error: unknown) {
@@ -181,7 +179,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
     }
 
     // Now add the source with content already included
-    const newSource = await addSource(sourceData);
+    const newSource = await addSource(enrichedData);
     if (newSource) {
       log.debug('Source added successfully:', newSource);
       showMessage('success', 'Source added successfully');

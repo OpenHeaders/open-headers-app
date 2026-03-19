@@ -16,6 +16,7 @@ import type { Settings } from '../../contexts/ui/SettingsContext';
 import type { SourceData } from '../../hooks/workspace/useSources';
 import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
 import type { InitialAction } from '../modals/settings/SettingsModal';
+import type { NewSourceData } from '../sources/source-form';
 
 interface AppLayoutProps {
   appVersion: string;
@@ -38,7 +39,7 @@ interface AppLayoutProps {
   onRecordChange: (record: Record<string, unknown> | null) => void;
   onPlaybackTimeChange: (time: number) => void;
   onAutoHighlightChange: (highlight: boolean) => void;
-  onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+  onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
   onRemoveSource: (sourceId: string) => Promise<boolean>;
   onRefreshSource: (sourceId: string) => Promise<boolean>;
   onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;

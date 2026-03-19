@@ -27,6 +27,8 @@ import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './HttpValidation';
 import { createLogger } from '../../../utils/error-handling/logger';
+import type { EnvironmentContextLike, HttpProgressCallback, TestResponseContent } from '../../../../types/http';
+import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../../../types/source';
 
 const log = createLogger('HttpTesting');
 
@@ -35,18 +37,37 @@ interface TotpState {
     secret: string;
 }
 
+interface TestRequestFn {
+    (
+        url: string,
+        method: string,
+        requestOptions: TestRequestOptions,
+        jsonFilter: JsonFilter,
+        sourceId: string,
+        progressCallback: HttpProgressCallback | null
+    ): Promise<string>;
+}
+
+interface TestRequestOptions {
+    headers: SourceHeader[];
+    queryParams: Record<string, string>;
+    body?: string;
+    contentType: string;
+    totpSecret?: string;
+}
+
 interface HttpTestHandlerParams {
     form: FormInstance;
     getTotpStateFromForm: () => TotpState;
     getCooldownSeconds: (sourceId: string) => number;
     checkIfRequestUsesTotp: (url: string, method: string, requestOptions: Record<string, unknown>) => boolean;
-    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; resolveTemplate: (text: string) => string; [key: string]: unknown };
-    http: { testRequest: (url: string, method: string, requestOptions: Record<string, any>, jsonFilter: { enabled: boolean; path: string }, sourceId: string, progressCallback: ((progress: number) => void) | null, cleanupCallback: (() => void) | null) => Promise<string> };
+    envContext: EnvironmentContextLike;
+    http: { testRequest: TestRequestFn };
     setTesting: (testing: boolean) => void;
     onTestingChange?: (testing: boolean) => void;
-    setTestResponseContent: (content: string) => void;
+    setTestResponseContent: (content: TestResponseContent) => void;
     setTestResponseVisible: (visible: boolean) => void;
-    setRawResponse: (response: string) => void;
+    setRawResponse: (response: string | null) => void;
     onTestResponse?: (response: string) => void;
     effectiveSourceId: string;
     testSourceId: string;
@@ -227,7 +248,7 @@ export const formatContentByType = (content: unknown, headers: Record<string, st
  * const formatted = formatResponseForDisplay(responseString);
  * console.log(formatted.statusCode, formatted.body);
  */
-export const formatResponseForDisplay = (responseJson: string): Record<string, unknown> => {
+export const formatResponseForDisplay = (responseJson: string): TestResponseContent => {
     try {
         return JSON.parse(responseJson);
     } catch (error) {
@@ -285,7 +306,7 @@ export const createHttpTestHandler = ({
     onTestResponse,
     effectiveSourceId,
     testSourceId
-}: HttpTestHandlerParams) => async (sourcePath: string | null = null, sourceMethod: string | null = null, progressCallback: ((progress: number) => void) | null = null, cleanupCallback: (() => void) | null = null) => {
+}: HttpTestHandlerParams) => async (sourcePath: string | null = null, sourceMethod: string | null = null, progressCallback: HttpProgressCallback | null = null, cleanupCallback: (() => void) | null = null) => {
     const { enabled: totpEnabled, secret: totpSecret } = getTotpStateFromForm();
     
     try {
@@ -375,14 +396,13 @@ export const createHttpTestHandler = ({
             requestOptions,
             jsonFilterForRequest,
             effectiveSourceId,
-            progressCallback,
-            cleanupCallback
+            progressCallback
         );
 
         // Save and format the response
         setRawResponse(response);
         const formattedResponse = formatResponseForDisplay(response);
-        setTestResponseContent(formattedResponse as unknown as string);
+        setTestResponseContent(formattedResponse as TestResponseContent);
         setTestResponseVisible(true);
 
         // Send to parent callback
@@ -413,21 +433,35 @@ export const createHttpTestHandler = ({
  * @param {Object} values - Form values
  * @returns {Object} Prepared request options
  */
-const prepareRequestOptions = (form: FormInstance, values: Record<string, any>): Record<string, any> => {
+interface HttpFormValues {
+    sourceType?: string;
+    sourcePath?: string;
+    sourceMethod?: string;
+    sourceTag?: string;
+    requestOptions?: {
+        headers?: SourceHeader[];
+        queryParams?: SourceQueryParam[];
+        body?: string;
+        contentType?: string;
+        totpSecret?: string;
+    };
+    jsonFilter?: { enabled: boolean; path: string };
+}
+
+const prepareRequestOptions = (form: FormInstance, values: HttpFormValues): TestRequestOptions => {
     // Get content type from form
     const formContentType = form.getFieldValue(['requestOptions', 'contentType']);
     const contentType = formContentType || values.requestOptions?.contentType || 'application/json';
 
     // Prepare request options with defaults
-    const requestOptions: Record<string, any> = {
+    const requestOptions: TestRequestOptions = {
         queryParams: {},
-        headers: [],  // Keep as array initially for variable substitution
-        body: null,
+        headers: [],
         contentType: contentType,
     };
 
     // Add query params if defined
-    const formQueryParams = form.getFieldValue(['requestOptions', 'queryParams']);
+    const formQueryParams: SourceQueryParam[] | undefined = form.getFieldValue(['requestOptions', 'queryParams']);
     if (Array.isArray(formQueryParams) && formQueryParams.length > 0) {
         formQueryParams.forEach(param => {
             if (param && param.key) {
@@ -435,7 +469,7 @@ const prepareRequestOptions = (form: FormInstance, values: Record<string, any>):
             }
         });
     } else if (values.requestOptions?.queryParams && Array.isArray(values.requestOptions.queryParams)) {
-        (values.requestOptions.queryParams as Array<{ key?: string; value?: string }>).forEach(param => {
+        values.requestOptions.queryParams.forEach(param => {
             if (param && param.key) {
                 requestOptions.queryParams[param.key] = param.value || '';
             }
@@ -443,18 +477,18 @@ const prepareRequestOptions = (form: FormInstance, values: Record<string, any>):
     }
 
     // Add headers as array for variable substitution
-    const formHeaders = form.getFieldValue(['requestOptions', 'headers']);
+    const formHeaders: SourceHeader[] | undefined = form.getFieldValue(['requestOptions', 'headers']);
     if (Array.isArray(formHeaders) && formHeaders.length > 0) {
-        requestOptions.headers = JSON.parse(JSON.stringify(formHeaders)); // Deep copy
+        requestOptions.headers = JSON.parse(JSON.stringify(formHeaders));
     } else if (values.requestOptions?.headers && Array.isArray(values.requestOptions.headers)) {
         requestOptions.headers = JSON.parse(JSON.stringify(values.requestOptions.headers));
     }
 
     // Add body if applicable for POST/PUT/PATCH
-    if (['POST', 'PUT', 'PATCH'].includes(values.sourceMethod)) {
-        const formBody = form.getFieldValue(['requestOptions', 'body']);
+    if (values.sourceMethod && ['POST', 'PUT', 'PATCH'].includes(values.sourceMethod)) {
+        const formBody: string | undefined = form.getFieldValue(['requestOptions', 'body']);
         const requestBody = formBody || values.requestOptions?.body || null;
-        
+
         if (requestBody) {
             requestOptions.body = requestBody;
         }
@@ -472,7 +506,7 @@ const prepareRequestOptions = (form: FormInstance, values: Record<string, any>):
  * @param {Object} values - Form values
  * @returns {Object} JSON filter configuration
  */
-const prepareJsonFilter = (values: Record<string, any>): { enabled: boolean; path: string } => {
+const prepareJsonFilter = (values: HttpFormValues): { enabled: boolean; path: string } => {
     const jsonFilterForRequest = { enabled: false, path: '' };
 
     // Check if jsonFilter is enabled in the form

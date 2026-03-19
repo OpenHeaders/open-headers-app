@@ -51,7 +51,7 @@ interface ElectronAPI {
     version: number;
     confidence?: number;
   }>;
-  makeHttpRequest: (url: string, method: string, options?: Record<string, unknown>) => Promise<string>;
+  makeHttpRequest: (url: string, method: string, options?: import('./http').HttpRequestOptions) => Promise<string>;
 
   // Shortcuts
   disableRecordingHotkey: () => Promise<void>;
@@ -226,5 +226,5 @@ interface ElectronAPI {
 
 interface Window {
   electronAPI: ElectronAPI;
-  generateTOTP: (secret: string, options?: { digits?: number; period?: number; timeOffset?: number }) => string;
+  generateTOTP: (secret: string, period?: number, digits?: number, timeOffset?: number) => Promise<string>;
 }

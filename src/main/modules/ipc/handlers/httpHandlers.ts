@@ -4,22 +4,11 @@ import mainLogger from '../../../../utils/mainLogger';
 import networkService from '../../../../services/network/NetworkService';
 import timeManager from '../../../../services/core/TimeManager';
 import type { IpcInvokeEvent } from '../../../../types/common';
+import type { HttpRequestOptions } from '../../../../types/http';
 
 const { net } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('HttpHandlers');
-
-interface HttpRequestOptions {
-    headers?: Record<string, string>;
-    queryParams?: Record<string, string | undefined | null>;
-    body?: string | Record<string, string>;
-    contentType?: string;
-    enableRetries?: boolean;
-    connectionOptions?: {
-        timeout?: number;
-        requestId?: string;
-    };
-}
 
 interface NetworkStateWithQuality {
     isOnline: boolean;
@@ -28,7 +17,7 @@ interface NetworkStateWithQuality {
 
 class HttpHandlers {
     handleMakeHttpRequest: (event: IpcInvokeEvent, url: string, method: string, options?: HttpRequestOptions) => Promise<string>;
-    processFormData: (body: string | Record<string, string> | null, requestId: string) => string | null;
+    processFormData: (body: string | Record<string, unknown> | null, requestId: string) => string | null;
 
     constructor() {
         // Bind methods to ensure context is preserved
@@ -273,7 +262,7 @@ class HttpHandlers {
         return performRequest();
     }
 
-    _processFormData(body: string | Record<string, string> | null, requestId: string): string | null {
+    _processFormData(body: string | Record<string, unknown> | null, requestId: string): string | null {
         if (body === null || body === undefined) return body as null;
 
         const formData: Record<string, string> = {};
@@ -315,7 +304,7 @@ class HttpHandlers {
             return body;
         }
         else if (typeof body === 'object' && body !== null) {
-            return querystring.stringify(body);
+            return querystring.stringify(body as Record<string, string>);
         }
 
         return String(body);

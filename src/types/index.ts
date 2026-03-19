@@ -65,3 +65,13 @@ export type {
 } from './proxy';
 
 export type { AppSettings } from './settings';
+
+export type {
+  HttpConnectionOptions,
+  HttpRequestOptions,
+  HttpResponsePayload,
+  HttpResult,
+  HttpProgressCallback,
+  TestResponseContent,
+  EnvironmentContextLike,
+} from './http';

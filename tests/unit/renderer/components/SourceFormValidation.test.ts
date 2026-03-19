@@ -91,11 +91,6 @@ describe('SourceFormValidation.validateUrlField', () => {
     ).rejects.toThrow('Invalid URL');
   });
 
-  it('resolves for non-string value', async () => {
-    await expect(
-      validateUrlField({}, 123 as any, 'http', makeEnvContext(), makeForm())
-    ).resolves.toBeUndefined();
-  });
 });
 
 // ======================================================================

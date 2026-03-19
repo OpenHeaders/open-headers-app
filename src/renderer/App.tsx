@@ -346,7 +346,7 @@ const AppComponent: React.FC = () => {
                     onRecordChange={setCurrentRecord}
                     onPlaybackTimeChange={setRecordPlaybackTime}
                     onAutoHighlightChange={setAutoHighlight}
-                    onAddSource={(data) => handleAddSource(data as Parameters<typeof handleAddSource>[0])}
+                    onAddSource={handleAddSource}
                     onRemoveSource={removeSourceWithRefresh}
                     onRefreshSource={refreshSourceWithHttp}
                     onUpdateSource={updateSource}
