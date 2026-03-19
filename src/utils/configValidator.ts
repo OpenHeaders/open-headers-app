@@ -28,13 +28,7 @@ let _log: LoggerLike | null = null;
 const getLog = (): LoggerLike => {
   if (_log) return _log;
   try {
-    if (typeof window !== 'undefined' && window.electronAPI) {
-      // Renderer context — dynamic import not possible synchronously, use console
-      _log = consoleLog;
-    } else {
-      // Main process context — try mainLogger (already imported at build time via webpack)
-      _log = consoleLog;
-    }
+    _log = consoleLog;
   } catch {
     _log = consoleLog;
   }

@@ -24,13 +24,9 @@
  */
 
 import type { FormInstance } from 'antd';
+import type { EnvironmentContextLike } from '../../../../types/http';
 
-interface EnvironmentContext {
-    environmentsReady: boolean;
-    activeEnvironment: string;
-    getAllVariables: () => Record<string, string>;
-    resolveTemplate?: (text: string) => string;
-}
+type EnvironmentContext = EnvironmentContextLike;
 
 interface ValidationError {
     message: string;
@@ -42,7 +38,6 @@ interface SourceFormValues {
         enabled?: boolean;
         path?: string;
     };
-    [key: string]: unknown;
 }
 
 /**
@@ -66,12 +61,7 @@ interface SourceFormValues {
 export const validateUrlField = (rule: unknown, value: string, sourceType: string, envContext: EnvironmentContext, form: FormInstance) => {
     // Skip validation for non-HTTP sources or empty values
     if (!value || sourceType !== 'http') return Promise.resolve();
-    
-    // Ensure value is a string for pattern matching
-    if (typeof value !== 'string') {
-        return Promise.resolve();
-    }
-    
+
     // Skip validation if environments aren't ready to prevent false errors
     if (!envContext.environmentsReady) {
         return Promise.resolve();

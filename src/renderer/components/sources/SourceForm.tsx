@@ -56,6 +56,7 @@ import {
     generateTempSourceId,
     createTestSourceId
 } from './source-form';
+import type { NewSourceData } from './source-form';
 
 const log = createLogger('SourceForm');
 const { Option } = Select;
@@ -70,7 +71,7 @@ const { Option } = Select;
  * @param {Function} props.onAddSource - Callback function for adding new sources
  * @returns {JSX.Element} Source form component
  */
-interface SourceFormProps { onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>; }
+interface SourceFormProps { onAddSource: (sourceData: NewSourceData) => Promise<boolean>; }
 const SourceForm = ({ onAddSource }: SourceFormProps) => {
     // Form and component state
     const [form] = Form.useForm();

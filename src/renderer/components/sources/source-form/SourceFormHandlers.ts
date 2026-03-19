@@ -24,6 +24,8 @@
 import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './SourceFormValidation';
+import type { SourceRequestOptions, JsonFilter, RefreshOptions } from '../../../../types/source';
+import type { EnvironmentContextLike } from '../../../../types/http';
 
 interface SourceTypeChangeParams {
     setSourceType: (value: string) => void;
@@ -50,11 +52,32 @@ interface HttpOptionsRef {
     forceTotpState?: (enabled: boolean, secret: string) => void;
 }
 
+interface SourceFormValues {
+    sourceType: string;
+    sourcePath: string;
+    sourceMethod?: string;
+    sourceTag?: string;
+    requestOptions?: SourceRequestOptions;
+    jsonFilter?: JsonFilter;
+    refreshOptions?: RefreshOptions;
+}
+
+export interface NewSourceData {
+    sourceType: string;
+    sourcePath: string;
+    sourceTag: string;
+    sourceMethod?: string;
+    requestOptions?: SourceRequestOptions;
+    jsonFilter?: JsonFilter;
+    refreshOptions?: RefreshOptions;
+    needsInitialFetch?: boolean;
+}
+
 interface FormSubmissionParams {
     setSubmitting: (submitting: boolean) => void;
     form: FormInstance;
-    envContext: { environmentsReady: boolean; activeEnvironment: string; getAllVariables: () => Record<string, string>; [key: string]: unknown };
-    onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+    envContext: EnvironmentContextLike;
+    onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
     untrackTotpSecret: (sourceId: string) => void;
     testSourceId: string;
     refs: {
@@ -220,7 +243,7 @@ export const createFormSubmissionHandler = ({
     refs,
     stateSetters,
     log
-}: FormSubmissionParams) => async (values: Record<string, any>) => {
+}: FormSubmissionParams) => async (values: SourceFormValues) => {
     try {
         setSubmitting(true);
 
@@ -279,9 +302,9 @@ export const createFormSubmissionHandler = ({
  * @param {Object} log - Logger instance
  * @returns {Object} Prepared source data
  */
-const prepareSourceData = (values: Record<string, any>, form: FormInstance, log: { debug: (message: string, data?: unknown) => void }) => {
+const prepareSourceData = (values: SourceFormValues, form: FormInstance, log: { debug: (message: string, data?: unknown) => void }): NewSourceData => {
     // Prepare basic source data
-    const sourceData: Record<string, any> = {
+    const sourceData: NewSourceData = {
         sourceType: values.sourceType,
         sourcePath: values.sourcePath,
         sourceTag: values.sourceTag || ''
@@ -292,29 +315,31 @@ const prepareSourceData = (values: Record<string, any>, form: FormInstance, log:
         sourceData.sourceMethod = values.sourceMethod || 'GET';
 
         // Make a deep copy of request options to avoid reference issues
-        sourceData.requestOptions = JSON.parse(JSON.stringify(values.requestOptions || {}));
-        
+        const requestOptions: SourceRequestOptions = JSON.parse(JSON.stringify(values.requestOptions || {}));
+
         // Ensure TOTP secret is preserved from form if not already present
-        if (!sourceData.requestOptions.totpSecret) {
+        if (!requestOptions.totpSecret) {
             const formRequestOptions = form.getFieldValue('requestOptions');
             if (formRequestOptions?.totpSecret) {
-                sourceData.requestOptions.totpSecret = formRequestOptions.totpSecret;
+                requestOptions.totpSecret = formRequestOptions.totpSecret;
                 log.debug('[SourceForm] Added TOTP secret from form requestOptions');
             }
         }
 
         // Ensure required arrays are initialized
-        if (!sourceData.requestOptions.headers) {
-            sourceData.requestOptions.headers = [];
+        if (!requestOptions.headers) {
+            requestOptions.headers = [];
         }
 
-        if (!sourceData.requestOptions.queryParams) {
-            sourceData.requestOptions.queryParams = [];
+        if (!requestOptions.queryParams) {
+            requestOptions.queryParams = [];
         }
+
+        sourceData.requestOptions = requestOptions;
 
         // Add form-specific configurations
-        sourceData.jsonFilter = values.jsonFilter || { enabled: false, path: '' };
-        sourceData.refreshOptions = values.refreshOptions || { interval: 0 };
+        sourceData.jsonFilter = values.jsonFilter || { enabled: false };
+        sourceData.refreshOptions = values.refreshOptions || { enabled: false };
 
         // Mark source as needing initial fetch
         sourceData.needsInitialFetch = true;

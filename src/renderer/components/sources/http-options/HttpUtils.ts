@@ -240,7 +240,7 @@ export const createTotpCodeGenerator = ({
 
 
         // Use the window.generateTOTP function
-        const totpCode = await window.generateTOTP(normalizedSecret, { period: 30, digits: 6, timeOffset: 0 });
+        const totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
 
         if (totpCode === 'ERROR') {
             setTotpError('Failed to generate code. Check your secret key.');

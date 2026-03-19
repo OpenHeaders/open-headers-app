@@ -1,32 +1,16 @@
-// In useHttp.tsx, update the imports and hook usage:
-
 import { useCallback } from 'react';
 import { useTotpState, useEnvironments } from '../contexts';
 import { createLogger } from '../utils/error-handling/logger';
+import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../types/source';
+import type { HttpRequestOptions, HttpResult, HttpProgressCallback } from '../../types/http';
 const log = createLogger('useHttp');
 
-interface JsonFilter {
-  enabled: boolean;
-  path?: string;
-}
-
-interface HeaderEntry {
-  key: string;
-  value?: string;
-}
-
-interface QueryParamEntry {
-  key: string;
-  value?: string;
-}
-
 interface RequestOptions {
-  headers?: HeaderEntry[] | Record<string, string>;
-  queryParams?: QueryParamEntry[] | Record<string, string>;
+  headers?: SourceHeader[] | Record<string, string>;
+  queryParams?: SourceQueryParam[] | Record<string, string>;
   body?: string | Record<string, unknown>;
   contentType?: string;
   totpSecret?: string;
-  [key: string]: unknown;
 }
 
 interface FormattedRequestOptions {
@@ -35,17 +19,8 @@ interface FormattedRequestOptions {
   body?: string | Record<string, unknown>;
   contentType: string;
   totpSecret?: string;
-  [key: string]: unknown;
-}
-
-interface HttpResult {
-  content: string;
-  originalResponse?: string;
-  headers?: Record<string, string>;
-  rawResponse?: string;
-  filteredWith?: string;
-  isFiltered?: boolean;
-  duration?: number;
+  enableRetries?: boolean;
+  connectionOptions?: import('../../types/http').HttpConnectionOptions;
 }
 
 interface HttpErrorWithResponse extends Error {
@@ -76,7 +51,7 @@ interface UseHttpReturn {
     method?: string,
     requestOptions?: RequestOptions,
     jsonFilter?: JsonFilter,
-    progressCallback?: ((loaded: number, total: number) => void) | null
+    progressCallback?: HttpProgressCallback | null
   ) => Promise<HttpResult>;
   testRequest: (
     url: string,
@@ -84,7 +59,7 @@ interface UseHttpReturn {
     requestOptions: RequestOptions,
     jsonFilter: JsonFilter,
     sourceId?: string | null,
-    progressCallback?: ((loaded: number, total: number) => void) | null
+    progressCallback?: HttpProgressCallback | null
   ) => Promise<string>;
   applyJsonFilter: (body: string | Record<string, unknown>, jsonFilter: JsonFilter) => string | Record<string, unknown>;
 }
@@ -269,8 +244,8 @@ export function useHttp(): UseHttpReturn {
         url: string,
         method: string = 'GET',
         requestOptions: RequestOptions = {},
-        jsonFilter: JsonFilter = { enabled: false, path: '' },
-        progressCallback: ((loaded: number, total: number) => void) | null = null
+        jsonFilter: JsonFilter = { enabled: false },
+        progressCallback: HttpProgressCallback | null = null
     ): Promise<HttpResult> => {
         // Normalize sourceId to string
         sourceId = String(sourceId);
@@ -329,7 +304,7 @@ export function useHttp(): UseHttpReturn {
                 // Substitute variables in TOTP secret
                 let substitutedSecret = substituteVariables(requestOptions.totpSecret, null);
                 const normalizedSecret = substitutedSecret.replace(/\s/g, '').replace(/=/g, '');
-                totpCode = await (window as unknown as { generateTOTP: (secret: string, period: number, digits: number, timeOffset: number) => Promise<string> }).generateTOTP(normalizedSecret, 30, 6, 0);
+                totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
                 log.debug(`[useHttp] TOTP code generated for ${sourceId}: ${totpCode ? totpCode.substring(0, 3) + '***' : 'ERROR'}`);
 
                 if (!totpCode || totpCode === 'ERROR') {
@@ -359,35 +334,27 @@ export function useHttp(): UseHttpReturn {
 
             // Process headers from array format to object
             if (Array.isArray(requestOptions.headers)) {
-                (requestOptions.headers as HeaderEntry[]).forEach((header: HeaderEntry) => {
+                requestOptions.headers.forEach((header) => {
                     if (header && header.key) {
-                        let headerValue = header.value || '';
-                        headerValue = substituteVariables(headerValue, totpCode);
-                        formattedOptions.headers[header.key] = headerValue;
+                        formattedOptions.headers[header.key] = substituteVariables(header.value || '', totpCode);
                     }
                 });
-            } else if (typeof requestOptions.headers === 'object' && requestOptions.headers !== null) {
-                Object.entries(requestOptions.headers as Record<string, string>).forEach(([key, value]: [string, string]) => {
-                    let headerValue = value || '';
-                    headerValue = substituteVariables(headerValue, totpCode);
-                    formattedOptions.headers[key] = headerValue;
+            } else if (requestOptions.headers) {
+                Object.entries(requestOptions.headers).forEach(([key, value]) => {
+                    formattedOptions.headers[key] = substituteVariables(value || '', totpCode);
                 });
             }
 
             // Process query params from array format to object
             if (Array.isArray(requestOptions.queryParams)) {
-                (requestOptions.queryParams as QueryParamEntry[]).forEach((param: QueryParamEntry) => {
+                requestOptions.queryParams.forEach((param) => {
                     if (param && param.key) {
-                        let paramValue = param.value || '';
-                        paramValue = substituteVariables(paramValue, totpCode);
-                        formattedOptions.queryParams[param.key] = paramValue;
+                        formattedOptions.queryParams[param.key] = substituteVariables(param.value || '', totpCode);
                     }
                 });
-            } else if (typeof requestOptions.queryParams === 'object' && requestOptions.queryParams !== null) {
-                Object.entries(requestOptions.queryParams as Record<string, string>).forEach(([key, value]: [string, string]) => {
-                    let paramValue = value || '';
-                    paramValue = substituteVariables(paramValue, totpCode);
-                    formattedOptions.queryParams[key] = paramValue;
+            } else if (requestOptions.queryParams) {
+                Object.entries(requestOptions.queryParams).forEach(([key, value]) => {
+                    formattedOptions.queryParams[key] = substituteVariables(value || '', totpCode);
                 });
             }
 
@@ -496,7 +463,7 @@ export function useHttp(): UseHttpReturn {
         requestOptions: RequestOptions,
         jsonFilter: JsonFilter,
         sourceId: string | null = null,
-        progressCallback: ((loaded: number, total: number) => void) | null = null
+        progressCallback: HttpProgressCallback | null = null
     ): Promise<string> => {
         try {
             // Normalize sourceId - always use test- prefix for test requests

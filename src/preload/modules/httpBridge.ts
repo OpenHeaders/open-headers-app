@@ -2,20 +2,10 @@ import electron from 'electron';
 const { ipcRenderer } = electron;
 import timeUtils from './timeUtils';
 import log from './logger';
-
-interface ConnectionOptions {
-    keepAlive?: boolean;
-    timeout?: number;
-    requestId?: string;
-}
-
-interface HttpRequestOptions {
-    connectionOptions?: ConnectionOptions;
-    [key: string]: unknown;
-}
+import type { HttpRequestOptions } from '../../types/http';
 
 class HttpBridge {
-    async makeHttpRequest(url: string, method: string, options: HttpRequestOptions): Promise<unknown> {
+    async makeHttpRequest(url: string, method: string, options: HttpRequestOptions): Promise<string> {
         const requestId = timeUtils.now().toString(36) + Math.random().toString(36).substring(2, 5);
 
         try {

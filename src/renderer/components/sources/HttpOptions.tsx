@@ -25,8 +25,10 @@
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useCallback } from 'react';
 import { Tabs } from 'antd';
+import type { FormInstance } from 'antd';
 import { useTotpState, useEnvironments } from '../../contexts';
 import { useHttp } from '../../hooks/useHttp';
+import type { TestResponseContent } from '../../../types/http';
 
 // Import extracted modules and components
 import {
@@ -66,9 +68,16 @@ import {
 } from './http-options';
 
 
-/**
- * HttpOptions component for configuring HTTP requests with modular architecture
- */
+interface HttpOptionsProps {
+    form: FormInstance;
+    sourceId: string;
+    onTestResponse?: (response: string) => void;
+    onTotpChange?: (enabled: boolean, secret: string) => void;
+    initialTotpEnabled?: boolean;
+    initialTotpSecret?: string;
+    onTestingChange?: (testing: boolean) => void;
+}
+
 const HttpOptions = forwardRef(({
     form,
     sourceId,
@@ -77,7 +86,7 @@ const HttpOptions = forwardRef(({
     initialTotpEnabled,
     initialTotpSecret,
     onTestingChange
-}: Record<string, any>, ref) => {
+}: HttpOptionsProps, ref) => {
     // Get contexts
     const envContext = useEnvironments();
     const http = useHttp();
@@ -92,7 +101,7 @@ const HttpOptions = forwardRef(({
     // Component state
     const [contentType, setContentType] = useState('application/json');
     const [testResponseVisible, setTestResponseVisible] = useState(false);
-    const [testResponseContent, setTestResponseContent] = useState('');
+    const [testResponseContent, setTestResponseContent] = useState<TestResponseContent | null>(null);
     const [testing, setTesting] = useState(false);
     const [, setRawResponse] = useState<string | null>(null);
     
@@ -266,7 +275,7 @@ const HttpOptions = forwardRef(({
             return true;
         },
         handleTestRequest: handleTestRequest,
-        handleTestRequestWithParams: (sourcePath: string, sourceMethod: string, progressCallback: (progress: number) => void, cleanupCallback: () => void) =>
+        handleTestRequestWithParams: (sourcePath: string, sourceMethod: string, progressCallback: (current: number, total: number) => void, cleanupCallback: () => void) =>
             handleTestRequest(sourcePath, sourceMethod, progressCallback, cleanupCallback)
     }));
 

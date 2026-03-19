@@ -59,6 +59,7 @@ export {
     createTestResponseHandler,
     createFormSubmissionHandler
 } from './SourceFormHandlers';
+export type { NewSourceData } from './SourceFormHandlers';
 
 // Utility Functions Exports
 // Helper functions for scroll handling, state management, and form utilities

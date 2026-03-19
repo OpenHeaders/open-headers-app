@@ -18,25 +18,8 @@
 import React from 'react';
 import { Card, Tabs } from 'antd';
 import { getStatusText, formatContentByType } from './HttpTesting';
+import type { TestResponseContent } from '../../../../types/http';
 
-/**
- * Response Preview card component for response display
- * 
- * @param {Object} props - Component props
- * @param {boolean} props.testResponseVisible - Response visibility state
- * @param {*} props.testResponseContent - Response content to display
- * @returns {JSX.Element} Response preview card component
- */
-interface TestResponseContent {
-    statusCode?: number;
-    duration?: number;
-    error?: string;
-    details?: string;
-    retryStrategy?: { reason: string };
-    filteredWith?: string;
-    body?: string;
-    headers?: Record<string, string>;
-}
 interface ResponsePreviewCardProps { testResponseVisible: boolean; testResponseContent: TestResponseContent | string | null; }
 const ResponsePreviewCard = ({ testResponseVisible, testResponseContent }: ResponsePreviewCardProps) => {
     if (!testResponseVisible) {
