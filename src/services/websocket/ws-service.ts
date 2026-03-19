@@ -16,29 +16,95 @@ import { WSClientHandler } from './ws-client-handler';
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
 
+interface ExtendedWebSocket extends WS {
+    clientId?: string;
+    isAlive?: boolean;
+    isInitialized?: boolean;
+}
+
+interface ClientInfo {
+    id: string;
+    connectionType: string;
+    browser: string;
+    browserVersion: string;
+    platform: string;
+    userAgent: string;
+    connectedAt: Date;
+    lastActivity: Date;
+    extensionVersion?: string;
+}
+
+interface InitLock {
+    status: 'initializing' | 'initialized';
+    promise: Promise<boolean> | null;
+}
+
+interface Source {
+    sourceId: string;
+    sourceContent?: string;
+}
+
+interface HeaderRule {
+    id: string | number;
+    headerName?: string;
+    headerValue?: string;
+    isEnabled?: boolean;
+    isDynamic?: boolean;
+    sourceId?: string | number;
+    hasEnvVars?: boolean;
+    [key: string]: unknown;
+}
+
+interface Rules {
+    header?: HeaderRule[];
+    [key: string]: unknown;
+}
+
+interface SourceServiceLike {
+    on?(event: string, handler: () => void): void;
+    getAllSources?(): Source[];
+}
+
+interface NetworkServiceLike {
+    getState(): { isOnline: boolean; networkQuality: string; lastUpdate: number } | null;
+    on(event: string, cb: (event: { newState?: { isOnline: boolean; networkQuality: string; lastUpdate: number } }) => void): void;
+}
+
+interface WSMessage {
+    type: string;
+    ruleId?: string | number;
+    enabled?: boolean;
+    ruleIds?: string[];
+    navigation?: Record<string, unknown>;
+    data?: Record<string, unknown>;
+    browser?: string;
+    version?: string;
+    extensionVersion?: string;
+}
+
 interface InitializeOptions {
     wsPort?: number;
     wssPort?: number;
-    sourceService?: any;
+    sourceService?: SourceServiceLike;
     appDataPath?: string;
-    networkService?: any;
+    networkService?: NetworkServiceLike;
 }
 
 class WebSocketService {
-    wss: any | null;
-    secureWss: any | null;
+    wss: WS.Server | null;
+    secureWss: WS.Server | null;
     httpServer: http.Server | null;
     httpsServer: https.Server | null;
     wsPort: number;
     wssPort: number;
     host: string;
     isInitializing: boolean;
-    sources: any[];
-    rules: any;
-    sourceService: any;
+    sources: Source[];
+    rules: Rules;
+    sourceService: SourceServiceLike | null;
     appDataPath: string | null;
-    connectedClients: Map<string, any>;
-    clientInitializationLocks: Map<string, any>;
+    connectedClients: Map<string, ClientInfo>;
+    clientInitializationLocks: Map<string, InitLock>;
     rulesBroadcastTimer: ReturnType<typeof setTimeout> | null;
     lastRulesBroadcast: number;
     _closing: boolean;
@@ -74,10 +140,10 @@ class WebSocketService {
         // Handlers
         this.certificateHandler = new WSCertificateHandler(this);
         this.recordingHandler = new WSRecordingHandler(this);
-        this.ruleHandler = new WSRuleHandler(this as any);
-        this.sourceHandler = new WSSourceHandler(this as any);
-        this.environmentHandler = new WSEnvironmentHandler(this as any);
-        this.clientHandler = new WSClientHandler(this as any);
+        this.ruleHandler = new WSRuleHandler(this);
+        this.sourceHandler = new WSSourceHandler(this);
+        this.environmentHandler = new WSEnvironmentHandler(this);
+        this.clientHandler = new WSClientHandler(this);
         this.networkStateHandler = null;
     }
 
@@ -138,9 +204,9 @@ class WebSocketService {
      */
     _broadcastToAll(message: string): number {
         let count = 0;
-        const send = (server: any | null) => {
+        const send = (server: WS.Server | null) => {
             if (!server) return;
-            server.clients.forEach((client: { readyState: number; send: (msg: string) => void }) => {
+            server.clients.forEach((client: WS) => {
                 if (client.readyState === WS.OPEN) {
                     try { client.send(message); count++; }
                     catch (e) { log.error('Error broadcasting to client:', e); }
@@ -249,14 +315,14 @@ class WebSocketService {
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
 
-        const terminateAll = (server: any | null) => {
+        const terminateAll = (server: WS.Server | null) => {
             if (!server) return;
             for (const c of server.clients) { try { c.terminate(); } catch (e) { /* ignore */ } }
         };
         terminateAll(this.wss);
         terminateAll(this.secureWss);
 
-        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: any | null, label: string): Promise<void> => {
+        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: WS.Server | null, label: string): Promise<void> => {
             if (!httpSrv) return Promise.resolve();
             return new Promise((resolve) => {
                 const t = setTimeout(() => { log.warn(`${label} close timed out`); resolve(); }, 2000);
@@ -272,8 +338,8 @@ class WebSocketService {
 
     // ── Message routing ───────────────────────────
 
-    _configureWebSocketServer(server: any, serverType: string): void {
-        server.on('connection', (ws: any, request: http.IncomingMessage) => {
+    _configureWebSocketServer(server: WS.Server, serverType: string): void {
+        server.on('connection', (ws: ExtendedWebSocket, request: http.IncomingMessage) => {
             log.info(`${serverType} client connected`);
 
             const clientId = `${serverType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -305,9 +371,9 @@ class WebSocketService {
                 if (c) c.lastActivity = new Date();
             });
 
-            ws.on('message', (msg: string) => {
+            ws.on('message', (msg: WS.RawData) => {
                 try {
-                    const data = JSON.parse(msg);
+                    const data = JSON.parse(msg.toString()) as WSMessage;
                     const c = this.connectedClients.get(clientId);
                     if (c) c.lastActivity = new Date();
 
@@ -334,7 +400,7 @@ class WebSocketService {
         });
     }
 
-    _dispatchMessage(ws: any, data: any): void {
+    _dispatchMessage(ws: ExtendedWebSocket, data: WSMessage): void {
         switch (data.type) {
             case 'requestSources':
                 if (ws.isInitialized) this.sourceHandler.sendSourcesToClient(ws);
@@ -349,29 +415,29 @@ class WebSocketService {
                 this.recordingHandler.sendRecordingHotkey(ws);
                 break;
             case 'toggleRule':
-                this.ruleHandler.handleToggleRule(data.ruleId, data.enabled);
+                this.ruleHandler.handleToggleRule(data.ruleId as string | number, data.enabled as boolean);
                 break;
             case 'toggleAllRules':
-                this.ruleHandler.handleToggleAllRules(data.ruleIds, data.enabled);
+                this.ruleHandler.handleToggleAllRules(data.ruleIds as string[], data.enabled as boolean);
                 break;
             case 'saveRecording':
             case 'saveWorkflow':
-                this.recordingHandler.handleSaveRecordingMessage(ws, data);
+                this.recordingHandler.handleSaveRecordingMessage(ws, data as unknown as Parameters<WSRecordingHandler['handleSaveRecordingMessage']>[1]);
                 break;
             case 'focusApp':
-                this._handleFocusApp(data.navigation);
+                this._handleFocusApp(data.navigation || {});
                 break;
             case 'startSyncRecording':
                 log.info('Received startSyncRecording request:', data.data);
-                this.recordingHandler.handleStartSyncRecording(ws, data.data);
+                this.recordingHandler.handleStartSyncRecording(ws, data.data as unknown as Parameters<WSRecordingHandler['handleStartSyncRecording']>[1]);
                 break;
             case 'stopSyncRecording':
                 log.info('Received stopSyncRecording request:', data.data);
-                this.recordingHandler.handleStopSyncRecording(ws, data.data);
+                this.recordingHandler.handleStopSyncRecording(ws, data.data as unknown as Parameters<WSRecordingHandler['handleStopSyncRecording']>[1]);
                 break;
             case 'recordingStateSync':
                 log.info('Received recordingStateSync:', data.data);
-                this.recordingHandler.handleRecordingStateSync(ws, data.data);
+                this.recordingHandler.handleRecordingStateSync(ws, data.data as unknown as Parameters<WSRecordingHandler['handleRecordingStateSync']>[1]);
                 break;
         }
     }
@@ -405,7 +471,7 @@ class WebSocketService {
 
     isConnected(): boolean { return this.connectedClients.size > 0; }
 
-    sendToBrowserExtension(message: any): boolean {
+    sendToBrowserExtension(message: Record<string, unknown>): boolean {
         if (this.connectedClients.size === 0) {
             log.warn('No connected browser extensions to send message to');
             return false;
@@ -416,20 +482,20 @@ class WebSocketService {
     }
 
     // Source delegators
-    updateSources(sources: any): void { this.sourceHandler.updateSources(sources); }
+    updateSources(sources: Array<{ sourceId?: string; sourceContent?: string }> | Record<string, unknown>): void { this.sourceHandler.updateSources(sources); }
     onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
 
     // Rule delegators
-    updateRules(rules: any): void { this.ruleHandler.updateRules(rules); }
+    updateRules(rules: Rules): void { this.ruleHandler.updateRules(rules); }
     broadcastRules(): void { this.ruleHandler.broadcastRules(); }
 
     // Client delegators
-    getConnectionStatus(): Record<string, any> { return this.clientHandler.getConnectionStatus(); }
+    getConnectionStatus() { return this.clientHandler.getConnectionStatus(); }
 
     // Certificate delegators
-    checkCertificateTrust(): Promise<any> { return this.certificateHandler.checkCertificateTrust(); }
-    trustCertificate(): Promise<any> { return this.certificateHandler.trustCertificate(); }
-    untrustCertificate(): Promise<any> { return this.certificateHandler.untrustCertificate(); }
+    checkCertificateTrust() { return this.certificateHandler.checkCertificateTrust(); }
+    trustCertificate() { return this.certificateHandler.trustCertificate(); }
+    untrustCertificate() { return this.certificateHandler.untrustCertificate(); }
 
     // Recording delegators
     broadcastVideoRecordingState(enabled: boolean): void { this.recordingHandler.broadcastVideoRecordingState(enabled); }

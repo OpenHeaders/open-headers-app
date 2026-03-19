@@ -1,8 +1,10 @@
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType, Display, DesktopCapturerSource, IpcMainEvent } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import { errorMessage } from '../../types/common';
 
 const { desktopCapturer, BrowserWindow, ipcMain, screen: electronScreen } = electron;
 const { createLogger } = mainLogger;
@@ -21,9 +23,15 @@ interface RecordingOptions {
 }
 
 interface DisplayInfo {
-    currentDisplay?: any;
-    allDisplays?: any[];
-    windowPosition?: any;
+    currentDisplay?: BrowserDisplayInfo;
+    allDisplays?: BrowserDisplayInfo[];
+    windowPosition?: { x: number; y: number };
+}
+
+interface BrowserDisplayInfo {
+    id: string | number;
+    name?: string;
+    bounds: { left: number; top: number; width: number; height: number };
 }
 
 interface RecordingInfo {
@@ -140,9 +148,9 @@ class VideoCaptureService {
             }
 
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error starting recording:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -179,9 +187,9 @@ class VideoCaptureService {
             }
 
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error stopping recording:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -208,8 +216,8 @@ class VideoCaptureService {
             });
 
             // ALWAYS use screen capture when available - it has no offset issues
-            const screenSources = sources.filter((s: any) => s.id.startsWith('screen:'));
-            log.info(`Available screen sources: ${screenSources.map((s: any) => `${s.id}: ${s.name}`).join(', ')}`);
+            const screenSources = sources.filter((s: DesktopCapturerSource) => s.id.startsWith('screen:'));
+            log.info(`Available screen sources: ${screenSources.map((s: DesktopCapturerSource) => `${s.id}: ${s.name}`).join(', ')}`);
 
             let selectedScreen: CaptureSource | null = null;
 
@@ -226,17 +234,17 @@ class VideoCaptureService {
                 log.info(`Window position: ${JSON.stringify(displayInfo.windowPosition)}`);
 
                 // Log all browser displays for debugging
-                browserAllDisplays.forEach((d: any, i: number) => {
+                browserAllDisplays.forEach((d: BrowserDisplayInfo, i: number) => {
                     log.info(`Browser display ${i}: ${d.name || d.id} at (${d.bounds.left}, ${d.bounds.top}) size ${d.bounds.width}x${d.bounds.height}`);
                 });
 
                 // Log all Electron displays
-                displays.forEach((d: any, i: number) => {
+                displays.forEach((d: Display, i: number) => {
                     log.info(`Electron display ${i}: ID=${d.id} at (${d.bounds.x}, ${d.bounds.y}) size ${d.bounds.width}x${d.bounds.height}`);
                 });
 
                 // Match the browser's current display with Electron's displays
-                let targetDisplay: any = null;
+                let targetDisplay: Display | null = null;
                 let bestMatchScore = Infinity;
 
                 for (const display of displays) {
@@ -268,7 +276,7 @@ class VideoCaptureService {
                 // If we found the target display, match it to a screen source
                 if (targetDisplay) {
                     // Try to match by display ID in screen source
-                    selectedScreen = screenSources.find((source: any) => {
+                    selectedScreen = screenSources.find((source: DesktopCapturerSource) => {
                         const idParts = source.id.split(':');
                         if (idParts.length >= 3) {
                             const sourceDisplayId = idParts[1];
@@ -378,18 +386,18 @@ class VideoCaptureService {
     /**
      * Start recording in renderer process
      */
-    async startRecordingInRenderer(window: any, options: RendererOptions): Promise<RecordingResult> {
+    async startRecordingInRenderer(window: BrowserWindowType, options: RendererOptions): Promise<RecordingResult> {
         return new Promise((resolve) => {
             // Generate a unique channel for this recording
             const responseChannel = `video-recording-started-${options.recordingId}`;
 
             // Listen for response
-            ipcMain.once(responseChannel, (_event: any, result: RecordingResult) => {
+            ipcMain.once(responseChannel, (_event: IpcMainEvent, result: RecordingResult) => {
                 resolve(result);
             });
 
             // Send start command to renderer
-            if (window && window.webContents) {
+            if (window && !window.isDestroyed()) {
                 window.webContents.send('start-video-recording', {
                     ...options,
                     responseChannel
@@ -409,18 +417,18 @@ class VideoCaptureService {
     /**
      * Stop recording in renderer process
      */
-    async stopRecordingInRenderer(window: any, recordingId: string): Promise<RecordingResult> {
+    async stopRecordingInRenderer(window: BrowserWindowType, recordingId: string): Promise<RecordingResult> {
         return new Promise((resolve) => {
             // Generate a unique channel for this recording
             const responseChannel = `video-recording-stopped-${recordingId}`;
 
             // Listen for response
-            ipcMain.once(responseChannel, (_event: any, result: RecordingResult) => {
+            ipcMain.once(responseChannel, (_event: IpcMainEvent, result: RecordingResult) => {
                 resolve(result);
             });
 
             // Send stop command to renderer
-            if (window && window.webContents) {
+            if (window && !window.isDestroyed()) {
                 window.webContents.send('stop-video-recording', {
                     recordingId,
                     responseChannel
@@ -476,9 +484,9 @@ class VideoCaptureService {
         // Notify renderer that recording metadata was updated
         try {
             const allWindows = BrowserWindow.getAllWindows();
-            allWindows.forEach((window: any) => {
-                if (window && !window.isDestroyed()) {
-                    window.webContents.send('recording-metadata-updated', {
+            allWindows.forEach((win: BrowserWindowType) => {
+                if (win && !win.isDestroyed()) {
+                    win.webContents.send('recording-metadata-updated', {
                         recordingId: recording.recordingId,
                         hasVideo: true
                     });
