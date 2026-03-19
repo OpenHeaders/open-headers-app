@@ -48,7 +48,7 @@ interface ContentViewerSource {
     sourceType?: string;
     sourceMethod?: string;
     content?: string;
-    originalResponse?: Record<string, unknown>;
+    originalResponse?: Record<string, unknown> | string | null;
     [key: string]: unknown;
 }
 interface ContentViewerProps { source: ContentViewerSource | null; open: boolean; onClose: () => void; }
@@ -79,7 +79,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
             }
 
             // Extract headers from source using the HeaderExtractor utility
-            const extractedHeaders = extractHeaders(source);
+            const extractedHeaders = extractHeaders(source as Parameters<typeof extractHeaders>[0]);
             setResponseHeaders(extractedHeaders);
         }
     }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalResponse]);
