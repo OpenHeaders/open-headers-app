@@ -1,7 +1,7 @@
 # Dependency directories
 node_modules/
 
-# Webpack build output
+# Build output
 dist-webpack/
 
 # Electron-builder output

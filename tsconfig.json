@@ -13,7 +13,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
 
-    /* Emit is handled by webpack/babel — TS is for type-checking only */
+    /* Emit is handled by electron-vite — TS is for type-checking only */
     "noEmit": true,
 
     /* React JSX support */

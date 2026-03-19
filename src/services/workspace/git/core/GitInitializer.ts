@@ -100,7 +100,7 @@ class GitInitializer {
       try {
         const portableGitPath = app.isPackaged
           ? path.join(process.resourcesPath, 'git', 'bin', 'git.exe')
-          : path.join(__dirname, '..', '..', '..', '..', 'build', 'portable', 'PortableGit', 'bin', 'git.exe');
+          : path.join(__dirname, '..', '..', 'build', 'portable', 'PortableGit', 'bin', 'git.exe');
 
         await fsPromises.access(portableGitPath, (fs.constants as any).X_OK);
         this.gitPath = portableGitPath;

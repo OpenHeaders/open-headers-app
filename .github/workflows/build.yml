@@ -132,9 +132,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PACKAGES_PAT: ${{ secrets.PACKAGES_PAT }}
 
-      # Build webpack bundle
-      - name: Build webpack bundle
-        run: npm run webpack
+      # Build application
+      - name: Build application
+        run: npm run build
         env:
           NODE_ENV: production
 
