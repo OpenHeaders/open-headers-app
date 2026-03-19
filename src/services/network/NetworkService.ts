@@ -5,6 +5,7 @@ import net from 'net';
 import child_process from 'child_process';
 import util from 'util';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 import timeManager from '../core/TimeManager';
 
 const { createLogger } = mainLogger;
@@ -487,10 +488,10 @@ class NetworkService extends EventEmitter {
                 }
             });
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Error in network state check:', error);
             this.log.debug('Setting offline state due to check error', {
-                error: error.message,
+                error: errorMessage(error),
                 isInitialized: this.isInitialized,
                 timeSinceInit: timeManager.now() - this.initializationTime
             });
@@ -574,8 +575,8 @@ class NetworkService extends EventEmitter {
                 this.consecutiveOnlineChecks = 0;
                 this.consecutiveOfflineChecks = 0;
             }
-        } catch (error: any) {
-            this.log.debug('Quick connectivity check failed:', error.message);
+        } catch (error: unknown) {
+            this.log.debug('Quick connectivity check failed:', errorMessage(error));
         }
     }
 
@@ -619,8 +620,8 @@ class NetworkService extends EventEmitter {
         try {
             const dnsServers = dnsPromises.getServers();
             this.log.debug('Current DNS servers:', dnsServers);
-        } catch (error: any) {
-            this.log.debug('Could not get DNS servers:', error.message);
+        } catch (error: unknown) {
+            this.log.debug('Could not get DNS servers:', errorMessage(error));
         }
 
         const checkPromises = this.dnsTestHosts.map(async (host): Promise<DnsCheckResult> => {
@@ -650,9 +651,9 @@ class NetworkService extends EventEmitter {
                 const ips = Array.isArray(result) ? result : [result];
                 this.log.debug(`DNS check SUCCESS for ${host}: resolved to ${ips.join(', ')} in ${latency}ms`);
                 return { host, success: true, latency, ips };
-            } catch (error: any) {
-                this.log.debug(`DNS check FAILED for ${host}: ${error.message}`);
-                return { host, success: false, error: error.message };
+            } catch (error: unknown) {
+                this.log.debug(`DNS check FAILED for ${host}: ${errorMessage(error)}`);
+                return { host, success: false, error: errorMessage(error) };
             }
         });
 
@@ -859,9 +860,9 @@ class NetworkService extends EventEmitter {
 
             try {
                 socket.connect(endpoint.port, endpoint.host);
-            } catch (error: any) {
-                this.log.debug(`Connectivity ERROR to ${endpoint.name}: ${error.message}`);
-                resolve({ ...endpoint, success: false, error: error.message });
+            } catch (error: unknown) {
+                this.log.debug(`Connectivity ERROR to ${endpoint.name}: ${errorMessage(error)}`);
+                resolve({ ...endpoint, success: false, error: errorMessage(error) });
             }
         });
     }

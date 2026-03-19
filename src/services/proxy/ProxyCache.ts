@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import { errorMessage } from '../../types/common';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -49,7 +50,7 @@ class ProxyCache {
       await this.loadMetadata();
       await this.cleanup();
       this.log.info('Proxy cache initialized');
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error initializing cache:', error);
     }
   }
@@ -58,11 +59,11 @@ class ProxyCache {
     try {
       const entries = await atomicWriter.readJson(this.metadataPath);
       if (entries !== null) {
-        this.metadata = new Map(entries as any);
+        this.metadata = new Map(entries as Array<[string, CacheMetadata]>);
       } else {
         this.metadata = new Map();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error loading cache metadata:', error);
       this.metadata = new Map();
     }
@@ -72,7 +73,7 @@ class ProxyCache {
     try {
       const entries = Array.from(this.metadata.entries());
       await atomicWriter.writeJson(this.metadataPath, entries, { pretty: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error saving cache metadata:', error);
     }
   }
@@ -122,7 +123,7 @@ class ProxyCache {
         contentType: metadata.contentType,
         statusCode: metadata.statusCode
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error reading from cache:', error);
       await this.remove(key);
       return null;
@@ -154,7 +155,7 @@ class ProxyCache {
       await this.saveMetadata();
 
       this.log.debug(`Cached resource: ${url} (${data.length} bytes)`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error writing to cache:', error);
     }
   }
@@ -183,8 +184,8 @@ class ProxyCache {
       await fsPromises.unlink(cachePath);
       this.metadata.delete(key);
       await this.saveMetadata();
-    } catch (error: any) {
-      if (error.code !== 'ENOENT') {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         this.log.error('Error removing cache entry:', error);
       }
     }
@@ -197,7 +198,7 @@ class ProxyCache {
       this.metadata.clear();
       await this.saveMetadata();
       this.log.info('Cache cleared');
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error clearing cache:', error);
     }
   }

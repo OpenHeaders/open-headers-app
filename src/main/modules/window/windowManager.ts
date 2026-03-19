@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType, BrowserWindowConstructorOptions, WebContents } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
@@ -10,7 +11,7 @@ const { createLogger } = mainLogger;
 const log = createLogger('WindowManager');
 
 class WindowManager {
-    mainWindow: any;
+    mainWindow: BrowserWindowType | null;
     appLaunchArgs: {
         argv: string[];
         startMinimized: boolean;
@@ -29,7 +30,7 @@ class WindowManager {
     createWindow() {
         // Create window hidden to prevent flash during startup configuration
         // Platform-specific window configuration
-        const windowConfig: any = {
+        const windowConfig: BrowserWindowConstructorOptions = {
             width: 1350,
             height: 800,
             center: true,
@@ -80,7 +81,7 @@ class WindowManager {
 
     setupCSP() {
         // Electron-optimized Content Security Policy with local development support
-        this.mainWindow.webContents.session.webRequest.onHeadersReceived((details: any, callback: any) => {
+        this.mainWindow!.webContents.session.webRequest.onHeadersReceived((details, callback) => {
             callback({
                 responseHeaders: {
                     ...details.responseHeaders,
@@ -129,7 +130,7 @@ class WindowManager {
 
     setupWindowEvents() {
         // Smart window visibility based on launch context and user settings
-        this.mainWindow.once('ready-to-show', () => {
+        this.mainWindow!.once('ready-to-show', () => {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             try {
                 if (fs.existsSync(settingsPath)) {
@@ -152,7 +153,7 @@ class WindowManager {
                     if (!shouldHideWindow) {
                         log.info('Showing window on startup (manual launch detected)');
                         // Use the enhanced focus helper for consistent Windows behavior
-                        windowsFocusHelper.focusWindow(this.mainWindow);
+                        windowsFocusHelper.focusWindow(this.mainWindow!);
                     } else {
                         log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
                     }
@@ -171,20 +172,20 @@ class WindowManager {
                 } else {
                     log.info('No settings file, showing window by default');
                     // Use the enhanced focus helper for consistent Windows behavior
-                    windowsFocusHelper.focusWindow(this.mainWindow);
+                    windowsFocusHelper.focusWindow(this.mainWindow!);
                 }
             } catch (err) {
                 log.error('Error loading settings:', err);
                 // Use the enhanced focus helper for consistent Windows behavior
-                windowsFocusHelper.focusWindow(this.mainWindow);
+                windowsFocusHelper.focusWindow(this.mainWindow!);
             }
         });
 
         // Hide to system tray instead of closing unless app is quitting
-        this.mainWindow.on('close', (event: any) => {
+        this.mainWindow!.on('close', (event: Electron.Event) => {
             if (!appLifecycle.isQuittingApp()) {
                 event.preventDefault();
-                this.mainWindow.hide();
+                this.mainWindow!.hide();
                 return false;
             }
             return true;
@@ -192,7 +193,7 @@ class WindowManager {
 
         // Block navigation away from the app — prevents renderer compromise
         // from escalating to arbitrary URL loading with preload context
-        this.mainWindow.webContents.on('will-navigate', (event: any, navigationUrl: string) => {
+        this.mainWindow!.webContents.on('will-navigate', (event: Electron.Event, navigationUrl: string) => {
             const parsedUrl = new URL(navigationUrl);
             if (parsedUrl.protocol !== 'file:') {
                 event.preventDefault();
@@ -201,8 +202,8 @@ class WindowManager {
         });
 
         // Whitelist permissions — only allow what the app actually needs
-        this.mainWindow.webContents.session.setPermissionRequestHandler(
-            (_webContents: any, permission: string, callback: (granted: boolean) => void) => {
+        this.mainWindow!.webContents.session.setPermissionRequestHandler(
+            (_webContents: WebContents, permission: string, callback: (granted: boolean) => void) => {
                 const allowedPermissions = ['media', 'display-capture', 'screen'];
                 if (allowedPermissions.includes(permission)) {
                     callback(true);
@@ -214,7 +215,7 @@ class WindowManager {
         );
 
         // Redirect external links to default browser
-        this.mainWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
+        this.mainWindow!.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
             shell.openExternal(url).catch((err: Error) => {
                 log.error('Failed to open external link:', err);
             });
@@ -222,13 +223,13 @@ class WindowManager {
         });
     }
 
-    getMainWindow() {
+    getMainWindow(): BrowserWindowType | null {
         return this.mainWindow;
     }
 
     showWindow() {
         if (this.mainWindow) {
-            windowsFocusHelper.focusWindow(this.mainWindow);
+            windowsFocusHelper.focusWindow(this.mainWindow!);
 
             this.mainWindow.webContents.send('showApp');
         }
@@ -241,7 +242,7 @@ class WindowManager {
         }
     }
 
-    sendToWindow(channel: string, ...args: any[]) {
+    sendToWindow(channel: string, ...args: unknown[]) {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send(channel, ...args);
         }

@@ -16,7 +16,7 @@ class FileHandlers {
     async handleOpenFileDialog() {
         try {
             const mainWindow = windowManager.getMainWindow();
-            const result = await dialog.showOpenDialog(mainWindow, {
+            const result = await dialog.showOpenDialog(mainWindow!, {
                 properties: ['openFile']
             });
             return result.canceled ? null : result.filePaths[0];
@@ -29,7 +29,7 @@ class FileHandlers {
     async handleSaveFileDialog(_: IpcInvokeEvent, options: Electron.SaveDialogOptions = {}) {
         try {
             const mainWindow = windowManager.getMainWindow();
-            const result = await dialog.showSaveDialog(mainWindow, options);
+            const result = await dialog.showSaveDialog(mainWindow!, options);
             return result.canceled ? null : result.filePath;
         } catch (error) {
             log.error('Error in save file dialog:', error);

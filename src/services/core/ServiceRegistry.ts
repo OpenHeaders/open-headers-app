@@ -4,7 +4,7 @@ const { createLogger } = mainLogger;
 
 interface ServiceInfo {
   name: string;
-  service: any;
+  service: unknown;
   dependencies: string[];
   initMethod: string;
   initialized: boolean;
@@ -18,7 +18,7 @@ class ServiceRegistry {
   private initialized = false;
   private log = createLogger('ServiceRegistry');
 
-  register(name: string, service: any, dependencies: string[] = [], initMethod = 'initialize'): void {
+  register(name: string, service: unknown, dependencies: string[] = [], initMethod = 'initialize'): void {
     if (this.services.has(name)) {
       throw new Error(`Service ${name} is already registered`);
     }
@@ -34,7 +34,7 @@ class ServiceRegistry {
     });
   }
 
-  get(name: string): any {
+  get(name: string): unknown {
     const serviceInfo = this.services.get(name);
     if (!serviceInfo) {
       throw new Error(`Service ${name} not found in registry`);
@@ -57,7 +57,7 @@ class ServiceRegistry {
     this.initialized = true;
   }
 
-  async initializeService(name: string): Promise<any> {
+  async initializeService(name: string): Promise<unknown> {
     const serviceInfo = this.services.get(name);
     if (!serviceInfo) {
       throw new Error(`Service ${name} not found`);
@@ -84,8 +84,8 @@ class ServiceRegistry {
     try {
       await serviceInfo.initPromise;
       serviceInfo.initialized = true;
-    } catch (error: any) {
-      serviceInfo.error = error;
+    } catch (error: unknown) {
+      serviceInfo.error = error instanceof Error ? error : new Error(String(error));
       this.log.error(`Failed to initialize service ${name}:`, error);
       throw error;
     } finally {
@@ -97,13 +97,14 @@ class ServiceRegistry {
 
   private async doInitialize(serviceInfo: ServiceInfo): Promise<void> {
     const { service, initMethod } = serviceInfo;
+    const svc = service as Record<string, unknown>;
 
-    if (typeof service[initMethod] !== 'function') {
+    if (typeof svc[initMethod] !== 'function') {
       this.log.warn(`Service ${serviceInfo.name} does not have ${initMethod} method`);
       return;
     }
 
-    await service[initMethod]();
+    await (svc[initMethod] as () => Promise<void>)();
   }
 
   private buildInitializationOrder(): void {
@@ -134,8 +135,8 @@ class ServiceRegistry {
     this.initializationOrder = order;
   }
 
-  getAllServices(): Record<string, any> {
-    const services: Record<string, any> = {};
+  getAllServices(): Record<string, unknown> {
+    const services: Record<string, unknown> = {};
     for (const [name, serviceInfo] of this.services) {
       services[name] = serviceInfo.service;
     }
@@ -149,16 +150,16 @@ class ServiceRegistry {
       const serviceInfo = this.services.get(serviceName);
       if (serviceInfo && serviceInfo.initialized) {
         try {
-          const { service } = serviceInfo;
+          const svc = serviceInfo.service as Record<string, unknown>;
           const shutdownMethods = ['shutdown', 'destroy', 'close', 'stop'];
-          const shutdownMethod = shutdownMethods.find(method => typeof service[method] === 'function');
+          const shutdownMethod = shutdownMethods.find(method => typeof svc[method] === 'function');
 
           if (shutdownMethod) {
-            await service[shutdownMethod]();
+            await (svc[shutdownMethod] as () => Promise<void>)();
           }
 
           serviceInfo.initialized = false;
-        } catch (error: any) {
+        } catch (error: unknown) {
           this.log.error(`Error shutting down service ${serviceName}:`, error);
         }
       }

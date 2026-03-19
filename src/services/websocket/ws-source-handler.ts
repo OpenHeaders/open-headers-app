@@ -7,6 +7,7 @@ import WebSocket from 'ws';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');
@@ -14,7 +15,7 @@ const log = createLogger('WSSourceHandler');
 interface Source {
     sourceId?: string;
     sourceContent?: string;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface SourceServiceLike {
@@ -23,7 +24,7 @@ interface SourceServiceLike {
 }
 
 interface WSServiceLike {
-    rules: any;
+    rules: Record<string, unknown>;
     sources: Source[];
     appDataPath: string | null;
     sourceService: SourceServiceLike | null;
@@ -41,19 +42,21 @@ class WSSourceHandler {
     /**
      * Update sources and broadcast to all clients
      */
-    updateSources(sources: any): void {
-        if (sources && typeof sources === 'object' && sources.type === 'rules-update') {
-            if (sources.data && sources.data.rules) {
-                this.wsService.rules = sources.data.rules;
+    updateSources(sources: unknown): void {
+        if (sources && typeof sources === 'object' && !Array.isArray(sources) && 'type' in sources && (sources as Record<string, unknown>).type === 'rules-update') {
+            const rulesUpdate = sources as { data?: { rules?: Record<string, unknown> } };
+            if (rulesUpdate.data && rulesUpdate.data.rules) {
+                this.wsService.rules = rulesUpdate.data.rules;
                 this.wsService.ruleHandler.broadcastRules();
             }
             return;
         }
 
-        log.info(`Sources updated: ${sources.length} sources received`);
+        const sourceArray = sources as Source[];
+        log.info(`Sources updated: ${sourceArray.length} sources received`);
 
-        const contentChanged = this._hasSourceContentChanged(sources);
-        this.wsService.sources = sources;
+        const contentChanged = this._hasSourceContentChanged(sourceArray);
+        this.wsService.sources = sourceArray;
 
         if (!contentChanged) {
             log.info('Source content unchanged, skipping broadcast');
@@ -70,7 +73,7 @@ class WSSourceHandler {
     /**
      * Send sources to a specific client
      */
-    async sendSourcesToClient(ws: any): Promise<void> {
+    async sendSourcesToClient(ws: WebSocket): Promise<void> {
         return new Promise(async (resolve, reject) => {
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 reject(new Error('WebSocket not in OPEN state'));
@@ -92,7 +95,7 @@ class WSSourceHandler {
                         }
 
                         const workspaceList = JSON.parse(await fs.promises.readFile(workspacesPath, 'utf8')).workspaces || [];
-                        const activeWorkspace = workspaceList.find((w: any) => w.id === activeWorkspaceId);
+                        const activeWorkspace = workspaceList.find((w: { id: string; type?: string }) => w.id === activeWorkspaceId);
 
                         if (activeWorkspace && (activeWorkspace.type === 'git' || activeWorkspace.type === 'team')) {
                             const sourcesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
@@ -259,8 +262,8 @@ class WSSourceHandler {
                         activeWorkspaceId = workspaces.activeWorkspaceId;
                     }
                 }
-            } catch (error: any) {
-                log.warn('Could not read active workspace, using default:', error.message);
+            } catch (error: unknown) {
+                log.warn('Could not read active workspace, using default:', errorMessage(error));
             }
 
             const rulesPath = path.join(appDataPath, 'workspaces', activeWorkspaceId, 'rules.json');

@@ -42,6 +42,7 @@ interface InitLock {
 interface Source {
     sourceId: string;
     sourceContent?: string;
+    [key: string]: unknown;
 }
 
 interface HeaderRule {
@@ -482,7 +483,7 @@ class WebSocketService {
     }
 
     // Source delegators
-    updateSources(sources: Array<{ sourceId?: string; sourceContent?: string }> | Record<string, unknown>): void { this.sourceHandler.updateSources(sources); }
+    updateSources(sources: unknown): void { this.sourceHandler.updateSources(sources); }
     onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
 
     // Rule delegators

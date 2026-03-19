@@ -3,6 +3,7 @@
  * Manages network state broadcasting to WebSocket clients
  */
 
+import WS from 'ws';
 import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
@@ -26,8 +27,8 @@ interface NetworkServiceLike {
 }
 
 interface WSServiceLike {
-    wss: any;
-    secureWss: any;
+    wss: WS.Server | null;
+    secureWss: WS.Server | null;
 }
 
 class WSNetworkStateHandler {
@@ -110,7 +111,7 @@ class WSNetworkStateHandler {
 
         // Send to WS clients
         if (this.wsService.wss && this.wsService.wss.clients) {
-            this.wsService.wss.clients.forEach((client: any) => {
+            this.wsService.wss.clients.forEach((client: WS) => {
                 if (client.readyState === 1) { // WebSocket.OPEN
                     try {
                         client.send(message);
@@ -124,7 +125,7 @@ class WSNetworkStateHandler {
 
         // Send to WSS clients
         if (this.wsService.secureWss && this.wsService.secureWss.clients) {
-            this.wsService.secureWss.clients.forEach((client: any) => {
+            this.wsService.secureWss.clients.forEach((client: WS) => {
                 if (client.readyState === 1) { // WebSocket.OPEN
                     try {
                         client.send(message);
@@ -151,7 +152,7 @@ class WSNetworkStateHandler {
     /**
      * Send initial network state to a newly connected client
      */
-    sendInitialState(ws: any): void {
+    sendInitialState(ws: WS): void {
         if (!ws || ws.readyState !== 1) {
             return;
         }
