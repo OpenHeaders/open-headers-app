@@ -36,8 +36,8 @@ interface RefreshSource {
     sourceId: string;
     sourceType: string;
     refreshOptions?: {
-        interval?: string | number;
-        lastRefresh?: string | number;
+        interval?: number;
+        lastRefresh?: number | null;
         alignToMinute?: boolean;
         alignToHour?: boolean;
         alignToDay?: boolean;

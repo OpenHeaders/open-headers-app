@@ -74,7 +74,8 @@ interface SourceStatusCache {
 }
 
 /** Scheduler-compatible source type */
-type SchedulerSource = { sourceId: string; sourceType: string; refreshOptions?: { interval?: string | number; lastRefresh?: string | number; alignToMinute?: boolean; alignToHour?: boolean; alignToDay?: boolean } };
+/** Matches RefreshSource in NetworkAwareScheduler */
+type SchedulerSource = Source;
 
 import NetworkAwareScheduler from './NetworkAwareScheduler';
 import RefreshCoordinator from './RefreshCoordinator';
@@ -334,7 +335,7 @@ class RefreshManager {
     await this.sources.set(sourceId, normalizedSource);
 
     if (source.refreshOptions?.enabled && source.refreshOptions?.interval && source.refreshOptions.interval > 0) {
-      await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
+      await this.scheduler.scheduleSource(normalizedSource);
 
       if (!source.refreshOptions?.lastRefresh) {
         log.info(`Triggering immediate refresh for new source ${sourceId}`);
@@ -379,7 +380,7 @@ class RefreshManager {
 
     if (!wasEnabled && isEnabled) {
       log.info(`Auto-refresh enabled for ${sourceId}`);
-      await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
+      await this.scheduler.scheduleSource(normalizedSource);
 
       if (!normalizedSource.refreshOptions?.lastRefresh || !normalizedSource.sourceContent) {
         log.info(`Triggering immediate refresh for source ${sourceId} after enabling auto-refresh`);
@@ -424,7 +425,7 @@ class RefreshManager {
       }
 
       if (!normalizedSource.refreshOptions?.preserveTiming) {
-        await this.scheduler.scheduleSource(normalizedSource as SchedulerSource);
+        await this.scheduler.scheduleSource(normalizedSource);
         log.info(`Rescheduled source ${sourceId} with new interval`);
       } else {
         log.info(`Preserving existing timer for ${sourceId}, only updating interval`);
@@ -522,7 +523,7 @@ class RefreshManager {
             ...options,
             timeout: await this.getNetworkTimeout()
           }
-      ) as { success: boolean };
+      );
 
       if (result.success) {
         this.lastCacheUpdate = 0;
@@ -662,7 +663,7 @@ class RefreshManager {
           isRefreshing: false,
           lastRefresh: timeManager.now(),
           success: false,
-          error: (error as Error).message,
+          error: error instanceof Error ? error.message : String(error),
           failureCount: circuitStatusAfter.failureCount
         }
       });
@@ -751,7 +752,7 @@ class RefreshManager {
       reason: 'manual',
       priority: 'high',
       skipIfActive: false
-    }) as { success: boolean };
+    });
 
     return result.success;
   }

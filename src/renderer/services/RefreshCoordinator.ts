@@ -9,10 +9,33 @@ interface ActiveRefresh {
   priority: string;
 }
 
+/** Result returned by executeRefresh / createRefreshOperation */
+export interface RefreshResult {
+  success: boolean;
+  result?: unknown;
+  error?: string;
+  duration: number;
+  timestamp: number;
+}
+
+/** Result when refresh was skipped due to dedup */
+interface SkippedResult {
+  success: false;
+  skipped: true;
+  reason: string;
+}
+
+interface RefreshOptions {
+  priority?: string;
+  skipIfActive?: boolean;
+  timeout?: number;
+  reason?: string;
+}
+
 interface QueuedRefresh {
   refreshFn: (id: string) => Promise<unknown>;
-  options: Record<string, unknown>;
-  resolve: (value: unknown) => void;
+  options: RefreshOptions;
+  resolve: (value: RefreshResult | SkippedResult) => void;
   reject: (reason: unknown) => void;
   timestamp: number;
 }
@@ -69,7 +92,7 @@ class RefreshCoordinator {
   /**
    * Execute a refresh operation with coordination
    */
-  async executeRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string } = {}) {
+  async executeRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: RefreshOptions = {}): Promise<RefreshResult | SkippedResult> {
     const {
       priority = 'normal',
       skipIfActive = true,
@@ -85,7 +108,7 @@ class RefreshCoordinator {
       if (skipIfActive) {
         log.debug(`Skipping refresh for ${sourceId} - already active`);
         this.metrics.skippedRefreshes++;
-        return { skipped: true, reason: 'already_active' };
+        return { success: false, skipped: true, reason: 'already_active' } satisfies SkippedResult;
       } else {
         // Queue the refresh with size limit check
         return this.queueRefresh(sourceId, refreshFn, options);
@@ -120,10 +143,10 @@ class RefreshCoordinator {
   /**
    * Create a refresh operation with timeout
    */
-  createRefreshOperation(sourceId: string, refreshFn: (id: string) => Promise<unknown>, timeout: number, reason: string) {
+  createRefreshOperation(sourceId: string, refreshFn: (id: string) => Promise<unknown>, timeout: number, reason: string): Promise<RefreshResult> {
     const startTime = timeManager.now();
     
-    const refreshPromise = refreshFn(sourceId)
+    const refreshPromise: Promise<RefreshResult> = refreshFn(sourceId)
       .then((result: unknown) => {
         const duration = timeManager.now() - startTime;
         this.updateMetrics(duration);
@@ -155,7 +178,7 @@ class RefreshCoordinator {
       });
     
     // Add timeout with proper cleanup
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<never>((_, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Refresh timeout after ${timeout}ms`));
       }, timeout);
@@ -172,7 +195,7 @@ class RefreshCoordinator {
   /**
    * Queue a refresh operation with size limits
    */
-  async queueRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: { priority?: string; skipIfActive?: boolean; timeout?: number; reason?: string }) {
+  async queueRefresh(sourceId: string, refreshFn: (id: string) => Promise<unknown>, options: RefreshOptions): Promise<RefreshResult | SkippedResult> {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     

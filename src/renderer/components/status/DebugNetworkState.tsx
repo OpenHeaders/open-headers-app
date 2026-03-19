@@ -19,7 +19,7 @@ interface NetworkStateData {
     vpnActive?: boolean;
     version?: number;
     diagnostics?: NetworkDiagnostics;
-    primaryInterface?: string;
+    primaryInterface?: string | null;
     interfaces?: (NetworkInterface | string | [string, NetworkInterface])[];
     lastUpdate?: number;
     error?: string;
@@ -38,7 +38,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
         try {
             if (window.electronAPI && window.electronAPI.getNetworkState) {
                 const state = await window.electronAPI.getNetworkState();
-                setNetworkState(state as NetworkStateData);
+                setNetworkState(state);
                 setLastUpdate(new Date());
             } else {
                 console.error('electronAPI.getNetworkState not available');
@@ -46,7 +46,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
             }
         } catch (error) {
             console.error('Failed to get network state:', error);
-            setNetworkState({ error: (error as Error).message });
+            setNetworkState({ error: error instanceof Error ? error.message : String(error) });
         }
     };
 
@@ -182,7 +182,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
                                     <div style={{ fontSize: 10, color: '#ccc' }}>
                                         {networkState.interfaces.slice(0, 4).map((iface, idx: number) => (
                                             <div key={idx}>
-                                                {Array.isArray(iface) ? iface[0] : typeof iface === 'object' && iface !== null ? (iface as NetworkInterface).name || String(iface) : String(iface)}
+                                                {Array.isArray(iface) ? iface[0] : typeof iface === 'object' && iface !== null ? iface.name || String(iface) : String(iface)}
                                             </div>
                                         ))}
                                         {networkState.interfaces.length > 4 && <div>+{networkState.interfaces.length - 4} more</div>}
