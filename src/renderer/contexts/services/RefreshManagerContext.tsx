@@ -41,7 +41,7 @@ interface RefreshStatus {
 }
 
 interface HttpService {
-  request: (sourceId: string, url: string, method: string, options: Record<string, unknown>, jsonFilter: Record<string, unknown>) => Promise<unknown>;
+  request: (sourceId: string, url: string | undefined, method: string | undefined, options: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> }>;
 }
 
 interface RefreshManagerContextValue {
@@ -69,14 +69,14 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     // Update HTTP service reference when http changes
     useEffect(() => {
         httpServiceRef.current = {
-            request: async (sourceId: string, url: string, method: string, options: Record<string, unknown>, jsonFilter: Record<string, unknown>) => {
+            request: async (sourceId: string, url: string | undefined, method: string | undefined, options: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => {
                 return await http.request(
                     sourceId,
-                    url,
-                    method,
+                    url as Parameters<typeof http.request>[1],
+                    method as Parameters<typeof http.request>[2],
                     options as Parameters<typeof http.request>[3],
                     jsonFilter as unknown as Parameters<typeof http.request>[4]
-                );
+                ) as { content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> };
             }
         };
     }, [http]);
@@ -145,7 +145,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                 await new Promise(resolve => setTimeout(resolve, 100));
 
                 await refreshManagerIntegration.initialize(
-                    httpServiceRef.current as unknown as Record<string, unknown>,
+                    httpServiceRef.current!,
                     updateCallback
                 );
 

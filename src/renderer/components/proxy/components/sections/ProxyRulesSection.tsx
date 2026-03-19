@@ -3,6 +3,7 @@ import { Card, Space, Typography, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { ProxyRuleTableModular } from '../tables';
 import { ProxyRuleFormModular } from '../forms';
+import type { ProxyRule, ProxySource, HeaderRule } from '../tables/ProxyRuleTableColumns';
 
 const { Title } = Typography;
 
@@ -120,10 +121,10 @@ const ProxyRulesSection = ({
                     </div>
 
                     <ProxyRuleTableModular
-                        rules={rules}
-                        sources={sources}
-                        headerRules={headerRules}
-                        onEdit={handleEditRule}
+                        rules={rules as ProxyRule[]}
+                        sources={sources as ProxySource[]}
+                        headerRules={headerRules as HeaderRule[]}
+                        onEdit={handleEditRule as unknown as (rule: ProxyRule) => void}
                         onDelete={onDeleteRule}
                         onToggle={onToggleRule}
                         onAdd={handleAddRule}
