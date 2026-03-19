@@ -3,15 +3,26 @@ import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
+import { errorMessage } from '../../../types/common';
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('AutoUpdater');
+
+// Use electron-updater's own types instead of redeclaring
+import type { UpdateInfo, UpdateDownloadedEvent } from 'electron-updater';
+
+interface DownloadProgress {
+    bytesPerSecond: number;
+    percent: number;
+    total: number;
+    transferred: number;
+}
 
 class AutoUpdaterManager {
     updateCheckInProgress: boolean;
     updateDownloadInProgress: boolean;
     updateDownloaded: boolean;
-    downloadedUpdateInfo: any;
+    downloadedUpdateInfo: UpdateDownloadedEvent | null;
     networkErrorRetryTimer: ReturnType<typeof setTimeout> | null;
     NETWORK_RETRY_INTERVAL: number;
     CHECK_INTERVAL: number;
@@ -30,11 +41,11 @@ class AutoUpdaterManager {
     setupAutoUpdater() {
         // Configure logging to filter electron-updater verbose output
         autoUpdater.logger = {
-            info: (...args: any[]) => log.info('[AutoUpdater]', ...args),
-            warn: (...args: any[]) => log.warn('[AutoUpdater]', ...args),
-            error: (...args: any[]) => log.error('[AutoUpdater]', ...args),
+            info: (...args: unknown[]) => log.info('[AutoUpdater]', ...args),
+            warn: (...args: unknown[]) => log.warn('[AutoUpdater]', ...args),
+            error: (...args: unknown[]) => log.error('[AutoUpdater]', ...args),
             debug: () => {}
-        } as any;
+        } as typeof autoUpdater.logger;
         autoUpdater.allowDowngrade = false;
         autoUpdater.autoDownload = true;
         autoUpdater.allowPrerelease = false;
@@ -62,26 +73,26 @@ class AutoUpdaterManager {
             this.updateCheckInProgress = true;
         });
 
-        autoUpdater.on('update-available', (info: any) => {
+        autoUpdater.on('update-available', (info: UpdateInfo) => {
             this.updateCheckInProgress = false;
             this.updateDownloadInProgress = true;
 
             windowManager.sendToWindow('update-available', info);
         });
 
-        autoUpdater.on('update-not-available', (info: any) => {
+        autoUpdater.on('update-not-available', (info: UpdateInfo) => {
             this.updateCheckInProgress = false;
 
             windowManager.sendToWindow('update-not-available', info);
             windowManager.sendToWindow('clear-update-checking-notification');
         });
 
-        autoUpdater.on('download-progress', (progressObj: any) => {
+        autoUpdater.on('download-progress', (progressObj: DownloadProgress) => {
             this.updateDownloadInProgress = true;
             windowManager.sendToWindow('update-progress', progressObj);
         });
 
-        autoUpdater.on('update-downloaded', (info: any) => {
+        autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
             this.updateDownloadInProgress = false;
             this.updateDownloaded = true;
             this.downloadedUpdateInfo = info; // Store for later retrieval
@@ -125,8 +136,8 @@ class AutoUpdaterManager {
         if (err.message.includes('code signature')) {
             log.error('Code signature validation error details:', {
                 message: err.message,
-                code: (err as any).code,
-                errno: (err as any).errno
+                code: (err as NodeJS.ErrnoException).code,
+                errno: (err as NodeJS.ErrnoException).errno
             });
         }
     }
@@ -249,13 +260,13 @@ class AutoUpdaterManager {
                         }
                     }, 10000); // 10 second timeout as a failsafe
                 });
-        } catch (err: any) {
+        } catch (err: unknown) {
             this.updateCheckInProgress = false;
             log.error('Error calling checkForUpdates:', err);
             windowManager.sendToWindow('clear-update-checking-notification');
 
             if (isManual) {
-                windowManager.sendToWindow('update-error', err.message);
+                windowManager.sendToWindow('update-error', errorMessage(err));
             }
         }
     }
@@ -264,7 +275,7 @@ class AutoUpdaterManager {
      * IPC handler for update checks from the renderer.
      * Thin transport layer — delegates to checkForUpdatesManual().
      */
-    handleManualUpdateCheck(_event: any, isManual: boolean) {
+    handleManualUpdateCheck(_event: Electron.IpcMainEvent, isManual: boolean) {
         this.checkForUpdatesManual(isManual);
     }
 
@@ -290,7 +301,7 @@ class AutoUpdaterManager {
             setTimeout(() => {
                 app.exit(0);
             }, 3000);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Failed to install update:', error);
             this.updateDownloaded = true; // Reset back since install failed
 
@@ -302,7 +313,7 @@ class AutoUpdaterManager {
                     type: 'error',
                     title: 'Update Error',
                     message: 'Failed to install update',
-                    detail: error.message || 'Unknown error',
+                    detail: errorMessage(error),
                     buttons: ['OK']
                 });
             }
