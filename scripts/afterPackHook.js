@@ -105,8 +105,8 @@ exports.default = async function(context) {
 
     console.log('Running afterPack hook for Linux build...');
 
-    // Path to the source file in dist-webpack
-    const sourceFile = path.join(process.cwd(), 'dist-webpack', 'install-open-headers.sh');
+    // Path to the source file in dist-webpack/main (copied there by electron-vite build)
+    const sourceFile = path.join(process.cwd(), 'dist-webpack', 'main', 'install-open-headers.sh');
 
     // Path where we want to copy the file
     const destDir = path.dirname(appOutDir);

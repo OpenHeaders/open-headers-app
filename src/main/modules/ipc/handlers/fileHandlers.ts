@@ -159,14 +159,14 @@ class FileHandlers {
             }
 
             // Check development resources directory
-            const appPath = path.join(__dirname, '..', '..', '..', '..', 'resources', filename);
+            const appPath = path.join(__dirname, '..', '..', 'resources', filename);
             if (fs.existsSync(appPath)) {
                 return appPath;
             }
 
             // Special handling for rrweb player resources
             if (filename.includes('lib/rrweb-player')) {
-                const rrwebPath = path.join(__dirname, 'renderer', filename);
+                const rrwebPath = path.join(__dirname, '../renderer', filename);
                 if (fs.existsSync(rrwebPath)) {
                     return rrwebPath;
                 }

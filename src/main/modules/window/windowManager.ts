@@ -35,7 +35,7 @@ class WindowManager {
             height: 800,
             center: true,
             webPreferences: {
-                preload: path.join(__dirname, 'preload.js'),
+                preload: path.join(__dirname, '../preload/index.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
                 sandbox: true,
@@ -64,7 +64,7 @@ class WindowManager {
         this.mainWindow = new BrowserWindow(windowConfig);
 
         // Load file immediately to start rendering faster
-        this.mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+        this.mainWindow.loadFile(path.join(__dirname, '../renderer', 'index.html'));
 
         // Setup other configurations after loading starts
         this.setupCSP();

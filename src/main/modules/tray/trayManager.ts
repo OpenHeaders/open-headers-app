@@ -82,18 +82,18 @@ class TrayManager {
 
         // Search locations in priority order: dev build, packaged resources, fallbacks
         const iconLocations = process.platform === 'darwin' ? [
-            // Renderer template icons (these get copied by webpack)
-            path.join(__dirname, 'renderer', 'images', 'iconTemplate.png'),
-            path.join(__dirname, 'renderer', 'images', 'iconTemplate@2x.png'),
+            // Renderer template icons
+            path.join(__dirname, '../renderer', 'images', 'iconTemplate.png'),
+            path.join(__dirname, '../renderer', 'images', 'iconTemplate@2x.png'),
             // macOS template icons from build dir
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'iconTemplate.png'),
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'iconTemplate@2x.png'),
+            path.join(__dirname, '..', '..', 'build', 'iconTemplate.png'),
+            path.join(__dirname, '..', '..', 'build', 'iconTemplate@2x.png'),
             // Fallback to regular icons
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon128.png'),
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon128.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon.png'),
             // Renderer assets
-            path.join(__dirname, 'renderer', 'images', 'icon32.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon128.png'),
+            path.join(__dirname, '../renderer', 'images', 'icon32.png'),
+            path.join(__dirname, '../renderer', 'images', 'icon128.png'),
             // Production app resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'iconTemplate.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'iconTemplate@2x.png'),
@@ -111,21 +111,21 @@ class TrayManager {
         ] : [
             // Windows/Linux: regular colored icons
             // Prioritize 64x64 for Windows tray for best quality on high-DPI displays
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon64.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon64.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon64.png'),
+            path.join(__dirname, '../renderer', 'images', 'icon64.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon64.png'),
             path.join(process.resourcesPath, 'icon64.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon64.png'),
             path.join(process.resourcesPath, 'images', 'icon64.png'),
             // Then 32x32 as fallback
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon32.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon32.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon32.png'),
+            path.join(__dirname, '../renderer', 'images', 'icon32.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'images', 'icon32.png'),
             path.join(process.resourcesPath, 'images', 'icon32.png'),
             // Fallback to other sizes
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon128.png'),
-            path.join(__dirname, '..', '..', '..', '..', 'build', 'icon.png'),
-            path.join(__dirname, 'renderer', 'images', 'icon128.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon128.png'),
+            path.join(__dirname, '..', '..', 'build', 'icon.png'),
+            path.join(__dirname, '../renderer', 'images', 'icon128.png'),
             // Production app resources
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon128.png'),
             path.join(app.getAppPath(), '..', '..', 'Resources', 'icon.png'),
