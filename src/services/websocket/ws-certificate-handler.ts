@@ -3,11 +3,13 @@
  * Manages SSL certificate generation, trust, and lifecycle for the WSS server
  */
 
+import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
 import crypto from 'crypto';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 
 const { execSync } = child_process;
 const { createLogger } = mainLogger;
@@ -106,8 +108,8 @@ class WSCertificateHandler {
                             };
                             log.info('Certificate auto-renewed successfully');
                             return { success: true, renewed: true };
-                        } catch (renewError: any) {
-                            log.warn('Certificate auto-renewal failed, using existing cert:', renewError.message);
+                        } catch (renewError: unknown) {
+                            log.warn('Certificate auto-renewal failed, using existing cert:', errorMessage(renewError));
                             // Fall through to use existing cert
                         }
                     }
@@ -148,16 +150,16 @@ class WSCertificateHandler {
                 };
 
                 return { success: true };
-            } catch (genError: any) {
+            } catch (genError: unknown) {
                 return {
                     success: false,
-                    error: `Failed to generate certificates: ${genError.message}`
+                    error: `Failed to generate certificates: ${errorMessage(genError)}`
                 };
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             return {
                 success: false,
-                error: `Error ensuring certificates exist: ${error.message}`
+                error: `Error ensuring certificates exist: ${errorMessage(error)}`
             };
         }
     }
@@ -184,8 +186,8 @@ class WSCertificateHandler {
                     execSync(`openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 397 -subj "/O=OpenHeaders/CN=OpenHeaders localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"`);
                     log.info('Successfully generated certificate files with OpenSSL');
                     return;
-                } catch (opensslError: any) {
-                    log.warn('OpenSSL command failed, falling back to Node.js implementation:', opensslError.message);
+                } catch (opensslError: unknown) {
+                    log.warn('OpenSSL command failed, falling back to Node.js implementation:', errorMessage(opensslError));
                 }
             }
 
@@ -199,8 +201,8 @@ class WSCertificateHandler {
             }
 
             log.info('Successfully generated certificate files');
-        } catch (error: any) {
-            log.error('Failed to generate certificates:', error.message);
+        } catch (error: unknown) {
+            log.error('Failed to generate certificates:', errorMessage(error));
             throw error;
         }
     }
@@ -240,8 +242,8 @@ class WSCertificateHandler {
                 validTo: new Date(x509.validTo).toISOString(),
                 subject: x509.subject || null
             };
-        } catch (error: any) {
-            log.warn('Could not parse certificate info:', error.message);
+        } catch (error: unknown) {
+            log.warn('Could not parse certificate info:', errorMessage(error));
             return { validTo: null, subject: null };
         }
     }
@@ -250,9 +252,9 @@ class WSCertificateHandler {
      * Returns an HTTPS request handler for the WSS server
      * Handles /ping, /verify-cert, /accept-cert endpoints
      */
-    createHttpsRequestHandler(): (req: any, res: any) => void {
-        return (req: any, res: any) => {
-            const urlPath = new URL(req.url, `https://${req.headers.host}`).pathname;
+    createHttpsRequestHandler(): (req: http.IncomingMessage, res: http.ServerResponse) => void {
+        return (req: http.IncomingMessage, res: http.ServerResponse) => {
+            const urlPath = new URL(req.url || '/', `https://${req.headers.host}`).pathname;
 
             if (urlPath === '/ping') {
                 res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -317,9 +319,9 @@ class WSCertificateHandler {
             }
 
             return { trusted: false, error: `Unsupported platform: ${platform}` };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error checking certificate trust:', error);
-            return { trusted: false, error: error.message };
+            return { trusted: false, error: errorMessage(error) };
         }
     }
 
@@ -353,8 +355,8 @@ class WSCertificateHandler {
                     execSync(`certutil -addstore -user Root "${certPath}"`, { stdio: 'pipe' });
                     log.info('Certificate added to Windows user Root store');
                     result = { success: true };
-                } catch (error: any) {
-                    const msg = (error.message || '').toLowerCase();
+                } catch (error: unknown) {
+                    const msg = errorMessage(error).toLowerCase();
                     if (msg.includes('denied') || msg.includes('policy')) {
                         return { success: false, error: 'Your organization\'s policy prevents adding certificates. Contact your IT administrator.' };
                     }
@@ -373,8 +375,8 @@ class WSCertificateHandler {
                     execSync(`certutil -d sql:"${nssDb}" -A -n "OpenHeaders localhost" -t "C,," -i "${certPath}"`, { stdio: 'pipe' });
                     log.info('Certificate added to Linux NSS database');
                     result = { success: true };
-                } catch (error: any) {
-                    return { success: false, error: error.message || 'Failed to add certificate — ensure libnss3-tools is installed (apt install libnss3-tools)' };
+                } catch (error: unknown) {
+                    return { success: false, error: errorMessage(error) || 'Failed to add certificate — ensure libnss3-tools is installed (apt install libnss3-tools)' };
                 }
             } else {
                 return { success: false, error: `Unsupported platform: ${platform}` };
@@ -386,9 +388,9 @@ class WSCertificateHandler {
             }
 
             return result!;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error trusting certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -409,8 +411,8 @@ class WSCertificateHandler {
                     execSync(`security delete-certificate -c "OpenHeaders localhost" ~/Library/Keychains/login.keychain-db`, { stdio: 'pipe' });
                     log.info('Certificate removed from macOS login keychain');
                     return { success: true };
-                } catch (error: any) {
-                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                } catch (error: unknown) {
+                    return { success: false, error: errorMessage(error) || 'Failed to remove certificate' };
                 }
             }
 
@@ -419,8 +421,8 @@ class WSCertificateHandler {
                     execSync(`certutil -delstore -user Root "OpenHeaders localhost"`, { stdio: 'pipe' });
                     log.info('Certificate removed from Windows user Root store');
                     return { success: true };
-                } catch (error: any) {
-                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                } catch (error: unknown) {
+                    return { success: false, error: errorMessage(error) || 'Failed to remove certificate' };
                 }
             }
 
@@ -430,15 +432,15 @@ class WSCertificateHandler {
                     execSync(`certutil -d sql:"${nssDb}" -D -n "OpenHeaders localhost"`, { stdio: 'pipe' });
                     log.info('Certificate removed from Linux NSS database');
                     return { success: true };
-                } catch (error: any) {
-                    return { success: false, error: error.message || 'Failed to remove certificate' };
+                } catch (error: unknown) {
+                    return { success: false, error: errorMessage(error) || 'Failed to remove certificate' };
                 }
             }
 
             return { success: false, error: `Unsupported platform: ${platform}` };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error untrusting certificate:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
