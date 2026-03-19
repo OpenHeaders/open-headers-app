@@ -1,27 +1,69 @@
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import zlib from 'zlib';
 import mainLogger from '../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION, isVersionCompatible as checkVersionCompatible } from '../../../config/version';
+import { errorMessage } from '../../../types/common';
+import type { EnvironmentConfigData, EnvironmentSchema, EnvironmentSchemaEntry, EnvironmentVariable } from '../../../types/environment';
 import windowsFocusHelper from '../utils/windowsFocus';
 
 const { app, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('ProtocolHandler');
 
+/** Decoded protocol payload after decompression and expansion. */
+interface ProtocolPayload {
+    action: string;
+    version?: string;
+    data: ProtocolInviteData | ProtocolEnvironmentData;
+    /** Minified action code (before expansion). */
+    a?: string;
+    /** Minified version (before expansion). */
+    v?: string;
+    /** Minified data (before expansion). */
+    d?: Record<string, unknown>;
+}
+
+/** Team invite data as received from protocol URL (subset of TeamWorkspaceInvite). */
+interface ProtocolInviteData {
+    workspaceName: string;
+    repoUrl: string;
+    branch?: string;
+    configPath?: string;
+    authType?: string;
+    inviterName?: string;
+    description?: string;
+}
+
+/** Environment import data as received from protocol URL. */
+interface ProtocolEnvironmentData {
+    environments?: Record<string, Record<string, Partial<EnvironmentVariable>>>;
+    environmentSchema?: EnvironmentSchema;
+}
+
+interface UrlValidationResult {
+    valid: boolean;
+    error?: string;
+    urlObj?: URL;
+    host?: string;
+}
+
 class ProtocolHandler {
-    mainWindow: any;
+    mainWindow: BrowserWindowType | null;
     rendererReady: boolean;
-    pendingInvite: any;
-    pendingEnvironmentImport: any;
+    pendingInvite: ProtocolInviteData | null;
+    pendingEnvironmentImport: ProtocolEnvironmentData | null;
 
     constructor() {
         this.mainWindow = null;
         this.rendererReady = false;
+        this.pendingInvite = null;
+        this.pendingEnvironmentImport = null;
     }
 
-    setMainWindow(window: any) {
+    setMainWindow(window: BrowserWindowType) {
         this.mainWindow = window;
     }
 
@@ -45,7 +87,7 @@ class ProtocolHandler {
         }
     }
 
-    validateProtocolUrl(url: string): { valid: boolean; error?: string; urlObj?: URL; host?: string } {
+    validateProtocolUrl(url: string): UrlValidationResult {
         if (!url || typeof url !== 'string') {
             return { valid: false, error: 'URL must be a non-empty string' };
         }
@@ -84,8 +126,8 @@ class ProtocolHandler {
             }
 
             return { valid: true, urlObj, host: normalizedHost };
-        } catch (error: any) {
-            return { valid: false, error: `Invalid URL format: ${error.message}` };
+        } catch (error: unknown) {
+            return { valid: false, error: `Invalid URL format: ${errorMessage(error)}` };
         }
     }
 
@@ -134,9 +176,9 @@ class ProtocolHandler {
 
             // Handle unified open format
             this.handleUnifiedProtocol(payload!, compressionType);
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error handling protocol URL:', error);
-            this.handleProtocolError(`Failed to handle URL: ${error.message}`);
+            this.handleProtocolError(`Failed to handle URL: ${errorMessage(error)}`);
         }
     }
 
@@ -148,7 +190,7 @@ class ProtocolHandler {
                 throw new Error('Missing payload parameter');
             }
 
-            let decodedPayload: any;
+            let decodedPayload: ProtocolPayload;
 
             try {
                 let decompressed: Buffer;
@@ -167,13 +209,13 @@ class ProtocolHandler {
                     decompressed = zlib.gunzipSync(compressed);
                 }
 
-                decodedPayload = JSON.parse(decompressed.toString('utf8'));
+                decodedPayload = JSON.parse(decompressed.toString('utf8')) as ProtocolPayload;
                 log.info(`Successfully decompressed payload using ${compressionType}`);
-            } catch (compressionError: any) {
-                log.warn('Compression decoding failed:', compressionError.message);
+            } catch (compressionError: unknown) {
+                log.warn('Compression decoding failed:', errorMessage(compressionError));
                 // Fallback to regular base64 decoding for backward compatibility
                 try {
-                    decodedPayload = JSON.parse(atob(payloadParam));
+                    decodedPayload = JSON.parse(atob(payloadParam)) as ProtocolPayload;
                     log.info('Using uncompressed payload (legacy format)');
                 } catch (base64Error) {
                     throw new Error('Failed to decode payload: invalid format');
@@ -206,21 +248,21 @@ class ProtocolHandler {
             switch (decodedPayload.action) {
                 case 'team-invite':
                     log.info('Processing team workspace invite');
-                    this.processTeamWorkspaceInvite(decodedPayload.data);
+                    this.processTeamWorkspaceInvite(decodedPayload.data as ProtocolInviteData);
                     break;
 
                 case 'environment-import':
                     log.info('Processing environment config import');
-                    this.processEnvironmentConfigImport(decodedPayload.data);
+                    this.processEnvironmentConfigImport(decodedPayload.data as ProtocolEnvironmentData);
                     break;
 
                 default:
                     log.error('Unknown action:', decodedPayload.action);
                     this.handleProtocolError(`Unknown action: ${decodedPayload.action}`);
             }
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error handling unified protocol:', error);
-            this.handleProtocolError(`Failed to process payload: ${error.message}`);
+            this.handleProtocolError(`Failed to process payload: ${errorMessage(error)}`);
         }
     }
 
@@ -255,7 +297,7 @@ class ProtocolHandler {
         return Buffer.from(result);
     }
 
-    expandOptimizedPayload(payload: any): any {
+    expandOptimizedPayload(payload: ProtocolPayload): ProtocolPayload {
         // Expand ultra-optimized action codes
         if (payload.a === 'ei') {
             payload.action = 'environment-import';
@@ -268,25 +310,27 @@ class ProtocolHandler {
             payload.version = DATA_FORMAT_VERSION;
         }
 
-        // Expand data
+        // Expand data from minified 'd' field
         if (payload.d) {
-            payload.data = payload.d;
+            const data = payload.d as Record<string, unknown>;
             delete payload.d;
 
+            const expanded: Record<string, unknown> = { ...data };
+
             // Expand environment names
-            if (payload.data.e) {
-                payload.data.environments = {};
-                Object.entries(payload.data.e).forEach(([shortName, vars]: [string, any]) => {
+            const minifiedEnvs = data.e as Record<string, Record<string, { val?: string; s?: number }>> | undefined;
+            if (minifiedEnvs) {
+                const environments: Record<string, Record<string, Partial<EnvironmentVariable>>> = {};
+                Object.entries(minifiedEnvs).forEach(([shortName, vars]) => {
                     const fullName = shortName === 'dev' ? 'development' :
                                    shortName === 'prod' ? 'production' :
                                    shortName === 'stg' ? 'staging' :
                                    shortName;
 
-                    payload.data.environments[fullName] = {};
+                    environments[fullName] = {};
 
-                    // Expand variable data
-                    Object.entries(vars).forEach(([varName, varData]: [string, any]) => {
-                        const expandedVar: any = {};
+                    Object.entries(vars).forEach(([varName, varData]) => {
+                        const expandedVar: Partial<EnvironmentVariable> = {};
 
                         if (varData.val !== undefined) {
                             expandedVar.value = varData.val;
@@ -296,65 +340,58 @@ class ProtocolHandler {
                             expandedVar.isSecret = true;
                         }
 
-                        payload.data.environments[fullName][varName] = expandedVar;
+                        environments[fullName][varName] = expandedVar;
                     });
                 });
-                delete payload.data.e;
+                expanded.environments = environments;
+                delete expanded.e;
             }
 
             // Expand environment schema
-            if (payload.data.es && payload.data.es.e) {
-                payload.data.environmentSchema = {
+            const minifiedSchema = data.es as { e?: Record<string, { v?: Array<{ n: string; s?: number }> }> } | undefined;
+            if (minifiedSchema?.e) {
+                const environmentSchema: EnvironmentSchema = {
                     environments: {}
                 };
 
-                Object.entries(payload.data.es.e).forEach(([shortName, envData]: [string, any]) => {
+                Object.entries(minifiedSchema.e).forEach(([shortName, envData]) => {
                     const fullName = shortName === 'dev' ? 'development' :
                                    shortName === 'prod' ? 'production' :
                                    shortName === 'stg' ? 'staging' :
                                    shortName;
 
                     if (envData.v) {
-                        payload.data.environmentSchema.environments[fullName] = {
-                            variables: envData.v.map((v: any) => ({
+                        environmentSchema.environments[fullName] = {
+                            variables: envData.v.map((v) => ({
                                 name: v.n,
                                 ...(v.s === 1 && { isSecret: true })
                             }))
-                        };
+                        } as EnvironmentSchemaEntry;
                     }
                 });
-                delete payload.data.es;
+                expanded.environmentSchema = environmentSchema;
+                delete expanded.es;
             }
 
             // Expand team invite fields
-            if (payload.data.wn) {
-                payload.data.workspaceName = payload.data.wn;
-                delete payload.data.wn;
+            const fieldMap: Record<string, string> = {
+                wn: 'workspaceName',
+                ru: 'repoUrl',
+                b: 'branch',
+                cp: 'configPath',
+                at: 'authType',
+                in: 'inviterName',
+                desc: 'description',
+            };
+
+            for (const [short, full] of Object.entries(fieldMap)) {
+                if (expanded[short] !== undefined) {
+                    expanded[full] = expanded[short];
+                    delete expanded[short];
+                }
             }
-            if (payload.data.ru) {
-                payload.data.repoUrl = payload.data.ru;
-                delete payload.data.ru;
-            }
-            if (payload.data.b) {
-                payload.data.branch = payload.data.b;
-                delete payload.data.b;
-            }
-            if (payload.data.cp) {
-                payload.data.configPath = payload.data.cp;
-                delete payload.data.cp;
-            }
-            if (payload.data.at) {
-                payload.data.authType = payload.data.at;
-                delete payload.data.at;
-            }
-            if (payload.data.in) {
-                payload.data.inviterName = payload.data.in;
-                delete payload.data.in;
-            }
-            if (payload.data.desc) {
-                payload.data.description = payload.data.desc;
-                delete payload.data.desc;
-            }
+
+            payload.data = expanded as ProtocolInviteData | ProtocolEnvironmentData;
         }
 
         // Remove the minified action field
@@ -375,7 +412,7 @@ class ProtocolHandler {
         return checkVersionCompatible(version);
     }
 
-    processTeamWorkspaceInvite(inviteData: any) {
+    processTeamWorkspaceInvite(inviteData: ProtocolInviteData) {
         // Basic validation
         if (!inviteData.workspaceName || !inviteData.repoUrl) {
             log.error('Invalid invite data structure:', inviteData);
@@ -390,7 +427,7 @@ class ProtocolHandler {
         });
 
         // Get main window - use stored reference or find existing
-        let mainWindow = this.mainWindow || BrowserWindow.getAllWindows()[0];
+        const mainWindow = this.mainWindow || BrowserWindow.getAllWindows()[0];
         if (!mainWindow) {
             // If no window exists, we need to create one
             // This will be handled by the main process initialization
@@ -423,7 +460,7 @@ class ProtocolHandler {
         }
     }
 
-    processEnvironmentConfigImport(envData: any) {
+    processEnvironmentConfigImport(envData: ProtocolEnvironmentData) {
         // Basic validation
         if (!envData.environmentSchema && !envData.environments) {
             log.error('Invalid environment data structure:', envData);
@@ -438,7 +475,7 @@ class ProtocolHandler {
         });
 
         // Get main window - use stored reference or find existing
-        let mainWindow = this.mainWindow || BrowserWindow.getAllWindows()[0];
+        const mainWindow = this.mainWindow || BrowserWindow.getAllWindows()[0];
         if (!mainWindow) {
             // If no window exists, we need to create one
             log.info('No window available, environment import will be processed after window creation');
@@ -470,7 +507,7 @@ class ProtocolHandler {
         }
     }
 
-    showAndFocusWindow(window: any) {
+    showAndFocusWindow(window: BrowserWindowType) {
         windowsFocusHelper.focusWindow(window);
     }
 
@@ -482,12 +519,12 @@ class ProtocolHandler {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             if (fs.existsSync(settingsPath)) {
                 const settingsData = fs.readFileSync(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData);
+                const settings = JSON.parse(settingsData) as Record<string, unknown>;
                 // Default to true if setting doesn't exist
                 return settings.showDockIcon !== false;
             }
-        } catch (error: any) {
-            log.debug('Could not read dock settings:', error.message);
+        } catch (error: unknown) {
+            log.debug('Could not read dock settings:', errorMessage(error));
         }
         // Default to showing dock if we can't read settings
         return true;
@@ -505,7 +542,7 @@ class ProtocolHandler {
     }
 
     // Method to handle pending invites after window creation
-    processPendingInvite(mainWindow: any) {
+    processPendingInvite(mainWindow: BrowserWindowType) {
         if (this.pendingInvite && mainWindow) {
             log.info('Processing pending team workspace invite');
             mainWindow.webContents.send('process-team-workspace-invite', this.pendingInvite);
@@ -521,40 +558,39 @@ class ProtocolHandler {
 
     // Process any pending invites - called when main window is set
     processPendingInvites() {
-        if (!this.mainWindow) return;
+        const win = this.mainWindow;
+        if (!win) return;
 
         if (this.pendingInvite) {
             log.info('Processing pending team workspace invite from setMainWindow');
-            // Check if window is ready
-            if (this.mainWindow.webContents.isLoading()) {
-                this.mainWindow.webContents.once('did-finish-load', () => {
-                    this.mainWindow.webContents.send('process-team-workspace-invite', this.pendingInvite);
-                    this.pendingInvite = null;
+            const invite = this.pendingInvite;
+            if (win.webContents.isLoading()) {
+                win.webContents.once('did-finish-load', () => {
+                    win.webContents.send('process-team-workspace-invite', invite);
                 });
             } else {
-                this.mainWindow.webContents.send('process-team-workspace-invite', this.pendingInvite);
-                this.pendingInvite = null;
+                win.webContents.send('process-team-workspace-invite', invite);
             }
+            this.pendingInvite = null;
         }
 
         if (this.pendingEnvironmentImport) {
             log.info('Processing pending environment config import from setMainWindow');
-            // Check if window is ready
-            if (this.mainWindow.webContents.isLoading()) {
-                this.mainWindow.webContents.once('did-finish-load', () => {
-                    this.mainWindow.webContents.send('process-environment-config-import', this.pendingEnvironmentImport);
-                    this.pendingEnvironmentImport = null;
+            const envImport = this.pendingEnvironmentImport;
+            if (win.webContents.isLoading()) {
+                win.webContents.once('did-finish-load', () => {
+                    win.webContents.send('process-environment-config-import', envImport);
                 });
             } else {
-                this.mainWindow.webContents.send('process-environment-config-import', this.pendingEnvironmentImport);
-                this.pendingEnvironmentImport = null;
+                win.webContents.send('process-environment-config-import', envImport);
             }
+            this.pendingEnvironmentImport = null;
         }
     }
 
     setupProtocolHandlers() {
         // macOS protocol URL handling
-        app.on('open-url', (event: any, url: string) => {
+        app.on('open-url', (event: Electron.Event, url: string) => {
             event.preventDefault();
             log.info('Received protocol URL on macOS:', url);
 
@@ -563,10 +599,10 @@ class ProtocolHandler {
             if (windows.length > 0) {
                 const window = windows[0];
                 this.showAndFocusWindow(window);
-                // Respect user's dock visibility setting
-                if ((app as any).dock && this.shouldShowDock()) {
-                    (app as any).dock.show().catch((error: any) => {
-                        log.debug('Error showing dock:', error.message);
+                // Respect user's dock visibility setting — dock API is macOS-only
+                if (app.dock && this.shouldShowDock()) {
+                    app.dock.show().catch((error: unknown) => {
+                        log.debug('Error showing dock:', errorMessage(error));
                     });
                 }
             }
@@ -575,7 +611,7 @@ class ProtocolHandler {
         });
 
         // Prevent multiple instances and handle protocol URLs from new instances
-        app.on('second-instance', (event: any, commandLine: string[], workingDirectory: string) => {
+        app.on('second-instance', (_event: Electron.Event, commandLine: string[], workingDirectory: string) => {
             log.info('Second instance detected with args:', commandLine);
             log.info('Working directory:', workingDirectory);
 
