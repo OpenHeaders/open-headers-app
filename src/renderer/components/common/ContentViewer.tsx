@@ -47,6 +47,7 @@ interface ContentViewerSource {
     sourcePath?: string;
     sourceType?: string;
     sourceMethod?: string;
+    sourceContent?: string | null;
     content?: string;
     originalResponse?: Record<string, unknown> | string | null;
     [key: string]: unknown;
@@ -66,7 +67,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
     useEffect(() => {
         if (source) {
             // Only update internal content when it changes
-            const sourceContent = (source.sourceContent as string | undefined) ?? null;
+            const sourceContent = source.sourceContent ?? null;
             if (sourceContent !== internalContent) {
                 setInternalContent(sourceContent);
             }
