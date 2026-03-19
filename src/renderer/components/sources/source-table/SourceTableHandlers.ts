@@ -44,7 +44,7 @@ interface TimeManagerLike {
 }
 
 interface SaveSourceParams {
-    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<Source | null>;
+    onUpdateSource: (sourceId: string, data: Partial<Source>) => Promise<Source | null>;
     setRefreshingSourceId: (id: string | null) => void;
     setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     setEditModalVisible: (visible: boolean) => void;
@@ -94,7 +94,7 @@ export const createSaveSourceHandler = ({
     setEditModalVisible,
     handleRefreshSource,
     log
-}: SaveSourceParams) => async (sourceData: Record<string, unknown> & { sourceId: string; refreshNow?: boolean; refreshOptions?: Record<string, unknown> }) => {
+}: SaveSourceParams) => async (sourceData: Source & { refreshNow: boolean }) => {
     // Main save handler that coordinates source updates with refresh operations
     // Handles both simple updates and complex refresh-triggered updates
     try {
@@ -103,9 +103,7 @@ export const createSaveSourceHandler = ({
 
         // Extract refreshNow flag and remove it from the data sent to parent
         // This flag indicates if an immediate refresh should be triggered after save
-        const shouldRefreshNow = sourceData.refreshNow === true;
-        const dataToSave = { ...sourceData };
-        delete dataToSave.refreshNow;
+        const { refreshNow: shouldRefreshNow, ...dataToSave } = sourceData;
 
         log.debug('Saving source data...', { 
             sourceId: dataToSave.sourceId,

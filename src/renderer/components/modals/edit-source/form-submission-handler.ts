@@ -3,7 +3,7 @@ import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils';
 import { validateAllFormFields } from './form-validation';
 import timeManager from '../../../services/TimeManager';
-import type { Source } from '../../../../types/source';
+import type { Source, SourceType, SourceMethod, SourceRequestOptions, JsonFilter, RefreshOptions } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('FormSubmissionHandler');
@@ -14,53 +14,58 @@ interface HttpOptionsHandle {
     getHeadersState?: () => Array<{ key: string; value: string }>;
 }
 
-/**
- * Handles the complex form submission logic for EditSourceModal
- * Extracted for better maintainability and testability
- */
-interface SourceData {
-    sourceId: string;
-    sourceType: string;
-    sourcePath: string;
-    sourceTag: string;
-    sourceMethod: string;
-    requestOptions: Record<string, unknown>;
-    jsonFilter: { enabled: boolean; path: string };
-    refreshOptions: { enabled: boolean; interval: number; preserveTiming?: boolean; nextRefresh?: number };
+/** Shape of form values returned by Ant Design form.getFieldsValue() */
+interface EditSourceFormValues {
+    sourceType?: SourceType;
+    sourcePath?: string;
+    sourceTag?: string;
+    sourceMethod?: SourceMethod;
+    requestOptions?: SourceRequestOptions;
+    jsonFilter?: JsonFilter;
+    refreshOptions?: RefreshOptions;
+    enableTOTP?: boolean;
+    totpSecret?: string;
+}
+
+/** Minimal environment context needed by form validation */
+interface FormEnvContext {
+    environmentsReady: boolean;
+    getAllVariables: () => Record<string, string>;
+    activeEnvironment: string;
+}
+
+/** Source data prepared for submission (Source + edit-specific fields) */
+interface EditSourceSubmission extends Source {
     refreshNow: boolean;
-    isFiltered: boolean;
-    filteredWith: string | null;
-    originalResponse?: unknown;
 }
 
 class FormSubmissionHandler {
     form: FormInstance;
     source: Source;
-    envContext: Record<string, unknown>;
+    envContext: FormEnvContext;
     httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>;
     originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>;
     totpEnabled: boolean;
     totpSecret: string;
 
-    constructor(form: FormInstance, source: Source, envContext: Record<string, unknown>, httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
+    constructor(
+        form: FormInstance,
+        source: Source,
+        envContext: FormEnvContext,
+        httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>,
+        originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>
+    ) {
         this.form = form;
         this.source = source;
         this.envContext = envContext;
         this.httpOptionsRef = httpOptionsRef;
         this.originalValuesRef = originalValuesRef;
-        // These properties are set dynamically from EditSourceModal
         this.totpEnabled = false;
         this.totpSecret = '';
     }
 
-    /**
-     * Validates JSON filter configuration
-     * @param {Object} jsonFilter - JSON filter object
-     * @returns {boolean} - True if valid, false otherwise
-     */
-    validateJsonFilter(jsonFilter: { enabled?: boolean; path?: string } | null) {
+    validateJsonFilter(jsonFilter: JsonFilter | null): boolean {
         if (jsonFilter?.enabled === true && !jsonFilter?.path) {
-            // Make the path field visible and mark it as error
             this.form.setFields([
                 {
                     name: ['jsonFilter', 'path'],
@@ -73,60 +78,40 @@ class FormSubmissionHandler {
         return true;
     }
 
-    /**
-     * Validates all form fields and prepares source data
-     * @returns {Promise<Object>} - Prepared source data
-     */
-    async validateAndPrepareData() {
-        // First validate basic fields
+    async validateAndPrepareData(): Promise<EditSourceFormValues> {
         const fieldsToValidate = ['sourcePath', 'sourceTag', 'sourceMethod'];
         log.debug('Validating fields before save:', fieldsToValidate);
-        
+
         await this.form.validateFields(fieldsToValidate);
-        
-        // Get ALL form values after validation
-        const values = this.form.getFieldsValue(true);
+
+        const values = this.form.getFieldsValue(true) as EditSourceFormValues;
         log.debug('All form values after validation:', {
             refreshOptions: values.refreshOptions,
             jsonFilter: values.jsonFilter,
             sourceType: values.sourceType
         });
-        
-        // Validate JSON filter first
-        const jsonFilter = this.form.getFieldValue('jsonFilter');
+
+        const jsonFilter = this.form.getFieldValue('jsonFilter') as JsonFilter | null;
         if (!this.validateJsonFilter(jsonFilter)) {
             throw new Error('JSON filter validation failed');
         }
-        
-        // Perform comprehensive validation of all fields
-        await validateAllFormFields(this.form, this.envContext as unknown as Parameters<typeof validateAllFormFields>[1]);
-        
+
+        await validateAllFormFields(this.form, this.envContext);
+
         return values;
     }
 
-    /**
-     * Normalizes the JSON filter object
-     * @param {Object} jsonFilter - Raw JSON filter from form
-     * @returns {Object} - Normalized JSON filter
-     */
-    normalizeJsonFilter(jsonFilter: { enabled?: boolean; path?: string } | null) {
+    normalizeJsonFilter(jsonFilter: JsonFilter | undefined | null): JsonFilter {
         return {
             enabled: Boolean(jsonFilter?.enabled),
             path: jsonFilter?.enabled === true ? (jsonFilter.path || '') : ''
         };
     }
 
-    /**
-     * Collects TOTP configuration from multiple sources
-     * @param {Object} values - Form values
-     * @returns {Object} - TOTP configuration
-     */
-    collectTotpConfiguration(values: Record<string, any>) {
-        // First check form values
+    collectTotpConfiguration(values: EditSourceFormValues): { isTotpEnabled: boolean; totpSecretValue: string } {
         let isTotpEnabled = values.enableTOTP === true;
         let totpSecretValue = values.totpSecret || '';
 
-        // Then check component state as an alternative
         if (!isTotpEnabled && this.totpEnabled) {
             isTotpEnabled = true;
             if (!totpSecretValue && this.totpSecret) {
@@ -134,11 +119,8 @@ class FormSubmissionHandler {
             }
         }
 
-        // Check if ref is available and has TOTP state
-        if (this.httpOptionsRef.current && this.httpOptionsRef.current.getTotpState) {
+        if (this.httpOptionsRef.current?.getTotpState) {
             const totpState = this.httpOptionsRef.current.getTotpState();
-
-            // Override previous values if TOTP is enabled in the ref
             if (totpState.enabled) {
                 isTotpEnabled = true;
                 if (totpState.secret) {
@@ -150,33 +132,35 @@ class FormSubmissionHandler {
         return { isTotpEnabled, totpSecretValue };
     }
 
-    /**
-     * Prepares the source data object for submission
-     * @param {Object} values - Form values
-     * @param {boolean} shouldRefreshNow - Whether to refresh immediately
-     * @returns {Object} - Prepared source data
-     */
-    prepareSourceData(values: Record<string, any>, shouldRefreshNow: boolean) {
+    prepareSourceData(values: EditSourceFormValues, shouldRefreshNow: boolean): EditSourceSubmission {
         const normalizedJsonFilter = this.normalizeJsonFilter(values.jsonFilter);
         const { isTotpEnabled, totpSecretValue } = this.collectTotpConfiguration(values);
 
-        // Prepare source data for update - preserve originalResponse if available
-        const sourceData: Record<string, any> = {
+        const requestOptions: SourceRequestOptions = {
+            ...this.source.requestOptions,
+            ...values.requestOptions,
+            headers: values.requestOptions?.headers || this.source.requestOptions?.headers || [],
+            queryParams: values.requestOptions?.queryParams || this.source.requestOptions?.queryParams || [],
+            body: values.requestOptions?.body || this.source.requestOptions?.body || undefined,
+            contentType: values.requestOptions?.contentType || this.source.requestOptions?.contentType || 'application/json'
+        };
+
+        // Handle TOTP configuration
+        if (isTotpEnabled && totpSecretValue) {
+            requestOptions.totpSecret = totpSecretValue;
+        } else {
+            delete requestOptions.totpSecret;
+        }
+
+        const sourceData: EditSourceSubmission = {
             sourceId: this.source.sourceId,
             sourceType: this.source.sourceType,
             sourcePath: values.sourcePath,
             sourceTag: values.sourceTag || '',
             sourceMethod: values.sourceMethod || 'GET',
-            requestOptions: {
-                ...(this.source.requestOptions as Record<string, unknown>),
-                ...values.requestOptions,
-                headers: values.requestOptions?.headers || (this.source.requestOptions as Record<string, unknown>)?.headers || [],
-                queryParams: values.requestOptions?.queryParams || (this.source.requestOptions as Record<string, unknown>)?.queryParams || [],
-                body: values.requestOptions?.body || (this.source.requestOptions as Record<string, unknown>)?.body || null,
-                contentType: values.requestOptions?.contentType || (this.source.requestOptions as Record<string, unknown>)?.contentType || 'application/json'
-            },
+            requestOptions,
             jsonFilter: normalizedJsonFilter,
-            refreshOptions: values.refreshOptions || { enabled: false, interval: 0 },
+            refreshOptions: values.refreshOptions || { enabled: false },
             refreshNow: shouldRefreshNow,
             isFiltered: this.source.isFiltered || normalizedJsonFilter.enabled,
             filteredWith: normalizedJsonFilter.enabled ? normalizedJsonFilter.path : this.source.filteredWith
@@ -187,28 +171,15 @@ class FormSubmissionHandler {
             sourceData.originalResponse = this.source.originalResponse;
         }
 
-        // Handle TOTP configuration
-        if (isTotpEnabled && totpSecretValue) {
-            sourceData.requestOptions.totpSecret = totpSecretValue;
-        } else if (sourceData.requestOptions.totpSecret) {
-            delete sourceData.requestOptions.totpSecret;
-        }
-
         return sourceData;
     }
 
-    /**
-     * Updates source data with latest state from HttpOptions component
-     * @param {Object} sourceData - Source data to update
-     */
-    updateFromHttpOptions(sourceData: Record<string, any>) {
+    updateFromHttpOptions(sourceData: EditSourceSubmission): void {
         if (!this.httpOptionsRef.current) return;
 
-        // Update JSON filter state
         if (this.httpOptionsRef.current.getJsonFilterState) {
             const jsonFilterState = this.httpOptionsRef.current.getJsonFilterState();
 
-            // Additional validation to ensure path exists when enabled
             if (jsonFilterState.enabled === true && !jsonFilterState.path) {
                 throw new Error('JSON filter is enabled but no path is specified. Please enter a JSON path.');
             }
@@ -222,90 +193,66 @@ class FormSubmissionHandler {
             sourceData.filteredWith = jsonFilterState.enabled ? jsonFilterState.path : null;
         }
 
-        // Update headers state
         if (this.httpOptionsRef.current.getHeadersState) {
             const headers = this.httpOptionsRef.current.getHeadersState();
             if (headers && headers.length > 0) {
+                if (!sourceData.requestOptions) sourceData.requestOptions = {};
                 sourceData.requestOptions.headers = headers;
             }
         }
     }
 
-    /**
-     * Configures refresh timing based on form changes
-     * @param {Object} sourceData - Source data to configure
-     * @param {boolean} shouldRefreshNow - Whether to refresh immediately
-     */
-    configureRefreshTiming(sourceData: Record<string, any>, shouldRefreshNow: boolean) {
-        const hasIntervalChanged = 
+    configureRefreshTiming(sourceData: EditSourceSubmission, shouldRefreshNow: boolean): void {
+        const hasIntervalChanged =
             sourceData.refreshOptions?.interval !== this.originalValuesRef.current.interval;
-        const hasEnabledChanged = 
+        const hasEnabledChanged =
             sourceData.refreshOptions?.enabled !== this.originalValuesRef.current.enabled;
 
-        // Set preserveTiming based on whether we want to keep the current timer running
-        const sourceRefreshOpts = this.source.refreshOptions as { nextRefresh?: number } | undefined;
         if (!hasEnabledChanged && !shouldRefreshNow &&
-            sourceRefreshOpts?.nextRefresh &&
-            sourceRefreshOpts.nextRefresh > timeManager.now()) {
-            
+            this.source.refreshOptions?.nextRefresh &&
+            this.source.refreshOptions.nextRefresh > timeManager.now()) {
+
             if (!sourceData.refreshOptions) {
-                sourceData.refreshOptions = {};
+                sourceData.refreshOptions = { enabled: false };
             }
             sourceData.refreshOptions.preserveTiming = true;
-            
+
             if (hasIntervalChanged) {
                 log.debug(`Interval changed but preserving timing (no immediate refresh): old=${this.originalValuesRef.current.interval}m, new=${sourceData.refreshOptions.interval}m`);
             }
         } else if (hasEnabledChanged) {
-            // Enabled state changed - don't preserve timing
             if (sourceData.refreshOptions) {
                 sourceData.refreshOptions.preserveTiming = false;
             }
         } else if (shouldRefreshNow) {
-            // User wants immediate refresh - don't preserve timing
             if (sourceData.refreshOptions) {
                 sourceData.refreshOptions.preserveTiming = false;
             }
         }
     }
 
-    /**
-     * Ensures URL has proper protocol
-     * @param {Object} sourceData - Source data to update
-     */
-    ensureUrlProtocol(sourceData: Record<string, any>) {
-        if (sourceData.sourceType === 'http' && !sourceData.sourcePath.match(/^https?:\/\//i)) {
+    ensureUrlProtocol(sourceData: EditSourceSubmission): void {
+        if (sourceData.sourceType === 'http' && sourceData.sourcePath && !sourceData.sourcePath.match(/^https?:\/\//i)) {
             sourceData.sourcePath = 'https://' + sourceData.sourcePath;
         }
     }
 
-    /**
-     * Performs final validation checks on prepared source data
-     * @param {Object} sourceData - Source data to validate
-     * @throws {Error} - If validation fails
-     */
-    validateFinalSourceData(sourceData: Record<string, any>) {
-        // Final validation check for JSON filter
-        if (sourceData.jsonFilter.enabled === true && !sourceData.jsonFilter.path) {
+    validateFinalSourceData(sourceData: EditSourceSubmission): void {
+        if (sourceData.jsonFilter?.enabled === true && !sourceData.jsonFilter?.path) {
             throw new Error('JSON filter is enabled but no path is specified. Please enter a JSON path.');
         }
     }
 
-    /**
-     * Main submission handler
-     * @param {boolean} shouldRefreshNow - Whether to refresh immediately
-     * @returns {Promise<Object>} - Prepared source data
-     */
-    async handleSubmission(shouldRefreshNow: boolean) {
+    async handleSubmission(shouldRefreshNow: boolean): Promise<EditSourceSubmission> {
         try {
             const values = await this.validateAndPrepareData();
-            let sourceData = this.prepareSourceData(values, shouldRefreshNow);
-            
+            const sourceData = this.prepareSourceData(values, shouldRefreshNow);
+
             this.updateFromHttpOptions(sourceData);
             this.validateFinalSourceData(sourceData);
             this.ensureUrlProtocol(sourceData);
             this.configureRefreshTiming(sourceData, shouldRefreshNow);
-            
+
             return sourceData;
         } catch (error) {
             log.error('Form submission failed:', error);

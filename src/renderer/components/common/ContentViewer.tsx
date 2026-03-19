@@ -71,11 +71,11 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
                 setInternalOriginalResponse(originalResponseStr);
             }
 
-            // Extract headers from source — extractHeaders handles originalResponse parsing
-            const extractedHeaders = extractHeaders(source as unknown as Parameters<typeof extractHeaders>[0]);
+            // Extract response headers from source
+            const extractedHeaders = extractHeaders(source);
             setResponseHeaders(extractedHeaders);
         }
-    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, internalContent, internalOriginalResponse]);
+    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.responseHeaders, internalContent, internalOriginalResponse]);
 
     // Create copy handlers using the ClipboardManager utility
     const handleCopyContent = createCopyHandler(setCopyingContent);

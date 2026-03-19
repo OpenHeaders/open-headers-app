@@ -1,25 +1,12 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import refreshManagerIntegration from '../../services/RefreshManagerIntegration';
-import type { HttpService } from '../../services/RefreshManager';
+import type { HttpService, SourceUpdateData } from '../../services/RefreshManager';
 import { useHttp } from '../../hooks/useHttp';
 import { useSources } from '../../hooks/workspace';
 import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { Source } from '../../../types/source';
 const log = createLogger('RefreshManagerContext');
-
-interface SourceData {
-  sourceId: string;
-  sourceType: string;
-  sourcePath?: string;
-  sourceMethod?: string;
-  sourceContent?: string | null;
-  requestOptions?: Record<string, unknown>;
-  jsonFilter?: Record<string, unknown>;
-  refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown };
-  activationState?: string;
-  needsInitialFetch?: boolean;
-  [key: string]: unknown;
-}
 
 interface RefreshStatus {
   isRefreshing: boolean;
@@ -44,10 +31,10 @@ interface RefreshStatus {
 interface RefreshManagerContextValue {
   isReady: () => boolean;
   manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (source: SourceData) => void;
-  updateSource: (source: SourceData) => void;
+  addSource: (source: Source) => void;
+  updateSource: (source: Source) => void;
   removeSource: (sourceId: string) => Promise<void>;
-  getTimeUntilRefresh: (sourceId: string, sourceData: { sourceId: string; sourceType: string } | null) => number;
+  getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => number;
   getRefreshStatus: (sourceId: string) => RefreshStatus;
 }
 
@@ -66,15 +53,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     // Update HTTP service reference when http changes
     useEffect(() => {
         httpServiceRef.current = {
-            request: async (sourceId: string, url: string | undefined, method: string | undefined, options: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => {
-                return await http.request(
-                    sourceId,
-                    url as Parameters<typeof http.request>[1],
-                    method as Parameters<typeof http.request>[2],
-                    options as Parameters<typeof http.request>[3],
-                    jsonFilter as unknown as Parameters<typeof http.request>[4]
-                );
-            }
+            request: http.request
         };
     }, [http]);
 
@@ -86,14 +65,14 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
 
         initializationRef.current = true;
 
-        const updateCallback = (sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown>) => {
+        const updateCallback = (sourceId: string, content: string | null | undefined, additionalData: SourceUpdateData) => {
             log.debug('RefreshManager update callback:', { sourceId, hasContent: !!content, additionalData });
 
             // Get the source to check if it has a JSON filter
-            const source = (getCentralizedWorkspaceService().getState().sources as SourceData[]).find((s: SourceData) => s.sourceId === String(sourceId));
+            const source = (getCentralizedWorkspaceService().getState().sources).find((s) => s.sourceId === String(sourceId));
 
             // Build updates object
-            const updates: Record<string, unknown> = {};
+            const updates: Partial<Source> = {};
 
             // Only update content if it's explicitly provided (not undefined)
             // This prevents schedule updates from clearing content
@@ -107,11 +86,9 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                 if (additionalData.originalResponse) {
                     updates.originalResponse = additionalData.originalResponse;
                     updates.isFiltered = true;
-                    const jsonFilter = source?.jsonFilter as Record<string, unknown> | undefined;
-                    updates.filteredWith = (jsonFilter?.path as string) || null;
+                    updates.filteredWith = source?.jsonFilter?.path ?? null;
                 } else {
-                    const jsonFilter = source?.jsonFilter as Record<string, unknown> | undefined;
-                    if (jsonFilter?.enabled === false) {
+                    if (source?.jsonFilter?.enabled === false) {
                         updates.originalResponse = null;
                         updates.isFiltered = false;
                         updates.filteredWith = null;
@@ -120,16 +97,19 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
 
                 // Merge refreshOptions to preserve all settings
                 if (additionalData.refreshOptions) {
-                    const sourceRefreshOptions = (source?.refreshOptions ?? {}) as Record<string, unknown>;
-                    const additionalRefreshOptions = additionalData.refreshOptions as Record<string, unknown>;
                     updates.refreshOptions = {
-                        ...sourceRefreshOptions,
-                        ...additionalRefreshOptions
+                        ...(source?.refreshOptions ?? { enabled: false }),
+                        ...additionalData.refreshOptions
                     };
                 }
 
                 if (additionalData.refreshStatus) {
-                    updates.refreshStatus = additionalData.refreshStatus;
+                    updates.refreshStatus = additionalData.refreshStatus as Source['refreshStatus'];
+                }
+
+                // Store HTTP response headers for ContentViewer
+                if (additionalData.headers) {
+                    updates.responseHeaders = additionalData.headers;
                 }
             }
 
@@ -199,10 +179,10 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     const value: RefreshManagerContextValue = {
         isReady: () => refreshManagerIntegration.isReady(),
         manualRefresh: (sourceId: string) => refreshManagerIntegration.manualRefresh(sourceId),
-        addSource: (source: SourceData) => refreshManagerIntegration.addSource(source),
-        updateSource: (source: SourceData) => refreshManagerIntegration.updateSource(source),
+        addSource: (source: Source) => refreshManagerIntegration.addSource(source),
+        updateSource: (source: Source) => refreshManagerIntegration.updateSource(source),
         removeSource: (sourceId: string) => refreshManagerIntegration.removeSource(sourceId),
-        getTimeUntilRefresh: (sourceId: string, sourceData: { sourceId: string; sourceType: string } | null) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData as SourceData | null),
+        getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData),
         getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId) as RefreshStatus
     };
 

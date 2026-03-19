@@ -1,154 +1,112 @@
 /**
  * Header Extraction Utilities
- * 
- * Comprehensive header extraction system supporting multiple response formats.
- * Implements a fallback hierarchy to maximize header extraction success rate
- * from various API response structures and malformed JSON data.
- * 
+ *
+ * Extracts HTTP response headers from a Source object.
+ *
  * Extraction Strategy Hierarchy:
- * 1. Direct headers property (ideal case)
- * 2. Raw response JSON parsing
- * 3. Original response string parsing
+ * 1. Direct responseHeaders field (populated by refresh/fetch pipeline)
+ * 2. Original response JSON parsing (for proxy-style responses with embedded headers)
+ * 3. Source content JSON parsing
  * 4. Regex-based extraction for malformed JSON
- * 5. Aggressive pattern matching for edge cases
- * 6. Content-type fallback detection
- * 
+ * 5. Content-type fallback detection
+ *
  * @module HeaderExtractor
  * @since 3.0.0
  */
 
+import type { Source } from '../../../../types/source';
+
 /**
- * Extracts HTTP headers from source object using intelligent fallback strategies
- * 
- * Implements a comprehensive extraction hierarchy to handle various response formats
- * from different APIs and proxy configurations. Each strategy is attempted in order
- * until headers are successfully extracted or all methods are exhausted.
- * 
- * @param {Object} source - Source object containing response data
- * @param {Object} [source.headers] - Direct headers object (highest priority)
- * @param {string} [source.rawResponse] - Raw JSON response string
- * @param {string} [source.originalResponse] - Original response data
- * @param {string} [source.sourceContent] - Source content for extraction
- * @returns {Object|null} Extracted headers object or null if extraction fails
- * @example
- * extractHeaders({headers: {'Content-Type': 'application/json'}}) // Returns headers directly
- * extractHeaders({originalResponse: '{"headers":{"Accept":"text/html"}}'}) // Parses from JSON
+ * Extracts HTTP response headers from a Source object.
+ *
+ * Uses a fallback hierarchy: first checks the dedicated responseHeaders field,
+ * then attempts to parse headers from originalResponse or sourceContent.
+ *
+ * @param source - Source object containing response data
+ * @returns Extracted headers object or null if extraction fails
  */
-export function extractHeaders(source: { headers?: Record<string, string> | null; rawResponse?: string; originalResponse?: string | Record<string, unknown>; sourceContent?: string | null; [key: string]: unknown } | null) {
-    // Check if headers was explicitly cleared (null means error state)
-    if (source?.headers === null) {
+export function extractHeaders(source: Source | null): Record<string, string> | null {
+    // Check if responseHeaders was explicitly cleared (null means error state)
+    if (source?.responseHeaders === null) {
         return null;
     }
 
-    // First check if there are headers directly in the source
-    if (source?.headers) {
-        return source.headers;
+    // Primary path: use stored response headers from the fetch pipeline
+    if (source?.responseHeaders && Object.keys(source.responseHeaders).length > 0) {
+        return source.responseHeaders;
     }
 
-    // Check for rawResponse property
-    if (source?.rawResponse) {
-        const rawHeaders = extractFromRawResponse(source.rawResponse);
-        if (rawHeaders) return rawHeaders;
-    }
-
-    // Try to parse headers from originalResponse if it's a string
+    // Fallback: try to parse headers from originalResponse (body before filtering)
+    // This works for proxy-style APIs that embed headers in the response body
     if (source?.originalResponse && typeof source.originalResponse === 'string') {
-        const originalHeaders = extractFromOriginalResponse(source.originalResponse);
+        const originalHeaders = extractFromJsonString(source.originalResponse);
         if (originalHeaders) return originalHeaders;
     }
 
-    // Check for headers in source content
+    // Fallback: check for headers embedded in source content
     if (source?.sourceContent && typeof source.sourceContent === 'string') {
         const contentHeaders = extractFromSourceContent(source.sourceContent);
         if (contentHeaders) return contentHeaders;
     }
 
-    // Manual fallback for common headers
+    // Last resort: content-type sniffing
     const fallbackHeaders = generateFallbackHeaders(source);
     if (Object.keys(fallbackHeaders).length > 0) {
         return fallbackHeaders;
     }
 
-    // If we couldn't find headers, return null
     return null;
 }
 
 /**
- * Extracts headers from rawResponse property
- * @param {string} rawResponse - Raw response string
- * @returns {Object|null} - Extracted headers or null
+ * Attempts to parse a JSON string and extract a "headers" property from it
  */
-function extractFromRawResponse(rawResponse: string) {
+function extractFromJsonString(jsonString: string): Record<string, string> | null {
     try {
-        const parsed = JSON.parse(rawResponse);
-        if (parsed && parsed.headers) {
+        const parsed = JSON.parse(jsonString);
+        if (parsed && parsed.headers && typeof parsed.headers === 'object') {
             return parsed.headers;
         }
-    } catch (e) {
-        // Failed to parse rawResponse
-    }
-    return null;
-}
-
-/**
- * Extracts headers from originalResponse string
- * @param {string} originalResponse - Original response string
- * @returns {Object|null} - Extracted headers or null
- */
-function extractFromOriginalResponse(originalResponse: string) {
-    // First try parsing as JSON
-    try {
-        const parsedJson = JSON.parse(originalResponse);
-        if (parsedJson.headers) {
-            return parsedJson.headers;
-        }
-    } catch (e) {
-        // originalResponse is not valid JSON, will try alternate approach
+    } catch {
+        // Not valid JSON, try regex
     }
 
-    // Try to extract headers using a more lenient regex approach
-    return extractHeadersWithRegex(originalResponse);
+    return extractHeadersWithRegex(jsonString);
 }
 
 /**
  * Extracts headers from source content string
- * @param {string} sourceContent - Source content string
- * @returns {Object|null} - Extracted headers or null
  */
-function extractFromSourceContent(sourceContent: string) {
-    // Try to find headers in the source content
+function extractFromSourceContent(sourceContent: string): Record<string, string> | null {
     if (sourceContent.includes('"headers":')) {
         const regexHeaders = extractHeadersWithRegex(sourceContent);
         if (regexHeaders) return regexHeaders;
     }
 
-    // Try a more aggressive extraction approach for malformed JSON
+    // Try aggressive extraction for malformed JSON
     return extractHeadersAggressive(sourceContent);
 }
 
 /**
  * Extracts headers using regex pattern matching
- * @param {string} content - Content to search
- * @returns {Object|null} - Extracted headers or null
  */
-function extractHeadersWithRegex(content: string) {
+function extractHeadersWithRegex(content: string): Record<string, string> | null {
     try {
         const headerPattern = /"headers":\s*(\{[^}]+})/;
         const match = content.match(headerPattern);
 
         if (match && match[1]) {
             try {
-                // Try to clean and parse the matched JSON
                 const headersText = match[1]
-                    .replace(/\\"/g, '"')  // Replace escaped quotes
-                    .replace(/([{,])\s*([a-zA-Z0-9_-]+):/g, '$1"$2":'); // Add quotes to keys
+                    .replace(/\\"/g, '"')
+                    .replace(/([{,])\s*([a-zA-Z0-9_-]+):/g, '$1"$2":');
 
                 return JSON.parse(headersText);
-            } catch (err) {
+            } catch {
                 // Failed to parse headers from regex match
             }
         }
-    } catch (regexErr) {
+    } catch {
         // Regex extraction approach failed
     }
     return null;
@@ -156,12 +114,9 @@ function extractHeadersWithRegex(content: string) {
 
 /**
  * Aggressive header extraction for malformed JSON
- * @param {string} content - Content to search
- * @returns {Object|null} - Extracted headers or null
  */
-function extractHeadersAggressive(content: string) {
+function extractHeadersAggressive(content: string): Record<string, string> | null {
     try {
-        // Look for a larger chunk that might contain the headers
         const fullResponseMatch = content.match(/\{[\s\S]*?"headers"[\s\S]*?}/);
         if (fullResponseMatch) {
             try {
@@ -169,11 +124,11 @@ function extractHeadersAggressive(content: string) {
                 if (fullResponse.headers) {
                     return fullResponse.headers;
                 }
-            } catch (err) {
+            } catch {
                 // Failed to parse full response match
             }
         }
-    } catch (e) {
+    } catch {
         // Failed aggressive extraction approach
     }
     return null;
@@ -181,13 +136,10 @@ function extractHeadersAggressive(content: string) {
 
 /**
  * Generates fallback headers based on content analysis
- * @param {Object} source - Source object
- * @returns {Object} - Fallback headers
  */
-function generateFallbackHeaders(source: { sourceContent?: string | null; originalResponse?: string | Record<string, unknown>; [key: string]: unknown } | null) {
+function generateFallbackHeaders(source: Source | null): Record<string, string> {
     const fallbackHeaders: Record<string, string> = {};
 
-    // Check if we can extract content-type from the response
     if (source?.sourceContent?.includes('<!doctype html>') ||
         (typeof source?.originalResponse === 'string' && source.originalResponse.includes('<!doctype html>'))) {
         fallbackHeaders['Content-Type'] = 'text/html';

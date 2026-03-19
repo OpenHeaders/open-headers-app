@@ -7,28 +7,15 @@ import refreshManager, { type HttpService, type OnUpdateCallback } from './Refre
 import { getCentralizedWorkspaceService } from './CentralizedWorkspaceService';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
 import { createLogger } from '../utils/error-handling/logger';
+import type { Source, SourceRequestOptions } from '../../types/source';
 const log = createLogger('RefreshManagerIntegration');
-
-interface SourceData {
-    sourceId: string;
-    sourceType: string;
-    sourcePath?: string;
-    sourceMethod?: string;
-    sourceContent?: string | null;
-    requestOptions?: Record<string, unknown>;
-    jsonFilter?: Record<string, unknown>;
-    refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown };
-    activationState?: string;
-    needsInitialFetch?: boolean;
-    [key: string]: unknown;
-}
 
 interface ResolvedSourceData {
     sourcePath: string;
-    requestOptions: Record<string, unknown>;
+    requestOptions: SourceRequestOptions;
 }
 
-interface TrackedSourceData extends SourceData {
+interface TrackedSource extends Source {
     resolvedData?: ResolvedSourceData;
 }
 
@@ -39,7 +26,7 @@ class RefreshManagerIntegration {
     updateCallback: OnUpdateCallback | null;
     sourceSubscriptionCleanup: (() => void) | null;
     envSubscriptionCleanup: (() => void) | null;
-    lastSeenSources: Map<string, TrackedSourceData>;
+    lastSeenSources: Map<string, TrackedSource>;
     envChangeDebounceTimer: ReturnType<typeof setTimeout> | null;
     sourceChangeDebounceTimers: Map<string, ReturnType<typeof setTimeout>>;
     sourceActivationCleanup?: (() => void) | null;
@@ -104,7 +91,7 @@ class RefreshManagerIntegration {
         // Subscribe to workspace state changes
         this.sourceSubscriptionCleanup = workspaceService.subscribe((state, changedKeys) => {
             if (changedKeys.includes('sources')) {
-                this.syncSourceChanges(state.sources as SourceData[]).catch(err => {
+                this.syncSourceChanges(state.sources).catch(err => {
                     log.error('Error syncing source changes:', err);
                 });
             }
@@ -121,7 +108,7 @@ class RefreshManagerIntegration {
                 // When env vars change, resync sources to update stored resolved values
                 // This does NOT trigger immediate refreshes - new values will be used on next scheduled refresh
                 const workspaceState = workspaceService.getState();
-                this.syncSourceChanges(workspaceState.sources as SourceData[]).catch(err => {
+                this.syncSourceChanges(workspaceState.sources).catch(err => {
                     log.error('Error syncing sources after env change:', err);
                 });
             }, 500); // Wait 500ms after last env change
@@ -131,23 +118,19 @@ class RefreshManagerIntegration {
     /**
      * Track source data in lastSeenSources map
      */
-    trackSourceData(source: SourceData) {
+    trackSourceData(source: Source) {
         const resolvedData = this.resolveSourceData(source);
-        this.lastSeenSources.set(source.sourceId, {
-            sourcePath: source.sourcePath,
-            sourceMethod: source.sourceMethod,
-            requestOptions: source.requestOptions ? {...source.requestOptions} : undefined,
-            jsonFilter: source.jsonFilter ? {...source.jsonFilter} : undefined,
-            refreshOptions: source.refreshOptions ? {...source.refreshOptions} : undefined,
-            activationState: source.activationState,
-            resolvedData: resolvedData
-        } as TrackedSourceData);
+        const tracked: TrackedSource = {
+            ...source,
+            resolvedData
+        };
+        this.lastSeenSources.set(source.sourceId, tracked);
     }
 
     /**
      * Resolve environment variables in source data
      */
-    resolveSourceData(source: SourceData): ResolvedSourceData {
+    resolveSourceData(source: Source): ResolvedSourceData {
         const envService = getCentralizedEnvironmentService();
 
         // Helper to resolve object templates
@@ -177,9 +160,9 @@ class RefreshManagerIntegration {
         const resolvedPath = envService.resolveTemplate(source.sourcePath || '');
 
         // Resolve headers and other request options
-        const resolvedRequestOptions: Record<string, unknown> = source.requestOptions ? {...source.requestOptions} : {};
+        const resolvedRequestOptions: SourceRequestOptions = source.requestOptions ? {...source.requestOptions} : {};
         if (resolvedRequestOptions.headers) {
-            resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers) as Record<string, string>;
+            resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers) as SourceRequestOptions['headers'];
         }
         if (resolvedRequestOptions.body && typeof resolvedRequestOptions.body === 'string') {
             resolvedRequestOptions.body = envService.resolveTemplate(resolvedRequestOptions.body);
@@ -196,7 +179,7 @@ class RefreshManagerIntegration {
      * This updates source configurations but does NOT trigger immediate refreshes
      * Environment variable changes will be applied on the next scheduled refresh
      */
-    async syncSourceChanges(sources: SourceData[]) {
+    async syncSourceChanges(sources: Source[]) {
         if (!this.initialized || !refreshManager.isInitialized) {
             return;
         }
@@ -212,7 +195,7 @@ class RefreshManagerIntegration {
         }, 100));
     }
 
-    async _performSourceSync(sources: SourceData[]) {
+    async _performSourceSync(sources: Source[]) {
         // Track which sources we've seen to detect real changes
         const currentSourceIds = new Set();
 
@@ -310,7 +293,7 @@ class RefreshManagerIntegration {
      * Setup listener for source activation events
      */
     setupSourceActivationListener() {
-        const handleSourceActivation = async (event: CustomEvent<{ sourceId: string; source: SourceData }>) => {
+        const handleSourceActivation = async (event: CustomEvent<{ sourceId: string; source: Source }>) => {
             const { sourceId, source } = event.detail;
             log.info(`Source ${sourceId} activated, adding to RefreshManager`);
 
@@ -351,15 +334,15 @@ class RefreshManagerIntegration {
      */
     async syncAllSources() {
         const workspaceService = getCentralizedWorkspaceService();
-        const { sources } = workspaceService.getState();
+        const sources = workspaceService.getState().sources;
 
         for (const source of sources) {
             if (source.sourceType === 'http') {
                 // Add all HTTP sources (even if auto-refresh is disabled)
-                await refreshManager.addSource(source as never);
+                await refreshManager.addSource(source);
 
                 // Track complete source data including resolved values
-                this.trackSourceData(source as never);
+                this.trackSourceData(source);
             }
         }
     }
@@ -367,7 +350,7 @@ class RefreshManagerIntegration {
     /**
      * Add a new source to RefreshManager
      */
-    async addSource(source: SourceData) {
+    async addSource(source: Source) {
         if (!this.initialized) {
             log.warn('RefreshManagerIntegration not initialized');
             return;
@@ -381,7 +364,7 @@ class RefreshManagerIntegration {
     /**
      * Update a source in RefreshManager
      */
-    async updateSource(source: SourceData) {
+    async updateSource(source: Source) {
         if (!this.initialized) {
             log.warn('RefreshManagerIntegration not initialized');
             return;
@@ -488,7 +471,7 @@ class RefreshManagerIntegration {
     /**
      * Get time until next refresh for a source
      */
-    getTimeUntilRefresh(sourceId: string, sourceData: SourceData | null = null) {
+    getTimeUntilRefresh(sourceId: string, sourceData: Source | null = null) {
         if (!this.initialized) {
             return 0;
         }

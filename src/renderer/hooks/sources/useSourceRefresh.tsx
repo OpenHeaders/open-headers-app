@@ -17,7 +17,7 @@ interface UseSourceRefreshDeps {
   updateSource: (sourceId: string, updates: Partial<Source>) => void;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (sourceData: Record<string, unknown>) => Promise<Source | null>;
+  addSource: (sourceData: Source) => Promise<Source | null>;
 }
 
 interface UseSourceRefreshReturn {
@@ -58,7 +58,8 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
 
       // Update the source content and metadata
       const updates: Partial<Source> = {
-        sourceContent: result.content
+        sourceContent: result.content,
+        responseHeaders: result.headers ?? null
       };
 
       // If there's a JSON filter, store the original response and filtering metadata
@@ -113,7 +114,8 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
     log.debug('Adding source:', sourceData);
 
     // Build the enriched source data (with content from initial fetch)
-    const enrichedData: Record<string, unknown> = { ...sourceData };
+    // sourceId will be assigned by SourceManager.addSource
+    const enrichedData: Source = { sourceId: '', ...sourceData };
 
     // For HTTP sources, fetch content BEFORE adding the source
     if (sourceData.sourceType === 'http') {
@@ -121,7 +123,6 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
         log.debug('Fetching initial content for HTTP source before adding');
         showMessage('info', 'Fetching content...');
 
-        // Make the HTTP request to get initial content
         const jsonFilter = { enabled: sourceData.jsonFilter?.enabled ?? false, path: sourceData.jsonFilter?.path };
         const result = await http.request(
           'new-source-' + Date.now(),
@@ -133,6 +134,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
 
         enrichedData.sourceContent = result.content;
         enrichedData.needsInitialFetch = false;
+        enrichedData.responseHeaders = result.headers ?? null;
 
         if (result.isFiltered && result.originalResponse) {
           enrichedData.originalResponse = result.originalResponse;
@@ -140,8 +142,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
           enrichedData.filteredWith = result.filteredWith;
         }
 
-        const refreshOptions = { ...(sourceData.refreshOptions || { enabled: false }), lastRefresh: Date.now() };
-        enrichedData.refreshOptions = refreshOptions;
+        enrichedData.refreshOptions = { ...(sourceData.refreshOptions || { enabled: false }), lastRefresh: Date.now() };
 
         log.debug('Initial content fetched successfully');
       } catch (error: unknown) {
