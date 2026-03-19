@@ -4,13 +4,14 @@ import type { FormInstance } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import HttpOptions from '../../sources/HttpOptions';
 import { validateEnvironmentVariables, validateTotpCodePlaceholder } from './form-validation';
+import type { Source } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EditSourceForm');
 
 interface EditSourceFormProps {
     form: FormInstance;
-    source: { sourceId: string; [key: string]: unknown };
+    source: Source;
     envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string>; activeEnvironment: string; [key: string]: unknown };
     totpEnabled: boolean;
     totpSecret: string;

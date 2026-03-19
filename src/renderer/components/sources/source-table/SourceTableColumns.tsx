@@ -33,20 +33,9 @@ import type { GlobalToken } from 'antd';
 import { ReloadOutlined, DeleteOutlined, EditOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { trimContent } from './SourceTableUtils';
 import { isTemplateSource } from './SourceDependencyChecker';
+import type { Source } from '../../../../types/source';
 
 const { Text } = Typography;
-
-interface SourceRecord {
-    sourceId: string;
-    sourceType: string;
-    sourceTag?: string;
-    sourcePath?: string;
-    sourceContent?: string | null;
-    activationState?: string;
-    missingDependencies?: string[];
-    refreshOptions?: { enabled?: boolean; [key: string]: unknown };
-    [key: string]: unknown;
-}
 
 interface CircuitBreakerInfo {
     isOpen?: boolean;
@@ -64,9 +53,9 @@ interface RefreshStatusInfo {
 
 interface SourceTableColumnsParams {
     token: GlobalToken;
-    getRefreshStatusText: (record: SourceRecord) => string | RefreshStatusInfo;
-    handleViewContent: (record: SourceRecord) => void;
-    handleEditSource: (record: SourceRecord) => void;
+    getRefreshStatusText: (record: Source) => string | RefreshStatusInfo;
+    handleViewContent: (record: Source) => void;
+    handleEditSource: (record: Source) => void;
     handleRemoveSource: (sourceId: string) => void;
     handleRefreshSource: (sourceId: string) => void;
     refreshingSourceId: string | null;
@@ -98,7 +87,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourceType',
         key: 'sourceType',
         width: 180,
-        render: (type: string, record: SourceRecord) => (
+        render: (type: string, record: Source) => (
             <Space size={4} direction="vertical" align="start">
                 <Space size={4}>
                     {/* Primary type tag with color coding:
@@ -180,7 +169,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourcePath',
         key: 'sourcePath',
         ellipsis: true, // Enable text truncation with ellipsis
-        render: (path: string, record: SourceRecord) => (
+        render: (path: string, record: Source) => (
             <Text
                 ellipsis={{ tooltip: path }} // Show full path in tooltip on hover
                 style={{ 
@@ -216,7 +205,7 @@ export const createSourceTableColumns = ({
         title: 'Actions',
         key: 'actions',
         width: 180,
-        render: (_: unknown, record: SourceRecord) => (
+        render: (_: unknown, record: Source) => (
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 {/* HTTP Sources: Full functionality with refresh status and controls */}
                 {record.sourceType === 'http' && (

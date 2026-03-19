@@ -4,43 +4,12 @@
 
 import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
 import { showMessage } from '../../../utils/ui/messageUtil';
+import type { Source } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentUtils');
 
-/** A header with a name and value */
-interface HeaderEntry {
-  name?: string;
-  value?: string;
-}
-
-/** Query parameter entry */
-interface QueryParam {
-  key?: string;
-  value?: string;
-}
-
-/** Source configuration used for environment variable checking */
-interface SourceConfig {
-  sourceId?: string;
-  sourceType?: string;
-  sourcePath?: string;
-  sourceName?: string;
-  sourceTag?: string;
-  name?: string;
-  requestOptions?: {
-    headers?: HeaderEntry[];
-    queryParams?: QueryParam[];
-    body?: string;
-    totpSecret?: string;
-    [key: string]: unknown;
-  };
-  jsonFilter?: {
-    enabled?: boolean;
-    path?: string;
-  };
-  [key: string]: unknown;
-}
+type SourceConfig = Source;
 
 /** Header rule with optional environment variable tracking */
 interface HeaderRule {
@@ -105,7 +74,7 @@ export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment
       
       // Check headers
       if (source.requestOptions?.headers) {
-        source.requestOptions.headers.forEach((header: HeaderEntry) => {
+        source.requestOptions.headers.forEach((header) => {
           const headerVars = extractVariables(header.value || '');
           headerVars.forEach(varName => {
             if (!targetEnvironment[varName]) {
@@ -115,21 +84,24 @@ export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment
         });
       }
       
-      // Check body, totpSecret, and other fields
-      ['body', 'totpSecret'].forEach(field => {
-        if (source.requestOptions?.[field]) {
-          const fieldVars = extractVariables((source.requestOptions[field] as string) || '');
-          fieldVars.forEach(varName => {
-            if (!targetEnvironment[varName]) {
-              missingVars.add(varName);
-            }
-          });
+      // Check body and totpSecret
+      const reqOpts = source.requestOptions;
+      if (reqOpts) {
+        for (const fieldValue of [reqOpts.body, reqOpts.totpSecret]) {
+          if (fieldValue) {
+            const fieldVars = extractVariables(fieldValue);
+            fieldVars.forEach(varName => {
+              if (!targetEnvironment[varName]) {
+                missingVars.add(varName);
+              }
+            });
+          }
         }
-      });
-      
+      }
+
       // Check query parameters
       if (source.requestOptions?.queryParams) {
-        source.requestOptions.queryParams.forEach((param: QueryParam) => {
+        source.requestOptions.queryParams.forEach((param) => {
           const paramVars = extractVariables(param.value || '');
           paramVars.forEach(varName => {
             if (!targetEnvironment[varName]) {
@@ -244,7 +216,7 @@ export const formatVariableUsage = (varName: string, sourceIds: string[], source
     const source = sources.find((s: SourceConfig) => s.sourceId === sourceId);
     return {
       sourceId,
-      sourceName: source?.sourceName || source?.name || `Source ${sourceId}`,
+      sourceName: source?.sourceName || `Source ${sourceId}`,
       isRule: false
     };
   });

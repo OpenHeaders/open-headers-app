@@ -8,24 +8,8 @@ import EditSourceModalFooter from './EditSourceModalFooter';
 import FormSubmissionHandler from './form-submission-handler';
 
 import { createLogger } from '../../../utils/error-handling/logger';
+import type { Source } from '../../../../types/source';
 const log = createLogger('EditSourceModal');
-
-/**
- * EditSourceModal component for editing existing HTTP sources
- * Provides a comprehensive interface for modifying source configuration
- * including URL, headers, query parameters, JSON filtering, and TOTP settings
- */
-interface SourceData {
-    sourceId: string;
-    sourceType?: string;
-    sourcePath?: string;
-    sourceTag?: string;
-    sourceMethod?: string;
-    requestOptions?: Record<string, unknown>;
-    jsonFilter?: Record<string, unknown>;
-    refreshOptions?: Record<string, unknown>;
-    [key: string]: unknown;
-}
 
 interface HttpOptionsRef {
     validateFields?: () => void;
@@ -38,10 +22,10 @@ interface HttpOptionsRef {
 }
 
 interface EditSourceModalProps {
-    source: SourceData | null;
+    source: Source | null;
     open: boolean;
     onCancel: () => void;
-    onSave: (sourceData: Record<string, unknown>) => Promise<boolean>;
+    onSave: (sourceData: Record<string, unknown> & { sourceId: string; refreshNow?: boolean }) => Promise<boolean>;
     refreshingSourceId: string | null;
 }
 
@@ -329,7 +313,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
             submissionHandler.totpEnabled = totpEnabled;
             submissionHandler.totpSecret = totpSecret;
 
-            const sourceData = await submissionHandler.handleSubmission(refreshNow);
+            const sourceData = await submissionHandler.handleSubmission(refreshNow) as Record<string, unknown> & { sourceId: string; refreshNow?: boolean };
 
             // Call parent save handler
             const success = await onSave(sourceData);

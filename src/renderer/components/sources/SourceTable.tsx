@@ -1,5 +1,5 @@
 import { useEnvironments, useRefreshManager } from '../../contexts';
-import type { SourceData } from '../../hooks/workspace/useSources';
+import type { Source } from '../../../types/source';
 import React, {useState, useEffect, useMemo} from 'react';
 import { Table, Empty, Typography, theme } from 'antd';
 import EditSourceModal from '../modals/edit-source';
@@ -60,10 +60,10 @@ const log = createLogger('SourceTable');
  * @since 3.0.0
  */
 interface SourceTableProps {
-    sources: SourceData[];
+    sources: Source[];
     onRemoveSource: (sourceId: string) => Promise<boolean>;
-    onRefreshSource: (sourceId: string, updatedSource?: SourceData | null) => Promise<boolean>;
-    onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;
+    onRefreshSource: (sourceId: string, updatedSource?: Source | null) => Promise<boolean>;
+    onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<Source | null>;
 }
 
 const SourceTable = ({
@@ -166,8 +166,8 @@ const SourceTable = ({
 
     // Refresh status text helper with extracted logic
     // Wrapper function that provides all necessary dependencies
-    const getRefreshStatus = (source: Record<string,unknown>) => getRefreshStatusText(
-        source as unknown as Parameters<typeof getRefreshStatusText>[0],
+    const getRefreshStatus = (source: Source) => getRefreshStatusText(
+        source,
         refreshManager, 
         refreshDisplayStates, 
         refreshingSourceId, 
@@ -273,19 +273,19 @@ const SourceTable = ({
 
     // Render virtualized or regular table based on data size
     // Virtualized table for >50 sources, regular table for smaller datasets
-    const VTable = VirtualizedSimpleTable as React.FC<{ dataSource: Record<string, unknown>[]; columns: Record<string, unknown>[]; rowKey: (record: Record<string, unknown>) => string; height: number; rowHeight: number }>;
+    const VTable = VirtualizedSimpleTable as unknown as React.FC<{ dataSource: Source[]; columns: Record<string, unknown>[]; rowKey: (record: Source) => string; height: number; rowHeight: number }>;
     const tableComponent = useVirtualization ? (
         <VTable
             dataSource={sources}
             columns={columns}
-            rowKey={(record: Record<string,unknown>) => `source-${record.sourceId}-${record.sourceType}`}
+            rowKey={(record: Source) => `source-${record.sourceId}-${record.sourceType}`}
             height={400}
             rowHeight={90} // Increased for multi-line content display
         />
     ) : (
-        <Table
-            dataSource={sources as unknown as Record<string, unknown>[]}
-            columns={columns as unknown as import('antd').TableColumnsType<Record<string, unknown>>}
+        <Table<Source>
+            dataSource={sources}
+            columns={columns}
             rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
             pagination={false}
             locale={{ emptyText }}
@@ -308,7 +308,7 @@ const SourceTable = ({
                     source={selectedSource}
                     open={editModalVisible}
                     onCancel={handleCloseModal}
-                    onSave={handleSaveSource as (sourceData: Record<string, unknown>) => Promise<boolean>}
+                    onSave={handleSaveSource}
                     refreshingSourceId={refreshingSourceId} // Pass refreshing state for UI feedback
                 />
             )}

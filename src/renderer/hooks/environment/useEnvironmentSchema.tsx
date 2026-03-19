@@ -1,5 +1,9 @@
 import { useCallback } from 'react';
 import { useEnvironmentCore } from './useEnvironmentCore';
+import type { Source } from '../../../types/source';
+import type { EnvironmentSchema } from '../../services/export-import/core/types';
+
+type SourceData = Source;
 
 interface VariableUsage {
   [varName: string]: string[];
@@ -10,28 +14,6 @@ interface VariableDefinition {
   sensitive: boolean;
   usedIn: string[];
   example?: string;
-  [key: string]: unknown;
-}
-
-interface EnvironmentSchema {
-  environments: Record<string, { variables: Array<{ name: string; isSecret: boolean }> }>;
-  variableDefinitions: Record<string, VariableDefinition>;
-  [key: string]: unknown;
-}
-
-interface SourceData {
-  sourceId: string;
-  sourceType: string;
-  sourcePath?: string;
-  requestOptions?: {
-    headers?: Array<{ key: string; value: string }>;
-    queryParams?: Array<{ key: string; value: string }>;
-    body?: string;
-    totpSecret?: string;
-    [key: string]: unknown;
-  };
-  jsonFilter?: { enabled?: boolean; path?: string };
-  [key: string]: unknown;
 }
 
 interface EnvironmentVarEntry {

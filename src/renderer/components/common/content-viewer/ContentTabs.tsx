@@ -25,21 +25,14 @@ import { Button, Typography, Tabs } from 'antd';
 import { CopyOutlined, CheckOutlined } from '@ant-design/icons';
 import { formatContent, formatJson } from './ContentFormatter';
 import { HeadersTable } from './HeadersTable';
+import type { Source } from '../../../../types/source';
 
 const { Text } = Typography;
-
-interface ContentTabsSource {
-    sourceType?: string;
-    isFiltered?: boolean;
-    filteredWith?: string | null;
-    jsonFilter?: { enabled?: boolean; path?: string };
-    [key: string]: unknown;
-}
 
 interface ContentTabsProps {
     activeTab: string;
     onTabChange: (key: string) => void;
-    source: ContentTabsSource;
+    source: Source;
     internalContent: string | null;
     internalOriginalResponse: string | null;
     responseHeaders: Record<string, string> | null;

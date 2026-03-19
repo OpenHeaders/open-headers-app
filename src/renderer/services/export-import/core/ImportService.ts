@@ -334,7 +334,7 @@ export class ImportService {
    * @private
    */
   _validateImportPayload(importData: ImportData) {
-    const validation = validateImportPayload(importData) as { success: boolean; error?: string; warnings?: string[] };
+    const validation = validateImportPayload(importData as unknown as Parameters<typeof validateImportPayload>[0]) as { success: boolean; error?: string; warnings?: string[] };
     if (!validation.success) {
       throw new Error(`Import data validation failed: ${validation.error}`);
     }

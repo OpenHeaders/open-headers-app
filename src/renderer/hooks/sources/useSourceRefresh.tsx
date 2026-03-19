@@ -9,45 +9,19 @@ import { useCallback } from 'react';
 import { useHttp } from '../useHttp';
 import { showMessage } from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
-import type { NewSourceData } from '../../components/sources/source-form';
+import type { Source, NewSourceData } from '../../../types/source';
 const log = createLogger('useSourceRefresh');
 
-interface SourceData {
-  sourceId: string;
-  sourceType: string;
-  sourcePath?: string;
-  sourceMethod?: string;
-  sourceContent?: string | null;
-  requestOptions?: Record<string, unknown>;
-  jsonFilter?: { enabled: boolean; path?: string; [key: string]: unknown };
-  refreshOptions?: { enabled?: boolean; interval?: number; lastRefresh?: number; [key: string]: unknown };
-  needsInitialFetch?: boolean;
-  originalResponse?: string | null;
-  isFiltered?: boolean;
-  filteredWith?: string | null;
-  [key: string]: unknown;
-}
-
-interface SourceUpdates {
-  sourceContent?: string | null;
-  originalResponse?: string | null;
-  isFiltered?: boolean;
-  filteredWith?: string | null;
-  needsInitialFetch?: boolean;
-  refreshOptions?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
 interface UseSourceRefreshDeps {
-  sources: SourceData[];
-  updateSource: (sourceId: string, updates: SourceUpdates) => void;
+  sources: Source[];
+  updateSource: (sourceId: string, updates: Partial<Source>) => void;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (sourceData: Record<string, unknown>) => Promise<SourceData | null>;
+  addSource: (sourceData: Record<string, unknown>) => Promise<Source | null>;
 }
 
 interface UseSourceRefreshReturn {
-  handleHttpSourceRefresh: (sourceId: string, updatedSource?: SourceData | null) => Promise<boolean>;
+  handleHttpSourceRefresh: (sourceId: string, updatedSource?: Source | null) => Promise<boolean>;
   refreshSourceWithHttp: (sourceId: string) => Promise<boolean>;
   handleAddSource: (sourceData: NewSourceData) => Promise<boolean>;
 }
@@ -61,7 +35,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
   /**
    * Handle HTTP source refresh with actual HTTP request
    */
-  const handleHttpSourceRefresh = useCallback(async (sourceId: string, updatedSource: SourceData | null = null): Promise<boolean> => {
+  const handleHttpSourceRefresh = useCallback(async (sourceId: string, updatedSource: Source | null = null): Promise<boolean> => {
     try {
       // Find the source - use the sources from the hook which are always fresh
       const source = updatedSource || sources.find((s) => s.sourceId === sourceId);
@@ -83,7 +57,7 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
       );
 
       // Update the source content and metadata
-      const updates: SourceUpdates = {
+      const updates: Partial<Source> = {
         sourceContent: result.content
       };
 

@@ -6,11 +6,12 @@
 export interface EnvironmentSchema {
   environments: Record<string, Record<string, unknown>>;
   variableDefinitions: Record<string, Record<string, unknown>>;
-  [key: string]: unknown;
 }
 
+import type { Source } from '../../../../types/source';
+
 /** Source data object as used in the export/import system */
-export type SourceData = Record<string, unknown>;
+export type SourceData = Source;
 
 /** A single environment variable entry as stored in the environment service */
 export interface EnvironmentVariableEntry {

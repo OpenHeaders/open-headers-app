@@ -45,6 +45,7 @@ export type {
 
 export type {
   Source,
+  NewSourceData,
   SourceType,
   ActivationState,
   SourceMethod,

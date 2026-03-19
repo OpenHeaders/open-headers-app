@@ -3,6 +3,7 @@ import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils';
 import { validateAllFormFields } from './form-validation';
 import timeManager from '../../../services/TimeManager';
+import type { Source } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('FormSubmissionHandler');
@@ -34,14 +35,14 @@ interface SourceData {
 
 class FormSubmissionHandler {
     form: FormInstance;
-    source: Record<string, unknown>;
+    source: Source;
     envContext: Record<string, unknown>;
     httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>;
     originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>;
     totpEnabled: boolean;
     totpSecret: string;
 
-    constructor(form: FormInstance, source: Record<string, unknown>, envContext: Record<string, unknown>, httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
+    constructor(form: FormInstance, source: Source, envContext: Record<string, unknown>, httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>, originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>) {
         this.form = form;
         this.source = source;
         this.envContext = envContext;

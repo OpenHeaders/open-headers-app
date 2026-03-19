@@ -26,6 +26,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Card, Button, Typography } from 'antd';
 import { FileTextOutlined, CopyOutlined, CheckOutlined } from '@ant-design/icons';
 import { extractHeaders, formatContent, createCopyHandler, ContentTabs } from './content-viewer';
+import type { Source } from '../../../types/source';
 
 const { Text } = Typography;
 
@@ -43,16 +44,7 @@ const { Text } = Typography;
  * @example
  * <ContentViewer source={sourceData} open={isOpen} onClose={handleClose} />
  */
-interface ContentViewerSource {
-    sourcePath?: string;
-    sourceType?: string;
-    sourceMethod?: string;
-    sourceContent?: string | null;
-    content?: string;
-    originalResponse?: Record<string, unknown> | string | null;
-    [key: string]: unknown;
-}
-interface ContentViewerProps { source: ContentViewerSource | null; open: boolean; onClose: () => void; }
+interface ContentViewerProps { source: Source | null; open: boolean; onClose: () => void; }
 const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
     const [activeTab, setActiveTab] = useState('content');
     const [copyingContent, setCopyingContent] = useState(false);
@@ -79,11 +71,11 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
                 setInternalOriginalResponse(originalResponseStr);
             }
 
-            // Extract headers from source using the HeaderExtractor utility
-            const extractedHeaders = extractHeaders(source as Parameters<typeof extractHeaders>[0]);
+            // Extract headers from source — extractHeaders handles originalResponse parsing
+            const extractedHeaders = extractHeaders(source as unknown as Parameters<typeof extractHeaders>[0]);
             setResponseHeaders(extractedHeaders);
         }
-    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, source?.headers, internalContent, internalOriginalResponse]);
+    }, [source?.sourceId, source?.sourceContent, source?.originalResponse, internalContent, internalOriginalResponse]);
 
     // Create copy handlers using the ClipboardManager utility
     const handleCopyContent = createCopyHandler(setCopyingContent);

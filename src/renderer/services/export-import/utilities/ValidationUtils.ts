@@ -24,13 +24,13 @@ interface ValidationResult {
   data?: Record<string, unknown>;
 }
 
-/** Import payload structure */
+/** Import payload structure — accepts parsed but unvalidated input */
 interface ImportPayload {
   version?: string;
   workspace?: Record<string, unknown>;
-  sources?: Array<Record<string, unknown>>;
-  proxyRules?: Array<Record<string, unknown>>;
-  rules?: Record<string, Array<Record<string, unknown>>>;
+  sources?: unknown[];
+  proxyRules?: unknown[];
+  rules?: Record<string, unknown[]>;
   environmentSchema?: Record<string, unknown>;
   [key: string]: unknown;
 }
@@ -396,7 +396,7 @@ export function validateImportPayload(payload: ImportPayload): ValidationResult 
 
   // Sources validation
   if (payload.sources && Array.isArray(payload.sources)) {
-    payload.sources.forEach((source: Record<string, unknown>, index: number) => {
+    payload.sources.forEach((source: unknown, index: number) => {
       const sourceValidation = validateSource(source);
       if (!sourceValidation.success) {
         errors.push(`Source ${index + 1} validation failed: ${sourceValidation.error}`);
@@ -406,7 +406,7 @@ export function validateImportPayload(payload: ImportPayload): ValidationResult 
 
   // Proxy rules validation
   if (payload.proxyRules && Array.isArray(payload.proxyRules)) {
-    payload.proxyRules.forEach((rule: Record<string, unknown>, index: number) => {
+    payload.proxyRules.forEach((rule: unknown, index: number) => {
       const ruleValidation = validateProxyRule(rule);
       if (!ruleValidation.success) {
         errors.push(`Proxy rule ${index + 1} validation failed: ${ruleValidation.error}`);
