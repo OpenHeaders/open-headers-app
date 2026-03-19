@@ -16,7 +16,7 @@ interface SourceData {
   sourceType: string;
   sourcePath?: string;
   sourceMethod?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   requestOptions?: Record<string, unknown>;
   jsonFilter?: { enabled: boolean; path?: string; [key: string]: unknown };
   refreshOptions?: { enabled?: boolean; interval?: number; lastRefresh?: number; [key: string]: unknown };
@@ -28,7 +28,7 @@ interface SourceData {
 }
 
 interface SourceUpdates {
-  sourceContent?: string;
+  sourceContent?: string | null;
   originalResponse?: string | null;
   isFiltered?: boolean;
   filteredWith?: string | null;

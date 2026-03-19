@@ -12,7 +12,7 @@ export interface SourceData {
   sourceMethod?: string;
   sourceName?: string;
   sourceTag?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   requestOptions?: Record<string, unknown>;
   jsonFilter?: {
     enabled: boolean;

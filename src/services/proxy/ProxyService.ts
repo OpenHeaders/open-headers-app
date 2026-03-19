@@ -557,10 +557,10 @@ class ProxyService extends EventEmitter {
         this.sources.set(id, value);
     }
 
-    updateSources(sourcesArray: Array<{ sourceId?: string; sourceContent?: string }>): void {
+    updateSources(sourcesArray: Array<{ sourceId?: string; sourceContent?: string | null }>): void {
         if (!Array.isArray(sourcesArray)) return;
         sourcesArray.forEach((source) => {
-            if (source.sourceId && source.sourceContent !== undefined) {
+            if (source.sourceId && source.sourceContent) {
                 this.updateSource(source.sourceId, source.sourceContent);
             }
         });

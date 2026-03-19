@@ -46,7 +46,7 @@ interface RulesStorage {
 
 interface Source {
     sourceId: string;
-    sourceContent?: string;
+    sourceContent?: string | null;
 }
 
 interface WSServiceLike {

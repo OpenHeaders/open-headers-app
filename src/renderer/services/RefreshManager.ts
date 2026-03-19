@@ -17,7 +17,7 @@ interface RefreshSource {
   sourceType: string;
   sourcePath?: string;
   sourceMethod?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   refreshOptions?: RefreshOptions;
   requestOptions?: Record<string, unknown>;
   jsonFilter?: Record<string, unknown>;
@@ -54,7 +54,7 @@ interface NetworkStateEvent {
 
 /** HTTP service interface */
 export interface HttpService {
-  request: (sourceId: string, sourcePath: string | undefined, sourceMethod: string | undefined, requestOptions: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> }>;
+  request: (sourceId: string, sourcePath: string | undefined, sourceMethod: string | undefined, requestOptions: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content: string; originalResponse?: string; rawResponse?: string; headers?: Record<string, string> }>;
 }
 
 /** Update callback type */

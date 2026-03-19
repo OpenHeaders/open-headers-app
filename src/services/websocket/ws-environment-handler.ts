@@ -14,7 +14,7 @@ const log = createLogger('WSEnvironmentHandler');
 interface WSServiceLike {
     appDataPath: string | null;
     rules: Record<string, unknown> & { header?: Array<Record<string, unknown>> };
-    sources: Array<{ sourceId?: string; sourceContent?: string }>;
+    sources: Array<{ sourceId?: string; sourceContent?: string | null }>;
     ruleHandler: { broadcastRules(): void };
 }
 

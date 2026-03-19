@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import refreshManagerIntegration from '../../services/RefreshManagerIntegration';
+import type { HttpService } from '../../services/RefreshManager';
 import { useHttp } from '../../hooks/useHttp';
 import { useSources } from '../../hooks/workspace';
 import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
@@ -11,7 +12,7 @@ interface SourceData {
   sourceType: string;
   sourcePath?: string;
   sourceMethod?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   requestOptions?: Record<string, unknown>;
   jsonFilter?: Record<string, unknown>;
   refreshOptions?: { enabled?: boolean; interval?: number; [key: string]: unknown };
@@ -38,10 +39,6 @@ interface RefreshStatus {
     currentTimeout: number;
     failureCount: number;
   };
-}
-
-interface HttpService {
-  request: (sourceId: string, url: string | undefined, method: string | undefined, options: Record<string, unknown>, jsonFilter?: Record<string, unknown>) => Promise<{ content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> }>;
 }
 
 interface RefreshManagerContextValue {
@@ -76,7 +73,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                     method as Parameters<typeof http.request>[2],
                     options as Parameters<typeof http.request>[3],
                     jsonFilter as unknown as Parameters<typeof http.request>[4]
-                ) as { content?: string; originalResponse?: unknown; rawResponse?: unknown; headers?: Record<string, string> };
+                );
             }
         };
     }, [http]);
@@ -89,7 +86,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
 
         initializationRef.current = true;
 
-        const updateCallback = (sourceId: string, content: unknown, additionalData: Record<string, unknown>) => {
+        const updateCallback = (sourceId: string, content: string | null | undefined, additionalData: Record<string, unknown>) => {
             log.debug('RefreshManager update callback:', { sourceId, hasContent: !!content, additionalData });
 
             // Get the source to check if it has a JSON filter

@@ -71,7 +71,7 @@ export interface Source {
   sourceMethod?: SourceMethod;
   sourceName?: string;
   sourceTag?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   requestOptions?: SourceRequestOptions;
   jsonFilter?: JsonFilter;
   refreshOptions?: RefreshOptions;

@@ -92,7 +92,7 @@ interface Source {
   sourcePath?: string;
   sourceMethod?: string;
   sourceTag?: string;
-  sourceContent?: string;
+  sourceContent?: string | null;
   originalResponse?: string;
   isFiltered?: boolean;
   filteredWith?: unknown;
