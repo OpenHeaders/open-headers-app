@@ -12,28 +12,39 @@ import mainLogger from '../../../utils/mainLogger';
 
 // Core modules
 import GitInitializer from './core/GitInitializer';
+import type { GitPaths, GitStatus } from './core/GitInitializer';
+import type { GitExecutor } from './core/GitExecutor';
 
 // Auth modules
 import GitAuthenticator from './auth/GitAuthenticator';
 
 // Repository modules
 import GitRepositoryManager from './repository/GitRepositoryManager';
+import type { CloneOptions, PullOptions, PushOptions, OperationResult, RepositoryStatus } from './repository/GitRepositoryManager';
 import GitBranchManager from './repository/GitBranchManager';
+import type { BranchResult } from './repository/GitBranchManager';
 import SparseCheckoutManager from './repository/SparseCheckoutManager';
 
 // Operation modules
 import TeamWorkspaceCreator from './operations/TeamWorkspaceCreator';
+import type { CreateOptions, InvitationOptions, CreateResult } from './operations/TeamWorkspaceCreator';
 import TeamWorkspaceSyncer from './operations/TeamWorkspaceSyncer';
+import type { SyncOptions, SyncResult, SyncStatusResult, SyncStatusType } from './operations/TeamWorkspaceSyncer';
 import ConnectionTester from './operations/ConnectionTester';
+import type { ConnectionTestOptions, ConnectionTestResult } from './operations/ConnectionTester';
 import CommitManager from './operations/CommitManager';
+import type { CommitOptions, CommitResult } from './operations/CommitManager';
 
 // Utility modules
 import GitCleanupManager from './utils/GitCleanupManager';
+import type { FullCleanupResult, CleanupStats } from './utils/GitCleanupManager';
 import { GitErrorHandler } from './utils/GitErrorHandler';
 
 // Config modules
 import { ConfigFileDetector } from '../ConfigFileDetector';
+import type { DetectedFile } from '../ConfigFileDetector';
 import { ConfigFileValidator } from '../config-file-validator';
+import type { ValidationResult, ConfigPaths } from '../config-file-validator';
 
 // Legacy support
 import { GitAutoInstaller } from '../git-auto-installer';
@@ -42,6 +53,37 @@ const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
 
 const log = createLogger('GitSyncService');
+
+interface InstallationInfo {
+  platform: NodeJS.Platform;
+  downloadUrl: string;
+  instructions: string;
+}
+
+interface CommitConfigurationOptions extends Partial<CommitOptions> {
+  url?: string;
+  branch?: string;
+  path?: string;
+  files?: Record<string, string>;
+  authType?: string;
+  authData?: Record<string, string>;
+  author?: string;
+  email?: string;
+  message?: string;
+}
+
+interface WritePermissionOptions {
+  url: string;
+  branch?: string;
+  authType?: string;
+  authData?: Record<string, string>;
+}
+
+interface WritePermissionResult {
+  success: boolean;
+  hasWriteAccess: boolean;
+  message?: string;
+}
 
 /**
  * GitSyncService - Main facade for Git operations
@@ -56,7 +98,7 @@ const log = createLogger('GitSyncService');
  */
 class GitSyncService {
   private initializer: GitInitializer;
-  private executor: any;
+  private executor: GitExecutor | null;
   private authManager: GitAuthenticator | null;
   private errorHandler: GitErrorHandler;
   private repositoryManager: GitRepositoryManager | null;
@@ -67,9 +109,9 @@ class GitSyncService {
   private teamWorkspaceCreator: TeamWorkspaceCreator | null;
   private teamWorkspaceSyncer: TeamWorkspaceSyncer | null;
   private connectionTester: ConnectionTester | null;
-  private configDetector: any;
-  private configValidator: any;
-  private gitAutoInstaller: any;
+  private configDetector: ConfigFileDetector;
+  private configValidator: ConfigFileValidator;
+  private gitAutoInstaller: GitAutoInstaller;
   private initialized: boolean;
   private initializationError: Error | null;
 
@@ -178,7 +220,7 @@ class GitSyncService {
   /**
    * Get Git installation status
    */
-  async getGitStatus(): Promise<any> {
+  async getGitStatus(): Promise<GitStatus & { error?: string }> {
     try {
       return this.initializer.getStatus();
     } catch (error) {
@@ -186,6 +228,9 @@ class GitSyncService {
         gitPath: null,
         isInstalled: false,
         initialized: false,
+        platform: process.platform,
+        tempDir: '',
+        sshDir: '',
         error: (error as Error).message
       };
     }
@@ -194,13 +239,14 @@ class GitSyncService {
   /**
    * Test connection to a Git repository
    */
-  async testConnection(options: any): Promise<any> {
+  async testConnection(options: ConnectionTestOptions): Promise<ConnectionTestResult> {
     await this.ensureInitialized();
 
     try {
       return await this.connectionTester!.testConnection(options);
     } catch (error) {
-      return this.errorHandler.handle(error as Error, { operation: 'testConnection', ...options });
+      const handled = this.errorHandler.handle(error as Error, { operation: 'testConnection', ...options });
+      return { success: false, accessible: false, error: handled.message } as ConnectionTestResult;
     }
   }
 
@@ -208,18 +254,21 @@ class GitSyncService {
    * Create a new team workspace
    * @public Called from IPC handlers
    */
-  async createTeamWorkspace(options: any): Promise<any> {
+  async createTeamWorkspace(options: Omit<CreateOptions, 'tempDir'>): Promise<CreateResult> {
     await this.ensureInitialized();
 
     try {
-      // Validate options
-      this.teamWorkspaceCreator!.validateOptions(options);
-
       // Add temp directory from initializer
-      options.tempDir = this.initializer.getPaths().tempDir;
+      const fullOptions: CreateOptions = {
+        ...options,
+        tempDir: this.initializer.getPaths().tempDir
+      };
+
+      // Validate options
+      this.teamWorkspaceCreator!.validateOptions(fullOptions);
 
       // Create workspace
-      const result = await this.teamWorkspaceCreator!.createTeamWorkspace(options);
+      const result = await this.teamWorkspaceCreator!.createTeamWorkspace(fullOptions);
 
       // Schedule cleanup of temp directory
       setTimeout(() => {
@@ -242,14 +291,16 @@ class GitSyncService {
   /**
    * Create workspace from invitation
    */
-  async createFromInvitation(options: any): Promise<any> {
+  async createFromInvitation(options: Omit<InvitationOptions, 'tempDir'>): Promise<CreateResult> {
     await this.ensureInitialized();
 
     try {
-      // Add temp directory
-      options.tempDir = this.initializer.getPaths().tempDir;
+      const fullOptions: InvitationOptions = {
+        ...options,
+        tempDir: this.initializer.getPaths().tempDir
+      };
 
-      return await this.teamWorkspaceCreator!.createFromInvitation(options);
+      return await this.teamWorkspaceCreator!.createFromInvitation(fullOptions);
 
     } catch (error) {
       const handled = this.errorHandler.handle(error as Error, {
@@ -263,7 +314,7 @@ class GitSyncService {
   /**
    * Sync team workspace
    */
-  async syncWorkspace(options: any): Promise<any> {
+  async syncWorkspace(options: SyncOptions): Promise<SyncResult> {
     await this.ensureInitialized();
 
     try {
@@ -286,7 +337,7 @@ class GitSyncService {
 
         // Clone the repository first
         const cloneResult = await this.repositoryManager!.cloneRepository({
-          url: options.url,
+          url: options.url!,
           targetDir: repoDir,
           branch: options.branch || 'main',
           authType: options.authType || 'none',
@@ -313,8 +364,9 @@ class GitSyncService {
       });
       return {
         success: false,
+        status: 'error' as SyncStatusType,
+        message: handled.message,
         error: handled.message,
-        recovery: handled.recovery
       };
     }
   }
@@ -322,7 +374,7 @@ class GitSyncService {
   /**
    * Auto-sync team workspace
    */
-  async autoSyncWorkspace(options: any): Promise<any> {
+  async autoSyncWorkspace(options: SyncOptions & { commitChanges?: boolean }): Promise<SyncResult> {
     await this.ensureInitialized();
 
     try {
@@ -343,6 +395,8 @@ class GitSyncService {
       });
       return {
         success: false,
+        status: 'error' as SyncStatusType,
+        message: handled.message,
         error: handled.message,
         autoSync: true
       };
@@ -352,7 +406,7 @@ class GitSyncService {
   /**
    * Clone repository
    */
-  async cloneRepository(options: any): Promise<any> {
+  async cloneRepository(options: CloneOptions): Promise<OperationResult> {
     await this.ensureInitialized();
 
     try {
@@ -369,7 +423,7 @@ class GitSyncService {
   /**
    * Pull repository changes
    */
-  async pullRepository(options: any): Promise<any> {
+  async pullRepository(options: PullOptions): Promise<OperationResult> {
     await this.ensureInitialized();
 
     try {
@@ -386,7 +440,7 @@ class GitSyncService {
   /**
    * Push repository changes
    */
-  async pushRepository(options: any): Promise<any> {
+  async pushRepository(options: PushOptions): Promise<OperationResult> {
     await this.ensureInitialized();
 
     try {
@@ -403,7 +457,7 @@ class GitSyncService {
   /**
    * Commit configuration changes
    */
-  async commitConfiguration(options: any): Promise<any> {
+  async commitConfiguration(options: CommitConfigurationOptions): Promise<CommitResult> {
     await this.ensureInitialized();
 
     try {
@@ -420,7 +474,7 @@ class GitSyncService {
 
           try {
             // Try to check if branch exists using ls-remote
-            const { stdout } = await this.executor.execute(
+            const { stdout } = await this.executor!.execute(
               `ls-remote --heads "${options.url}" "${targetBranch}"`,
               { timeout: 15000 }
             );
@@ -512,7 +566,7 @@ class GitSyncService {
       }
 
       // Handle backend format (already has repoDir)
-      return await this.commitManager!.commitConfiguration(options);
+      return await this.commitManager!.commitConfiguration(options as CommitOptions);
 
     } catch (error) {
       const handled = this.errorHandler.handle(error as Error, {
@@ -526,7 +580,7 @@ class GitSyncService {
   /**
    * Get repository status
    */
-  async getRepositoryStatus(repoDir: string): Promise<any> {
+  async getRepositoryStatus(repoDir: string): Promise<RepositoryStatus> {
     await this.ensureInitialized();
 
     try {
@@ -543,7 +597,7 @@ class GitSyncService {
   /**
    * Get sync status
    */
-  async getSyncStatus(options: any): Promise<any> {
+  async getSyncStatus(options: { repoDir: string; branch: string }): Promise<SyncStatusResult> {
     await this.ensureInitialized();
 
     try {
@@ -553,16 +607,16 @@ class GitSyncService {
       );
     } catch (error) {
       return {
-        status: 'error',
+        status: 'error' as SyncStatusType,
         error: (error as Error).message
-      };
+      } as SyncStatusResult;
     }
   }
 
   /**
    * Detect configuration files
    */
-  async detectConfigFiles(repoDir: string): Promise<any[]> {
+  async detectConfigFiles(repoDir: string): Promise<DetectedFile[]> {
     try {
       return await this.configDetector.detectConfigFiles(repoDir);
     } catch (error) {
@@ -574,46 +628,41 @@ class GitSyncService {
   /**
    * Validate configuration
    */
-  async validateConfiguration(configPaths: any, repoDir: string): Promise<any> {
+  async validateConfiguration(configPaths: ConfigPaths, repoDir: string): Promise<ValidationResult> {
     try {
       return await this.configValidator.validateAll(configPaths, repoDir);
     } catch (error) {
       return {
         valid: false,
         errors: [(error as Error).message]
-      };
+      } as ValidationResult;
     }
   }
 
   /**
    * Perform cleanup
    */
-  async performCleanup(options: any = {}): Promise<any> {
+  async performCleanup(options: { cleanTemp?: boolean; cleanOldRepos?: boolean; cleanSSHKeys?: boolean; force?: boolean } = {}): Promise<FullCleanupResult | { success: false; error: string }> {
     await this.ensureInitialized();
 
     try {
       return await this.cleanupManager!.performCleanup(options);
     } catch (error) {
       log.error('Cleanup failed:', error);
-      return {
-        success: false,
-        error: (error as Error).message
-      };
+      return { success: false, error: (error as Error).message };
     }
   }
 
   /**
    * Get cleanup statistics
    */
-  async getCleanupStats(): Promise<any> {
+  async getCleanupStats(): Promise<CleanupStats | { error: string }> {
     await this.ensureInitialized();
 
     try {
       return await this.cleanupManager!.getCleanupStats();
     } catch (error) {
-      return {
-        error: (error as Error).message
-      };
+      return { error: (error as Error).message };
     }
   }
 
@@ -633,7 +682,7 @@ class GitSyncService {
   /**
    * Handle installation prompt (for UI)
    */
-  getInstallationInfo(): any {
+  getInstallationInfo(): InstallationInfo {
     return {
       platform: process.platform,
       downloadUrl: this.getGitDownloadUrl(),
@@ -682,7 +731,7 @@ class GitSyncService {
   /**
    * Create a new branch in repository
    */
-  async createBranch(options: any): Promise<any> {
+  async createBranch(options: { repoDir: string; branchName: string; baseBranch?: string }): Promise<BranchResult> {
     await this.ensureInitialized();
 
     try {
@@ -700,7 +749,7 @@ class GitSyncService {
   /**
    * Check write permissions for repository
    */
-  async checkWritePermissions(options: any): Promise<any> {
+  async checkWritePermissions(options: WritePermissionOptions): Promise<WritePermissionResult> {
     await this.ensureInitialized();
 
     try {
@@ -734,7 +783,7 @@ class GitSyncService {
 
         // If we got here, we have write permissions
         // Clean up test branch on remote
-        await this.executor.execute(
+        await this.executor!.execute(
           `push origin --delete ${testBranch}`,
           { cwd: tempDir }
         ).catch(() => {}); // Ignore cleanup errors
