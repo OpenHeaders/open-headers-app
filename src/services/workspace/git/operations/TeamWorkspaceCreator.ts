@@ -6,6 +6,12 @@
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../../utils/mainLogger';
+import type { GitRepositoryManager } from '../repository/GitRepositoryManager';
+import type { GitBranchManager } from '../repository/GitBranchManager';
+import type { SparseCheckoutManager } from '../repository/SparseCheckoutManager';
+import type { CommitManager } from './CommitManager';
+import type { ConfigFileDetector, DetectedFile } from '../../ConfigFileDetector';
+import type { ConfigFileValidator } from '../../config-file-validator';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -13,12 +19,20 @@ const { createLogger } = mainLogger;
 const log = createLogger('TeamWorkspaceCreator');
 
 interface Dependencies {
-  repositoryManager: any;
-  branchManager: any;
-  sparseCheckoutManager: any;
-  commitManager: any;
-  configDetector: any;
-  configValidator: any;
+  repositoryManager: GitRepositoryManager;
+  branchManager: GitBranchManager;
+  sparseCheckoutManager: SparseCheckoutManager;
+  commitManager: CommitManager;
+  configDetector: ConfigFileDetector;
+  configValidator: ConfigFileValidator;
+}
+
+interface ProgressInfo {
+  phase: string;
+  step?: number;
+  totalSteps?: number;
+  message: string;
+  [key: string]: unknown;
 }
 
 interface CreateOptions {
@@ -28,8 +42,8 @@ interface CreateOptions {
   branch?: string;
   configDir?: string;
   authType?: string;
-  authData?: Record<string, any>;
-  progressCallback?: (progress: any) => void;
+  authData?: Record<string, string>;
+  progressCallback?: (progress: ProgressInfo) => void;
   tempDir: string;
 }
 
@@ -40,8 +54,8 @@ interface InvitationOptions {
   workspaceId: string;
   workspaceName: string;
   authType?: string;
-  authData?: Record<string, any>;
-  progressCallback?: (progress: any) => void;
+  authData?: Record<string, string>;
+  progressCallback?: (progress: ProgressInfo) => void;
   tempDir: string;
 }
 
@@ -57,13 +71,29 @@ interface CreateResult {
   fromInvite?: boolean;
 }
 
+interface ConfigSetupResult {
+  configPaths: Record<string, string>;
+  metadata: Record<string, unknown>;
+  detectedConfigs: DetectedFile[];
+  sparsePatterns: string[];
+  hasSparsePatterns: boolean;
+}
+
+interface VerifyConfigResult {
+  exists: boolean;
+  basePath?: string;
+  configPaths: Record<string, string>;
+  metadata?: Record<string, unknown>;
+  sparsePatterns: string[];
+}
+
 class TeamWorkspaceCreator {
-  private repositoryManager: any;
-  private branchManager: any;
-  private sparseCheckoutManager: any;
-  private commitManager: any;
-  private configDetector: any;
-  private configValidator: any;
+  private repositoryManager: GitRepositoryManager;
+  private branchManager: GitBranchManager;
+  private sparseCheckoutManager: SparseCheckoutManager;
+  private commitManager: CommitManager;
+  private configDetector: ConfigFileDetector;
+  private configValidator: ConfigFileValidator;
 
   constructor(dependencies: Dependencies) {
     this.repositoryManager = dependencies.repositoryManager;
@@ -110,13 +140,6 @@ class TeamWorkspaceCreator {
         authType,
         authData,
         depth: 10, // Shallow clone for initial setup
-        progressCallback: (progress: any) => {
-          progressCallback({
-            ...progress,
-            step: 1,
-            totalSteps: 6
-          });
-        }
       });
 
       // Step 2: Create workspace branch
@@ -192,13 +215,6 @@ class TeamWorkspaceCreator {
         branch: workspaceBranch,
         authType,
         authData,
-        progressCallback: (progress: any) => {
-          progressCallback({
-            ...progress,
-            step: 6,
-            totalSteps: 6
-          });
-        }
       });
 
       return {
@@ -257,13 +273,6 @@ class TeamWorkspaceCreator {
         authType,
         authData,
         depth: 10,
-        progressCallback: (progress: any) => {
-          progressCallback({
-            ...progress,
-            step: 1,
-            totalSteps: 4
-          });
-        }
       });
 
       // Step 2: Verify configuration exists
@@ -337,7 +346,7 @@ class TeamWorkspaceCreator {
   /**
    * Setup initial configuration for new workspace
    */
-  async setupInitialConfig(options: { repoDir: string; workspaceId: string; workspaceName: string; configDir: string }): Promise<any> {
+  async setupInitialConfig(options: { repoDir: string; workspaceId: string; workspaceName: string; configDir: string }): Promise<ConfigSetupResult> {
     const { repoDir, workspaceId, workspaceName, configDir } = options;
 
     // Detect existing config files
@@ -390,7 +399,7 @@ class TeamWorkspaceCreator {
   /**
    * Verify workspace configuration exists
    */
-  async verifyWorkspaceConfig(repoDir: string, workspaceId: string): Promise<any> {
+  async verifyWorkspaceConfig(repoDir: string, workspaceId: string): Promise<VerifyConfigResult> {
     const possiblePaths = [
       `.openheaders/workspaces/${workspaceId}`,
       `.config/openheaders/workspaces/${workspaceId}`,
@@ -403,23 +412,27 @@ class TeamWorkspaceCreator {
       try {
         const metadata = await this.configValidator.loadJson(metadataPath);
 
-        if (metadata && metadata.workspaceId === workspaceId) {
-          // Found valid workspace config
-          const configPaths: Record<string, string> = {};
+        if (metadata && typeof metadata === 'object') {
+          const metaObj = metadata as Record<string, unknown>;
+          if (metaObj.workspaceId === workspaceId) {
+            // Found valid workspace config
+            const configPaths: Record<string, string> = {};
+            const metaConfigPaths = (metaObj.configPaths || {}) as Record<string, string>;
 
-          for (const [key, relativePath] of Object.entries(metadata.configPaths || {})) {
-            configPaths[key] = path.join(repoDir, relativePath as string);
+            for (const [key, relativePath] of Object.entries(metaConfigPaths)) {
+              configPaths[key] = path.join(repoDir, relativePath);
+            }
+
+            const sparsePatterns = this.sparseCheckoutManager.createWorkspacePatterns(configPaths);
+
+            return {
+              exists: true,
+              basePath,
+              configPaths,
+              metadata: metaObj,
+              sparsePatterns
+            };
           }
-
-          const sparsePatterns = this.sparseCheckoutManager.createWorkspacePatterns(configPaths);
-
-          return {
-            exists: true,
-            basePath,
-            configPaths,
-            metadata,
-            sparsePatterns
-          };
         }
       } catch (error) {
         // Continue checking other paths
@@ -449,13 +462,15 @@ class TeamWorkspaceCreator {
   /**
    * Validate creation options
    */
-  validateOptions(options: Record<string, any>): void {
-    const required = ['workspaceId', 'workspaceName', 'repositoryUrl'];
-
-    for (const field of required) {
-      if (!options[field]) {
-        throw new Error(`Missing required field: ${field}`);
-      }
+  validateOptions(options: CreateOptions): void {
+    if (!options.workspaceId) {
+      throw new Error('Missing required field: workspaceId');
+    }
+    if (!options.workspaceName) {
+      throw new Error('Missing required field: workspaceName');
+    }
+    if (!options.repositoryUrl) {
+      throw new Error('Missing required field: repositoryUrl');
     }
 
     // Validate workspace ID format
@@ -473,5 +488,5 @@ class TeamWorkspaceCreator {
 }
 
 export { TeamWorkspaceCreator };
-export type { Dependencies, CreateOptions, InvitationOptions, CreateResult };
+export type { Dependencies, CreateOptions, InvitationOptions, CreateResult, ProgressInfo, ConfigSetupResult, VerifyConfigResult };
 export default TeamWorkspaceCreator;
