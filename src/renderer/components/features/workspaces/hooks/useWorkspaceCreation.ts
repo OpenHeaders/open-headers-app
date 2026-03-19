@@ -6,7 +6,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import WorkspaceCreationController, { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
-import { WORKSPACE_CREATION_STATES } from '../state/WorkspaceCreationStateMachine';
+import { WORKSPACE_CREATION_STATES, type StateMachineContext, type StateChangeData } from '../state/WorkspaceCreationStateMachine';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('useWorkspaceCreation');
@@ -18,13 +18,6 @@ const log = createLogger('useWorkspaceCreation');
  * @param {boolean} options.disableNotifications - Disable automatic success/error notifications
  * @returns {Object} Workspace creation state and actions
  */
-interface WorkspaceCreationContext {
-    formData?: Record<string, unknown> | null;
-    workspaceId?: string | null;
-    error?: Error | null;
-    [key: string]: unknown;
-}
-
 interface WorkspaceCreationOptions {
     disableNotifications?: boolean;
 }
@@ -40,7 +33,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
     const { message } = App.useApp();
     const controllerRef = useRef<WorkspaceCreationController | null>(null);
     const [state, setState] = useState(WORKSPACE_CREATION_STATES.IDLE);
-    const [context, setContext] = useState<WorkspaceCreationContext>({});
+    const [context, setContext] = useState<StateMachineContext | null>(null);
     const [progress, setProgress] = useState<ProgressState | null>(null);
     const [error, setError] = useState<Error | null>(null);
 
@@ -50,19 +43,19 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
             controllerRef.current = new WorkspaceCreationController(dependencies);
             
             // Listen to state changes
-            const unsubscribe = controllerRef.current.addListener(((stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }) => {
+            const unsubscribe = controllerRef.current.addListener((stateData: StateChangeData) => {
                 setState(stateData.state);
                 setContext(stateData.context);
-                setError(stateData.context?.error ?? null);
-                
+                setError(stateData.context.error ?? null);
+
                 // Update progress based on state
-                setProgress(getProgressFromState(stateData.state as string));
+                setProgress(getProgressFromState(stateData.state));
 
                 // Handle UI notifications (if not disabled)
                 if (!options.disableNotifications) {
-                    handleStateNotifications(stateData as { state: string; context: WorkspaceCreationContext; [key: string]: unknown }, message);
+                    handleStateNotifications(stateData, message);
                 }
-            }) as Parameters<typeof controllerRef.current.addListener>[0]);
+            });
             
             return () => {
                 unsubscribe();
@@ -124,7 +117,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
      * Retries the workspace creation with the same form data
      */
     const retryCreation = useCallback(async () => {
-        if (!controllerRef.current || !context.formData) {
+        if (!controllerRef.current || !context?.formData) {
             return false;
         }
 
@@ -135,7 +128,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
             log.error('Workspace creation retry failed:', error);
             return false;
         }
-    }, [context.formData]);
+    }, [context?.formData]);
 
     // Generate user-friendly progress message
     const getProgressMessage = useCallback((currentState: string) => {
@@ -190,7 +183,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
     ].includes(state);
     const isCompleted = state === WORKSPACE_CREATION_STATES.COMPLETED;
     const isError = state === WORKSPACE_CREATION_STATES.ERROR;
-    const canRetry = (isError || state === WORKSPACE_CREATION_STATES.TIMEOUT) && context.formData;
+    const canRetry = (isError || state === WORKSPACE_CREATION_STATES.TIMEOUT) && context?.formData;
     const canAbort = isLoading && [
         WORKSPACE_CREATION_STATES.ROLLBACK,
         WORKSPACE_CREATION_STATES.CANCELLING,
@@ -221,8 +214,8 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
         retryCreation,
         
         // Workspace info
-        workspaceId: context.workspaceId,
-        formData: context.formData
+        workspaceId: context?.workspaceId,
+        formData: context?.formData
     };
 };
 
@@ -311,7 +304,7 @@ interface MessageInstance {
     loading: (config: { content: string; key: string; duration: number }) => void;
 }
 
-function handleStateNotifications(stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }, message: MessageInstance) {
+function handleStateNotifications(stateData: StateChangeData, message: MessageInstance) {
     const { state, context } = stateData;
 
     switch (state) {

@@ -80,9 +80,9 @@ const ProxyServer = () => {
                 onToggleRule={toggleRule}
             />
 
-            {proxyStatus.running && (
+            {proxyStatus.running && cacheStats && (
                 <ProxyCacheSection
-                    cacheStats={cacheStats ?? {}}
+                    cacheStats={cacheStats}
                     cacheEnabled={cacheEnabled}
                     cacheEntries={cacheEntries}
                     showCacheDetails={showCacheDetails}

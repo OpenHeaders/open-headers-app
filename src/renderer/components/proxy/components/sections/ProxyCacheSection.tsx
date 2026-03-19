@@ -39,13 +39,28 @@ const { Title, Text } = Typography;
  * @param {function} onToggleCacheDetails - Callback for details visibility toggle
  * @returns {JSX.Element} Cache management section
  */
+export interface CacheStats {
+    totalSize: number;
+    maxCacheSize: number;
+    usage: number;
+    totalEntries: number;
+}
+
+export interface CacheEntry {
+    key: string;
+    url: string;
+    contentType: string;
+    size: number;
+    timestamp: number;
+}
+
 interface ProxyCacheSectionProps {
-    cacheStats: Record<string, any>;
+    cacheStats: CacheStats;
     cacheEnabled: boolean;
-    cacheEntries: Record<string, any>[];
+    cacheEntries: CacheEntry[];
     showCacheDetails: boolean;
     onToggleCache: (enabled: boolean) => void;
-    onClearCache: () => Promise<any>;
+    onClearCache: () => Promise<boolean>;
     onToggleCacheDetails: () => void;
 }
 

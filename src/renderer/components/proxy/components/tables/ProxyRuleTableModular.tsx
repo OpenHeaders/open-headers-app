@@ -55,7 +55,7 @@ interface ProxyRuleTableProps {
     sources: ProxySource[];
     headerRules?: HeaderRule[];
     onEdit: (rule: ProxyRule) => void;
-    onDelete: (ruleId: string) => Promise<void>;
+    onDelete: (ruleId: string) => Promise<boolean>;
     onToggle: (ruleId: string, enabled: boolean) => void;
     onAdd: () => void;
 }

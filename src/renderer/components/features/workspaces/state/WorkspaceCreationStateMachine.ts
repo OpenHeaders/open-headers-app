@@ -56,36 +56,80 @@ interface RollbackAction {
     paths?: string[];
 }
 
-interface StateMachineContext {
-    formData: Record<string, unknown> | null;
-    workspaceId: string | null;
-    gitStatus: Record<string, unknown> | null;
-    connectionResult: Record<string, unknown> | null;
-    error: Error | null;
+interface InitialCommitData {
+    files?: unknown;
+    message?: string;
+    [key: string]: unknown;
+}
+
+export interface WorkspaceFormData {
+    name?: string;
+    type?: string;
+    initialCommit?: InitialCommitData;
+    gitUrl?: string;
+    gitBranch?: string;
+    gitPath?: string;
+    authType?: string;
+    [key: string]: unknown;
+}
+
+interface GitStatus {
+    isInstalled?: boolean;
+}
+
+interface ConnectionResult {
+    success: boolean;
+    error?: string;
+    message?: string;
+}
+
+interface SyncProgress {
+    status?: string;
+    progress?: number;
+    message?: string;
+}
+
+interface TransitionEventPayload {
+    formData?: WorkspaceFormData;
+    isTeamWorkspace?: boolean;
+    error?: Error;
+    gitStatus?: GitStatus;
+    result?: ConnectionResult;
+    workspaceId?: string;
+    progress?: SyncProgress;
+    options?: Record<string, unknown>;
+}
+
+export interface StateMachineContext {
+    formData: WorkspaceFormData | undefined;
+    workspaceId: string | undefined;
+    gitStatus: GitStatus | undefined;
+    connectionResult: ConnectionResult | undefined;
+    error: Error | undefined;
     rollbackActions: RollbackAction[];
     retryCount: number;
     maxRetries: number;
-    startTime: string | null;
+    startTime: string | undefined;
     operationTimeouts: Map<string, ReturnType<typeof setTimeout>>;
-    syncProgress: unknown;
+    syncProgress: SyncProgress | undefined;
     abortRequested: boolean;
     cancelRequested: boolean;
 }
 
 interface TransitionEvent {
-    payload: Record<string, any>;
+    payload: TransitionEventPayload;
     type: string;
 }
 
 interface TransitionConfig {
     target: string;
-    action?: (context: StateMachineContext, event: TransitionEvent) => Record<string, any> | null;
-    guard?: (context: StateMachineContext, event?: unknown) => boolean;
-    condition?: (context: StateMachineContext, event: TransitionEvent) => unknown;
+    action?: (context: StateMachineContext, event: TransitionEvent) => StateMachineContext | null;
+    guard?: (context: StateMachineContext, event?: TransitionEvent) => boolean;
+    condition?: (context: StateMachineContext, event: TransitionEvent) => boolean | undefined;
     fallback?: string;
 }
 
-interface StateChangeData {
+export interface StateChangeData {
     state: string;
     context: StateMachineContext;
     timestamp: string;
@@ -100,17 +144,17 @@ class WorkspaceCreationStateMachine {
     constructor() {
         this.state = WORKSPACE_CREATION_STATES.IDLE;
         this.context = {
-            formData: null,
-            workspaceId: null,
-            gitStatus: null,
-            connectionResult: null,
-            error: null,
+            formData: undefined,
+            workspaceId: undefined,
+            gitStatus: undefined,
+            connectionResult: undefined,
+            error: undefined,
             rollbackActions: [],
             retryCount: 0,
             maxRetries: 3,
-            startTime: null,
+            startTime: undefined,
             operationTimeouts: new Map(),
-            syncProgress: null,
+            syncProgress: undefined,
             abortRequested: false,
             cancelRequested: false
         };
@@ -129,7 +173,7 @@ class WorkspaceCreationStateMachine {
                         rollbackActions: [],
                         retryCount: 0,
                         startTime: new Date().toISOString(),
-                        error: null,
+                        error: undefined,
                         abortRequested: false,
                         cancelRequested: false
                     }),
@@ -283,7 +327,7 @@ class WorkspaceCreationStateMachine {
                 },
                 [WORKSPACE_CREATION_EVENTS.CONNECTION_TESTED]: {
                     target: WORKSPACE_CREATION_STATES.INITIAL_COMMIT,
-                    condition: (context, event) => context.formData?.type === 'team' && context.formData?.initialCommit,
+                    condition: (context) => context.formData?.type === 'team' && !!context.formData?.initialCommit,
                     fallback: WORKSPACE_CREATION_STATES.WORKSPACE_CREATION,
                     action: (context, event) => ({
                         ...context,
@@ -521,8 +565,8 @@ class WorkspaceCreationStateMachine {
                     target: WORKSPACE_CREATION_STATES.VALIDATING,
                     action: (context, event) => ({
                         ...context,
-                        formData: event.payload.formData || context.formData,
-                        error: null
+                        formData: event.payload.formData ?? context.formData,
+                        error: undefined
                     })
                 },
                 [WORKSPACE_CREATION_EVENTS.ERROR_OCCURRED]: {
@@ -591,7 +635,7 @@ class WorkspaceCreationStateMachine {
                 },
                 [WORKSPACE_CREATION_EVENTS.START_CREATION]: {
                     target: WORKSPACE_CREATION_STATES.VALIDATING,
-                    action: (context, event) => ({
+                    action: (_context, event) => ({
                         ...this.getInitialContext(),
                         formData: event.payload.formData,
                         startTime: new Date().toISOString()
@@ -603,23 +647,23 @@ class WorkspaceCreationStateMachine {
 
     getInitialContext() {
         return {
-            formData: null,
-            workspaceId: null,
-            gitStatus: null,
-            connectionResult: null,
-            error: null,
+            formData: undefined,
+            workspaceId: undefined,
+            gitStatus: undefined,
+            connectionResult: undefined,
+            error: undefined,
             rollbackActions: [],
             retryCount: 0,
             maxRetries: 3,
-            startTime: null,
+            startTime: undefined,
             operationTimeouts: new Map(),
-            syncProgress: null,
+            syncProgress: undefined,
             abortRequested: false,
             cancelRequested: false
         };
     }
 
-    transition(event: string, payload: Record<string, unknown> = {}) {
+    transition(event: string, payload: TransitionEventPayload = {}) {
         const currentTransitions = this.transitions[this.state];
         if (!currentTransitions || !currentTransitions[event]) {
             // Only warn for non-idle states and non-completed states to avoid spam from delayed events
@@ -657,7 +701,7 @@ class WorkspaceCreationStateMachine {
         if (transition.action) {
             const newContext = transition.action(this.context, eventPayload);
             if (newContext) {
-                this.context = newContext as StateMachineContext;
+                this.context = newContext;
             }
         }
 

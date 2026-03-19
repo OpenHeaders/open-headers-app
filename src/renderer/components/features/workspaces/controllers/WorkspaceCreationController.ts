@@ -3,9 +3,10 @@
  * Ensures all operations are atomic and provides comprehensive error recovery
  */
 
-import WorkspaceCreationStateMachine, { 
-    WORKSPACE_CREATION_EVENTS, 
-    WORKSPACE_CREATION_STATES 
+import WorkspaceCreationStateMachine, {
+    WORKSPACE_CREATION_EVENTS,
+    WORKSPACE_CREATION_STATES,
+    type StateChangeData
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
 
@@ -28,7 +29,7 @@ class WorkspaceCreationController {
     private stateMachine: WorkspaceCreationStateMachine;
     private dependencies: WorkspaceCreationDependencies;
     private abortController: AbortController | null;
-    private listeners: Set<(stateData: { state: string; context?: Record<string, any>; timestamp?: string }) => void>;
+    private listeners: Set<(stateData: StateChangeData) => void>;
 
     constructor(dependencies: WorkspaceCreationDependencies) {
         this.stateMachine = new WorkspaceCreationStateMachine();
@@ -383,7 +384,7 @@ class WorkspaceCreationController {
         // Cleanup resources if needed
     }
 
-    handleStateChange(stateData: { state: string; context?: Record<string, any>; timestamp?: string }) {
+    handleStateChange(stateData: StateChangeData) {
         const { state } = stateData;
         
         // Notify listeners
@@ -422,7 +423,7 @@ class WorkspaceCreationController {
         }
     }
 
-    addListener(listener: (stateData: { state: string; context?: Record<string, any>; timestamp?: string }) => void) {
+    addListener(listener: (stateData: StateChangeData) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }
