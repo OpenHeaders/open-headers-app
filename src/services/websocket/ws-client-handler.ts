@@ -5,10 +5,18 @@
 
 import WebSocket from 'ws';
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSClientHandler');
+
+interface ExtendedWebSocket extends WebSocket {
+    clientId?: string;
+    isAlive?: boolean;
+    isInitialized?: boolean;
+}
 
 interface BrowserInfo {
     browser: string;
@@ -36,20 +44,20 @@ interface InitLock {
 interface WSServiceLike {
     connectedClients: Map<string, ClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
-    wss: any;
-    secureWss: any;
+    wss: WebSocket.Server | null;
+    secureWss: WebSocket.Server | null;
     wsPort: number;
     wssPort: number;
-    sourceHandler: { sendSourcesToClient(ws: any): Promise<void> };
-    ruleHandler: { sendRulesToClient(ws: any): Promise<void> };
-    recordingHandler: { sendVideoRecordingState(ws: any): Promise<void> };
-    networkStateHandler: { sendInitialState(ws: any): void } | null;
+    sourceHandler: { sendSourcesToClient(ws: WebSocket): Promise<void> };
+    ruleHandler: { sendRulesToClient(ws: WebSocket): Promise<void> };
+    recordingHandler: { sendVideoRecordingState(ws: WebSocket): Promise<void> };
+    networkStateHandler: { sendInitialState(ws: WebSocket): void } | null;
     certificateHandler: {
         certificatePaths: {
             fingerprint: string | null;
             certPath: string | null;
-            validTo: string | null;
-            subject: string | null;
+            validTo?: string | null;
+            subject?: string | null;
         };
     };
 }
@@ -70,7 +78,7 @@ class WSClientHandler {
     /**
      * Initialize client with proper locking to prevent race conditions
      */
-    async initializeClient(ws: any, clientId: string): Promise<void> {
+    async initializeClient(ws: ExtendedWebSocket, clientId: string): Promise<void> {
         const existingLock = this.wsService.clientInitializationLocks.get(clientId);
         if (existingLock) {
             if (existingLock.status === 'initializing') {
@@ -84,7 +92,7 @@ class WSClientHandler {
         }
 
         let resolveInit!: (value: boolean) => void;
-        let rejectInit!: (reason: any) => void;
+        let rejectInit!: (reason: unknown) => void;
         const initPromise = new Promise<boolean>((resolve, reject) => {
             resolveInit = resolve;
             rejectInit = reject;
@@ -165,7 +173,7 @@ class WSClientHandler {
     /**
      * Get current connection status and connected clients
      */
-    getConnectionStatus(): Record<string, any> {
+    getConnectionStatus(): Record<string, unknown> {
         const clients = Array.from(this.wsService.connectedClients.values());
 
         const browserCounts: Record<string, number> = {};
@@ -206,13 +214,13 @@ class WSClientHandler {
             const { BrowserWindow } = electron;
             const status = this.getConnectionStatus();
 
-            BrowserWindow.getAllWindows().forEach((window: any) => {
-                if (window && !window.isDestroyed()) {
-                    window.webContents.send('ws-connection-status-changed', status);
+            BrowserWindow.getAllWindows().forEach((win: BrowserWindowType) => {
+                if (win && !win.isDestroyed()) {
+                    win.webContents.send('ws-connection-status-changed', status);
                 }
             });
-        } catch (error: any) {
-            log.debug('Could not broadcast connection status:', error.message);
+        } catch (error: unknown) {
+            log.debug('Could not broadcast connection status:', errorMessage(error));
         }
     }
 
@@ -264,9 +272,9 @@ class WSClientHandler {
         staleClients.forEach(({ clientId, inactiveTime }) => {
             log.info(`Cleaning up stale client ${clientId} (inactive for ${Math.round(inactiveTime / 1000)}s)`);
 
-            const closeClient = (server: any): boolean => {
+            const closeClient = (server: WebSocket.Server | null): boolean => {
                 if (!server) return false;
-                for (const client of server.clients) {
+                for (const client of server.clients as Set<ExtendedWebSocket>) {
                     if (client.clientId === clientId && client.readyState === WebSocket.OPEN) {
                         client.close(1000, 'Inactive connection');
                         return true;
@@ -290,10 +298,10 @@ class WSClientHandler {
      * Perform heartbeat check on all clients
      */
     performHeartbeat(): void {
-        const pingClients = (server: any) => {
+        const pingClients = (server: WebSocket.Server | null) => {
             if (!server) return;
 
-            server.clients.forEach((client: any) => {
+            (server.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.isAlive = false;
                     client.ping(() => {});
@@ -305,9 +313,9 @@ class WSClientHandler {
         pingClients(this.wsService.secureWss);
 
         setTimeout(() => {
-            const terminateDeadClients = (server: any) => {
+            const terminateDeadClients = (server: WebSocket.Server | null) => {
                 if (!server) return;
-                server.clients.forEach((client: any) => {
+                (server.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
                     if (!client.isAlive && client.readyState === WebSocket.OPEN) {
                         log.info(`Terminating dead client: ${client.clientId}`);
                         client.terminate();

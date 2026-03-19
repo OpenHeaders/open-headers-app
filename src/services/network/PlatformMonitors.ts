@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 
 const { createLogger } = mainLogger;
 const { spawn, exec } = child_process;
@@ -37,8 +38,8 @@ class BasePlatformMonitor extends EventEmitter {
                 if (proc && !proc.killed) {
                     proc.kill();
                 }
-            } catch (e: any) {
-                this.log.debug(`Process cleanup error: ${e.message}`);
+            } catch (e: unknown) {
+                this.log.debug(`Process cleanup error: ${errorMessage(e)}`);
             }
         });
 
@@ -48,8 +49,8 @@ class BasePlatformMonitor extends EventEmitter {
                 if (watcher && typeof watcher.close === 'function') {
                     watcher.close();
                 }
-            } catch (e: any) {
-                this.log.debug(`Watcher cleanup error: ${e.message}`);
+            } catch (e: unknown) {
+                this.log.debug(`Watcher cleanup error: ${errorMessage(e)}`);
             }
         });
 
@@ -131,8 +132,8 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                         }
                     });
                     this.watchers.push(watcher);
-                } catch (e: any) {
-                    this.log.error(`Failed to watch ${configPath}:`, e.message);
+                } catch (e: unknown) {
+                    this.log.error(`Failed to watch ${configPath}:`, errorMessage(e));
                 }
             }
         });
@@ -271,8 +272,8 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
                 method: 'interface-check',
                 interface: vpnInterface
             });
-        } catch (e: any) {
-            this.log.error('Failed to check VPN interfaces:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to check VPN interfaces:', errorMessage(e));
         }
     }
 
@@ -336,8 +337,8 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.processes.push(routeMonitor);
-        } catch (e: any) {
-            this.log.error('Failed to start route monitor:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to start route monitor:', errorMessage(e));
         }
     }
 }
@@ -394,12 +395,12 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                         }
 
                         lastState = currentState;
-                    } catch (e: any) {
-                        this.log.debug('JSON parsing error in adapter check:', e.message);
+                    } catch (e: unknown) {
+                        this.log.debug('JSON parsing error in adapter check:', errorMessage(e));
                     }
                 }
-            } catch (e: any) {
-                this.log.debug('Adapter check failed:', e.message);
+            } catch (e: unknown) {
+                this.log.debug('Adapter check failed:', errorMessage(e));
             } finally {
                 this.adapterMonitorActive = false;
             }
@@ -451,8 +452,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                             }
 
                             lastState = currentState;
-                        } catch (e: any) {
-                            this.log.debug('JSON parsing error in adapter monitor:', e.message);
+                        } catch (e: unknown) {
+                            this.log.debug('JSON parsing error in adapter monitor:', errorMessage(e));
                         }
                     }
                 });
@@ -478,8 +479,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                 });
 
                 this.processes.push(monitor);
-            } catch (e: any) {
-                this.log.error('Failed to start adapter monitor:', e.message);
+            } catch (e: unknown) {
+                this.log.error('Failed to start adapter monitor:', errorMessage(e));
                 // Fall back to periodic polling if PowerShell spawn fails
                 this.fallbackAdapterMonitoring();
             }
@@ -592,9 +593,9 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                                 }
                             }
                         }
-                    } catch (e: any) {
+                    } catch (e: unknown) {
                         // rasdial might not be available
-                        this.log.debug('rasdial check failed:', e.message);
+                        this.log.debug('rasdial check failed:', errorMessage(e));
                     }
                 }
 
@@ -627,8 +628,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                     }
                     initialCheckDone = true;
                 }
-            } catch (e: any) {
-                this.log.error('VPN check failed:', e.message);
+            } catch (e: unknown) {
+                this.log.error('VPN check failed:', errorMessage(e));
             } finally {
                 // Always reset the flag to allow next check
                 this.vpnCheckInProgress = false;
@@ -706,8 +707,8 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.processes.push(monitor);
-        } catch (e: any) {
-            this.log.error('Failed to start WMI monitor:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to start WMI monitor:', errorMessage(e));
         }
     }
 }
@@ -773,8 +774,8 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.processes.push(monitor);
-        } catch (e: any) {
-            this.log.error('Failed to start NetworkManager monitor:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to start NetworkManager monitor:', errorMessage(e));
             this.monitorWithIPCommand();
         }
     }
@@ -801,8 +802,8 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.processes.push(monitor);
-        } catch (e: any) {
-            this.log.error('Failed to start IP monitor:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to start IP monitor:', errorMessage(e));
         }
     }
 
@@ -822,8 +823,8 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
             });
 
             this.watchers.push(watcher);
-        } catch (e: any) {
-            this.log.error('Failed to watch network interfaces:', e.message);
+        } catch (e: unknown) {
+            this.log.error('Failed to watch network interfaces:', errorMessage(e));
         }
     }
 
@@ -872,8 +873,8 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
                     });
                     lastVPNState = vpnActive;
                 }
-            } catch (e: any) {
-                this.log.error('Failed to check VPN state:', e.message);
+            } catch (e: unknown) {
+                this.log.error('Failed to check VPN state:', errorMessage(e));
             }
         };
 
