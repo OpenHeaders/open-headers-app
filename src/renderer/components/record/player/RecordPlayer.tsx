@@ -19,7 +19,7 @@ import React, { useState, useEffect } from 'react';
 import { Spin, theme, Button, Space, Typography, Tooltip } from 'antd';
 import { TableOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useVideoLoader } from './hooks/useVideoLoader';
-import { usePlayerManager } from './hooks/usePlayerManager';
+import { usePlayerManager, RecordData, ProxyStatus, RRWebPlayerConstructor } from './hooks/usePlayerManager';
 import ViewModeToggle from './components/ViewModeToggle';
 import DOMPlayerContainer from './components/DOMPlayerContainer';
 import VideoPlayerContainer from './components/VideoPlayerContainer';
@@ -30,13 +30,13 @@ const { Text } = Typography;
 const log = createLogger('RecordPlayer');
 
 interface RecordPlayerProps {
-    record: any;
-    rrwebPlayer: any;
+    record: RecordData | null;
+    rrwebPlayer: RRWebPlayerConstructor | null;
     loading: boolean;
     onPlaybackTimeChange?: (time: number) => void;
-    processRecordForProxy?: (...args: any[]) => any;
-    createConsoleOverrides?: () => any;
-    onPlayingStateChange?: (...args: any[]) => void;
+    processRecordForProxy?: (record: RecordData, proxyStatus: ProxyStatus) => Promise<RecordData>;
+    createConsoleOverrides?: () => (() => void);
+    onPlayingStateChange?: (playing: boolean) => void;
     autoHighlight?: boolean;
     showAllWorkflowsButton?: boolean;
     onShowAllWorkflows?: () => void;
@@ -71,7 +71,7 @@ const RecordPlayer = ({
         rrwebPlayer,
         viewMode,
         autoHighlight,
-        processRecordForProxy ?? (async (record: Record<string, unknown>) => record),
+        processRecordForProxy ?? (async (record: RecordData) => record),
         createConsoleOverrides ?? (() => () => {}),
         onPlaybackTimeChange ?? null,
         onPlayingStateChange ?? null
@@ -116,11 +116,11 @@ const RecordPlayer = ({
                                 <Tooltip
                                     title={
                                         <div>
-                                            <div><strong>URL:</strong> {record.metadata?.url || 'Unknown'}</div>
-                                            <div><strong>Duration:</strong> {formatDuration(record.metadata?.duration || 0)}</div>
+                                            <div><strong>URL:</strong> {(record.metadata?.url as string | undefined) || 'Unknown'}</div>
+                                            <div><strong>Duration:</strong> {formatDuration((record.metadata?.duration as number | undefined) || 0)}</div>
                                             <div>
                                                 <strong>Started:</strong> {(() => {
-                                                    const startTime = new Date(record.metadata?.startTime || record.metadata?.timestamp || Date.now());
+                                                    const startTime = new Date(((record.metadata?.startTime ?? record.metadata?.timestamp ?? Date.now()) as string | number));
                                                     const formattedStartTime = format24HTimeWithMs(startTime);
                                                     return (
                                                         <>

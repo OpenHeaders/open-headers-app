@@ -1,14 +1,15 @@
 import React from 'react';
 import { Form } from 'antd';
 import DomainTags from '../../../features/domain-tags';
-import { 
+import type { DomainValidation } from '../../../features/domain-tags/DomainTagDisplay';
+import {
     validateEnvironmentVariables,
     formatMissingVariables
 } from '../../../../utils/validation/environment-variables';
 
 interface DomainSectionProps {
-    domainValidation: unknown[];
-    setDomainValidation: React.Dispatch<React.SetStateAction<unknown[]>>;
+    domainValidation: DomainValidation[];
+    setDomainValidation: React.Dispatch<React.SetStateAction<DomainValidation[]>>;
     envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string> };
 }
 

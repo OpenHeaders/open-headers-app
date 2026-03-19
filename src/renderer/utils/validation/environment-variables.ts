@@ -11,6 +11,26 @@ const log = createLogger('EnvironmentVariableValidation');
  */
 const ENV_VAR_PATTERN = /\{\{([^}]+)\}\}/g;
 
+/** Result of validateEnvironmentVariables */
+export interface EnvVarValidation {
+  isValid: boolean;
+  missingVars: string[];
+  usedVars: string[];
+  hasVars: boolean;
+}
+
+/** A rule object with header/domain fields for env-var validation */
+interface RuleForValidation {
+  headerName?: string;
+  headerValue?: string;
+  isDynamic?: boolean;
+  prefix?: string;
+  suffix?: string;
+  domains?: string[];
+  isEnabled?: boolean;
+  [key: string]: unknown;
+}
+
 /**
  * Extract all environment variable names from a text string
  * @param {string} text - Text to extract variables from
@@ -52,7 +72,7 @@ export function hasEnvironmentVariables(text: string | null | undefined): boolea
  * @param {Object} rule - Header rule object
  * @returns {Array<string>} Array of all variable names used in the rule
  */
-export function extractVariablesFromRule(rule: Record<string, any>): string[] {
+export function extractVariablesFromRule(rule: RuleForValidation): string[] {
     const variables = [];
     
     // Check header name
@@ -128,11 +148,12 @@ export function validateEnvironmentVariables(text: string | null | undefined, av
  * @param {Object} availableVars - Available variables object
  * @returns {Object} Validation result with details for each field
  */
-export function validateRuleEnvironmentVariables(rule: Record<string, any>, availableVars: Record<string, string | null | undefined> | null) {
-    const results: { isValid: boolean; missingVars: string[]; fieldValidation: Record<string, any>; totalVarsUsed: number } = {
+export function validateRuleEnvironmentVariables(rule: RuleForValidation, availableVars: Record<string, string | null | undefined> | null) {
+    const results: { isValid: boolean; missingVars: string[]; fieldValidation: Record<string, EnvVarValidation>; domainValidation: EnvVarValidation[]; totalVarsUsed: number } = {
         isValid: true,
         missingVars: [],
         fieldValidation: {},
+        domainValidation: [],
         totalVarsUsed: 0
     };
     
@@ -170,10 +191,9 @@ export function validateRuleEnvironmentVariables(rule: Record<string, any>, avai
     
     // Validate domains
     if (Array.isArray(rule.domains)) {
-        results.fieldValidation.domains = [];
-        rule.domains.forEach((domain, index) => {
+        rule.domains.forEach((domain) => {
             const validation = validateEnvironmentVariables(domain, availableVars);
-            results.fieldValidation.domains[index] = validation;
+            results.domainValidation.push(validation);
             results.missingVars.push(...validation.missingVars);
             results.totalVarsUsed += validation.usedVars.length;
         });
@@ -225,33 +245,33 @@ export function resolveEnvironmentVariables(text: string | null | undefined, var
  * @param {Object} options - Resolution options
  * @returns {Object} Rule with resolved variables
  */
-export function resolveRuleEnvironmentVariables(rule: Record<string, any>, variables: Record<string, string | null | undefined>, options: { keepUnresolved?: boolean; placeholderPrefix?: string } = {}) {
+export function resolveRuleEnvironmentVariables(rule: RuleForValidation, variables: Record<string, string | null | undefined>, options: { keepUnresolved?: boolean; placeholderPrefix?: string } = {}) {
     const resolvedRule = { ...rule };
     
     // Resolve header name
     if (rule.headerName) {
-        resolvedRule.headerName = resolveEnvironmentVariables(rule.headerName, variables, options);
+        resolvedRule.headerName = resolveEnvironmentVariables(rule.headerName, variables, options) ?? undefined;
     }
-    
+
     // Resolve header value (for static values)
     if (!rule.isDynamic && rule.headerValue) {
-        resolvedRule.headerValue = resolveEnvironmentVariables(rule.headerValue, variables, options);
+        resolvedRule.headerValue = resolveEnvironmentVariables(rule.headerValue, variables, options) ?? undefined;
     }
-    
+
     // Resolve prefix and suffix (for dynamic values)
     if (rule.isDynamic) {
         if (rule.prefix) {
-            resolvedRule.prefix = resolveEnvironmentVariables(rule.prefix, variables, options);
+            resolvedRule.prefix = resolveEnvironmentVariables(rule.prefix, variables, options) ?? undefined;
         }
         if (rule.suffix) {
-            resolvedRule.suffix = resolveEnvironmentVariables(rule.suffix, variables, options);
+            resolvedRule.suffix = resolveEnvironmentVariables(rule.suffix, variables, options) ?? undefined;
         }
     }
-    
+
     // Resolve domains
     if (Array.isArray(rule.domains)) {
-        resolvedRule.domains = rule.domains.map(domain => 
-            resolveEnvironmentVariables(domain, variables, options)
+        resolvedRule.domains = rule.domains.map(domain =>
+            resolveEnvironmentVariables(domain, variables, options) ?? ''
         );
     }
     
@@ -264,7 +284,7 @@ export function resolveRuleEnvironmentVariables(rule: Record<string, any>, varia
  * @param {Object} availableVars - Available variables object
  * @returns {Object} Result { shouldApply, reason, missingVars }
  */
-export function checkRuleActivation(rule: Record<string, any>, availableVars: Record<string, string | null | undefined> | null) {
+export function checkRuleActivation(rule: RuleForValidation, availableVars: Record<string, string | null | undefined> | null) {
     // Skip disabled rules
     if (!rule.isEnabled) {
         return {

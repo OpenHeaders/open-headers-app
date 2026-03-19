@@ -48,6 +48,7 @@ import {
     createTagEditHandlers,
     createShowInputHandler
 } from './index';
+import type { DomainValidation } from './DomainTagDisplay';
 
 /**
  * DomainTags component for managing domain tag collections with modular architecture
@@ -66,7 +67,7 @@ import {
  *   onChange={handleDomainsChange}
  * />
  */
-const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }: { value?: any[]; onChange?: any; onValidate?: any; validationResults?: any[] }) => {
+const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }: { value?: string[]; onChange?: (tags: string[]) => void; onValidate?: (tags: string[]) => void; validationResults?: DomainValidation[] }) => {
     // Input state management
     const [inputVisible, setInputVisible] = useState(false);
     const [inputValue, setInputValue] = useState('');
@@ -210,7 +211,7 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
             {/* Header with help text and action buttons */}
             <DomainActionsHeader
                 domains={value}
-                onChange={onChange}
+                onChange={onChange ?? (() => {})}
                 helpComponent={<DomainInputHelp />}
             />
 

@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { App } from 'antd';
-import WorkspaceCreationController from '../controllers/WorkspaceCreationController';
+import WorkspaceCreationController, { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
 import { WORKSPACE_CREATION_STATES } from '../state/WorkspaceCreationStateMachine';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
@@ -19,7 +19,7 @@ const log = createLogger('useWorkspaceCreation');
  * @returns {Object} Workspace creation state and actions
  */
 interface WorkspaceCreationContext {
-    formData?: Record<string, any> | null;
+    formData?: Record<string, unknown> | null;
     workspaceId?: string | null;
     error?: Error | null;
     [key: string]: unknown;
@@ -29,12 +29,19 @@ interface WorkspaceCreationOptions {
     disableNotifications?: boolean;
 }
 
-export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreationOptions = {}) => {
+interface ProgressState {
+    step: number;
+    total: number;
+    title: string;
+    description: string;
+}
+
+export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies, options: WorkspaceCreationOptions = {}) => {
     const { message } = App.useApp();
-    const controllerRef = useRef<any>(null);
+    const controllerRef = useRef<WorkspaceCreationController | null>(null);
     const [state, setState] = useState(WORKSPACE_CREATION_STATES.IDLE);
     const [context, setContext] = useState<WorkspaceCreationContext>({});
-    const [progress, setProgress] = useState<any>(null);
+    const [progress, setProgress] = useState<ProgressState | null>(null);
     const [error, setError] = useState<Error | null>(null);
 
     // Initialize controller
@@ -43,7 +50,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
             controllerRef.current = new WorkspaceCreationController(dependencies);
             
             // Listen to state changes
-            const unsubscribe = controllerRef.current.addListener((stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }) => {
+            const unsubscribe = controllerRef.current.addListener(((stateData: { state: string; context: WorkspaceCreationContext; [key: string]: unknown }) => {
                 setState(stateData.state);
                 setContext(stateData.context);
                 setError(stateData.context?.error ?? null);
@@ -55,7 +62,7 @@ export const useWorkspaceCreation = (dependencies: any, options: WorkspaceCreati
                 if (!options.disableNotifications) {
                     handleStateNotifications(stateData as { state: string; context: WorkspaceCreationContext; [key: string]: unknown }, message);
                 }
-            });
+            }) as Parameters<typeof controllerRef.current.addListener>[0]);
             
             return () => {
                 unsubscribe();

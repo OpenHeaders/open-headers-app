@@ -12,6 +12,51 @@ import TrayMenu from '../features/TrayMenu';
 import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
 import { DebugSourceInfo } from '../status/DebugSourceInfo';
 import { DebugNetworkState } from '../status/DebugNetworkState';
+import type { Settings } from '../../contexts/ui/SettingsContext';
+import type { SourceData } from '../../hooks/workspace/useSources';
+import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
+import type { InitialAction } from '../modals/settings/SettingsModal';
+
+interface AppLayoutProps {
+  appVersion: string;
+  activeTab: string;
+  tabScrollPositions: Record<string, number>;
+  settingsVisible: boolean;
+  settingsInitialTab: string | null;
+  settingsAction: InitialAction | null;
+  aboutModalVisible: boolean;
+  exportModalVisible: boolean;
+  importModalVisible: boolean;
+  currentRecord: Record<string, unknown> | null;
+  recordPlaybackTime: number;
+  autoHighlight: boolean;
+  loading: { export: boolean; import: boolean };
+  settings: Settings;
+  sources: SourceData[];
+  onTabChange: (tab: string) => void;
+  onTabScrollPositionChange: (tab: string, scrollTop: number) => void;
+  onRecordChange: (record: Record<string, unknown> | null) => void;
+  onPlaybackTimeChange: (time: number) => void;
+  onAutoHighlightChange: (highlight: boolean) => void;
+  onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
+  onRemoveSource: (sourceId: string) => Promise<boolean>;
+  onRefreshSource: (sourceId: string) => Promise<boolean>;
+  onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;
+  onExport: () => void;
+  onImport: () => void;
+  onCheckForUpdates: () => void;
+  onOpenSettings: () => void;
+  onOpenAbout: () => void;
+  onSettingsCancel: () => void;
+  onAboutCancel: () => void;
+  onSettingsSave: (values: Record<string, unknown>) => Promise<void>;
+  onExportModalCancel: () => void;
+  onImportModalCancel: () => void;
+  onHandleExport: (config: Record<string, unknown>) => void;
+  onHandleImport: (data: Record<string, unknown>) => Promise<void>;
+  preloadedEnvData: Record<string, unknown> | null;
+  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
+}
 
 const { Content } = Layout;
 
@@ -54,7 +99,7 @@ export function AppLayout({
   onHandleImport,
   preloadedEnvData,
   updateNotificationRef
-}: any) {
+}: AppLayoutProps) {
   const { token } = theme.useToken();
 
   return (
@@ -85,7 +130,7 @@ export function AppLayout({
           onRemoveSource={onRemoveSource}
           onRefreshSource={onRefreshSource}
           onUpdateSource={onUpdateSource}
-          tutorialMode={Boolean((settings as Record<string, unknown>)?.tutorialMode)}
+          tutorialMode={Boolean(settings?.tutorialMode)}
         />
       </Content>
 
@@ -93,7 +138,7 @@ export function AppLayout({
         appVersion={appVersion}
         theme={token}
         debugComponents={
-          !!(settings as Record<string, unknown>)?.developerMode && (
+          !!settings?.developerMode && (
             <>
               <CircuitBreakerStatus inFooter={true} />
               <DebugSourceInfo inFooter={true} />
@@ -108,8 +153,8 @@ export function AppLayout({
         settings={settings}
         onCancel={onSettingsCancel}
         onSave={onSettingsSave}
-        initialTab={settingsInitialTab}
-        initialAction={settingsAction}
+        initialTab={settingsInitialTab ?? undefined}
+        initialAction={settingsAction ?? undefined}
       />
 
       <AboutModal

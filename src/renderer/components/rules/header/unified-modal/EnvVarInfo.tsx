@@ -1,17 +1,12 @@
 import React from 'react';
 import { Alert, Space, Typography } from 'antd';
+import type { EnvVarValidation } from '../../../../utils/validation/environment-variables';
 
 const { Text } = Typography;
 
-const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<string, any>; mode: string }) => {
+const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<string, EnvVarValidation>; mode: string }) => {
     // Check if there are any environment variables used
-    const hasEnvVars = Object.keys(envVarValidation).some(key => {
-        const val = envVarValidation[key];
-        if (Array.isArray(val)) {
-            return val.some(v => v?.hasVars);
-        }
-        return val?.hasVars;
-    });
+    const hasEnvVars = Object.values(envVarValidation).some(v => v?.hasVars);
 
     if (!hasEnvVars) return null;
 
@@ -22,31 +17,8 @@ const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<strin
                 <Space direction="vertical" size="small">
                     <Text>This rule uses environment variables. They will be resolved when the rule is applied.</Text>
                     {Object.entries(envVarValidation).map(([field, validation]) => {
-                        if (!validation || (!validation.hasVars && !Array.isArray(validation))) return null;
-                        
-                        // Handle domains array separately
-                        if (field === 'domains' && Array.isArray(validation)) {
-                            const domainsWithVars = validation
-                                .map((v, i) => v?.hasVars ? { index: i, vars: v.usedVars, isValid: v.isValid, missingVars: v.missingVars || [] } : null)
-                                .filter(Boolean);
-                            
-                            if (domainsWithVars.length === 0) return null;
-                            
-                            const invalidDomains = domainsWithVars.filter(d => d && !d.isValid);
-                            const allDomainVars = [...new Set(domainsWithVars.flatMap(d => d?.vars ?? []))];
+                        if (!validation?.hasVars) return null;
 
-                            return (
-                                <div key={field}>
-                                    <Text type={invalidDomains.length > 0 ? "danger" : "secondary"}>
-                                        • Domains use: {allDomainVars.map(v => `{{${v}}}`).join(', ')}
-                                        {invalidDomains.length > 0 && ` (missing: ${[...new Set(invalidDomains.flatMap(d => d?.missingVars ?? []))].join(', ')})`}
-                                    </Text>
-                                </div>
-                            );
-                        }
-                        
-                        if (!validation.hasVars) return null;
-                        
                         // Determine field label based on mode and field name
                         let fieldLabel;
                         if (mode === 'cookie') {
@@ -58,7 +30,7 @@ const EnvVarInfo = ({ envVarValidation, mode }: { envVarValidation: Record<strin
                             else if (field === 'headerValue') fieldLabel = 'Header value';
                             else fieldLabel = field.charAt(0).toUpperCase() + field.slice(1);
                         }
-                        
+
                         return (
                             <Text key={field} type={validation.isValid ? "secondary" : "danger"}>
                                 • {fieldLabel} uses: {validation.usedVars.map((v: string) => `{{${v}}}`).join(', ')}

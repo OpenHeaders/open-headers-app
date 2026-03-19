@@ -17,7 +17,7 @@ interface UseFileWatcherDeps {
  */
 export function useFileWatcher({ refreshSource }: UseFileWatcherDeps): void {
   useEffect(() => {
-    const unsubscribe = (window as any).electronAPI.onFileChanged((sourceId: string, content: string) => {
+    const unsubscribe = window.electronAPI.onFileChanged((sourceId: string, content: string) => {
       log.debug(`File changed event for sourceId: ${sourceId}, content: ${content.substring(0, 50)}`);
       refreshSource(sourceId);
     });

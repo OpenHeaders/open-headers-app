@@ -14,6 +14,7 @@ import {
 } from '../../../record';
 import WorkflowViewerControls from './WorkflowViewerControls';
 import { TAB_KEYS, DEFAULT_TAB_STYLES } from './WorkflowViewerTypes';
+import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
 
 /**
  * WorkflowViewerTabs component
@@ -29,7 +30,7 @@ import { TAB_KEYS, DEFAULT_TAB_STYLES } from './WorkflowViewerTypes';
  * @returns {React.ReactNode} Rendered tabs
  */
 interface WorkflowViewerTabsProps {
-    record: any;
+    record: RecordData;
     viewMode: string;
     activeTime: number;
     autoHighlight: boolean;
@@ -56,7 +57,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="console-tab">
             <RecordConsoleTab
-                record={record}
+                record={record as unknown as Parameters<typeof RecordConsoleTab>[0]['record']}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -70,7 +71,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="network-tab">
             <RecordNetworkTab
-                record={record}
+                record={record as unknown as Parameters<typeof RecordNetworkTab>[0]['record']}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -84,7 +85,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="storage-tab">
             <RecordStorageTab
-                record={record}
+                record={record as unknown as Parameters<typeof RecordStorageTab>[0]['record']}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -97,7 +98,7 @@ const WorkflowViewerTabs = ({
       label: 'Info',
       children: (
           <div className="info-tab">
-            <RecordInfoTab record={record} />
+            <RecordInfoTab record={record as unknown as Parameters<typeof RecordInfoTab>[0]['record']} />
           </div>
       )
     }

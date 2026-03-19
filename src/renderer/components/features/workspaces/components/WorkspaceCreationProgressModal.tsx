@@ -21,7 +21,7 @@ const WorkspaceCreationProgressModal = ({
     error,
     onClose
 }: WorkspaceCreationProgressModalProps) => {
-    const renderStepIcon = (stepNumber: any) => {
+    const renderStepIcon = (stepNumber: number) => {
         if (!progress) return null;
         
         const currentStep = progress.step;

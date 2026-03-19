@@ -8,6 +8,7 @@ import { Button, Space, Upload, Tooltip } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 
 import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '../shared';
+import type { WorkflowRecord } from './WorkflowTableColumns';
 
 /**
  * Upload component for importing workflows
@@ -17,7 +18,7 @@ import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '../shared';
  */
 interface WorkflowUploadProps {
   onImportSuccess: () => void;
-  onImportError: (error: any) => void;
+  onImportError: (error: Error) => void;
 }
 
 export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploadProps) => {
@@ -57,9 +58,9 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploa
  */
 interface WorkflowTableActionsProps {
   onImportSuccess: () => void;
-  onImportError: (error: any) => void;
-  selectedWorkflows?: any[];
-  onBulkDelete?: (workflows: any[]) => void;
+  onImportError: (error: Error) => void;
+  selectedWorkflows?: WorkflowRecord[];
+  onBulkDelete?: (workflows: WorkflowRecord[]) => void;
 }
 
 export const WorkflowTableActions = ({

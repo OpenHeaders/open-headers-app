@@ -21,13 +21,15 @@ import {
     InfoCircleOutlined
 } from '@ant-design/icons';
 import DomainTags from '../features/domain-tags';
+import type { DomainValidation } from '../features/domain-tags/DomainTagDisplay';
 import { showMessage } from '../../utils';
-import { 
+import {
     extractEnvironmentVariables,
     validateEnvironmentVariables,
     formatMissingVariables,
     getResolvedPreview,
-    extractVariablesFromRule
+    extractVariablesFromRule,
+    type EnvVarValidation
 } from '../../utils/validation/environment-variables';
 
 const { Option } = Select;
@@ -113,8 +115,8 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
     const { token } = theme.useToken();
     const [headerType, setHeaderType] = useState('request');
     const [valueType, setValueType] = useState('static');
-    const [envVarValidation, setEnvVarValidation] = useState<Record<string, any>>({});
-    const [domainValidation, setDomainValidation] = useState<any[]>([]);
+    const [envVarValidation, setEnvVarValidation] = useState<Record<string, EnvVarValidation>>({});
+    const [domainValidation, setDomainValidation] = useState<DomainValidation[]>([]);
     const formRef = useRef(null);
 
     useEffect(() => {
@@ -205,7 +207,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
     const validateAllEnvVars = () => {
         const values = form.getFieldsValue();
         const variables = envContext.getAllVariables();
-        const validations: Record<string, any> = {};
+        const validations: Record<string, EnvVarValidation> = {};
 
         // Validate header name
         if (values.headerName) {
@@ -229,7 +231,6 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
             const domainValidations = values.domains.map((domain: string) =>
                 validateEnvironmentVariables(domain, variables)
             );
-            validations.domains = domainValidations;
             setDomainValidation(domainValidations);
         }
         

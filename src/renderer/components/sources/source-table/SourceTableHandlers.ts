@@ -34,7 +34,7 @@ interface RefreshDisplayState {
 
 interface SourceRecord {
     sourceId: string;
-    sourceType?: string;
+    sourceType: string;
     sourceTag?: string;
     [key: string]: unknown;
 }
@@ -50,7 +50,7 @@ interface TimeManagerLike {
 }
 
 interface SaveSourceParams {
-    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => SourceRecord | null;
+    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<SourceRecord | null>;
     setRefreshingSourceId: (id: string | null) => void;
     setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     setEditModalVisible: (visible: boolean) => void;
@@ -122,7 +122,7 @@ export const createSaveSourceHandler = ({
 
         // Call parent handler to update the source and get the updated source
         // Parent handler typically updates the sources array and returns the updated source
-        const updatedSource = onUpdateSource(dataToSave.sourceId, dataToSave);
+        const updatedSource = await onUpdateSource(dataToSave.sourceId, dataToSave);
         log.debug('UpdateSource returned:', { updatedSource, hasValue: !!updatedSource });
 
         if (updatedSource) {

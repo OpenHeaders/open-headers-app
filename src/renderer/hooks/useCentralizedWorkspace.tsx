@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getCentralizedWorkspaceService } from '../services/CentralizedWorkspaceService';
+import { getCentralizedWorkspaceService, type WorkspaceServiceState } from '../services/CentralizedWorkspaceService';
 import { useCentralizedEnvironments } from './useCentralizedEnvironments';
 
 // Re-export hooks from workspace module
@@ -13,7 +13,7 @@ export function useCentralizedWorkspace() {
   const [state, setState] = useState(service.getState());
 
   useEffect(() => {
-    const unsubscribe = service.subscribe((newState: any) => {
+    const unsubscribe = service.subscribe((newState: WorkspaceServiceState) => {
       setState(newState);
 
       // Remove per-hook logging to avoid spam

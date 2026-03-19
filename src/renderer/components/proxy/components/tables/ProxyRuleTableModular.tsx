@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table } from 'antd';
-import { createAllColumns } from './ProxyRuleTableColumns';
+import { createAllColumns, ProxyRule, HeaderRule, ProxySource } from './ProxyRuleTableColumns';
 import ProxyRuleTableEmpty from './ProxyRuleTableEmpty';
 
 /**
@@ -51,11 +51,11 @@ import ProxyRuleTableEmpty from './ProxyRuleTableEmpty';
  * @returns {JSX.Element} Proxy rules management table
  */
 interface ProxyRuleTableProps {
-    rules: Record<string, any>[];
-    sources: any[];
-    headerRules?: any[];
-    onEdit: (rule: Record<string, any>) => void;
-    onDelete: (ruleId: string) => Promise<any>;
+    rules: ProxyRule[];
+    sources: ProxySource[];
+    headerRules?: HeaderRule[];
+    onEdit: (rule: ProxyRule) => void;
+    onDelete: (ruleId: string) => Promise<void>;
     onToggle: (ruleId: string, enabled: boolean) => void;
     onAdd: () => void;
 }

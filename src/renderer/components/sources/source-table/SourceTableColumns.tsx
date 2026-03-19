@@ -37,7 +37,7 @@ const { Text } = Typography;
 
 interface SourceRecord {
     sourceId: string;
-    sourceType: 'http' | 'file' | 'env';
+    sourceType: string;
     sourceTag?: string;
     sourcePath?: string;
     sourceContent?: string;

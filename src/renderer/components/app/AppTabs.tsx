@@ -15,11 +15,7 @@ import Rules from '../rules/Rules';
 import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
 import ServerConfig from '../server-config/ServerConfig';
-
-interface SourceRecord {
-    sourceId: string;
-    [key: string]: unknown;
-}
+import type { SourceData } from '../../hooks/workspace/useSources';
 
 interface AppTabsProps {
     activeTab: string;
@@ -32,11 +28,11 @@ interface AppTabsProps {
     onRecordChange: (record: Record<string, unknown> | null) => void;
     onPlaybackTimeChange: (time: number) => void;
     onAutoHighlightChange: (enabled: boolean) => void;
-    sources: SourceRecord[];
+    sources: SourceData[];
     onAddSource: (sourceData: Record<string, unknown>) => Promise<boolean>;
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     onRefreshSource: (sourceId: string) => Promise<boolean>;
-    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => SourceRecord | null;
+    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<SourceData | null>;
     tutorialMode: boolean;
 }
 

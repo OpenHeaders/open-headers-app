@@ -12,7 +12,7 @@ const log = createLogger('useAppInitialization');
 interface UseAppInitializationDeps {
   setAppVersion: (version: string) => void;
   setActiveTab: (tab: string) => void;
-  setCurrentRecord: (record: any) => void;
+  setCurrentRecord: (record: Record<string, unknown> | null) => void;
 }
 
 /**
@@ -35,7 +35,7 @@ export function useAppInitialization({ setAppVersion, setActiveTab, setCurrentRe
     getAppVersion();
 
     // Set up listener for opening record recordings from main process
-    const unsubscribe = window.electronAPI.onOpenRecordRecording((data: any) => {
+    const unsubscribe = window.electronAPI.onOpenRecordRecording((data: Record<string, unknown>) => {
       log.info('Received request to open record recording:', data);
       setActiveTab('record-viewer');
       if (data && data.record) {

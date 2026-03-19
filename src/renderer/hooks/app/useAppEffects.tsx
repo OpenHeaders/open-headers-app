@@ -12,29 +12,31 @@
  * - Update checking functionality
  */
 
+import React from 'react';
 import { useAppInitialization } from './useAppInitialization';
 import { useFileWatcher } from './useFileWatcher';
-import { useNavigation } from './useNavigation';
+import { useNavigation, NavigationIntent } from './useNavigation';
+import type { InitialAction } from '../../components/modals/settings/SettingsModal';
 import { useWorkspaceSync } from './useWorkspaceSync';
-import { useUpdateChecker } from './useUpdateChecker';
+import { useUpdateChecker, UpdateNotificationHandle } from './useUpdateChecker';
 
 interface UseAppEffectsDeps {
   setAppVersion: (version: string) => void;
   setActiveTab: (tab: string) => void;
-  setCurrentRecord: (record: any) => void;
+  setCurrentRecord: (record: Record<string, unknown> | null) => void;
   refreshSource: (sourceId: string) => void;
   activeWorkspaceId: string;
-  navigate: (intent: any) => void;
+  navigate: (intent: NavigationIntent) => void;
   clearAllHighlights: () => void;
   ACTIONS: Record<string, string>;
   TARGETS: Record<string, string>;
   setSettingsInitialTab: (tab: string | null) => void;
   setSettingsVisible: (visible: boolean) => void;
-  setSettingsAction: (action: any) => void;
+  setSettingsAction: (action: InitialAction | null) => void;
 }
 
 interface UseAppEffectsReturn {
-  updateNotificationRef: React.MutableRefObject<any>;
+  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
   handleCheckForUpdates: () => void;
   clearAllHighlights: () => void;
 }

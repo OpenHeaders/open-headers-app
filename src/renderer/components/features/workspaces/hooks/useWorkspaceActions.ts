@@ -23,7 +23,7 @@ export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: 
     }, [workspaceContext]);
     
     // Use new workspace creation hook
-    const workspaceCreation = useWorkspaceCreation(services);
+    const workspaceCreation = useWorkspaceCreation(services as unknown as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
     
     // Keep existing hooks for backward compatibility
     const gitActions = useGitActions();

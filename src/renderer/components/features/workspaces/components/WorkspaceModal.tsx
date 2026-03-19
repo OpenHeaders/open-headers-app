@@ -94,7 +94,7 @@ const WorkspaceModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services);
+    } = useWorkspaceCreation(services as unknown as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
 
     const watchedType = Form.useWatch('type', form);
     const watchedGitUrl = Form.useWatch('gitUrl', form);

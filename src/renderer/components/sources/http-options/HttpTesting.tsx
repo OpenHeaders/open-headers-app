@@ -44,7 +44,7 @@ interface HttpTestHandlerParams {
     http: { testRequest: (url: string, method: string, requestOptions: Record<string, any>, jsonFilter: { enabled: boolean; path: string }, sourceId: string, progressCallback: ((progress: number) => void) | null, cleanupCallback: (() => void) | null) => Promise<string> };
     setTesting: (testing: boolean) => void;
     onTestingChange?: (testing: boolean) => void;
-    setTestResponseContent: (content: any) => void;
+    setTestResponseContent: (content: string) => void;
     setTestResponseVisible: (visible: boolean) => void;
     setRawResponse: (response: string) => void;
     onTestResponse?: (response: string) => void;
@@ -382,7 +382,7 @@ export const createHttpTestHandler = ({
         // Save and format the response
         setRawResponse(response);
         const formattedResponse = formatResponseForDisplay(response);
-        setTestResponseContent(formattedResponse);
+        setTestResponseContent(formattedResponse as unknown as string);
         setTestResponseVisible(true);
 
         // Send to parent callback

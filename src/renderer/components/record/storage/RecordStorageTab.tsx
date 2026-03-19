@@ -12,6 +12,7 @@
  */
 import React, { useState } from 'react';
 import { Table, Typography, Empty, App, theme, Button, Tooltip, Tag } from 'antd';
+import type { FilterValue } from 'antd/es/table/interface';
 import { SearchOutlined, ClearOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { useSearchFilter } from '../shared/useSearchFilter';
 import { useTimeHighlight } from '../shared/useTimeHighlight';
@@ -136,7 +137,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'Cookie', value: 'cookie' }
             ],
             filteredValue: typeFilter,
-            onFilter: (value: string, record: StorageRecord) => record.type === value,
+            onFilter: (value: boolean | React.Key, record: StorageRecord) => record.type === (value as string),
             render: (type: string) => <StorageTypeCell type={type} />
         },
         {
@@ -150,7 +151,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'Clear', value: 'clear' }
             ],
             filteredValue: actionFilter,
-            onFilter: (value: string, record: StorageRecord) => record.action === value,
+            onFilter: (value: boolean | React.Key, record: StorageRecord) => record.action === (value as string),
             render: (action: string, record: StorageRecord) => <StorageActionCell action={action} record={record} />
         },
         {
@@ -268,7 +269,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 .sort()
                 .map((domain: string) => ({ text: domain, value: domain })),
             filteredValue: domainFilter,
-            onFilter: (value: string, record: StorageRecord) => record.domain === value,
+            onFilter: (value: boolean | React.Key, record: StorageRecord) => record.domain === (value as string),
             render: (domain: string, record: StorageRecord) => (
                 <Text style={{ fontSize: '12px', opacity: 0.8, cursor: 'help' }} title={record.url || record.metadata?.url || 'URL not available'}>
                     {domain}
@@ -288,8 +289,8 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 { text: 'None', value: 'none' }
             ],
             filteredValue: attributeFilter,
-            onFilter: (value: string, record: StorageRecord) => {
-                switch(value) {
+            onFilter: (value: boolean | React.Key, record: StorageRecord) => {
+                switch(value as string) {
                     case 'initial':
                         return record.metadata?.initial === true;
                     case 'httpOnly':
@@ -320,7 +321,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
         }));
 
     // Table change handler
-    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
+    const handleTableChange = (_pagination: unknown, filters: Record<string, FilterValue | null>) => {
         setTypeFilter((filters.type || []) as string[]);
         setActionFilter((filters.action || []) as string[]);
         setDomainFilter((filters.domain || []) as string[]);
@@ -335,10 +336,10 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
     // Complete table props
     const tableProps = createStandardTableProps(
-        tableData as any,
-        columns as any,
-        handleTableChange as any,
-        generateRowClassName as any
+        tableData,
+        columns,
+        handleTableChange,
+        generateRowClassName
     );
 
     return (

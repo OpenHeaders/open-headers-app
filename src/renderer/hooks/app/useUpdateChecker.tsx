@@ -8,8 +8,12 @@ import React, { useRef } from 'react';
 import { notification } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 
+export interface UpdateNotificationHandle {
+  checkForUpdates: (isManual: boolean) => void;
+}
+
 interface UseUpdateCheckerReturn {
-  updateNotificationRef: React.MutableRefObject<any>;
+  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
   handleCheckForUpdates: () => void;
 }
 
@@ -17,7 +21,7 @@ interface UseUpdateCheckerReturn {
  * Hook for managing update checking functionality
  */
 export function useUpdateChecker(): UseUpdateCheckerReturn {
-  const updateNotificationRef = useRef<any>(null);
+  const updateNotificationRef = useRef<UpdateNotificationHandle | null>(null);
 
   const handleCheckForUpdates = () => {
     if (updateNotificationRef.current?.checkForUpdates) {

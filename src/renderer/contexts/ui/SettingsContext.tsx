@@ -4,7 +4,7 @@ import { createLogger, setGlobalLogLevel } from '../../utils/error-handling/logg
 
 const log = createLogger('SettingsContext');
 
-interface Settings {
+export interface Settings {
   launchAtLogin: boolean;
   hideOnLaunch: boolean;
   showDockIcon: boolean;

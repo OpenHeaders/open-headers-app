@@ -48,7 +48,7 @@ interface EditableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement>
   dataIndex: string;
   title: string;
   inputType: 'text' | 'password' | 'radio' | 'dynamic';
-  record: any;
+  record: Record<string, unknown>;
   index: number;
   children: React.ReactNode;
 }

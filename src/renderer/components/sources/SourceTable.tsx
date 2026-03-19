@@ -1,4 +1,5 @@
 import { useEnvironments, useRefreshManager } from '../../contexts';
+import type { SourceData } from '../../hooks/workspace/useSources';
 import React, {useState, useEffect, useMemo} from 'react';
 import { Table, Empty, Typography, theme } from 'antd';
 import EditSourceModal from '../modals/edit-source';
@@ -59,10 +60,10 @@ const log = createLogger('SourceTable');
  * @since 3.0.0
  */
 interface SourceTableProps {
-    sources: any[];
-    onRemoveSource: (sourceId: string) => Promise<any>;
-    onRefreshSource: (sourceId: string, updatedSource?: any) => Promise<any>;
-    onUpdateSource: (sourceId: string, updates: Record<string, any>) => any;
+    sources: SourceData[];
+    onRemoveSource: (sourceId: string) => Promise<boolean>;
+    onRefreshSource: (sourceId: string, updatedSource?: SourceData | null) => Promise<boolean>;
+    onUpdateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<SourceData | null>;
 }
 
 const SourceTable = ({
@@ -283,9 +284,9 @@ const SourceTable = ({
         />
     ) : (
         <Table
-            dataSource={sources}
-            columns={columns}
-            rowKey={(record: Record<string,unknown>) => `source-${record.sourceId}-${record.sourceType}`}
+            dataSource={sources as unknown as Record<string, unknown>[]}
+            columns={columns as unknown as import('antd').TableColumnsType<Record<string, unknown>>}
+            rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
             pagination={false}
             locale={{ emptyText }}
             size="small"
@@ -315,7 +316,7 @@ const SourceTable = ({
             {/* Content Viewer Modal for displaying source content */}
             {/* Always rendered but controlled by open prop for better animation */}
             <ContentViewer
-                source={selectedSource}
+                source={selectedSource ?? null}
                 open={contentViewerVisible}
                 onClose={handleCloseModal}
             />

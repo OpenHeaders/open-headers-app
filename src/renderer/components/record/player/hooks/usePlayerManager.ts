@@ -21,26 +21,26 @@ import { createLogger } from '../../../../utils/error-handling/logger';
 
 const log = createLogger('usePlayerManager');
 
-interface RecordMetadata {
+export interface RecordMetadata {
     recordId: string;
     viewport?: { width: number; height: number };
     [key: string]: unknown;
 }
 
-interface RecordData {
+export interface RecordData {
     metadata: RecordMetadata;
     events: unknown[];
     [key: string]: unknown;
 }
 
-interface ProxyStatus {
+export interface ProxyStatus {
     running: boolean;
     port?: number;
     rulesCount?: number;
     sourcesCount?: number;
 }
 
-interface RRWebPlayerInstance {
+export interface RRWebPlayerInstance {
     getReplayer: () => { getCurrentTime: () => number; getMetaData: () => { playing?: boolean }; pause: () => void; play: (time?: number) => void } | null;
     addEventListener: (event: string, handler: (event: { payload: unknown }) => void) => void;
     _restoreConsole?: () => void;
@@ -50,9 +50,11 @@ interface RRWebPlayerInstance {
     [key: string]: unknown;
 }
 
+export type RRWebPlayerConstructor = new (options: { target: HTMLElement; props: Record<string, unknown> }) => RRWebPlayerInstance;
+
 export const usePlayerManager = (
     record: RecordData | null,
-    rrwebPlayer: (new (options: { target: HTMLElement; props: Record<string, unknown> }) => RRWebPlayerInstance) | null,
+    rrwebPlayer: RRWebPlayerConstructor | null,
     viewMode: string,
     autoHighlight: boolean,
     processRecordForProxy: (record: RecordData, proxyStatus: ProxyStatus) => Promise<RecordData>,

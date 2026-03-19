@@ -32,6 +32,9 @@ interface HttpOptionsRef {
     forceTotpState?: (enabled: boolean, secret: string) => void;
     forceHeadersState?: (headers: unknown[]) => void;
     forceJsonFilterState?: (enabled: boolean, path: string) => void;
+    getTotpState?: () => { enabled: boolean; secret?: string };
+    getJsonFilterState?: () => { enabled: boolean; path?: string };
+    getHeadersState?: () => Array<{ key: string; value: string }>;
 }
 
 interface EditSourceModalProps {

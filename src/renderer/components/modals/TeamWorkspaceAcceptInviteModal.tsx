@@ -71,7 +71,7 @@ const TeamWorkspaceAcceptInviteModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services, { disableNotifications: true });
+    } = useWorkspaceCreation(services as unknown as import('../features/workspaces/controllers/WorkspaceCreationController').WorkspaceCreationDependencies, { disableNotifications: true });
 
     const authTypeValue = Form.useWatch('authType', form);
     const sshKeySourceValue = Form.useWatch('sshKeySource', form);

@@ -29,9 +29,9 @@ interface SettingsValues {
 }
 
 /** Initial action to perform when modal opens */
-interface InitialAction {
+export interface InitialAction {
     action: string;
-    value: unknown;
+    value?: unknown;
 }
 
 /** Permission check result */

@@ -12,7 +12,7 @@ import { prepareAuthData, prepareWorkspaceData } from '../utils';
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceCreationController');
 
-interface WorkspaceCreationDependencies {
+export interface WorkspaceCreationDependencies {
     gitService: {
         getStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string }>;
         install: () => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -20,7 +20,7 @@ interface WorkspaceCreationDependencies {
         commitConfiguration: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
     };
     workspaceService: {
-        create: (data: Record<string, unknown>) => Promise<{ id: string } | null>;
+        create: (data: Record<string, unknown>) => Promise<{ id?: string } | null>;
     };
 }
 

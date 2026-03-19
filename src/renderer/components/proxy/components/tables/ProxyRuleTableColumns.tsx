@@ -7,7 +7,7 @@ import { getResolvedPreview } from '../../../../utils/validation/environment-var
 
 const { Text } = Typography;
 
-interface ProxyRule {
+export interface ProxyRule {
     id: string;
     name?: string;
     headerRuleId?: string;
@@ -22,7 +22,7 @@ interface ProxyRule {
     enabled?: boolean;
 }
 
-interface HeaderRule {
+export interface HeaderRule {
     id: string;
     headerName?: string;
     headerValue?: string;
@@ -34,7 +34,7 @@ interface HeaderRule {
     domains?: string[];
 }
 
-interface Source {
+export interface ProxySource {
     sourceId: string;
     sourceContent?: string;
 }
@@ -147,7 +147,7 @@ export const createDomainsColumn = (headerRules: HeaderRule[]) => ({
 });
 
 // Header Column Component
-const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRule; sources: Source[]; headerRules: HeaderRule[] }) => {
+const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRule; sources: ProxySource[]; headerRules: HeaderRule[] }) => {
     const envContext = useEnvironments();
     
     let headerInfo;
@@ -251,7 +251,7 @@ const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRu
 /**
  * Header Column - Shows header name and value information with env var resolution
  */
-export const createHeaderColumn = (sources: Source[], headerRules: HeaderRule[]) => ({
+export const createHeaderColumn = (sources: ProxySource[], headerRules: HeaderRule[]) => ({
     title: 'Header',
     key: 'header',
     width: '28%',
@@ -355,7 +355,7 @@ export const createActionsColumn = (onEdit: (record: ProxyRule) => void, onDelet
  * Create all table columns
  * Factory function that creates all columns with proper dependencies
  */
-export const createAllColumns = (sources: Source[], headerRules: HeaderRule[], onEdit: (record: ProxyRule) => void, onDelete: (id: string) => void, onToggle: (id: string, checked: boolean) => void) => [
+export const createAllColumns = (sources: ProxySource[], headerRules: HeaderRule[], onEdit: (record: ProxyRule) => void, onDelete: (id: string) => void, onToggle: (id: string, checked: boolean) => void) => [
     createNameColumn(),
     createTypeColumn(headerRules),
     createDomainsColumn(headerRules),
