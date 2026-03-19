@@ -1113,3 +1113,4 @@ function getAcceptHeader(resourceType: string): string {
 }
 
 export { preprocessRecordingForSave };
+export type { RecordingData, RecordingRecord, RecordingMetadata, RecordingEvent, PreprocessOptions };

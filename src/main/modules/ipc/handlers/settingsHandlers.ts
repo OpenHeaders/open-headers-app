@@ -108,6 +108,7 @@ class SettingsHandlers {
                     videoRecording: false,
                     videoQuality: 'high',
                     recordingHotkey: 'CommandOrControl+Shift+E',
+                    recordingHotkeyEnabled: true,
                     logLevel: 'info'
                 };
 
