@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { App } from 'antd';
 import { useSources, useWorkspaces, useSettings } from '../../../contexts';
+import type { ProxyRule, HeaderRule } from '../components/tables/ProxyRuleTableColumns';
+import type { CacheStats, CacheEntry } from '../components/sections/ProxyCacheSection';
 
 /**
  * Proxy Server Management Hook
@@ -27,14 +29,14 @@ export const useProxyServer = () => {
     
     // Proxy server state
     const [proxyStatus, setProxyStatus] = useState({ running: false, port: 59212 });
-    const [rules, setRules] = useState<Record<string, unknown>[]>([]);
-    const [headerRules, setHeaderRules] = useState<Record<string, unknown>[]>([]);
+    const [rules, setRules] = useState<ProxyRule[]>([]);
+    const [headerRules, setHeaderRules] = useState<HeaderRule[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Cache management state
-    const [cacheStats, setCacheStats] = useState<Record<string, unknown> | null>(null);
+    const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
     const [cacheEnabled, setCacheEnabled] = useState(true);
-    const [cacheEntries, setCacheEntries] = useState<Record<string, unknown>[]>([]);
+    const [cacheEntries, setCacheEntries] = useState<CacheEntry[]>([]);
     const [showCacheDetails, setShowCacheDetails] = useState(false);
 
     /**
@@ -50,7 +52,7 @@ export const useProxyServer = () => {
      */
     const loadRules = async () => {
         const loadedRules = await window.electronAPI.proxyGetRules();
-        setRules(loadedRules as Record<string, unknown>[]);
+        setRules(loadedRules as ProxyRule[]);
     };
 
     /**
@@ -62,7 +64,7 @@ export const useProxyServer = () => {
             const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
             if (rulesData) {
                 const parsed = JSON.parse(rulesData);
-                const headerRules = parsed.rules?.header || [];
+                const headerRules = (parsed.rules?.header || []) as HeaderRule[];
                 setHeaderRules(headerRules);
                 // NOTE: Don't re-send to proxy here — BroadcastManager already
                 // sends header rules during workspace load / switch.
@@ -77,7 +79,7 @@ export const useProxyServer = () => {
      */
     const loadCacheStats = async () => {
         const stats = await window.electronAPI.proxyGetCacheStats();
-        setCacheStats(stats);
+        setCacheStats(stats as CacheStats | null);
     };
 
     /**
@@ -85,7 +87,7 @@ export const useProxyServer = () => {
      */
     const loadCacheEntries = async () => {
         const entries = await window.electronAPI.proxyGetCacheEntries();
-        setCacheEntries(entries as Record<string, unknown>[]);
+        setCacheEntries(entries as CacheEntry[]);
     };
 
     /**
@@ -114,7 +116,7 @@ export const useProxyServer = () => {
     /**
      * Save a proxy rule (create or update)
      */
-    const saveRule = async (rule: Record<string,unknown>) => {
+    const saveRule = async (rule: ProxyRule) => {
         const result = await window.electronAPI.proxySaveRule(rule);
         if (result.success) {
             message.success('Rule saved');

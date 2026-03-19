@@ -22,7 +22,7 @@ import {
  * @param {Object} source - Source object with sourceType property
  * @returns {JSX.Element} Ant Design icon component
  */
-export const getSourceIcon = (source: { sourceType?: string; [key: string]: unknown }) => {
+export const getSourceIcon = (source: { sourceType?: string }) => {
     const sourceType = source.sourceType || '';
 
     if (sourceType.toLowerCase().includes('http')) {
@@ -46,7 +46,7 @@ export const getSourceIcon = (source: { sourceType?: string; [key: string]: unkn
  * @param {Object} source - Source object with tag, path, type, and ID
  * @returns {string} Formatted display string
  */
-export const formatSourceDisplay = (source: { sourceTag?: string; sourcePath?: string; sourceType?: string; sourceId?: string; [key: string]: unknown }) => {
+export const formatSourceDisplay = (source: { sourceTag?: string; sourcePath?: string; sourceType?: string; sourceId?: string }) => {
     const tag = source.sourceTag || '';
     const path = source.sourcePath || '';
     const type = source.sourceType || '';

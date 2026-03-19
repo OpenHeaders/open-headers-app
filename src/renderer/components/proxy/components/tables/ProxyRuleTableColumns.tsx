@@ -24,6 +24,7 @@ export interface ProxyRule {
 
 export interface HeaderRule {
     id: string;
+    name?: string;
     headerName?: string;
     headerValue?: string;
     isDynamic?: boolean;
@@ -32,6 +33,7 @@ export interface HeaderRule {
     suffix?: string;
     hasEnvVars?: boolean;
     domains?: string[];
+    isEnabled?: boolean;
 }
 
 export interface ProxySource {

@@ -47,12 +47,12 @@ const { Title } = Typography;
  * @returns {JSX.Element} Complete proxy rules management section
  */
 interface ProxyRulesSectionProps {
-    rules: Record<string, any>[];
-    sources: Record<string, any>[];
-    headerRules: Record<string, any>[];
-    onSaveRule: (rule: Record<string, any>) => Promise<any>;
-    onDeleteRule: (ruleId: string) => Promise<any>;
-    onToggleRule: (ruleId: string, enabled: boolean) => any;
+    rules: ProxyRule[];
+    sources: ProxySource[];
+    headerRules: HeaderRule[];
+    onSaveRule: (rule: ProxyRule) => Promise<boolean>;
+    onDeleteRule: (ruleId: string) => Promise<boolean>;
+    onToggleRule: (ruleId: string, enabled: boolean) => void;
 }
 
 const ProxyRulesSection = ({
@@ -64,7 +64,7 @@ const ProxyRulesSection = ({
     onToggleRule
 }: ProxyRulesSectionProps) => {
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingRule, setEditingRule] = useState<Record<string, unknown> | null>(null);
+    const [editingRule, setEditingRule] = useState<ProxyRule | null>(null);
 
     /**
      * Handle add new rule action
@@ -79,7 +79,7 @@ const ProxyRulesSection = ({
      * Handle edit existing rule action
      * Sets the rule to edit and opens modal for editing
      */
-    const handleEditRule = (rule: Record<string,unknown>) => {
+    const handleEditRule = (rule: ProxyRule) => {
         setEditingRule(rule);
         setModalVisible(true);
     };
@@ -88,7 +88,7 @@ const ProxyRulesSection = ({
      * Handle rule save operation
      * Delegates to parent callback and closes modal on success
      */
-    const handleSaveRule = async (rule: Record<string,unknown>) => {
+    const handleSaveRule = async (rule: ProxyRule) => {
         const success = await onSaveRule(rule);
         if (success) {
             setModalVisible(false);
@@ -121,10 +121,10 @@ const ProxyRulesSection = ({
                     </div>
 
                     <ProxyRuleTableModular
-                        rules={rules as ProxyRule[]}
-                        sources={sources as ProxySource[]}
-                        headerRules={headerRules as HeaderRule[]}
-                        onEdit={handleEditRule as unknown as (rule: ProxyRule) => void}
+                        rules={rules}
+                        sources={sources}
+                        headerRules={headerRules}
+                        onEdit={handleEditRule}
                         onDelete={onDeleteRule}
                         onToggle={onToggleRule}
                         onAdd={handleAddRule}

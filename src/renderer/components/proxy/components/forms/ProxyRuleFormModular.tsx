@@ -15,6 +15,7 @@ import {
     createHeaderValueValidator,
     validateRuleName
 } from './ProxyRuleFormValidation';
+import type { ProxyRule, ProxySource, HeaderRule } from '../tables/ProxyRuleTableColumns';
 
 const { Text } = Typography;
 
@@ -47,7 +48,14 @@ const { Text } = Typography;
  * @param {Array} headerRules - Available header rules for reference mode
  * @returns {JSX.Element} Proxy rule form modal
  */
-interface ProxyRuleFormProps { visible: boolean; onCancel: () => void; onSave: (values: Record<string, unknown>) => void; rule: Record<string, unknown> | null; sources?: Record<string, unknown>[]; headerRules?: Record<string, unknown>[]; }
+interface ProxyRuleFormProps {
+    visible: boolean;
+    onCancel: () => void;
+    onSave: (values: ProxyRule) => void;
+    rule: ProxyRule | null;
+    sources?: ProxySource[];
+    headerRules?: HeaderRule[];
+}
 const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRules = [] }: ProxyRuleFormProps) => {
     const [form] = Form.useForm();
     const formRef = useRef(null);
@@ -88,11 +96,22 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
         }
     }, [rule, form, visible]);
 
+    interface FormValues {
+        name?: string;
+        headerRuleId?: string;
+        domains?: string[];
+        headerName?: string;
+        headerValue?: string;
+        sourceId?: string;
+        prefix?: string;
+        suffix?: string;
+    }
+
     // Form submission handler
     const handleSubmit = async () => {
         try {
-            const values = await form.validateFields();
-            
+            const values = await form.validateFields() as FormValues;
+
             // For custom headers, validate domains
             if (headerType === 'custom') {
                 const domains = values.domains || [];
@@ -103,7 +122,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             }
 
             // Build rule data based on header type
-            let ruleData: Record<string, any> = {
+            const ruleData: Partial<ProxyRule> = {
                 name: values.name,
                 enabled: rule?.enabled !== false
             };
@@ -115,11 +134,11 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             } else {
                 // Custom header - needs domains
                 ruleData.domains = values.domains || [];
-                ruleData.headerName = values.headerName.trim();
+                ruleData.headerName = values.headerName?.trim();
                 ruleData.isDynamic = valueType === 'dynamic';
-                
+
                 if (valueType === 'static') {
-                    ruleData.headerValue = values.headerValue.trim();
+                    ruleData.headerValue = values.headerValue?.trim();
                 } else {
                     ruleData.sourceId = values.sourceId;
                     ruleData.prefix = values.prefix || '';
@@ -127,7 +146,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
                 }
             }
 
-            onSave({ ...rule, ...ruleData });
+            onSave({ ...rule, ...ruleData } as ProxyRule);
         } catch (error) {
             // Form validation failed - this is expected when user hasn't filled required fields
         }
@@ -191,24 +210,24 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
                     {headerType === 'reference' ? (
                         <>
                             {/* Existing Header Rule Selection */}
-                            <ExistingHeaderRuleSelector headerRules={headerRules as { id: string; headerName: string; isEnabled: boolean }[]} />
+                            <ExistingHeaderRuleSelector headerRules={headerRules ?? []} />
                         </>
                     ) : (
                         /* Custom Header Configuration */
                         <>
                             {/* Header Name and Value Type */}
-                            <CustomHeaderConfig 
+                            <CustomHeaderConfig
                                 validateHeaderName={validateHeaderName}
                                 valueType={valueType}
                                 setValueType={setValueType}
-                                sources={sources as { sourceId: string; [key: string]: unknown }[]}
+                                sources={sources ?? []}
                             />
 
                             {/* Value Input */}
                             {valueType === 'static' ? (
                                 <StaticValueInput validateHeaderValue={validateHeaderValue} />
                             ) : (
-                                <DynamicValueConfig sources={sources as { sourceId: string; [key: string]: unknown }[]} />
+                                <DynamicValueConfig sources={sources ?? []} />
                             )}
                             
                             {/* Domains for custom header */}

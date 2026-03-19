@@ -4,6 +4,7 @@ import type { FormInstance } from 'antd';
 import { LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import DomainTags from '../../../features/domain-tags';
 import { getSourceIcon, formatSourceDisplay } from '../../utils';
+import type { HeaderRule } from '../tables/ProxyRuleTableColumns';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -14,13 +15,6 @@ interface HeaderTypeSelectorProps {
     form: FormInstance;
 }
 
-interface HeaderRule {
-    id: string;
-    headerName: string;
-    isEnabled: boolean;
-    isDynamic?: boolean;
-    domains?: string[];
-}
 
 interface ExistingHeaderRuleSelectorProps {
     headerRules: HeaderRule[];
@@ -31,7 +25,6 @@ interface SourceItem {
     sourceType?: string;
     sourceTag?: string;
     sourcePath?: string;
-    [key: string]: unknown;
 }
 
 interface CustomHeaderConfigProps {
@@ -104,7 +97,7 @@ export const ExistingHeaderRuleSelector: React.FC<ExistingHeaderRuleSelectorProp
         >
             {headerRules.length > 0 ? (
                 headerRules.map(rule => {
-                    const isDisabled = !rule.isEnabled;
+                    const isDisabled = rule.isEnabled === false;
                     return (
                         <Option 
                             key={rule.id} 

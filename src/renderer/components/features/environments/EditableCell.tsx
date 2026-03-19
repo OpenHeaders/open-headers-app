@@ -13,7 +13,7 @@ const { TextArea } = Input;
 /**
  * Dynamic value input that switches between TextArea and SecretInput based on isSecret
  */
-const DynamicValueInput = forwardRef((props: Record<string, any>, ref: React.Ref<any>) => {
+const DynamicValueInput = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>((props, ref) => {
   const form = Form.useFormInstance();
   const isSecret = Form.useWatch('isSecret', form);
   
