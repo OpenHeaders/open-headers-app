@@ -1,9 +1,11 @@
 import electron from 'electron';
+import type { IpcMainInvokeEvent, IpcMainEvent } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { FFmpegManager } from './ffmpeg-manager';
 import { VideoConverter } from './video-converter';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 
 const { dialog, BrowserWindow, ipcMain, shell } = electron;
 const { createLogger } = mainLogger;
@@ -35,7 +37,7 @@ class VideoExportManager {
      */
     initializeHandlers(): void {
         // Handle export video request
-        ipcMain.handle('export-video', async (_event: any, recordingPath: string) => {
+        ipcMain.handle('export-video', async (_event: IpcMainInvokeEvent, recordingPath: string) => {
             return this.showExportDialog(recordingPath);
         });
 
@@ -45,7 +47,7 @@ class VideoExportManager {
         });
 
         // Handle FFmpeg download
-        ipcMain.handle('download-ffmpeg', async (event: any) => {
+        ipcMain.handle('download-ffmpeg', async (event: IpcMainInvokeEvent) => {
             const sender = event.sender;
 
             try {
@@ -60,14 +62,14 @@ class VideoExportManager {
                     sender.send('ffmpeg-install-status', { phase });
                 });
                 return { success: true, path: result };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 log.error('FFmpeg download failed:', error);
-                return { success: false, error: error.message };
+                return { success: false, error: errorMessage(error) };
             }
         });
 
         // Handle video conversion
-        ipcMain.handle('convert-video', async (event: any, inputPath: string, outputPath: string) => {
+        ipcMain.handle('convert-video', async (event: IpcMainInvokeEvent, inputPath: string, outputPath: string) => {
             const sender = event.sender;
 
             try {
@@ -85,9 +87,9 @@ class VideoExportManager {
                     sender.send('video-conversion-progress', progress);
                 });
                 return result;
-            } catch (error: any) {
+            } catch (error: unknown) {
                 log.error('Video conversion failed:', error);
-                return { success: false, error: error.message };
+                return { success: false, error: errorMessage(error) };
             }
         });
     }
@@ -164,9 +166,9 @@ class VideoExportManager {
             shell.showItemInFolder(result.filePath!);
 
             return { success: true, path: result.filePath, format: 'webm' };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error exporting WebM:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -217,9 +219,9 @@ class VideoExportManager {
             }
 
             return convertResult;
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error exporting MP4:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -327,7 +329,7 @@ class VideoExportManager {
 
         try {
             // Add progress listener
-            ipcMain.on('ffmpeg-download-progress', (_event: any, progress: any) => {
+            ipcMain.on('ffmpeg-download-progress', (_event: IpcMainEvent, progress: { percent: number; downloaded: number; total: number }) => {
                 if (!progressWindow.isDestroyed()) {
                     progressWindow.webContents.send('ffmpeg-download-progress', progress);
                 }
@@ -365,17 +367,17 @@ class VideoExportManager {
             });
 
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (!progressWindow.isDestroyed()) {
                 progressWindow.close();
             }
 
             dialog.showErrorBox(
                 'Installation Failed',
-                `Failed to install FFmpeg: ${error.message}\n\nYou can still export as WebM.`
+                `Failed to install FFmpeg: ${errorMessage(error)}\n\nYou can still export as WebM.`
             );
 
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -474,17 +476,17 @@ class VideoExportManager {
 
             progressWindow.close();
             return result;
-        } catch (error: any) {
+        } catch (error: unknown) {
             if (!progressWindow.isDestroyed()) {
                 progressWindow.close();
             }
 
             dialog.showErrorBox(
                 'Conversion Failed',
-                `Failed to convert video: ${error.message}`
+                `Failed to convert video: ${errorMessage(error)}`
             );
 
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 

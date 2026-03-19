@@ -10,6 +10,7 @@
  */
 
 import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '../../../types/common';
 import http from 'http';
 import nodeUrl from 'url';
 
@@ -22,16 +23,16 @@ const CACHE_MAX_SIZE = 5000; // Limit cache size to prevent memory issues
 
 interface DomNode {
     tagName?: string;
-    attributes?: Record<string, any>;
+    attributes?: Record<string, string>;
     textContent?: string;
     childNodes?: DomNode[];
     node?: DomNode;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface Snapshot {
     node: DomNode;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface StaticResources {
@@ -48,11 +49,28 @@ interface PageTransition {
     pageIndex: number;
 }
 
+interface RRWebInnerData {
+    node?: DomNode;
+    source?: number;
+    adds?: Array<{ node?: DomNode; rule?: string; [key: string]: unknown }>;
+    [key: string]: unknown;
+}
+
+interface RRWebEventData {
+    type?: number;
+    source?: number;
+    timestamp?: number;
+    data?: RRWebInnerData | null;
+    adds?: Array<{ node?: DomNode; rule?: string; [key: string]: unknown }>;
+    positions?: unknown[];
+    [key: string]: unknown;
+}
+
 interface RecordingEvent {
     type: string | number;
     timestamp: number;
-    data?: any;
-    [key: string]: any;
+    data?: RRWebEventData;
+    [key: string]: unknown;
 }
 
 interface RecordingMetadata {
@@ -60,7 +78,7 @@ interface RecordingMetadata {
     url?: string;
     timestamp?: number;
     duration?: number;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface RecordingRecord {
@@ -70,17 +88,17 @@ interface RecordingRecord {
     _pageTransitions?: PageTransition[];
     _fontUrls?: string[];
     _staticResources?: Record<string, string[]>;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface RecordingData {
     record: RecordingRecord;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 interface PreprocessOptions {
     proxyPort?: number | null;
-    onProgress?: (stage: string, progress: number, details?: any) => void;
+    onProgress?: (stage: string, progress: number, details?: Record<string, unknown>) => void;
 }
 
 interface PrefetchResource {
@@ -420,11 +438,11 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                         pageIndex: currentPageIndex++
                     });
 
-                    const baseTagUrl = extractBaseUrl(rrwebEvent.data);
+                    const baseTagUrl = extractBaseUrl(rrwebEvent.data as Snapshot | null);
                     const effectiveBaseUrl = baseTagUrl || baseUrl;
-                    collectResourcesFromSnapshot(rrwebEvent.data, resourceMap, effectiveBaseUrl);
+                    collectResourcesFromSnapshot(rrwebEvent.data as Snapshot, resourceMap, effectiveBaseUrl);
                 } else if (rrwebEvent.type === 3 && rrwebEvent.data?.source === 8 && rrwebEvent.data?.adds) {
-                    rrwebEvent.data.adds.forEach((add: any) => {
+                    rrwebEvent.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
                         if (add.rule && typeof add.rule === 'string') {
                             collectResourcesFromCss(add.rule, resourceMap, baseUrl);
                         }
@@ -437,11 +455,11 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                     pageIndex: currentPageIndex++
                 });
 
-                const baseTagUrl = extractBaseUrl(event.data);
+                const baseTagUrl = extractBaseUrl(event.data as Snapshot | null);
                 const effectiveBaseUrl = baseTagUrl || baseUrl;
-                collectResourcesFromSnapshot(event.data, resourceMap, effectiveBaseUrl);
+                collectResourcesFromSnapshot(event.data as Snapshot, resourceMap, effectiveBaseUrl);
             } else if (event.type === 3 && event.data?.source === 8 && event.data?.adds) {
-                event.data.adds.forEach((add: any) => {
+                event.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
                     if (add.rule && typeof add.rule === 'string') {
                         collectResourcesFromCss(add.rule, resourceMap, baseUrl);
                     }
@@ -502,10 +520,10 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                 const rrwebEvent = event.data;
 
                 if (rrwebEvent.type === 2) { // Full snapshot
-                    const baseTagUrl = extractBaseUrl(rrwebEvent.data);
+                    const baseTagUrl = extractBaseUrl(rrwebEvent.data as Snapshot | null);
                     const effectiveBaseUrl = baseTagUrl || baseUrl;
 
-                    const processedData = preprocessSnapshot(rrwebEvent.data, fontUrls, staticResources, effectiveBaseUrl, resourceMap);
+                    const processedData = preprocessSnapshot(rrwebEvent.data as Snapshot, fontUrls, staticResources, effectiveBaseUrl, resourceMap);
                     const processedEvent = {
                         ...event,
                         data: {
@@ -521,24 +539,24 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                             ...event,
                             data: processedRrwebEvent
                         };
-                        processedEvents.push(processedEvent);
+                        processedEvents.push(processedEvent as RecordingEvent);
                     }
                 } else {
                     processedEvents.push(event);
                 }
             } else if (event.type === 2) { // Direct rrweb format - Full snapshot
-                const baseTagUrl = extractBaseUrl(event.data);
+                const baseTagUrl = extractBaseUrl(event.data as Snapshot | null);
                 const effectiveBaseUrl = baseTagUrl || baseUrl;
 
                 const processedEvent = {
                     ...event,
-                    data: preprocessSnapshot(event.data, fontUrls, staticResources, effectiveBaseUrl, resourceMap)
+                    data: preprocessSnapshot(event.data as Snapshot, fontUrls, staticResources, effectiveBaseUrl, resourceMap)
                 };
-                processedEvents.push(processedEvent);
+                processedEvents.push(processedEvent as RecordingEvent);
             } else if (event.type === 3) { // Direct rrweb format - Incremental snapshot
                 const processedEvent = processIncrementalSnapshot(event, fontUrls, pageTransitions, baseUrl, resourceMap);
                 if (processedEvent) {
-                    processedEvents.push(processedEvent);
+                    processedEvents.push(processedEvent as RecordingEvent);
                 }
             } else {
                 processedEvents.push(event);
@@ -784,11 +802,11 @@ function preprocessSnapshot(snapshot: Snapshot, fontUrls: Set<string>, staticRes
 /**
  * Process incremental snapshots
  */
-function processIncrementalSnapshot(event: RecordingEvent, fontUrls: Set<string>, pageTransitions: PageTransition[], baseUrl: string, resourceMap: Map<string, string[]>): RecordingEvent | null {
+function processIncrementalSnapshot(event: RecordingEvent | RRWebEventData, fontUrls: Set<string>, pageTransitions: PageTransition[], baseUrl: string, resourceMap: Map<string, string[]>): RecordingEvent | RRWebEventData | null {
     if (!event.data) return event;
 
     if (event.data.source === 0 && event.data.adds) {
-        const processedAdds = event.data.adds.map((add: any) => {
+        const processedAdds = event.data.adds.map((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
             if (!add.node || !add.node.attributes) return add;
 
             const processedNode = JSON.parse(JSON.stringify(add.node));
@@ -873,7 +891,7 @@ function processIncrementalSnapshot(event: RecordingEvent, fontUrls: Set<string>
     } else if (event.data.source === 8) {
         // Style sheet event - collect font URLs
         if (event.data.adds && Array.isArray(event.data.adds)) {
-            event.data.adds.forEach((add: any) => {
+            event.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
                 if (add.rule && typeof add.rule === 'string' && add.rule.includes('@font-face')) {
                     extractFontUrlsFromCss(add.rule, fontUrls, null, baseUrl, resourceMap);
                 }
@@ -890,13 +908,14 @@ function processIncrementalSnapshot(event: RecordingEvent, fontUrls: Set<string>
         if (isMouseEvent) {
             return event;
         } else {
+            const eventTimestamp = event.timestamp ?? 0;
             const nextPageIndex = pageTransitions.findIndex(
-                p => p.timestamp > event.timestamp
+                p => p.timestamp > eventTimestamp
             );
 
             if (nextPageIndex !== -1) {
                 const nextPageTime = pageTransitions[nextPageIndex].timestamp;
-                if (nextPageTime - event.timestamp < 100) {
+                if (nextPageTime - eventTimestamp < 100) {
                     return null;
                 }
             }
@@ -978,7 +997,7 @@ function getBatchSize(resourceType: string): number {
 /**
  * Prefetch resources through the proxy to populate the cache
  */
-async function prefetchResources(staticResources: StaticResources, proxyPort: number, onProgress?: (stage: string, progress: number, details?: any) => void): Promise<void> {
+async function prefetchResources(staticResources: StaticResources, proxyPort: number, onProgress?: (stage: string, progress: number, details?: Record<string, unknown>) => void): Promise<void> {
     const allResources: PrefetchResource[] = [];
 
     staticResources.stylesheets.forEach(url => allResources.push({ url, type: 'stylesheet', priority: 1 }));
@@ -1023,8 +1042,8 @@ async function prefetchResources(staticResources: StaticResources, proxyPort: nu
                 try {
                     await prefetchSingleResource(resource.url, resource.type, proxyPort);
                     completed++;
-                } catch (error: any) {
-                    log.warn(`Failed to prefetch ${resource.type}: ${resource.url}`, error.message);
+                } catch (error: unknown) {
+                    log.warn(`Failed to prefetch ${resource.type}: ${resource.url}`, errorMessage(error));
                     failed++;
                 }
 

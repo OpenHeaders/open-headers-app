@@ -222,7 +222,7 @@ class RecordingHandlers {
             }
 
             // Create progress callback for prefetching
-            const onPrefetchProgress = (stage: string, progress: number, details: Record<string, unknown>) => {
+            const onPrefetchProgress = (stage: string, progress: number, details?: Record<string, unknown>) => {
                 if (stage === 'prefetching') {
                     // Map prefetch progress from 0-100 to 25-75 in overall progress
                     const overallProgress = 25 + Math.round(progress * 0.5);
