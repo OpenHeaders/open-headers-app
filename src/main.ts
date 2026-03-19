@@ -254,7 +254,7 @@ if (!gotTheLock) {
         });
 
         // Runtime updates
-        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string }>) => {
+        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string | null }>) => {
             const webSocketService = (await import('./services/websocket/ws-service')).default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
@@ -271,7 +271,7 @@ if (!gotTheLock) {
             proxyService.updateSource(sourceId, value);
         });
 
-        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string }>) => {
+        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string | null }>) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
