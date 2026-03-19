@@ -1,10 +1,14 @@
 import http from 'http';
+import type { Socket } from 'net';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
 import { execFileSync } from 'child_process';
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
+import type { CliSetupHandler } from './CliSetupHandler';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -19,17 +23,30 @@ const PROCESS_NAMES: Record<string, string> = {
     'com.apple.WebKit.Content': 'Safari',
 };
 
+interface RequestLogEntry {
+    timestamp: number;
+    method?: string;
+    path?: string;
+    statusCode?: number;
+    userAgent?: string | null;
+    remoteAddress?: string;
+    duration?: number;
+    errorMessage?: string | null;
+    bodySummary?: unknown;
+    clientProcess?: string | null;
+}
+
 class CliApiService {
     port = CLI_PORT;
     token = crypto.randomBytes(32).toString('hex');
     server: http.Server | null = null;
-    mainWindow: any = null;
-    setupHandler: any = null;
+    mainWindow: BrowserWindowType | null = null;
+    setupHandler: CliSetupHandler | null = null;
     discoveryPath = '';
     logsPath = '';
-    requestLogs: any[] = [];
+    requestLogs: RequestLogEntry[] = [];
     startedAt: number | null = null;
-    private _connections?: Set<any>;
+    private _connections?: Set<Socket>;
 
     constructor() {
         try {
@@ -41,14 +58,14 @@ class CliApiService {
         }
     }
 
-    setMainWindow(window: any): void {
+    setMainWindow(window: BrowserWindowType): void {
         this.mainWindow = window;
         if (this.setupHandler) {
             this.setupHandler.setMainWindow(window);
         }
     }
 
-    setSetupHandler(handler: any): void {
+    setSetupHandler(handler: CliSetupHandler): void {
         this.setupHandler = handler;
         if (this.mainWindow) {
             handler.setMainWindow(this.mainWindow);
@@ -64,7 +81,7 @@ class CliApiService {
         return new Promise((resolve, reject) => {
             this.server = http.createServer((req, res) => this._handleRequest(req, res));
 
-            this.server.on('connection', (socket: any) => {
+            this.server.on('connection', (socket: Socket) => {
                 if (!this._connections) this._connections = new Set();
                 this._connections.add(socket);
                 socket.once('close', () => this._connections?.delete(socket));
@@ -74,7 +91,7 @@ class CliApiService {
             const maxRetries = 5;
             const retryDelay = 500;
 
-            const retryHandler = (err: any) => {
+            const retryHandler = (err: NodeJS.ErrnoException) => {
                 if (err.code === 'EADDRINUSE' && attempts < maxRetries) {
                     attempts++;
                     log.warn(`CLI API port ${this.port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
@@ -112,8 +129,8 @@ class CliApiService {
                     await fs.promises.mkdir(dir, { recursive: true });
                     await fs.promises.writeFile(this.discoveryPath, discoveryData, 'utf8');
                     log.info('CLI discovery file written');
-                } catch (err: any) {
-                    log.warn('Failed to write CLI discovery file:', err.message);
+                } catch (err: unknown) {
+                    log.warn('Failed to write CLI discovery file:', errorMessage(err));
                 }
 
                 resolve();
@@ -164,13 +181,13 @@ class CliApiService {
         };
     }
 
-    getLogs(): any[] { return this.requestLogs.slice(); }
+    getLogs(): RequestLogEntry[] { return this.requestLogs.slice(); }
 
     clearLogs(): void {
         this.requestLogs = [];
         if (this.logsPath) {
-            fs.promises.writeFile(this.logsPath, '', 'utf8').catch((err: any) => {
-                log.warn('Failed to clear CLI API log file:', err.message);
+            fs.promises.writeFile(this.logsPath, '', 'utf8').catch((err: unknown) => {
+                log.warn('Failed to clear CLI API log file:', errorMessage(err));
             });
         }
     }
@@ -189,21 +206,21 @@ class CliApiService {
                 }, null, 2);
                 await fs.promises.writeFile(this.discoveryPath, discoveryData, 'utf8');
                 log.info('CLI discovery file rewritten with new token');
-            } catch (err: any) {
-                log.warn('Failed to rewrite CLI discovery file:', err.message);
+            } catch (err: unknown) {
+                log.warn('Failed to rewrite CLI discovery file:', errorMessage(err));
             }
         }
 
         return this.token;
     }
 
-    _addLog(entry: any): void {
-        const logEntry = { timestamp: Date.now(), ...entry };
+    _addLog(entry: Omit<RequestLogEntry, 'timestamp'>): void {
+        const logEntry: RequestLogEntry = { timestamp: Date.now(), ...entry };
         this.requestLogs.unshift(logEntry);
         if (this.logsPath) {
             const line = JSON.stringify(logEntry) + '\n';
-            fs.promises.appendFile(this.logsPath, line, 'utf8').catch((err: any) => {
-                log.warn('Failed to append CLI API log:', err.message);
+            fs.promises.appendFile(this.logsPath, line, 'utf8').catch((err: unknown) => {
+                log.warn('Failed to append CLI API log:', errorMessage(err));
             });
         }
     }
@@ -215,7 +232,7 @@ class CliApiService {
             const lines = data.trim().split('\n').filter(Boolean);
             this.requestLogs = [];
             for (const line of lines) {
-                try { this.requestLogs.push(JSON.parse(line)); } catch { /* skip */ }
+                try { this.requestLogs.push(JSON.parse(line) as RequestLogEntry); } catch { /* skip */ }
             }
             this.requestLogs.reverse();
             log.info(`Loaded ${this.requestLogs.length} persisted CLI API logs`);
@@ -334,7 +351,7 @@ class CliApiService {
         return null;
     }
 
-    _summarizeBody(pathname: string, body: any): any {
+    _summarizeBody(_pathname: string, body: unknown): unknown {
         if (!body || typeof body !== 'object') return null;
         try {
             return this._redactDeep(body);
@@ -343,15 +360,15 @@ class CliApiService {
         }
     }
 
-    _redactDeep(obj: any): any {
+    _redactDeep(obj: unknown): unknown {
         if (Array.isArray(obj)) return obj.map(item => this._redactDeep(item));
         if (obj === null || typeof obj !== 'object') {
             if (typeof obj === 'string') return this._redactString(obj);
             return obj;
         }
-        const result: Record<string, any> = {};
+        const result: Record<string, unknown> = {};
         const sensitiveKeys = ['token', 'password', 'secret', 'authData', 'sshKey', 'sshPassphrase', 'value'];
-        for (const [key, val] of Object.entries(obj)) {
+        for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
             if (sensitiveKeys.includes(key) && typeof val === 'string') {
                 result[key] = '***';
             } else if (typeof val === 'object' && val !== null) {
@@ -381,7 +398,7 @@ class CliApiService {
         } catch { /* Ignore */ }
     }
 
-    _handleWithBody(req: http.IncomingMessage, res: http.ServerResponse, handler: (body: any) => Promise<void>): void {
+    _handleWithBody(req: http.IncomingMessage, res: http.ServerResponse, handler: (body: unknown) => Promise<void>): void {
         let body = '';
         let responseSent = false;
         req.on('data', (chunk) => {
@@ -396,16 +413,16 @@ class CliApiService {
         req.on('end', async () => {
             if (responseSent) return;
             try {
-                const parsed = JSON.parse(body);
+                const parsed: unknown = JSON.parse(body);
                 await handler(parsed);
-            } catch (err: any) {
+            } catch (err: unknown) {
                 if (err instanceof SyntaxError) {
                     res.writeHead(400);
                     res.end(JSON.stringify({ error: 'Invalid JSON' }));
                 } else {
                     log.error('CLI API handler error:', err);
                     res.writeHead(500);
-                    res.end(JSON.stringify({ success: false, error: err.message }));
+                    res.end(JSON.stringify({ success: false, error: errorMessage(err) }));
                 }
             }
         });
@@ -417,27 +434,27 @@ class CliApiService {
 
         const originalWriteHead = res.writeHead.bind(res);
         let loggedStatusCode = 200;
-        (res as any).writeHead = (statusCode: number, ...args: any[]) => {
+        res.writeHead = (statusCode: number, ...args: unknown[]) => {
             loggedStatusCode = statusCode;
-            return originalWriteHead(statusCode, ...args);
+            return (originalWriteHead as (...a: unknown[]) => http.ServerResponse)(statusCode, ...args);
         };
 
         const originalEnd = res.end.bind(res);
-        let errorMessage: string | null = null;
-        (res as any).end = (data?: any, ...args: any[]) => {
+        let logErrorMessage: string | null = null;
+        res.end = (data?: unknown, ...args: unknown[]) => {
             if (loggedStatusCode >= 400 && data) {
                 try {
-                    const parsed = JSON.parse(typeof data === 'string' ? data : data.toString());
-                    errorMessage = parsed.error || null;
+                    const parsed = JSON.parse(typeof data === 'string' ? data : String(data)) as Record<string, unknown>;
+                    logErrorMessage = (parsed.error as string) || null;
                 } catch { /* ignore */ }
             }
-            return originalEnd(data, ...args);
+            return (originalEnd as (...a: unknown[]) => http.ServerResponse)(data, ...args);
         };
 
         const url = new URL(req.url || '/', `http://${CLI_HOST}:${this.port}`);
         const pathname = url.pathname;
         const skipLog = !pathname.startsWith('/cli/');
-        const logContext: { bodySummary: any } = { bodySummary: null };
+        const logContext: { bodySummary: unknown } = { bodySummary: null };
 
         const userAgent = req.headers['user-agent'] || null;
         const remoteAddress = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
@@ -452,7 +469,7 @@ class CliApiService {
                 userAgent,
                 remoteAddress,
                 duration: Date.now() - startTime,
-                errorMessage,
+                errorMessage: logErrorMessage,
                 bodySummary: logContext.bodySummary,
                 clientProcess
             });
@@ -483,7 +500,7 @@ class CliApiService {
 
             res.writeHead(404);
             res.end(JSON.stringify({ error: 'Not found' }));
-        } catch (err: any) {
+        } catch (err: unknown) {
             log.error('CLI API request error:', err);
             res.writeHead(500);
             res.end(JSON.stringify({ error: 'Internal server error' }));
@@ -495,18 +512,18 @@ class CliApiService {
         res.end(JSON.stringify({ status: 'ok', version: app.getVersion() }));
     }
 
-    async _handleWorkspaceJoin(body: any, res: http.ServerResponse): Promise<void> {
+    async _handleWorkspaceJoin(body: unknown, res: http.ServerResponse): Promise<void> {
         if (!this.setupHandler) {
             res.writeHead(503);
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        const result = await this.setupHandler.joinWorkspace(body);
+        const result = await this.setupHandler.joinWorkspace(body as import('./CliSetupHandler').JoinWorkspaceData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }
 
-    async _handleEnvironmentImport(body: any, res: http.ServerResponse): Promise<void> {
+    async _handleEnvironmentImport(body: unknown, res: http.ServerResponse): Promise<void> {
         if (!this.setupHandler) {
             res.writeHead(503);
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
