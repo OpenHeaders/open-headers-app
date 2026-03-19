@@ -6,6 +6,8 @@
  * This is a shared utility that can be used by both main and renderer processes
  */
 
+function errMsg(e: unknown): string { return e instanceof Error ? e.message : String(e); }
+
 interface LoggerLike {
   debug(...args: unknown[]): void;
   info(...args: unknown[]): void;
@@ -175,11 +177,11 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
       variableCount: calculateVariableCount(data),
       rawData: data
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('Config file analysis failed:', error);
     return {
       valid: false,
-      error: error.message
+      error: errMsg(error)
     };
   }
 }
@@ -239,11 +241,11 @@ async function validateGitWorkspaceConfig(configPath: string, envPath?: string):
         isMultiFile: !!envPath
       }
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     log.error('Git workspace validation error:', error);
     return {
       valid: false,
-      error: error.message
+      error: errMsg(error)
     };
   }
 }

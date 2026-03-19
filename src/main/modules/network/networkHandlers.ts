@@ -13,7 +13,7 @@ class NetworkHandlers {
     async initializeNetworkService() {
         log.info('Setting up network service event handlers...');
 
-        networkService.on('stateChanged', (event: any) => {
+        networkService.on('stateChanged', (event: { newState: Record<string, unknown>; oldState: Record<string, unknown>; version: number }) => {
             log.info('NetworkService state changed event:', {
                 isOnline: event.newState.isOnline,
                 wasOnline: event.oldState.isOnline,

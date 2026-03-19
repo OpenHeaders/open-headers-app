@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
 
 const { app } = electron;
@@ -56,7 +57,7 @@ class ProxyRuleStore {
         this.rules = [];
         this.log.debug('No proxy rules found, starting with empty set');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error loading proxy rules:', error);
       this.rules = [];
     }
@@ -69,7 +70,7 @@ class ProxyRuleStore {
       await fsPromises.mkdir(dir, { recursive: true });
       await atomicWriter.writeJson(rulesPath, this.rules, { pretty: true });
       this.log.debug(`Saved ${this.rules.length} proxy rules to ${rulesPath}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.log.error('Error saving proxy rules:', error);
     }
   }

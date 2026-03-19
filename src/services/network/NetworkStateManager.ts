@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';
 
@@ -205,7 +206,7 @@ class NetworkStateManager extends EventEmitter {
             version: this.stateVersion
         };
 
-        windows.forEach((window: any) => {
+        windows.forEach((window: BrowserWindowType) => {
             if (!window.isDestroyed()) {
                 try {
                     window.webContents.send('network-state-sync', stateUpdate);

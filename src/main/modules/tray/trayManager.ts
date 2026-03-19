@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { Tray as TrayType, NativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
@@ -10,7 +11,7 @@ const { createLogger } = mainLogger;
 const log = createLogger('TrayManager');
 
 class TrayManager {
-    tray: any;
+    tray: TrayType | null;
 
     constructor() {
         this.tray = null;
@@ -77,7 +78,7 @@ class TrayManager {
     }
 
     findTrayIcon() {
-        let trayIcon: any = null;
+        let trayIcon: NativeImage | null = null;
 
         // Search locations in priority order: dev build, packaged resources, fallbacks
         const iconLocations = process.platform === 'darwin' ? [
@@ -207,7 +208,7 @@ class TrayManager {
         }
     }
 
-    updateTray(settings: any) {
+    updateTray(settings: Record<string, unknown>) {
         if (!settings) return;
 
         // Normalize settings to prevent type coercion issues

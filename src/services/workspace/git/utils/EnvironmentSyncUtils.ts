@@ -23,7 +23,7 @@ const ENV_FILE_READ_RETRY_DELAY = 500; // Base delay between retries in ms
 interface VarData {
   value?: string;
   isSecret?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface ExtractedVarData {

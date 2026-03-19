@@ -1,4 +1,5 @@
 import electron from 'electron';
+import { errorMessage as errMsg } from '../../types/common';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
@@ -67,8 +68,8 @@ class FFmpegManager {
                 this.ffmpegPath = localFFmpeg;
                 log.info('Found local FFmpeg at:', localFFmpeg);
                 return { available: true, path: localFFmpeg };
-            } catch (error: any) {
-                log.warn('Local FFmpeg found but not working, removing:', error.message);
+            } catch (error: unknown) {
+                log.warn('Local FFmpeg found but not working, removing:', errMsg(error));
                 try {
                     await fs.promises.unlink(localFFmpeg);
                 } catch (e) {
@@ -207,11 +208,12 @@ class FFmpegManager {
 
             return this.ffmpegPath;
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Failed to download FFmpeg:', error);
 
             // Notify all waiting callbacks
-            this.downloadCallbacks.forEach(cb => cb.reject(error));
+            const err = error instanceof Error ? error : new Error(String(error));
+            this.downloadCallbacks.forEach(cb => cb.reject(err));
 
             throw error;
         } finally {

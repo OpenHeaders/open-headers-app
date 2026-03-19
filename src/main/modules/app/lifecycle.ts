@@ -2,6 +2,7 @@ import electron from 'electron';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '../../../types/common';
 import atomicWriter from '../../../utils/atomicFileWriter';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
 import serviceRegistry from '../../../services/core/ServiceRegistry';
@@ -102,8 +103,8 @@ class AppLifecycle {
                 cliApiService.setSetupHandler(cliSetupHandler);
                 this.services.set('cliApiService', cliApiService);
                 await cliApiService.start();
-            } catch (error: any) {
-                log.warn('CLI API server failed to start (non-critical):', error.message);
+            } catch (error: unknown) {
+                log.warn('CLI API server failed to start (non-critical):', errorMessage(error));
             }
         } catch (error) {
             log.error('Failed to initialize services:', error);
@@ -224,8 +225,8 @@ class AppLifecycle {
         if (cliApiService) {
             try {
                 await cliApiService.stop();
-            } catch (error: any) {
-                log.warn('Error stopping CLI API server:', error.message);
+            } catch (error: unknown) {
+                log.warn('Error stopping CLI API server:', errorMessage(error));
             }
         }
 

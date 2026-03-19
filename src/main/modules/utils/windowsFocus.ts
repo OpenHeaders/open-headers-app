@@ -1,4 +1,5 @@
 import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '../../../types/common';
 import type { BrowserWindow } from 'electron';
 
 const { createLogger } = mainLogger;
@@ -9,7 +10,7 @@ const log = createLogger('WindowsFocus');
  * Uses @openheaders/windows-foreground on Windows to help with focus attribution
  */
 class WindowsFocusHelper {
-    private foregroundModule: any;
+    private foregroundModule: { forceForegroundWindow(pid: number): boolean } | null;
     private isWindows: boolean;
 
     constructor() {
@@ -22,7 +23,7 @@ class WindowsFocusHelper {
                 // Use dynamic require to prevent webpack from trying to bundle it
                 this.foregroundModule = eval("require")('@openheaders/windows-foreground');
                 log.info('@openheaders/windows-foreground loaded successfully');
-            } catch (error: any) {
+            } catch (error: unknown) {
                 // Try multiple fallback paths for the module
                 const fallbackPaths: string[] = [];
 
@@ -53,17 +54,17 @@ class WindowsFocusHelper {
                             this.foregroundModule = eval("require")(fallbackPath);
                             log.info('@openheaders/windows-foreground loaded from fallback path:', fallbackPath);
                             break;
-                        } catch (pathError: any) {
-                            log.debug(`Failed to load from path: ${fallbackPath} ${pathError.message}`);
+                        } catch (pathError: unknown) {
+                            log.debug(`Failed to load from path: ${fallbackPath} ${errorMessage(pathError)}`);
                         }
                     }
-                } catch (fallbackError: any) {
-                    log.debug('Error setting up fallback paths:', fallbackError.message);
+                } catch (fallbackError: unknown) {
+                    log.debug('Error setting up fallback paths:', errorMessage(fallbackError));
                 }
 
                 if (!this.foregroundModule) {
                     log.warn('@openheaders/windows-foreground not available, using fallback focus methods');
-                    log.debug('Original error:', error.message);
+                    log.debug('Original error:', errorMessage(error));
                 }
             }
         }
