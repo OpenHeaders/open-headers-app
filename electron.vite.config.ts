@@ -25,6 +25,11 @@ export default defineConfig({
             rollupOptions: {
                 output: {
                     entryFileNames: 'index.js'
+                },
+                onwarn(warning, warn) {
+                    // Suppress mixed static/dynamic import warnings — these are intentional lazy-load patterns
+                    if (warning.message?.includes('dynamically imported by') && warning.message?.includes('but also statically imported by')) return;
+                    warn(warning);
                 }
             },
             minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
@@ -68,6 +73,12 @@ export default defineConfig({
             outDir: resolve('dist-webpack/renderer'),
             rollupOptions: {
                 input: resolve(__dirname, 'src/renderer/index.html'),
+                onwarn(warning, warn) {
+                    if (warning.message?.includes('dynamically imported by') && warning.message?.includes('but also statically imported by')) return;
+                    // Suppress antd "use client" directive warnings
+                    if (warning.message?.includes('"use client"') && warning.message?.includes('was ignored')) return;
+                    warn(warning);
+                },
                 output: {
                     manualChunks: process.env.NODE_ENV === 'production'
                         ? (id: string) => {

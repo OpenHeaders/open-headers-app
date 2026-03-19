@@ -63,8 +63,13 @@ class WindowManager {
 
         this.mainWindow = new BrowserWindow(windowConfig);
 
-        // Load file immediately to start rendering faster
-        this.mainWindow.loadFile(path.join(__dirname, '../renderer', 'index.html'));
+        // In dev mode, electron-vite serves renderer via its dev server
+        // Only trust ELECTRON_RENDERER_URL when not packaged to prevent env injection attacks
+        if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
+            this.mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+        } else {
+            this.mainWindow.loadFile(path.join(__dirname, '../renderer', 'index.html'));
+        }
 
         // Setup other configurations after loading starts
         this.setupCSP();
@@ -195,7 +200,9 @@ class WindowManager {
         // from escalating to arbitrary URL loading with preload context
         this.mainWindow!.webContents.on('will-navigate', (event: Electron.Event, navigationUrl: string) => {
             const parsedUrl = new URL(navigationUrl);
-            if (parsedUrl.protocol !== 'file:') {
+            // Allow dev server navigation only when not packaged
+            const isDevServer = !app.isPackaged && process.env.ELECTRON_RENDERER_URL && parsedUrl.origin === new URL(process.env.ELECTRON_RENDERER_URL).origin;
+            if (parsedUrl.protocol !== 'file:' && !isDevServer) {
                 event.preventDefault();
                 log.warn('Blocked navigation to non-file URL:', navigationUrl);
             }
