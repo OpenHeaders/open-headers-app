@@ -452,7 +452,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Save sources
    */
   async saveSources() {
-    await this.sourceManager.saveSources(this.state.activeWorkspaceId, this.state.sources as never);
+    await this.sourceManager.saveSources(this.state.activeWorkspaceId, this.state.sources);
     this.autoSaveManager.markClean('sources');
     this.state.lastSaved.sources = Date.now();
   }

@@ -5,6 +5,7 @@ import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import HttpOptions from '../../sources/HttpOptions';
 import { validateEnvironmentVariables, validateTotpCodePlaceholder } from './form-validation';
 import type { Source } from '../../../../types/source';
+import type { EditSourceFormValues } from './form-submission-handler';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EditSourceForm');
@@ -12,13 +13,13 @@ const log = createLogger('EditSourceForm');
 interface EditSourceFormProps {
     form: FormInstance;
     source: Source;
-    envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string>; activeEnvironment: string; [key: string]: unknown };
+    envContext: { environmentsReady: boolean; getAllVariables: () => Record<string, string>; activeEnvironment: string };
     totpEnabled: boolean;
     totpSecret: string;
     refreshNow: boolean;
     refreshingSourceId: string | null;
     saving: boolean;
-    onFormChange: (changedValues: Record<string, unknown>, allValues: Record<string, unknown>) => void;
+    onFormChange: (changedValues: Partial<EditSourceFormValues>, allValues: Partial<EditSourceFormValues>) => void;
     onTotpChange: (enabled: boolean, secret: string) => void;
     onTestResponse: (response: string) => void;
     onTestingChange: (testing: boolean) => void;

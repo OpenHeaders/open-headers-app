@@ -33,7 +33,7 @@ interface AppTabsProps {
     onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     onRefreshSource: (sourceId: string) => Promise<boolean>;
-    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<SourceData | null>;
+    onUpdateSource: (sourceId: string, data: Partial<SourceData>) => Promise<SourceData | null>;
     tutorialMode: boolean;
 }
 
