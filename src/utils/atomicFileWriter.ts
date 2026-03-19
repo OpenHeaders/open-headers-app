@@ -13,6 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createLogger } from './mainLogger';
+import { errorMessage } from '../types/common';
 
 const log = createLogger('AtomicFileWriter');
 
@@ -103,8 +104,8 @@ class AtomicFileWriter {
       }
       try {
         JSON.parse(content);
-      } catch (error: any) {
-        throw new Error(`Invalid JSON content: ${error.message}`);
+      } catch (error: unknown) {
+        throw new Error(`Invalid JSON content: ${errorMessage(error)}`);
       }
     }
 
@@ -116,9 +117,9 @@ class AtomicFileWriter {
         try {
           await this.performAtomicWrite(filePath, content);
           return;
-        } catch (error: any) {
-          lastError = error;
-          log.warn(`Write attempt ${attempt + 1} failed for ${filePath}:`, error.message);
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error : new Error(errorMessage(error));
+          log.warn(`Write attempt ${attempt + 1} failed for ${filePath}:`, errorMessage(error));
 
           if (attempt < maxRetries - 1) {
             // Exponential backoff
@@ -193,8 +194,8 @@ class AtomicFileWriter {
             // On Windows, we can't always sync, but the rename is still atomic
             // Adding a small delay helps ensure write is complete
             await new Promise(resolve => setTimeout(resolve, 10));
-          } catch (syncError: any) {
-            log.debug(`Windows file sync skipped: ${syncError.message}`);
+          } catch (syncError: unknown) {
+            log.debug(`Windows file sync skipped: ${errorMessage(syncError)}`);
           }
         } else {
           // Unix-like systems (macOS, Linux)
@@ -202,9 +203,9 @@ class AtomicFileWriter {
             const fd = await fs.promises.open(tempPath, 'r');
             await fd.sync();
             await fd.close();
-          } catch (syncError: any) {
+          } catch (syncError: unknown) {
             // Fallback if sync fails
-            log.debug(`Could not sync file to disk: ${syncError.message}`);
+            log.debug(`Could not sync file to disk: ${errorMessage(syncError)}`);
           }
         }
 
@@ -216,15 +217,16 @@ class AtomicFileWriter {
             try {
               await fs.promises.unlink(filePath);
               break; // Successfully deleted
-            } catch (unlinkError: any) {
-              if (unlinkError.code === 'ENOENT') {
+            } catch (unlinkError: unknown) {
+              const errCode = (unlinkError as NodeJS.ErrnoException).code;
+              if (errCode === 'ENOENT') {
                 // File doesn't exist, that's fine
                 break;
-              } else if (unlinkError.code === 'EBUSY' || unlinkError.code === 'EACCES') {
+              } else if (errCode === 'EBUSY' || errCode === 'EACCES') {
                 // File is in use, wait and retry
                 await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
               } else {
-                log.debug(`Could not remove existing file on Windows: ${unlinkError.message}`);
+                log.debug(`Could not remove existing file on Windows: ${errorMessage(unlinkError)}`);
                 break;
               }
             }
@@ -266,11 +268,12 @@ class AtomicFileWriter {
         await fd.close();
         this.lockFiles.set(lockPath, true);
         return;
-      } catch (error: any) {
-        if (error.code === 'EEXIST') {
+      } catch (error: unknown) {
+        const errCode = (error as NodeJS.ErrnoException).code;
+        if (errCode === 'EEXIST') {
           // Lock exists, wait and retry
           await new Promise(resolve => setTimeout(resolve, 50));
-        } else if (error.code === 'EPERM' && process.platform === 'win32') {
+        } else if (errCode === 'EPERM' && process.platform === 'win32') {
           // Windows permission error - file might be locked by another process
           await new Promise(resolve => setTimeout(resolve, 100));
         } else {
@@ -283,10 +286,10 @@ class AtomicFileWriter {
     log.warn(`Lock timeout for ${lockPath}, forcing acquisition`);
     try {
       await fs.promises.unlink(lockPath);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ignore if lock was already removed
-      if (error.code !== 'ENOENT') {
-        log.debug(`Could not remove stale lock: ${error.message}`);
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        log.debug(`Could not remove stale lock: ${errorMessage(error)}`);
       }
     }
 
@@ -314,9 +317,9 @@ class AtomicFileWriter {
     try {
       await fs.promises.unlink(lockPath);
       this.lockFiles.delete(lockPath);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ignore if lock was already removed
-      log.debug(`Failed to remove lock ${lockPath}:`, error.message);
+      log.debug(`Failed to remove lock ${lockPath}:`, errorMessage(error));
     }
   }
 
@@ -350,8 +353,8 @@ class AtomicFileWriter {
       } finally {
         await this.releaseLock(lockPath);
       }
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return null;
       }
       throw error;
@@ -384,8 +387,8 @@ class AtomicFileWriter {
 
     try {
       return JSON.parse(content);
-    } catch (error: any) {
-      throw new Error(`Invalid JSON in ${filePath}: ${error.message}`);
+    } catch (error: unknown) {
+      throw new Error(`Invalid JSON in ${filePath}: ${errorMessage(error)}`);
     }
   }
 }

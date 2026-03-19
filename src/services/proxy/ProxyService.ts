@@ -9,6 +9,7 @@ import { ProxyCache } from './ProxyCache';
 import { ProxyRuleStore } from './ProxyRuleStore';
 import type { ProxyRule } from './ProxyRuleStore';
 import { DomainMatcher } from './domainMatcher';
+import { errorMessage } from '../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -52,7 +53,7 @@ class ProxyService extends EventEmitter {
     server: http.Server | null = null;
     port = 59212;
     isRunning = false;
-    private _connections = new Set<any>();
+    private _connections = new Set<import('net').Socket>();
 
     // Rule management
     ruleStore = new ProxyRuleStore();
@@ -84,7 +85,7 @@ class ProxyService extends EventEmitter {
 
         this.httpsAgent = new https.Agent({
             rejectUnauthorized: this.strictSSL,
-            checkServerIdentity: (hostname: string, cert: any) => this.checkServerIdentity(hostname, cert),
+            checkServerIdentity: (hostname: string, cert: tls.PeerCertificate) => this.checkServerIdentity(hostname, cert),
             keepAlive: true,
             keepAliveMsecs: 30000,
             maxSockets: 50,
@@ -100,12 +101,12 @@ class ProxyService extends EventEmitter {
         this.log.info(`Loaded ${this.ruleStore.getRules().length} proxy rules for workspace ${workspaceId}`);
     }
 
-    updateEnvironmentVariables(variables: Record<string, any> | null | undefined): void {
+    updateEnvironmentVariables(variables: Record<string, string | { value: string }> | null | undefined): void {
         const processedVariables: Record<string, string> = {};
         Object.entries(variables || {}).forEach(([key, data]) => {
             processedVariables[key] = (typeof data === 'object' && data !== null && 'value' in data)
-                ? data.value
-                : data;
+                ? (data as { value: string }).value
+                : String(data);
         });
         this.environmentVariables = processedVariables;
         this.log.info(`Environment variables updated: ${Object.keys(this.environmentVariables).length} variables`);
@@ -130,7 +131,7 @@ class ProxyService extends EventEmitter {
                 this.handleRequest(req, res);
             });
 
-            this.server.on('connection', (socket: any) => {
+            this.server.on('connection', (socket: import('net').Socket) => {
                 this._connections.add(socket);
                 socket.once('close', () => this._connections.delete(socket));
             });
@@ -140,7 +141,7 @@ class ProxyService extends EventEmitter {
                 const maxRetries = 5;
                 const retryDelay = 500;
 
-                const retryHandler = (error: any) => {
+                const retryHandler = (error: NodeJS.ErrnoException) => {
                     if (error.code === 'EADDRINUSE' && attempts < maxRetries) {
                         attempts++;
                         this.log.warn(`Proxy port ${this.port} in use, retrying in ${retryDelay}ms (attempt ${attempts}/${maxRetries})`);
@@ -167,9 +168,9 @@ class ProxyService extends EventEmitter {
             });
 
             return { success: true, port: this.port };
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Failed to start proxy server:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -203,10 +204,10 @@ class ProxyService extends EventEmitter {
             });
 
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Failed to stop proxy server:', error);
             this.isRunning = false;
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -245,7 +246,7 @@ class ProxyService extends EventEmitter {
                     res.end(cached.data);
                     return;
                 }
-            } catch (err: any) {
+            } catch (err: unknown) {
                 this.log.error('Cache lookup error:', err);
             }
             this.stats.cacheMisses++;
@@ -259,7 +260,7 @@ class ProxyService extends EventEmitter {
         const parsedUrl = url.parse(targetUrl);
         const rules = this.getApplicableRules(targetUrl);
 
-        const proxyHeaders: Record<string, any> = { ...req.headers };
+        const proxyHeaders: Record<string, string | string[] | undefined> = { ...req.headers };
         delete proxyHeaders.host;
         delete proxyHeaders['accept-encoding'];
 
@@ -281,7 +282,7 @@ class ProxyService extends EventEmitter {
             }
         });
 
-        proxyHeaders.host = parsedUrl.host;
+        proxyHeaders.host = parsedUrl.host || undefined;
 
         const protocol = parsedUrl.protocol === 'https:' ? https : http;
 
@@ -320,7 +321,7 @@ class ProxyService extends EventEmitter {
 
             if (isStaticResource) {
                 const rules = this.getApplicableRules(targetUrl);
-                const proxyHeaders: Record<string, any> = { ...req.headers };
+                const proxyHeaders: Record<string, string | string[] | undefined> = { ...req.headers };
                 delete proxyHeaders.host;
                 delete proxyHeaders['accept-encoding'];
 
@@ -341,7 +342,7 @@ class ProxyService extends EventEmitter {
 
                 const redirectUrl = url.resolve(targetUrl, locationUrl);
                 const parsedRedirectUrl = url.parse(redirectUrl);
-                proxyHeaders.host = parsedRedirectUrl.host;
+                proxyHeaders.host = parsedRedirectUrl.host || undefined;
 
                 const redirectProtocol = parsedRedirectUrl.protocol === 'https:' ? https : http;
 
@@ -407,7 +408,7 @@ class ProxyService extends EventEmitter {
                 }
             }
 
-            const responseHeaders: Record<string, any> = {
+            const responseHeaders: Record<string, string | string[] | undefined> = {
                 ...proxyRes.headers,
                 'content-type': contentType,
                 'access-control-allow-origin': '*',
@@ -433,10 +434,10 @@ class ProxyService extends EventEmitter {
                 const shouldCache = cacheableTypes.some(type => contentType && contentType.includes(type));
                 if (shouldCache) {
                     await this.cache.set(targetUrl, buffer, {
-                        headers: responseHeaders,
+                        headers: responseHeaders as Record<string, string>,
                         contentType,
                         statusCode: proxyRes.statusCode || 200
-                    }).catch((err: any) => {
+                    }).catch((err: unknown) => {
                         this.log.error('Failed to cache response:', err);
                     });
                 }
@@ -447,7 +448,7 @@ class ProxyService extends EventEmitter {
         });
     }
 
-    checkServerIdentity(hostname: string, cert: any): Error | undefined {
+    checkServerIdentity(hostname: string, cert: tls.PeerCertificate): Error | undefined {
         const fingerprint = this.getCertificateFingerprint(cert);
 
         if (this.trustedCertificates.has(fingerprint)) {
@@ -462,13 +463,13 @@ class ProxyService extends EventEmitter {
         try {
             tls.checkServerIdentity(hostname, cert);
             return undefined;
-        } catch (error: any) {
-            this.log.warn(`Certificate verification failed for ${hostname}: ${error.message}`);
-            return error;
+        } catch (error: unknown) {
+            this.log.warn(`Certificate verification failed for ${hostname}: ${errorMessage(error)}`);
+            return error instanceof Error ? error : new Error(errorMessage(error));
         }
     }
 
-    getCertificateFingerprint(cert: any): string {
+    getCertificateFingerprint(cert: tls.PeerCertificate): string {
         return crypto.createHash('sha256').update(cert.raw).digest('hex');
     }
 
@@ -516,14 +517,14 @@ class ProxyService extends EventEmitter {
         return applicableRules;
     }
 
-    resolveHeaderValue(value: any, rule: any): any {
+    resolveHeaderValue(value: string | undefined, rule: HeaderRule | ProxyRule): string {
         if (rule && rule.isDynamic && rule.sourceId) {
             const sourceId = String(rule.sourceId);
             const sourceValue = this.sources.get(sourceId);
             return sourceValue || value || '';
         }
 
-        if (!value || typeof value !== 'string') return value;
+        if (!value || typeof value !== 'string') return value || '';
 
         const sourceMatch = value.match(/^__source_(\d+)$/);
         if (sourceMatch) {
@@ -535,7 +536,7 @@ class ProxyService extends EventEmitter {
         return this.resolveEnvironmentVariables(value);
     }
 
-    resolveEnvironmentVariables(template: any): any {
+    resolveEnvironmentVariables(template: string): string {
         if (!template || typeof template !== 'string') return template;
 
         return template.replace(/\{\{([^}]+)}}/g, (match: string, varName: string) => {
@@ -556,9 +557,9 @@ class ProxyService extends EventEmitter {
         this.sources.set(id, value);
     }
 
-    updateSources(sourcesArray: any): void {
+    updateSources(sourcesArray: Array<{ sourceId?: string; sourceContent?: string }>): void {
         if (!Array.isArray(sourcesArray)) return;
-        sourcesArray.forEach((source: any) => {
+        sourcesArray.forEach((source) => {
             if (source.sourceId && source.sourceContent !== undefined) {
                 this.updateSource(source.sourceId, source.sourceContent);
             }
@@ -626,9 +627,9 @@ class ProxyService extends EventEmitter {
         try {
             await this.ruleStore.saveRule(rule);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Failed to save proxy rule:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -636,9 +637,9 @@ class ProxyService extends EventEmitter {
         try {
             await this.ruleStore.deleteRule(ruleId);
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             this.log.error('Failed to delete proxy rule:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
