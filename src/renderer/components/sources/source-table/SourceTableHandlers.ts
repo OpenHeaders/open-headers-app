@@ -26,17 +26,11 @@
 
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { debugRefreshState } from './SourceTableUtils';
+import type { Source } from '../../../../types/source';
 
 interface RefreshDisplayState {
     text: string;
     timestamp: number;
-}
-
-interface SourceRecord {
-    sourceId: string;
-    sourceType: string;
-    sourceTag?: string;
-    [key: string]: unknown;
 }
 
 interface LoggerLike {
@@ -50,16 +44,16 @@ interface TimeManagerLike {
 }
 
 interface SaveSourceParams {
-    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<SourceRecord | null>;
+    onUpdateSource: (sourceId: string, data: Record<string, unknown>) => Promise<Source | null>;
     setRefreshingSourceId: (id: string | null) => void;
     setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     setEditModalVisible: (visible: boolean) => void;
-    handleRefreshSource: (sourceId: string, source: SourceRecord) => Promise<boolean>;
+    handleRefreshSource: (sourceId: string, source: Source) => Promise<boolean>;
     log: LoggerLike;
 }
 
 interface RefreshSourceParams {
-    onRefreshSource: (sourceId: string, updatedSource?: SourceRecord | null) => Promise<boolean>;
+    onRefreshSource: (sourceId: string, updatedSource?: Source | null) => Promise<boolean>;
     setRefreshingSourceId: (id: string | null) => void;
     setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     timeManager: TimeManagerLike;
@@ -70,7 +64,7 @@ interface RemoveSourceParams {
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     setRemovingSourceId: (id: string | null) => void;
     setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
-    sources: SourceRecord[];
+    sources: Source[];
 }
 
 interface ModalHandlerParams {
@@ -209,7 +203,7 @@ export const createRefreshSourceHandler = ({
     setRefreshDisplayStates,
     timeManager,
     log
-}: RefreshSourceParams) => async (sourceId: string, updatedSource: SourceRecord | null = null) => {
+}: RefreshSourceParams) => async (sourceId: string, updatedSource: Source | null = null) => {
     // Manual refresh handler with comprehensive status tracking
     // Coordinates with RefreshManager and provides visual feedback
     try {
@@ -319,14 +313,14 @@ export const createModalHandlers = ({
     setContentViewerVisible
 }: ModalHandlerParams) => ({
     // Edit source handler - opens edit modal for the selected source
-    handleEditSource: (source: SourceRecord) => {
+    handleEditSource: (source: Source) => {
         // Store only the source ID to always get latest data from sources array
         setSelectedSourceId(source.sourceId);
         setEditModalVisible(true);
     },
     
     // View content handler - opens content viewer modal for the selected source
-    handleViewContent: (source: SourceRecord) => {
+    handleViewContent: (source: Source) => {
         // Store only the source ID to always get latest data from sources array
         setSelectedSourceId(source.sourceId);
         setContentViewerVisible(true);

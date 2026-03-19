@@ -24,6 +24,8 @@
  * @since 3.0.0
  */
 
+import type { Source } from '../../../../types/source';
+
 /**
  * Checks if source has missing dependencies for activation
  * 
@@ -39,7 +41,7 @@
  * const missingDeps = checkSourceDependencies(source, { API_KEY: 'value' });
  * // Returns: ['env:MISSING_VAR', 'totp:secret']
  */
-export const checkSourceDependencies = (source: { requestOptions?: { totpSecret?: string; [key: string]: unknown }; [key: string]: unknown }, envVars: Record<string,string>) => {
+export const checkSourceDependencies = (source: Source, envVars: Record<string,string>) => {
     // Array to collect all missing dependencies
     const missingDeps = [];
     
@@ -92,7 +94,7 @@ export const checkSourceDependencies = (source: { requestOptions?: { totpSecret?
  * const hasTemplates = isTemplateSource({ sourceType: 'http', url: '{{API_URL}}/data' });
  * // Returns: true
  */
-export const isTemplateSource = (source: Record<string,unknown>) => {
+export const isTemplateSource = (source: Source) => {
     // Quick check for template variable usage in source configuration
     // Only HTTP sources support template variables
     if (source.sourceType !== 'http') return false;

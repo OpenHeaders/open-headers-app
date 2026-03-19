@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Row, Col, Space, Select, Button, Dropdown, Modal, Typography, Tag } from 'antd';
 import type { MenuProps } from 'antd';
+import type { Source } from '../../../../types/source';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -27,7 +28,7 @@ interface ThemeToken {
 interface EnvironmentSelectorProps {
   environments: Record<string, Record<string, unknown>>;
   activeEnvironment: string;
-  sources: Array<Record<string, unknown>>;
+  sources: Source[];
   onEnvironmentSwitch: (envName: string) => void;
   onCreateEnvironment: () => void;
   onCopyEnvironment: (envName: string) => void;

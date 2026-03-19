@@ -24,7 +24,7 @@
 import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './SourceFormValidation';
-import type { SourceRequestOptions, JsonFilter, RefreshOptions } from '../../../../types/source';
+import type { SourceType, SourceMethod, SourceRequestOptions, JsonFilter, RefreshOptions, NewSourceData } from '../../../../types/source';
 import type { EnvironmentContextLike } from '../../../../types/http';
 
 interface SourceTypeChangeParams {
@@ -60,17 +60,6 @@ interface SourceFormValues {
     requestOptions?: SourceRequestOptions;
     jsonFilter?: JsonFilter;
     refreshOptions?: RefreshOptions;
-}
-
-export interface NewSourceData {
-    sourceType: string;
-    sourcePath: string;
-    sourceTag: string;
-    sourceMethod?: string;
-    requestOptions?: SourceRequestOptions;
-    jsonFilter?: JsonFilter;
-    refreshOptions?: RefreshOptions;
-    needsInitialFetch?: boolean;
 }
 
 interface FormSubmissionParams {
@@ -305,14 +294,14 @@ export const createFormSubmissionHandler = ({
 const prepareSourceData = (values: SourceFormValues, form: FormInstance, log: { debug: (message: string, data?: unknown) => void }): NewSourceData => {
     // Prepare basic source data
     const sourceData: NewSourceData = {
-        sourceType: values.sourceType,
+        sourceType: values.sourceType as SourceType,
         sourcePath: values.sourcePath,
         sourceTag: values.sourceTag || ''
     };
 
     // Add HTTP-specific properties
     if (values.sourceType === 'http') {
-        sourceData.sourceMethod = values.sourceMethod || 'GET';
+        sourceData.sourceMethod = (values.sourceMethod || 'GET') as SourceMethod;
 
         // Make a deep copy of request options to avoid reference issues
         const requestOptions: SourceRequestOptions = JSON.parse(JSON.stringify(values.requestOptions || {}));

@@ -6,6 +6,7 @@
 import React from 'react';
 import { Alert, Space, Tag, Typography, Divider } from 'antd';
 import { getSourcesUsingVariables } from './EnvironmentUtils';
+import type { Source } from '../../../../types/source';
 
 const { Text } = Typography;
 
@@ -60,7 +61,7 @@ export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
  * @param {Object} props - Component props
  * @param {Array} props.sources - Array of source configurations
  */
-interface VariableUsageSummaryProps { sources: Record<string, unknown>[]; }
+interface VariableUsageSummaryProps { sources: Source[]; }
 export const VariableUsageSummary = ({ sources }: VariableUsageSummaryProps) => {
   const sourcesUsingVariables = getSourcesUsingVariables(sources);
   

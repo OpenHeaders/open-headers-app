@@ -1,8 +1,9 @@
 import React from 'react';
 import { Button, Tooltip } from 'antd';
+import type { Source } from '../../../../types/source';
 
 interface EditSourceModalFooterProps {
-    source: { sourceId: string; [key: string]: unknown };
+    source: Source;
     saving: boolean;
     testing: boolean;
     refreshingSourceId: string | null;

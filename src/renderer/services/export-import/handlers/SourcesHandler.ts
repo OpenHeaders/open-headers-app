@@ -41,7 +41,7 @@ export class SourcesHandler {
       const sources = this.dependencies.sources || [];
 
       // Filter out invalid sources before export
-      const validSources = sources.filter((source: Record<string, unknown>) => {
+      const validSources = sources.filter((source: SourceData) => {
         const validation = validateSource(source);
         if (!validation.success) {
           log.warn(`Filtering out invalid source during export: ${validation.error}`, source);
@@ -64,7 +64,7 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport: Array<Record<string, unknown>>, options: Record<string, unknown>) {
+  async importSources(sourcesToImport: SourceData[], options: Record<string, unknown>) {
     const stats: { imported: number; skipped: number; errors: Array<{ source: unknown; error: string }> } = {
       imported: 0,
       skipped: 0,
@@ -197,7 +197,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources to validate
    * @returns {Object} - Validation result
    */
-  validateSourcesForExport(sources: Array<Record<string, unknown>>) {
+  validateSourcesForExport(sources: SourceData[]) {
     if (!Array.isArray(sources)) {
       return {
         success: false,
@@ -228,7 +228,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources array
    * @returns {Object} - Statistics object
    */
-  getSourcesStatistics(sources: Array<Record<string, unknown>>) {
+  getSourcesStatistics(sources: SourceData[]) {
     if (!Array.isArray(sources)) {
       return { total: 0, byType: {} };
     }

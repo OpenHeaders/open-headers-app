@@ -5,53 +5,23 @@ import { useSources } from '../../hooks/workspace';
 import timeManager from '../../services/TimeManager';
 import { createLogger } from '../../utils/error-handling/logger';
 import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
+import type { Source } from '../../../types/source';
 
 // Note: This provider only exists to sync sources to ws-service via side effects
 // The context value is empty and no components consume it
 const WebSocketContext = createContext({});
 const log = createLogger('WebSocketContext');
 
-/** Source data shape as provided by the useSources hook */
-interface SourceEntry {
-    sourceId: string;
-    sourceType: string;
-    sourcePath?: string;
-    sourceTag?: string;
-    sourceContent?: string | null;
-    sourceMethod?: string;
-    jsonFilter?: {
-        enabled: boolean;
-        path?: string;
-        [key: string]: unknown;
-    };
-    isFiltered?: boolean;
-    filteredWith?: string | null;
-    activationState?: string;
-    _lastUpdateId?: string;
-    [key: string]: unknown;
-}
-
-interface CleanedSource {
-    sourceId: string;
-    sourceType: string;
-    sourcePath?: string;
-    sourceTag?: string;
-    sourceContent?: string | null;
-    sourceMethod?: string;
-    jsonFilter?: {
-        enabled: boolean | undefined;
-        path: string | undefined;
-    };
-    isFiltered?: boolean;
-    filteredWith?: string | null;
-    _lastUpdateId?: string;
-}
+type CleanedSource = Pick<Source,
+    'sourceId' | 'sourceType' | 'sourcePath' | 'sourceTag' |
+    'sourceContent' | 'sourceMethod' | 'jsonFilter' | 'isFiltered' | 'filteredWith'
+>;
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     const { sources, shouldSuppressBroadcast } = useSources();
 
     // Use a ref to track previous sources for comparison
-    const prevSourcesRef = useRef<SourceEntry[]>([]);
+    const prevSourcesRef = useRef<Source[]>([]);
     // Use a ref to track if initial broadcast has been done
     const initialBroadcastDoneRef = useRef(false);
     // Add a debounce timer ref
@@ -61,7 +31,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     // Helper function to check if sources have meaningfully changed
     // ENHANCED: More sophisticated change detection to prevent unnecessary broadcasts
-    const haveSourcesChanged = (prevSources: SourceEntry[], currentSources: SourceEntry[]): boolean => {
+    const haveSourcesChanged = (prevSources: Source[], currentSources: Source[]): boolean => {
         // Different number of sources means a source was added or removed
         if (prevSources.length !== currentSources.length) {
             return true;
@@ -71,7 +41,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         for (let i = 0; i < currentSources.length; i++) {
             const currentSource = currentSources[i];
             // Find matching source by ID
-            const prevSource = prevSources.find((s: SourceEntry) => s.sourceId === currentSource.sourceId);
+            const prevSource = prevSources.find((s: Source) => s.sourceId === currentSource.sourceId);
 
             // If source not found, it's a change
             if (!prevSource) {
@@ -103,7 +73,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
     // Debounced broadcast function
     // FIXED: Uses granular suppression check
-    const debouncedBroadcast = (sourcesToBroadcast: SourceEntry[], reason: string) => {
+    const debouncedBroadcast = (sourcesToBroadcast: Source[], reason: string) => {
         // FIXED: Check if this specific set of sources should be suppressed
         if (shouldSuppressBroadcast && shouldSuppressBroadcast(sourcesToBroadcast)) {
             return;
@@ -124,10 +94,10 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         debounceTimerRef.current = setTimeout(() => {
             // FIXED: Double-check suppression right before broadcasting
             // BUT don't suppress if sources have content that wasn't broadcast yet
-            const hasUnbroadcastContent = sourcesToBroadcast.some((source: SourceEntry) =>
+            const hasUnbroadcastContent = sourcesToBroadcast.some((source: Source) =>
                 source.sourceType === 'http' &&
                 source.sourceContent &&
-                !prevSourcesRef.current.find((prev: SourceEntry) =>
+                !prevSourcesRef.current.find((prev: Source) =>
                     prev.sourceId === source.sourceId &&
                     prev.sourceContent === source.sourceContent
                 )
@@ -140,7 +110,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
 
 
             // ENHANCED: Filter out any temporary status data before broadcasting
-            const cleanedSources: CleanedSource[] = sourcesToBroadcast.map((source: SourceEntry) => {
+            const cleanedSources: CleanedSource[] = sourcesToBroadcast.map((source: Source) => {
                 // Debug log to check source content before cleaning
                 if (source.sourceType === 'http') {
                     log.info(`  Cleaning source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
@@ -177,9 +147,6 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
                     cleanSource.isFiltered = true;
                     cleanSource.filteredWith = source.filteredWith;
                 }
-
-                // FIXED: Remove internal tracking fields
-                delete cleanSource._lastUpdateId;
 
                 return cleanSource;
             });
@@ -221,7 +188,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Check if HTTP sources have content - if not, delay initial broadcast
-            const httpSourcesWithoutContent = sources.filter((s: SourceEntry) =>
+            const httpSourcesWithoutContent = sources.filter((s: Source) =>
                 s.sourceType === 'http' &&
                 !s.sourceContent &&
                 s.activationState !== 'waiting_for_deps'
@@ -234,7 +201,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             }
 
             // ENHANCED: Clean sources for initial broadcast too
-            const cleanedSources: CleanedSource[] = sources.map((source: SourceEntry) => {
+            const cleanedSources: CleanedSource[] = sources.map((source: Source) => {
                 const cleanSource: CleanedSource = {
                     sourceId: source.sourceId,
                     sourceType: source.sourceType,
@@ -274,7 +241,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         // Check if sources have meaningfully changed
         if (haveSourcesChanged(prevSourcesRef.current, sources)) {
             log.info(`WebSocketContext: Detected source change, ${sources.length} sources`);
-            sources.forEach((source: SourceEntry) => {
+            sources.forEach((source: Source) => {
                 log.info(`  Before broadcast - Source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
             });
 
@@ -287,7 +254,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
             }
 
             // Check if HTTP sources are missing content that they should have
-            const httpSourcesWithoutContent = sources.filter((s: SourceEntry) =>
+            const httpSourcesWithoutContent = sources.filter((s: Source) =>
                 s.sourceType === 'http' &&
                 !s.sourceContent &&
                 s.activationState !== 'waiting_for_deps'

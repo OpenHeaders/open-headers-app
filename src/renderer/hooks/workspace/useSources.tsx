@@ -1,40 +1,12 @@
 import {useCallback} from 'react';
 import {useCentralizedWorkspace} from '../useCentralizedWorkspace';
 import {showMessage} from '../../utils';
+import type { Source, RefreshOptions } from '../../../types/source';
 
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSources');
 
-export interface SourceData {
-  sourceId: string;
-  sourceType: string;
-  sourcePath?: string;
-  sourceMethod?: string;
-  sourceName?: string;
-  sourceTag?: string;
-  sourceContent?: string | null;
-  requestOptions?: Record<string, unknown>;
-  jsonFilter?: {
-    enabled: boolean;
-    path?: string;
-    [key: string]: unknown;
-  };
-  refreshOptions?: RefreshOptions;
-  activationState?: string;
-  missingDependencies?: string[];
-  createdAt?: string;
-  isFiltered?: boolean;
-  filteredWith?: string | null;
-  needsInitialFetch?: boolean;
-  originalResponse?: string | null;
-  [key: string]: unknown;
-}
-
-interface RefreshOptions {
-  enabled?: boolean;
-  interval?: number;
-  [key: string]: unknown;
-}
+export type SourceData = Source;
 
 interface UseSourcesReturn {
   sources: SourceData[];
@@ -54,7 +26,7 @@ interface UseSourcesReturn {
  */
 export function useSources(): UseSourcesReturn {
   const { sources: rawSources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
-  const sources = rawSources as SourceData[];
+  const sources = rawSources as unknown as SourceData[];
 
   const addSource = useCallback(async (sourceData: Record<string, unknown>): Promise<SourceData | null> => {
     try {
@@ -123,7 +95,7 @@ export function useSources(): UseSourcesReturn {
   const refreshSource = useCallback(async (sourceId: string): Promise<boolean> => {
     try {
       // Get fresh sources from service to avoid stale closure issue
-      const currentSources = service.getState().sources as SourceData[];
+      const currentSources = service.getState().sources as unknown as SourceData[];
       const source = currentSources.find((s: SourceData) => s.sourceId === sourceId);
       if (!source) {
         log.error(`Source with ID ${sourceId} not found. Available sources:`, currentSources.map((s: SourceData) => ({ id: s.sourceId, type: s.sourceType, path: s.sourcePath })));

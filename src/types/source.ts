@@ -10,7 +10,7 @@
 
 export type SourceType = 'http' | 'file' | 'manual' | 'env';
 
-export type ActivationState = 'active' | 'inactive' | 'error';
+export type ActivationState = 'active' | 'inactive' | 'error' | 'waiting_for_deps';
 
 export type SourceMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -85,3 +85,10 @@ export interface Source {
   needsInitialFetch?: boolean;
   originalResponse?: string | null;
 }
+
+/** Data produced by the source creation form — no sourceId yet. */
+export type NewSourceData = Omit<Source, 'sourceId'> & {
+  sourceType: SourceType;
+  sourcePath: string;
+  sourceTag: string;
+};
