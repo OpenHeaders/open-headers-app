@@ -46,7 +46,7 @@ describe('SourceManager', () => {
     it('extracts multiple distinct variables', () => {
       const source = {
         sourcePath: '{{proto}}://{{host}}',
-        requestOptions: { headers: { Authorization: 'Bearer {{token}}' } },
+        requestOptions: { headers: [{ key: 'Authorization', value: 'Bearer {{token}}' }] },
       };
       const vars = manager.extractVariablesFromSource(source);
       expect(vars).toContain('proto');
@@ -58,7 +58,7 @@ describe('SourceManager', () => {
     it('deduplicates variables', () => {
       const source = {
         sourcePath: '{{api}}',
-        requestOptions: { url: '{{api}}' },
+        requestOptions: { body: '{{api}}' },
       };
       const vars = manager.extractVariablesFromSource(source);
       expect(vars).toEqual(['api']);
@@ -69,19 +69,21 @@ describe('SourceManager', () => {
       expect(manager.extractVariablesFromSource(source)).toEqual([]);
     });
 
-    it('extracts from nested requestOptions', () => {
+    it('extracts from headers and queryParams', () => {
       const source = {
         sourcePath: 'https://example.com',
         requestOptions: {
-          headers: {
-            'X-Custom': '{{customVar}}',
-            nested: { deep: '{{deepVar}}' },
-          },
+          headers: [
+            { key: 'X-Custom', value: '{{customVar}}' },
+          ],
+          queryParams: [
+            { key: 'filter', value: '{{filterVar}}' },
+          ],
         },
       };
       const vars = manager.extractVariablesFromSource(source);
       expect(vars).toContain('customVar');
-      expect(vars).toContain('deepVar');
+      expect(vars).toContain('filterVar');
     });
 
     it('extracts from jsonFilter path', () => {
@@ -97,11 +99,13 @@ describe('SourceManager', () => {
       expect(manager.extractVariablesFromSource(source)).toEqual([]);
     });
 
-    it('handles array of objects in requestOptions', () => {
+    it('extracts from header keys and values', () => {
       const source = {
         sourcePath: 'https://example.com',
         requestOptions: {
-          items: [{ key: '{{a}}' }, { key: '{{b}}' }],
+          headers: [
+            { key: '{{a}}', value: '{{b}}' },
+          ],
         },
       };
       const vars = manager.extractVariablesFromSource(source);
@@ -109,24 +113,26 @@ describe('SourceManager', () => {
       expect(vars).toContain('b');
     });
 
-    it('does not extract from plain string array items (no object wrapper)', () => {
-      // The implementation only extracts from object values, not direct string array items
+    it('extracts from body and totpSecret', () => {
       const source = {
         sourcePath: 'https://example.com',
         requestOptions: {
-          items: ['{{a}}', '{{b}}'],
+          body: '{"key": "{{bodyVar}}"}',
+          totpSecret: '{{secretVar}}',
         },
       };
       const vars = manager.extractVariablesFromSource(source);
-      expect(vars).toEqual([]);
+      expect(vars).toContain('bodyVar');
+      expect(vars).toContain('secretVar');
     });
 
-    it('ignores non-string values', () => {
+    it('extracts from contentType', () => {
       const source = {
         sourcePath: 'https://example.com',
-        requestOptions: { timeout: 5000, enabled: true },
+        requestOptions: { contentType: '{{contentVar}}' },
       };
-      expect(manager.extractVariablesFromSource(source)).toEqual([]);
+      const vars = manager.extractVariablesFromSource(source);
+      expect(vars).toContain('contentVar');
     });
   });
 
@@ -148,7 +154,7 @@ describe('SourceManager', () => {
       const source = {
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
-        requestOptions: { headers: { Authorization: '{{token}}' } },
+        requestOptions: { headers: [{ key: 'Authorization', value: '{{token}}' }] },
       };
       const result = await manager.evaluateSourceDependencies(source);
       expect(result.ready).toBe(true);
@@ -160,7 +166,7 @@ describe('SourceManager', () => {
       const source = {
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
-        requestOptions: { headers: { Authorization: '{{token}}' } },
+        requestOptions: { headers: [{ key: 'Authorization', value: '{{token}}' }] },
       };
       const result = await manager.evaluateSourceDependencies(source);
       expect(result.ready).toBe(false);

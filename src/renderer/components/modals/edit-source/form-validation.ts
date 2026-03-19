@@ -9,8 +9,14 @@ interface FormEnvContext {
     activeEnvironment: string;
 }
 
+/** Typed form accessor — overloads return proper types per field name */
 interface FormInstance {
-    getFieldValue: (name: string | string[]) => unknown;
+    getFieldValue(name: 'totpSecret'): string | undefined;
+    getFieldValue(name: 'enableTOTP'): boolean | undefined;
+    getFieldValue(name: 'jsonFilter'): JsonFilter | undefined;
+    getFieldValue(name: ['requestOptions', 'headers']): SourceHeader[] | undefined;
+    getFieldValue(name: ['requestOptions', 'queryParams']): SourceQueryParam[] | undefined;
+    getFieldValue(name: ['requestOptions', 'body']): string | undefined;
 }
 
 /**
@@ -62,8 +68,8 @@ const validateTotpCodePlaceholder = (value: string, form: FormInstance): Promise
     // Check for TOTP code pattern [[TOTP_CODE]]
     if (value.includes('[[TOTP_CODE]]')) {
         // Get current TOTP settings from form
-        const totpSecret = form.getFieldValue('totpSecret') as string | undefined;
-        const enableTOTP = form.getFieldValue('enableTOTP') as boolean | undefined;
+        const totpSecret = form.getFieldValue('totpSecret');
+        const enableTOTP = form.getFieldValue('enableTOTP');
 
         if (!enableTOTP || !totpSecret || totpSecret.trim() === '') {
             return Promise.reject(new Error('TOTP code placeholder [[TOTP_CODE]] is used but no TOTP secret is configured. Please enable TOTP and provide a secret.'));
@@ -222,24 +228,24 @@ const validateTotpSecretForVariables = (totpSecret: string | null | undefined, e
  */
 const validateAllFormFields = async (form: FormInstance, envContext: FormEnvContext): Promise<void> => {
     // Validate headers
-    const headers = form.getFieldValue(['requestOptions', 'headers']) as SourceHeader[] | undefined;
+    const headers = form.getFieldValue(['requestOptions', 'headers']);
     await validateHeadersForVariables(headers, envContext);
 
     // Validate query params
-    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']) as SourceQueryParam[] | undefined;
+    const queryParams = form.getFieldValue(['requestOptions', 'queryParams']);
     await validateQueryParamsForVariables(queryParams, envContext);
 
     // Validate body
-    const body = form.getFieldValue(['requestOptions', 'body']) as string | undefined;
+    const body = form.getFieldValue(['requestOptions', 'body']);
     await validateBodyForVariables(body, envContext);
 
     // Validate JSON filter path
-    const jsonFilter = form.getFieldValue('jsonFilter') as JsonFilter | undefined;
+    const jsonFilter = form.getFieldValue('jsonFilter');
     await validateJsonFilterForVariables(jsonFilter, envContext);
 
     // Validate TOTP secret
-    const enableTOTP = form.getFieldValue('enableTOTP') as boolean | undefined;
-    const totpSecret = form.getFieldValue('totpSecret') as string | undefined;
+    const enableTOTP = form.getFieldValue('enableTOTP');
+    const totpSecret = form.getFieldValue('totpSecret');
     if (enableTOTP && totpSecret) {
         await validateTotpSecretForVariables(totpSecret, envContext);
     }

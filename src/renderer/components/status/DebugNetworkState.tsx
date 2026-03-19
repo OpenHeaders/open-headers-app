@@ -58,9 +58,9 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
         const interval = setInterval(fetchNetworkState, 2000);
 
         // Listen for network state changes
-        const handleNetworkSync = (event: Record<string, unknown>) => {
+        const handleNetworkSync = (event: NetworkStateSyncData) => {
             if (event.state) {
-                setNetworkState(event.state as NetworkStateData);
+                setNetworkState(event.state);
                 setLastUpdate(new Date());
             }
         };

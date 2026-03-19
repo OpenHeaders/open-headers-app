@@ -6,6 +6,25 @@
  * - generateTOTP: TOTP generator exposed via contextBridge
  */
 
+/** Network state data sent via IPC from main process */
+interface NetworkStateSyncData {
+  state: {
+    isOnline: boolean;
+    networkQuality?: string;
+  };
+}
+
+/** Source activation event detail */
+interface SourceActivatedDetail {
+  sourceId: string;
+  source: import('./source').Source;
+}
+
+/** Custom DOM events used in the renderer */
+interface WindowEventMap {
+  'source-activated': CustomEvent<SourceActivatedDetail>;
+}
+
 interface ElectronAPI {
   // Platform info
   platform: string;
@@ -184,7 +203,7 @@ interface ElectronAPI {
   onTriggerUpdateCheck: (callback: () => void) => (() => void);
   onSystemSuspend: (callback: () => void) => (() => void);
   onSystemResume: (callback: () => void) => (() => void);
-  onNetworkStateSync: (callback: (data: Record<string, unknown>) => void) => (() => void);
+  onNetworkStateSync: (callback: (data: NetworkStateSyncData) => void) => (() => void);
   onRecordingReceived: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onRecordingProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onRecordingProcessing: (callback: (data: Record<string, unknown>) => void) => (() => void);

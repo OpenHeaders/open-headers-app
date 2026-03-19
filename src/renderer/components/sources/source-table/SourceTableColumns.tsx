@@ -87,7 +87,9 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourceType',
         key: 'sourceType',
         width: 180,
-        render: (type: string, record: Source) => (
+        render: (_value: unknown, record: Source) => {
+            const type = record.sourceType;
+            return (
             <Space size={4} direction="vertical" align="start">
                 <Space size={4}>
                     {/* Primary type tag with color coding:
@@ -151,7 +153,8 @@ export const createSourceTableColumns = ({
                     </div>
                 )}
             </Space>
-        ),
+        );
+        },
     },
     // Column 3: Source Tag
     // User-defined label for easy source identification and organization
@@ -160,7 +163,7 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourceTag',
         key: 'sourceTag',
         width: 80,
-        render: (tag: string | undefined) => tag || '-', // Display dash when no tag is set
+        render: (_value: unknown, record: Source) => record.sourceTag || '-',
     },
     // Column 4: Source Path/URL
     // Displays the source location with visual cues for type and state
@@ -169,20 +172,21 @@ export const createSourceTableColumns = ({
         dataIndex: 'sourcePath',
         key: 'sourcePath',
         ellipsis: true, // Enable text truncation with ellipsis
-        render: (path: string, record: Source) => (
-            <Text
-                ellipsis={{ tooltip: path }} // Show full path in tooltip on hover
-                style={{ 
-                    // Blue color for HTTP URLs to indicate they're clickable/external
-                    color: record.sourceType === 'http' ? '#1890ff' : 'inherit', 
-                    fontSize: '12px',
-                    // Reduce opacity for sources with missing dependencies
-                    opacity: record.activationState === 'waiting_for_deps' ? 0.5 : 1
-                }}
-            >
-                {path}
-            </Text>
-        ),
+        render: (_value: unknown, record: Source) => {
+            const path = record.sourcePath ?? '';
+            return (
+                <Text
+                    ellipsis={{ tooltip: path }}
+                    style={{
+                        color: record.sourceType === 'http' ? '#1890ff' : 'inherit',
+                        fontSize: '12px',
+                        opacity: record.activationState === 'waiting_for_deps' ? 0.5 : 1
+                    }}
+                >
+                    {path}
+                </Text>
+            );
+        },
     },
     // Column 5: Content Preview
     // Shows truncated source content with full text available in tooltip
@@ -190,14 +194,16 @@ export const createSourceTableColumns = ({
         title: 'Content',
         dataIndex: 'sourceContent',
         key: 'sourceContent',
-        render: (content: string | undefined) => (
-            <div className="source-content-cell" style={{ maxHeight: '60px', fontSize: '11px' }}>
-                <Text ellipsis={{ tooltip: content }}>
-                    {/* Trim content to prevent layout issues with large content */}
-                    {trimContent(content ?? '')}
-                </Text>
-            </div>
-        ),
+        render: (_value: unknown, record: Source) => {
+            const content = record.sourceContent ?? '';
+            return (
+                <div className="source-content-cell" style={{ maxHeight: '60px', fontSize: '11px' }}>
+                    <Text ellipsis={{ tooltip: content }}>
+                        {trimContent(content)}
+                    </Text>
+                </div>
+            );
+        },
     },
     // Column 6: Actions and Status
     // Dynamic action controls and status display based on source type and state

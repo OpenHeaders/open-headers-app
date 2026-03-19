@@ -2,7 +2,7 @@
  * SourceManager - Manages HTTP, File, and Environment sources
  */
 import { createLogger } from '../../utils/error-handling/logger';
-import type { Source, ActivationState } from '../../../types/source';
+import type { Source, SourceRequestOptions, ActivationState } from '../../../types/source';
 const log = createLogger('SourceManager');
 
 interface StorageAPI {
@@ -123,45 +123,41 @@ class SourceManager {
   extractVariablesFromSource(source: Source): string[] {
     const variables = new Set<string>();
     const variablePattern = /\{\{(\w+)\}\}/g;
-    
-    // Helper to extract from any string
-    const extractFromString = (str: string) => {
-      if (typeof str === 'string') {
-        const matches = [...str.matchAll(variablePattern)];
-        matches.forEach(match => variables.add(match[1]));
-      }
-    };
-    
-    // Helper to extract from object recursively
-    const extractFromObject = (obj: unknown) => {
-      if (!obj || typeof obj !== 'object') return;
 
-      if (Array.isArray(obj)) {
-        obj.forEach((item: unknown) => extractFromObject(item));
-      } else {
-        Object.values(obj as Record<string, unknown>).forEach((value: unknown) => {
-          if (typeof value === 'string') {
-            extractFromString(value);
-          } else if (typeof value === 'object') {
-            extractFromObject(value);
-          }
-        });
+    const extractFromString = (str: string) => {
+      for (const match of str.matchAll(variablePattern)) {
+        variables.add(match[1]);
       }
     };
-    
+
     // Extract from URL
     if (source.sourcePath) extractFromString(source.sourcePath);
-    
-    // Extract from request options
-    if (source.requestOptions) {
-      extractFromObject(source.requestOptions);
+
+    // Extract from request options — walk typed fields directly
+    const opts = source.requestOptions;
+    if (opts) {
+      if (opts.body) extractFromString(opts.body);
+      if (opts.contentType) extractFromString(opts.contentType);
+      if (opts.totpSecret) extractFromString(opts.totpSecret);
+      if (opts.headers) {
+        for (const header of opts.headers) {
+          extractFromString(header.key);
+          extractFromString(header.value);
+        }
+      }
+      if (opts.queryParams) {
+        for (const param of opts.queryParams) {
+          extractFromString(param.key);
+          extractFromString(param.value);
+        }
+      }
     }
-    
+
     // Extract from JSON filter
     if (source.jsonFilter?.path) {
       extractFromString(source.jsonFilter.path);
     }
-    
+
     return Array.from(variables);
   }
 

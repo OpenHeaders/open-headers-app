@@ -13,8 +13,8 @@ const networkAPI = {
     getSystemState: (): Promise<unknown> => ipcRenderer.invoke('getSystemState'),
 
     // Network state synchronization - used by RefreshManager and DebugNetworkState
-    onNetworkStateSync: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => {
+    onNetworkStateSync: (callback: (data: NetworkStateSyncData) => void): (() => void) => {
+        const subscription = (_: unknown, data: NetworkStateSyncData) => {
             callback(data);
         };
         ipcRenderer.on('network-state-sync', subscription);

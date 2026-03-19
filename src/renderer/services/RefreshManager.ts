@@ -20,13 +20,8 @@ interface ScheduleEntry {
   isTemporary?: boolean;
 }
 
-/** Network state event */
-interface NetworkStateEvent {
-  state: {
-    isOnline: boolean;
-    networkQuality?: string;
-  };
-}
+/** Network state event — mirrors NetworkStateSyncData from global.d.ts */
+type NetworkStateEvent = NetworkStateSyncData;
 
 /** HTTP service interface — bridges useHttp to RefreshManager */
 export interface HttpService {
@@ -204,7 +199,7 @@ class RefreshManager {
   setupEventListeners() {
     if (typeof window !== 'undefined' && window.electronAPI) {
       if (window.electronAPI.onNetworkStateSync) {
-        const cleanup = window.electronAPI.onNetworkStateSync(this.handleNetworkStateSync as unknown as (data: Record<string, unknown>) => void);
+        const cleanup = window.electronAPI.onNetworkStateSync(this.handleNetworkStateSync);
         this.eventCleanup.push(cleanup);
       }
 
