@@ -295,7 +295,7 @@ class WorkspaceHandlers {
             try {
                 const sourcesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'sources.json');
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                const sources: unknown[] = JSON.parse(sourcesData);
+                const sources = JSON.parse(sourcesData) as Array<{ sourceId?: string; sourceContent?: string }>;
                 if (Array.isArray(sources)) {
                     proxyService.updateSources(sources);
                     log.info(`Loaded ${sources.length} sources for proxy service`);

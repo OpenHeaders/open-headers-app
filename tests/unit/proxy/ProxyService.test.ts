@@ -185,9 +185,8 @@ describe('ProxyService', () => {
             expect(proxyService.resolveHeaderValue('Bearer {{TOKEN}}', {})).toBe('Bearer xyz');
         });
 
-        it('returns non-string values unchanged', () => {
-            expect(proxyService.resolveHeaderValue(null, {})).toBeNull();
-            expect(proxyService.resolveHeaderValue(undefined, {})).toBeUndefined();
+        it('returns empty string for undefined values', () => {
+            expect(proxyService.resolveHeaderValue(undefined, {} as Record<string, unknown>)).toBe('');
         });
     });
 

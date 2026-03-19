@@ -4,14 +4,22 @@ import util from 'util';
 import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import timeManager from '../../../../services/core/TimeManager';
+import type { IpcInvokeEvent } from '../../../../types/common';
+import { errorMessage } from '../../../../types/common';
 
 const { app, systemPreferences, shell } = electron;
 const { createLogger, getLogDirectory } = mainLogger;
 const log = createLogger('SystemHandlers');
 const execAsync = util.promisify(child_process.exec);
 
+interface TimezoneResult {
+    timezone: string | null;
+    offset: number;
+    method: string;
+}
+
 // Cache for timezone - it rarely changes, no need to spawn PowerShell every time
-let cachedTimezone: any = null;
+let cachedTimezone: TimezoneResult | null = null;
 let cacheTimestamp = 0;
 const CACHE_DURATION = 300000; // 5 minutes cache
 
@@ -208,13 +216,13 @@ class SystemHandlers {
         return mapping[windowsId] || windowsId;
     }
 
-    handleShowItemInFolder(_: any, filePath: string) {
+    handleShowItemInFolder(_: IpcInvokeEvent, filePath: string) {
         if (filePath && typeof filePath === 'string') {
             shell.showItemInFolder(filePath);
         }
     }
 
-    async handleOpenAppPath(_: any, pathKey: string) {
+    async handleOpenAppPath(_: IpcInvokeEvent, pathKey: string) {
         try {
             const pathMap: Record<string, string> = {
                 logs: getLogDirectory(),
@@ -237,9 +245,9 @@ class SystemHandlers {
             }
 
             return { success: true };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error opening app path:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
@@ -261,11 +269,11 @@ class SystemHandlers {
                 hasPermission: true,
                 platform: process.platform
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error checking screen recording permission:', error);
             return {
                 success: false,
-                error: error.message,
+                error: errorMessage(error),
                 platform: process.platform
             };
         }
@@ -340,11 +348,11 @@ class SystemHandlers {
                 hasPermission: true,
                 platform: process.platform
             };
-        } catch (error: any) {
+        } catch (error: unknown) {
             log.error('Error requesting screen recording permission:', error);
             return {
                 success: false,
-                error: error.message,
+                error: errorMessage(error),
                 platform: process.platform
             };
         }

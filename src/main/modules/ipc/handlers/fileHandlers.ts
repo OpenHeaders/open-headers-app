@@ -6,6 +6,7 @@ import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import windowManager from '../../window/windowManager';
 import appLifecycle from '../../app/lifecycle';
+import type { IpcInvokeEvent } from '../../../../types/common';
 
 const { dialog, app } = electron;
 const { createLogger } = mainLogger;
@@ -25,7 +26,7 @@ class FileHandlers {
         }
     }
 
-    async handleSaveFileDialog(_: any, options: any = {}) {
+    async handleSaveFileDialog(_: IpcInvokeEvent, options: Electron.SaveDialogOptions = {}) {
         try {
             const mainWindow = windowManager.getMainWindow();
             const result = await dialog.showSaveDialog(mainWindow, options);
@@ -36,7 +37,7 @@ class FileHandlers {
         }
     }
 
-    async handleReadFile(_: any, filePath: string, encoding: string | null = 'utf8') {
+    async handleReadFile(_: IpcInvokeEvent, filePath: string, encoding: string | null = 'utf8') {
         try {
             // Return binary data for null/'buffer' encoding, otherwise use specified encoding
             if (encoding === null || encoding === 'buffer') {
@@ -49,7 +50,7 @@ class FileHandlers {
         }
     }
 
-    async handleWriteFile(_: any, filePath: string, content: any) {
+    async handleWriteFile(_: IpcInvokeEvent, filePath: string, content: string | Buffer) {
         try {
             // Handle both binary (Buffer) and text content
             if (Buffer.isBuffer(content)) {
@@ -77,7 +78,7 @@ class FileHandlers {
         }
     }
 
-    async handleWatchFile(_: any, sourceId: string, filePath: string) {
+    async handleWatchFile(_: IpcInvokeEvent, sourceId: string, filePath: string) {
         try {
             const content = await fs.promises.readFile(filePath, 'utf8');
             const fileWatchers = appLifecycle.getFileWatchers();
@@ -110,7 +111,7 @@ class FileHandlers {
         }
     }
 
-    async handleUnwatchFile(_: any, filePath: string) {
+    async handleUnwatchFile(_: IpcInvokeEvent, filePath: string) {
         try {
             const fileWatchers = appLifecycle.getFileWatchers();
             if (fileWatchers.has(filePath)) {
@@ -127,7 +128,7 @@ class FileHandlers {
         }
     }
 
-    handleGetEnvVariable(_: any, name: string) {
+    handleGetEnvVariable(_: IpcInvokeEvent, name: string) {
         try {
             return process.env[name] || `Environment variable '${name}' is not set`;
         } catch (error) {
@@ -140,7 +141,7 @@ class FileHandlers {
         return app.getPath('userData');
     }
 
-    async handleOpenRecordFile(_: any, filePath: string) {
+    async handleOpenRecordFile(_: IpcInvokeEvent, filePath: string) {
         try {
             return await fs.promises.readFile(filePath, 'utf8');
         } catch (error) {
@@ -149,7 +150,7 @@ class FileHandlers {
         }
     }
 
-    async handleGetResourcePath(_: any, filename: string) {
+    async handleGetResourcePath(_: IpcInvokeEvent, filename: string) {
         try {
             // Check production app resources directory
             const resourcePath = path.join(process.resourcesPath, 'app', 'resources', filename);
