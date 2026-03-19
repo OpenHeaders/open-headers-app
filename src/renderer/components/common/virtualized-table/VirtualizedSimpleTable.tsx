@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { FixedSizeList as List } from 'react-window';
 import { Table } from 'antd';
 import './VirtualizedTables.css';
@@ -32,40 +32,42 @@ import './VirtualizedTables.css';
  * @component
  * @since 3.0.0
  */
-interface SimpleColumnDef {
+interface SimpleColumnDef<T> {
   key?: string;
   dataIndex?: string;
   title?: React.ReactNode;
   width?: number;
   align?: 'left' | 'right' | 'center';
-  render?: (value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode;
+  render?: (value: unknown, record: T, index: number) => React.ReactNode;
 }
 
-interface SimpleRowSelectionConfig {
+interface SimpleRowSelectionConfig<T> {
   selectedRowKeys?: React.Key[];
-  onChange?: (selectedRowKeys: React.Key[], selectedRows: Record<string, unknown>[]) => void;
+  onChange?: (selectedRowKeys: React.Key[], selectedRows: T[]) => void;
 }
 
 interface RowEventHandlers {
   className?: string;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
   onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
-  [key: string]: unknown;
 }
 
-interface VirtualizedSimpleTableProps {
-  columns: SimpleColumnDef[];
-  dataSource: Record<string, unknown>[];
+interface VirtualizedSimpleTableProps<T = Record<string, unknown>> {
+  columns: SimpleColumnDef<T>[];
+  dataSource: T[];
   rowHeight?: number;
   height?: number;
-  onRow?: (record: Record<string, unknown>, index: number) => RowEventHandlers;
-  rowKey: string | ((record: Record<string, unknown>) => React.Key);
-  rowSelection?: SimpleRowSelectionConfig;
+  onRow?: (record: T, index: number) => RowEventHandlers;
+  rowKey: string | ((record: T) => React.Key);
+  rowSelection?: SimpleRowSelectionConfig<T>;
   expandable?: Record<string, unknown>;
   scroll?: { x?: number; y?: number };
 }
 
-const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(function VirtualizedSimpleTableInner(props: VirtualizedSimpleTableProps, ref) {
+const getField = <T,>(record: T, key: string): unknown =>
+  (record as Record<string, unknown>)[key];
+
+function VirtualizedSimpleTable<T>(props: VirtualizedSimpleTableProps<T>) {
   const {
     columns,
     dataSource,
@@ -80,7 +82,7 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
   // Row renderer for react-window virtualization
   const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
     const record = dataSource[index];
-    const key = typeof rowKey === 'function' ? rowKey(record) : record[rowKey] as React.Key;
+    const key: React.Key = typeof rowKey === 'function' ? rowKey(record) : String(getField(record, rowKey));
 
     // Get row props if onRow is provided
     const rowProps: RowEventHandlers = onRow ? onRow(record, index) : {};
@@ -117,8 +119,8 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
                   newKeys = currentKeys.filter((k: React.Key) => k !== key);
                 }
                 
-                rowSelection.onChange?.(newKeys, dataSource.filter((item: Record<string, unknown>) => {
-                  const itemKey = typeof rowKey === 'function' ? rowKey(item) : item[rowKey] as React.Key;
+                rowSelection.onChange?.(newKeys, dataSource.filter((item) => {
+                  const itemKey = typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey));
                   return newKeys.includes(itemKey);
                 }));
               }}
@@ -127,9 +129,9 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
         )}
         
         {/* Render cells */}
-        {columns.map((column: SimpleColumnDef, colIndex: number) => {
-          const value = column.dataIndex ? record[column.dataIndex] : undefined;
-          const cellContent = column.render ? column.render(value, record, index) : value as React.ReactNode;
+        {columns.map((column, colIndex: number) => {
+          const value = column.dataIndex ? getField(record, column.dataIndex) : undefined;
+          const cellContent = column.render ? column.render(value, record, index) : String(value ?? '');
           
           return (
             <div
@@ -165,8 +167,8 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
             onChange={(e) => {
               const checked = e.target.checked;
               if (checked) {
-                const allKeys = dataSource.map((item: Record<string, unknown>) =>
-                  typeof rowKey === 'function' ? rowKey(item) : item[rowKey] as React.Key
+                const allKeys = dataSource.map((item) =>
+                  typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey))
                 );
                 rowSelection.onChange?.(allKeys, dataSource);
               } else {
@@ -176,7 +178,7 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
           />
         </div>
       )}
-      {columns.map((column: SimpleColumnDef, index: number) => (
+      {columns.map((column, index: number) => (
         <div
           key={column.key || column.dataIndex || index}
           className="virtual-table-header-cell"
@@ -193,11 +195,16 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
     </div>
   );
 
-  // Empty state
+  const listRef = useRef<List>(null);
+
+  // Empty state — only show column headers, so we just need title/key/width
   if (!dataSource || dataSource.length === 0) {
+    const emptyColumns = columns.map(({ key, dataIndex, title, width, align }) => ({
+      key, dataIndex, title, width, align,
+    }));
     return (
       <Table
-        columns={columns as Parameters<typeof Table>[0]['columns']}
+        columns={emptyColumns}
         dataSource={[]}
       />
     );
@@ -207,7 +214,7 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
     <div className="virtualized-table-container">
       {renderHeader()}
       <List
-        ref={ref}
+        ref={listRef}
         height={height}
         itemCount={dataSource.length}
         itemSize={rowHeight}
@@ -218,8 +225,6 @@ const VirtualizedSimpleTable = forwardRef<List, VirtualizedSimpleTableProps>(fun
       </List>
     </div>
   );
-});
-
-VirtualizedSimpleTable.displayName = 'VirtualizedSimpleTable';
+}
 
 export default VirtualizedSimpleTable;

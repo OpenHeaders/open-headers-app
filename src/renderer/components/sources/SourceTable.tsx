@@ -273,14 +273,13 @@ const SourceTable = ({
 
     // Render virtualized or regular table based on data size
     // Virtualized table for >50 sources, regular table for smaller datasets
-    const VTable = VirtualizedSimpleTable as unknown as React.FC<{ dataSource: Source[]; columns: Record<string, unknown>[]; rowKey: (record: Source) => string; height: number; rowHeight: number }>;
     const tableComponent = useVirtualization ? (
-        <VTable
+        <VirtualizedSimpleTable
             dataSource={sources}
             columns={columns}
-            rowKey={(record: Source) => `source-${record.sourceId}-${record.sourceType}`}
+            rowKey={(record) => `source-${record.sourceId}-${record.sourceType}`}
             height={400}
-            rowHeight={90} // Increased for multi-line content display
+            rowHeight={90}
         />
     ) : (
         <Table<Source>

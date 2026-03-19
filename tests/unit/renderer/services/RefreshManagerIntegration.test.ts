@@ -231,11 +231,11 @@ describe('RefreshManagerIntegration', () => {
       const source = {
         sourcePath: 'https://api.com',
         requestOptions: {
-          headers: { Authorization: '{{TOKEN}}' },
+          headers: [{ key: 'Authorization', value: '{{TOKEN}}' }],
         },
       };
       const result = refreshManagerIntegration.resolveSourceData(source);
-      expect(result.requestOptions.headers.Authorization).toBe('abc123');
+      expect(result.requestOptions.headers?.[0].value).toBe('abc123');
     });
 
     it('resolves request body', () => {
@@ -257,35 +257,36 @@ describe('RefreshManagerIntegration', () => {
       expect(result.requestOptions).toEqual({});
     });
 
-    it('recursively resolves nested objects', () => {
+    it('resolves all header key-value pairs', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{VAL}}' ? 'resolved' : s
       );
       const source = {
         sourcePath: 'https://api.com',
         requestOptions: {
-          headers: { nested: { deep: '{{VAL}}' } },
+          headers: [
+            { key: 'X-Custom', value: '{{VAL}}' },
+            { key: 'Accept', value: 'application/json' },
+          ],
         },
       };
       const result = refreshManagerIntegration.resolveSourceData(source);
-      expect(result.requestOptions.headers.nested.deep).toBe('resolved');
+      expect(result.requestOptions.headers?.[0].value).toBe('resolved');
+      expect(result.requestOptions.headers?.[1].value).toBe('application/json');
     });
 
-    it('handles arrays in requestOptions by recursing (strings at array level are not resolved)', () => {
+    it('resolves query params', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{A}}' ? 'x' : s
       );
       const source = {
         sourcePath: 'https://api.com',
         requestOptions: {
-          headers: [{ val: '{{A}}' }, 'literal'],
+          queryParams: [{ key: 'filter', value: '{{A}}' }],
         },
       };
       const result = refreshManagerIntegration.resolveSourceData(source);
-      // Objects inside arrays have their string values resolved
-      expect(result.requestOptions.headers[0].val).toBe('x');
-      // Plain strings in arrays pass through resolveObjectTemplate as non-objects
-      expect(result.requestOptions.headers[1]).toBe('literal');
+      expect(result.requestOptions.queryParams?.[0].value).toBe('x');
     });
   });
 

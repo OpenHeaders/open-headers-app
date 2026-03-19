@@ -132,41 +132,18 @@ class RefreshManagerIntegration {
      */
     resolveSourceData(source: Source): ResolvedSourceData {
         const envService = getCentralizedEnvironmentService();
+        const resolve = (s: string) => envService.resolveTemplate(s);
 
-        // Helper to resolve object templates
-        const resolveObjectTemplate = (obj: unknown): unknown => {
-            if (!obj || typeof obj !== 'object') {
-                return obj;
-            }
+        const resolvedPath = resolve(source.sourcePath || '');
 
-            if (Array.isArray(obj)) {
-                return obj.map(item => resolveObjectTemplate(item));
-            }
-
-            const resolved: Record<string, unknown> = {};
-            for (const [key, value] of Object.entries(obj)) {
-                if (typeof value === 'string') {
-                    resolved[key] = envService.resolveTemplate(value);
-                } else if (typeof value === 'object') {
-                    resolved[key] = resolveObjectTemplate(value);
-                } else {
-                    resolved[key] = value;
-                }
-            }
-            return resolved;
-        };
-
-        // Resolve URL
-        const resolvedPath = envService.resolveTemplate(source.sourcePath || '');
-
-        // Resolve headers and other request options
-        const resolvedRequestOptions: SourceRequestOptions = source.requestOptions ? {...source.requestOptions} : {};
-        if (resolvedRequestOptions.headers) {
-            resolvedRequestOptions.headers = resolveObjectTemplate(resolvedRequestOptions.headers) as SourceRequestOptions['headers'];
-        }
-        if (resolvedRequestOptions.body && typeof resolvedRequestOptions.body === 'string') {
-            resolvedRequestOptions.body = envService.resolveTemplate(resolvedRequestOptions.body);
-        }
+        const opts = source.requestOptions;
+        const resolvedRequestOptions: SourceRequestOptions = opts ? {
+            contentType: opts.contentType,
+            body: opts.body ? resolve(opts.body) : opts.body,
+            totpSecret: opts.totpSecret,
+            headers: opts.headers?.map(h => ({ key: resolve(h.key), value: resolve(h.value) })),
+            queryParams: opts.queryParams?.map(p => ({ key: resolve(p.key), value: resolve(p.value) })),
+        } : {};
 
         return {
             sourcePath: resolvedPath,
@@ -293,7 +270,7 @@ class RefreshManagerIntegration {
      * Setup listener for source activation events
      */
     setupSourceActivationListener() {
-        const handleSourceActivation = async (event: CustomEvent<{ sourceId: string; source: Source }>) => {
+        const handleSourceActivation = async (event: CustomEvent<SourceActivatedDetail>) => {
             const { sourceId, source } = event.detail;
             log.info(`Source ${sourceId} activated, adding to RefreshManager`);
 
@@ -319,12 +296,12 @@ class RefreshManagerIntegration {
             }
         };
 
-        window.addEventListener('source-activated', handleSourceActivation as unknown as EventListener);
+        window.addEventListener('source-activated', handleSourceActivation);
 
         // Store cleanup function
         if (!this.sourceActivationCleanup) {
             this.sourceActivationCleanup = () => {
-                window.removeEventListener('source-activated', handleSourceActivation as unknown as EventListener);
+                window.removeEventListener('source-activated', handleSourceActivation);
             };
         }
     }
