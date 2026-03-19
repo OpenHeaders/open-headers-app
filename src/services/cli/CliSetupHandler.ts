@@ -2,8 +2,12 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import electron from 'electron';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import { errorMessage } from '../../types/common';
+import type { EnvironmentsFile } from '../../types/environment';
+import type { HeaderRule } from '../proxy/ProxyService';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -24,7 +28,7 @@ export interface JoinWorkspaceData {
     branch?: string;
     configPath?: string;
     authType?: string;
-    authData?: Record<string, any>;
+    authData?: Record<string, string>;
     inviterName?: string;
     inviteId?: string;
 }
@@ -36,13 +40,17 @@ export interface NormalizedAuthData {
     sshPassphrase?: string;
     username?: string;
     password?: string;
-    [key: string]: any;
+    [key: string]: string | undefined;
+}
+
+interface EnvironmentImportData {
+    environments: Record<string, Record<string, unknown>>;
 }
 
 class CliSetupHandler {
-    mainWindow: any = null;
+    mainWindow: BrowserWindowType | null = null;
 
-    setMainWindow(window: any): void {
+    setMainWindow(window: BrowserWindowType): void {
         this.mainWindow = window;
     }
 
@@ -123,15 +131,15 @@ class CliSetupHandler {
             try {
                 await proxyService.switchWorkspace(workspaceId);
                 log.info('Proxy service switched to new workspace');
-            } catch (err: any) {
-                log.warn('Failed to switch proxy service:', err.message);
+            } catch (err: unknown) {
+                log.warn('Failed to switch proxy service:', errorMessage(err));
             }
 
             try {
                 await webSocketService.onWorkspaceSwitch(workspaceId);
                 log.info('WebSocket service switched to new workspace');
-            } catch (err: any) {
-                log.warn('Failed to switch WebSocket service:', err.message);
+            } catch (err: unknown) {
+                log.warn('Failed to switch WebSocket service:', errorMessage(err));
             }
 
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
@@ -139,8 +147,8 @@ class CliSetupHandler {
                 try {
                     await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId);
                     log.info('Sync scheduler switched to new workspace');
-                } catch (err: any) {
-                    log.warn('Failed to switch sync scheduler:', err.message);
+                } catch (err: unknown) {
+                    log.warn('Failed to switch sync scheduler:', errorMessage(err));
                 }
             }
 
@@ -150,13 +158,13 @@ class CliSetupHandler {
 
             log.info(`Workspace ${workspaceId} joined and activated successfully`);
             return { success: true, workspaceId };
-        } catch (err: any) {
+        } catch (err: unknown) {
             log.error('Workspace join failed:', err);
-            return { success: false, error: err.message };
+            return { success: false, error: errorMessage(err) };
         }
     }
 
-    async importEnvironment(data: any): Promise<{ success: boolean; error?: string }> {
+    async importEnvironment(data: EnvironmentImportData): Promise<{ success: boolean; error?: string }> {
         const { appLifecycle, proxyService } = await getLazyDeps();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
         if (!workspaceSettingsService) {
@@ -173,10 +181,10 @@ class CliSetupHandler {
 
             const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
 
-            let existingData: any = { environments: { Default: {} }, activeEnvironment: 'Default' };
+            let existingData: EnvironmentsFile = { environments: { Default: {} }, activeEnvironment: 'Default' };
             try {
                 const existing = await atomicWriter.readJson(envPath);
-                if (existing) existingData = existing;
+                if (existing) existingData = existing as EnvironmentsFile;
             } catch { /* File doesn't exist yet */ }
 
             for (const [envName, variables] of Object.entries(data.environments)) {
@@ -195,26 +203,26 @@ class CliSetupHandler {
 
             try {
                 proxyService.updateEnvironmentVariables(activeVars);
-            } catch (err: any) {
-                log.warn('Failed to update proxy env vars:', err.message);
+            } catch (err: unknown) {
+                log.warn('Failed to update proxy env vars:', errorMessage(err));
             }
 
             this._notifyRenderer('environments-structure-changed', { workspaceId, timestamp: Date.now() });
 
             return { success: true };
-        } catch (err: any) {
+        } catch (err: unknown) {
             log.error('Environment import failed:', err);
-            return { success: false, error: err.message };
+            return { success: false, error: errorMessage(err) };
         }
     }
 
-    async _generateUniqueWorkspaceName(baseName: string, workspaceSettingsService: any): Promise<string> {
+    async _generateUniqueWorkspaceName(baseName: string, workspaceSettingsService: { getSettings(): Promise<{ workspaces?: Array<{ name: string }> }> }): Promise<string> {
         const settings = await workspaceSettingsService.getSettings();
         const existingWorkspaces = settings.workspaces || [];
         let counter = 1;
         let name = baseName;
 
-        while (existingWorkspaces.find((w: any) => w.name === name)) {
+        while (existingWorkspaces.find((w) => w.name === name)) {
             counter++;
             name = `${baseName} (${counter})`;
         }
@@ -222,7 +230,7 @@ class CliSetupHandler {
         return name;
     }
 
-    _normalizeAuthData(authType: string, authData?: Record<string, any>): NormalizedAuthData {
+    _normalizeAuthData(authType: string, authData?: Record<string, string>): NormalizedAuthData {
         if (!authType || authType === 'none') return {};
         if (!authData) return {};
 
@@ -245,7 +253,7 @@ class CliSetupHandler {
         try {
             const envPath = path.join(workspacePath, 'environments.json');
             const envData = await fsPromises.readFile(envPath, 'utf8');
-            const { environments, activeEnvironment } = JSON.parse(envData);
+            const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
             const activeVars = environments[activeEnvironment] || {};
             proxyService.updateEnvironmentVariables(activeVars);
             log.info(`Loaded ${Object.keys(activeVars).length} env vars for proxy`);
@@ -256,7 +264,7 @@ class CliSetupHandler {
         try {
             const sourcesPath = path.join(workspacePath, 'sources.json');
             const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-            const sources = JSON.parse(sourcesData);
+            const sources = JSON.parse(sourcesData) as Array<{ sourceId?: string; sourceContent?: string }>;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
                 log.info(`Loaded ${sources.length} sources for proxy`);
@@ -266,7 +274,7 @@ class CliSetupHandler {
         try {
             const rulesPath = path.join(workspacePath, 'rules.json');
             const rulesData = await fsPromises.readFile(rulesPath, 'utf8');
-            const rulesStorage = JSON.parse(rulesData);
+            const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
             if (rulesStorage.rules && rulesStorage.rules.header) {
                 proxyService.updateHeaderRules(rulesStorage.rules.header);
                 log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy`);
@@ -274,7 +282,7 @@ class CliSetupHandler {
         } catch { /* No rules yet */ }
     }
 
-    _notifyRenderer(channel: string, data: any): void {
+    _notifyRenderer(channel: string, data: Record<string, unknown>): void {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send(channel, data);
         }
@@ -282,4 +290,5 @@ class CliSetupHandler {
 }
 
 export { CliSetupHandler };
+export type { EnvironmentImportData };
 export default CliSetupHandler;

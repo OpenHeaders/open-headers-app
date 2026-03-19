@@ -529,7 +529,7 @@ class CliApiService {
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        const result = await this.setupHandler.importEnvironment(body);
+        const result = await this.setupHandler.importEnvironment(body as import('./CliSetupHandler').EnvironmentImportData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }

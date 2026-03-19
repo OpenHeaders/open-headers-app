@@ -70,4 +70,5 @@ class GitConnectionProgress {
 }
 
 export { GitConnectionProgress };
+export type { ProgressStep, OnProgressCallback };
 export default GitConnectionProgress;

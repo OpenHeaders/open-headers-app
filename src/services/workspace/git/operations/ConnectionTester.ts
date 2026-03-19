@@ -6,6 +6,11 @@
 import electron from 'electron';
 import mainLogger from '../../../../utils/mainLogger';
 import GitConnectionProgress from '../utils/GitConnectionProgress';
+import type { ProgressStep } from '../utils/GitConnectionProgress';
+import type { GitExecutor } from '../core/GitExecutor';
+import type GitAuthenticator from '../auth/GitAuthenticator';
+import type { ConfigFileDetector } from '../../ConfigFileDetector';
+import type { GitBranchManager } from '../repository/GitBranchManager';
 
 const { net } = electron;
 const { createLogger } = mainLogger;
@@ -16,12 +21,12 @@ interface ConnectionTestOptions {
   url: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, any>;
+  authData?: Record<string, string>;
   configDir?: string;
   filePath?: string;
   checkWriteAccess?: boolean;
   isInvite?: boolean;
-  onProgress?: (update: any, summary: any[]) => void;
+  onProgress?: (update: ProgressStep, summary: ProgressStep[]) => void;
 }
 
 interface ConnectionTestResult {
@@ -48,21 +53,29 @@ interface ConnectionTestResult {
   error?: string;
   errorType?: string;
   hint?: string;
-  progressSteps?: any[];
+  progressSteps?: ProgressStep[];
+}
+
+interface RepositoryAccessResult {
+  accessible: boolean;
+  branches?: string[];
+  defaultBranch?: string;
+  isPrivate?: boolean;
+  error?: string;
 }
 
 interface Dependencies {
-  executor: any;
-  authManager: any;
-  configDetector: any;
-  branchManager: any;
+  executor: GitExecutor;
+  authManager: GitAuthenticator;
+  configDetector: ConfigFileDetector;
+  branchManager: GitBranchManager;
 }
 
 class ConnectionTester {
-  private executor: any;
-  private authManager: any;
-  private configDetector: any;
-  private branchManager: any;
+  private executor: GitExecutor;
+  private authManager: GitAuthenticator;
+  private configDetector: ConfigFileDetector;
+  private branchManager: GitBranchManager;
 
   constructor(dependencies: Dependencies) {
     this.executor = dependencies.executor;
@@ -210,8 +223,8 @@ class ConnectionTester {
           authenticated: authType !== 'none',
           repository: {
             url,
-            defaultBranch: accessResult.defaultBranch,
-            isPrivate: accessResult.isPrivate
+            defaultBranch: accessResult.defaultBranch || 'main',
+            isPrivate: accessResult.isPrivate ?? true
           },
           branch: {
             name: branch,
@@ -263,7 +276,7 @@ class ConnectionTester {
   /**
    * Test repository access
    */
-  async testRepositoryAccess(url: string, env: NodeJS.ProcessEnv): Promise<any> {
+  async testRepositoryAccess(url: string, env: NodeJS.ProcessEnv): Promise<RepositoryAccessResult> {
     try {
       const { stdout } = await this.executor.execute(
         `ls-remote --heads "${url}"`,
@@ -510,7 +523,7 @@ class ConnectionTester {
   /**
    * Collect warnings from test results
    */
-  collectWarnings(accessResult: any, branchResult: any, configResult: any): string[] {
+  collectWarnings(accessResult: RepositoryAccessResult, branchResult: { exists: boolean; alternatives: string[]; name?: string }, configResult: { hasConfig: boolean | null; requiresClone?: boolean }): string[] {
     const warnings: string[] = [];
 
     if (!branchResult.exists) {
@@ -597,7 +610,7 @@ class ConnectionTester {
         });
       }, 10000);
 
-      request.on('response', (res: any) => {
+      request.on('response', (res: Electron.IncomingMessage) => {
         let data = '';
 
         res.on('data', (chunk: Buffer) => {
@@ -692,7 +705,7 @@ class ConnectionTester {
         resolve({ valid: true }); // Let git handle it
       }, 10000);
 
-      request.on('response', (res: any) => {
+      request.on('response', (res: Electron.IncomingMessage) => {
         const statusCode = res.statusCode;
 
         // Consume response data to free up memory
