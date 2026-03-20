@@ -21,7 +21,7 @@ export interface Settings {
   developerMode: boolean;
   recordingHotkey: string;
   logLevel: string;
-  [key: string]: unknown;
+  [key: string]: string | boolean | number | undefined;
 }
 
 interface SettingsContextValue {

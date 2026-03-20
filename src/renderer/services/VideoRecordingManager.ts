@@ -60,7 +60,7 @@ class VideoRecordingManager {
             const result = await this.stopRecording(String(data.recordingId));
 
             // Send result back to main process
-            window.electronAPI.sendVideoRecordingStopped(String(data.responseChannel), result);
+            window.electronAPI.sendVideoRecordingStopped(String(data.responseChannel), result as { success: boolean; error?: string });
         });
     }
 

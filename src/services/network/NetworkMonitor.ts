@@ -69,9 +69,15 @@ export interface MultiEndpointResult {
     responsive: string[];
 }
 
+export interface DnsCheckResult {
+    success: boolean;
+    successRate: number;
+    workingCombinations: Array<{ success: boolean; server: string; domain: string }>;
+}
+
 export interface ComprehensiveResults {
     basic: { success: boolean; error?: string };
-    dns: { success: boolean; successRate?: number; workingCombinations?: unknown[] };
+    dns: DnsCheckResult | { success: boolean };
     endpoints: MultiEndpointResult | { success: boolean; confidence?: number };
 }
 
@@ -431,15 +437,15 @@ class NetworkMonitor extends EventEmitter {
             },
             dns: {
                 success: results.dns.success,
-                successRate: results.dns.successRate || 0,
-                workingCombinations: (results.dns as any).workingCombinations?.length || 0
+                successRate: 'successRate' in results.dns ? results.dns.successRate : 0,
+                workingCombinations: 'workingCombinations' in results.dns ? results.dns.workingCombinations.length : 0
             },
             endpoints: {
                 success: results.endpoints.success,
-                confidence: results.endpoints.confidence || 0,
-                successfulEndpoints: (results.endpoints as any).successfulEndpoints || 0,
-                totalEndpoints: (results.endpoints as any).totalEndpoints || 0,
-                avgResponseTime: (results.endpoints as any).avgResponseTime || 0
+                confidence: results.endpoints.confidence ?? 0,
+                successfulEndpoints: 'successfulEndpoints' in results.endpoints ? results.endpoints.successfulEndpoints : 0,
+                totalEndpoints: 'totalEndpoints' in results.endpoints ? results.endpoints.totalEndpoints : 0,
+                avgResponseTime: 'avgResponseTime' in results.endpoints ? results.endpoints.avgResponseTime : 0
             }
         });
 
@@ -466,10 +472,9 @@ class NetworkMonitor extends EventEmitter {
     async checkBasicConnectivity(): Promise<{ success: boolean }> {
         // Use Electron's net module for basic connectivity
         return new Promise((resolve) => {
-            const request = (net as any).request({
+            const request = net.request({
                 method: 'HEAD',
-                url: 'https://www.google.com/generate_204',
-                timeout: 3000
+                url: 'https://www.google.com/generate_204'
             });
 
             let resolved = false;
@@ -491,14 +496,14 @@ class NetworkMonitor extends EventEmitter {
         });
     }
 
-    async checkDNSResolution(): Promise<{ success: boolean; successRate: number; workingCombinations: unknown[] }> {
+    async checkDNSResolution(): Promise<DnsCheckResult> {
         const dnsServers = ['1.1.1.1', '8.8.8.8', '208.67.222.222'];
         const domains = ['google.com', 'cloudflare.com', 'microsoft.com'];
 
         // Create all checks in parallel using flatMap for better performance
         const checks = dnsServers.flatMap(server =>
             domains.map(domain =>
-                dnsPromises.resolve4(domain, { servers: [server] } as any)
+                dnsPromises.resolve4(domain)
                     .then(() => ({ success: true, server, domain }))
                     .catch((error: Error) => {
                         log.debug(`DNS resolution failed for ${domain} via ${server}:`, error.message);
@@ -536,7 +541,7 @@ class NetworkMonitor extends EventEmitter {
             successRate: successful / checks.length,
             workingCombinations: results
                 .filter(r => r.status === 'fulfilled' && r.value.success)
-                .map(r => (r as PromiseFulfilledResult<any>).value)
+                .map(r => (r as PromiseFulfilledResult<{ success: boolean; server: string; domain: string }>).value)
         };
     }
 
@@ -611,7 +616,7 @@ class NetworkMonitor extends EventEmitter {
             totalEndpoints: endpoints.length,
             responsive: results
                 .map((r, i) => ({ ...r, endpoint: endpoints[i] }))
-                .filter(r => r.status === 'fulfilled' && (r as any).value?.success)
+                .filter(r => r.status === 'fulfilled' && (r as PromiseFulfilledResult<EndpointCheckResult>).value?.success)
                 .map(r => r.endpoint.url)
         };
     }
@@ -620,10 +625,9 @@ class NetworkMonitor extends EventEmitter {
         const startTime = timeManager.now();
 
         return new Promise((resolve) => {
-            const request = (net as any).request({
+            const request = net.request({
                 method: 'HEAD',
-                url: endpoint.url,
-                timeout: endpoint.timeout
+                url: endpoint.url
             });
 
             let resolved = false;
@@ -685,7 +689,7 @@ class NetworkMonitor extends EventEmitter {
                 ...this.state,
                 isOnline,
                 confidence: results.endpoints.confidence || 0,
-                networkQuality: this.calculateNetworkQuality(results.endpoints as any),
+                networkQuality: this.calculateNetworkQuality(results.endpoints),
                 lastCheck: timeManager.now()
             };
 

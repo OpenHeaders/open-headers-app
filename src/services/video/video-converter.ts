@@ -23,8 +23,17 @@ interface ConversionResult {
     error?: string;
 }
 
+interface FFprobeStream {
+    codec_type?: string;
+    codec_name?: string;
+    width?: number;
+    height?: number;
+    duration?: string;
+    bit_rate?: string;
+}
+
 interface VideoFormatInfo {
-    streams?: Array<Record<string, unknown>>;
+    streams?: FFprobeStream[];
     skipped?: boolean;
 }
 

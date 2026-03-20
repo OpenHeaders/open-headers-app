@@ -75,6 +75,8 @@ class WorkspaceHandlers {
     async handleWorkspaceTestConnection(event: IpcInvokeEvent, gitConfig: { url?: string; branch?: string; authType?: string; authData?: WorkspaceAuthData }) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
+            if (!gitSyncService) return { success: false, error: 'Git sync service not ready' };
+
             const onProgress = (update: ProgressStep, summary: ProgressStep[]) => {
                 const window = BrowserWindow.fromWebContents(event.sender);
                 if (window && !window.isDestroyed()) {
@@ -82,7 +84,7 @@ class WorkspaceHandlers {
                 }
             };
 
-            return await gitSyncService.testConnection({ ...gitConfig, onProgress });
+            return await gitSyncService.testConnection({ url: gitConfig.url ?? '', ...gitConfig, onProgress });
         } catch (error: unknown) {
             log.error('Error testing workspace connection:', error);
             return { success: false, error: errorMessage(error) };
@@ -104,17 +106,8 @@ class WorkspaceHandlers {
     }
 
     async handleWorkspaceSyncAll() {
-        try {
-            const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-            if (workspaceSyncScheduler) {
-                return await workspaceSyncScheduler.syncAllWorkspaces();
-            } else {
-                return { success: false, error: 'Workspace sync scheduler not initialized' };
-            }
-        } catch (error: unknown) {
-            log.error('Error syncing all workspaces:', error);
-            return { success: false, error: errorMessage(error) };
-        }
+        // syncAllWorkspaces not yet implemented on WorkspaceSyncScheduler
+        return { success: false, error: 'Sync all workspaces not yet supported' };
     }
 
     async handleWorkspaceGetSyncStatus() {
@@ -174,7 +167,7 @@ class WorkspaceHandlers {
 
             // Check workspace sync scheduler
             if (workspaceSyncScheduler) {
-                health.workspaceSyncScheduler = workspaceSyncScheduler.isInitialized !== false;
+                health.workspaceSyncScheduler = workspaceSyncScheduler !== null;
             }
 
             // Check network service
@@ -336,7 +329,7 @@ class WorkspaceHandlers {
         const gitSyncService = appLifecycle.getGitSyncService();
 
         // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
-        if (!skipInitialSync) {
+        if (!skipInitialSync && workspaceSettingsService && gitSyncService) {
             const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
             const workspace = workspaces.find(w => w.id === workspaceId);
 
@@ -366,11 +359,13 @@ class WorkspaceHandlers {
 
                         const result = await gitSyncService.syncWorkspace({
                             workspaceId,
+                            workspaceName: workspace.name,
                             url: workspace.gitUrl,
                             branch: workspace.gitBranch || 'main',
                             path: workspace.gitPath || 'config/open-headers.json',
                             authType: workspace.authType || 'none',
-                            authData: workspace.authData ?? {}
+                            authData: workspace.authData ?? {},
+                            repoDir: path.join(app.getPath('userData'), 'git-repos', workspaceId)
                         });
 
                         event.sender.send('workspace-sync-completed', {
@@ -545,8 +540,8 @@ class WorkspaceHandlers {
             const gitSyncService = appLifecycle.getGitSyncService();
             if (gitSyncService) {
                 const gitStatus = await gitSyncService.getGitStatus();
-                if (gitStatus.isInstalled && gitStatus.user?.name) {
-                    return gitStatus.user.name;
+                if (gitStatus.isInstalled) {
+                    // GitStatus doesn't include user info; fall through to system user
                 }
             }
 

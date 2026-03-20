@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from './TimeManager';
+import type { AppSettings } from '../../types/settings';
 
 const { createLogger } = mainLogger;
 
@@ -60,20 +61,30 @@ export const StateTransitions: Record<string, Record<string, string>> = {
     [AppStates.TERMINATED]: {}
 };
 
+interface StateTransitionData {
+    settings?: Partial<AppSettings>;
+    services?: Record<string, unknown>;
+    servers?: Record<string, unknown>;
+    workspace?: Record<string, unknown>;
+    error?: string | unknown;
+    reason?: string;
+    state?: string;
+}
+
 interface StateHistoryEntry {
     state: string;
     previousState?: string | null;
     timestamp: number;
     event: string;
-    data?: Record<string, unknown>;
+    data?: StateTransitionData;
 }
 
 interface AppContext {
     startTime: number;
     errors: Array<{ error: unknown; timestamp: number; state: string }>;
     retryCount: number;
-    services: Map<string, unknown> | Record<string, unknown>;
-    settings: Record<string, unknown> | null;
+    services: Map<string, unknown>;
+    settings: Partial<AppSettings> | null;
 }
 
 class AppStateMachineImpl extends EventEmitter {
@@ -110,7 +121,7 @@ class AppStateMachineImpl extends EventEmitter {
         return transitions && Object.prototype.hasOwnProperty.call(transitions, event);
     }
 
-    transition(event: string, data: Record<string, unknown> = {}): boolean {
+    transition(event: string, data: StateTransitionData = {}): boolean {
         if (!this.canTransition(event)) {
             this.log.warn(`Invalid transition: ${event} from state ${this.currentState}`);
             return false;
@@ -166,20 +177,20 @@ class AppStateMachineImpl extends EventEmitter {
         }
     }
 
-    settingsLoaded(settings: Record<string, unknown>): boolean {
+    settingsLoaded(settings: Partial<AppSettings>): boolean {
         this.context.settings = settings;
         return this.transition('SETTINGS_LOADED', { settings });
     }
 
     settingsReady(): boolean { return this.transition('SETTINGS_READY'); }
 
-    servicesReady(services: Record<string, unknown>): boolean {
-        this.context.services = services;
-        return this.transition('SERVICES_READY', { services });
+    servicesReady(services: Record<string, unknown> | Map<string, unknown>): boolean {
+        this.context.services = services instanceof Map ? services : new Map(Object.entries(services));
+        return this.transition('SERVICES_READY');
     }
 
-    serversReady(servers: Record<string, unknown>): boolean { return this.transition('SERVERS_READY', { servers }); }
-    workspaceChange(workspace: Record<string, unknown>): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
+    serversReady(servers: Record<string, unknown> = {}): boolean { return this.transition('SERVERS_READY', { servers }); }
+    workspaceChange(workspace: Record<string, unknown> = {}): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
     workspaceReady(): boolean { return this.transition('WORKSPACE_READY'); }
     networkLost(): boolean { return this.transition('NETWORK_LOST'); }
     networkRestored(): boolean { return this.transition('NETWORK_RESTORED'); }

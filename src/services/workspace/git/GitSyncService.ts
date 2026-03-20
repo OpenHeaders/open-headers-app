@@ -863,6 +863,15 @@ class GitSyncService {
       throw error;
     }
   }
+
+  async installGit(onProgress: (message: string) => void): Promise<boolean> {
+    this.gitAutoInstaller.setProgressCallback(onProgress);
+    try {
+      return await this.gitAutoInstaller.ensureGitInstalled();
+    } finally {
+      this.gitAutoInstaller.setProgressCallback(null);
+    }
+  }
 }
 
 // Export the class (not a singleton) to match original behavior

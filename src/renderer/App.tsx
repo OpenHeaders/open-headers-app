@@ -36,7 +36,7 @@ interface PartialSettings {
     developerMode?: boolean;
     recordingHotkey?: string;
     logLevel?: string;
-    [key: string]: unknown;
+    [key: string]: string | boolean | number | undefined;
 }
 
 const AppComponent: React.FC = () => {
@@ -261,13 +261,13 @@ const AppComponent: React.FC = () => {
 
     // Listen for team workspace invite and environment import events
     useEffect(() => {
-        const handleTeamWorkspaceInvite = (inviteRaw: Record<string, unknown>) => {
+        const handleTeamWorkspaceInvite = (inviteRaw: Partial<TeamWorkspaceInvite>) => {
             try {
                 if (!inviteRaw.workspaceName || !inviteRaw.repoUrl) {
                     throw new Error('Invalid invite data structure');
                 }
 
-                setTeamWorkspaceInvite(inviteRaw as unknown as TeamWorkspaceInvite);
+                setTeamWorkspaceInvite(inviteRaw as TeamWorkspaceInvite);
                 setInviteModalVisible(true);
                 setActiveTab('workspaces');
             } catch (error: unknown) {
@@ -276,14 +276,14 @@ const AppComponent: React.FC = () => {
             }
         };
 
-        const handleErrorMessage = (errorData: Record<string, unknown>) => {
+        const handleErrorMessage = (errorData: { title?: string; message: string }) => {
             showMessage('error', String(errorData.message));
         };
 
         // Set up event listeners
         const cleanupInviteListener = window.electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
         const cleanupErrorListener = window.electronAPI?.onShowErrorMessage?.(handleErrorMessage);
-        const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData: Record<string, unknown>) => {
+        const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData) => {
             handleEnvironmentConfigImport(envData);
         });
 
@@ -349,7 +349,7 @@ const AppComponent: React.FC = () => {
                     onOpenAbout={handleOpenAbout}
                     onSettingsCancel={handleSettingsCancel}
                     onAboutCancel={handleAboutCancel}
-                    onSettingsSave={handleSettingsSave}
+                    onSettingsSave={handleSettingsSave as (values: Record<string, unknown>) => Promise<void>}
                     onExportModalCancel={() => setExportModalVisible(false)}
                     onImportModalCancel={() => {
                         setImportModalVisible(false);

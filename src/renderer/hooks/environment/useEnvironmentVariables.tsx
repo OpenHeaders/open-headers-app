@@ -16,7 +16,7 @@ interface UseEnvironmentVariablesReturn {
  * Hook for environment variable management
  */
 export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
-  const { service, state, activeEnvironment, environments, isReady } = useEnvironmentCore();
+  const { service, activeEnvironment, environments, isReady } = useEnvironmentCore();
 
   const setVariable = useCallback(async (name: string, value: string | null, environment: string | null = null, isSecret: boolean = false): Promise<boolean> => {
     try {

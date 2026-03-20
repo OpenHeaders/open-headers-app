@@ -53,6 +53,11 @@ export interface Workspace {
   clonedFrom?: string;
   description?: string;
   metadata?: WorkspaceMetadata;
+  inviteMetadata?: {
+    invitedBy?: string | null;
+    inviteId?: string | null;
+    joinedAt?: string;
+  };
 }
 
 // ── Workspace sync ──────────────────────────────────────────────────

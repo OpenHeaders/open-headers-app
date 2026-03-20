@@ -48,9 +48,7 @@ class CertificateGenerator {
     }
   }
 
-  // node-forge is dynamically loaded without bundled types
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async generateWithForge(keyPath: string, certPath: string, forge: any): Promise<CertResult> { // any: untyped dynamic import
+  async generateWithForge(keyPath: string, certPath: string, forge: typeof import('node-forge')): Promise<CertResult> {
     const keys = forge.pki.rsa.generateKeyPair(2048);
     const cert = forge.pki.createCertificate();
 

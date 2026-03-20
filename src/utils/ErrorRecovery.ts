@@ -20,11 +20,10 @@ type ErrorType = typeof ErrorTypes[keyof typeof ErrorTypes];
 
 interface RecoveryContext {
   operationId?: string;
-  onAuthError?: (error: Error) => Promise<unknown>;
-  onConflict?: (error: Error) => Promise<unknown>;
+  onAuthError?: (error: Error) => Promise<boolean | null>;
+  onConflict?: (error: Error) => Promise<boolean | null>;
   updateTimeout?: (timeout: number) => void;
   timeout?: number;
-  [key: string]: unknown;
 }
 
 type RetryFn = (() => Promise<unknown>) | null;
@@ -384,10 +383,10 @@ class ErrorRecovery {
   /**
    * Create a retry wrapper for a function
    */
-  withRetry<T extends (...args: any[]) => Promise<any>>(fn: T, options: { maxRetries?: number; operationId?: string } = {}): (...args: Parameters<T>) => Promise<ReturnType<T>> {
+  withRetry<TArgs extends unknown[], TReturn>(fn: (...args: TArgs) => Promise<TReturn>, options: { maxRetries?: number; operationId?: string } = {}): (...args: TArgs) => Promise<TReturn> {
     const { maxRetries = this.maxRetries, operationId = `op-${Date.now()}` } = options;
 
-    return async (...args: Parameters<T>): Promise<ReturnType<T>> => {
+    return async (...args: TArgs): Promise<TReturn> => {
       let lastError: Error | undefined;
 
       for (let attempt = 0; attempt <= maxRetries; attempt++) {

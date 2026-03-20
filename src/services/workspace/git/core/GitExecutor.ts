@@ -29,7 +29,6 @@ interface ExecuteOptions {
   maxBuffer?: number;
   env?: NodeJS.ProcessEnv;
   cwd?: string;
-  [key: string]: unknown;
 }
 
 interface ExecuteResult {

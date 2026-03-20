@@ -95,7 +95,7 @@ export const createUpdateEventHandlers = ({
      *
      * @param {Object} payload - Event payload containing isManual and info
      */
-    const handleUpdateAlreadyDownloaded = (payload: { isManual?: boolean; info?: Record<string, unknown> } = {}) => {
+    const handleUpdateAlreadyDownloaded = (payload: { isManual?: boolean; info?: UpdateInfoEvent | null } = {}) => {
         const { isManual = false, info = null } = payload;
         debugLog(`${debugLabel} Received "update-already-downloaded" event (manual check: ${isManual}, version: ${info?.version})`);
 
@@ -289,12 +289,12 @@ export const createUpdateEventHandlers = ({
 
         // Set up event subscriptions
         const unsubscribeAlreadyInProgress = window.electronAPI.onUpdateCheckAlreadyInProgress?.(handleUpdateCheckAlreadyInProgress) || (() => {});
-        const unsubscribeAlreadyDownloaded = window.electronAPI.onUpdateAlreadyDownloaded?.(handleUpdateAlreadyDownloaded) || (() => {});
+        const unsubscribeAlreadyDownloaded = window.electronAPI.onUpdateAlreadyDownloaded?.((data) => handleUpdateAlreadyDownloaded({ info: data })) || (() => {});
         const unsubscribeClearChecking = window.electronAPI.onClearUpdateCheckingNotification?.(handleClearCheckingNotification) || (() => {});
-        const unsubscribeAvailable = window.electronAPI.onUpdateAvailable((data: Record<string, unknown>) => handleUpdateAvailable(data as unknown as { version: string }));
-        const unsubscribeProgress = window.electronAPI.onUpdateProgress((data: Record<string, unknown>) => handleUpdateProgress(data as unknown as { percent: number }));
-        const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded((data: Record<string, unknown>) => handleUpdateDownloaded(data as unknown as { version: string }));
-        const unsubscribeError = window.electronAPI.onUpdateError((data) => handleUpdateError(typeof data === 'string' ? data : String(data?.message ?? data)));
+        const unsubscribeAvailable = window.electronAPI.onUpdateAvailable((data) => handleUpdateAvailable(data));
+        const unsubscribeProgress = window.electronAPI.onUpdateProgress((data) => handleUpdateProgress(data));
+        const unsubscribeDownloaded = window.electronAPI.onUpdateDownloaded((data) => handleUpdateDownloaded(data));
+        const unsubscribeError = window.electronAPI.onUpdateError((data) => handleUpdateError(typeof data === 'string' ? data : String(data?.message ?? '')));
         const unsubscribeNotAvailable = window.electronAPI.onUpdateNotAvailable(handleUpdateNotAvailable);
 
         // Return cleanup function
