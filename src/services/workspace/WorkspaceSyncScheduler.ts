@@ -20,7 +20,8 @@ import type { Source } from '../../types/source';
 import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus, CommitInfo } from '../../types/workspace';
 import type { RulesCollection } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
-import type { EnvironmentMap, EnvironmentSchema } from '../../types/environment';
+import type { EnvironmentMap, EnvironmentSchema, EnvironmentsFile } from '../../types/environment';
+import type { RulesStorage } from '../../types/rules';
 import webSocketService from '../websocket/ws-service';
 import proxyService from '../proxy/ProxyService';
 
@@ -625,7 +626,7 @@ class WorkspaceSyncScheduler {
         try {
           const rulesPath = path.join(workspacePath, 'rules.json');
           const existingData = await fsPromises.readFile(rulesPath, 'utf8');
-          const existingRules = JSON.parse(existingData);
+          const existingRules: Partial<RulesStorage> = JSON.parse(existingData);
 
           if (JSON.stringify(existingRules.rules) !== JSON.stringify(newData.rules)) {
             log.info('Rules have changed');
@@ -641,7 +642,7 @@ class WorkspaceSyncScheduler {
         try {
           const proxyPath = path.join(workspacePath, 'proxy-rules.json');
           const existingData = await fsPromises.readFile(proxyPath, 'utf8');
-          const existingProxy = JSON.parse(existingData);
+          const existingProxy: ProxyRule[] = JSON.parse(existingData);
 
           if (JSON.stringify(existingProxy) !== JSON.stringify(newData.proxyRules)) {
             log.info('Proxy rules have changed');
@@ -657,7 +658,7 @@ class WorkspaceSyncScheduler {
         try {
           const envPath = path.join(workspacePath, 'environments.json');
           const existingData = await fsPromises.readFile(envPath, 'utf8');
-          const existingEnv = JSON.parse(existingData);
+          const existingEnv: Partial<EnvironmentsFile> = JSON.parse(existingData);
 
           // Extract environment names and variable names (not values)
           const getEnvStructure = (envData: EnvironmentMap): Record<string, string[]> => {
@@ -833,7 +834,7 @@ class WorkspaceSyncScheduler {
 
         if (readResult.exists && readResult.content) {
           // File exists and was read successfully - parse it
-          const parsed = JSON.parse(readResult.content);
+          const parsed: Partial<EnvironmentsFile> = JSON.parse(readResult.content);
 
           if (parsed.environments) {
             existingEnvironments = parsed.environments;

@@ -32,11 +32,11 @@ class WorkspaceManager {
     try {
       const data = await this.storageAPI.loadFromStorage('workspaces.json');
       if (data) {
-        const parsed = JSON.parse(data);
+        const parsed: Partial<WorkspacesConfig> = JSON.parse(data);
         return {
-          workspaces: parsed.workspaces || [],
-          activeWorkspaceId: parsed.activeWorkspaceId || 'default-personal',
-          syncStatus: parsed.syncStatus || {}
+          workspaces: parsed.workspaces ?? [],
+          activeWorkspaceId: parsed.activeWorkspaceId ?? 'default-personal',
+          syncStatus: parsed.syncStatus ?? {}
         };
       } else {
         // Initialize with default
