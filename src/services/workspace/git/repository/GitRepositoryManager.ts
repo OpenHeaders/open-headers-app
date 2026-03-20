@@ -8,40 +8,46 @@ import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
 import { GitAuthenticator } from '../auth/GitAuthenticator';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
 
 const log = createLogger('GitRepositoryManager');
 
+interface GitProgress {
+  phase: string;
+  message: string;
+}
+
 interface CloneOptions {
   url: string;
   targetDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   depth?: number;
   sparse?: boolean;
   sparsePatterns?: string[];
-  progressCallback?: (progress: Record<string, unknown>) => void;
+  progressCallback?: (progress: GitProgress) => void;
 }
 
 interface PullOptions {
   repoDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, string>;
-  progressCallback?: (progress: Record<string, unknown>) => void;
+  authData?: WorkspaceAuthData;
+  progressCallback?: (progress: GitProgress) => void;
 }
 
 interface PushOptions {
   repoDir: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   force?: boolean;
   setUpstream?: boolean;
-  progressCallback?: (progress: Record<string, unknown>) => void;
+  progressCallback?: (progress: GitProgress) => void;
 }
 
 interface OperationResult {
@@ -490,7 +496,7 @@ class GitRepositoryManager {
   /**
    * Setup sparse checkout
    */
-  async setupSparseCheckout(repoDir: string, patterns: string[], env: NodeJS.ProcessEnv, progressCallback: (progress: Record<string, unknown>) => void): Promise<void> {
+  async setupSparseCheckout(repoDir: string, patterns: string[], env: NodeJS.ProcessEnv, progressCallback: (progress: GitProgress) => void): Promise<void> {
     log.info('Setting up sparse checkout with patterns:', patterns);
     progressCallback({ phase: 'sparse', message: 'Configuring sparse checkout...' });
 

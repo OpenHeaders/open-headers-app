@@ -1,5 +1,8 @@
 import React from 'react';
 import { Button, Progress } from 'antd';
+import type { NotificationInstance } from 'antd/es/notification/interface';
+import type { ModalStaticFunctions } from 'antd/es/modal/confirm';
+import type { GlobalToken } from 'antd';
 import { ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-design/icons';
 
 /**
@@ -24,9 +27,9 @@ import { ReloadOutlined, CheckCircleOutlined, LoadingOutlined } from '@ant-desig
  * @param {function} debugLog - Debug logging function
  */
 interface UpdateNotificationManagerProps {
-    notification: Record<string, any>;
-    modal: Record<string, any>;
-    token: Record<string, any>;
+    notification: NotificationInstance;
+    modal: Omit<ModalStaticFunctions, 'warn'>;
+    token: GlobalToken;
     isInstalling: boolean;
     setIsInstalling: (value: boolean) => void;
     debugLog: (message: string) => void;

@@ -92,7 +92,7 @@ class NetworkService extends EventEmitter {
 
     // Concurrency control
     stateUpdateLock = false;
-    pendingStateChanges: Record<string, unknown> = {};
+    pendingStateChanges: Partial<NetworkState> = {};
 
     intervals = new Map<string, ReturnType<typeof setTimeout>>();
     isDestroyed = false;
@@ -319,7 +319,7 @@ class NetworkService extends EventEmitter {
     /**
      * Update state with changes
      */
-    updateState(changes: Record<string, unknown>, immediate = false): void {
+    updateState(changes: Partial<NetworkState>, immediate = false): void {
         if (changes.hasOwnProperty('isOnline')) {
             if (!changes.isOnline) {
                 this.log.debug('OFFLINE STATE REQUESTED - Stack trace:', new Error().stack);
@@ -372,7 +372,7 @@ class NetworkService extends EventEmitter {
             this.log.info(`Applying state change with hysteresis: ${currentIsOnline ? 'online' : 'offline'} -> ${newIsOnline ? 'online' : 'offline'}`);
         }
 
-        this.updateState(newState as Record<string, unknown>);
+        this.updateState(newState);
         this.updateAdaptiveMonitoring();
     }
 

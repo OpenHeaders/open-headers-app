@@ -11,6 +11,7 @@ import type { GitExecutor } from '../core/GitExecutor';
 import type GitAuthenticator from '../auth/GitAuthenticator';
 import type { ConfigFileDetector } from '../../ConfigFileDetector';
 import type { GitBranchManager } from '../repository/GitBranchManager';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const { net } = electron;
 const { createLogger } = mainLogger;
@@ -21,7 +22,7 @@ interface ConnectionTestOptions {
   url: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   configDir?: string;
   filePath?: string;
   checkWriteAccess?: boolean;

@@ -8,6 +8,7 @@ import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
 import type { EnvironmentsFile } from '../../types/environment';
 import type { HeaderRule } from '../proxy/ProxyService';
+import type { WorkspaceAuthData } from '../../types/workspace';
 import type { Source } from '../../types/source';
 
 const { app } = electron;
@@ -29,7 +30,7 @@ export interface JoinWorkspaceData {
     branch?: string;
     configPath?: string;
     authType?: string;
-    authData?: Record<string, string>;
+    authData?: WorkspaceAuthData;
     inviterName?: string;
     inviteId?: string;
 }
@@ -231,7 +232,7 @@ class CliSetupHandler {
         return name;
     }
 
-    _normalizeAuthData(authType: string, authData?: Record<string, string>): NormalizedAuthData {
+    _normalizeAuthData(authType: string, authData?: WorkspaceAuthData): NormalizedAuthData {
         if (!authType || authType === 'none') return {};
         if (!authData) return {};
 

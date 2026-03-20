@@ -5,23 +5,11 @@ import { getSourceName, truncateValue, truncateDomain } from '../../utils';
 import { useEnvironments } from '../../../../contexts';
 import { getResolvedPreview } from '../../../../utils/validation/environment-variables';
 import type { Source } from '../../../../../types/source';
+import type { ProxyRule } from '../../../../../types/proxy';
+
+export type { ProxyRule } from '../../../../../types/proxy';
 
 const { Text } = Typography;
-
-export interface ProxyRule {
-    id: string;
-    name?: string;
-    headerRuleId?: string;
-    headerName?: string;
-    headerValue?: string;
-    isDynamic?: boolean;
-    sourceId?: string;
-    prefix?: string;
-    suffix?: string;
-    hasEnvVars?: boolean;
-    domains?: string[];
-    enabled?: boolean;
-}
 
 export interface HeaderRule {
     id: string;

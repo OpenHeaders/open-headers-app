@@ -19,7 +19,7 @@ export interface NetworkManagerState {
     isOnline: boolean;
     networkQuality: string;
     vpnActive: boolean;
-    interfaces: unknown[];
+    interfaces: string[];
     primaryInterface: string | null;
     connectionType: string;
     lastCheck: number;
@@ -46,7 +46,7 @@ class NetworkStateManager extends EventEmitter {
 
     // Debounce timer for state changes
     private stateChangeTimer: ReturnType<typeof setTimeout> | undefined;
-    pendingStateChanges: Record<string, unknown> = {};
+    pendingStateChanges: Partial<NetworkManagerState> = {};
     stateUpdateLock = false;
     stateVersion = 0; // Version counter for detecting concurrent updates
 
@@ -82,7 +82,7 @@ class NetworkStateManager extends EventEmitter {
     /**
      * Update network state with debouncing to prevent rapid changes
      */
-    updateState(changes: Record<string, unknown>, immediate = false): void {
+    updateState(changes: Partial<NetworkManagerState>, immediate = false): void {
         // Merge pending changes
         this.pendingStateChanges = { ...this.pendingStateChanges, ...changes };
 
@@ -172,20 +172,15 @@ class NetworkStateManager extends EventEmitter {
     /**
      * Merge state changes deeply
      */
-    mergeStateChanges(currentState: Record<string, any>, changes: Record<string, any>): NetworkManagerState {
-        const newState: Record<string, any> = JSON.parse(JSON.stringify(currentState));
+    mergeStateChanges(currentState: NetworkManagerState, changes: Partial<NetworkManagerState>): NetworkManagerState {
+        const newState: NetworkManagerState = JSON.parse(JSON.stringify(currentState));
 
-        for (const [key, value] of Object.entries(changes)) {
-            if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                // Deep merge for objects
-                newState[key] = this.mergeStateChanges(newState[key] || {}, value);
-            } else {
-                // Direct assignment for primitives and arrays
-                newState[key] = value;
-            }
+        if (changes.diagnostics) {
+            newState.diagnostics = { ...newState.diagnostics, ...changes.diagnostics };
         }
 
-        return newState as NetworkManagerState;
+        const { diagnostics: _, ...rest } = changes;
+        return Object.assign(newState, rest);
     }
 
     /**
@@ -199,7 +194,7 @@ class NetworkStateManager extends EventEmitter {
      * Broadcast current state to all renderer processes
      */
     broadcastState(): void {
-        const windows = (BrowserWindow as any).getAllWindows();
+        const windows = BrowserWindow.getAllWindows();
         const stateUpdate = {
             state: this.getState(),
             timestamp: timeManager.now(),

@@ -39,6 +39,7 @@ import type { CommitOptions, CommitResult } from './operations/CommitManager';
 import GitCleanupManager from './utils/GitCleanupManager';
 import type { FullCleanupResult, CleanupStats } from './utils/GitCleanupManager';
 import { GitErrorHandler } from './utils/GitErrorHandler';
+import type { WorkspaceAuthData } from '../../../types/workspace';
 
 // Config modules
 import { ConfigFileDetector } from '../ConfigFileDetector';
@@ -66,7 +67,7 @@ interface CommitConfigurationOptions extends Partial<CommitOptions> {
   path?: string;
   files?: Record<string, string>;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   author?: string;
   email?: string;
   message?: string;
@@ -76,7 +77,7 @@ interface WritePermissionOptions {
   url: string;
   branch?: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
 }
 
 interface WritePermissionResult {

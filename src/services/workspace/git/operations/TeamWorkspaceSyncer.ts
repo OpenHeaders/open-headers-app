@@ -9,6 +9,7 @@ import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';
 import type { GitRepositoryManager, PullOptions, PushOptions, RepositoryStatus } from '../repository/GitRepositoryManager';
 import type { Source } from '../../../../types/source';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
@@ -48,11 +49,20 @@ interface SyncOptions {
   repoDir: string;
   branch: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   autoResolve?: boolean;
   progressCallback?: (progress: SyncProgressInfo) => void;
   path?: string;
   url?: string;
+}
+
+/** Shape of the JSON config file on disk (external boundary). */
+interface ConfigFileJson {
+  sources?: Source[];
+  rules?: Record<string, unknown>;
+  proxyRules?: unknown[];
+  environmentSchema?: unknown;
+  environments?: unknown;
 }
 
 interface WorkspaceConfigData {
@@ -95,7 +105,7 @@ interface HandlePullOptions {
   repoDir: string;
   branch: string;
   authType: string;
-  authData: Record<string, string>;
+  authData: WorkspaceAuthData;
   status: SyncStatusResult;
   progressCallback: (progress: SyncProgressInfo) => void;
   path?: string;
@@ -105,7 +115,7 @@ interface HandlePushOptions {
   repoDir: string;
   branch: string;
   authType: string;
-  authData: Record<string, string>;
+  authData: WorkspaceAuthData;
   status: SyncStatusResult;
   progressCallback: (progress: SyncProgressInfo) => void;
 }
@@ -114,7 +124,7 @@ interface HandleConflictOptions {
   repoDir: string;
   branch: string;
   authType: string;
-  authData: Record<string, string> & { env?: NodeJS.ProcessEnv };
+  authData: WorkspaceAuthData & { env?: NodeJS.ProcessEnv };
   status: SyncStatusResult;
   autoResolve: boolean;
   progressCallback: (progress: SyncProgressInfo) => void;
@@ -695,7 +705,7 @@ class TeamWorkspaceSyncer {
         'openheaders.json'
       ];
 
-      let configData: Record<string, unknown> | null = null;
+      let configData: ConfigFileJson | null = null;
       let configFile: string | null = null;
 
       // First check the config path directly
@@ -705,7 +715,7 @@ class TeamWorkspaceSyncer {
         const filePath = path.join(configDir, filename);
         try {
           const content = await fsPromises.readFile(filePath, 'utf8');
-          configData = JSON.parse(content) as Record<string, unknown>;
+          configData = JSON.parse(content) as ConfigFileJson;
           configFile = filePath;
           log.info(`Found config file: ${filePath}`);
           break;
@@ -719,24 +729,15 @@ class TeamWorkspaceSyncer {
         return null;
       }
 
-      // Extract relevant data for import
       const result: WorkspaceConfigData = {
-        sources: (Array.isArray(configData.sources) ? configData.sources : []) as Source[],
-        rules: (configData.rules as Record<string, unknown>) || {},
-        proxyRules: (configData.proxyRules as unknown[]) || []
+        sources: configData.sources ?? [],
+        rules: configData.rules ?? {},
+        proxyRules: configData.proxyRules ?? [],
+        environmentSchema: configData.environmentSchema,
+        environments: configData.environments,
       };
 
-      // Handle environment schema
-      if (configData.environmentSchema) {
-        result.environmentSchema = configData.environmentSchema;
-      }
-
-      // Handle environments (values)
-      if (configData.environments) {
-        result.environments = configData.environments;
-      }
-
-      log.info(`Loaded config with ${result.sources?.length || 0} sources, ${Object.keys(result.rules || {}).length} rule types, ${result.proxyRules?.length || 0} proxy rules`);
+      log.info(`Loaded config with ${result.sources.length} sources, ${Object.keys(result.rules).length} rule types, ${result.proxyRules.length} proxy rules`);
 
       return result;
 

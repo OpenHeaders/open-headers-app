@@ -10,19 +10,8 @@ const { createLogger } = mainLogger;
 
 const fsPromises = fs.promises;
 
-export interface ProxyRule {
-  id: string;
-  enabled?: boolean;
-  headerRuleId?: string;
-  headerName?: string;
-  headerValue?: string;
-  isDynamic?: boolean;
-  sourceId?: string | number;
-  prefix?: string;
-  suffix?: string;
-  domains?: string[];
-  [key: string]: unknown;
-}
+import type { ProxyRule } from '../../types/proxy';
+export type { ProxyRule } from '../../types/proxy';
 
 class ProxyRuleStore {
   private log = createLogger('ProxyRuleStore');

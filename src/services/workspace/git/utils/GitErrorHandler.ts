@@ -4,6 +4,7 @@
  */
 
 import mainLogger from '../../../../utils/mainLogger';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const { createLogger } = mainLogger;
 
@@ -128,6 +129,38 @@ const ERROR_PATTERNS: ErrorPattern[] = [
   }
 ];
 
+interface GitErrorContext {
+  operation?: string;
+  branch?: string;
+  repoDir?: string;
+  url?: string;
+  authType?: string;
+  authData?: WorkspaceAuthData;
+  workspaceId?: string;
+  workspaceName?: string;
+  configDir?: string;
+  filePath?: string;
+  path?: string;
+  message?: string;
+  checkWriteAccess?: boolean;
+  isInvite?: boolean;
+  force?: boolean;
+  autoResolve?: boolean;
+  depth?: number;
+  targetDir?: string;
+  repositoryUrl?: string;
+  author?: string | null;
+  email?: string | null;
+  files?: Record<string, string>;
+  progressCallback?: (progress: { phase: string; message: string }) => void;
+}
+
+interface ErrorDetails {
+  original: string;
+  recovery: string[];
+  context: GitErrorContext;
+}
+
 interface HandledError {
   type: ErrorType;
   message: string;
@@ -135,12 +168,12 @@ interface HandledError {
   recovery: string[];
   retryable: boolean;
   requiresUserAction: boolean;
-  context: Record<string, any>;
+  context: GitErrorContext;
 }
 
 interface EnhancedError extends Error {
   type?: ErrorType;
-  details?: Record<string, any>;
+  details?: ErrorDetails;
   timestamp?: string;
   code?: string;
   killed?: boolean;
@@ -150,7 +183,7 @@ class GitErrorHandler {
   /**
    * Handle Git error and provide user-friendly response
    */
-  handle(error: Error, context: Record<string, any> = {}): HandledError {
+  handle(error: Error, context: GitErrorContext = {}): HandledError {
     log.error('Handling Git error:', { error, context });
 
     const errorType = this.classifyError(error);
@@ -197,7 +230,7 @@ class GitErrorHandler {
   /**
    * Get user-friendly error message
    */
-  getFriendlyMessage(errorType: ErrorType, error: Error, context: Record<string, any>): string {
+  getFriendlyMessage(errorType: ErrorType, error: Error, context: GitErrorContext): string {
     const messages: Record<ErrorType, string> = {
       [ERROR_TYPES.AUTH_ERROR]:
         'Authentication failed. Please check your credentials and repository permissions.',
@@ -209,7 +242,7 @@ class GitErrorHandler {
         'Repository not found or inaccessible. Please verify the URL is correct.',
 
       [ERROR_TYPES.BRANCH_ERROR]:
-        `Branch '${context.branch || 'specified'}' not found in the repository.`,
+        `Branch '${String(context.branch ?? 'specified')}' not found in the repository.`,
 
       [ERROR_TYPES.CONFLICT_ERROR]:
         'Git merge conflict detected. Manual resolution required.',
@@ -236,7 +269,7 @@ class GitErrorHandler {
   /**
    * Get recovery suggestions based on error type
    */
-  getRecoverySuggestions(errorType: ErrorType, context: Record<string, any>): string[] {
+  getRecoverySuggestions(errorType: ErrorType, context: GitErrorContext): string[] {
     const suggestions: Record<ErrorType, string[]> = {
       [ERROR_TYPES.AUTH_ERROR]: [
         'Verify your access token or SSH key is correct',
@@ -342,7 +375,7 @@ class GitErrorHandler {
   /**
    * Create error with additional context
    */
-  createError(message: string, type: ErrorType, details: Record<string, any> = {}): EnhancedError {
+  createError(message: string, type: ErrorType, details?: ErrorDetails): EnhancedError {
     const error: EnhancedError = new Error(message);
     error.type = type;
     error.details = details;
@@ -354,7 +387,7 @@ class GitErrorHandler {
   /**
    * Wrap async operation with error handling
    */
-  async wrapOperation(operation: () => Promise<any>, context: Record<string, any> = {}): Promise<any> {
+  async wrapOperation<T>(operation: () => Promise<T>, context: GitErrorContext = {}): Promise<T> {
     try {
       return await operation();
     } catch (error) {
@@ -398,7 +431,7 @@ class GitErrorHandler {
   /**
    * Log error with context
    */
-  logError(error: Error, context: Record<string, any> = {}): HandledError {
+  logError(error: Error, context: GitErrorContext = {}): HandledError {
     const handled = this.handle(error, context);
 
     log.error('Git operation failed', {

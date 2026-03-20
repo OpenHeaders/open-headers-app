@@ -7,9 +7,9 @@ const { Text } = Typography;
 interface WorkspaceCreationProgressModalProps {
     visible: boolean;
     state: string;
-    progress: Record<string, any> | null;
+    progress: { step: number; total: number; title?: string; description?: string } | null;
     progressMessage: string;
-    error: Record<string, any> | string | null;
+    error: Error | string | null;
     onClose: () => void;
 }
 
@@ -143,7 +143,7 @@ const WorkspaceCreationProgressModal = ({
                 {error && (
                     <Alert
                         message="Creation Failed"
-                        description={typeof error === 'object' && error !== null ? (error as Record<string, unknown>).message as string : error}
+                        description={typeof error === 'object' ? error.message : error}
                         type="error"
                         showIcon
                         icon={<CloseCircleOutlined />}

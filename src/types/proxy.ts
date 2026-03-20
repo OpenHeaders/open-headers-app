@@ -8,8 +8,8 @@
 
 export interface ProxyRule {
   id: string;
-  name: string;
-  enabled: boolean;
+  name?: string;
+  enabled?: boolean;
   headerRuleId?: string;
   isDynamic?: boolean;
   headerName?: string;
@@ -18,6 +18,7 @@ export interface ProxyRule {
   prefix?: string;
   suffix?: string;
   domains?: string[];
+  hasEnvVars?: boolean;
 }
 
 // ── Proxy stats & status ────────────────────────────────────────────

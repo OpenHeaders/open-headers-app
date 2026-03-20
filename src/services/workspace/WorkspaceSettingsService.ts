@@ -18,45 +18,19 @@ const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSettingsService');
 
 import { DATA_FORMAT_VERSION } from '../../config/version';
-
-// Type definitions
-interface Workspace {
-  id: string;
-  name: string;
-  type: string;
-  description?: string;
-  isDefault?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  autoSync?: boolean;
-  gitUrl?: string;
-  gitBranch?: string;
-  gitPath?: string;
-  authType?: string;
-  authData?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-interface SyncStatus {
-  syncing?: boolean;
-  lastSync?: string;
-  error?: string | null;
-  lastCommit?: string;
-  commitInfo?: Record<string, unknown>;
-  [key: string]: unknown;
-}
+import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
 
 interface WorkspaceSettings {
   version: string;
   activeWorkspaceId: string;
   workspaces: Workspace[];
-  syncStatus?: Record<string, SyncStatus>;
+  syncStatus?: Record<string, WorkspaceSyncStatus>;
 }
 
 interface WorkspacesData {
   activeWorkspaceId: string;
   workspaces: Workspace[];
-  syncStatus: Record<string, SyncStatus>;
+  syncStatus: Record<string, WorkspaceSyncStatus>;
 }
 
 class WorkspaceSettingsService {
@@ -345,7 +319,7 @@ class WorkspaceSettingsService {
   /**
    * Update sync status for a workspace
    */
-  async updateSyncStatus(workspaceId: string, status: SyncStatus): Promise<void> {
+  async updateSyncStatus(workspaceId: string, status: WorkspaceSyncStatus): Promise<void> {
     try {
       const settings = await this.getSettings();
 
@@ -370,5 +344,7 @@ class WorkspaceSettingsService {
   }
 }
 
-export { WorkspaceSettingsService, Workspace, WorkspaceSettings, SyncStatus, WorkspacesData };
+export { WorkspaceSettingsService };
+export type { WorkspaceSettings, WorkspacesData };
+export type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
 export default WorkspaceSettingsService;

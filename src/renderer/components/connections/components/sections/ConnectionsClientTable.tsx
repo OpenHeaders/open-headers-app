@@ -37,8 +37,16 @@ const getBrowserDisplay = (browser: string) => {
  * @param {Object} status - Connection status containing clients array
  * @returns {JSX.Element} Connected clients table
  */
+interface ClientRecord {
+    id: string;
+    browser: string;
+    browserVersion: string;
+    extensionVersion?: string;
+    connectedAt?: string;
+}
+
 interface ConnectionsClientTableProps {
-    status: Record<string, any>;
+    status: { clients?: ClientRecord[] };
 }
 
 const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
@@ -49,7 +57,7 @@ const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
             title: 'Browser',
             key: 'browser',
             width: 180,
-            render: (_: unknown, record: Record<string, any>) => {
+            render: (_: unknown, record: ClientRecord) => {
                 const { name, icon } = getBrowserDisplay(record.browser);
                 const version = trimVersion(record.browserVersion);
                 return (
