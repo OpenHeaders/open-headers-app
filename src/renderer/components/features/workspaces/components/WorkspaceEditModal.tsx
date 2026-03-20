@@ -71,7 +71,7 @@ const WorkspaceEditModal = ({
             const authData = workspace.authData || {};
 
             // Set form values from the workspace
-            const formValues: Record<string, unknown> = {
+            const formValues: WorkspaceFormValues = {
                 name: workspace.name,
                 description: workspace.description,
                 type: workspace.type,

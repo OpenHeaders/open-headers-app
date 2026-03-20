@@ -4,8 +4,11 @@ import { TeamOutlined, CheckCircleOutlined, SyncOutlined, FolderOpenOutlined, Qu
 import { DEFAULT_VALUES, WORKSPACE_TYPES, AUTH_TYPES, SSH_KEY_SOURCES, TOKEN_TYPES } from '../features/workspaces';
 import { useWorkspaceCreation } from '../features/workspaces/hooks/useWorkspaceCreation';
 import { WorkspaceServiceAdapterFactory } from '../features/workspaces/services/WorkspaceServiceAdapter';
+import type { WorkspaceCreationDependencies } from '../features/workspaces/controllers/WorkspaceCreationController';
 import { useWorkspaces } from '../../hooks/workspace';
 import { prepareAuthData } from '../features/workspaces';
+import type { WorkspaceFormValues } from '../features/workspaces/utils/WorkspaceUtils';
+import type { TeamWorkspaceInvite } from '../../../types/workspace';
 import GitStatusAlert from '../features/workspaces/components/GitStatusAlert';
 import ConnectionProgressModal from '../features/workspaces/components/ConnectionProgressModal';
 
@@ -14,7 +17,7 @@ const { Text } = Typography;
 
 interface TeamWorkspaceAcceptInviteModalProps {
     visible: boolean;
-    inviteData: Record<string, any> | null;
+    inviteData: TeamWorkspaceInvite | null;
     onCancel: () => void;
     onSuccess?: () => void;
 }
@@ -43,19 +46,7 @@ const TeamWorkspaceAcceptInviteModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        }) as unknown as {
-            gitService: {
-                getStatus: () => Promise<Record<string, unknown>>;
-                install: () => Promise<{ success: boolean }>;
-                testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; [key: string]: unknown }>;
-                subscribeToConnectionProgress?: () => (() => void);
-                onProgress?: (callback: (event: { type: string; data: Record<string, unknown> }) => void) => (() => void);
-                [key: string]: unknown;
-            };
-            workspaceService: Record<string, unknown>;
-            syncService: Record<string, unknown>;
-            cleanup: () => void;
-        } | null;
+        });
     }, [workspaceContext]);
     
     const {
@@ -71,7 +62,7 @@ const TeamWorkspaceAcceptInviteModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services as unknown as import('../features/workspaces/controllers/WorkspaceCreationController').WorkspaceCreationDependencies, { disableNotifications: true });
+    } = useWorkspaceCreation(services as WorkspaceCreationDependencies, { disableNotifications: true });
 
     const authTypeValue = Form.useWatch('authType', form);
     const sshKeySourceValue = Form.useWatch('sshKeySource', form);
@@ -106,7 +97,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                 ? generateUniqueWorkspaceName(inviteData.workspaceName, workspaceContext.workspaces)
                 : inviteData.workspaceName;
 
-            const formValues: Record<string, unknown> = {
+            const formValues: WorkspaceFormValues = {
                 name: workspaceName,
                 description: inviteData.description || `Shared workspace: ${inviteData.workspaceName}`,
                 type: 'team',
@@ -176,7 +167,7 @@ const TeamWorkspaceAcceptInviteModal = ({
     const checkGitStatus = async () => {
         try {
             const status = await services!.gitService.getStatus();
-            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
+            setGitStatus(status);
         } catch (error) {
             console.error('Failed to check Git status:', error);
             setGitStatus({ isInstalled: false, error: (error instanceof Error ? error.message : String(error)) });
@@ -286,9 +277,12 @@ const TeamWorkspaceAcceptInviteModal = ({
             
             unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress?.() ?? null;
 
-            progressUnsubscribeRef.current = services!.gitService.onProgress?.((event: { type: string; data: Record<string, unknown> }) => {
+            progressUnsubscribeRef.current = services!.gitService.onProgress?.((event) => {
                 if (event.type === 'git-connection') {
-                    setConnectionProgress((event.data.summary as { step: string; status: string; details?: string; progress?: number }[]) || []);
+                    const summary = event.data.summary || [];
+                    setConnectionProgress(summary.map(item =>
+                        typeof item === 'string' ? { step: item, status: 'done' } : item
+                    ));
                 }
             }) ?? null;
 
@@ -304,7 +298,7 @@ const TeamWorkspaceAcceptInviteModal = ({
             });
             
             setConnectionTested(result.success);
-            setConnectionTestResult(result as { success: boolean; message?: string; error?: string });
+            setConnectionTestResult(result);
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
@@ -345,7 +339,7 @@ const TeamWorkspaceAcceptInviteModal = ({
         }
     };
 
-    const handleFinish = async (values: Record<string, unknown>) => {
+    const handleFinish = async (values: WorkspaceFormValues) => {
         if (!connectionTested) {
             message.warning('Please test the connection before joining the workspace');
             return;
@@ -378,7 +372,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                 }
             }
             
-            const formDataWithInviteMetadata = {
+            const formDataWithInviteMetadata: WorkspaceFormValues = {
                 ...finalValues,
                 type: 'team',
                 inviteMetadata: {

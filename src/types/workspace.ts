@@ -89,6 +89,27 @@ export interface TeamWorkspaceInvite {
   createdAt: string;
 }
 
+// ── IPC event data ──────────────────────────────────────────────────
+
+export interface WorkspaceSyncCompletedData {
+  workspaceId: string;
+  success: boolean;
+  error?: string;
+  timestamp?: number;
+  commitInfo?: CommitInfo;
+  hasChanges?: boolean;
+  isInitialSync?: boolean;
+}
+
+export interface WorkspaceDataUpdatedData {
+  workspaceId: string;
+  timestamp: number;
+}
+
+export interface CliWorkspaceJoinedData {
+  workspaceId: string;
+}
+
 // ── Services health ─────────────────────────────────────────────────
 
 export interface ServicesHealth {

@@ -317,18 +317,16 @@ const WorkspaceModal = ({
                     files['open-headers-config.json'] = JSON.stringify(exportData, null, 2);
                 } else {
                     // Separate main config and environment
-                    const mainData: Record<string, unknown> = { ...exportData };
-                    const envData: Record<string, unknown> = {};
-                    
-                    if (exportData.environmentSchema) {
-                        envData.environmentSchema = exportData.environmentSchema;
-                        delete mainData.environmentSchema;
+                    const { environmentSchema, environments, ...mainData } = exportData;
+                    const envData: Partial<Pick<ExportData, 'environmentSchema' | 'environments'>> = {};
+
+                    if (environmentSchema) {
+                        envData.environmentSchema = environmentSchema;
                     }
-                    if (exportData.environments) {
-                        envData.environments = exportData.environments;
-                        delete mainData.environments;
+                    if (environments) {
+                        envData.environments = environments;
                     }
-                    
+
                     // Sanitize sources in mainData for team workspaces
                     if (mainData.sources && Array.isArray(mainData.sources)) {
                         mainData.sources = mainData.sources.map(source => {

@@ -24,7 +24,7 @@ export function useWorkspaceSync({ activeWorkspaceId }: UseWorkspaceSyncDeps): v
   const pendingNotificationRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const unsubscribe = (window as unknown as { electronAPI: { onWorkspaceDataUpdated: (cb: (data: { workspaceId: string; timestamp: number }) => void) => (() => void) } }).electronAPI.onWorkspaceDataUpdated((updateData) => {
+    const unsubscribe = window.electronAPI.onWorkspaceDataUpdated((updateData) => {
       log.info('Received workspace data update notification:', {
         workspaceId: updateData.workspaceId,
         timestamp: updateData.timestamp

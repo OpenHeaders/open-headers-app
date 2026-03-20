@@ -119,7 +119,7 @@ class RulesManager {
   /**
    * Add a header rule
    */
-  addHeaderRule(rules: RulesCollection, ruleData: Record<string, unknown>) {
+  addHeaderRule(rules: RulesCollection, ruleData: Partial<HeaderRule>) {
     const newRule = {
       ...ruleData,
       id: Date.now().toString(),
@@ -135,7 +135,7 @@ class RulesManager {
   /**
    * Update a header rule
    */
-  updateHeaderRule(rules: RulesCollection, ruleId: string, updates: Record<string, unknown>) {
+  updateHeaderRule(rules: RulesCollection, ruleId: string, updates: Partial<HeaderRule>) {
     return {
       ...rules,
       header: rules.header.map((rule: HeaderRule) =>

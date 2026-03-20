@@ -79,7 +79,7 @@ export class WorkspaceHandler {
    * @returns {Promise<Object>} - Import statistics with created workspace info
    */
   async importWorkspace(workspaceInfo: WorkspaceData | null, options: WorkspaceImportOptions) {
-    const stats: { createdWorkspace: Record<string, unknown> | null; errors: Array<{ workspace: string; error: string }> } = {
+    const stats: { createdWorkspace: WorkspaceData | null; errors: Array<{ workspace: string; error: string }> } = {
       createdWorkspace: null,
       errors: []
     };
@@ -95,7 +95,7 @@ export class WorkspaceHandler {
       const error = new Error(`Invalid workspace configuration: ${validation.error}`);
       log.error('Failed to import workspace:', error);
       stats.errors.push({
-        workspace: workspaceInfo.name as string,
+        workspace: workspaceInfo.name,
         error: error.message
       });
       return stats;
@@ -116,7 +116,7 @@ export class WorkspaceHandler {
     } catch (error) {
       log.error('Failed to import workspace:', error);
       stats.errors.push({
-        workspace: workspaceInfo.name as string,
+        workspace: workspaceInfo.name,
         error: error instanceof Error ? error.message : String(error)
       });
       return stats;
