@@ -147,7 +147,7 @@ export const createTagEditHandlers = ({
  * @example
  * focusInput(inputRef, 100); // Focus input after 100ms
  */
-export const focusInput = (inputRef: React.RefObject<HTMLInputElement | null>, delay = 0) => {
+export const focusInput = (inputRef: React.RefObject<{ focus(): void } | null>, delay = 0) => {
     setTimeout(() => {
         try {
             inputRef.current?.focus();
@@ -171,7 +171,7 @@ export const focusInput = (inputRef: React.RefObject<HTMLInputElement | null>, d
  * const showInput = createShowInputHandler(setVisible, inputRef);
  * showInput(); // Shows input and focuses it
  */
-export const createShowInputHandler = (setInputVisible: (visible: boolean) => void, inputRef: React.RefObject<HTMLInputElement | null>) => () => {
+export const createShowInputHandler = (setInputVisible: (visible: boolean) => void, inputRef: React.RefObject<{ focus(): void } | null>) => () => {
     setInputVisible(true);
     focusInput(inputRef);
 };

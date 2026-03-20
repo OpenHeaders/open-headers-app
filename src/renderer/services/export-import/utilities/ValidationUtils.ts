@@ -15,6 +15,8 @@
 
 import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig';
 import type { Source } from '../../../../types/source';
+import type { ProxyRule } from '../../../../types/proxy';
+import type { EnvironmentSchema } from '../core/types';
 
 /** Validation result returned by all validation functions */
 interface ValidationResult {
@@ -30,10 +32,11 @@ interface ImportPayload {
   version?: string;
   workspace?: Record<string, unknown>;
   sources?: Partial<Source>[];
-  proxyRules?: unknown[];
+  proxyRules?: Partial<ProxyRule>[];
   rules?: Record<string, unknown[]>;
-  environmentSchema?: Record<string, unknown>;
-  [key: string]: unknown;
+  environmentSchema?: EnvironmentSchema;
+  environments?: Record<string, Record<string, { value: string; isSecret: boolean }>>;
+  rulesMetadata?: { totalRules?: number; lastUpdated?: string };
 }
 
 /**
