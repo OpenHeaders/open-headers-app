@@ -8,6 +8,7 @@ import fs from 'fs';
 import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';
 import type { GitRepositoryManager, PullOptions, PushOptions, RepositoryStatus } from '../repository/GitRepositoryManager';
+import type { Source } from '../../../../types/source';
 import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
@@ -55,7 +56,7 @@ interface SyncOptions {
 }
 
 interface WorkspaceConfigData {
-  sources: unknown[];
+  sources: Source[];
   rules: Record<string, unknown>;
   proxyRules: unknown[];
   environmentSchema?: unknown;
@@ -720,7 +721,7 @@ class TeamWorkspaceSyncer {
 
       // Extract relevant data for import
       const result: WorkspaceConfigData = {
-        sources: (configData.sources as unknown[]) || [],
+        sources: (Array.isArray(configData.sources) ? configData.sources : []) as Source[],
         rules: (configData.rules as Record<string, unknown>) || {},
         proxyRules: (configData.proxyRules as unknown[]) || []
       };

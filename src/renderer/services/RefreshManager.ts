@@ -62,9 +62,6 @@ interface SourceStatusCache {
   circuitBreaker?: CircuitBreakerState;
 }
 
-/** Scheduler-compatible source type */
-/** Matches RefreshSource in NetworkAwareScheduler */
-type SchedulerSource = Source;
 
 import NetworkAwareScheduler from './NetworkAwareScheduler';
 import RefreshCoordinator from './RefreshCoordinator';

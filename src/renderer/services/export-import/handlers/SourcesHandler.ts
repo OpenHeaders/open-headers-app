@@ -8,7 +8,8 @@
 import { isSourceDuplicate } from '../utilities/DuplicateDetection';
 import { validateSource } from '../utilities/ValidationUtils';
 import { IMPORT_MODES } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ExportOptions, SourceData } from '../core/types';
+import type { ExportImportDependencies, ExportOptions } from '../core/types';
+import type { Source } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SourcesHandler');
@@ -29,7 +30,7 @@ export class SourcesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of sources or null if not selected
    */
-  async exportSources(options: ExportOptions): Promise<SourceData[] | null> {
+  async exportSources(options: ExportOptions): Promise<Source[] | null> {
     const { selectedItems } = options;
 
     if (!selectedItems.sources) {
@@ -41,7 +42,7 @@ export class SourcesHandler {
       const sources = this.dependencies.sources || [];
 
       // Filter out invalid sources before export
-      const validSources = sources.filter((source: SourceData) => {
+      const validSources = sources.filter((source: Source) => {
         const validation = validateSource(source);
         if (!validation.success) {
           log.warn(`Filtering out invalid source during export: ${validation.error}`, source);
@@ -64,7 +65,7 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport: SourceData[], options: { importMode?: string }) {
+  async importSources(sourcesToImport: Source[], options: { importMode?: string }) {
     const stats: { imported: number; skipped: number; errors: Array<{ source: string; error: string }> } = {
       imported: 0,
       skipped: 0,
@@ -112,7 +113,7 @@ export class SourcesHandler {
    * @returns {Promise<Object>} - Import result
    * @private
    */
-  async _importSingleSource(source: SourceData, options: { importMode?: string }) {
+  async _importSingleSource(source: Source, options: { importMode?: string }) {
     // Validate source structure
     const validation = validateSource(source);
     if (!validation.success) {
@@ -122,10 +123,7 @@ export class SourcesHandler {
     // Check for duplicates in merge mode
     if (options.importMode === IMPORT_MODES.MERGE) {
       const currentSources = this._getCurrentSources();
-      const isDuplicate = isSourceDuplicate(
-        source as { sourceType: string; sourcePath?: string; url?: string },
-        currentSources as { sourceType: string; sourcePath?: string; url?: string }[]
-      );
+      const isDuplicate = isSourceDuplicate(source, currentSources);
       
       if (isDuplicate) {
         log.debug(`Skipping duplicate source: ${source.sourceId}`);
@@ -144,7 +142,7 @@ export class SourcesHandler {
    * @returns {Array} - Current sources
    * @private
    */
-  _getCurrentSources(): SourceData[] {
+  _getCurrentSources(): Source[] {
     try {
       return this.dependencies.exportSources();
     } catch (error) {
@@ -159,10 +157,10 @@ export class SourcesHandler {
    * @returns {Promise<boolean>} - Success status
    * @private
    */
-  async _addSource(source: SourceData) {
+  async _addSource(source: Source) {
     // Dynamic import to avoid circular dependencies
     const mod = await import('../../../hooks/workspace/useSources');
-    const addSource = (mod as unknown as { addSource?: (s: SourceData) => Promise<boolean> }).addSource;
+    const addSource = (mod as unknown as { addSource?: (s: Source) => Promise<boolean> }).addSource;
     const success = await addSource?.(source);
     
     if (!success) {
@@ -183,7 +181,7 @@ export class SourcesHandler {
     log.info(`Clearing ${currentSources.length} existing sources`);
     
     for (const source of currentSources) {
-      const sourceId = source.sourceId as string;
+      const sourceId = source.sourceId;
       try {
         await removeSource(sourceId);
       } catch (error) {
@@ -197,7 +195,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources to validate
    * @returns {Object} - Validation result
    */
-  validateSourcesForExport(sources: SourceData[]) {
+  validateSourcesForExport(sources: Source[]) {
     if (!Array.isArray(sources)) {
       return {
         success: false,
@@ -228,7 +226,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources array
    * @returns {Object} - Statistics object
    */
-  getSourcesStatistics(sources: SourceData[]) {
+  getSourcesStatistics(sources: Source[]) {
     if (!Array.isArray(sources)) {
       return { total: 0, byType: {} };
     }
@@ -239,7 +237,7 @@ export class SourcesHandler {
     };
 
     sources.forEach(source => {
-      const type = (source.sourceType as string) || 'unknown';
+      const type = source.sourceType || 'unknown';
       stats.byType[type] = (stats.byType[type] || 0) + 1;
     });
 

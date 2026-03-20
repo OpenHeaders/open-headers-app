@@ -9,6 +9,7 @@ import {
     OVERDUE_RETRY_CONFIG,
     calculateDelayWithJitter
 } from '../constants/retryConfig';
+import type { Source } from '../../types/source';
 const log = createLogger('NetworkAwareScheduler');
 
 interface NetworkState {
@@ -32,17 +33,7 @@ interface ScheduleEntry {
     isTemporary?: boolean;
 }
 
-interface RefreshSource {
-    sourceId: string;
-    sourceType: string;
-    refreshOptions?: {
-        interval?: number;
-        lastRefresh?: number | null;
-        alignToMinute?: boolean;
-        alignToHour?: boolean;
-        alignToDay?: boolean;
-    };
-}
+type RefreshSource = Pick<Source, 'sourceId' | 'sourceType' | 'refreshOptions'>;
 
 interface TimeEvent {
     type: string;
@@ -135,7 +126,7 @@ class NetworkAwareScheduler {
       intervalMs,
       lastRefresh: existingSchedule?.lastRefresh ||
                    (source.refreshOptions?.lastRefresh
-                    ? timeManager.getDate(source.refreshOptions.lastRefresh as number | null | undefined).getTime()
+                    ? timeManager.getDate(source.refreshOptions.lastRefresh).getTime()
                     : null),
       nextRefresh: null,
       retryCount: 0,

@@ -52,6 +52,9 @@ export interface RefreshOptions {
   lastRefresh?: number | null;
   nextRefresh?: number | null;
   preserveTiming?: boolean;
+  alignToMinute?: boolean;
+  alignToHour?: boolean;
+  alignToDay?: boolean;
 }
 
 export interface RefreshStatus {

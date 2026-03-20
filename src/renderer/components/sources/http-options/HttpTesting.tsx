@@ -28,7 +28,7 @@ import { showMessage } from '../../../utils/ui/messageUtil';
 import { validateAllHttpFields } from './HttpValidation';
 import { createLogger } from '../../../utils/error-handling/logger';
 import type { EnvironmentContextLike, HttpProgressCallback, TestResponseContent } from '../../../../types/http';
-import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../../../types/source';
+import type { JsonFilter, SourceHeader, SourceQueryParam, SourceType, SourceMethod, SourceRequestOptions } from '../../../../types/source';
 
 const log = createLogger('HttpTesting');
 
@@ -434,18 +434,12 @@ export const createHttpTestHandler = ({
  * @returns {Object} Prepared request options
  */
 interface HttpFormValues {
-    sourceType?: string;
+    sourceType?: SourceType;
     sourcePath?: string;
-    sourceMethod?: string;
+    sourceMethod?: SourceMethod;
     sourceTag?: string;
-    requestOptions?: {
-        headers?: SourceHeader[];
-        queryParams?: SourceQueryParam[];
-        body?: string;
-        contentType?: string;
-        totpSecret?: string;
-    };
-    jsonFilter?: { enabled: boolean; path: string };
+    requestOptions?: SourceRequestOptions;
+    jsonFilter?: JsonFilter;
 }
 
 const prepareRequestOptions = (form: FormInstance, values: HttpFormValues): TestRequestOptions => {

@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { Source } from '../../types/source';
 const { ipcRenderer } = electron;
 
 const settingsAPI = {
@@ -10,7 +11,7 @@ const settingsAPI = {
     setAutoLaunch: (enable: boolean): Promise<unknown> => ipcRenderer.invoke('setAutoLaunch', enable),
 
     // WebSocket sources
-    updateWebSocketSources: (sources: unknown): void => {
+    updateWebSocketSources: (sources: Source[]): void => {
         ipcRenderer.send('updateWebSocketSources', sources);
     }
 };

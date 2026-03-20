@@ -9,7 +9,6 @@ import type { Source } from '../../../../types/source';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentUtils');
 
-type SourceConfig = Source;
 
 /** Header rule with optional environment variable tracking */
 interface HeaderRule {
@@ -54,7 +53,7 @@ export const extractVariables = (text: string): string[] => {
  * @param {Object} rules - Rules object containing header rules
  * @returns {string[]} Array of missing variable names
  */
-export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment: Record<string, unknown>, rules: RulesConfig | null = null): string[] => {
+export const checkMissingVariables = (sources: Source[], targetEnvironment: Record<string, unknown>, rules: RulesConfig | null = null): string[] => {
   const missingVars = new Set<string>();
   
   if (!sources || !Array.isArray(sources)) {
@@ -62,7 +61,7 @@ export const checkMissingVariables = (sources: SourceConfig[], targetEnvironment
     return [];
   }
 
-  sources.forEach((source: SourceConfig) => {
+  sources.forEach((source: Source) => {
     if (source.sourceType === 'http') {
       // Check URL for variables
       const urlVars = extractVariables(source.sourcePath || '');
@@ -162,7 +161,7 @@ export const generateUniqueEnvironmentName = (baseName: string, existingEnvironm
  * @param {Object} source - Source configuration object
  * @returns {boolean} True if source uses variables
  */
-export const sourceUsesVariables = (source: SourceConfig | null): boolean => {
+export const sourceUsesVariables = (source: Source | null): boolean => {
   if (!source) return false;
   
   const sourceStr = JSON.stringify(source);
@@ -174,7 +173,7 @@ export const sourceUsesVariables = (source: SourceConfig | null): boolean => {
  * @param {Array} sources - Array of source configurations
  * @returns {Array} Filtered array of sources using variables
  */
-export const getSourcesUsingVariables = (sources: SourceConfig[]): SourceConfig[] => {
+export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
   if (!sources || !Array.isArray(sources)) return [];
   
   return sources.filter(sourceUsesVariables);
@@ -188,7 +187,7 @@ export const getSourcesUsingVariables = (sources: SourceConfig[]): SourceConfig[
  * @param {Object} rules - Rules object for rule name lookup
  * @returns {Array} Array of formatted source info
  */
-export const formatVariableUsage = (varName: string, sourceIds: string[], sources: SourceConfig[], rules: RulesConfig | null = null): VariableUsageInfo[] => {
+export const formatVariableUsage = (varName: string, sourceIds: string[], sources: Source[], rules: RulesConfig | null = null): VariableUsageInfo[] => {
   if (!sourceIds || !Array.isArray(sourceIds)) return [];
   
   return sourceIds.map(sourceId => {
@@ -213,7 +212,7 @@ export const formatVariableUsage = (varName: string, sourceIds: string[], source
     }
     
     // Regular source
-    const source = sources.find((s: SourceConfig) => s.sourceId === sourceId);
+    const source = sources.find((s: Source) => s.sourceId === sourceId);
     return {
       sourceId,
       sourceName: source?.sourceName || `Source ${sourceId}`,

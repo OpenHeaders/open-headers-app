@@ -3,7 +3,8 @@ import { Card, Space, Typography, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { ProxyRuleTableModular } from '../tables';
 import { ProxyRuleFormModular } from '../forms';
-import type { ProxyRule, ProxySource, HeaderRule } from '../tables/ProxyRuleTableColumns';
+import type { ProxyRule, HeaderRule } from '../tables/ProxyRuleTableColumns';
+import type { Source } from '../../../../../types/source';
 
 const { Title } = Typography;
 
@@ -48,7 +49,7 @@ const { Title } = Typography;
  */
 interface ProxyRulesSectionProps {
     rules: ProxyRule[];
-    sources: ProxySource[];
+    sources: Source[];
     headerRules: HeaderRule[];
     onSaveRule: (rule: ProxyRule) => Promise<boolean>;
     onDeleteRule: (ruleId: string) => Promise<boolean>;

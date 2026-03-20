@@ -111,9 +111,9 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         const envs: Record<string, { varCount: number }> = {};
         
         // Count sources, rules, and proxy rules
-        const sourceCount = data.sources ? Object.keys(data.sources as Record<string, unknown>).length : 0;
-        const ruleCount = data.rules ? (data.rules as unknown[]).length : 0;
-        const proxyRuleCount = data.proxyRules ? (data.proxyRules as unknown[]).length : 0;
+        const sourceCount = Array.isArray(data.sources) ? data.sources.length : 0;
+        const ruleCount = Array.isArray(data.rules) ? data.rules.length : 0;
+        const proxyRuleCount = Array.isArray(data.proxyRules) ? data.proxyRules.length : 0;
 
         // Extract available environments
         if (data.environments) {

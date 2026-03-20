@@ -19,6 +19,7 @@ import EditableCell from './EditableCell';
 import JWTEditorModal from './JWTEditorModal';
 import { showMessage } from '../../../utils';
 import { isJWT } from '../../../utils/jwtUtils';
+import type { Source } from '../../../../types/source';
 
 const { Text } = Typography;
 
@@ -55,11 +56,7 @@ interface HeaderRuleEntry {
     headerName?: string;
 }
 
-interface SourceEntry {
-    sourceId: string;
-    sourceName?: string;
-    name?: string;
-}
+type SourceEntry = Pick<Source, 'sourceId' | 'sourceName'>;
 
 interface RulesMap {
     header?: HeaderRuleEntry[];
@@ -371,7 +368,7 @@ const VariableTable = ({
           
           // Regular source
           const source = sources.find(s => s.sourceId === sourceId);
-          const sourceName = source?.sourceName || source?.name || `Source ${sourceId}`;
+          const sourceName = source?.sourceName || `Source ${sourceId}`;
           return (
             <Tag key={sourceId} color="blue">
               {sourceName}

@@ -57,6 +57,7 @@ import {
     createTestSourceId
 } from './source-form';
 import type { NewSourceData } from './source-form';
+import type { SourceType } from '../../../types/source';
 
 const log = createLogger('SourceForm');
 const { Option } = Select;
@@ -75,7 +76,7 @@ interface SourceFormProps { onAddSource: (sourceData: NewSourceData) => Promise<
 const SourceForm = ({ onAddSource }: SourceFormProps) => {
     // Form and component state
     const [form] = Form.useForm();
-    const [sourceType, setSourceType] = useState('file');
+    const [sourceType, setSourceType] = useState<SourceType>('file');
     const [filePath, setFilePath] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [testing, setTesting] = useState(false);

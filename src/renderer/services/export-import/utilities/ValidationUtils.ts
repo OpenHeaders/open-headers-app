@@ -29,7 +29,7 @@ interface ValidationResult {
 interface ImportPayload {
   version?: string;
   workspace?: Record<string, unknown>;
-  sources?: unknown[];
+  sources?: Partial<Source>[];
   proxyRules?: unknown[];
   rules?: Record<string, unknown[]>;
   environmentSchema?: Record<string, unknown>;
@@ -235,15 +235,14 @@ export function validateProxyRule(ruleInput: unknown): ValidationResult {
  * @param {Object} source - Source object
  * @returns {Object} - Validation result
  */
-export function validateSource(sourceInput: unknown): ValidationResult {
-  if (!sourceInput || typeof sourceInput !== 'object') {
+export function validateSource(source: Partial<Source>): ValidationResult {
+  if (!source || typeof source !== 'object') {
     return {
       success: false,
       error: 'Source must be an object'
     };
   }
 
-  const source = sourceInput as Partial<Source>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.SOURCE;
   for (const field of requiredFields) {
     if (!source[field as keyof Source]) {
@@ -397,7 +396,7 @@ export function validateImportPayload(payload: ImportPayload): ValidationResult 
 
   // Sources validation
   if (payload.sources && Array.isArray(payload.sources)) {
-    payload.sources.forEach((source: unknown, index: number) => {
+    payload.sources.forEach((source, index) => {
       const sourceValidation = validateSource(source);
       if (!sourceValidation.success) {
         errors.push(`Source ${index + 1} validation failed: ${sourceValidation.error}`);

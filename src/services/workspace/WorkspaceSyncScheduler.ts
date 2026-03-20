@@ -18,6 +18,7 @@ const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
 
 import { DATA_FORMAT_VERSION } from '../../config/version';
+import type { Source } from '../../types/source';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -33,7 +34,6 @@ const RESUME_SYNC_DELAY = 5000; // 5 seconds delay after network recovery to let
 // Type definitions
 interface NetworkState {
   isOnline: boolean;
-  [key: string]: unknown;
 }
 
 interface NetworkService {
@@ -56,7 +56,6 @@ interface Workspace {
   gitPath?: string;
   authType?: string;
   authData?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 interface SyncConfig {
@@ -83,48 +82,16 @@ interface SyncData {
   proxyRules?: unknown[];
   environments?: Record<string, Record<string, unknown>>;
   environmentSchema?: EnvironmentSchema;
-  [key: string]: unknown;
 }
 
-interface Source {
-  sourceId?: string;
-  sourceType?: string;
-  sourcePath?: string;
-  sourceMethod?: string;
-  sourceTag?: string;
-  sourceContent?: string | null;
-  originalResponse?: string;
-  isFiltered?: boolean;
-  filteredWith?: unknown;
-  activationState?: unknown;
-  missingDependencies?: unknown[];
-  requestOptions?: unknown;
-  jsonFilter?: unknown;
-  refreshOptions?: RefreshOptions;
-  createdAt?: string;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
-
-interface RefreshOptions {
-  enabled?: boolean;
-  type?: string;
-  interval?: number;
-  lastRefresh?: unknown;
-  nextRefresh?: unknown;
-  [key: string]: unknown;
-}
 
 interface EnvironmentSchema {
   environments?: Record<string, {
     variables?: Array<{
       name?: string;
       isSecret?: boolean;
-      [key: string]: unknown;
     }>;
-    [key: string]: unknown;
   }>;
-  [key: string]: unknown;
 }
 
 interface GitSyncService {
@@ -601,7 +568,7 @@ class WorkspaceSyncScheduler {
         try {
           const sourcesPath = path.join(workspacePath, 'sources.json');
           const existingData = await fsPromises.readFile(sourcesPath, 'utf8');
-          const existingSources = JSON.parse(existingData) as Source[];
+          const existingSources: Source[] = JSON.parse(existingData);
 
           // Compare sources (ignore dynamic fields like sourceContent, originalResponse, refresh timings, etc.)
           const normalizeSource = (source: Source) => ({
@@ -764,8 +731,8 @@ class WorkspaceSyncScheduler {
         }
 
         // Merge sources - use remote config but preserve local execution data
-        mergedSources = data.sources.map(remoteSource => {
-          const existingSource = existingSourcesMap.get(remoteSource.sourceId!);
+        mergedSources = data.sources.map((remoteSource): Source => {
+          const existingSource = existingSourcesMap.get(remoteSource.sourceId);
 
           if (existingSource) {
             // Preserve local execution data
@@ -779,11 +746,13 @@ class WorkspaceSyncScheduler {
               activationState: existingSource.activationState || remoteSource.activationState,
               missingDependencies: existingSource.missingDependencies || [],
               // Preserve refresh timing but take enabled/interval from remote
-              refreshOptions: {
-                ...remoteSource.refreshOptions,
-                lastRefresh: existingSource.refreshOptions?.lastRefresh,
-                nextRefresh: existingSource.refreshOptions?.nextRefresh
-              },
+              refreshOptions: remoteSource.refreshOptions
+                ? {
+                    ...remoteSource.refreshOptions,
+                    lastRefresh: existingSource.refreshOptions?.lastRefresh ?? null,
+                    nextRefresh: existingSource.refreshOptions?.nextRefresh ?? null
+                  }
+                : existingSource.refreshOptions,
               // Preserve other local metadata
               createdAt: existingSource.createdAt || remoteSource.createdAt,
               updatedAt: existingSource.updatedAt || remoteSource.updatedAt

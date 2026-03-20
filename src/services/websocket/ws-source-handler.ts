@@ -8,14 +8,14 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
+import type { Source } from '../../types/source';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');
 
-interface Source {
-    sourceId?: string;
-    sourceContent?: string | null;
-    [key: string]: unknown;
+interface RulesUpdateMessage {
+    type: 'rules-update';
+    data?: { rules?: Record<string, unknown>; version?: string };
 }
 
 interface SourceServiceLike {
@@ -42,17 +42,16 @@ class WSSourceHandler {
     /**
      * Update sources and broadcast to all clients
      */
-    updateSources(sources: unknown): void {
-        if (sources && typeof sources === 'object' && !Array.isArray(sources) && 'type' in sources && (sources as Record<string, unknown>).type === 'rules-update') {
-            const rulesUpdate = sources as { data?: { rules?: Record<string, unknown> } };
-            if (rulesUpdate.data && rulesUpdate.data.rules) {
-                this.wsService.rules = rulesUpdate.data.rules;
+    updateSources(sources: Source[] | RulesUpdateMessage): void {
+        if (!Array.isArray(sources)) {
+            if (sources.data?.rules) {
+                this.wsService.rules = sources.data.rules;
                 this.wsService.ruleHandler.broadcastRules();
             }
             return;
         }
 
-        const sourceArray = sources as Source[];
+        const sourceArray = sources;
         log.info(`Sources updated: ${sourceArray.length} sources received`);
 
         const contentChanged = this._hasSourceContentChanged(sourceArray);
@@ -140,12 +139,11 @@ class WSSourceHandler {
 
         const oldMap = new Map<string, string>();
         for (const s of current) {
-            if (s.sourceId) oldMap.set(String(s.sourceId), s.sourceContent || '');
+            oldMap.set(s.sourceId, s.sourceContent || '');
         }
 
         for (const s of newSources) {
-            if (!s.sourceId) return true;
-            const oldContent = oldMap.get(String(s.sourceId));
+            const oldContent = oldMap.get(s.sourceId);
             if (oldContent === undefined || oldContent !== (s.sourceContent || '')) return true;
         }
 

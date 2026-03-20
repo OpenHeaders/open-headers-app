@@ -12,6 +12,7 @@ import { WSRuleHandler } from './ws-rule-handler';
 import { WSSourceHandler } from './ws-source-handler';
 import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSClientHandler } from './ws-client-handler';
+import type { Source } from '../../types/source';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
@@ -37,12 +38,6 @@ interface ClientInfo {
 interface InitLock {
     status: 'initializing' | 'initialized';
     promise: Promise<boolean> | null;
-}
-
-interface Source {
-    sourceId: string;
-    sourceContent?: string | null;
-    [key: string]: unknown;
 }
 
 interface HeaderRule {
@@ -483,7 +478,7 @@ class WebSocketService {
     }
 
     // Source delegators
-    updateSources(sources: unknown): void { this.sourceHandler.updateSources(sources); }
+    updateSources(sources: Parameters<WSSourceHandler['updateSources']>[0]): void { this.sourceHandler.updateSources(sources); }
     onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
 
     // Rule delegators
