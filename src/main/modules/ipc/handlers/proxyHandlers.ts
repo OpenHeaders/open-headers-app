@@ -8,6 +8,7 @@ import settingsHandlers from './settingsHandlers';
 import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
 import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
+import type { Source } from '../../../../types/source';
 import type { AppSettings } from '../../../../types/settings';
 
 const { app } = electron;
@@ -58,7 +59,7 @@ class ProxyHandlers {
                         try {
                             const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
                             const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-                            const sources = JSON.parse(sourcesData) as Array<{ sourceId?: string; sourceContent?: string | null }>;
+                            const sources: Source[] = JSON.parse(sourcesData);
                             if (Array.isArray(sources)) {
                                 proxyService.updateSources(sources);
                                 log.info(`Loaded ${sources.length} sources for proxy service`);

@@ -8,6 +8,7 @@ import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
 import type { EnvironmentsFile } from '../../types/environment';
 import type { HeaderRule } from '../proxy/ProxyService';
+import type { Source } from '../../types/source';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -264,7 +265,7 @@ class CliSetupHandler {
         try {
             const sourcesPath = path.join(workspacePath, 'sources.json');
             const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-            const sources = JSON.parse(sourcesData) as Array<{ sourceId?: string; sourceContent?: string | null }>;
+            const sources: Source[] = JSON.parse(sourcesData);
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);
                 log.info(`Loaded ${sources.length} sources for proxy`);

@@ -23,6 +23,7 @@
 import React from 'react';
 import { Input, Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import type { SourceType } from '../../../../types/source';
 
 /**
  * Renders source path input field based on source type
@@ -44,7 +45,7 @@ import { PlusOutlined } from '@ant-design/icons';
  *   onBrowse={handleBrowse}
  * />
  */
-export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: string; filePath: string; onBrowse: () => void; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; [key: string]: unknown }) => {
+export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: SourceType; filePath: string; onBrowse: () => void; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; [key: string]: unknown }) => {
     switch (sourceType) {
         case 'file':
             return (

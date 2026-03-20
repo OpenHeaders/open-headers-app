@@ -7,6 +7,7 @@ import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
+import type { Source } from '../../types/source';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSEnvironmentHandler');
@@ -14,7 +15,7 @@ const log = createLogger('WSEnvironmentHandler');
 interface WSServiceLike {
     appDataPath: string | null;
     rules: Record<string, unknown> & { header?: Array<Record<string, unknown>> };
-    sources: Array<{ sourceId?: string; sourceContent?: string | null }>;
+    sources: Source[];
     ruleHandler: { broadcastRules(): void };
 }
 

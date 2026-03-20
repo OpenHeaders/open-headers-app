@@ -109,7 +109,7 @@ function validateConfigStructure(data: Record<string, unknown>) {
       throw new Error('Invalid configuration: sources must be an array');
     }
     
-    const sources = data.sources as Partial<Source>[];
+    const sources: Partial<Source>[] = data.sources;
     sources.forEach((source, index: number) => {
       if (!source.sourceId || !source.sourceType || !source.sourcePath) {
         throw new Error(`Invalid source at index ${index}: missing required fields`);

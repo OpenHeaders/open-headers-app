@@ -4,6 +4,7 @@ import { EditOutlined, DeleteOutlined, LinkOutlined, SolutionOutlined, Environme
 import { getSourceName, truncateValue, truncateDomain } from '../../utils';
 import { useEnvironments } from '../../../../contexts';
 import { getResolvedPreview } from '../../../../utils/validation/environment-variables';
+import type { Source } from '../../../../../types/source';
 
 const { Text } = Typography;
 
@@ -36,10 +37,7 @@ export interface HeaderRule {
     isEnabled?: boolean;
 }
 
-export interface ProxySource {
-    sourceId: string;
-    sourceContent?: string | null;
-}
+export type ProxySource = Pick<Source, 'sourceId' | 'sourceContent'>;
 
 /**
  * Proxy Rule Table Column Definitions

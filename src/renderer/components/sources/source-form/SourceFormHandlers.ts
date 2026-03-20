@@ -28,7 +28,7 @@ import type { SourceType, SourceMethod, SourceRequestOptions, JsonFilter, Refres
 import type { EnvironmentContextLike } from '../../../../types/http';
 
 interface SourceTypeChangeParams {
-    setSourceType: (value: string) => void;
+    setSourceType: (value: SourceType) => void;
     setFilePath: (path: string) => void;
     setTotpEnabled: (enabled: boolean) => void;
     setTotpSecret: (secret: string) => void;
@@ -77,7 +77,7 @@ interface FormSubmissionParams {
         setFilePath: (path: string) => void;
         setTotpEnabled: (enabled: boolean) => void;
         setTotpSecret: (secret: string) => void;
-        setSourceType: (type: string) => void;
+        setSourceType: (type: SourceType) => void;
     };
     log: { debug: (message: string, data?: unknown) => void; error: (message: string, data?: unknown) => void };
 }
@@ -94,7 +94,7 @@ interface SuccessfulSubmissionParams {
         setFilePath: (path: string) => void;
         setTotpEnabled: (enabled: boolean) => void;
         setTotpSecret: (secret: string) => void;
-        setSourceType: (type: string) => void;
+        setSourceType: (type: SourceType) => void;
     };
 }
 
@@ -122,7 +122,7 @@ export const createSourceTypeChangeHandler = ({
     untrackTotpSecret,
     form,
     testSourceId
-}: SourceTypeChangeParams) => (value: string) => {
+}: SourceTypeChangeParams) => (value: SourceType) => {
     // Update source type state
     setSourceType(value);
     

@@ -221,9 +221,9 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       // Update workspace metadata with actual counts
       const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
       await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: (sources as unknown[]).length,
+        sourceCount: sources.length,
         ruleCount: totalRules,
-        proxyRuleCount: (proxyRules as unknown[]).length,
+        proxyRuleCount: proxyRules.length,
         lastDataLoad: new Date().toISOString()
       });
 
@@ -971,7 +971,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Check and activate sources that have their dependencies met
    */
   async activateReadySources() {
-    const result = await this.sourceManager.activateReadySources(this.state.sources as never);
+    const result = await this.sourceManager.activateReadySources(this.state.sources);
     
     if (result.hasChanges) {
       this.setState({ sources: result.sources }, ['sources']);

@@ -1,4 +1,5 @@
 import electron from 'electron';
+import type { Source } from '../../types/source';
 const { ipcRenderer } = electron;
 
 const proxyAPI = {
@@ -8,8 +9,8 @@ const proxyAPI = {
     proxyGetRules: (): Promise<unknown> => ipcRenderer.invoke('proxy-get-rules'),
     proxySaveRule: (rule: unknown): Promise<unknown> => ipcRenderer.invoke('proxy-save-rule', rule),
     proxyDeleteRule: (ruleId: string): Promise<unknown> => ipcRenderer.invoke('proxy-delete-rule', ruleId),
-    proxyUpdateSource: (sourceId: string, value: unknown): void => ipcRenderer.send('proxy-update-source', sourceId, value),
-    proxyUpdateSources: (sources: unknown): void => ipcRenderer.send('proxy-update-sources', sources),
+    proxyUpdateSource: (sourceId: string, value: string): void => ipcRenderer.send('proxy-update-source', sourceId, value),
+    proxyUpdateSources: (sources: Source[]): void => ipcRenderer.send('proxy-update-sources', sources),
 
     proxyClearCache: (): Promise<unknown> => ipcRenderer.invoke('proxy-clear-cache'),
     proxyGetCacheStats: (): Promise<unknown> => ipcRenderer.invoke('proxy-get-cache-stats'),

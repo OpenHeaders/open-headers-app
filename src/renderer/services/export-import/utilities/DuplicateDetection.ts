@@ -12,11 +12,9 @@
  * - Configurable duplicate detection strategies
  */
 
-interface ImportSource {
-  sourceType: string;
-  sourcePath?: string;
-  url?: string;
-}
+import type { Source } from '../../../../types/source';
+
+type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 
 interface ImportHeader {
   name: string;
@@ -81,7 +79,7 @@ export function isSourceDuplicate(source: ImportSource | null, currentSources: I
       case 'env':
         return existingSource.sourcePath === source.sourcePath;
       case 'http':
-        return existingSource.url === source.url && existingSource.sourcePath === source.sourcePath;
+        return existingSource.sourcePath === source.sourcePath;
       default:
         // For unknown types, only match on type and path
         return existingSource.sourcePath === source.sourcePath;

@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from './utils/mainLogger';
 import { errorMessage } from './types/common';
+import type { Source } from './types/source';
 
 const { app, ipcMain, Menu, shell } = electron;
 const { createLogger } = mainLogger;
@@ -254,7 +255,7 @@ if (!gotTheLock) {
         });
 
         // Runtime updates
-        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string | null }>) => {
+        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Source[]) => {
             const webSocketService = (await import('./services/websocket/ws-service')).default;
             log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
             if (sources && sources.length > 0) {
@@ -271,7 +272,7 @@ if (!gotTheLock) {
             proxyService.updateSource(sourceId, value);
         });
 
-        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Array<{ sourceId?: string; sourceContent?: string | null }>) => {
+        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Source[]) => {
             const proxyService = (await import('./services/proxy/ProxyService')).default;
             if (Array.isArray(sources)) {
                 proxyService.updateSources(sources);

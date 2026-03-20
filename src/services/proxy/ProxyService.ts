@@ -8,6 +8,7 @@ import mainLogger from '../../utils/mainLogger';
 import { ProxyCache } from './ProxyCache';
 import { ProxyRuleStore } from './ProxyRuleStore';
 import type { ProxyRule } from './ProxyRuleStore';
+import type { Source } from '../../types/source';
 import { DomainMatcher } from './domainMatcher';
 import { errorMessage } from '../../types/common';
 
@@ -557,7 +558,7 @@ class ProxyService extends EventEmitter {
         this.sources.set(id, value);
     }
 
-    updateSources(sourcesArray: Array<{ sourceId?: string; sourceContent?: string | null }>): void {
+    updateSources(sourcesArray: Source[]): void {
         if (!Array.isArray(sourcesArray)) return;
         sourcesArray.forEach((source) => {
             if (source.sourceId && source.sourceContent) {

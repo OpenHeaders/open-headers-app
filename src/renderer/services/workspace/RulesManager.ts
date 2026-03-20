@@ -3,6 +3,7 @@
  */
 import { createLogger } from '../../utils/error-handling/logger';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
+import type { Source } from '../../../types/source';
 const log = createLogger('RulesManager');
 
 interface StorageAPI {
@@ -11,7 +12,7 @@ interface StorageAPI {
 }
 
 interface RulesElectronAPI {
-  updateWebSocketSources?: (sources: unknown) => void;
+  updateWebSocketSources?: (sources: Source[] | { type: 'rules-update'; data: Record<string, unknown> }) => void;
   proxySaveRule?: (rule: unknown) => Promise<{ success: boolean; error?: string }>;
   proxyDeleteRule?: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
 }

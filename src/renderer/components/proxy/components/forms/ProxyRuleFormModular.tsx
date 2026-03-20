@@ -15,7 +15,8 @@ import {
     createHeaderValueValidator,
     validateRuleName
 } from './ProxyRuleFormValidation';
-import type { ProxyRule, ProxySource, HeaderRule } from '../tables/ProxyRuleTableColumns';
+import type { ProxyRule, HeaderRule } from '../tables/ProxyRuleTableColumns';
+import type { Source } from '../../../../../types/source';
 
 const { Text } = Typography;
 
@@ -53,7 +54,7 @@ interface ProxyRuleFormProps {
     onCancel: () => void;
     onSave: (values: ProxyRule) => void;
     rule: ProxyRule | null;
-    sources?: ProxySource[];
+    sources?: Source[];
     headerRules?: HeaderRule[];
 }
 const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRules = [] }: ProxyRuleFormProps) => {

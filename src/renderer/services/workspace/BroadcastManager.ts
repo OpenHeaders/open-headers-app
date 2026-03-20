@@ -6,10 +6,10 @@ import type { Source } from '../../../types/source';
 const log = createLogger('BroadcastManager');
 
 interface BroadcastElectronAPI {
-  updateWebSocketSources?: (sources: unknown) => void;
+  updateWebSocketSources?: (sources: Source[]) => void;
   proxyUpdateHeaderRules?: (headerRules: unknown[]) => Promise<{ success: boolean; error?: string }>;
-  proxyUpdateSources?: (sources: unknown) => void;
-  proxyUpdateSource?: (sourceId: string, value: unknown) => void;
+  proxyUpdateSources?: (sources: Source[]) => void;
+  proxyUpdateSource?: (sourceId: string, value: string) => void;
   proxyClearRules?: () => Promise<{ success: boolean; error?: string }>;
 }
 

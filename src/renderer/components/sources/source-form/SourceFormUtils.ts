@@ -15,6 +15,7 @@
  */
 
 import type { FormInstance } from 'antd';
+import type { SourceType } from '../../../../types/source';
 
 interface LoggerLike {
     debug: (message: string, data?: unknown) => void;
@@ -32,7 +33,7 @@ interface ScrollHandlerParams {
 
 interface EnvironmentChangeHandlerParams {
     form: FormInstance;
-    sourceType: string;
+    sourceType: SourceType;
     envContext: { environmentsReady: boolean };
     httpOptionsRef: React.RefObject<{ validateFields?: () => void } | null>;
     log: LoggerLike;

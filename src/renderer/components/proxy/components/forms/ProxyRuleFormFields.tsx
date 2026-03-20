@@ -5,9 +5,12 @@ import { LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import DomainTags from '../../../features/domain-tags';
 import { getSourceIcon, formatSourceDisplay } from '../../utils';
 import type { HeaderRule } from '../tables/ProxyRuleTableColumns';
+import type { Source } from '../../../../../types/source';
 
 const { Text } = Typography;
 const { Option } = Select;
+
+type SourceItem = Pick<Source, 'sourceId' | 'sourceType' | 'sourceTag' | 'sourcePath'>;
 
 interface HeaderTypeSelectorProps {
     headerType: string;
@@ -18,13 +21,6 @@ interface HeaderTypeSelectorProps {
 
 interface ExistingHeaderRuleSelectorProps {
     headerRules: HeaderRule[];
-}
-
-interface SourceItem {
-    sourceId: string;
-    sourceType?: string;
-    sourceTag?: string;
-    sourcePath?: string;
 }
 
 interface CustomHeaderConfigProps {

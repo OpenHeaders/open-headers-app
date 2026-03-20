@@ -9,6 +9,7 @@ import path from 'path';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
+import type { Source } from '../../types/source';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { DATA_FORMAT_VERSION } from '../../config/version';
 
@@ -42,11 +43,6 @@ interface RulesStorage {
     version?: string;
     rules: Rules;
     metadata?: Record<string, unknown>;
-}
-
-interface Source {
-    sourceId: string;
-    sourceContent?: string | null;
 }
 
 interface WSServiceLike {

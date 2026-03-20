@@ -109,8 +109,8 @@ interface ElectronAPI {
   proxySetCacheEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
   proxyUpdateHeaderRules: (headerRules: unknown[]) => Promise<{ success: boolean; error?: string }>;
   proxyClearRules: () => Promise<{ success: boolean; error?: string }>;
-  proxyUpdateSource: (sourceId: string, value: unknown) => void;
-  proxyUpdateSources: (sources: unknown) => void;
+  proxyUpdateSource: (sourceId: string, value: string) => void;
+  proxyUpdateSources: (sources: import('./source').Source[]) => void;
 
   // WebSocket
   wsGetConnectionStatus: () => Promise<{
@@ -194,7 +194,7 @@ interface ElectronAPI {
   restartApp: () => void;
 
   // Runtime updates
-  updateWebSocketSources: (sources: unknown) => void;
+  updateWebSocketSources: (sources: import('./source').Source[] | { type: 'rules-update'; data: Record<string, unknown> }) => void;
   cleanupTempFiles: (...args: unknown[]) => void;
 
   // Event listeners (return cleanup function)

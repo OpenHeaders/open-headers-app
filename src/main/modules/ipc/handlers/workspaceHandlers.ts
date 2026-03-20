@@ -12,6 +12,7 @@ import webSocketService from '../../../../services/websocket/ws-service';
 import proxyService from '../../../../services/proxy/ProxyService';
 import networkService from '../../../../services/network/NetworkService';
 import type { IpcInvokeEvent, IpcFireEvent, OperationResult } from '../../../../types/common';
+import type { Source } from '../../../../types/source';
 import { errorMessage } from '../../../../types/common';
 import type { Workspace, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
@@ -295,7 +296,7 @@ class WorkspaceHandlers {
             try {
                 const sourcesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'sources.json');
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                const sources = JSON.parse(sourcesData) as Array<{ sourceId?: string; sourceContent?: string | null }>;
+                const sources: Source[] = JSON.parse(sourcesData);
                 if (Array.isArray(sources)) {
                     proxyService.updateSources(sources);
                     log.info(`Loaded ${sources.length} sources for proxy service`);

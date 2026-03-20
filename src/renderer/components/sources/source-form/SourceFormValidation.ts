@@ -25,6 +25,7 @@
 
 import type { FormInstance } from 'antd';
 import type { EnvironmentContextLike } from '../../../../types/http';
+import type { SourceType, JsonFilter } from '../../../../types/source';
 
 type EnvironmentContext = EnvironmentContextLike;
 
@@ -33,11 +34,8 @@ interface ValidationError {
 }
 
 interface SourceFormValues {
-    sourceType?: string;
-    jsonFilter?: {
-        enabled?: boolean;
-        path?: string;
-    };
+    sourceType?: SourceType;
+    jsonFilter?: JsonFilter;
 }
 
 /**

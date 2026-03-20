@@ -18,7 +18,8 @@ import {
 import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig';
-import type { ExportImportDependencies, ExportData, ExportOptions, SourceData, RuleEntry } from './types';
+import type { ExportImportDependencies, ExportData, ExportOptions, RuleEntry } from './types';
+import type { Source } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ExportService');

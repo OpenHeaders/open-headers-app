@@ -10,9 +10,6 @@ export interface EnvironmentSchema {
 
 import type { Source } from '../../../../types/source';
 
-/** Source data object as used in the export/import system */
-export type SourceData = Source;
-
 /** A single environment variable entry as stored in the environment service */
 export interface EnvironmentVariableEntry {
   value?: string;
@@ -34,10 +31,10 @@ export type WorkspaceData = Record<string, unknown>;
  */
 export interface ExportImportDependencies {
   appVersion: string;
-  sources: SourceData[];
+  sources: Source[];
   activeWorkspaceId: string;
   // bivariant method shorthands: concrete functions may have narrower param types
-  exportSources(): SourceData[];
+  exportSources(): Source[];
   removeSource(sourceId: string): Promise<boolean>;
   workspaces: WorkspaceData[];
   createWorkspace(workspace: WorkspaceData): Promise<WorkspaceData | null>;
@@ -45,13 +42,13 @@ export interface ExportImportDependencies {
   environments: Record<string, Record<string, EnvironmentVariableEntry>>;
   createEnvironment(name: string): Promise<boolean>;
   setVariable(name: string, value: string | null, environment?: string | null, isSecret?: boolean): Promise<boolean>;
-  generateEnvironmentSchema(sources: SourceData[]): EnvironmentSchema;
+  generateEnvironmentSchema(sources: Source[]): EnvironmentSchema;
 }
 
 /** Shape of the data object assembled during an export operation */
 export interface ExportData {
   version: string;
-  sources?: SourceData[];
+  sources?: Source[];
   proxyRules?: Record<string, unknown>[];
   rules?: Record<string, RuleEntry[]>;
   rulesMetadata?: Record<string, unknown>;
@@ -80,7 +77,7 @@ export interface RulesStorage {
 /** Import data parsed from file */
 export interface ImportData {
   version?: string;
-  sources?: SourceData[];
+  sources?: Source[];
   proxyRules?: Record<string, unknown>[];
   rules?: Record<string, RuleEntry[]>;
   rulesMetadata?: Record<string, unknown>;
