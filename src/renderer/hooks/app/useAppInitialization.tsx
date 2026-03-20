@@ -7,12 +7,14 @@
 import { useEffect } from 'react';
 import { convertNewRecordingFormat } from '../../utils/formatters/recordConverter';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { Recording, RawRecordingRecord } from '../../../types/recording';
+
 const log = createLogger('useAppInitialization');
 
 interface UseAppInitializationDeps {
   setAppVersion: (version: string) => void;
   setActiveTab: (tab: string) => void;
-  setCurrentRecord: (record: Record<string, unknown> | null) => void;
+  setCurrentRecord: (record: Recording | null) => void;
 }
 
 /**
@@ -35,12 +37,15 @@ export function useAppInitialization({ setAppVersion, setActiveTab, setCurrentRe
     getAppVersion();
 
     // Set up listener for opening record recordings from main process
-    const unsubscribe = window.electronAPI.onOpenRecordRecording((data: Record<string, unknown>) => {
+    const unsubscribe = window.electronAPI.onOpenRecordRecording(async (data) => {
       log.info('Received request to open record recording:', data);
       setActiveTab('record-viewer');
-      if (data && data.record) {
-        const convertedRecord = convertNewRecordingFormat(data.record);
-        setCurrentRecord(convertedRecord);
+      if (data?.recordId) {
+        const fullRecord = await window.electronAPI.loadRecording(data.recordId);
+        if (fullRecord?.record) {
+          const convertedRecord = convertNewRecordingFormat(fullRecord.record as RawRecordingRecord) as Recording;
+          setCurrentRecord(convertedRecord);
+        }
       }
     });
 

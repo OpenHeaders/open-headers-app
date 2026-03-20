@@ -177,7 +177,7 @@ interface FileDialogOptions {
 interface RecordingMetadataUpdateRequest {
   recordId: string;
   updates: {
-    tag?: string | null;
+    tag?: { name: string; url: string } | string | null;
     description?: string | null;
     url?: string;
   };
@@ -421,7 +421,7 @@ interface RRWebPlayerModule {
 }
 
 interface RRWebPlayerConstructor {
-  new (options: { target: HTMLElement; data: { events: unknown[] }; [key: string]: unknown }): {
+  new (options: { target: HTMLElement; data: { events: unknown[] }; width?: number; height?: number }): {
     destroy(): void;
     play(): void;
     pause(): void;

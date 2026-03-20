@@ -13,6 +13,7 @@
 import React, { useState, useRef } from 'react';
 import { Table, Typography, Button, Tooltip, theme, Empty } from 'antd';
 import { SearchOutlined, ClearOutlined } from '@ant-design/icons';
+import type { FilterValue } from 'antd/es/table/interface';
 import { formatBytes, formatMilliseconds } from '../../../utils';
 import { useSearchFilter } from '../shared/useSearchFilter';
 import { useTimeHighlight } from '../shared/useTimeHighlight';
@@ -227,7 +228,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             width: selectedRequest ? 140 : 250,
             ellipsis: true,
             filteredValue: searchFilter.searchValue ? [searchFilter.searchValue] : null,
-            onFilter: searchFilter.createFilterFunction(extractSearchableFields as (record: Record<string, unknown>) => string[]),
+            onFilter: searchFilter.createFilterFunction(extractSearchableFields),
             render: (url: string, networkRecord: NetworkRecord) => (
                 <NetworkRequestCell url={url} record={networkRecord} token={token} />
             )
@@ -240,7 +241,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             sorter: (a: NetworkRecord, b: NetworkRecord) => (a.status || 0) - (b.status || 0),
             filters: statusValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.status,
-            onFilter: (value: string, networkRecord: NetworkRecord) => {
+            onFilter: (value: boolean | React.Key, networkRecord: NetworkRecord) => {
                 if (networkRecord.error) return value === 'Failed';
                 if (!networkRecord.status) return value === 'Pending';
                 if (value === '2xx') return networkRecord.status >= 200 && networkRecord.status < 300;
@@ -261,7 +262,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             sorter: (a: NetworkRecord, b: NetworkRecord) => a.method.localeCompare(b.method),
             filters: methodValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.method,
-            onFilter: (value: string, networkRecord: NetworkRecord) => networkRecord.method === value,
+            onFilter: (value: boolean | React.Key, networkRecord: NetworkRecord) => networkRecord.method === String(value),
             render: (method: string) => <Text style={{ fontSize: '12px' }}>{method}</Text>
         },
         {
@@ -272,7 +273,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
             sorter: (a: NetworkRecord, b: NetworkRecord) => getTypeFromRecord(a).localeCompare(getTypeFromRecord(b)),
             filters: typeValues.map(value => ({ text: value, value })),
             filteredValue: networkFilters.type,
-            onFilter: (value: string, filterRecord: NetworkRecord) => getTypeFromRecord(filterRecord) === value,
+            onFilter: (value: boolean | React.Key, filterRecord: NetworkRecord) => getTypeFromRecord(filterRecord) === String(value),
             render: (type: string, networkRecord: NetworkRecord) => (
                 <Text style={{ fontSize: '12px' }}>{getTypeFromRecord(networkRecord)}</Text>
             )
@@ -312,11 +313,11 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     const tableDataSource = getFilteredData(unfilteredData);
 
     // Table change handler
-    const handleTableChange = (_pagination: unknown, filters: Record<string, (string | number | boolean)[] | null>) => {
+    const handleTableChange = (_pagination: unknown, filters: Record<string, FilterValue | null>) => {
         setNetworkFilters({
-            status: filters.status || [],
-            method: filters.method || [],
-            type: filters.type || []
+            status: (filters.status || []) as (string | number | boolean)[],
+            method: (filters.method || []) as (string | number | boolean)[],
+            type: (filters.type || []) as (string | number | boolean)[]
         });
     };
 
@@ -328,12 +329,12 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
     // Use virtualization for large datasets (more than 100 requests)
     const useVirtualization = tableDataSource.length > 100;
 
-    // Complete table props - use type assertions to bridge between NetworkRecord and TableRecord
+    // Complete table props
     const standardProps = createStandardTableProps(
-        tableDataSource as unknown as { timestamp: number; [key: string]: unknown }[],
-        columns as unknown as Parameters<typeof createStandardTableProps>[1],
-        handleTableChange as unknown as Parameters<typeof createStandardTableProps>[2],
-        generateRowClassName as unknown as Parameters<typeof createStandardTableProps>[3]
+        tableDataSource,
+        columns,
+        handleTableChange,
+        generateRowClassName
     );
     const tableProps = {
         ...standardProps,
@@ -395,7 +396,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                                     }
                                 />
                             ) : (
-                                <Table {...tableProps as Record<string, unknown>} />
+                                <Table {...tableProps} />
                             )}
                         </div>
                         <RecordNetworkDetails
@@ -417,7 +418,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
                             }
                         />
                     ) : (
-                        <Table {...tableProps as Record<string, unknown>} />
+                        <Table {...tableProps} />
                     )
                 )}
             </div>

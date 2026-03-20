@@ -11,7 +11,8 @@ import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { preprocessRecordingForSave } from './utils/recordingPreprocessor';
-import type { RecordingData, RecordingMetadata as RecordingRecordMetadata } from './utils/recordingPreprocessor';
+import type { PreprocessorData } from './utils/recordingPreprocessor';
+import type { RecordingMetadata } from '../../types/recording';
 import { errorMessage } from '../../types/common';
 import type { AppSettings } from '../../types/settings';
 
@@ -62,7 +63,7 @@ interface SavedRecordingMetadata {
     size: number;
     originalSize: number;
     source: string;
-    metadata: RecordingRecordMetadata | undefined;
+    metadata: RecordingMetadata | undefined;
     hasVideo: boolean;
     hasProcessedVersion: boolean;
     hasOriginalVersion: boolean;
@@ -96,7 +97,7 @@ interface RecordingStateSyncData {
 
 interface SaveRecordingMessageData {
     type: string;
-    recording: RecordingData;
+    recording: PreprocessorData;
 }
 
 class WSRecordingHandler {
@@ -279,7 +280,7 @@ class WSRecordingHandler {
     /**
      * Handle save recording from browser extension
      */
-    async handleSaveRecording(recordingData: RecordingData): Promise<SaveRecordingResult> {
+    async handleSaveRecording(recordingData: PreprocessorData): Promise<SaveRecordingResult> {
         try {
             const { app } = electron;
             const fsPromises = fs.promises;
@@ -303,7 +304,7 @@ class WSRecordingHandler {
             const recordingDir = path.join(recordingsPath, recordId);
             await fsPromises.mkdir(recordingDir, { recursive: true });
 
-            let processedRecordingData: RecordingData;
+            let processedRecordingData: PreprocessorData;
             let hasProcessedVersion = false;
 
             try {
@@ -547,12 +548,12 @@ class WSRecordingHandler {
         if (!data.recording?.record?.metadata?.recordId) {
             const generatedId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             if (!data.recording.record) data.recording.record = { events: [] };
-            if (!data.recording.record.metadata) data.recording.record.metadata = {};
+            if (!data.recording.record.metadata) data.recording.record.metadata = { startTime: Date.now() };
             data.recording.record.metadata.recordId = generatedId;
             log.info(`Generated record ID: ${generatedId}`);
         }
 
-        const recordId = data.recording.record.metadata!.recordId!;
+        const recordId = data.recording.record.metadata?.recordId ?? '';
 
         log.info('Immediately navigating to records tab for:', recordId);
         this.wsService._handleFocusApp({

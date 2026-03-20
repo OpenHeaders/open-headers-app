@@ -1,10 +1,14 @@
 import React from 'react';
 import { Descriptions, Typography } from 'antd';
 import { formatDuration, format24HTimeWithMs } from '../../../utils';
+import type { Recording } from '../../../../types/recording';
 
 const { Text } = Typography;
 
-interface RecordInfoTabProps { record: { metadata?: { startTime: number; duration?: number; url?: string; title?: string; userAgent?: string; recordId?: string; viewport?: { width: number; height: number } }; events?: unknown[]; console?: unknown[]; network?: unknown[]; storage?: { localStorage?: unknown[]; sessionStorage?: unknown[]; cookies?: unknown[] }; [key: string]: unknown }; }
+interface RecordInfoTabProps {
+    record: Pick<Recording, 'metadata' | 'events' | 'console' | 'network' | 'storage'>;
+}
+
 export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
     if (!record?.metadata) return null;
 
@@ -25,8 +29,8 @@ export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
                     </span>
                 </Descriptions.Item>
                 <Descriptions.Item label="Viewport">
-                    {metadata.viewport ? 
-                        `${metadata.viewport.width} × ${metadata.viewport.height}` : 
+                    {metadata.viewport ?
+                        `${metadata.viewport.width} × ${metadata.viewport.height}` :
                         'Unknown'
                     }
                 </Descriptions.Item>
@@ -37,10 +41,10 @@ export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
                 <Descriptions.Item label="Console Logs">{record.console?.length || 0}</Descriptions.Item>
                 <Descriptions.Item label="Network Requests">{record.network?.length || 0}</Descriptions.Item>
                 <Descriptions.Item label="Storage Data">
-                    {record.storage ? 
-                        Array.isArray(record.storage) ? 
-                            `${record.storage.length} storage events` : 
-                            `${Object.keys(record.storage.localStorage || {}).length} localStorage, ${Object.keys(record.storage.sessionStorage || {}).length} sessionStorage, ${(record.storage.cookies || []).length} cookies` 
+                    {record.storage ?
+                        Array.isArray(record.storage) ?
+                            `${record.storage.length} storage events` :
+                            'None'
                         : 'None'
                     }
                 </Descriptions.Item>

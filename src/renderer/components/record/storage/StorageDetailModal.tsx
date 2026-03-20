@@ -15,12 +15,13 @@ import { Modal, Space, Tag, Typography, Button, theme } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { formatRelativeTimeWithSmallMs } from '../../../utils';
 import { getTypeColor, getActionColor, formatValue } from './StorageUtils';
+import type { StorageRecord } from '../../../../types/recording';
 
 const { Text } = Typography;
 
 interface StorageDetailModalProps {
     visible: boolean;
-    selectedEntry: { name: string; domain?: string; url?: string; timestamp?: number; type?: string; action?: string; value?: string; oldValue?: string; newValue?: string; path?: string; expires?: string; httpOnly?: boolean; secure?: boolean; sameSite?: string; metadata?: { maxAge?: number | string; expires?: string; httpOnly?: boolean; secure?: boolean; sameSite?: string; [key: string]: unknown }; [key: string]: unknown } | null;
+    selectedEntry: StorageRecord | null;
     onClose: () => void;
     messageApi: { success: (msg: string) => void; error: (msg: string) => void };
 }

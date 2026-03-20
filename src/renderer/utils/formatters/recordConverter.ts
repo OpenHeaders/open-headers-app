@@ -1,100 +1,21 @@
-/** Cookie attributes parsed from cookie string */
-interface CookieAttributes {
-  [key: string]: string | boolean | undefined;
-  domain?: string;
-  path?: string;
-  httponly?: boolean;
-  secure?: boolean;
-  samesite?: string;
-  'max-age'?: string;
-  expires?: string;
-}
+import type {
+  CookieAttributes,
+  StorageRecord,
+  RecordingEventData,
+  RecordingEvent,
+  RawRecordingRecord,
+  RecordingMetadata,
+  NetworkRecord,
+  NavigationEntry,
+  NetworkTimingData,
+} from '../../../types/recording';
 
-/** Parsed cookie representation */
 interface ParsedCookie {
   name: string;
   value: string;
   isDeleted: boolean;
   attributes: CookieAttributes;
   domain?: string | null;
-}
-
-/** Storage event item */
-interface StorageItem {
-  timestamp: number;
-  type: string;
-  action: string;
-  key?: string;
-  name?: string;
-  value?: unknown;
-  oldValue?: unknown;
-  newValue?: unknown;
-  domain?: string;
-  path?: string;
-  url?: string | null;
-  data?: {
-    localStorage?: Record<string, unknown>;
-    sessionStorage?: Record<string, unknown>;
-    cookies?: string;
-  };
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-/** Event data fields shared across event types */
-interface EventData {
-  type?: string;
-  level?: string;
-  args?: unknown[];
-  stack?: string;
-  url?: string;
-  requestId?: string;
-  method?: string;
-  headers?: Record<string, string>;
-  body?: string;
-  timing?: { startTime?: number; endTime?: number; [key: string]: unknown };
-  status?: number;
-  statusText?: string;
-  responseHeaders?: Record<string, string>;
-  responseBody?: string;
-  responseSize?: number;
-  action?: string;
-  key?: string;
-  oldValue?: string | null;
-  newValue?: string | null;
-  domain?: string;
-  path?: string;
-  title?: string;
-  transitionType?: string;
-  localStorage?: Record<string, unknown>;
-  sessionStorage?: Record<string, unknown>;
-  cookies?: string;
-  [key: string]: unknown;
-}
-
-/** Recording event */
-interface RecordingEvent {
-  timestamp: number;
-  type: string;
-  url?: string;
-  data: EventData;
-}
-
-/** Recording record */
-interface RecordingRecord {
-  id?: string;
-  events?: RecordingEvent[];
-  console?: unknown[];
-  network?: unknown[];
-  storage?: unknown[];
-  startTime?: number;
-  endTime?: number;
-  url?: string;
-  metadata?: Record<string, unknown>;
-  viewport?: { width: number; height: number };
-  userAgent?: string;
-  _originalEvents?: RecordingEvent[];
-  [key: string]: unknown;
 }
 
 /**
@@ -164,26 +85,27 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
   const cookieName = firstPart.substring(0, eqIndex).trim();
   const cookieValue = firstPart.substring(eqIndex + 1); // Don't trim cookie values, they might have intentional spaces
   
-  // Parse attributes
   const attributes: CookieAttributes = {};
   let cookieDomain: string | null = null;
-  
+
   for (let i = 1; i < parts.length; i++) {
     const part = parts[i];
     const attrEqIndex = part.indexOf('=');
     if (attrEqIndex > 0) {
       const attrName = part.substring(0, attrEqIndex).trim().toLowerCase();
       const attrValue = part.substring(attrEqIndex + 1).trim();
-      attributes[attrName] = attrValue;
-      
-      if (attrName === 'domain') {
-        cookieDomain = attrValue;
+      switch (attrName) {
+        case 'domain': attributes.domain = attrValue; cookieDomain = attrValue; break;
+        case 'path': attributes.path = attrValue; break;
+        case 'samesite': attributes.samesite = attrValue; break;
+        case 'max-age': attributes['max-age'] = attrValue; break;
+        case 'expires': attributes.expires = attrValue; break;
       }
     } else {
-      // Boolean attributes like 'secure', 'httponly'
       const attrName = part.trim().toLowerCase();
-      if (attrName) {
-        attributes[attrName] = true;
+      switch (attrName) {
+        case 'httponly': attributes.httponly = true; break;
+        case 'secure': attributes.secure = true; break;
       }
     }
   }
@@ -205,8 +127,8 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
  * Converts new recording format (single events array) to old format (separate arrays)
  * for backward compatibility with existing components
  */
-export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<string, unknown> | unknown) {
-  const record = recordInput as RecordingRecord;
+export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
+  const record = recordInput;
   if (!record || !record.events) {
     return record;
   }
@@ -217,11 +139,11 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
   }
 
   // Initialize arrays for different event types
-  const console: Array<Record<string, unknown>> = [];
-  const network: Array<Record<string, unknown>> = [];
-  const storage: StorageItem[] = [];
-  const rrwebEvents: EventData[] = [];
-  const navigationHistory: Array<{ timestamp: number; url?: string; title?: string; transitionType?: string }> = [];
+  const consoleRecords: Array<{ timestamp: number; level?: string; args?: unknown[]; stack?: string }> = [];
+  const networkRecords: Array<Partial<NetworkRecord>> = [];
+  const storage: StorageRecord[] = [];
+  const rrwebEvents: RecordingEventData[] = [];
+  const navigationHistory: NavigationEntry[] = [];
   
   // Get the actual start time (considering pre-navigation adjustment)
   // If preNavTimeAdjustment exists, events are already adjusted, so we use the raw startTime
@@ -234,7 +156,7 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
     
     switch (event.type) {
       case 'console':
-        console.push({
+        consoleRecords.push({
           timestamp: relativeTimestamp,
           level: event.data.level,
           args: event.data.args,
@@ -255,10 +177,10 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
               fullUrl = baseUrl.origin + event.data.url;
             } catch (e) {
               // If that fails, try to use the URL from metadata or navigation history
-              const recordUrl = record.url || (record.metadata?.url as string | undefined) || navigationHistory[0]?.url;
+              const recordUrl = record.url || record.metadata?.url || navigationHistory[0]?.url;
               if (recordUrl) {
                 try {
-                  const baseUrl = new URL(recordUrl as string);
+                  const baseUrl = new URL(recordUrl);
                   fullUrl = baseUrl.origin + event.data.url;
                 } catch (e2) {
                   // Keep relative URL if can't parse base
@@ -268,40 +190,36 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
             }
           }
           
-          network.push({
+          networkRecords.push({
             id: event.data.requestId,
             timestamp: relativeTimestamp,
             method: event.data.method,
             url: fullUrl,
             requestHeaders: event.data.headers || {},
-            requestBody: event.data.body || null,
-            headers: event.data.headers || {}, // Keep for backward compatibility
-            body: event.data.body || null, // Keep for backward compatibility
+            requestBody: event.data.body || undefined,
+            headers: event.data.headers || {},
+            body: event.data.body || null,
             timing: event.data.timing,
-            // Response will be added later when we find the matching response event
           });
         } else if (event.data.type === 'response') {
-          // Find the matching request and update it
-          const request = network.find(req => req.id === event.data.requestId);
+          const request = networkRecords.find(req => req.id === event.data.requestId);
           if (request) {
             request.status = event.data.status;
             request.statusText = event.data.statusText;
             request.responseHeaders = event.data.responseHeaders || {};
-            request.responseBody = event.data.responseBody || null;
+            request.responseBody = event.data.responseBody || undefined;
             request.responseSize = event.data.responseBody ? event.data.responseBody.length : 0;
-            
-            // Set timing information
+
             if (event.data.timing && event.data.timing.endTime) {
               const responseTimestamp = event.timestamp - (startTime ?? 0);
               request.endTime = responseTimestamp;
-              request.duration = (event.data.timing.endTime as number) - ((request.timing as Record<string, unknown>)?.startTime as number || 0);
+              request.duration = event.data.timing.endTime - (request.timing?.startTime || 0);
             }
-            
-            // For size, use response body length or responseSize from event
+
             if (event.data.responseSize) {
               request.size = event.data.responseSize;
             } else if (request.responseBody) {
-              request.size = (request.responseBody as string).length;
+              request.size = request.responseBody.length;
             }
           }
         }
@@ -310,17 +228,20 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
       case 'storage':
       case 'storage-initial':
         if (event.type === 'storage-initial') {
-          // Handle initial storage state
           storage.push({
             timestamp: relativeTimestamp,
             type: 'initial',
             action: 'snapshot',
-            data: event.data,
+            name: '',
+            domain: extractDomain(event.url) || 'unknown',
+            data: {
+              localStorage: event.data.localStorage,
+              sessionStorage: event.data.sessionStorage,
+              cookies: event.data.cookies,
+            },
             url: event.url
           });
         } else {
-          // Handle storage changes
-          // Map type from 'local'/'session' to 'localStorage'/'sessionStorage'
           const storageType = event.data.type === 'local' ? 'localStorage' :
                             event.data.type === 'session' ? 'sessionStorage' :
                             (event.data.type || 'unknown');
@@ -328,12 +249,12 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
           storage.push({
             timestamp: relativeTimestamp,
             type: storageType,
-            action: event.data.action || 'unknown', // set, remove, clear
+            action: event.data.action || 'unknown',
             key: event.data.key,
             name: event.data.key || (event.data.action === 'clear' ? '*' : ''),
             oldValue: event.data.oldValue,
             value: event.data.newValue !== null ? event.data.newValue : undefined,
-            newValue: event.data.newValue, // Keep for compatibility
+            newValue: event.data.newValue,
             domain: event.data.domain || extractDomain(event.url) || 'unknown',
             path: event.data.path || '/',
             url: event.url
@@ -366,31 +287,26 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
     }
   });
 
-  // Extract metadata from the record if not present
-  const metadata = record.metadata || {
+  const metadata: RecordingMetadata = record.metadata || {
     recordId: record.id,
-    startTime: record.startTime,
-    endTime: record.endTime,
+    startTime: record.startTime ?? 0,
     duration: record.endTime ? record.endTime - (record.startTime ?? 0) : 0,
     url: record.url || navigationHistory[0]?.url || '',
     viewport: record.viewport || { width: 1920, height: 1080 },
     userAgent: record.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown')
   };
 
-  // Store original events for reference
-  const recordWithOriginalEvents = {
+  const recordWithOriginalEvents: RawRecordingRecord = {
     ...record,
     _originalEvents: record.events
   };
 
-
-  // Return the converted record
   return {
     ...recordWithOriginalEvents,
     metadata,
-    events: rrwebEvents, // rrweb events for the player
-    console,
-    network,
+    events: rrwebEvents,
+    console: consoleRecords,
+    network: networkRecords,
     storage: processStorageEvents(storage, recordWithOriginalEvents),
     navigationHistory
   };
@@ -399,10 +315,10 @@ export function convertNewRecordingFormat(recordInput: RecordingRecord | Record<
 /**
  * Process storage events to match the old format expected by RecordStorageTab
  */
-export function processStorageEvents(storage: StorageItem[], record: RecordingRecord) {
-  const processedStorage: StorageItem[] = [];
+export function processStorageEvents(storage: StorageRecord[], record: RawRecordingRecord) {
+  const processedStorage: StorageRecord[] = [];
 
-  storage.forEach((item: StorageItem) => {
+  storage.forEach((item: StorageRecord) => {
     // URL should already be present from the converter, but fallback to record URL
     const itemUrl = item.url || record.url || null;
 
@@ -494,13 +410,11 @@ export function processStorageEvents(storage: StorageItem[], record: RecordingRe
             path: attributes?.path || item.path || '/',
             metadata: {
               ...item.metadata,
-              // Add all cookie attributes to metadata
               httpOnly: attributes?.httponly === true,
               secure: attributes?.secure === true,
               sameSite: attributes?.samesite || undefined,
               maxAge: attributes?.['max-age'] || undefined,
               expires: attributes?.expires || undefined,
-              // Store raw attributes for debugging
               rawAttributes: attributes
             }
           });
@@ -527,9 +441,9 @@ export function processStorageEvents(storage: StorageItem[], record: RecordingRe
  * Process storage events and only mark as "Initial" those that existed when recording started
  * Also track previous values for proper old/new value display
  */
-function deduplicateInitialStorage(storageEvents: StorageItem[]) {
-  const seenKeys = new Map<string, unknown>(); // Map of type:key -> last known value
-  const processedEvents: StorageItem[] = [];
+function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
+  const seenKeys = new Map<string, unknown>();
+  const processedEvents: StorageRecord[] = [];
   
   // Find the timestamp of the first storage-initial event (recording start)
   let recordingStartTime = null;
@@ -540,7 +454,7 @@ function deduplicateInitialStorage(storageEvents: StorageItem[]) {
     }
   }
   
-  storageEvents.forEach((event: StorageItem) => {
+  storageEvents.forEach((event: StorageRecord) => {
     const key = `${event.type}:${event.name}`;
     
     // Check if this is an initial storage state by looking at metadata
@@ -610,10 +524,10 @@ function deduplicateInitialStorage(storageEvents: StorageItem[]) {
 /**
  * Convert flat storage array for RecordStorageTab component
  */
-export function convertStorageForTable(storage: StorageItem[]) {
-  const tableData: StorageItem[] = [];
+export function convertStorageForTable(storage: StorageRecord[]) {
+  const tableData: StorageRecord[] = [];
 
-  storage.forEach((item: StorageItem) => {
+  storage.forEach((item: StorageRecord) => {
     // Handle both the converted format and direct storage events
     if (item.action === 'initial') {
       // Initial state entries

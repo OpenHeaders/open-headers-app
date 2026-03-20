@@ -19,11 +19,12 @@ import { useNavigation, NavigationIntent } from './useNavigation';
 import type { InitialAction } from '../../components/modals/settings/SettingsModal';
 import { useWorkspaceSync } from './useWorkspaceSync';
 import { useUpdateChecker, UpdateNotificationHandle } from './useUpdateChecker';
+import type { Recording } from '../../../types/recording';
 
 interface UseAppEffectsDeps {
   setAppVersion: (version: string) => void;
   setActiveTab: (tab: string) => void;
-  setCurrentRecord: (record: Record<string, unknown> | null) => void;
+  setCurrentRecord: (record: Recording | null) => void;
   refreshSource: (sourceId: string) => void;
   activeWorkspaceId: string;
   navigate: (intent: NavigationIntent) => void;

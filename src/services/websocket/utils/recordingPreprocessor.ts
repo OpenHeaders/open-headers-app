@@ -13,92 +13,46 @@ import mainLogger from '../../../utils/mainLogger';
 import { errorMessage } from '../../../types/common';
 import http from 'http';
 import nodeUrl from 'url';
+import type {
+    DomNode,
+    Snapshot,
+    StaticResources,
+    PageTransition,
+    RRWebInnerData,
+    RRWebAdd,
+    RRWebEvent,
+    PreprocessProgressDetails,
+    RecordingMetadata,
+} from '../../../types/recording';
 
 const { createLogger } = mainLogger;
 const log = createLogger('RecordingPreprocessor');
 
-// Global cache for URL normalization to avoid recalculating
 const urlNormalizationCache = new Map<string, string>();
-const CACHE_MAX_SIZE = 5000; // Limit cache size to prevent memory issues
+const CACHE_MAX_SIZE = 5000;
 
-interface DomNode {
-    tagName?: string;
-    attributes?: Record<string, string>;
-    textContent?: string;
-    childNodes?: DomNode[];
-    node?: DomNode;
-    [key: string]: unknown;
-}
-
-interface Snapshot {
-    node: DomNode;
-    [key: string]: unknown;
-}
-
-interface StaticResources {
-    scripts: Set<string>;
-    stylesheets: Set<string>;
-    images: Set<string>;
-    fonts: Set<string>;
-    other: Set<string>;
-}
-
-interface PageTransition {
-    index: number;
-    timestamp: number;
-    pageIndex: number;
-}
-
-interface RRWebInnerData {
-    node?: DomNode;
-    source?: number;
-    adds?: Array<{ node?: DomNode; rule?: string; [key: string]: unknown }>;
-    [key: string]: unknown;
-}
-
-interface RRWebEventData {
-    type?: number;
-    source?: number;
-    timestamp?: number;
-    data?: RRWebInnerData | null;
-    adds?: Array<{ node?: DomNode; rule?: string; [key: string]: unknown }>;
-    positions?: unknown[];
-    [key: string]: unknown;
-}
-
-interface RecordingEvent {
+interface PreprocessorEvent {
     type: string | number;
     timestamp: number;
-    data?: RRWebEventData;
-    [key: string]: unknown;
+    data?: RRWebEvent;
 }
 
-interface RecordingMetadata {
-    recordId?: string;
-    url?: string;
-    timestamp?: number;
-    duration?: number;
-    [key: string]: unknown;
-}
-
-interface RecordingRecord {
-    events: RecordingEvent[];
+interface PreprocessorRecord {
+    events: PreprocessorEvent[];
     metadata?: RecordingMetadata;
     _preprocessed?: boolean;
     _pageTransitions?: PageTransition[];
     _fontUrls?: string[];
     _staticResources?: Record<string, string[]>;
-    [key: string]: unknown;
 }
 
-interface RecordingData {
-    record: RecordingRecord;
-    [key: string]: unknown;
+interface PreprocessorData {
+    record: PreprocessorRecord;
 }
 
 interface PreprocessOptions {
     proxyPort?: number | null;
-    onProgress?: (stage: string, progress: number, details?: Record<string, unknown>) => void;
+    onProgress?: (stage: string, progress: number, details?: PreprocessProgressDetails) => void;
 }
 
 interface PrefetchResource {
@@ -371,7 +325,7 @@ function clearUrlNormalizationCache(): void {
  * Preprocesses a recording for optimized playback
  * This is called when saving a recording from the browser extension
  */
-async function preprocessRecordingForSave(recordingData: RecordingData, options: PreprocessOptions = {}): Promise<RecordingData> {
+async function preprocessRecordingForSave(recordingData: PreprocessorData, options: PreprocessOptions = {}): Promise<PreprocessorData> {
     if (!recordingData || !recordingData.record || !recordingData.record.events) {
         log.warn('Invalid recording data for preprocessing');
         return recordingData;
@@ -389,7 +343,7 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
         // Extract base URL from metadata
         const baseUrl = record.metadata?.url || '';
 
-        const processedEvents: RecordingEvent[] = [];
+        const processedEvents: PreprocessorEvent[] = [];
         const pageTransitions: PageTransition[] = [];
         const fontUrls = new Set<string>();
         const staticResources: StaticResources = {
@@ -442,7 +396,7 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                     const effectiveBaseUrl = baseTagUrl || baseUrl;
                     collectResourcesFromSnapshot(rrwebEvent.data as Snapshot, resourceMap, effectiveBaseUrl);
                 } else if (rrwebEvent.type === 3 && rrwebEvent.data?.source === 8 && rrwebEvent.data?.adds) {
-                    rrwebEvent.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
+                    rrwebEvent.data.adds.forEach((add: RRWebAdd) => {
                         if (add.rule && typeof add.rule === 'string') {
                             collectResourcesFromCss(add.rule, resourceMap, baseUrl);
                         }
@@ -459,7 +413,7 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                 const effectiveBaseUrl = baseTagUrl || baseUrl;
                 collectResourcesFromSnapshot(event.data as Snapshot, resourceMap, effectiveBaseUrl);
             } else if (event.type === 3 && event.data?.source === 8 && event.data?.adds) {
-                event.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
+                event.data.adds.forEach((add: RRWebAdd) => {
                     if (add.rule && typeof add.rule === 'string') {
                         collectResourcesFromCss(add.rule, resourceMap, baseUrl);
                     }
@@ -539,7 +493,7 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                             ...event,
                             data: processedRrwebEvent
                         };
-                        processedEvents.push(processedEvent as RecordingEvent);
+                        processedEvents.push(processedEvent as PreprocessorEvent);
                     }
                 } else {
                     processedEvents.push(event);
@@ -552,11 +506,11 @@ async function preprocessRecordingForSave(recordingData: RecordingData, options:
                     ...event,
                     data: preprocessSnapshot(event.data as Snapshot, fontUrls, staticResources, effectiveBaseUrl, resourceMap)
                 };
-                processedEvents.push(processedEvent as RecordingEvent);
+                processedEvents.push(processedEvent as PreprocessorEvent);
             } else if (event.type === 3) { // Direct rrweb format - Incremental snapshot
                 const processedEvent = processIncrementalSnapshot(event, fontUrls, pageTransitions, baseUrl, resourceMap);
                 if (processedEvent) {
-                    processedEvents.push(processedEvent as RecordingEvent);
+                    processedEvents.push(processedEvent as PreprocessorEvent);
                 }
             } else {
                 processedEvents.push(event);
@@ -802,11 +756,11 @@ function preprocessSnapshot(snapshot: Snapshot, fontUrls: Set<string>, staticRes
 /**
  * Process incremental snapshots
  */
-function processIncrementalSnapshot(event: RecordingEvent | RRWebEventData, fontUrls: Set<string>, pageTransitions: PageTransition[], baseUrl: string, resourceMap: Map<string, string[]>): RecordingEvent | RRWebEventData | null {
+function processIncrementalSnapshot(event: PreprocessorEvent | RRWebEvent, fontUrls: Set<string>, pageTransitions: PageTransition[], baseUrl: string, resourceMap: Map<string, string[]>): PreprocessorEvent | RRWebEvent | null {
     if (!event.data) return event;
 
     if (event.data.source === 0 && event.data.adds) {
-        const processedAdds = event.data.adds.map((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
+        const processedAdds = event.data.adds.map((add: RRWebAdd) => {
             if (!add.node || !add.node.attributes) return add;
 
             const processedNode = JSON.parse(JSON.stringify(add.node));
@@ -891,7 +845,7 @@ function processIncrementalSnapshot(event: RecordingEvent | RRWebEventData, font
     } else if (event.data.source === 8) {
         // Style sheet event - collect font URLs
         if (event.data.adds && Array.isArray(event.data.adds)) {
-            event.data.adds.forEach((add: { node?: DomNode; rule?: string; [key: string]: unknown }) => {
+            event.data.adds.forEach((add: RRWebAdd) => {
                 if (add.rule && typeof add.rule === 'string' && add.rule.includes('@font-face')) {
                     extractFontUrlsFromCss(add.rule, fontUrls, null, baseUrl, resourceMap);
                 }
@@ -1132,4 +1086,4 @@ function getAcceptHeader(resourceType: string): string {
 }
 
 export { preprocessRecordingForSave };
-export type { RecordingData, RecordingRecord, RecordingMetadata, RecordingEvent, PreprocessOptions };
+export type { PreprocessorData, PreprocessorRecord, PreprocessorEvent };

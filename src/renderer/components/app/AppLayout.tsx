@@ -15,6 +15,7 @@ import { DebugNetworkState } from '../status/DebugNetworkState';
 import type { AppSettings } from '../../../types/settings';
 import type { EnvironmentConfigData } from '../../../types/environment';
 import type { Source } from '../../../types/source';
+import type { Recording } from '../../../types/recording';
 import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
 import type { InitialAction } from '../modals/settings/SettingsModal';
 import type { NewSourceData } from '../sources/source-form';
@@ -29,7 +30,7 @@ interface AppLayoutProps {
   aboutModalVisible: boolean;
   exportModalVisible: boolean;
   importModalVisible: boolean;
-  currentRecord: Record<string, unknown> | null;
+  currentRecord: Recording | null;
   recordPlaybackTime: number;
   autoHighlight: boolean;
   loading: { export: boolean; import: boolean };
@@ -37,7 +38,7 @@ interface AppLayoutProps {
   sources: Source[];
   onTabChange: (tab: string) => void;
   onTabScrollPositionChange: (tab: string, scrollTop: number) => void;
-  onRecordChange: (record: Record<string, unknown> | null) => void;
+  onRecordChange: (record: Recording | null) => void;
   onPlaybackTimeChange: (time: number) => void;
   onAutoHighlightChange: (highlight: boolean) => void;
   onAddSource: (sourceData: NewSourceData) => Promise<boolean>;

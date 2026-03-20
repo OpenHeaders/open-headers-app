@@ -12,16 +12,18 @@
  */
 import React from 'react';
 import { Typography, Button, Tooltip } from 'antd';
+import type { GlobalToken } from 'antd/es/theme/interface';
 import { CopyOutlined, EyeOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { formatValue } from './StorageUtils';
+import type { StorageRecord } from '../../../../types/recording';
 
 const { Text } = Typography;
 
 interface StorageChangeCellProps {
-    record: Record<string, unknown>;
-    onViewDetails: (record: Record<string, unknown>) => void;
+    record: StorageRecord;
+    onViewDetails: (record: StorageRecord) => void;
     messageApi: { success: (msg: string) => void; error: (msg: string) => void };
-    token: Record<string, unknown>;
+    token: GlobalToken;
 }
 
 const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: StorageChangeCellProps) => {
@@ -41,7 +43,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: Storage
     if (record.action === 'clear') {
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                <Text style={{ fontSize: '12px', color: token.colorTextSecondary as string }}>
+                <Text style={{ fontSize: '12px', color: token.colorTextSecondary }}>
                     Cleared all entries
                 </Text>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: '2px', flexShrink: 0 }}>
@@ -99,7 +101,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: Storage
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
-                    color: (record.action === 'set' ? token.colorSuccess : token.colorTextSecondary) as string
+                    color: record.action === 'set' ? token.colorSuccess : token.colorTextSecondary
                 }}
                 title={newDisplay}
             >

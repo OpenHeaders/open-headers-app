@@ -5,46 +5,23 @@ import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import windowManager from '../../window/windowManager';
 import { preprocessRecordingForSave } from '../../../../services/websocket/utils/recordingPreprocessor';
+import type { PreprocessorData } from '../../../../services/websocket/utils/recordingPreprocessor';
 import type { IpcInvokeEvent } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
+import type { WorkflowRecordingFileMetadata, RecordingMetadata, PreprocessProgressDetails } from '../../../../types/recording';
 
 const { app, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('RecordingHandlers');
 
-interface RecordingMetadata {
-    id: string;
-    timestamp: number;
-    url: string;
-    duration: number;
-    eventCount: number;
-    size: number;
-    source: string;
-    hasVideo: boolean;
-    hasProcessedVersion?: boolean;
-    tag?: string | null;
-    description?: string | null;
-    metadata?: Record<string, unknown>;
-    [key: string]: unknown;
-}
-
 interface RecordingData {
     record: {
-        metadata: {
-            recordId?: string;
-            timestamp?: number;
-            url?: string;
-            initialUrl?: string;
-            duration?: number;
-            [key: string]: unknown;
-        };
+        metadata: RecordingMetadata;
         events?: unknown[];
-        [key: string]: unknown;
     };
     source?: string;
     tag?: string | null;
     description?: string | null;
-    [key: string]: unknown;
 }
 
 class RecordingHandlers {
@@ -57,13 +34,13 @@ class RecordingHandlers {
 
             // Get all recording metadata files
             const files = await fs.promises.readdir(recordingsPath);
-            const recordings: RecordingMetadata[] = [];
+            const recordings: WorkflowRecordingFileMetadata[] = [];
 
             for (const file of files) {
                 if (file.endsWith('.meta.json')) {
                     try {
                         const metaPath = path.join(recordingsPath, file);
-                        const metaData = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as RecordingMetadata;
+                        const metaData = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as WorkflowRecordingFileMetadata;
 
                         // Check if video exists for this recording
                         if (metaData.hasVideo === undefined) {
@@ -144,18 +121,17 @@ class RecordingHandlers {
             await atomicWriter.writeJson(recordPath, recordData);
 
             // Save metadata separately for quick listing
-            const metadata: RecordingMetadata = {
+            const metadata: WorkflowRecordingFileMetadata = {
                 id: recordId,
-                timestamp: recordData.record.metadata.timestamp || Date.now(),
+                timestamp: recordData.record.metadata.timestamp || recordData.record.metadata.startTime || Date.now(),
                 url: recordData.record.metadata.url || recordData.record.metadata.initialUrl || 'Unknown',
                 duration: recordData.record.metadata.duration || 0,
                 eventCount: recordData.record.events?.length || 0,
                 size: Buffer.byteLength(JSON.stringify(recordData)),
                 source: recordData.source || 'extension',
-                hasVideo: false, // Initially false, will be updated when video recording completes
+                hasVideo: false,
                 tag: recordData.tag || null,
                 description: recordData.description || null,
-                metadata: recordData.record.metadata
             };
 
             const metaPath = path.join(recordingsPath, `${recordId}.meta.json`);
@@ -222,7 +198,7 @@ class RecordingHandlers {
             }
 
             // Create progress callback for prefetching
-            const onPrefetchProgress = (stage: string, progress: number, details?: Record<string, unknown>) => {
+            const onPrefetchProgress = (stage: string, progress: number, details?: PreprocessProgressDetails) => {
                 if (stage === 'prefetching') {
                     // Map prefetch progress from 0-100 to 25-75 in overall progress
                     const overallProgress = 25 + Math.round(progress * 0.5);
@@ -237,7 +213,7 @@ class RecordingHandlers {
 
             // Preprocess the uploaded recording
             log.info(`Preprocessing uploaded recording ${recordId}`);
-            const processedRecordingData = await preprocessRecordingForSave(recordData as Parameters<typeof preprocessRecordingForSave>[0], {
+            const processedRecordingData = await preprocessRecordingForSave(recordData as PreprocessorData, {
                 proxyPort,
                 onProgress: onPrefetchProgress
             });
@@ -253,19 +229,18 @@ class RecordingHandlers {
             await atomicWriter.writeJson(recordPath, processedRecordingData);
 
             // Save metadata separately for quick listing
-            const metadata: RecordingMetadata = {
+            const metadata: WorkflowRecordingFileMetadata = {
                 id: recordId,
-                timestamp: recordData.record?.metadata?.timestamp || Date.now(),
+                timestamp: recordData.record?.metadata?.timestamp || recordData.record?.metadata?.startTime || Date.now(),
                 url: recordData.record?.metadata?.url || 'Unknown',
                 duration: recordData.record?.metadata?.duration || 0,
                 eventCount: recordData.record?.events?.length || 0,
                 size: Buffer.byteLength(JSON.stringify(processedRecordingData)),
                 source: 'upload',
-                hasVideo: false, // Uploaded recordings don't have video by default
+                hasVideo: false,
                 hasProcessedVersion: true,
                 tag: recordData.tag || null,
                 description: recordData.description || null,
-                metadata: recordData.record?.metadata
             };
 
             const metaPath = path.join(recordingsPath, `${recordId}.meta.json`);
@@ -351,7 +326,7 @@ class RecordingHandlers {
         }
     }
 
-    async handleUpdateRecordingMetadata(_: IpcInvokeEvent, { recordId, updates }: { recordId: string; updates: Record<string, unknown> }) {
+    async handleUpdateRecordingMetadata(_: IpcInvokeEvent, { recordId, updates }: { recordId: string; updates: Partial<WorkflowRecordingFileMetadata> }) {
         try {
             const recordingsPath = path.join(app.getPath('userData'), 'recordings');
             const metaPath = path.join(recordingsPath, `${recordId}.meta.json`);
@@ -362,7 +337,7 @@ class RecordingHandlers {
             }
 
             // Read existing metadata
-            const existingMetadata = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as RecordingMetadata;
+            const existingMetadata = JSON.parse(await fs.promises.readFile(metaPath, 'utf8')) as WorkflowRecordingFileMetadata;
 
             // Update only the fields provided
             const updatedMetadata = {

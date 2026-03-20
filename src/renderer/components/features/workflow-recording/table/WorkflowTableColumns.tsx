@@ -21,12 +21,13 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 
-import { 
-  formatFileSize, 
-  formatDuration, 
+import {
+  formatFileSize,
+  formatDuration,
   formatTimestamp,
-  formatTimeAgo 
+  formatTimeAgo
 } from '../../../../utils';
+import type { WorkflowRecordingEntry, PreprocessProgressDetails } from '../../../../../types/recording';
 
 /**
  * Component that displays timestamp with live updating relative time
@@ -144,19 +145,7 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
 /**
  * Component for Delete button with controlled tooltip
  */
-export interface WorkflowRecord {
-  id: string;
-  timestamp?: string;
-  url?: string;
-  metadata?: { url?: string; initialUrl?: string };
-  hasVideo?: boolean;
-  duration?: number;
-  tag?: { name?: string; url?: string } | null;
-  description?: string;
-  size?: number;
-  eventCount?: number;
-  source?: string;
-}
+export type WorkflowRecord = WorkflowRecordingEntry;
 
 const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: WorkflowRecord; onDelete: (id: string) => void; isProcessing: boolean }) => {
   const [tooltipOpen, setTooltipOpen] = useState(false);
@@ -200,7 +189,15 @@ const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: Workfl
  * @param {Object} processingRecords - Map of recordId to processing state
  * @returns {Array} Table columns configuration
  */
-export const createWorkflowColumns = (onView: (record: WorkflowRecord) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecord) => void, onUpdateMetadata: (id: string, data: Record<string, unknown>) => void, processingRecords: Record<string, boolean> = {}): ColumnsType<WorkflowRecord> => [
+interface MetadataAction {
+  _action: string;
+  currentTag?: WorkflowRecordingEntry['tag'] | string | null;
+  recordUrl?: string;
+  currentDescription?: string;
+  recordTag?: WorkflowRecordingEntry['tag'];
+}
+
+export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecordingEntry) => void, onUpdateMetadata: (id: string, data: MetadataAction) => void, processingRecords: Record<string, { stage?: string; progress?: number; details?: PreprocessProgressDetails }> = {}): ColumnsType<WorkflowRecordingEntry> => [
   {
     title: 'Timestamp',
     dataIndex: 'timestamp',

@@ -1,6 +1,8 @@
 import electron from 'electron';
 import type { IpcRendererEvent } from 'electron';
-import type { RecordingData } from '../../services/websocket/utils/recordingPreprocessor';
+import type { PreprocessorData } from '../../services/websocket/utils/recordingPreprocessor';
+
+type RecordingData = PreprocessorData;
 
 const { ipcRenderer } = electron;
 

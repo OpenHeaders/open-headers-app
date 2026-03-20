@@ -16,6 +16,7 @@ import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
 import ServerConfig from '../server-config/ServerConfig';
 import type { Source } from '../../../types/source';
+import type { Recording } from '../../../types/recording';
 import type { NewSourceData } from '../sources/source-form';
 
 interface AppTabsProps {
@@ -23,10 +24,10 @@ interface AppTabsProps {
     onTabChange: (key: string) => void;
     tabScrollPositions: Record<string, number>;
     onTabScrollPositionChange: (tab: string, position: number) => void;
-    currentRecord: Record<string, unknown> | null;
+    currentRecord: Recording | null;
     recordPlaybackTime: number;
     autoHighlight: boolean;
-    onRecordChange: (record: Record<string, unknown> | null) => void;
+    onRecordChange: (record: Recording | null) => void;
     onPlaybackTimeChange: (time: number) => void;
     onAutoHighlightChange: (enabled: boolean) => void;
     sources: Source[];
@@ -98,7 +99,7 @@ export function AppTabs({
                 <div className="content-container">
                     <WorkflowRecording
                         record={currentRecord}
-                        onRecordChange={(newRecord: Record<string, unknown> | null) => {
+                        onRecordChange={(newRecord: Recording | null) => {
                             onRecordChange(newRecord);
                             onPlaybackTimeChange(0);
                         }}

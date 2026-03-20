@@ -3,6 +3,7 @@ import { AppLayout } from './components/app/AppLayout';
 import { useExportImport } from './hooks/useExportImport';
 import { useAppEffects } from './hooks/app';
 import type { InitialAction } from './components/modals/settings/SettingsModal';
+import type { Recording } from '../types/recording';
 import { useSourceRefresh } from './hooks/sources';
 import { useSources, useEnvironments, useWorkspaces, useCentralizedWorkspace } from './hooks/useCentralizedWorkspace';
 import { useSettings, useNavigation, useRefreshManager, useWorkspaceSwitch } from './contexts';
@@ -79,7 +80,7 @@ const AppComponent: React.FC = () => {
     const [settingsAction, setSettingsAction] = useState<InitialAction | null>(null);
     const [aboutModalVisible, setAboutModalVisible] = useState(false);
     const [activeTab, setActiveTab] = useState('record-viewer');
-    const [currentRecord, setCurrentRecord] = useState<Record<string, unknown> | null>(null);
+    const [currentRecord, setCurrentRecord] = useState<Recording | null>(null);
     const [recordPlaybackTime, setRecordPlaybackTime] = useState(0);
     const [autoHighlight, setAutoHighlight] = useState(
         settings?.autoHighlightTableEntries !== undefined ? settings.autoHighlightTableEntries : false

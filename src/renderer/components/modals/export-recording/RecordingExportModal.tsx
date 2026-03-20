@@ -43,11 +43,13 @@ import ExportInfoCard from './ExportInfoCard';
  * @param {number} record.timestamp - Recording timestamp
  * @param {function} onExportJson - Handler for JSON export completion
  */
+import type { WorkflowRecordingEntry } from '../../../../types/recording';
+
 interface RecordingExportModalProps {
     visible: boolean;
     onCancel: () => void;
-    record: Record<string, unknown> | null;
-    onExportJson: (record: Record<string, unknown>) => void;
+    record: WorkflowRecordingEntry | null;
+    onExportJson: (record: WorkflowRecordingEntry) => void;
 }
 
 const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: RecordingExportModalProps) => {

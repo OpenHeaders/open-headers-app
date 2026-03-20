@@ -25,37 +25,12 @@ import StorageAttributesCell from './StorageAttributesCell';
 import StorageDetailModal from './StorageDetailModal';
 import { formatValue } from './StorageUtils';
 import { createStandardTableProps } from '../shared';
+import type { StorageRecord, Recording } from '../../../../types/recording';
 
 const { Text } = Typography;
 
-interface StorageRecord {
-    [key: string]: unknown;
-    timestamp: number;
-    type: string;
-    action: string;
-    name: string;
-    domain: string;
-    url?: string;
-    value?: unknown;
-    oldValue?: unknown;
-    metadata?: {
-        url?: string;
-        initial?: boolean;
-        httpOnly?: boolean;
-        secure?: boolean;
-        sameSite?: string;
-    };
-    key?: string;
-}
-
-interface RecordData {
-    storage: StorageRecord[];
-    startTime?: number;
-    [key: string]: unknown;
-}
-
 interface RecordStorageTabProps {
-    record: RecordData;
+    record: Pick<Recording, 'storage'> & { startTime?: number; metadata?: { startTime: number } };
     viewMode: string;
     activeTime: number;
     autoHighlight?: boolean;
@@ -89,22 +64,21 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Show storage detail modal
      */
-    const showValueModal = (entry: Record<string, unknown>) => {
-        setSelectedEntry(entry as StorageRecord);
+    const showValueModal = (entry: StorageRecord) => {
+        setSelectedEntry(entry);
         setValueModalVisible(true);
     };
 
     /**
      * Extract searchable fields from storage record
      */
-    const extractSearchableFields = (record: Record<string, unknown>) => {
-        const storageRecord = record as StorageRecord;
+    const extractSearchableFields = (storageRecord: StorageRecord) => {
         return [
             storageRecord.name.toLowerCase(),
             storageRecord.domain.toLowerCase(),
             formatValue(storageRecord.value).toLowerCase(),
             formatValue(storageRecord.oldValue).toLowerCase(),
-            ((storageRecord.metadata?.url as string) || '').toLowerCase()
+            (storageRecord.url || '').toLowerCase()
         ];
     };
 
@@ -255,7 +229,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                     record={record}
                     onViewDetails={showValueModal}
                     messageApi={messageApi}
-                    token={token as unknown as Record<string, unknown>}
+                    token={token}
                 />
             )
         },
@@ -270,8 +244,8 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
                 .map((domain: string) => ({ text: domain, value: domain })),
             filteredValue: domainFilter,
             onFilter: (value: boolean | React.Key, record: StorageRecord) => record.domain === (value as string),
-            render: (domain: string, record: StorageRecord) => (
-                <Text style={{ fontSize: '12px', opacity: 0.8, cursor: 'help' }} title={record.url || record.metadata?.url || 'URL not available'}>
+            render: (domain: string, storageRecord: StorageRecord) => (
+                <Text style={{ fontSize: '12px', opacity: 0.8, cursor: 'help' }} title={storageRecord.url || 'URL not available'}>
                     {domain}
                 </Text>
             )
@@ -361,7 +335,7 @@ const RecordStorageTab = ({ record, viewMode, activeTime, autoHighlight = false 
 
             <StorageDetailModal
                 visible={valueModalVisible}
-                selectedEntry={selectedEntry as Parameters<typeof StorageDetailModal>[0]['selectedEntry']}
+                selectedEntry={selectedEntry}
                 onClose={() => setValueModalVisible(false)}
                 messageApi={messageApi}
             />

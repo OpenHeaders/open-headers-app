@@ -9,7 +9,7 @@ import { Spin } from 'antd';
 import { useSettings } from '../../../../contexts';
 import { useRecordPlayer } from '../../../../hooks/useRecordPlayer';
 import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
-type RecordLike = Record<string, unknown>;
+import type { Recording } from '../../../../../types/recording';
 import { RecordPlayer } from '../../../record';
 import WorkflowViewerTabs from './WorkflowViewerTabs';
 import {
@@ -32,8 +32,8 @@ import '../../../../styles/RecordViewer.css';
  * @returns {React.ReactNode} Rendered workflow viewer
  */
 interface WorkflowViewerProps {
-    record: RecordLike | null;
-    onRecordChange?: (record: RecordLike | null) => void;
+    record: Recording | null;
+    onRecordChange?: (record: Recording | null) => void;
     viewMode: string;
     playbackTime?: number;
     onPlaybackTimeChange?: (time: number) => void;
@@ -57,7 +57,7 @@ const WorkflowViewer = ({
   const { settings } = useSettings();
 
   // Internal state
-  const [internalRecord, setInternalRecord] = useState<RecordLike | null>(null);
+  const [internalRecord, setInternalRecord] = useState<Recording | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
   // Refs for component lifecycle and scroll management
@@ -82,7 +82,7 @@ const WorkflowViewer = ({
 
   // Record management
   const record = externalRecord !== undefined ? externalRecord : internalRecord;
-  const setRecord = (newRecord: RecordLike) => {
+  const setRecord = (newRecord: Recording) => {
     if (onRecordChange) {
       onRecordChange(newRecord);
     } else {
