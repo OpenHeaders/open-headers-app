@@ -6,7 +6,7 @@ import { DATA_FORMAT_VERSION } from '../../../config/version';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '../../../types/workspace';
 const log = createLogger('WorkspaceManager');
 
-interface StorageAPI {
+export interface StorageAPI {
   loadFromStorage: (filename: string) => Promise<string | null>;
   saveToStorage: (filename: string, content: string) => Promise<void>;
   deleteDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;

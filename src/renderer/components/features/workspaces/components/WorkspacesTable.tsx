@@ -198,11 +198,11 @@ const WorkspacesTable = ({
 
     /**
      * Renders the sync status with appropriate icon and tooltip
-     * @param {unknown} _ - Unused parameter
+     * @param {Workspace} _value - Cell value (unused, record used instead)
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered sync status cell
      */
-    const renderSyncStatusCell = (_: unknown, record: Workspace) => {
+    const renderSyncStatusCell = (_value: Workspace, record: Workspace) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text>-</Text>;
         }
@@ -267,11 +267,11 @@ const WorkspacesTable = ({
 
     /**
      * Renders the authentication information
-     * @param {unknown} _ - Unused parameter
+     * @param {Workspace} _value - Cell value (unused, record used instead)
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auth cell
      */
-    const renderAuthCell = (_: unknown, record: Workspace) => {
+    const renderAuthCell = (_value: Workspace, record: Workspace) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text type="secondary">-</Text>;
         }
@@ -302,11 +302,11 @@ const WorkspacesTable = ({
 
     /**
      * Renders the auto-sync toggle for team workspaces
-     * @param {unknown} _ - Unused parameter
+     * @param {Workspace} _value - Cell value (unused, record used instead)
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered auto-sync cell
      */
-    const renderAutoSyncCell = (_: unknown, record: Workspace) => {
+    const renderAutoSyncCell = (_value: Workspace, record: Workspace) => {
         if (record.type !== WORKSPACE_TYPES.GIT) {
             return <Text type="secondary">-</Text>;
         }
@@ -335,11 +335,11 @@ const WorkspacesTable = ({
 
     /**
      * Renders the action buttons for each workspace with consistent alignment
-     * @param {unknown} _ - Unused parameter
+     * @param {Workspace} _value - Cell value (unused, record used instead)
      * @param {Object} record - Workspace record
      * @returns {JSX.Element} Rendered actions cell
      */
-    const renderActionsCell = (_: unknown, record: Workspace) => {
+    const renderActionsCell = (_value: Workspace, record: Workspace) => {
         const isGitWorkspace = record.type === WORKSPACE_TYPES.GIT;
         const isDefaultPersonal = record.id === 'default-personal' || record.isDefault;
         const isActiveWorkspace = record.id === activeWorkspaceId;

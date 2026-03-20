@@ -10,7 +10,7 @@ import WorkspaceCreationStateMachine, {
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
 import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
-import type { Workspace, WorkspaceType } from '../../../../../types/workspace';
+import type { Workspace, WorkspaceType, WorkspaceAuthData } from '../../../../../types/workspace';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceCreationController');
@@ -23,7 +23,7 @@ interface GitConfig {
     path?: string;
     files?: Record<string, string>;
     message?: string;
-    authData?: import('../../../../../types/workspace').WorkspaceAuthData;
+    authData?: WorkspaceAuthData;
     checkWriteAccess?: boolean;
 }
 

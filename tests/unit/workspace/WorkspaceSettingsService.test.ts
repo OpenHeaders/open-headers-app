@@ -25,8 +25,8 @@ const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
 vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   default: {
-    writeJson: (...args: unknown[]) => mockWriteJson(...args),
-    readJson: (...args: unknown[]) => mockReadJson(...args)
+    writeJson: (filePath: string, data: object) => mockWriteJson(filePath, data),
+    readJson: (filePath: string) => mockReadJson(filePath)
   }
 }));
 

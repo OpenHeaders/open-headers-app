@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import crypto from 'crypto';
+import zlib from 'zlib';
+import path from 'path';
 import { DATA_FORMAT_VERSION } from '../../../src/config/version';
 import type { TeamWorkspaceInvite, Workspace, WorkspaceAuthData } from '../../../src/types/workspace';
 
@@ -12,7 +15,6 @@ import type { TeamWorkspaceInvite, Workspace, WorkspaceAuthData } from '../../..
 // ---------- generateInviteId ----------
 // Mirrors WorkspaceHandlers.generateInviteId()
 function generateInviteId(): string {
-    const crypto = require('crypto');
     return crypto.randomBytes(8).toString('hex');
 }
 
@@ -49,7 +51,6 @@ function buildInviteData(
 
 // ---------- buildInviteLinks ----------
 function buildInviteLinks(payload: TeamWorkspaceInvite): { appLink: string; webLink: string } {
-    const zlib = require('zlib');
     const payloadJson = JSON.stringify(payload);
     const compressed = zlib.gzipSync(payloadJson, { level: 9 });
     const payloadParam = compressed.toString('base64url');
@@ -136,7 +137,6 @@ function determineNeedsInitialSync(data: string | null): boolean {
 
 // ---------- workspace path construction ----------
 function buildWorkspacePath(userDataPath: string, workspaceId: string): string {
-    const path = require('path');
     return path.join(userDataPath, 'workspaces', workspaceId);
 }
 
@@ -258,7 +258,6 @@ describe('WorkspaceHandlers — pure logic', () => {
         });
 
         it('payload is decompressible back to original JSON', () => {
-            const zlib = require('zlib');
             const payload = { action: 'team-invite', version: DATA_FORMAT_VERSION, data: { name: 'Team' } };
             const links = buildInviteLinks(payload);
             const encoded = links.appLink.split('payload=')[1];
