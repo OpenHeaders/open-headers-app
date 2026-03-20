@@ -6,25 +6,15 @@ const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
 
 import { analyzeConfigFile } from '../../utils/configValidator';
-
-// Type definitions
-interface ValidationResultDetails {
-  valid: boolean;
-  error?: string;
-  sourceCount?: number;
-  ruleCount?: number;
-  proxyRuleCount?: number;
-  variableCount?: number;
-  [key: string]: unknown;
-}
+import type { AnalysisResult, MainAnalysisResult, ConfigData } from '../../utils/configValidator';
 
 interface DetectionResult {
   success: boolean;
   message?: string;
   error?: string;
   details?: {
-    rawData?: Record<string, unknown>;
-    validationResults?: ValidationResultDetails;
+    rawData?: ConfigData;
+    validationResults?: MainAnalysisResult;
   };
 }
 
@@ -32,6 +22,10 @@ interface SearchPatterns {
   configFiles: string[];
   envFiles: string[];
   exactMatch: boolean;
+}
+
+function isMainAnalysis(result: AnalysisResult): result is MainAnalysisResult {
+  return result.valid === true && 'sourceCount' in result;
 }
 
 /**
@@ -58,19 +52,18 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         const configContent = await fs.promises.readFile(configPath, 'utf8');
         const envContent = await fs.promises.readFile(envPath, 'utf8');
 
-        const configData = JSON.parse(configContent) as Record<string, unknown>;
-        const envData = JSON.parse(envContent) as Record<string, unknown>;
+        const configData = JSON.parse(configContent) as ConfigData;
+        const envData = JSON.parse(envContent) as ConfigData;
 
         // Merge environment data into config
-        const combinedData: Record<string, unknown> = Object.assign(
-          {},
-          configData,
-          envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {},
-          envData.environments ? { environments: envData.environments } : {}
-        );
+        const combinedData: ConfigData = {
+          ...configData,
+          ...(envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {}),
+          ...(envData.environments ? { environments: envData.environments } : {})
+        };
 
-        const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
-        if (validationResult.valid) {
+        const validationResult = await analyzeConfigFile(JSON.stringify(combinedData));
+        if (isMainAnalysis(validationResult)) {
           return {
             success: true,
             message: `Connection successful! Found comma-separated configuration files with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`,
@@ -82,8 +75,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         } else {
           return {
             success: false,
-            error: validationResult.error,
-            details: validationResult as DetectionResult['details']
+            error: !validationResult.valid ? validationResult.error : undefined
           };
         }
       } catch (error: unknown) {
@@ -99,21 +91,20 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
     if (searchPatterns.configFiles.length > 0) {
       const configPath = path.join(repoDir, searchPatterns.configFiles[0]);
       const content = await fs.promises.readFile(configPath, 'utf8');
-      const validationResult: ValidationResultDetails = await analyzeConfigFile(content) as any;
-      if (validationResult.valid) {
+      const validationResult = await analyzeConfigFile(content);
+      if (isMainAnalysis(validationResult)) {
         return {
           success: true,
           message: `Connection successful! Found configuration file with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`,
           details: {
-            rawData: JSON.parse(content),
+            rawData: JSON.parse(content) as ConfigData,
             validationResults: validationResult
           }
         };
       } else {
         return {
           success: false,
-          error: validationResult.error,
-          details: validationResult as DetectionResult['details']
+          error: !validationResult.valid ? validationResult.error : undefined
         };
       }
     }
@@ -233,18 +224,17 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
     const configContent = await fs.promises.readFile(path.join(repoDir, foundConfigFile), 'utf8');
     const envContent = await fs.promises.readFile(path.join(repoDir, foundEnvFile), 'utf8');
 
-    const configData = JSON.parse(configContent) as Record<string, unknown>;
-    const envData = JSON.parse(envContent) as Record<string, unknown>;
+    const configData = JSON.parse(configContent) as ConfigData;
+    const envData = JSON.parse(envContent) as ConfigData;
 
-    const combinedData: Record<string, unknown> = Object.assign(
-      {},
-      configData,
-      envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {},
-      envData.environments ? { environments: envData.environments } : {}
-    );
+    const combinedData: ConfigData = {
+      ...configData,
+      ...(envData.environmentSchema ? { environmentSchema: envData.environmentSchema } : {}),
+      ...(envData.environments ? { environments: envData.environments } : {})
+    };
 
-    const validationResult: ValidationResultDetails = await analyzeConfigFile(JSON.stringify(combinedData)) as any;
-    if (validationResult.valid) {
+    const validationResult = await analyzeConfigFile(JSON.stringify(combinedData));
+    if (isMainAnalysis(validationResult)) {
       return {
         success: true,
         message: `Connection successful! Found multi-file configuration (${path.basename(foundConfigFile)} + ${path.basename(foundEnvFile)}) with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`,
@@ -256,15 +246,14 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
     } else {
       return {
         success: false,
-        error: validationResult.error,
-        details: validationResult as DetectionResult['details']
+        error: !validationResult.valid ? validationResult.error : undefined
       };
     }
   } else if (foundConfigFile) {
     // Single file format
     const content = await fs.promises.readFile(path.join(repoDir, foundConfigFile), 'utf8');
-    const validationResult: ValidationResultDetails = await analyzeConfigFile(content) as any;
-    if (validationResult.valid) {
+    const validationResult = await analyzeConfigFile(content);
+    if (isMainAnalysis(validationResult)) {
       const message = foundConfigFile !== searchPatterns.configFiles[0]
         ? `Connection successful! Found configuration file (${foundConfigFile}) with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`
         : `Connection successful! Configuration verified with ${validationResult.sourceCount || 0} sources, ${validationResult.ruleCount || 0} rules, ${validationResult.proxyRuleCount || 0} proxy rules, and ${validationResult.variableCount || 0} environment variables.`;
@@ -273,15 +262,14 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         success: true,
         message,
         details: {
-          rawData: JSON.parse(content),
+          rawData: JSON.parse(content) as ConfigData,
           validationResults: validationResult
         }
       };
     } else {
       return {
         success: false,
-        error: validationResult.error,
-        details: validationResult as DetectionResult['details']
+        error: !validationResult.valid ? validationResult.error : undefined
       };
     }
   }
@@ -295,5 +283,5 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
   throw new Error('No configuration files found matching the specified path pattern');
 }
 
-export { detectAndValidateConfig, DetectionResult, SearchPatterns, ValidationResultDetails };
+export { detectAndValidateConfig, DetectionResult, SearchPatterns };
 export default { detectAndValidateConfig };

@@ -48,8 +48,8 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   autoSaveManager: InstanceType<typeof AutoSaveManager>;
   syncManager: InstanceType<typeof SyncManager>;
   broadcastManager: InstanceType<typeof BroadcastManager>;
-  initPromise: Promise<unknown> | null;
-  loadPromises: Map<string, Promise<unknown>>;
+  initPromise: Promise<boolean> | null;
+  loadPromises: Map<string, Promise<void>>;
   eventCleanup: Array<() => void>;
 
   constructor() {

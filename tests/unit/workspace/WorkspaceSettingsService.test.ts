@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Workspace } from '../../../src/types/workspace';
+import type { WorkspaceSettings } from '../../../src/services/workspace/WorkspaceSettingsService';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -109,30 +111,30 @@ describe('WorkspaceSettingsService', () => {
 
   describe('saveSettings()', () => {
     it('ensures default workspace is never removed', async () => {
-      const settings = {
+      const settings: WorkspaceSettings = {
         version: '3.0.0',
         activeWorkspaceId: 'ws-1',
         workspaces: [
           { id: 'ws-1', name: 'Team', type: 'git' }
         ]
       };
-      await service.saveSettings(settings as any);
+      await service.saveSettings(settings);
       // The first call arg should have default workspace prepended
       const savedSettings = mockWriteJson.mock.calls[0][1];
-      expect(savedSettings.workspaces.some((w: any) => w.id === 'default-personal')).toBe(true);
+      expect(savedSettings.workspaces.some((w: Workspace) => w.id === 'default-personal')).toBe(true);
     });
 
     it('does not duplicate default workspace if already present', async () => {
-      const settings = {
+      const settings: WorkspaceSettings = {
         version: '3.0.0',
         activeWorkspaceId: 'default-personal',
         workspaces: [
           { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true }
         ]
       };
-      await service.saveSettings(settings as any);
+      await service.saveSettings(settings);
       const savedSettings = mockWriteJson.mock.calls[0][1];
-      const defaultCount = savedSettings.workspaces.filter((w: any) => w.id === 'default-personal').length;
+      const defaultCount = savedSettings.workspaces.filter((w: Workspace) => w.id === 'default-personal').length;
       expect(defaultCount).toBe(1);
     });
   });
@@ -154,7 +156,7 @@ describe('WorkspaceSettingsService', () => {
       await service.removeWorkspace('ws-to-remove');
       const savedSettings = mockWriteJson.mock.calls[0][1];
       expect(savedSettings.activeWorkspaceId).toBe('default-personal');
-      expect(savedSettings.workspaces.some((w: any) => w.id === 'ws-to-remove')).toBe(false);
+      expect(savedSettings.workspaces.some((w: Workspace) => w.id === 'ws-to-remove')).toBe(false);
     });
   });
 

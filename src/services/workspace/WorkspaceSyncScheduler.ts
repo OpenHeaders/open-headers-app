@@ -95,13 +95,51 @@ interface SchedulerOptions {
   broadcaster?: BroadcasterFn | null;
 }
 
-type BroadcasterFn = (channel: string, data: unknown) => void;
+/** Union of all data shapes broadcast to renderer windows. */
+interface WorkspaceBroadcastBase {
+  workspaceId: string;
+  timestamp?: number;
+}
+
+interface SyncCompletedBroadcast extends WorkspaceBroadcastBase {
+  success: boolean;
+  error?: string;
+  commitInfo?: CommitInfo;
+  hasChanges?: boolean;
+}
+
+interface SyncStatusBroadcast extends WorkspaceBroadcastBase {
+  syncing: boolean;
+  hasChanges: boolean;
+}
+
+interface SyncWarningBroadcast extends WorkspaceBroadcastBase {
+  warning: string;
+}
+
+interface DataUpdatedBroadcast extends WorkspaceBroadcastBase {
+  hasChanges: boolean;
+}
+
+/** Simple notification with just workspaceId + timestamp (e.g. environments-structure-changed). */
+interface WorkspaceNotificationBroadcast extends WorkspaceBroadcastBase {
+  timestamp: number;
+}
+
+type WorkspaceBroadcastData =
+  | SyncCompletedBroadcast
+  | SyncStatusBroadcast
+  | SyncWarningBroadcast
+  | DataUpdatedBroadcast
+  | WorkspaceNotificationBroadcast;
+
+type BroadcasterFn = (channel: string, data: WorkspaceBroadcastData) => void;
 
 /**
  * Helper to broadcast message to all renderer windows
  * Can be injected for testing or different environments
  */
-function broadcastToRenderers(channel: string, data: unknown, broadcaster: BroadcasterFn | null = null): void {
+function broadcastToRenderers(channel: string, data: WorkspaceBroadcastData, broadcaster: BroadcasterFn | null = null): void {
   if (broadcaster) {
     broadcaster(channel, data);
     return;
@@ -109,7 +147,7 @@ function broadcastToRenderers(channel: string, data: unknown, broadcaster: Broad
 
   // Default Electron implementation
   const { BrowserWindow } = electron;
-  BrowserWindow.getAllWindows().forEach((window: { isDestroyed(): boolean; webContents: { send(channel: string, data: unknown): void } } | null) => {
+  BrowserWindow.getAllWindows().forEach((window) => {
     if (window && !window.isDestroyed()) {
       window.webContents.send(channel, data);
     }

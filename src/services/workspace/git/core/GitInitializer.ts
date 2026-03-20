@@ -102,7 +102,7 @@ class GitInitializer {
           ? path.join(process.resourcesPath, 'git', 'bin', 'git.exe')
           : path.join(__dirname, '..', '..', 'build', 'portable', 'PortableGit', 'bin', 'git.exe');
 
-        await fsPromises.access(portableGitPath, (fs.constants as any).X_OK);
+        await fsPromises.access(portableGitPath, fs.constants.X_OK);
         this.gitPath = portableGitPath;
         log.info('Using bundled portable Git:', this.gitPath);
         return this.gitPath;
@@ -128,7 +128,7 @@ class GitInitializer {
     // Check common paths
     for (const gitPath of COMMON_GIT_PATHS) {
       try {
-        await fsPromises.access(gitPath, (fs.constants as any).X_OK);
+        await fsPromises.access(gitPath, fs.constants.X_OK);
         this.gitPath = gitPath;
         log.info('Found git at:', gitPath);
         return this.gitPath;

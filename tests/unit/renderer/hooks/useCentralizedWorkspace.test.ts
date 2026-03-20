@@ -18,7 +18,9 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-type StateListener = (state: Record<string, unknown>, changedKeys: string[]) => void;
+import type { WorkspaceServiceState } from '../../../../src/renderer/services/CentralizedWorkspaceService';
+
+type StateListener = (state: WorkspaceServiceState, changedKeys: string[]) => void;
 
 let mockSubscriber: StateListener | null = null;
 const mockUnsubscribe = vi.fn();

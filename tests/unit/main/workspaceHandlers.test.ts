@@ -293,7 +293,7 @@ describe('WorkspaceHandlers — pure logic', () => {
             expect(result.environments!.production.API_KEY).toEqual({ value: 'key123', isSecret: true });
             expect(result.environments!.production.BASE_URL).toEqual({ value: 'https://api.com' });
             // updatedAt should be stripped
-            expect((result.environments!.production.API_KEY as Record<string, unknown>).updatedAt).toBeUndefined();
+            expect('updatedAt' in result.environments!.production.API_KEY).toBe(false);
         });
 
         it('extracts schema when includeValues is false', () => {

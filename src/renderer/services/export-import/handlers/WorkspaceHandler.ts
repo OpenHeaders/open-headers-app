@@ -20,7 +20,6 @@ interface WorkspaceImportOptions {
   isGitSync?: boolean;
   includeCredentials?: boolean;
   switchToNewWorkspace?: boolean;
-  [key: string]: unknown;
 }
 
 /**
@@ -160,7 +159,7 @@ export class WorkspaceHandler {
 
     // Include auth data if provided and credentials are allowed
     if (workspaceInfo.authData && this._shouldImportCredentials(options)) {
-      workspace.authData = this._validateAndSanitizeWorkspaceAuthData(workspaceInfo.authData as WorkspaceAuthData);
+      workspace.authData = this._validateAndSanitizeWorkspaceAuthData(workspaceInfo.authData);
     }
 
     // Create the workspace using the dependency function

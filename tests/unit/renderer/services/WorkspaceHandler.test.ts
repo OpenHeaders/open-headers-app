@@ -1,20 +1,30 @@
 import { describe, it, expect, vi } from 'vitest';
 import { WorkspaceHandler } from '../../../../src/renderer/services/export-import/handlers/WorkspaceHandler';
 import { DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
+    appVersion: '1.0.0',
+    sources: [],
+    activeWorkspaceId: 'default',
+    exportSources: () => [],
+    removeSource: vi.fn().mockResolvedValue(true),
     workspaces: [],
     createWorkspace: vi.fn(async (ws) => ws),
-    switchWorkspace: vi.fn(),
+    switchWorkspace: vi.fn().mockResolvedValue(true),
+    environments: {},
+    createEnvironment: vi.fn().mockResolvedValue(true),
+    setVariable: vi.fn().mockResolvedValue(true),
+    generateEnvironmentSchema: vi.fn().mockReturnValue({ environments: {} }),
     ...overrides,
   };
 }
 
-function validWorkspace(overrides: Record<string, any> = {}) {
+function validWorkspace(overrides: Partial<WorkspaceData> = {}): WorkspaceData {
   return {
     name: 'My Workspace',
     description: 'Test workspace',
@@ -34,17 +44,17 @@ function validWorkspace(overrides: Record<string, any> = {}) {
 describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
   it('returns empty object for null input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._sanitizeWorkspaceAuthData(null)).toEqual({});
+    expect(handler._sanitizeWorkspaceAuthData(null as never)).toEqual({});
   });
 
   it('returns empty object for non-object input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._sanitizeWorkspaceAuthData('str')).toEqual({});
+    expect(handler._sanitizeWorkspaceAuthData('str' as never)).toEqual({});
   });
 
   it('copies only known auth fields', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._sanitizeWorkspaceAuthData({
+    const result = handler._sanitizeWorkspaceAuthData({
       token: 'ghp_123',
       tokenType: 'auto',
       username: 'user',
@@ -67,19 +77,19 @@ describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
 describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
   it('throws for null input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeWorkspaceAuthData(null))
+    expect(() => handler._validateAndSanitizeWorkspaceAuthData(null as never))
       .toThrow('must be an object');
   });
 
   it('throws for non-object input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeWorkspaceAuthData('str'))
+    expect(() => handler._validateAndSanitizeWorkspaceAuthData('str' as never))
       .toThrow('must be an object');
   });
 
   it('accepts valid token auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._validateAndSanitizeWorkspaceAuthData({
+    const result = handler._validateAndSanitizeWorkspaceAuthData({
       token: 'ghp_123',
       tokenType: 'auto',
     });
@@ -89,7 +99,7 @@ describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
 
   it('accepts valid basic auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._validateAndSanitizeWorkspaceAuthData({
+    const result = handler._validateAndSanitizeWorkspaceAuthData({
       username: 'user',
       password: 'pass',
     });
@@ -104,22 +114,22 @@ describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
 describe('WorkspaceHandler._shouldImportCredentials', () => {
   it('returns true for git sync operations', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._shouldImportCredentials({ isGitSync: true })).toBe(true);
+    expect(handler._shouldImportCredentials({ isGitSync: true })).toBe(true);
   });
 
   it('returns true when includeCredentials is true', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._shouldImportCredentials({ includeCredentials: true })).toBe(true);
+    expect(handler._shouldImportCredentials({ includeCredentials: true })).toBe(true);
   });
 
   it('returns false when includeCredentials is false', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._shouldImportCredentials({ includeCredentials: false })).toBe(false);
+    expect(handler._shouldImportCredentials({ includeCredentials: false })).toBe(false);
   });
 
   it('returns false when includeCredentials is undefined', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._shouldImportCredentials({})).toBe(false);
+    expect(handler._shouldImportCredentials({})).toBe(false);
   });
 });
 
@@ -129,14 +139,14 @@ describe('WorkspaceHandler._shouldImportCredentials', () => {
 describe('WorkspaceHandler._generateWorkspaceId', () => {
   it('returns a non-empty string', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const id = (handler as any)._generateWorkspaceId();
+    const id = handler._generateWorkspaceId();
     expect(typeof id).toBe('string');
     expect(id.length).toBeGreaterThan(0);
   });
 
   it('generates unique IDs', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const ids = new Set(Array.from({ length: 20 }, () => (handler as any)._generateWorkspaceId()));
+    const ids = new Set(Array.from({ length: 20 }, () => handler._generateWorkspaceId()));
     expect(ids.size).toBe(20);
   });
 });

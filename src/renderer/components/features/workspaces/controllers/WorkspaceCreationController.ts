@@ -21,7 +21,7 @@ interface GitConfig {
     authType?: string;
     filePath?: string;
     path?: string;
-    files?: Record<string, string> | unknown;
+    files?: Record<string, string>;
     message?: string;
     authData?: import('../../../../../types/workspace').WorkspaceAuthData;
     checkWriteAccess?: boolean;

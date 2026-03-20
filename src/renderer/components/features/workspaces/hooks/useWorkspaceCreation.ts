@@ -289,7 +289,7 @@ function getProgressFromState(state: string) {
         }
     };
 
-    return (progressMap as Record<string, ProgressState>)[state] || null;
+    return progressMap[state as keyof typeof progressMap] || null;
 }
 
 /**

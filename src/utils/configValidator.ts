@@ -256,6 +256,7 @@ export {
   validateGitWorkspaceConfig,
   readAndValidateMultiFileConfig
 };
+export type { AnalysisResult, MainAnalysisResult, EnvAnalysisResult, AnalysisError, ConfigData };
 
 export default {
   analyzeConfigFile,

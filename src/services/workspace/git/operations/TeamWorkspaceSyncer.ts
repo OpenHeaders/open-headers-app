@@ -15,7 +15,7 @@ import type { ProxyRule } from '../../../../types/proxy';
 import type { EnvironmentSchema, EnvironmentMap } from '../../../../types/environment';
 import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { CommitManager } from './CommitManager';
-import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
+import type { ConfigFileValidator, ConfigPaths, ConfigContent } from '../../config-file-validator';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -86,7 +86,7 @@ interface SyncResult {
   pushed?: number;
   configValid?: boolean;
   configErrors?: string[];
-  error?: unknown;
+  error?: string;
   autoSync?: boolean;
   localChangesCommitted?: boolean;
   resolved?: boolean;
@@ -236,11 +236,12 @@ class TeamWorkspaceSyncer {
 
     } catch (error) {
       log.error('Sync failed:', error);
+      const errMsg = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         status: SYNC_STATUS.ERROR,
-        message: (error as Error).message,
-        error
+        message: errMsg,
+        error: errMsg
       };
     }
   }
@@ -292,11 +293,12 @@ class TeamWorkspaceSyncer {
 
     } catch (error) {
       log.error('Auto-sync failed:', error);
+      const errMsg = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         status: SYNC_STATUS.ERROR,
-        message: `Auto-sync failed: ${(error as Error).message}`,
-        error,
+        message: `Auto-sync failed: ${errMsg}`,
+        error: errMsg,
         autoSync: true
       };
     }
@@ -394,7 +396,7 @@ class TeamWorkspaceSyncer {
       log.error('Failed to check sync status:', error);
       return {
         status: SYNC_STATUS.ERROR,
-        error: (error as Error).message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }
@@ -549,7 +551,7 @@ class TeamWorkspaceSyncer {
       return {
         success: false,
         status: SYNC_STATUS.CONFLICT,
-        message: `Auto-resolve failed: ${(error as Error).message}`,
+        message: `Auto-resolve failed: ${error instanceof Error ? error.message : String(error)}`,
         requiresManualResolution: true
       };
     }
@@ -603,9 +605,8 @@ class TeamWorkspaceSyncer {
       const metadata = await this.configValidator.loadJson(metadataPath);
       const configPaths: ConfigPaths = {};
 
-      if (metadata && typeof metadata === 'object') {
-        const metaObj = metadata as { configPaths?: Record<string, string> };
-        for (const [key, relativePath] of Object.entries(metaObj.configPaths || {})) {
+      if (metadata) {
+        for (const [key, relativePath] of Object.entries(metadata.configPaths || {})) {
           configPaths[key] = path.join(repoDir, relativePath);
         }
       }
@@ -615,7 +616,7 @@ class TeamWorkspaceSyncer {
     } catch (error) {
       return {
         valid: false,
-        errors: [(error as Error).message]
+        errors: [error instanceof Error ? error.message : String(error)]
       };
     }
   }
@@ -668,7 +669,7 @@ class TeamWorkspaceSyncer {
       };
     } catch (error) {
       return {
-        error: (error as Error).message
+        error: error instanceof Error ? error.message : String(error)
       };
     }
   }

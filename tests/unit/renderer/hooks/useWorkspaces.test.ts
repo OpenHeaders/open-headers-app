@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { Workspace } from '../../../../src/types/workspace';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -105,7 +106,7 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
 
-      let created: Record<string, unknown> | null = null;
+      let created: Workspace | null = null;
       await act(async () => {
         created = await result.current.createWorkspace({ name: 'New WS' });
       });
@@ -132,7 +133,7 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
 
-      let created: Record<string, unknown> | null = null;
+      let created: Workspace | null = null;
       await act(async () => {
         created = await result.current.createWorkspace({ name: 'Bad' });
       });
@@ -305,11 +306,11 @@ describe('useWorkspaces', () => {
 
   describe('cloneWorkspaceToPersonal', () => {
     it('clones team workspace to personal', async () => {
-      mockWorkspaceManagerCreate.mockImplementation((_workspaces: unknown, data: Record<string, unknown>) => data);
+      mockWorkspaceManagerCreate.mockImplementation((_workspaces: Workspace[], data: Workspace) => data);
 
       const { result } = renderHook(() => useWorkspaces());
 
-      let cloned: Record<string, unknown> | null = null;
+      let cloned: Workspace | null = null;
       await act(async () => {
         cloned = await result.current.cloneWorkspaceToPersonal('ws-2');
       });
@@ -327,7 +328,7 @@ describe('useWorkspaces', () => {
     it('returns null for non-existent workspace', async () => {
       const { result } = renderHook(() => useWorkspaces());
 
-      let cloned: unknown = 'not-null';
+      let cloned: Workspace | null = null;
       await act(async () => {
         cloned = await result.current.cloneWorkspaceToPersonal('non-existent');
       });

@@ -142,12 +142,12 @@ interface ElectronAPI {
   wsUntrustCert: () => Promise<{ success: boolean; error?: string }>;
 
   // Git
-  testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: import('./workspace').WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: unknown; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
+  testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: import('./workspace').WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number }; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
   getGitStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } }>;
   installGit: () => Promise<{ success: boolean; message?: string; error?: string }>;
   syncGitWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
   cleanupGitRepo: (gitUrl: string) => Promise<{ success: boolean; error?: string }>;
-  commitConfiguration: (config: { url?: string; branch?: string; path?: string; files?: unknown; message?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: import('./workspace').CommitInfo; files?: string[]; noChanges?: boolean; message?: string }>;
+  commitConfiguration: (config: { url?: string; branch?: string; path?: string; files?: Record<string, string>; message?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: import('./workspace').CommitInfo; files?: string[]; noChanges?: boolean; message?: string }>;
   createBranch: (config: { url?: string; branch?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; message?: string }>;
   checkWritePermissions: (config: { url?: string; branch?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; details?: { canPush?: boolean; reason?: string } }>;
 
@@ -169,9 +169,9 @@ interface ElectronAPI {
   // Workspace
   deleteWorkspace: (workspaceId: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   initializeWorkspaceSync: (workspaceId: string) => Promise<{ success: boolean; message?: string; error?: string }>;
-  syncWorkspace: (workspaceId: string, options: unknown) => Promise<{ success: boolean; error?: string }>;
-  generateTeamWorkspaceInvite: (workspaceData: unknown) => Promise<{ success: boolean; inviteData?: Record<string, unknown>; links?: { appLink: string; webLink: string }; error?: string }>;
-  generateEnvironmentConfigLink: (environmentData: unknown) => Promise<{ success: boolean; envConfigData?: Record<string, unknown>; links?: { appLink: string; webLink: string; dataSize: number }; error?: string }>;
+  syncWorkspace: (workspaceId: string, options: { silent?: boolean }) => Promise<{ success: boolean; error?: string }>;
+  generateTeamWorkspaceInvite: (workspaceData: Partial<import('./workspace').Workspace> & { includeAuthData?: boolean }) => Promise<{ success: boolean; inviteData?: import('./workspace').TeamWorkspaceInvite; links?: { appLink: string; webLink: string }; error?: string }>;
+  generateEnvironmentConfigLink: (environmentData: { environments?: import('./environment').EnvironmentMap; environmentSchema?: import('./environment').EnvironmentSchema; includeValues?: boolean }) => Promise<{ success: boolean; envConfigData?: import('./environment').EnvironmentConfigData; links?: { appLink: string; webLink: string; dataSize: number }; error?: string }>;
 
   // Video
   checkFFmpeg: () => Promise<{ available: boolean } | boolean>;
