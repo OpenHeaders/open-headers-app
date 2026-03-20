@@ -1,5 +1,5 @@
 import { createLogger } from '../utils/error-handling/logger';
-import type { Source, SourceRequestOptions, JsonFilter, RefreshOptions } from '../../types/source';
+import type { Source, SourceRequestOptions, JsonFilter, RefreshOptions, RefreshStatus } from '../../types/source';
 import type { HttpResult } from '../../types/http';
 const log = createLogger('RefreshManager');
 
@@ -32,18 +32,7 @@ export interface HttpService {
 export interface SourceUpdateData {
   originalResponse?: string;
   headers?: Record<string, string>;
-  refreshStatus?: {
-    isRefreshing: boolean;
-    lastRefresh?: number;
-    startTime?: number;
-    success?: boolean;
-    error?: string;
-    reason?: string;
-    isRetry?: boolean;
-    attemptNumber?: number;
-    totalAttempts?: number;
-    failureCount?: number;
-  };
+  refreshStatus?: RefreshStatus;
   refreshOptions?: Partial<RefreshOptions>;
 }
 

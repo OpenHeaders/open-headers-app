@@ -14,6 +14,7 @@
  */
 
 import { VALIDATION_RULES, ERROR_MESSAGES } from '../core/ExportImportConfig';
+import type { Source } from '../../../../types/source';
 
 /** Validation result returned by all validation functions */
 interface ValidationResult {
@@ -242,10 +243,10 @@ export function validateSource(sourceInput: unknown): ValidationResult {
     };
   }
 
-  const source = sourceInput as Record<string, unknown>;
+  const source = sourceInput as Partial<Source>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.SOURCE;
   for (const field of requiredFields) {
-    if (!source[field]) {
+    if (!source[field as keyof Source]) {
       return {
         success: false,
         error: `Source missing required field: ${field}`

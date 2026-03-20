@@ -23,6 +23,8 @@ interface SourceActivatedDetail {
 /** Custom DOM events used in the renderer */
 interface WindowEventMap {
   'source-activated': CustomEvent<SourceActivatedDetail>;
+  'workspace-switching': CustomEvent<{ fromWorkspaceId: string; toWorkspaceId: string }>;
+  'workspace-syncing': CustomEvent<{ workspaceId: string; reason: string }>;
 }
 
 interface ElectronAPI {

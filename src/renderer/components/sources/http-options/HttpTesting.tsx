@@ -402,7 +402,7 @@ export const createHttpTestHandler = ({
         // Save and format the response
         setRawResponse(response);
         const formattedResponse = formatResponseForDisplay(response);
-        setTestResponseContent(formattedResponse as TestResponseContent);
+        setTestResponseContent(formattedResponse);
         setTestResponseVisible(true);
 
         // Send to parent callback
@@ -410,7 +410,7 @@ export const createHttpTestHandler = ({
             onTestResponse(response);
         }
     } catch (error) {
-        showMessage('error', `Failed to test request: ${(error as Error).message}`);
+        showMessage('error', `Failed to test request: ${(error instanceof Error ? error.message : String(error))}`);
     } finally {
         setTesting(false);
         if (onTestingChange) {

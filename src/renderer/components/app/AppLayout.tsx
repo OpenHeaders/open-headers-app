@@ -13,7 +13,7 @@ import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
 import { DebugSourceInfo } from '../status/DebugSourceInfo';
 import { DebugNetworkState } from '../status/DebugNetworkState';
 import type { Settings } from '../../contexts/ui/SettingsContext';
-import type { SourceData } from '../../hooks/workspace/useSources';
+import type { Source } from '../../../types/source';
 import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
 import type { InitialAction } from '../modals/settings/SettingsModal';
 import type { NewSourceData } from '../sources/source-form';
@@ -33,7 +33,7 @@ interface AppLayoutProps {
   autoHighlight: boolean;
   loading: { export: boolean; import: boolean };
   settings: Settings;
-  sources: SourceData[];
+  sources: Source[];
   onTabChange: (tab: string) => void;
   onTabScrollPositionChange: (tab: string, scrollTop: number) => void;
   onRecordChange: (record: Record<string, unknown> | null) => void;
@@ -42,7 +42,7 @@ interface AppLayoutProps {
   onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
   onRemoveSource: (sourceId: string) => Promise<boolean>;
   onRefreshSource: (sourceId: string) => Promise<boolean>;
-  onUpdateSource: (sourceId: string, updates: Partial<SourceData>) => Promise<SourceData | null>;
+  onUpdateSource: (sourceId: string, updates: Partial<Source>) => Promise<Source | null>;
   onExport: () => void;
   onImport: () => void;
   onCheckForUpdates: () => void;

@@ -20,7 +20,7 @@ interface RefreshStatus {
     state: string;
     isOpen: boolean;
     canManualBypass: boolean;
-    timeUntilNextAttempt: number;
+    timeUntilNextAttempt: string | null;
     timeUntilNextAttemptMs: number;
     consecutiveOpenings: number;
     currentTimeout: number;
@@ -104,7 +104,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
                 }
 
                 if (additionalData.refreshStatus) {
-                    updates.refreshStatus = additionalData.refreshStatus as Source['refreshStatus'];
+                    updates.refreshStatus = additionalData.refreshStatus;
                 }
 
                 // Store HTTP response headers for ContentViewer
@@ -146,8 +146,8 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
         };
 
         // Listen for workspace sync events
-        const handleWorkspaceSync = async (event: Event) => {
-            log.info(`Workspace sync detected (${(event as CustomEvent).detail?.reason}), cleaning up RefreshManager sources`);
+        const handleWorkspaceSync = async (event: CustomEvent<{ workspaceId: string; reason: string }>) => {
+            log.info(`Workspace sync detected (${event.detail?.reason}), cleaning up RefreshManager sources`);
             try {
                 await refreshManagerIntegration.cleanupAllSources();
             } catch (error) {
@@ -183,7 +183,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
         updateSource: (source: Source) => refreshManagerIntegration.updateSource(source),
         removeSource: (sourceId: string) => refreshManagerIntegration.removeSource(sourceId),
         getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData),
-        getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId) as RefreshStatus
+        getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId)
     };
 
     return (

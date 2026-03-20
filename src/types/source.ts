@@ -57,10 +57,14 @@ export interface RefreshOptions {
 export interface RefreshStatus {
   isRefreshing: boolean;
   lastRefresh?: number;
+  startTime?: number;
   success?: boolean;
+  error?: string;
+  reason?: string;
   isRetry?: boolean;
   attemptNumber?: number;
-  error?: string;
+  totalAttempts?: number;
+  failureCount?: number;
 }
 
 // ── Source ───────────────────────────────────────────────────────────
