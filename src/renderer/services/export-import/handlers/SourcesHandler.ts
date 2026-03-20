@@ -64,8 +64,8 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport: SourceData[], options: Record<string, unknown>) {
-    const stats: { imported: number; skipped: number; errors: Array<{ source: unknown; error: string }> } = {
+  async importSources(sourcesToImport: SourceData[], options: { importMode?: string }) {
+    const stats: { imported: number; skipped: number; errors: Array<{ source: string; error: string }> } = {
       imported: 0,
       skipped: 0,
       errors: []

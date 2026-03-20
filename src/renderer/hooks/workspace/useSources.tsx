@@ -6,7 +6,6 @@ import type { Source, RefreshOptions } from '../../../types/source';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSources');
 
-export type SourceData = Source;
 
 interface UseSourcesReturn {
   sources: Source[];
@@ -25,12 +24,11 @@ interface UseSourcesReturn {
  * Hook for source management
  */
 export function useSources(): UseSourcesReturn {
-  const { sources: rawSources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
-  const sources = rawSources as Source[];
+  const { sources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
 
   const addSource = useCallback(async (sourceData: Source): Promise<Source | null> => {
     try {
-      return await service.addSource(sourceData) as Source;
+      return await service.addSource(sourceData);
     } catch (error: unknown) {
       showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
@@ -93,7 +91,7 @@ export function useSources(): UseSourcesReturn {
 
   const refreshSource = useCallback(async (sourceId: string): Promise<boolean> => {
     try {
-      const currentSources = service.getState().sources as Source[];
+      const currentSources = service.getState().sources;
       const source = currentSources.find((s) => s.sourceId === sourceId);
       if (!source) {
         log.error(`Source with ID ${sourceId} not found. Available sources:`, currentSources.map((s) => ({ id: s.sourceId, type: s.sourceType, path: s.sourcePath })));

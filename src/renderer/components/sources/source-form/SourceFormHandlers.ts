@@ -53,9 +53,9 @@ interface HttpOptionsRef {
 }
 
 interface SourceFormValues {
-    sourceType: string;
+    sourceType: SourceType;
     sourcePath: string;
-    sourceMethod?: string;
+    sourceMethod?: SourceMethod;
     sourceTag?: string;
     requestOptions?: SourceRequestOptions;
     jsonFilter?: JsonFilter;
@@ -167,7 +167,7 @@ export const createFileBrowseHandler = ({
             form.setFieldsValue({ sourcePath: selectedPath });
         }
     } catch (error) {
-        showMessage('error', `Failed to select file: ${(error as Error).message}`);
+        showMessage('error', `Failed to select file: ${(error instanceof Error ? error.message : String(error))}`);
     }
 };
 
@@ -274,7 +274,7 @@ export const createFormSubmissionHandler = ({
             });
         }
     } catch (error) {
-        showMessage('error', `Failed to add source: ${(error as Error).message}`);
+        showMessage('error', `Failed to add source: ${(error instanceof Error ? error.message : String(error))}`);
     } finally {
         setSubmitting(false);
     }
@@ -294,14 +294,14 @@ export const createFormSubmissionHandler = ({
 const prepareSourceData = (values: SourceFormValues, form: FormInstance, log: { debug: (message: string, data?: unknown) => void }): NewSourceData => {
     // Prepare basic source data
     const sourceData: NewSourceData = {
-        sourceType: values.sourceType as SourceType,
+        sourceType: values.sourceType,
         sourcePath: values.sourcePath,
         sourceTag: values.sourceTag || ''
     };
 
     // Add HTTP-specific properties
     if (values.sourceType === 'http') {
-        sourceData.sourceMethod = (values.sourceMethod || 'GET') as SourceMethod;
+        sourceData.sourceMethod = values.sourceMethod || 'GET';
 
         // Make a deep copy of request options to avoid reference issues
         const requestOptions: SourceRequestOptions = JSON.parse(JSON.stringify(values.requestOptions || {}));

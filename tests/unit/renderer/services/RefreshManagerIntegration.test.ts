@@ -403,6 +403,19 @@ describe('RefreshManagerIntegration', () => {
         isOverdue: false,
         isPaused: false,
         consecutiveErrors: 0,
+        isRetry: false,
+        attemptNumber: 0,
+        failureCount: 0,
+        circuitBreaker: {
+          state: 'closed',
+          isOpen: false,
+          canManualBypass: false,
+          timeUntilNextAttempt: null,
+          timeUntilNextAttemptMs: 0,
+          consecutiveOpenings: 0,
+          currentTimeout: 0,
+          failureCount: 0
+        }
       });
     });
 

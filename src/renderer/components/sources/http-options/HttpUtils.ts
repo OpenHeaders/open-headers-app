@@ -250,7 +250,7 @@ export const createTotpCodeGenerator = ({
         }
     } catch (error) {
         log.error('Error generating TOTP:', error);
-        setTotpError(`Error: ${(error as Error).message}`);
+        setTotpError(`Error: ${(error instanceof Error ? error.message : String(error))}`);
         setTotpCode('ERROR');
     } finally {
         setTotpTesting(false);

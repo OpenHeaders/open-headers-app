@@ -174,7 +174,7 @@ export const createSaveSourceHandler = ({
         }
     } catch (error) {
         log.error('Error saving source:', error);
-        showMessage('error', `Error: ${(error as Error).message}`);
+        showMessage('error', `Error: ${(error instanceof Error ? error.message : String(error))}`);
         return false;
     } finally {
         // Clear refreshing state with delay to ensure UI updates properly
@@ -229,7 +229,7 @@ export const createRefreshSourceHandler = ({
 
         return success;
     } catch (error) {
-        debugRefreshState(sourceId, 'Manual Refresh Error', { error: (error as Error).message }, log, timeManager);
+        debugRefreshState(sourceId, 'Manual Refresh Error', { error: (error instanceof Error ? error.message : String(error)) }, log, timeManager);
         return false;
     } finally {
         // Clear refreshing state with a delay to ensure UI updates
@@ -289,7 +289,7 @@ export const createRemoveSourceHandler = ({
 
         return success;
     } catch (error) {
-        showMessage('error', `Error removing source: ${(error as Error).message}`);
+        showMessage('error', `Error removing source: ${(error instanceof Error ? error.message : String(error))}`);
         return false;
     } finally {
         // Clear removing state to stop loading spinner

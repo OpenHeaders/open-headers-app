@@ -15,7 +15,7 @@ import Rules from '../rules/Rules';
 import Workspaces from '../features/workspaces';
 import Environments from '../features/environments';
 import ServerConfig from '../server-config/ServerConfig';
-import type { SourceData } from '../../hooks/workspace/useSources';
+import type { Source } from '../../../types/source';
 import type { NewSourceData } from '../sources/source-form';
 
 interface AppTabsProps {
@@ -29,11 +29,11 @@ interface AppTabsProps {
     onRecordChange: (record: Record<string, unknown> | null) => void;
     onPlaybackTimeChange: (time: number) => void;
     onAutoHighlightChange: (enabled: boolean) => void;
-    sources: SourceData[];
+    sources: Source[];
     onAddSource: (sourceData: NewSourceData) => Promise<boolean>;
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     onRefreshSource: (sourceId: string) => Promise<boolean>;
-    onUpdateSource: (sourceId: string, data: Partial<SourceData>) => Promise<SourceData | null>;
+    onUpdateSource: (sourceId: string, data: Partial<Source>) => Promise<Source | null>;
     tutorialMode: boolean;
 }
 
