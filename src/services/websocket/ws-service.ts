@@ -13,6 +13,7 @@ import { WSSourceHandler } from './ws-source-handler';
 import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSClientHandler } from './ws-client-handler';
 import type { Source } from '../../types/source';
+import type { RulesCollection } from '../../types/rules';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
@@ -40,21 +41,8 @@ interface InitLock {
     promise: Promise<boolean> | null;
 }
 
-interface HeaderRule {
-    id: string | number;
-    headerName?: string;
-    headerValue?: string;
-    isEnabled?: boolean;
-    isDynamic?: boolean;
-    sourceId?: string | number;
-    hasEnvVars?: boolean;
-    [key: string]: unknown;
-}
 
-interface Rules {
-    header?: HeaderRule[];
-    [key: string]: unknown;
-}
+type Rules = RulesCollection;
 
 interface SourceServiceLike {
     on?(event: string, handler: () => void): void;
@@ -124,7 +112,7 @@ class WebSocketService {
         this.host = '127.0.0.1';
         this.isInitializing = false;
         this.sources = [];
-        this.rules = {};
+        this.rules = { header: [], request: [], response: [] };
         this.sourceService = null;
         this.appDataPath = null;
         this.connectedClients = new Map();

@@ -6,8 +6,8 @@ import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
-import type { EnvironmentsFile } from '../../types/environment';
-import type { HeaderRule } from '../proxy/ProxyService';
+import type { EnvironmentsFile, EnvironmentMap } from '../../types/environment';
+import type { HeaderRule } from '../../types/rules';
 import type { WorkspaceAuthData } from '../../types/workspace';
 import type { Source } from '../../types/source';
 
@@ -35,18 +35,9 @@ export interface JoinWorkspaceData {
     inviteId?: string;
 }
 
-export interface NormalizedAuthData {
-    token?: string;
-    tokenType?: string;
-    sshKey?: string;
-    sshPassphrase?: string;
-    username?: string;
-    password?: string;
-    [key: string]: string | undefined;
-}
 
 interface EnvironmentImportData {
-    environments: Record<string, Record<string, unknown>>;
+    environments: EnvironmentMap;
 }
 
 class CliSetupHandler {
@@ -232,7 +223,7 @@ class CliSetupHandler {
         return name;
     }
 
-    _normalizeAuthData(authType: string, authData?: WorkspaceAuthData): NormalizedAuthData {
+    _normalizeAuthData(authType: string, authData?: WorkspaceAuthData): WorkspaceAuthData {
         if (!authType || authType === 'none') return {};
         if (!authData) return {};
 

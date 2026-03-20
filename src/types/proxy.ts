@@ -21,6 +21,23 @@ export interface ProxyRule {
   hasEnvVars?: boolean;
 }
 
+// ── Cache ───────────────────────────────────────────────────────────
+
+export interface CacheEntry {
+  key: string;
+  url: string;
+  contentType: string;
+  size: number;
+  timestamp: number;
+}
+
+export interface CacheStats {
+  totalSize: number;
+  maxCacheSize: number;
+  usage: number;
+  totalEntries: number;
+}
+
 // ── Proxy stats & status ────────────────────────────────────────────
 
 export interface ProxyStats {

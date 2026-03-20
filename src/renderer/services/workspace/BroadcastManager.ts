@@ -3,11 +3,12 @@
  */
 import { createLogger } from '../../utils/error-handling/logger';
 import type { Source } from '../../../types/source';
+import type { HeaderRule } from '../../../types/rules';
 const log = createLogger('BroadcastManager');
 
 interface BroadcastElectronAPI {
   updateWebSocketSources?: (sources: Source[]) => void;
-  proxyUpdateHeaderRules?: (headerRules: unknown[]) => Promise<{ success: boolean; error?: string }>;
+  proxyUpdateHeaderRules?: (headerRules: HeaderRule[]) => Promise<{ success: boolean; error?: string }>;
   proxyUpdateSources?: (sources: Source[]) => void;
   proxyUpdateSource?: (sourceId: string, value: string) => void;
   proxyClearRules?: () => Promise<{ success: boolean; error?: string }>;
@@ -23,7 +24,7 @@ class BroadcastManager {
   /**
    * Broadcast current state to WebSocket and proxy
    */
-  async broadcastState(sources: Source[], headerRules: Record<string, unknown>[], { includeWebSocket = false } = {}) {
+  async broadcastState(sources: Source[], headerRules: HeaderRule[], { includeWebSocket = false } = {}) {
     try {
       // WebSocket source broadcasting is normally handled by WebSocketContext
       // (with cleaning, debouncing, and change detection).

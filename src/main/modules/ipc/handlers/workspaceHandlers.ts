@@ -16,7 +16,7 @@ import type { Source } from '../../../../types/source';
 import { errorMessage } from '../../../../types/common';
 import type { Workspace, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
-import type { RulesStorage } from '../../../../types/rules';
+import type { RulesStorage, HeaderRule } from '../../../../types/rules';
 import type { AppSettings } from '../../../../types/settings';
 
 const { app, shell, BrowserWindow } = electron;
@@ -309,9 +309,9 @@ class WorkspaceHandlers {
             try {
                 const rulesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'rules.json');
                 const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: Record<string, unknown>[] } };
+                const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
                 if (rulesStorage.rules && rulesStorage.rules.header) {
-                    proxyService.updateHeaderRules(rulesStorage.rules.header as import('../../../../services/proxy/ProxyService').HeaderRule[]);
+                    proxyService.updateHeaderRules(rulesStorage.rules.header);
                     log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
                 }
             } catch (error: unknown) {

@@ -8,11 +8,9 @@ import {
   readFileWithAtomicWriter,
   createBackupIfNeeded,
   cleanupOldBackups,
-  extractVarData,
   validateEnvironmentWrite,
   ENV_FILE_READ_MAX_RETRIES
 } from './git/utils/EnvironmentSyncUtils';
-import type { VarData } from './git/utils/EnvironmentSyncUtils';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
@@ -20,6 +18,9 @@ const log = createLogger('WorkspaceSyncScheduler');
 import { DATA_FORMAT_VERSION } from '../../config/version';
 import type { Source } from '../../types/source';
 import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus, CommitInfo } from '../../types/workspace';
+import type { RulesCollection } from '../../types/rules';
+import type { ProxyRule } from '../../types/proxy';
+import type { EnvironmentMap, EnvironmentSchema } from '../../types/environment';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -66,31 +67,21 @@ interface SyncResult {
 
 interface SyncData {
   sources?: Source[];
-  rules?: Record<string, unknown[]>;
-  proxyRules?: unknown[];
-  environments?: Record<string, Record<string, unknown>>;
+  rules?: RulesCollection;
+  proxyRules?: ProxyRule[];
+  environments?: EnvironmentMap;
   environmentSchema?: EnvironmentSchema;
 }
 
-
-interface EnvironmentSchema {
-  environments?: Record<string, {
-    variables?: Array<{
-      name?: string;
-      isSecret?: boolean;
-    }>;
-  }>;
-}
-
 interface GitSyncService {
-  getGitStatus(): Promise<{ isInstalled: boolean; [key: string]: unknown }>;
+  getGitStatus(): Promise<{ isInstalled: boolean; version?: string; error?: string }>;
   syncWorkspace(config: SyncConfig): Promise<SyncResult>;
-  testConnection(config: Record<string, unknown>): Promise<{ success: boolean; [key: string]: unknown }>;
+  testConnection(config: { url?: string; branch?: string; authType?: string; authData?: WorkspaceAuthData }): Promise<{ success: boolean; error?: string }>;
 }
 
 interface WorkspaceSettingsService {
   getWorkspaces(): Promise<Workspace[]>;
-  updateWorkspace(workspaceId: string, workspace: Partial<Workspace>): Promise<unknown>;
+  updateWorkspace(workspaceId: string, workspace: Partial<Workspace>): Promise<Workspace>;
   updateSyncStatus(workspaceId: string, status: WorkspaceSyncStatus): Promise<void>;
 }
 
@@ -629,10 +620,10 @@ class WorkspaceSyncScheduler {
           const existingEnv = JSON.parse(existingData);
 
           // Extract environment names and variable names (not values)
-          const getEnvStructure = (envData: unknown): Record<string, string[]> => {
+          const getEnvStructure = (envData: EnvironmentMap): Record<string, string[]> => {
             const structure: Record<string, string[]> = {};
-            for (const [envName, vars] of Object.entries(typeof envData === 'object' && envData !== null ? envData as Record<string, unknown> : {})) {
-              structure[envName] = Object.keys((vars as Record<string, unknown>) || {}).sort();
+            for (const [envName, vars] of Object.entries(envData)) {
+              structure[envName] = Object.keys(vars).sort();
             }
             return structure;
           };
@@ -757,24 +748,14 @@ class WorkspaceSyncScheduler {
 
       // Import rules with proper structure
       if (data.rules) {
-        // Ensure rules are in the correct format
-        const rulesStorage: { version: string; rules: Record<string, unknown[]>; metadata: { lastUpdated: string; totalRules: number } } = {
+        const rulesStorage = {
           version: DATA_FORMAT_VERSION,
           rules: data.rules,
           metadata: {
             lastUpdated: new Date().toISOString(),
-            totalRules: 0
+            totalRules: (data.rules.header?.length ?? 0) + (data.rules.request?.length ?? 0) + (data.rules.response?.length ?? 0)
           }
         };
-
-        // Count total rules
-        if (typeof data.rules === 'object') {
-          for (const ruleType in data.rules) {
-            if (Array.isArray(data.rules[ruleType])) {
-              rulesStorage.metadata.totalRules += data.rules[ruleType].length;
-            }
-          }
-        }
 
         const rulesPath = path.join(workspacePath, 'rules.json');
         await atomicWriter.writeJson(rulesPath, rulesStorage, { pretty: true });
@@ -789,11 +770,11 @@ class WorkspaceSyncScheduler {
       }
 
       // Import environments - handle both formats properly
-      let environmentsToImport: Record<string, Record<string, unknown>> | null = null;
+      let environmentsToImport: EnvironmentMap | null = null;
 
       // Load existing environments using atomicWriter for proper coordination with any concurrent writes
       // CRITICAL: We must distinguish between "file doesn't exist" (OK) and "file read failed" (ABORT)
-      let existingEnvironments: Record<string, Record<string, unknown>> = {};
+      let existingEnvironments: EnvironmentMap = {};
       let existingActiveEnvironment: string | null = null;
       let existingEnvFileExists: boolean | undefined;
       let existingEnvLoadFailed = false;
@@ -816,7 +797,7 @@ class WorkspaceSyncScheduler {
 
           if (parsed.environments) {
             existingEnvironments = parsed.environments;
-            existingEnvValueCount = countNonEmptyEnvValues(existingEnvironments as Record<string, Record<string, VarData | string>>);
+            existingEnvValueCount = countNonEmptyEnvValues(existingEnvironments);
           }
 
           // IMPORTANT: Preserve the active environment selection
@@ -873,16 +854,15 @@ class WorkspaceSyncScheduler {
             }
 
             // Merge variables, with Git values taking precedence ONLY if they have non-empty values
-            for (const [varName, varData] of Object.entries(typeof envVars === 'object' && envVars !== null ? envVars as Record<string, unknown> : {})) {
-              const { value: gitValue, isSecret, hasNonEmptyValue: gitHasNonEmptyValue } = extractVarData(varData);
+            for (const [varName, varData] of Object.entries(envVars)) {
               const existingVar = environmentsToImport[envName][varName];
 
-              if (gitHasNonEmptyValue) {
+              if (varData.value) {
                 // Git has a non-empty value, use it
-                environmentsToImport[envName][varName] = typeof varData === 'object' ? varData : { value: gitValue, isSecret: false };
+                environmentsToImport[envName][varName] = varData;
               } else if (!existingVar) {
                 // Variable doesn't exist locally, create it with empty value
-                environmentsToImport[envName][varName] = { value: '', isSecret: isSecret };
+                environmentsToImport[envName][varName] = { value: '', isSecret: varData.isSecret };
               }
               // Otherwise, preserve existing local value (DO NOTHING)
             }
@@ -916,30 +896,13 @@ class WorkspaceSyncScheduler {
                     // Only update isSecret flag from schema if needed
                     const existingVar = environmentsToImport[envName][varDef.name];
 
-                    // Extract existing value properly - DO NOT use || '' as it converts falsy values to empty string
-                    let existingValue: unknown;
-                    let existingIsSecret = false;
-
-                    if (typeof existingVar === 'object' && existingVar !== null) {
-                      // Object format - preserve whatever value is there, even if undefined/null/empty
-                      existingValue = (existingVar as Record<string, unknown>).value;
-                      existingIsSecret = !!(existingVar as Record<string, unknown>).isSecret;
-                    } else if (typeof existingVar === 'string') {
-                      // String format - preserve the string value
-                      existingValue = existingVar;
-                    } else {
-                      // Other format (number, boolean, etc.) - preserve as is
-                      existingValue = existingVar;
-                    }
-
-                    // Log when preserving existing values
-                    if (existingValue !== '' && existingValue !== null && existingValue !== undefined) {
+                    if (existingVar.value) {
                       log.debug(`Preserving existing value for ${envName}.${varDef.name} during Git sync`);
                     }
 
                     environmentsToImport[envName][varDef.name] = {
-                      value: existingValue, // PRESERVE existing value exactly as it was
-                      isSecret: varDef.isSecret !== undefined ? varDef.isSecret : existingIsSecret
+                      value: existingVar.value,
+                      isSecret: varDef.isSecret !== undefined ? varDef.isSecret : existingVar.isSecret
                     };
                   }
                 }
@@ -949,7 +912,7 @@ class WorkspaceSyncScheduler {
 
           // Now check if the same data object also contains environments with actual values
           // (this is the case when env file has both schema AND values)
-          if (data.environments && typeof data.environments === 'object') {
+          if (data.environments) {
             // We have actual values from Git, but ONLY use non-empty ones
             for (const [envName, envVars] of Object.entries(data.environments)) {
               if (!environmentsToImport[envName]) {
@@ -957,15 +920,13 @@ class WorkspaceSyncScheduler {
                 environmentsToImport[envName] = envVars;
               } else {
                 // Environment exists, merge variables CAREFULLY
-                for (const [varName, varData] of Object.entries(typeof envVars === 'object' && envVars !== null ? envVars as Record<string, unknown> : {})) {
-                  const { value: gitValue, isSecret, hasNonEmptyValue: gitHasNonEmptyValue } = extractVarData(varData);
-
-                  if (gitHasNonEmptyValue) {
+                for (const [varName, varData] of Object.entries(envVars)) {
+                  if (varData.value) {
                     // Git has a non-empty value, use it
-                    environmentsToImport[envName][varName] = typeof varData === 'object' ? varData : { value: gitValue, isSecret: false };
+                    environmentsToImport[envName][varName] = varData;
                   } else if (!environmentsToImport[envName][varName]) {
                     // Variable doesn't exist locally, add it with empty value
-                    environmentsToImport[envName][varName] = { value: '', isSecret: isSecret };
+                    environmentsToImport[envName][varName] = { value: '', isSecret: varData.isSecret };
                   }
                   // If Git value is empty and local value exists, preserve local value (do nothing)
                 }
@@ -977,7 +938,7 @@ class WorkspaceSyncScheduler {
 
       if (environmentsToImport) {
         // VALIDATION: Check if we're about to lose data
-        const newValueCount = countNonEmptyEnvValues(environmentsToImport as Record<string, Record<string, VarData | string>> | null);
+        const newValueCount = countNonEmptyEnvValues(environmentsToImport);
         const validation = validateEnvironmentWrite(existingEnvValueCount, newValueCount);
 
         // Log potential data loss
@@ -1025,9 +986,7 @@ class WorkspaceSyncScheduler {
           const envCount = Object.keys(environmentsToImport).length;
           let varCount = 0;
           for (const env of Object.values(environmentsToImport)) {
-            if (typeof env === 'object' && env !== null) {
-              varCount += Object.keys(env as Record<string, unknown>).length;
-            }
+            varCount += Object.keys(env).length;
           }
 
           log.info(`Imported ${envCount} environment(s) with ${varCount} variables for workspace ${workspaceId}`);
@@ -1036,13 +995,11 @@ class WorkspaceSyncScheduler {
           let preservedCount = 0;
           let emptyCount = 0;
           for (const env of Object.values(environmentsToImport)) {
-            if (typeof env === 'object' && env !== null) {
-              for (const varData of Object.values(env as Record<string, unknown>)) {
-                if (typeof varData === 'object' && varData !== null && (varData as Record<string, unknown>).value) {
-                  preservedCount++;
-                } else {
-                  emptyCount++;
-                }
+            for (const varData of Object.values(env)) {
+              if (varData.value) {
+                preservedCount++;
+              } else {
+                emptyCount++;
               }
             }
           }
@@ -1075,8 +1032,12 @@ class WorkspaceSyncScheduler {
             webSocketService.updateSources({
               type: 'rules-update',
               data: {
+                version: DATA_FORMAT_VERSION,
                 rules: data.rules,
-                version: DATA_FORMAT_VERSION
+                metadata: {
+                  totalRules: (data.rules.header?.length ?? 0) + (data.rules.request?.length ?? 0) + (data.rules.response?.length ?? 0),
+                  lastUpdated: new Date().toISOString()
+                }
               }
             });
           }

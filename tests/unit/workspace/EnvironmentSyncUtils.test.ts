@@ -22,7 +22,6 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
 
 import {
     countNonEmptyEnvValues,
-    extractVarData,
     validateEnvironmentWrite,
     ENV_FILE_READ_MAX_RETRIES,
     ENV_FILE_READ_RETRY_DELAY
@@ -39,87 +38,32 @@ describe('EnvironmentSyncUtils', () => {
             expect(countNonEmptyEnvValues({})).toBe(0);
         });
 
-        it('counts non-empty string values', () => {
+        it('counts non-empty values', () => {
             expect(countNonEmptyEnvValues({
                 production: {
-                    API_KEY: 'abc123',
-                    SECRET: 'def456'
+                    API_KEY: { value: 'abc123', isSecret: false },
+                    SECRET: { value: 'def456', isSecret: true }
                 }
             })).toBe(2);
         });
 
-        it('counts non-empty object values', () => {
+        it('counts non-empty and skips empty values', () => {
             expect(countNonEmptyEnvValues({
                 staging: {
-                    API_KEY: { value: 'abc123' },
-                    EMPTY_VAR: { value: '' }
+                    API_KEY: { value: 'abc123', isSecret: false },
+                    EMPTY_VAR: { value: '', isSecret: false }
                 }
             })).toBe(1);
         });
 
-        it('skips null and undefined values', () => {
+        it('handles multiple environments', () => {
             expect(countNonEmptyEnvValues({
+                dev: { KEY: { value: 'val1', isSecret: false } },
                 prod: {
-                    VAR_A: { value: null },
-                    VAR_B: { value: undefined },
-                    VAR_C: { value: 'real' }
+                    KEY: { value: 'val2', isSecret: false },
+                    EMPTY: { value: '', isSecret: false }
                 }
-            })).toBe(1);
-        });
-
-        it('handles mixed formats across environments', () => {
-            expect(countNonEmptyEnvValues({
-                dev: { KEY: 'val1' },
-                prod: { KEY: { value: 'val2' }, EMPTY: { value: '' } }
             })).toBe(2);
-        });
-
-        it('returns 0 for non-object input', () => {
-            expect(countNonEmptyEnvValues('string' as any)).toBe(0);
-            expect(countNonEmptyEnvValues(42 as any)).toBe(0);
-        });
-    });
-
-    describe('extractVarData()', () => {
-        it('extracts string value', () => {
-            const result = extractVarData('hello');
-            expect(result.value).toBe('hello');
-            expect(result.isSecret).toBe(false);
-            expect(result.hasNonEmptyValue).toBe(true);
-        });
-
-        it('extracts object value', () => {
-            const result = extractVarData({ value: 'secret', isSecret: true });
-            expect(result.value).toBe('secret');
-            expect(result.isSecret).toBe(true);
-            expect(result.hasNonEmptyValue).toBe(true);
-        });
-
-        it('handles empty string', () => {
-            const result = extractVarData('');
-            expect(result.value).toBe('');
-            expect(result.hasNonEmptyValue).toBe(false);
-        });
-
-        it('handles null/undefined', () => {
-            const nullResult = extractVarData(null);
-            expect(nullResult.value).toBe('');
-            expect(nullResult.hasNonEmptyValue).toBe(false);
-
-            const undefResult = extractVarData(undefined);
-            expect(undefResult.value).toBe('');
-            expect(undefResult.hasNonEmptyValue).toBe(false);
-        });
-
-        it('defaults isSecret to false', () => {
-            const result = extractVarData({ value: 'v' });
-            expect(result.isSecret).toBe(false);
-        });
-
-        it('handles object with undefined value', () => {
-            const result = extractVarData({ isSecret: true });
-            expect(result.value).toBe('');
-            expect(result.isSecret).toBe(true);
         });
     });
 

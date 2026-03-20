@@ -6,6 +6,7 @@
  */
 
 import { DATA_FORMAT_VERSION } from '../../../config/version.esm';
+import type { RulesStorage } from '../../../types/rules';
 
 // Rule types enum
 export const RULE_TYPES = {
@@ -29,7 +30,7 @@ interface RuleData {
     tag?: string;
     isResponse?: boolean;
     isDynamic?: boolean;
-    sourceId?: string | null;
+    sourceId?: string | number | null;
     prefix?: string;
     suffix?: string;
     hasEnvVars?: boolean;
@@ -105,12 +106,12 @@ export const createRule = (type: string, data: RuleData = {}) => {
 };
 
 // Storage structure for all rules
-export const createRulesStorage = () => ({
+export const createRulesStorage = (): RulesStorage => ({
     version: DATA_FORMAT_VERSION,
     rules: {
-        [RULE_TYPES.HEADER]: [],
-        [RULE_TYPES.PAYLOAD]: [],
-        [RULE_TYPES.URL]: []
+        header: [],
+        request: [],
+        response: []
     },
     metadata: {
         lastUpdated: new Date().toISOString(),
@@ -120,7 +121,7 @@ export const createRulesStorage = () => ({
 
 
 // Export rules in a format compatible with browser extension
-export const exportForExtension = (storage: Record<string, unknown>) => {
+export const exportForExtension = (storage: RulesStorage) => {
     return {
         version: storage.version,
         rules: storage.rules,

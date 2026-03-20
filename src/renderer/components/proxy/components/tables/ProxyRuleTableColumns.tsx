@@ -6,24 +6,12 @@ import { useEnvironments } from '../../../../contexts';
 import { getResolvedPreview } from '../../../../utils/validation/environment-variables';
 import type { Source } from '../../../../../types/source';
 import type { ProxyRule } from '../../../../../types/proxy';
+import type { HeaderRule } from '../../../../../types/rules';
 
 export type { ProxyRule } from '../../../../../types/proxy';
+export type { HeaderRule } from '../../../../../types/rules';
 
 const { Text } = Typography;
-
-export interface HeaderRule {
-    id: string;
-    name?: string;
-    headerName?: string;
-    headerValue?: string;
-    isDynamic?: boolean;
-    sourceId?: string;
-    prefix?: string;
-    suffix?: string;
-    hasEnvVars?: boolean;
-    domains?: string[];
-    isEnabled?: boolean;
-}
 
 export type ProxySource = Pick<Source, 'sourceId' | 'sourceContent'>;
 

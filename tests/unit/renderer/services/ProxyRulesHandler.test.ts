@@ -24,13 +24,14 @@ function validStaticProxyRule(overrides: Record<string, any> = {}) {
   };
 }
 
-function validDynamicProxyRule(overrides: Record<string, any> = {}) {
+function validDynamicProxyRule(overrides: Record<string, string | boolean | string[]> = {}) {
   return {
     id: 'pr-2',
     isDynamic: true,
     headerRuleId: 'rule-1',
-    pattern: '*.api.com',
-    headers: [{ name: 'Auth', isDynamic: true, sourceId: 'src-1' }],
+    headerName: 'Auth',
+    domains: ['*.api.com'],
+    sourceId: 'src-1',
     ...overrides,
   };
 }
@@ -98,7 +99,7 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
     expect(stats.total).toBe(0);
   });
 
-  it('counts total, patterns, and headers', () => {
+  it('counts total, domains, and headers', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const stats = handler.getProxyRulesStatistics([
       validStaticProxyRule(),
@@ -111,11 +112,11 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
     expect(stats.averageHeadersPerRule).toBe(1);
   });
 
-  it('handles rules without headers', () => {
+  it('handles rules without headerName', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const stats = handler.getProxyRulesStatistics([
-      { pattern: 'a.com' },
-      { pattern: 'b.com', headers: [] },
+      { id: '1', domains: ['a.com'] },
+      { id: '2', domains: ['b.com'] },
     ]);
     expect(stats.total).toBe(2);
     expect(stats.withHeaders).toBe(0);
@@ -125,17 +126,17 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
   it('calculates average headers correctly', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const stats = handler.getProxyRulesStatistics([
-      { pattern: 'a.com', headers: [{ name: 'H1' }, { name: 'H2' }, { name: 'H3' }] },
-      { pattern: 'b.com', headers: [{ name: 'H4' }] },
+      { id: '1', domains: ['a.com'], headerName: 'H1' },
+      { id: '2', domains: ['b.com'], headerName: 'H4' },
     ]);
     expect(stats.withHeaders).toBe(2);
-    expect(stats.totalHeaders).toBe(4);
-    expect(stats.averageHeadersPerRule).toBe(2);
+    expect(stats.totalHeaders).toBe(2);
+    expect(stats.averageHeadersPerRule).toBe(1);
   });
 
-  it('handles rules without pattern', () => {
+  it('handles rules without domains', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const stats = handler.getProxyRulesStatistics([{ headers: [] }]);
+    const stats = handler.getProxyRulesStatistics([{ id: '1' }]);
     expect(stats.patterns).toEqual([]);
     expect(stats.total).toBe(1);
   });
@@ -159,48 +160,39 @@ describe('ProxyRulesHandler.analyzeProxyRules', () => {
     expect(result.suggestions).toEqual([]);
   });
 
-  it('detects duplicate patterns', () => {
+  it('detects duplicate domain patterns', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = handler.analyzeProxyRules([
-      { pattern: 'api.com', headers: [{ name: 'X' }] },
-      { pattern: 'api.com', headers: [{ name: 'Y' }] },
+      { id: '1', domains: ['api.com'], headerName: 'X' },
+      { id: '2', domains: ['api.com'], headerName: 'Y' },
     ]);
     expect(result.warnings.some(w => w.includes('api.com'))).toBe(true);
     expect(result.suggestions.some(s => s.includes('consolidating'))).toBe(true);
   });
 
-  it('warns about very broad patterns (* and **)', () => {
+  it('warns about rules without domain restrictions', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = handler.analyzeProxyRules([
-      { pattern: '*', headers: [{ name: 'X' }] },
+      { id: '1', headerName: 'X' },
     ]);
-    expect(result.warnings.some(w => w.includes('very broad'))).toBe(true);
+    expect(result.warnings.some(w => w.includes('no domain restrictions'))).toBe(true);
   });
 
-  it('warns about ** pattern', () => {
+  it('warns about rules without header names', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = handler.analyzeProxyRules([
-      { pattern: '**', headers: [{ name: 'X' }] },
+      { id: '1', domains: ['a.com'] },
+      { id: '2', domains: ['b.com'] },
     ]);
-    expect(result.warnings.some(w => w.includes('very broad'))).toBe(true);
+    expect(result.warnings.some(w => w.includes('no header name'))).toBe(true);
   });
 
-  it('warns about rules without headers', () => {
+  it('does not warn when all rules have header names', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = handler.analyzeProxyRules([
-      { pattern: 'a.com' },
-      { pattern: 'b.com', headers: [] },
+      { id: '1', domains: ['a.com'], headerName: 'X' },
     ]);
-    expect(result.warnings.some(w => w.includes('no headers'))).toBe(true);
-    expect(result.suggestions.some(s => s.includes('without headers'))).toBe(true);
-  });
-
-  it('does not warn when all rules have headers', () => {
-    const handler = new ProxyRulesHandler(makeDeps());
-    const result = handler.analyzeProxyRules([
-      { pattern: 'a.com', headers: [{ name: 'X' }] },
-    ]);
-    expect(result.warnings.some(w => w.includes('no headers'))).toBe(false);
+    expect(result.warnings.some(w => w.includes('no header name'))).toBe(false);
   });
 });
 

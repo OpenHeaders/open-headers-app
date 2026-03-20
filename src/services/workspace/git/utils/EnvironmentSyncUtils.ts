@@ -11,6 +11,7 @@
 
 import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
+import type { EnvironmentVariable, EnvironmentMap } from '../../../../types/environment';
 
 const { createLogger } = mainLogger;
 
@@ -19,12 +20,6 @@ const log = createLogger('EnvironmentSyncUtils');
 // Constants
 const ENV_FILE_READ_MAX_RETRIES = 3;
 const ENV_FILE_READ_RETRY_DELAY = 500; // Base delay between retries in ms
-
-interface VarData {
-  value?: string;
-  isSecret?: boolean;
-  [key: string]: unknown;
-}
 
 interface ExtractedVarData {
   value: string;
@@ -59,19 +54,14 @@ interface PathModule {
  * Count the number of non-empty environment variable values
  * Used to detect if we're about to lose data during sync
  */
-function countNonEmptyEnvValues(environments: Record<string, Record<string, VarData | string>> | null | undefined): number {
+function countNonEmptyEnvValues(environments: EnvironmentMap | null | undefined): number {
   let count = 0;
-  if (!environments || typeof environments !== 'object') return 0;
+  if (!environments) return 0;
 
   for (const envVars of Object.values(environments)) {
-    if (typeof envVars === 'object' && envVars !== null) {
-      for (const varData of Object.values(envVars)) {
-        const value = typeof varData === 'object' && varData !== null
-          ? (varData as VarData).value
-          : varData;
-        if (value !== '' && value !== null && value !== undefined) {
-          count++;
-        }
+    for (const varData of Object.values(envVars)) {
+      if (varData.value) {
+        count++;
       }
     }
   }
@@ -177,22 +167,14 @@ async function cleanupOldBackups(fs: FsPromises, workspacePath: string, pathModu
 }
 
 /**
- * Extract value and isSecret from variable data in either string or object format
+ * Extract value and isSecret from an EnvironmentVariable
  */
-function extractVarData(varData: unknown): ExtractedVarData {
-  let value = '';
-  let isSecret = false;
-
-  if (typeof varData === 'string') {
-    value = varData;
-  } else if (varData && typeof varData === 'object') {
-    value = (varData as VarData).value !== undefined ? (varData as VarData).value! : '';
-    isSecret = (varData as VarData).isSecret || false;
-  }
-
-  const hasNonEmptyValue = value !== '' && value !== null && value !== undefined;
-
-  return { value, isSecret, hasNonEmptyValue };
+function extractVarData(varData: EnvironmentVariable): ExtractedVarData {
+  return {
+    value: varData.value ?? '',
+    isSecret: varData.isSecret,
+    hasNonEmptyValue: !!varData.value
+  };
 }
 
 /**
@@ -231,8 +213,7 @@ export {
   readFileWithAtomicWriter,
   createBackupIfNeeded,
   cleanupOldBackups,
-  extractVarData,
   validateEnvironmentWrite
 };
 
-export type { VarData, ExtractedVarData, ReadFileResult, WriteValidation };
+export type { ReadFileResult, WriteValidation };

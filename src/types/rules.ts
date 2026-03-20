@@ -42,6 +42,7 @@ export interface HeaderRule extends BaseRule {
   suffix: string;
   hasEnvVars: boolean;
   envVars: string[];
+  cookieName?: string;
 }
 
 // ── Payload rule ────────────────────────────────────────────────────
@@ -78,15 +79,19 @@ export interface UrlRule extends BaseRule {
 
 export type Rule = HeaderRule | PayloadRule | UrlRule;
 
+// ── Rules collection (in-memory shape) ──────────────────────────────
+
+export interface RulesCollection {
+  header: HeaderRule[];
+  request: PayloadRule[];
+  response: Rule[];
+}
+
 // ── Persisted file shape (rules.json) ───────────────────────────────
 
 export interface RulesStorage {
   version: string;
-  rules: {
-    header: HeaderRule[];
-    request: PayloadRule[];
-    response: Rule[];
-  };
+  rules: RulesCollection;
   metadata: {
     lastUpdated: string;
     totalRules: number;

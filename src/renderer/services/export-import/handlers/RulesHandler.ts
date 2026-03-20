@@ -8,6 +8,12 @@
 import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 import type { ExportImportDependencies } from '../core/types';
+import type { RulesStorage as SharedRulesStorage } from '../../../../types/rules';
+
+/** Import/export rules storage — uses dynamic keys for iterating over rule types */
+interface RulesStorage extends SharedRulesStorage {
+  rules: SharedRulesStorage['rules'] & Record<string, RuleEntry[]>;
+}
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
@@ -39,16 +45,6 @@ interface RulesToImport {
   metadata?: Record<string, unknown>;
 }
 
-/** Rules storage structure */
-interface RulesStorage {
-  rules: Record<string, RuleEntry[]>;
-  metadata: {
-    totalRules: number;
-    lastUpdated: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
 
 /** Import statistics per type */
 interface TypeImportStats {
@@ -173,8 +169,8 @@ export class RulesHandler {
       }
 
       // Update metadata
-      existingRulesStorage.metadata.totalRules = (Object.values(existingRulesStorage.rules) as RuleEntry[][])
-        .reduce((sum: number, rules: RuleEntry[]) => sum + rules.length, 0);
+      existingRulesStorage.metadata.totalRules = existingRulesStorage.rules.header.length
+        + existingRulesStorage.rules.request.length + existingRulesStorage.rules.response.length;
       existingRulesStorage.metadata.lastUpdated = new Date().toISOString();
 
       // Save the updated rules

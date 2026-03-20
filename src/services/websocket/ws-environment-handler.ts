@@ -8,13 +8,14 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import type { Source } from '../../types/source';
+import type { RulesCollection } from '../../types/rules';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSEnvironmentHandler');
 
 interface WSServiceLike {
     appDataPath: string | null;
-    rules: Record<string, unknown> & { header?: Array<Record<string, unknown>> };
+    rules: RulesCollection;
     sources: Source[];
     ruleHandler: { broadcastRules(): void };
 }
@@ -130,8 +131,8 @@ class WSEnvironmentHandler {
                 proxyService.updateEnvironmentVariables(envVars);
             }
 
-            if (this.wsService.rules && this.wsService.rules.header) {
-                proxyService.updateHeaderRules(this.wsService.rules.header as Parameters<typeof proxyService.updateHeaderRules>[0]);
+            if (this.wsService.rules.header.length > 0) {
+                proxyService.updateHeaderRules(this.wsService.rules.header);
             }
 
             if (this.wsService.sources && this.wsService.sources.length > 0) {

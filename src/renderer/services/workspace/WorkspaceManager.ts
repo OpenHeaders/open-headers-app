@@ -9,7 +9,7 @@ const log = createLogger('WorkspaceManager');
 interface StorageAPI {
   loadFromStorage: (filename: string) => Promise<string | null>;
   saveToStorage: (filename: string, content: string) => Promise<void>;
-  deleteDirectory: (dirPath: string) => Promise<unknown>;
+  deleteDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export interface WorkspacesConfig {

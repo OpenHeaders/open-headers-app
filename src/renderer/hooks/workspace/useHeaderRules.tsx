@@ -1,17 +1,12 @@
 import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 import { showMessage } from '../../utils/ui/messageUtil';
-
-interface HeaderRule {
-  id: string;
-  isEnabled?: boolean;
-  [key: string]: unknown;
-}
+import type { HeaderRule } from '../../../types/rules';
 
 interface UseHeaderRulesReturn {
   rules: HeaderRule[];
-  addRule: (ruleData: Record<string, unknown>) => Promise<boolean>;
-  updateRule: (ruleId: string, updates: Record<string, unknown>) => Promise<boolean>;
+  addRule: (ruleData: Partial<HeaderRule>) => Promise<boolean>;
+  updateRule: (ruleId: string, updates: Partial<HeaderRule>) => Promise<boolean>;
   removeRule: (ruleId: string) => Promise<boolean>;
   toggleRule: (ruleId: string, enabled: boolean) => Promise<boolean>;
 }
@@ -21,9 +16,9 @@ interface UseHeaderRulesReturn {
  */
 export function useHeaderRules(): UseHeaderRulesReturn {
   const { rules, service } = useCentralizedWorkspace();
-  const headerRules = (rules.header || []) as HeaderRule[];
+  const headerRules = rules.header || [];
 
-  const addRule = useCallback(async (ruleData: Record<string, unknown>): Promise<boolean> => {
+  const addRule = useCallback(async (ruleData: Partial<HeaderRule>): Promise<boolean> => {
     try {
       await service.addHeaderRule(ruleData);
       showMessage('success', 'Rule added successfully');
@@ -34,7 +29,7 @@ export function useHeaderRules(): UseHeaderRulesReturn {
     }
   }, [service]);
 
-  const updateRule = useCallback(async (ruleId: string, updates: Record<string, unknown>): Promise<boolean> => {
+  const updateRule = useCallback(async (ruleId: string, updates: Partial<HeaderRule>): Promise<boolean> => {
     try {
       await service.updateHeaderRule(ruleId, updates);
       return true;

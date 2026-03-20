@@ -28,7 +28,6 @@ interface RuleForValidation {
   suffix?: string;
   domains?: string[];
   isEnabled?: boolean;
-  [key: string]: unknown;
 }
 
 /**
