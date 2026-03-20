@@ -50,8 +50,8 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
 
                 showMessage('success',
                     React.createElement('span', null,
-                        'Switched to ', icon as React.ReactNode, ' ', workspaceName
-                    ) as unknown as string
+                        'Switched to ', icon, ' ', workspaceName
+                    )
                 );
             }, remainingTime + 150); // Wait for overlay to hide + small buffer
         };

@@ -14,7 +14,8 @@ import networkService from '../../../../services/network/NetworkService';
 import type { IpcInvokeEvent, IpcFireEvent, OperationResult } from '../../../../types/common';
 import type { Source } from '../../../../types/source';
 import { errorMessage } from '../../../../types/common';
-import type { Workspace, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
+import type { Workspace, WorkspaceAuthData, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
+import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
 import type { RulesStorage, HeaderRule } from '../../../../types/rules';
 import type { AppSettings } from '../../../../types/settings';
@@ -70,10 +71,10 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleWorkspaceTestConnection(event: IpcInvokeEvent, gitConfig: Record<string, unknown>) {
+    async handleWorkspaceTestConnection(event: IpcInvokeEvent, gitConfig: { url?: string; branch?: string; authType?: string; authData?: WorkspaceAuthData }) {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
-            const onProgress = (update: Record<string, unknown>, summary: Record<string, unknown>) => {
+            const onProgress = (update: ProgressStep, summary: ProgressStep[]) => {
                 const window = BrowserWindow.fromWebContents(event.sender);
                 if (window && !window.isDestroyed()) {
                     window.webContents.send('git-connection-progress', { update, summary });
@@ -130,7 +131,7 @@ class WorkspaceHandlers {
 
     async handleWorkspaceAutoSyncEnabled() {
         try {
-            const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
+            const settings = await settingsHandlers.handleGetSettings();
             return settings.autoSyncWorkspaces !== false; // Default to true
         } catch (error) {
             log.error('Error checking auto-sync setting:', error);
@@ -335,8 +336,8 @@ class WorkspaceHandlers {
 
         // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
         if (!skipInitialSync) {
-            const workspaces = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find((w: { id: string }) => w.id === workspaceId);
+            const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
+            const workspace = workspaces.find(w => w.id === workspaceId);
 
             if (workspace && workspace.type === 'git') {
                 const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
@@ -397,7 +398,7 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleWorkspaceUpdated(_event: IpcFireEvent, data: { workspaceId: string; workspace: Record<string, unknown> }) {
+    async handleWorkspaceUpdated(_event: IpcFireEvent, data: { workspaceId: string; workspace: Workspace }) {
         log.info(`Received workspace update event:`, data);
         const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
         if (workspaceSyncScheduler && data.workspace) {
@@ -446,8 +447,8 @@ class WorkspaceHandlers {
             }
 
             // Try to get workspaces first to verify the method exists
-            const workspaces = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find((w: { id: string }) => w.id === workspaceId);
+            const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
+            const workspace = workspaces.find(w => w.id === workspaceId);
 
             if (!workspace) {
                 log.info(`Workspace ${workspaceId} not found in settings, considering it deleted`);

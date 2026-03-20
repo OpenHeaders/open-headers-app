@@ -22,7 +22,7 @@ export interface WorkspaceFormValues {
     environmentOption?: string;
     fileFormat?: string;
     initialCommit?: { files: Record<string, string>; message: string };
-    [key: string]: unknown;
+    inviteMetadata?: { invitedBy?: string; inviteId?: string; joinedAt?: string };
 }
 
 /**

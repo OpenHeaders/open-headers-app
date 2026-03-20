@@ -11,7 +11,9 @@ interface GitProgressEvent {
     type: string;
     data: {
         summary?: Array<string | { step: string; status: string; details?: string; progress?: number }>;
-        [key: string]: unknown;
+        message?: string;
+        progress?: number;
+        phase?: string;
     };
 }
 
@@ -37,7 +39,7 @@ interface GitConfig {
     authType?: string;
     filePath?: string;
     path?: string;
-    files?: Record<string, string> | unknown;
+    files?: Record<string, string>;
     message?: string;
     authData?: WorkspaceAuthData;
     checkWriteAccess?: boolean;
@@ -97,9 +99,9 @@ class GitServiceAdapter {
     async install() {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data: unknown) => {
+            const progressHandler = (data: GitProgressEvent['data']) => {
                 this.progressListeners.forEach(listener => {
-                    listener({ type: 'git-install', data: data as GitProgressEvent['data'] });
+                    listener({ type: 'git-install', data });
                 });
             };
 
@@ -149,9 +151,9 @@ class GitServiceAdapter {
     async commitConfiguration(config: GitConfig) {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data: unknown) => {
+            const progressHandler = (data: GitProgressEvent['data']) => {
                 this.progressListeners.forEach(listener => {
-                    listener({ type: 'git-commit', data: data as GitProgressEvent['data'] });
+                    listener({ type: 'git-commit', data });
                 });
             };
 
@@ -221,9 +223,9 @@ class GitServiceAdapter {
      * Returns unsubscribe function that should be called when done
      */
     subscribeToConnectionProgress() {
-        const progressHandler = (data: unknown) => {
+        const progressHandler = (data: GitProgressEvent['data']) => {
             this.progressListeners.forEach(listener => {
-                listener({ type: 'git-connection', data: data as GitProgressEvent['data'] });
+                listener({ type: 'git-connection', data });
             });
         };
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Workspace } from '../../../src/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -46,10 +47,32 @@ vi.mock('../../../src/services/workspace/git/utils/EnvironmentSyncUtils.js', () 
   ENV_FILE_READ_MAX_RETRIES: 3
 }));
 
-import { WorkspaceSyncScheduler } from '../../../src/services/workspace/WorkspaceSyncScheduler';
+import {
+  WorkspaceSyncScheduler,
+  type GitSyncService,
+  type WorkspaceSettingsServiceInterface,
+  type NetworkService,
+} from '../../../src/services/workspace/WorkspaceSyncScheduler';
+
+/** Expose private fields for test assertions. */
+type TestableScheduler = WorkspaceSyncScheduler & {
+  syncInProgress: Map<string, boolean>;
+  activeWorkspaceId: string | null;
+  activeWorkspace: Workspace | null;
+};
+
+/** Create a minimal valid Workspace for tests. */
+function testWorkspace(overrides: Partial<Workspace> = {}): Workspace {
+  return {
+    id: 'ws-test',
+    name: 'Test',
+    type: 'git',
+    ...overrides,
+  };
+}
 
 // Helper to create mock services
-function createMockGitSyncService() {
+function createMockGitSyncService(): GitSyncService {
   return {
     getGitStatus: vi.fn().mockResolvedValue({ isInstalled: true }),
     syncWorkspace: vi.fn().mockResolvedValue({ success: true, data: null }),
@@ -57,7 +80,7 @@ function createMockGitSyncService() {
   };
 }
 
-function createMockWorkspaceSettingsService() {
+function createMockWorkspaceSettingsService(): WorkspaceSettingsServiceInterface {
   return {
     getWorkspaces: vi.fn().mockResolvedValue([]),
     updateWorkspace: vi.fn().mockResolvedValue(undefined),
@@ -65,18 +88,23 @@ function createMockWorkspaceSettingsService() {
   };
 }
 
+interface NetworkStateChange {
+  newState: { isOnline: boolean };
+  oldState: { isOnline: boolean };
+}
+
 function createMockNetworkService(isOnline = true) {
-  const listeners = new Map<string, Function[]>();
+  const listeners = new Map<string, ((event: NetworkStateChange) => void)[]>();
   return {
-    on: vi.fn((event: string, handler: Function) => {
+    on: vi.fn((event: string, handler: (event: NetworkStateChange) => void) => {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(handler);
     }),
     getState: vi.fn().mockReturnValue({ isOnline }),
-    _emit(event: string, data: any) {
+    _emit(event: string, data: NetworkStateChange) {
       (listeners.get(event) || []).forEach(fn => fn(data));
     }
-  };
+  } satisfies NetworkService & { _emit: (event: string, data: NetworkStateChange) => void };
 }
 
 describe('WorkspaceSyncScheduler', () => {
@@ -93,9 +121,9 @@ describe('WorkspaceSyncScheduler', () => {
     networkService = createMockNetworkService(true);
     broadcaster = vi.fn();
     scheduler = new WorkspaceSyncScheduler(
-      gitSync as any,
-      settingsService as any,
-      networkService as any,
+      gitSync,
+      settingsService,
+      networkService,
       { broadcaster }
     );
   });
@@ -114,25 +142,25 @@ describe('WorkspaceSyncScheduler', () => {
   describe('startSync()', () => {
     it('does not start sync when network is offline', () => {
       networkService.getState.mockReturnValue({ isOnline: false });
-      scheduler.startSync('ws-1', { name: 'Test', type: 'git' } as any);
+      scheduler.startSync('ws-1', testWorkspace());
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
     });
 
     it('does not schedule duplicate syncs for same workspace', () => {
-      const workspace = { name: 'Test', type: 'git' };
-      scheduler.startSync('ws-1', workspace as any);
-      scheduler.startSync('ws-1', workspace as any);
+      const workspace = testWorkspace();
+      scheduler.startSync('ws-1', workspace);
+      scheduler.startSync('ws-1', workspace);
       // Second call should not create a new timer (idempotent)
     });
   });
 
   describe('stopSync()', () => {
     it('clears sync timer for workspace', () => {
-      const workspace = { name: 'Test', type: 'git' };
-      scheduler.startSync('ws-1', workspace as any);
+      const workspace = testWorkspace();
+      scheduler.startSync('ws-1', workspace);
       scheduler.stopSync('ws-1');
       // Should be able to start again after stopping without error
-      scheduler.startSync('ws-1', workspace as any);
+      scheduler.startSync('ws-1', workspace);
     });
 
     it('does nothing for workspace with no timer', () => {
@@ -144,34 +172,33 @@ describe('WorkspaceSyncScheduler', () => {
   describe('performSync()', () => {
     it('skips when sync already in progress', async () => {
       // Manually set sync in progress
-      (scheduler as any).syncInProgress.set('ws-1', true);
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git' } as any);
+      (scheduler as TestableScheduler).syncInProgress.set('ws-1', true);
+      await scheduler.performSync('ws-1', testWorkspace());
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
     });
 
     it('skips when network is offline', async () => {
       networkService.getState.mockReturnValue({ isOnline: false });
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git' } as any);
+      await scheduler.performSync('ws-1', testWorkspace());
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
     });
 
     it('skips when git is not installed', async () => {
       gitSync.getGitStatus.mockResolvedValue({ isInstalled: false });
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git' } as any);
+      await scheduler.performSync('ws-1', testWorkspace());
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
     });
 
     it('calls syncWorkspace with correct config', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
-      await scheduler.performSync('ws-1', {
+      await scheduler.performSync('ws-1', testWorkspace({
         name: 'My Team',
-        type: 'git',
         gitUrl: 'https://github.com/test/repo',
         gitBranch: 'develop',
         gitPath: 'custom/path.json',
         authType: 'token',
         authData: { token: 'abc' }
-      } as any);
+      }));
 
       expect(gitSync.syncWorkspace).toHaveBeenCalledWith({
         workspaceId: 'ws-1',
@@ -186,11 +213,9 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('uses default values for missing config fields', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
-      await scheduler.performSync('ws-1', {
-        name: 'Test',
-        type: 'git',
+      await scheduler.performSync('ws-1', testWorkspace({
         gitUrl: 'https://github.com/test/repo'
-      } as any);
+      }));
 
       expect(gitSync.syncWorkspace).toHaveBeenCalledWith(expect.objectContaining({
         branch: 'main',
@@ -202,7 +227,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('broadcasts sync error on failure', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: false, error: 'auth failed' });
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git', gitUrl: 'url' } as any);
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'url' }));
 
       expect(broadcaster).toHaveBeenCalledWith('workspace-sync-completed', expect.objectContaining({
         workspaceId: 'ws-1',
@@ -213,24 +238,24 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('clears syncInProgress flag after completion', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git', gitUrl: 'url' } as any);
-      expect((scheduler as any).syncInProgress.get('ws-1')).toBe(false);
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'url' }));
+      expect((scheduler as TestableScheduler).syncInProgress.get('ws-1')).toBe(false);
     });
 
     it('clears syncInProgress flag even on error', async () => {
       gitSync.syncWorkspace.mockRejectedValue(new Error('network error'));
-      await scheduler.performSync('ws-1', { name: 'Test', type: 'git', gitUrl: 'url' } as any);
-      expect((scheduler as any).syncInProgress.get('ws-1')).toBe(false);
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'url' }));
+      expect((scheduler as TestableScheduler).syncInProgress.get('ws-1')).toBe(false);
     });
   });
 
   describe('onWorkspaceSwitch()', () => {
     it('stops sync for previous workspace', async () => {
       const stopSyncSpy = vi.spyOn(scheduler, 'stopSync');
-      (scheduler as any).activeWorkspaceId = 'old-ws';
+      (scheduler as TestableScheduler).activeWorkspaceId = 'old-ws';
 
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'new-ws', name: 'New', type: 'personal' }
+        testWorkspace({ id: 'new-ws', name: 'New', type: 'personal' })
       ]);
 
       await scheduler.onWorkspaceSwitch('new-ws');
@@ -240,7 +265,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('starts sync for git workspace with autoSync', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'git-ws', name: 'Team', type: 'git', autoSync: true }
+        testWorkspace({ id: 'git-ws', name: 'Team', autoSync: true })
       ]);
 
       await scheduler.onWorkspaceSwitch('git-ws');
@@ -250,7 +275,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('does not start sync for personal workspace', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'personal', name: 'Personal', type: 'personal' }
+        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' })
       ]);
 
       await scheduler.onWorkspaceSwitch('personal');
@@ -260,7 +285,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('does not start sync when autoSync is false', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'git-ws', name: 'Team', type: 'git', autoSync: false }
+        testWorkspace({ id: 'git-ws', name: 'Team', autoSync: false })
       ]);
 
       await scheduler.onWorkspaceSwitch('git-ws');
@@ -271,18 +296,18 @@ describe('WorkspaceSyncScheduler', () => {
   describe('onWorkspaceUpdated()', () => {
     it('restarts sync when autoSync is toggled on', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      (scheduler as any).activeWorkspaceId = 'ws-1';
-      (scheduler as any).activeWorkspace = { name: 'Test', type: 'git' };
+      (scheduler as TestableScheduler).activeWorkspaceId = 'ws-1';
+      (scheduler as TestableScheduler).activeWorkspace = testWorkspace();
 
-      await scheduler.onWorkspaceUpdated('ws-1', { name: 'Test', type: 'git', autoSync: true } as any);
+      await scheduler.onWorkspaceUpdated('ws-1', testWorkspace({ autoSync: true }));
       expect(startSyncSpy).toHaveBeenCalledWith('ws-1', expect.objectContaining({ autoSync: true }));
     });
 
     it('does not restart sync for non-active workspace', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      (scheduler as any).activeWorkspaceId = 'other-ws';
+      (scheduler as TestableScheduler).activeWorkspaceId = 'other-ws';
 
-      await scheduler.onWorkspaceUpdated('ws-1', { name: 'Test', type: 'git', autoSync: true } as any);
+      await scheduler.onWorkspaceUpdated('ws-1', testWorkspace({ autoSync: true }));
       expect(startSyncSpy).not.toHaveBeenCalled();
     });
   });
@@ -297,7 +322,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('returns error for non-git workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'personal', name: 'Personal', type: 'personal' }
+        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' })
       ]);
       const result = await scheduler.manualSync('personal');
       expect(result.success).toBe(false);
@@ -306,7 +331,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('performs sync for git workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'git-ws', name: 'Team', type: 'git', gitUrl: 'url' }
+        testWorkspace({ id: 'git-ws', name: 'Team', gitUrl: 'url' })
       ]);
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       const result = await scheduler.manualSync('git-ws');
@@ -315,7 +340,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('allows manual sync for team workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        { id: 'team-ws', name: 'Team', type: 'team', gitUrl: 'url' }
+        testWorkspace({ id: 'team-ws', name: 'Team', type: 'team', gitUrl: 'url' })
       ]);
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       const result = await scheduler.manualSync('team-ws');
@@ -330,7 +355,7 @@ describe('WorkspaceSyncScheduler', () => {
     });
 
     it('returns status for scheduled workspace', () => {
-      scheduler.startSync('ws-1', { name: 'Test', type: 'git' } as any);
+      scheduler.startSync('ws-1', testWorkspace());
       const status = scheduler.getSyncStatus();
       expect(status['ws-1']).toBeDefined();
       expect(status['ws-1'].scheduled).toBe(true);
@@ -340,8 +365,8 @@ describe('WorkspaceSyncScheduler', () => {
 
   describe('shutdown()', () => {
     it('clears all sync timers', async () => {
-      scheduler.startSync('ws-1', { name: 'Test1', type: 'git' } as any);
-      scheduler.startSync('ws-2', { name: 'Test2', type: 'git' } as any);
+      scheduler.startSync('ws-1', testWorkspace({ name: 'Test1' }));
+      scheduler.startSync('ws-2', testWorkspace({ name: 'Test2' }));
 
       await scheduler.shutdown();
 
@@ -353,10 +378,10 @@ describe('WorkspaceSyncScheduler', () => {
   describe('checkGitConnectivity()', () => {
     it('caches connectivity results', async () => {
       gitSync.testConnection.mockResolvedValue({ success: true });
-      const workspace = { name: 'Test', type: 'git', gitUrl: 'https://github.com/test' };
+      const workspace = testWorkspace({ gitUrl: 'https://github.com/test' });
 
-      const result1 = await scheduler.checkGitConnectivity('ws-1', workspace as any);
-      const result2 = await scheduler.checkGitConnectivity('ws-1', workspace as any);
+      const result1 = await scheduler.checkGitConnectivity('ws-1', workspace);
+      const result2 = await scheduler.checkGitConnectivity('ws-1', workspace);
 
       expect(result1).toBe(true);
       expect(result2).toBe(true);
@@ -366,9 +391,9 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('returns false when connectivity check fails', async () => {
       gitSync.testConnection.mockRejectedValue(new Error('timeout'));
-      const workspace = { name: 'Test', type: 'git', gitUrl: 'https://github.com/test' };
+      const workspace = testWorkspace({ gitUrl: 'https://github.com/test' });
 
-      const result = await scheduler.checkGitConnectivity('ws-1', workspace as any);
+      const result = await scheduler.checkGitConnectivity('ws-1', workspace);
       expect(result).toBe(false);
     });
   });

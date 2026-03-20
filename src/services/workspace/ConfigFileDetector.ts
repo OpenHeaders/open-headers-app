@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
+import type { ConfigData } from '../../utils/configValidator';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
@@ -16,7 +17,7 @@ interface DetectedFile {
   relativePath: string;
   type: string;
   valid: boolean;
-  data?: Record<string, unknown>;
+  data?: ConfigData;
   error?: string;
 }
 
@@ -150,7 +151,7 @@ class ConfigFileDetector {
 
     try {
       const content = await fs.promises.readFile(filePath, 'utf8');
-      const data = JSON.parse(content) as Record<string, unknown>;
+      const data = JSON.parse(content) as ConfigData;
 
       // Determine file type
       const type = this.detectFileType(data, relativePath);
@@ -177,7 +178,7 @@ class ConfigFileDetector {
   /**
    * Detect configuration file type
    */
-  detectFileType(data: Record<string, unknown>, relativePath: string): string {
+  detectFileType(data: ConfigData, relativePath: string): string {
     // Check for workspace metadata
     if (data.workspaceId && data.workspaceName) {
       return 'workspace-metadata';

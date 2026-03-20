@@ -11,7 +11,7 @@ import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { SparseCheckoutManager } from '../repository/SparseCheckoutManager';
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileDetector, DetectedFile } from '../../ConfigFileDetector';
-import type { ConfigFileValidator } from '../../config-file-validator';
+import type { ConfigFileValidator, ConfigContent } from '../../config-file-validator';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const fsPromises = fs.promises;
@@ -33,7 +33,6 @@ interface ProgressInfo {
   step?: number;
   totalSteps?: number;
   message: string;
-  [key: string]: unknown;
 }
 
 interface CreateOptions {
@@ -74,7 +73,7 @@ interface CreateResult {
 
 interface ConfigSetupResult {
   configPaths: Record<string, string>;
-  metadata: Record<string, unknown>;
+  metadata: ConfigContent;
   detectedConfigs: DetectedFile[];
   sparsePatterns: string[];
   hasSparsePatterns: boolean;
@@ -84,7 +83,7 @@ interface VerifyConfigResult {
   exists: boolean;
   basePath?: string;
   configPaths: Record<string, string>;
-  metadata?: Record<string, unknown>;
+  metadata?: ConfigContent;
   sparsePatterns: string[];
 }
 
@@ -413,27 +412,23 @@ class TeamWorkspaceCreator {
       try {
         const metadata = await this.configValidator.loadJson(metadataPath);
 
-        if (metadata && typeof metadata === 'object') {
-          const metaObj = metadata as Record<string, unknown>;
-          if (metaObj.workspaceId === workspaceId) {
-            // Found valid workspace config
-            const configPaths: Record<string, string> = {};
-            const metaConfigPaths = (metaObj.configPaths || {}) as Record<string, string>;
+        if (metadata && metadata.workspaceId === workspaceId) {
+          const configPaths: Record<string, string> = {};
+          const metaConfigPaths = metadata.configPaths || {};
 
-            for (const [key, relativePath] of Object.entries(metaConfigPaths)) {
-              configPaths[key] = path.join(repoDir, relativePath);
-            }
-
-            const sparsePatterns = this.sparseCheckoutManager.createWorkspacePatterns(configPaths);
-
-            return {
-              exists: true,
-              basePath,
-              configPaths,
-              metadata: metaObj,
-              sparsePatterns
-            };
+          for (const [key, relativePath] of Object.entries(metaConfigPaths)) {
+            configPaths[key] = path.join(repoDir, relativePath);
           }
+
+          const sparsePatterns = this.sparseCheckoutManager.createWorkspacePatterns(configPaths);
+
+          return {
+            exists: true,
+            basePath,
+            configPaths,
+            metadata,
+            sparsePatterns
+          };
         }
       } catch (error) {
         // Continue checking other paths

@@ -8,14 +8,17 @@ const log = createLogger('messageUtil');
 /** Message type for the message API */
 type MessageType = 'success' | 'error' | 'warning' | 'info';
 
+/** Content accepted by the message API — string or React node (Ant Design supports both). */
+type MessageContent = React.ReactNode;
+
 /** Function signature for showing messages */
-type ShowMessageFn = (type: MessageType, content: string, duration?: number) => void;
+type ShowMessageFn = (type: MessageType, content: MessageContent, duration?: number) => void;
 
 // These functions will be used outside of React components
-let globalShowMessage: ShowMessageFn = (type: MessageType, content: string, duration?: number) => {
-    log.debug(`Message API not initialized yet: ${type} - ${content}`);
+let globalShowMessage: ShowMessageFn = (type: MessageType, content: MessageContent, duration?: number) => {
+    log.debug(`Message API not initialized yet: ${type} - ${String(content)}`);
     // Default implementation that just logs
-    log.debug(`This message will not be displayed to user: ${content}`);
+    log.debug(`This message will not be displayed to user: ${String(content)}`);
 };
 
 /**
@@ -43,7 +46,7 @@ export const MessageInitializer = () => {
         initializeMessageApi(showMessage);
         return () => {
             // Reset to default implementation when component unmounts
-            globalShowMessage = (type: MessageType, content: string, duration?: number) => {
+            globalShowMessage = (type: MessageType, content: MessageContent, duration?: number) => {
                 log.debug(`Message API reset: ${type} - ${content}`);
             };
         };
@@ -54,7 +57,7 @@ export const MessageInitializer = () => {
 };
 
 // Exported functions that can be used anywhere in the application
-export const showMessage = (type: MessageType, content: string, duration = 3) => {
+export const showMessage = (type: MessageType, content: MessageContent, duration = 3) => {
     if (typeof globalShowMessage !== 'function') {
         // Message API not properly initialized
         return;
@@ -62,7 +65,7 @@ export const showMessage = (type: MessageType, content: string, duration = 3) =>
     globalShowMessage(type, content, duration);
 };
 
-export const successMessage = (content: string, duration?: number) => showMessage('success', content, duration);
-export const errorMessage = (content: string, duration?: number) => showMessage('error', content, duration);
-export const warningMessage = (content: string, duration?: number) => showMessage('warning', content, duration);
-export const infoMessage = (content: string, duration?: number) => showMessage('info', content, duration);
+export const successMessage = (content: MessageContent, duration?: number) => showMessage('success', content, duration);
+export const errorMessage = (content: MessageContent, duration?: number) => showMessage('error', content, duration);
+export const warningMessage = (content: MessageContent, duration?: number) => showMessage('warning', content, duration);
+export const infoMessage = (content: MessageContent, duration?: number) => showMessage('info', content, duration);

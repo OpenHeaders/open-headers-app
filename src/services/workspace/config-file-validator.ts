@@ -49,21 +49,15 @@ interface EnvironmentEntry {
   name?: string;
 }
 
-interface ProxyRule {
-  pattern?: string;
-  url?: string;
-  target?: string;
-}
-
 interface ConfigContent {
   version?: string;
   headers?: HeaderEntry[];
   environments?: EnvironmentEntry[];
-  rules?: ProxyRule[];
+  rules?: Array<{ pattern?: string; url?: string; target?: string }>;
   workspaceId?: string;
   workspaceName?: string;
   createdAt?: string;
-  configPaths?: Record<string, unknown>;
+  configPaths?: Record<string, string>;
   [key: string]: unknown;
 }
 
@@ -400,10 +394,14 @@ class ConfigFileValidator {
     // Type-specific merging
     switch (type) {
       case 'headers':
+        if (Array.isArray(override.headers)) {
+          merged.headers = [...(base.headers || []), ...override.headers];
+        }
+        break;
+
       case 'rules':
-        // For arrays, concatenate unique items
-        if (Array.isArray(override[type])) {
-          (merged as Record<string, unknown>)[type] = [...((base as Record<string, unknown>)[type] as unknown[] || []), ...(override[type] as unknown[])];
+        if (Array.isArray(override.rules)) {
+          merged.rules = [...(base.rules || []), ...override.rules];
         }
         break;
 

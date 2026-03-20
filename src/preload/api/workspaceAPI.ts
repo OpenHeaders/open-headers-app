@@ -1,92 +1,173 @@
 import electron from 'electron';
+import type { IpcRendererEvent } from 'electron';
+import type { OperationResult } from '../../types/common';
+import type {
+    Workspace,
+    WorkspaceAuthData,
+    TeamWorkspaceInvite,
+    WorkspaceSyncCompletedData,
+    WorkspaceDataUpdatedData,
+    CliWorkspaceJoinedData,
+    ServicesHealth,
+} from '../../types/workspace';
+import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from '../../types/environment';
+
 const { ipcRenderer } = electron;
+
+/** WebSocket connection status returned by the main process. */
+interface WsConnectionStatus {
+    totalConnections: number;
+    browserCounts: Record<string, number>;
+    clients: {
+        id: string;
+        browser: string;
+        browserVersion: string;
+        platform: string;
+        connectionType: string;
+        connectedAt: number;
+        lastActivity: number;
+        extensionVersion: string;
+    }[];
+    wsServerRunning: boolean;
+    wssServerRunning: boolean;
+    wsPort: number;
+    wssPort: number;
+    certificateFingerprint: string | null;
+    certificatePath: string | null;
+    certificateExpiry: string | null;
+    certificateSubject: string | null;
+    error?: string;
+}
+
+/** Sync status per workspace. */
+interface SyncStatus {
+    scheduled: boolean;
+    syncing: boolean;
+    lastSync: number | null;
+}
+
+/** Workspace sync options from the renderer. */
+interface WorkspaceSyncOptions {
+    silent?: boolean;
+}
+
+/** Git config for testing connection. */
+interface GitTestConfig {
+    url?: string;
+    branch?: string;
+    authType?: string;
+    authData?: WorkspaceAuthData;
+}
+
+/** Result from generateTeamWorkspaceInvite. */
+interface GenerateInviteResult {
+    success: boolean;
+    inviteData?: TeamWorkspaceInvite;
+    links?: { appLink: string; webLink: string };
+    error?: string;
+}
+
+/** Result from generateEnvironmentConfigLink. */
+interface GenerateEnvLinkResult {
+    success: boolean;
+    envConfigData?: EnvironmentConfigData;
+    links?: { appLink: string; webLink: string; dataSize: number };
+    error?: string;
+}
+
+/** Data for environment config link generation. */
+interface EnvironmentLinkData {
+    environments?: EnvironmentMap;
+    environmentSchema?: EnvironmentSchema;
+    includeValues?: boolean;
+}
 
 const workspaceAPI = {
     // WebSocket status
-    wsGetConnectionStatus: (): Promise<unknown> => ipcRenderer.invoke('ws-get-connection-status'),
-    wsCheckCertTrust: (): Promise<unknown> => ipcRenderer.invoke('ws-check-cert-trust'),
-    wsTrustCert: (): Promise<unknown> => ipcRenderer.invoke('ws-trust-cert'),
-    wsUntrustCert: (): Promise<unknown> => ipcRenderer.invoke('ws-untrust-cert'),
+    wsGetConnectionStatus: (): Promise<WsConnectionStatus> => ipcRenderer.invoke('ws-get-connection-status'),
+    wsCheckCertTrust: (): Promise<{ trusted: boolean; error?: string }> => ipcRenderer.invoke('ws-check-cert-trust'),
+    wsTrustCert: (): Promise<OperationResult> => ipcRenderer.invoke('ws-trust-cert'),
+    wsUntrustCert: (): Promise<OperationResult> => ipcRenderer.invoke('ws-untrust-cert'),
 
     // Core workspace operations
-    initializeWorkspaceSync: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('initializeWorkspaceSync', workspaceId),
-    deleteWorkspace: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deleteWorkspace', workspaceId),
-    deleteWorkspaceFolder: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('deleteWorkspaceFolder', workspaceId),
-    syncWorkspace: (workspaceId: string, options: unknown): Promise<unknown> => ipcRenderer.invoke('workspace-sync', workspaceId, options),
+    initializeWorkspaceSync: (workspaceId: string): Promise<OperationResult> => ipcRenderer.invoke('initializeWorkspaceSync', workspaceId),
+    deleteWorkspace: (workspaceId: string): Promise<OperationResult> => ipcRenderer.invoke('deleteWorkspace', workspaceId),
+    deleteWorkspaceFolder: (workspaceId: string): Promise<OperationResult> => ipcRenderer.invoke('deleteWorkspaceFolder', workspaceId),
+    syncWorkspace: (workspaceId: string, options: WorkspaceSyncOptions): Promise<OperationResult> => ipcRenderer.invoke('workspace-sync', workspaceId, options),
 
     // Workspace management operations
-    workspaceTestConnection: (gitConfig: unknown): Promise<unknown> => ipcRenderer.invoke('workspace-test-connection', gitConfig),
-    workspaceSyncAll: (): Promise<unknown> => ipcRenderer.invoke('workspace-sync-all'),
-    workspaceGetSyncStatus: (): Promise<unknown> => ipcRenderer.invoke('workspace-get-sync-status'),
-    workspaceAutoSyncEnabled: (): Promise<unknown> => ipcRenderer.invoke('workspace-auto-sync-enabled'),
-    workspaceOpenFolder: (workspaceId: string): Promise<unknown> => ipcRenderer.invoke('workspace-open-folder', workspaceId),
-    servicesHealthCheck: (): Promise<unknown> => ipcRenderer.invoke('services-health-check'),
+    workspaceTestConnection: (gitConfig: GitTestConfig): Promise<OperationResult> => ipcRenderer.invoke('workspace-test-connection', gitConfig),
+    workspaceSyncAll: (): Promise<OperationResult> => ipcRenderer.invoke('workspace-sync-all'),
+    workspaceGetSyncStatus: (): Promise<Record<string, SyncStatus>> => ipcRenderer.invoke('workspace-get-sync-status'),
+    workspaceAutoSyncEnabled: (): Promise<boolean> => ipcRenderer.invoke('workspace-auto-sync-enabled'),
+    workspaceOpenFolder: (workspaceId: string): Promise<OperationResult> => ipcRenderer.invoke('workspace-open-folder', workspaceId),
+    servicesHealthCheck: (): Promise<ServicesHealth> => ipcRenderer.invoke('services-health-check'),
 
     // Event listeners for workspace sync
-    onWorkspaceSyncProgress: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onWorkspaceSyncProgress: (callback: (data: WorkspaceSyncCompletedData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: WorkspaceSyncCompletedData) => callback(data);
         ipcRenderer.on('workspace-sync-progress', subscription);
         return () => ipcRenderer.removeListener('workspace-sync-progress', subscription);
     },
 
-    onWorkspaceSyncCompleted: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onWorkspaceSyncCompleted: (callback: (data: WorkspaceSyncCompletedData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: WorkspaceSyncCompletedData) => callback(data);
         ipcRenderer.on('workspace-sync-completed', subscription);
         return () => ipcRenderer.removeListener('workspace-sync-completed', subscription);
     },
 
-    onWorkspaceSyncStarted: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onWorkspaceSyncStarted: (callback: (data: WorkspaceSyncCompletedData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: WorkspaceSyncCompletedData) => callback(data);
         ipcRenderer.on('workspace-sync-started', subscription);
         return () => ipcRenderer.removeListener('workspace-sync-started', subscription);
     },
 
-    onWorkspaceDataUpdated: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onWorkspaceDataUpdated: (callback: (data: WorkspaceDataUpdatedData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: WorkspaceDataUpdatedData) => callback(data);
         ipcRenderer.on('workspace-data-updated', subscription);
         return () => ipcRenderer.removeListener('workspace-data-updated', subscription);
     },
 
-    onCliWorkspaceJoined: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onCliWorkspaceJoined: (callback: (data: CliWorkspaceJoinedData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: CliWorkspaceJoinedData) => callback(data);
         ipcRenderer.on('cli-workspace-joined', subscription);
         return () => ipcRenderer.removeListener('cli-workspace-joined', subscription);
     },
 
-    onEnvironmentsStructureChanged: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, data: unknown) => callback(data);
+    onEnvironmentsStructureChanged: (callback: (data: { workspaceId: string; timestamp: number }) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: { workspaceId: string; timestamp: number }) => callback(data);
         ipcRenderer.on('environments-structure-changed', subscription);
         return () => ipcRenderer.removeListener('environments-structure-changed', subscription);
     },
 
-    onWsConnectionStatusChanged: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => callback(data);
+    onWsConnectionStatusChanged: (callback: (data: WsConnectionStatus) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: WsConnectionStatus) => callback(data);
         ipcRenderer.on('ws-connection-status-changed', subscription);
         return () => ipcRenderer.removeListener('ws-connection-status-changed', subscription);
     },
 
     // Team workspace invite processing
-    onProcessTeamWorkspaceInvite: (callback: (inviteData: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, inviteData: unknown) => callback(inviteData);
+    onProcessTeamWorkspaceInvite: (callback: (inviteData: TeamWorkspaceInvite) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, inviteData: TeamWorkspaceInvite) => callback(inviteData);
         ipcRenderer.on('process-team-workspace-invite', subscription);
         return () => ipcRenderer.removeListener('process-team-workspace-invite', subscription);
     },
 
-    onShowErrorMessage: (callback: (errorData: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, errorData: unknown) => callback(errorData);
+    onShowErrorMessage: (callback: (errorData: { title?: string; message: string }) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, errorData: { title?: string; message: string }) => callback(errorData);
         ipcRenderer.on('show-error-message', subscription);
         return () => ipcRenderer.removeListener('show-error-message', subscription);
     },
 
     // Generate invite links for team workspaces
-    generateTeamWorkspaceInvite: (workspaceData: unknown): Promise<unknown> => ipcRenderer.invoke('generate-team-workspace-invite', workspaceData),
+    generateTeamWorkspaceInvite: (workspaceData: Partial<Workspace> & { includeAuthData?: boolean }): Promise<GenerateInviteResult> => ipcRenderer.invoke('generate-team-workspace-invite', workspaceData),
 
     // Generate environment config links
-    generateEnvironmentConfigLink: (environmentData: unknown): Promise<unknown> => ipcRenderer.invoke('generate-environment-config-link', environmentData),
+    generateEnvironmentConfigLink: (environmentData: EnvironmentLinkData): Promise<GenerateEnvLinkResult> => ipcRenderer.invoke('generate-environment-config-link', environmentData),
 
     // Environment config import processing
-    onProcessEnvironmentConfigImport: (callback: (envData: unknown) => void): (() => void) => {
-        const subscription = (event: unknown, envData: unknown) => {
+    onProcessEnvironmentConfigImport: (callback: (envData: EnvironmentConfigData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, envData: EnvironmentConfigData) => {
             callback(envData);
         };
         ipcRenderer.on('process-environment-config-import', subscription);

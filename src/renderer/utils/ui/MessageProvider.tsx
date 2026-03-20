@@ -5,7 +5,7 @@ import { createLogger } from '../error-handling/logger';
 const log = createLogger('MessageProvider');
 
 // Create a context for the message API
-const MessageContext = createContext<{ showMessage: (type: string, content: string, duration?: number) => void } | null>(null);
+const MessageContext = createContext<{ showMessage: (type: string, content: React.ReactNode, duration?: number) => void } | null>(null);
 
 // Set of recent messages to prevent duplicates
 const recentMessages = new Set();
@@ -19,18 +19,18 @@ export const MessageProvider = ({ children }: MessageProviderProps) => {
     const [messageApi, contextHolder] = message.useMessage();
 
     // Export the message API through context
-    const showMessage = (type: string, content: string, duration = 3) => {
+    const showMessage = (type: string, content: React.ReactNode, duration = 3) => {
         // Create a message key for deduplication
-        const messageKey = `${type}:${content}`;
+        const messageKey = `${type}:${String(content)}`;
 
         // Skip if duplicate
         if (recentMessages.has(messageKey)) {
-            log.debug(`Skipping duplicate message: ${content}`);
+            log.debug(`Skipping duplicate message: ${String(content)}`);
             return;
         }
 
         // Log message attempt
-        log.debug(`Showing ${type} message: ${content}`);
+        log.debug(`Showing ${type} message: ${String(content)}`);
 
         // Add to recent messages set
         recentMessages.add(messageKey);

@@ -7,6 +7,18 @@ import { TIMING } from '../../constants';
 import { createLogger } from '../../../../../utils/error-handling/logger';
 const log = createLogger('GitActions');
 
+interface GitConnectionResult {
+    success: boolean;
+    warning?: string;
+    configFileValid?: boolean;
+    branches?: string[] | number;
+    message?: string;
+    validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number };
+    error?: string;
+    hint?: string;
+    debugHint?: string;
+}
+
 /**
  * Custom hook for Git-related operations
  * 
@@ -138,7 +150,7 @@ export const useGitActions = () => {
      * Handles successful connection test
      * @param {Object} result - Connection test result
      */
-    const handleConnectionSuccess = (result: { warning?: string; configFileValid?: boolean; branches?: string[] | number; message?: string; validationDetails?: unknown; [key: string]: unknown }) => {
+    const handleConnectionSuccess = (result: GitConnectionResult) => {
         if (result.warning) {
             void message.warning(result.warning);
         } else if (result.configFileValid) {
@@ -152,12 +164,12 @@ export const useGitActions = () => {
      * Handles valid config file in connection test
      * @param {Object} result - Connection test result
      */
-    const handleValidConfigFile = (result: { validationDetails?: unknown; message?: string; branches?: string[] | number; [key: string]: unknown }) => {
+    const handleValidConfigFile = (result: GitConnectionResult) => {
         if (result.validationDetails) {
-            const items = formatValidationDetails(result.validationDetails as Parameters<typeof formatValidationDetails>[0]);
+            const items = formatValidationDetails(result.validationDetails);
             
             if (items.length > 0) {
-                const isMultiFile = result.message && (result.message as string).includes('multi-file');
+                const isMultiFile = result.message?.includes('multi-file');
                 void message.success(
                     <div>
                         <div style={{ fontWeight: 500 }}>✅ Connection successful!</div>
@@ -187,7 +199,7 @@ export const useGitActions = () => {
      * Handles connection test error
      * @param {Object} result - Connection test result
      */
-    const handleConnectionError = (result: { validationDetails?: unknown; error?: string; hint?: string; debugHint?: string; [key: string]: unknown }) => {
+    const handleConnectionError = (result: GitConnectionResult) => {
         if (result.validationDetails) {
             void message.error(
                 <div>
