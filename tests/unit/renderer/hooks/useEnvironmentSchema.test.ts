@@ -111,8 +111,8 @@ describe('useEnvironmentSchema', () => {
 
       const schema = result.current.generateEnvironmentSchema([httpSource]);
 
-      expect(schema.variableDefinitions.API_KEY.sensitive).toBe(true);
-      expect(schema.variableDefinitions.BASE_URL.sensitive).toBe(false);
+      expect(schema.variableDefinitions.API_KEY.isSecret).toBe(true);
+      expect(schema.variableDefinitions.BASE_URL.isSecret).toBe(false);
     });
 
     it('tracks which sources use each variable', () => {

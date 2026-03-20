@@ -2,10 +2,29 @@
  * Shared types for the Export/Import system
  */
 
+/** A single variable in a schema environment listing */
+export interface SchemaVariable {
+  name: string;
+  isSecret: boolean;
+}
+
+/** Per-environment data inside the schema */
+export interface SchemaEnvironmentEntry {
+  variables: SchemaVariable[];
+}
+
+/** Per-variable metadata */
+export interface SchemaVariableDefinition {
+  description: string;
+  isSecret: boolean;
+  usedIn: string[];
+  example?: string;
+}
+
 /** Environment schema structure returned by generateEnvironmentSchema */
 export interface EnvironmentSchema {
-  environments: Record<string, { variables?: Array<{ name: string; isSecret: boolean }> } | Record<string, { value?: string; isSecret?: boolean }>>;
-  variableDefinitions: Record<string, { name?: string; defaultValue?: string; isSecret?: boolean; sensitive?: boolean; usedIn?: string[]; description?: string; example?: string }>;
+  environments: Record<string, SchemaEnvironmentEntry>;
+  variableDefinitions: Record<string, SchemaVariableDefinition>;
 }
 
 import type { Source } from '../../../../types/source';

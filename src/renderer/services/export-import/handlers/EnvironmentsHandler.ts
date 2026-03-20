@@ -9,20 +9,14 @@ import { getCentralizedEnvironmentService } from '../../../services/CentralizedE
 import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utilities/ValidationUtils';
 import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
 import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, EnvironmentVariableEntry } from '../core/types';
+import type { ExportImportDependencies, EnvironmentVariableEntry, EnvironmentSchema, SchemaVariableDefinition } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentsHandler');
 
-interface EnvironmentSchema {
-  environments: Record<string, Record<string, unknown>>;
-  variableDefinitions: Record<string, Record<string, unknown>>;
-}
-
 interface ExportOptions {
   environmentOption?: string;
   selectedEnvironments?: string[];
-  [key: string]: unknown;
 }
 
 interface ImportOptions {
@@ -34,13 +28,7 @@ interface ImportOptions {
 
 interface ImportData {
   environmentSchema?: EnvironmentSchema;
-  environments?: Record<string, Record<string, EnvironmentVariableData>>;
-}
-
-interface EnvironmentVariableData {
-  value?: string;
-  isSecret?: boolean;
-  [key: string]: unknown;
+  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
 }
 
 interface ImportStats {
@@ -55,14 +43,8 @@ interface VariableToSet {
   isSecret: boolean;
 }
 
-interface VariableDefinition {
-  name: string;
-  isSecret?: boolean;
-  [key: string]: unknown;
-}
-
 interface EnvironmentData {
-  environments?: Record<string, Record<string, EnvironmentVariableData>>;
+  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
   environmentSchema?: EnvironmentSchema;
 }
 
@@ -228,7 +210,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Import statistics
    * @private
    */
-  async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariableData>>, options: ImportOptions) {
+  async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariableEntry>>, options: ImportOptions) {
     const stats: ImportStats = {
       environmentsImported: 0,
       variablesCreated: 0,
@@ -378,7 +360,7 @@ export class EnvironmentsHandler {
           // Convert object variableDefinitions to array format for processing
           const variableDefsArray = Object.entries(schemaData.variableDefinitions).map(([name, def]) => ({
             name,
-            ...(def as Record<string, unknown>)
+            ...def
           }));
           const schemaStats = await this._createVariablesFromSchema(envName, variableDefsArray);
           stats.variablesCreated += schemaStats.variablesCreated;
@@ -405,7 +387,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Creation statistics
    * @private
    */
-  async _createVariablesFromSchema(envName: string, variableDefinitions: VariableDefinition[]) {
+  async _createVariablesFromSchema(envName: string, variableDefinitions: Array<SchemaVariableDefinition & { name: string }>) {
     const stats: { variablesCreated: number; errors: ImportStats['errors'] } = {
       variablesCreated: 0,
       errors: []
