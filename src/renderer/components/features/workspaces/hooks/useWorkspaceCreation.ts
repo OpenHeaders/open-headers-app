@@ -289,7 +289,8 @@ function getProgressFromState(state: string) {
         }
     };
 
-    return (state in progressMap) ? progressMap[state as keyof typeof progressMap] : null;
+    const map: Record<string, { step: number; total: number; title: string; description: string }> = progressMap;
+    return map[state] ?? null;
 }
 
 /**

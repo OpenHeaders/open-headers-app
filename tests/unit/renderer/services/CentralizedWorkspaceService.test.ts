@@ -325,12 +325,13 @@ describe('CWS state management patterns', () => {
 
   describe('source operations', () => {
     it('updateSource merges refreshOptions', () => {
-      manager.state.sources = [
+      const initialSources: TestSource[] = [
         { sourceId: '1', sourceType: 'http', refreshOptions: { enabled: true, interval: 5000 } },
       ];
+      manager.state.sources = initialSources;
 
       const updates = { refreshOptions: { interval: 10000 } };
-      const sources = (manager.state.sources as TestSource[]).map((source: TestSource) => {
+      const sources = initialSources.map((source) => {
         if (source.sourceId === '1') {
           const mergedUpdates = { ...updates };
           if (updates.refreshOptions && source.refreshOptions) {
@@ -344,25 +345,25 @@ describe('CWS state management patterns', () => {
         return source;
       });
 
-      expect(sources[0].refreshOptions.enabled).toBe(true);
-      expect(sources[0].refreshOptions.interval).toBe(10000);
+      expect(sources[0].refreshOptions!.enabled).toBe(true);
+      expect(sources[0].refreshOptions!.interval).toBe(10000);
     });
 
     it('removeSource filters by id', () => {
-      manager.state.sources = [{ sourceId: '1' }, { sourceId: '2' }, { sourceId: '3' }];
-      const sources = (manager.state.sources as TestSource[]).filter(
-        (s: TestSource) => s.sourceId !== String('2')
-      );
+      const initialSources: TestSource[] = [{ sourceId: '1' }, { sourceId: '2' }, { sourceId: '3' }];
+      manager.state.sources = initialSources;
+      const sources = initialSources.filter((s) => s.sourceId !== '2');
       expect(sources).toHaveLength(2);
-      expect(sources.map((s: TestSource) => s.sourceId)).toEqual(['1', '3']);
+      expect(sources.map((s) => s.sourceId)).toEqual(['1', '3']);
     });
 
     it('updateSourceActivation activates and clears dependencies', () => {
-      manager.state.sources = [
+      const initialSources: TestSource[] = [
         { sourceId: '1', activationState: 'waiting_for_deps', missingDependencies: ['KEY'] },
       ];
+      manager.state.sources = initialSources;
 
-      const sources = (manager.state.sources as TestSource[]).map((source: TestSource) => {
+      const sources = initialSources.map((source) => {
         if (source.sourceId === '1') {
           return {
             ...source,
@@ -380,16 +381,18 @@ describe('CWS state management patterns', () => {
 
   describe('proxy rule operations', () => {
     it('addProxyRule appends to array', () => {
-      manager.state.proxyRules = [{ id: 'p1' }];
+      const initialRules: TestProxyRule[] = [{ id: 'p1' }];
+      manager.state.proxyRules = initialRules;
       const rule: TestProxyRule = { id: 'p2', pattern: '*.api.com' };
-      const proxyRules = [...(manager.state.proxyRules as TestProxyRule[]), rule];
+      const proxyRules = [...initialRules, rule];
       expect(proxyRules).toHaveLength(2);
       expect(proxyRules[1]).toEqual(rule);
     });
 
     it('removeProxyRule filters by id', () => {
-      manager.state.proxyRules = [{ id: 'p1' }, { id: 'p2' }];
-      const proxyRules = (manager.state.proxyRules as TestProxyRule[]).filter((r: TestProxyRule) => r.id !== 'p1');
+      const initialRules: TestProxyRule[] = [{ id: 'p1' }, { id: 'p2' }];
+      manager.state.proxyRules = initialRules;
+      const proxyRules = initialRules.filter((r) => r.id !== 'p1');
       expect(proxyRules).toHaveLength(1);
       expect(proxyRules[0].id).toBe('p2');
     });
@@ -397,12 +400,13 @@ describe('CWS state management patterns', () => {
 
   describe('workspace metadata update', () => {
     it('updates metadata for matching workspace', () => {
-      manager.state.workspaces = [
+      const initialWorkspaces: TestWorkspace[] = [
         { id: 'ws1', name: 'Test', metadata: { sourceCount: 0 } },
         { id: 'ws2', name: 'Other', metadata: { sourceCount: 3 } },
       ];
+      manager.state.workspaces = initialWorkspaces;
 
-      const workspaces = (manager.state.workspaces as TestWorkspace[]).map((w: TestWorkspace) =>
+      const workspaces = initialWorkspaces.map((w) =>
         w.id === 'ws1'
           ? { ...w, metadata: { ...w.metadata, sourceCount: 5 }, updatedAt: new Date().toISOString() }
           : w

@@ -80,7 +80,8 @@ describe('useWorkspaceSync', () => {
     capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect((handler.mock.calls[0][0] as CustomEvent).detail.workspaceId).toBe('ws-1');
+    const event: CustomEvent = handler.mock.calls[0][0];
+    expect(event.detail.workspaceId).toBe('ws-1');
 
     window.removeEventListener('workspace-data-refresh-needed', handler);
   });
