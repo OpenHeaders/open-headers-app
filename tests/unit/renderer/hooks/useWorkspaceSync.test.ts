@@ -20,7 +20,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 
 const mockShowMessage = vi.fn();
 vi.mock('../../../../src/renderer/utils/ui/messageUtil', () => ({
-  showMessage: (...args: unknown[]) => mockShowMessage(...args),
+  showMessage: (...args: [type: string, content: React.ReactNode, duration?: number]) => mockShowMessage(...args),
 }));
 
 type UpdateCallback = (data: { workspaceId: string; timestamp: number }) => void;

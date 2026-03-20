@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { StorageAPI } from '../../../../src/renderer/services/workspace/WorkspaceManager';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -21,7 +22,7 @@ const WorkspaceManager = (
 
 describe('WorkspaceManager', () => {
   let manager: InstanceType<typeof WorkspaceManager>;
-  let mockStorageAPI: any;
+  let mockStorageAPI: StorageAPI;
 
   beforeEach(() => {
     mockStorageAPI = {

@@ -7,6 +7,8 @@
  * patterns that mirror CWS behaviour.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type BaseStateManagerType from '../../../../src/renderer/services/workspace/BaseStateManager';
+import type AutoSaveManagerType from '../../../../src/renderer/services/workspace/AutoSaveManager';
 
 // Mock logger for all sub-module imports
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -19,20 +21,57 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 }));
 
 // Import the CJS sub-managers that CWS delegates to
-const BaseStateManager = (await import(
+const { default: BaseStateManager } = await import(
   '../../../../src/renderer/services/workspace/BaseStateManager'
-) as any).default || (await import('../../../../src/renderer/services/workspace/BaseStateManager') as any);
+);
 
-const AutoSaveManagerModule = await import(
+const { default: AutoSaveManager } = await import(
   '../../../../src/renderer/services/workspace/AutoSaveManager'
 );
-const AutoSaveManager = (AutoSaveManagerModule as any).default || AutoSaveManagerModule;
+
+// ======================================================================
+// Test-local interfaces for the CWS-like state used in pattern tests
+// ======================================================================
+interface TestRefreshOptions {
+  enabled?: boolean;
+  interval?: number;
+}
+
+interface TestSource {
+  sourceId: string;
+  sourceType?: string;
+  refreshOptions?: TestRefreshOptions;
+  activationState?: string;
+  missingDependencies?: string[];
+}
+
+interface TestProxyRule {
+  id: string;
+  pattern?: string;
+}
+
+interface TestWorkspaceMetadata {
+  sourceCount: number;
+}
+
+interface TestWorkspace {
+  id: string;
+  name: string;
+  metadata: TestWorkspaceMetadata;
+  updatedAt?: string;
+}
+
+interface TestRules {
+  header: number[];
+  request: number[];
+  response: number[];
+}
 
 // ======================================================================
 // BaseStateManager (base class of CentralizedWorkspaceService)
 // ======================================================================
 describe('BaseStateManager', () => {
-  let manager: any;
+  let manager: InstanceType<typeof BaseStateManagerType>;
 
   beforeEach(() => {
     manager = new BaseStateManager('TestManager');
@@ -120,7 +159,7 @@ describe('BaseStateManager', () => {
 // AutoSaveManager (used by CWS for dirty tracking and auto-save)
 // ======================================================================
 describe('AutoSaveManager', () => {
-  let asm: any;
+  let asm: InstanceType<typeof AutoSaveManagerType>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -242,7 +281,7 @@ describe('AutoSaveManager', () => {
 // Tests the coordination logic that CWS implements using BaseStateManager.
 // ======================================================================
 describe('CWS state management patterns', () => {
-  let manager: any;
+  let manager: InstanceType<typeof BaseStateManagerType>;
 
   beforeEach(() => {
     manager = new BaseStateManager('CWSLike');
@@ -291,7 +330,7 @@ describe('CWS state management patterns', () => {
       ];
 
       const updates = { refreshOptions: { interval: 10000 } };
-      const sources = manager.state.sources.map((source: any) => {
+      const sources = (manager.state.sources as TestSource[]).map((source: TestSource) => {
         if (source.sourceId === '1') {
           const mergedUpdates = { ...updates };
           if (updates.refreshOptions && source.refreshOptions) {
@@ -311,11 +350,11 @@ describe('CWS state management patterns', () => {
 
     it('removeSource filters by id', () => {
       manager.state.sources = [{ sourceId: '1' }, { sourceId: '2' }, { sourceId: '3' }];
-      const sources = manager.state.sources.filter(
-        (s: any) => s.sourceId !== String('2')
+      const sources = (manager.state.sources as TestSource[]).filter(
+        (s: TestSource) => s.sourceId !== String('2')
       );
       expect(sources).toHaveLength(2);
-      expect(sources.map((s: any) => s.sourceId)).toEqual(['1', '3']);
+      expect(sources.map((s: TestSource) => s.sourceId)).toEqual(['1', '3']);
     });
 
     it('updateSourceActivation activates and clears dependencies', () => {
@@ -323,7 +362,7 @@ describe('CWS state management patterns', () => {
         { sourceId: '1', activationState: 'waiting_for_deps', missingDependencies: ['KEY'] },
       ];
 
-      const sources = manager.state.sources.map((source: any) => {
+      const sources = (manager.state.sources as TestSource[]).map((source: TestSource) => {
         if (source.sourceId === '1') {
           return {
             ...source,
@@ -342,15 +381,15 @@ describe('CWS state management patterns', () => {
   describe('proxy rule operations', () => {
     it('addProxyRule appends to array', () => {
       manager.state.proxyRules = [{ id: 'p1' }];
-      const rule = { id: 'p2', pattern: '*.api.com' };
-      const proxyRules = [...manager.state.proxyRules, rule];
+      const rule: TestProxyRule = { id: 'p2', pattern: '*.api.com' };
+      const proxyRules = [...(manager.state.proxyRules as TestProxyRule[]), rule];
       expect(proxyRules).toHaveLength(2);
       expect(proxyRules[1]).toEqual(rule);
     });
 
     it('removeProxyRule filters by id', () => {
       manager.state.proxyRules = [{ id: 'p1' }, { id: 'p2' }];
-      const proxyRules = manager.state.proxyRules.filter((r: any) => r.id !== 'p1');
+      const proxyRules = (manager.state.proxyRules as TestProxyRule[]).filter((r: TestProxyRule) => r.id !== 'p1');
       expect(proxyRules).toHaveLength(1);
       expect(proxyRules[0].id).toBe('p2');
     });
@@ -363,7 +402,7 @@ describe('CWS state management patterns', () => {
         { id: 'ws2', name: 'Other', metadata: { sourceCount: 3 } },
       ];
 
-      const workspaces = manager.state.workspaces.map((w: any) =>
+      const workspaces = (manager.state.workspaces as TestWorkspace[]).map((w: TestWorkspace) =>
         w.id === 'ws1'
           ? { ...w, metadata: { ...w.metadata, sourceCount: 5 }, updatedAt: new Date().toISOString() }
           : w
@@ -462,18 +501,18 @@ describe('CWS state management patterns', () => {
 
   describe('rule count calculation', () => {
     it('calculates total rules across all types', () => {
-      const rules = { header: [1, 2, 3], request: [4], response: [5, 6] };
+      const rules: TestRules = { header: [1, 2, 3], request: [4], response: [5, 6] };
       const totalRules = Object.values(rules).reduce(
-        (sum: number, ruleArray: any[]) => sum + ruleArray.length,
+        (sum: number, ruleArray: number[]) => sum + ruleArray.length,
         0
       );
       expect(totalRules).toBe(6);
     });
 
     it('returns 0 for empty rules', () => {
-      const rules = { header: [], request: [], response: [] };
+      const rules: TestRules = { header: [], request: [], response: [] };
       const totalRules = Object.values(rules).reduce(
-        (sum: number, ruleArray: any[]) => sum + ruleArray.length,
+        (sum: number, ruleArray: number[]) => sum + ruleArray.length,
         0
       );
       expect(totalRules).toBe(0);

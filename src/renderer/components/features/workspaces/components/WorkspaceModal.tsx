@@ -15,6 +15,7 @@ import WorkspaceCreationProgressModal from './WorkspaceCreationProgressModal';
 import { FILE_FORMATS, ExportService, type ExportData } from '../../../../services/export-import';
 import type { Workspace } from '../../../../../types/workspace';
 import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+import type { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
 
 const { Text, Title } = Typography;
 
@@ -84,7 +85,7 @@ const WorkspaceModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
+    } = useWorkspaceCreation(services as WorkspaceCreationDependencies);
 
     const watchedType = Form.useWatch('type', form);
     const watchedGitUrl = Form.useWatch('gitUrl', form);
@@ -348,7 +349,7 @@ const WorkspaceModal = ({
                 };
             } catch (error: unknown) {
                 console.error('Failed to prepare export data:', error);
-                console.error('Error details:', (error as Error).stack);
+                console.error('Error details:', error instanceof Error ? error.stack : String(error));
                 message.error({
                     content: `Failed to prepare configuration data: ${error instanceof Error ? error.message : String(error)}`,
                     duration: 8
