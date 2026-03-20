@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { useEnvironmentCore, EnvironmentVariableEntry } from './useEnvironmentCore';
+import { useEnvironmentCore } from './useEnvironmentCore';
+import type { EnvironmentVariable } from '../../../types/environment';
 import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useEnvironmentVariables');
@@ -9,7 +10,7 @@ interface UseEnvironmentVariablesReturn {
   deleteVariable: (name: string, environment?: string | null) => Promise<boolean>;
   getVariable: (name: string, environment?: string | null) => string;
   getAllVariables: (environment?: string | null) => Record<string, string>;
-  getAllVariablesWithMetadata: (environment?: string | null) => Record<string, EnvironmentVariableEntry>;
+  getAllVariablesWithMetadata: (environment?: string | null) => Record<string, EnvironmentVariable>;
 }
 
 /**
@@ -56,21 +57,21 @@ export function useEnvironmentVariables(): UseEnvironmentVariablesReturn {
     const envVars = environments[targetEnv] || {};
 
     const result: Record<string, string> = {};
-    Object.entries(envVars).forEach(([key, variable]: [string, EnvironmentVariableEntry]) => {
+    Object.entries(envVars).forEach(([key, variable]: [string, EnvironmentVariable]) => {
       result[key] = variable.value || '';
     });
 
     return result;
   }, [environments, activeEnvironment, isReady, service]);
 
-  const getAllVariablesWithMetadata = useCallback((environment: string | null = null): Record<string, EnvironmentVariableEntry> => {
+  const getAllVariablesWithMetadata = useCallback((environment: string | null = null): Record<string, EnvironmentVariable> => {
     const targetEnv = environment || activeEnvironment;
     const envData = environments[targetEnv] || {};
 
     // Filter out any non-variable properties
     // Variables should have a 'value' property
-    const variables: Record<string, EnvironmentVariableEntry> = {};
-    Object.entries(envData).forEach(([key, data]: [string, EnvironmentVariableEntry]) => {
+    const variables: Record<string, EnvironmentVariable> = {};
+    Object.entries(envData).forEach(([key, data]: [string, EnvironmentVariable]) => {
       if (data && typeof data === 'object' && 'value' in data) {
         variables[key] = data;
       }

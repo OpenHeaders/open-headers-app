@@ -1,11 +1,12 @@
 import { useCallback } from 'react';
-import { useEnvironmentCore, EnvironmentVariableEntry } from './useEnvironmentCore';
+import { useEnvironmentCore } from './useEnvironmentCore';
+import type { EnvironmentVariable } from '../../../types/environment';
 import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useEnvironmentOperations');
 
 interface UseEnvironmentOperationsReturn {
-  environments: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments: Record<string, Record<string, EnvironmentVariable>>;
   activeEnvironment: string;
   createEnvironment: (name: string) => Promise<boolean>;
   deleteEnvironment: (name: string) => Promise<boolean>;
@@ -63,7 +64,7 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
       await service.createEnvironment(newName);
 
       // Batch copy all variables (single save + single IPC event)
-      const variablesToSet = Object.entries(sourceVars).map(([varName, variable]: [string, EnvironmentVariableEntry]) => ({
+      const variablesToSet = Object.entries(sourceVars).map(([varName, variable]: [string, EnvironmentVariable]) => ({
         name: varName,
         value: variable.value ?? null,
         isSecret: variable.isSecret

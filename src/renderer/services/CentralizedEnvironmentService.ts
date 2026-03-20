@@ -16,6 +16,7 @@ import {
   TemplateResolver,
   EnvironmentEventManager
 } from './environment';
+import type { EnvironmentServiceState } from './environment/EnvironmentStateManager';
 
 const log = createLogger('CentralizedEnvironmentService');
 
@@ -43,7 +44,7 @@ class CentralizedEnvironmentService {
   /**
    * Subscribe to state changes
    */
-  subscribe(listener: (state: Record<string, unknown>, changedKeys: string[]) => void) {
+  subscribe(listener: (state: EnvironmentServiceState, changedKeys: string[]) => void) {
     return this.stateManager.subscribe(listener);
   }
 
@@ -131,7 +132,7 @@ class CentralizedEnvironmentService {
       const data = await this.storageManager.loadEnvironments(workspaceId ?? '');
       
       this.stateManager.setState({
-        currentWorkspaceId: workspaceId,
+        currentWorkspaceId: workspaceId ?? 'default-personal',
         environments: data.environments,
         activeEnvironment: data.activeEnvironment
       });
@@ -282,7 +283,7 @@ class CentralizedEnvironmentService {
   async setVariableInEnvironment(name: string, value: string | null, environmentName: string, isSecret = false) {
     const state = this.stateManager.getState();
     const updatedEnvironments = this.variableManager.setVariable(
-      state.environments as never,
+      state.environments,
       environmentName,
       name,
       value,
@@ -382,7 +383,7 @@ class CentralizedEnvironmentService {
     );
 
     // If we're deleting the active environment, switch to Default
-    let updates: { environments: Record<string, unknown>; activeEnvironment?: string } = { environments: updatedEnvironments };
+    const updates: Partial<EnvironmentServiceState> = { environments: updatedEnvironments };
     const wasActiveEnvironment = state.activeEnvironment === name;
     if (wasActiveEnvironment) {
       updates.activeEnvironment = 'Default';

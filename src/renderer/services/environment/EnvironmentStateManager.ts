@@ -3,21 +3,21 @@
  */
 import BaseStateManager from '../workspace/BaseStateManager';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { EnvironmentVariable } from '../../../types/environment';
 const log = createLogger('EnvironmentStateManager');
 
 export interface EnvironmentServiceState {
   currentWorkspaceId: string;
-  environments: Record<string, Record<string, unknown>>;
+  environments: Record<string, Record<string, EnvironmentVariable>>;
   activeEnvironment: string;
   isLoading: boolean;
   isReady: boolean;
   error: string | null;
-  [key: string]: unknown;
 }
 
 class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> {
-  initPromise: Promise<unknown> | null;
-  loadPromises: Map<string, Promise<unknown>>;
+  initPromise: Promise<boolean> | null;
+  loadPromises: Map<string, Promise<boolean>>;
   hasLoadedInitialData: boolean;
 
   constructor() {
@@ -41,10 +41,10 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
   /**
    * Override setState to log environment-specific details
    */
-  setState(updates: Record<string, unknown>) {
+  setState(updates: Partial<EnvironmentServiceState>) {
     const prevState = { ...this.state };
     super.setState(updates);
-    
+
   }
 
   /**
@@ -89,7 +89,7 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
   /**
    * Track initialization promise
    */
-  setInitPromise(promise: Promise<unknown>) {
+  setInitPromise(promise: Promise<boolean>) {
     this.initPromise = promise;
   }
 
@@ -103,7 +103,7 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
   /**
    * Track load promise for workspace
    */
-  setLoadPromise(workspaceId: string, promise: Promise<unknown>) {
+  setLoadPromise(workspaceId: string, promise: Promise<boolean>) {
     this.loadPromises.set(workspaceId, promise);
   }
 

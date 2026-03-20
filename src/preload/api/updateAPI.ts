@@ -1,12 +1,12 @@
 import electron from 'electron';
+import type { IpcRendererEvent } from 'electron';
+
 const { ipcRenderer } = electron;
 
 const updateAPI = {
-    // Update functionality
     checkForUpdates: (isManual: boolean): void => ipcRenderer.send('check-for-updates', isManual),
     installUpdate: (): void => ipcRenderer.send('install-update'),
 
-    // Update events
     onUpdateCheckAlreadyInProgress: (callback: () => void): (() => void) => {
         const subscription = () => callback();
         ipcRenderer.on('update-check-already-in-progress', subscription);
@@ -19,41 +19,40 @@ const updateAPI = {
         return () => ipcRenderer.removeListener('clear-update-checking-notification', subscription);
     },
 
-    onUpdateAlreadyDownloaded: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => {
-            // Pass the full payload including isManual and info
-            callback(data || {});
+    onUpdateAlreadyDownloaded: (callback: (data: UpdateInfoEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: UpdateInfoEvent) => {
+            callback(data ?? ({} as UpdateInfoEvent));
         };
         ipcRenderer.on('update-already-downloaded', subscription);
         return () => ipcRenderer.removeListener('update-already-downloaded', subscription);
     },
 
-    onUpdateAvailable: (callback: (info: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, info: unknown) => callback(info);
+    onUpdateAvailable: (callback: (info: UpdateInfoEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, info: UpdateInfoEvent) => callback(info);
         ipcRenderer.on('update-available', subscription);
         return () => ipcRenderer.removeListener('update-available', subscription);
     },
 
-    onUpdateProgress: (callback: (progressObj: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, progressObj: unknown) => callback(progressObj);
+    onUpdateProgress: (callback: (progressObj: UpdateProgressEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, progressObj: UpdateProgressEvent) => callback(progressObj);
         ipcRenderer.on('update-progress', subscription);
         return () => ipcRenderer.removeListener('update-progress', subscription);
     },
 
-    onUpdateDownloaded: (callback: (info: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, info: unknown) => callback(info);
+    onUpdateDownloaded: (callback: (info: UpdateInfoEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, info: UpdateInfoEvent) => callback(info);
         ipcRenderer.on('update-downloaded', subscription);
         return () => ipcRenderer.removeListener('update-downloaded', subscription);
     },
 
-    onUpdateError: (callback: (message: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, message: unknown) => callback(message);
+    onUpdateError: (callback: (message: { message: string; error?: string }) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, message: { message: string; error?: string }) => callback(message);
         ipcRenderer.on('update-error', subscription);
         return () => ipcRenderer.removeListener('update-error', subscription);
     },
 
-    onUpdateNotAvailable: (callback: (info: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, info: unknown) => callback(info);
+    onUpdateNotAvailable: (callback: (info: UpdateInfoEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, info: UpdateInfoEvent) => callback(info);
         ipcRenderer.on('update-not-available', subscription);
         return () => ipcRenderer.removeListener('update-not-available', subscription);
     }

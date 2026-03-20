@@ -167,14 +167,12 @@ class AppLifecycle {
                         ['--hidden', '--autostart'] :
                         ['--hidden'];
 
-                    // auto-launch supports args at runtime but @types/auto-launch doesn't declare it
-                    const autoLaunchOptions: ConstructorParameters<typeof AutoLaunch>[0] & { args?: string[] } = {
+                    const autoLauncher = new AutoLaunch({
                         name: app.getName(),
                         path: app.getPath('exe'),
                         args: args,
                         isHidden: true
-                    };
-                    const autoLauncher = new AutoLaunch(autoLaunchOptions as ConstructorParameters<typeof AutoLaunch>[0]);
+                    });
 
                     await autoLauncher.enable();
                     log.info('Auto-launch enabled for first-time user');

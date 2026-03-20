@@ -970,7 +970,6 @@ class NetworkService extends EventEmitter {
 
         for (const [name, timerId] of this.intervals) {
             clearTimeout(timerId);
-            clearInterval(timerId as unknown as number);
             this.log.debug(`Cleared timer: ${name}`);
         }
         this.intervals.clear();
