@@ -205,7 +205,7 @@ const Workspaces = () => {
                                                     onChange={async (e) => {
                                                         const checked = e.target.checked;
                                                         setIncludeAuth(checked);
-                                                        await handleChange('app', checked as boolean);
+                                                        await handleChange('app', checked);
                                                     }}
                                                     style={{ display: 'flex', alignItems: 'center' }}
                                                 >

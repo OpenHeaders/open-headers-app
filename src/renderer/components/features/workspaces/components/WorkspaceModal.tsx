@@ -15,7 +15,7 @@ import WorkspaceCreationProgressModal from './WorkspaceCreationProgressModal';
 import { FILE_FORMATS, ExportService, type ExportData } from '../../../../services/export-import';
 import type { Workspace } from '../../../../../types/workspace';
 import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
-import type { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
+
 
 const { Text, Title } = Typography;
 
@@ -85,7 +85,7 @@ const WorkspaceModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services as WorkspaceCreationDependencies);
+    } = useWorkspaceCreation(services);
 
     const watchedType = Form.useWatch('type', form);
     const watchedGitUrl = Form.useWatch('gitUrl', form);

@@ -21,6 +21,8 @@ import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus, CommitInfo } fr
 import type { RulesCollection } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
 import type { EnvironmentMap, EnvironmentSchema } from '../../types/environment';
+import webSocketService from '../websocket/ws-service';
+import proxyService from '../proxy/ProxyService';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -1057,7 +1059,7 @@ class WorkspaceSyncScheduler {
       // Notify WebSocket service to update browser extensions.
       // Skip when nothing changed to avoid redundant messages on every periodic sync.
       if (broadcastToExtensions) {
-        const webSocketService = (await import('../websocket/ws-service')).default;
+        // webSocketService is imported at module level
         if (webSocketService && webSocketService.updateSources) {
           // Update sources -- use mergedSources (which preserves local sourceContent)
           // instead of data.sources (raw Git config without execution data).
@@ -1084,7 +1086,7 @@ class WorkspaceSyncScheduler {
 
       // Reload proxy rules if they were imported
       if (data.proxyRules && Array.isArray(data.proxyRules) && data.proxyRules.length > 0) {
-        const proxyService = (await import('../proxy/ProxyService')).default;
+        // proxyService is imported at module level
         // Only reload if this is the current workspace
         if (proxyService.ruleStore && proxyService.ruleStore.currentWorkspaceId === workspaceId) {
           await proxyService.ruleStore.load();

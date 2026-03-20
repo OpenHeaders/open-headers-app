@@ -18,6 +18,7 @@ import type { Workspace, WorkspaceAuthData, TeamWorkspaceInvite, ServicesHealth 
 import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
 import type { RulesStorage, HeaderRule } from '../../../../types/rules';
+import serviceRegistry from '../../../../services/core/ServiceRegistry';
 import type { AppSettings } from '../../../../types/settings';
 
 const { app, shell, BrowserWindow } = electron;
@@ -154,7 +155,7 @@ class WorkspaceHandlers {
         try {
             const gitSyncService = appLifecycle.getGitSyncService();
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-            const serviceRegistryMod = (await import('../../../../services/core/ServiceRegistry')).default;
+            const serviceRegistryMod = serviceRegistry;
 
             const health: ServicesHealth = {
                 gitSync: false,

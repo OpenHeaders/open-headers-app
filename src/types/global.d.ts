@@ -25,6 +25,9 @@ interface WindowEventMap {
   'source-activated': CustomEvent<SourceActivatedDetail>;
   'workspace-switching': CustomEvent<{ fromWorkspaceId: string; toWorkspaceId: string }>;
   'workspace-syncing': CustomEvent<{ workspaceId: string; reason: string }>;
+  'workspace-switch-progress': CustomEvent<{ step: string; workspaceId: string; workspace?: import('./workspace').Workspace }>;
+  'workspace-data-applied': Event;
+  'workspace-data-refresh-needed': CustomEvent<{ workspaceId: string }>;
 }
 
 interface ElectronAPI {

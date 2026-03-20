@@ -131,7 +131,7 @@ class WorkspaceSettingsService {
   async getSettings(): Promise<WorkspaceSettings> {
     try {
       const raw = await atomicWriter.readJson(this.settingsPath);
-      if (raw === null) {
+      if (raw === null || typeof raw !== 'object') {
         return this.defaultSettings;
       }
       const settings = raw as WorkspaceSettings;

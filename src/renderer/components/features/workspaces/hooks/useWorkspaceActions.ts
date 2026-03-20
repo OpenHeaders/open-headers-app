@@ -45,21 +45,20 @@ export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
         const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
 
         if (saveResult.success && saveResult.result) {
-            const result = typeof saveResult.result === 'object' && saveResult.result !== null && 'id' in saveResult.result
-                ? saveResult.result as { id: string }
-                : { id: Date.now().toString() };
+            const workspaceId = editingWorkspace?.id || Date.now().toString();
             const workspace = {
                 ...values,
-                id: result.id,
+                id: workspaceId,
                 type: values.gitUrl ? 'git' as const : 'personal' as const
             };
+            const switchTarget = { id: workspaceId };
 
             // Handle sync operations for updated workspaces
             if (workspace.type === 'git') {
                 const syncListeners = syncOps.setupSyncListeners();
-                await syncOps.handleWorkspaceSwitch(result, workspace, syncListeners);
+                await syncOps.handleWorkspaceSwitch(switchTarget, workspace, syncListeners);
             } else {
-                await syncOps.handleWorkspaceSwitch(result, workspace, null);
+                await syncOps.handleWorkspaceSwitch(switchTarget, workspace, null);
             }
         }
 

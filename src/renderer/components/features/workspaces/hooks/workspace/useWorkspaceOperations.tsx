@@ -53,7 +53,7 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
             }
         } catch (error) {
             log.error('Error saving workspace:', error);
-            void message.error(`Failed to save workspace: ${(error as Error).message}`);
+            void message.error(`Failed to save workspace: ${error instanceof Error ? error.message : String(error)}`);
             return { success: false, error };
         } finally {
             setLoading(false);

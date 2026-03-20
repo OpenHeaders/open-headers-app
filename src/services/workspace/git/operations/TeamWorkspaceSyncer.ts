@@ -16,6 +16,7 @@ import type { EnvironmentSchema, EnvironmentMap } from '../../../../types/enviro
 import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileValidator, ConfigPaths, ConfigContent } from '../../config-file-validator';
+import glob from 'glob';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -324,7 +325,7 @@ class TeamWorkspaceSyncer {
           break; // Success, exit retry loop
         } catch (fetchError) {
           fetchAttempts++;
-          if ((fetchError as Error).message.includes("couldn't find remote ref") && fetchAttempts < maxAttempts) {
+          if (fetchError instanceof Error && fetchError.message.includes("couldn't find remote ref") && fetchAttempts < maxAttempts) {
             log.warn(`Branch ${branch} not found on remote (attempt ${fetchAttempts}/${maxAttempts}), retrying in ${retryDelay}ms...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
           } else {
@@ -633,7 +634,6 @@ class TeamWorkspaceSyncer {
 
     for (const pattern of possiblePaths) {
       try {
-        const glob = (await import('glob')).default;
         const files: string[] = await new Promise((resolve, reject) => {
           glob(pattern, { cwd: repoDir }, (err: Error | null, matchedFiles: string[]) => {
             if (err) reject(err);

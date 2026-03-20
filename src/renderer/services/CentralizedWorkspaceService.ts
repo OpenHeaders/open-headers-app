@@ -1065,8 +1065,8 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Setup refresh listener
    */
   setupRefreshListener() {
-    const handleRefresh = async (event: Event) => {
-      const workspaceId = (event as CustomEvent<{ workspaceId: string }>).detail?.workspaceId;
+    const handleRefresh = async (event: CustomEvent<{ workspaceId: string }>) => {
+      const workspaceId = event.detail?.workspaceId;
       if (workspaceId && workspaceId === this.state.activeWorkspaceId) {
         log.info('Received workspace data refresh request');
         await this.loadWorkspaceData(workspaceId);
