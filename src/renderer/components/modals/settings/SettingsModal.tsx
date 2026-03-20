@@ -10,23 +10,10 @@ import DeveloperSettings from './DeveloperSettings';
 import PermissionAlert from './PermissionAlert';
 
 import { createLogger } from '../../../utils/error-handling/logger';
+import type { AppSettings } from '../../../../types/settings';
 const log = createLogger('SettingsModal');
 
-/** Settings values managed by the modal */
-interface SettingsValues {
-    theme?: string;
-    compactMode?: boolean;
-    launchAtLogin?: boolean;
-    hideOnLaunch?: boolean;
-    autoHighlightTableEntries?: boolean;
-    autoScrollTableEntries?: boolean;
-    videoRecording?: boolean;
-    videoQuality?: string;
-    recordingHotkeyEnabled?: boolean;
-    developerMode?: boolean;
-    pendingVideoRecording?: boolean;
-    [key: string]: unknown;
-}
+type SettingsValues = Partial<AppSettings>;
 
 /** Initial action to perform when modal opens */
 export interface InitialAction {
@@ -36,8 +23,8 @@ export interface InitialAction {
 
 /** Permission check result */
 interface PermissionCheck {
+    hasPermission?: boolean;
     platform: string;
-    [key: string]: unknown;
 }
 
 /** Permission request result */
@@ -47,7 +34,6 @@ interface PermissionRequest {
     platform: string;
     needsManualGrant?: boolean;
     error?: string;
-    [key: string]: unknown;
 }
 
 /** Permission alert configuration */

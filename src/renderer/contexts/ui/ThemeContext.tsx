@@ -3,14 +3,15 @@ import { ConfigProvider, theme, type ThemeConfig } from 'antd';
 import type { MappingAlgorithm } from 'antd/es/theme/interface';
 import { useSettings } from './SettingsContext';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { AppSettings } from '../../../types/settings';
 
 const log = createLogger('ThemeContext');
 
 interface ThemeContextValue {
-  themeMode: string;
-  currentTheme: string;
+  themeMode: AppSettings['theme'];
+  currentTheme: 'light' | 'dark';
   loading: boolean;
-  saveThemeSettings: (mode: string) => Promise<boolean>;
+  saveThemeSettings: (mode: AppSettings['theme']) => Promise<boolean>;
   isSystemTheme: boolean;
   isDarkMode: boolean;
   isCompactMode: boolean;
@@ -25,11 +26,11 @@ export const THEME_MODES = {
     AUTO: 'auto',
     LIGHT: 'light',
     DARK: 'dark'
-};
+} as const;
 
 // Default theme settings
-const defaultThemeSettings = {
-    currentTheme: 'light' // actual theme being used
+const defaultThemeSettings: { currentTheme: 'light' | 'dark' } = {
+    currentTheme: 'light'
 };
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -55,7 +56,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Detect system theme preference
-    const detectSystemTheme = (): string => {
+    const detectSystemTheme = (): 'light' | 'dark' => {
         if (window.matchMedia) {
             const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
             return darkModeQuery.matches ? 'dark' : 'light';
@@ -68,10 +69,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (!settings.theme) return;
 
         // Determine current theme based on mode
-        let newTheme = settings.theme;
-        if (settings.theme === THEME_MODES.AUTO) {
-            newTheme = detectSystemTheme();
-        }
+        const newTheme = settings.theme === THEME_MODES.AUTO
+            ? detectSystemTheme()
+            : settings.theme;
 
         if (isMounted.current) {
             setCurrentTheme(newTheme);
@@ -102,20 +102,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }, [settings.compactMode]);
 
     // Save theme settings
-    const saveThemeMode = async (mode: string): Promise<boolean> => {
+    const saveThemeMode = async (mode: AppSettings['theme']): Promise<boolean> => {
         try {
-            // Update settings with new theme mode
             const success = await saveSettings({
                 ...settings,
                 theme: mode
             });
 
             if (success) {
-                // Update current theme if mode changed to/from auto
-                let newTheme = mode;
-                if (mode === THEME_MODES.AUTO) {
-                    newTheme = detectSystemTheme();
-                }
+                const newTheme = mode === THEME_MODES.AUTO
+                    ? detectSystemTheme()
+                    : mode;
 
                 if (isMounted.current) {
                     setCurrentTheme(newTheme);

@@ -1,28 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { showMessage } from '../../utils'; // Import the utility
+import { showMessage } from '../../utils';
 import { createLogger, setGlobalLogLevel } from '../../utils/error-handling/logger';
+import type { AppSettings } from '../../../types/settings';
 
 const log = createLogger('SettingsContext');
 
-export interface Settings {
-  launchAtLogin: boolean;
-  hideOnLaunch: boolean;
-  showDockIcon: boolean;
-  showStatusBarIcon: boolean;
-  theme: string;
-  autoStartProxy: boolean;
-  proxyCacheEnabled: boolean;
-  videoRecording: boolean;
-  videoQuality: string;
-  autoHighlightTableEntries: boolean;
-  autoScrollTableEntries: boolean;
-  compactMode: boolean;
-  tutorialMode: boolean;
-  developerMode: boolean;
-  recordingHotkey: string;
-  logLevel: string;
-  [key: string]: string | boolean | number | undefined;
-}
+export type Settings = AppSettings;
 
 interface SettingsContextValue {
   settings: Settings;
@@ -36,22 +19,23 @@ interface SettingsContextValue {
 export const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
 // Default settings
-const defaultSettings: Settings = {
+const defaultSettings: AppSettings = {
     launchAtLogin: true,
     hideOnLaunch: true,
     showDockIcon: true,
     showStatusBarIcon: true,
-    theme: 'auto', // auto, light, dark
+    theme: 'auto',
     autoStartProxy: true,
     proxyCacheEnabled: true,
     videoRecording: false,
-    videoQuality: 'high', // standard, high, ultra
+    videoQuality: 'high',
     autoHighlightTableEntries: false,
     autoScrollTableEntries: false,
     compactMode: false,
     tutorialMode: true,
     developerMode: false,
     recordingHotkey: 'CommandOrControl+Shift+E',
+    recordingHotkeyEnabled: true,
     logLevel: 'info'
 };
 
@@ -71,7 +55,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const storedSettings = await window.electronAPI.getSettings() as Settings;
+                const loaded = await window.electronAPI.getSettings();
+                const storedSettings: AppSettings = { ...defaultSettings, ...loaded };
                 if (isMounted.current) {
                     setSettings(storedSettings);
                     if (storedSettings.logLevel) {
@@ -100,7 +85,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             const settingsToSave = {
                 ...defaultSettings,
                 ...newSettings
-            } as Settings;
+            };
 
             // Save to main process
             const result = await window.electronAPI.saveSettings(settingsToSave);
