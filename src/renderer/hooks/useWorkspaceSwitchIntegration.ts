@@ -4,6 +4,7 @@ import { useCentralizedWorkspace } from './useCentralizedWorkspace';
 import { showMessage } from '../utils/ui/messageUtil';
 import React from 'react';
 import { TeamOutlined, UserOutlined } from '@ant-design/icons';
+import type { Workspace } from '../../types/workspace';
 
 interface UseWorkspaceSwitchIntegrationReturn {
   switchWorkspaceWithProgress: (workspaceId: string) => Promise<void>;
@@ -18,13 +19,13 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
 
     useEffect(() => {
         // Listen for workspace switch start
-        const handleSwitchProgress = (event: CustomEvent) => {
+        const handleSwitchProgress = (event: CustomEvent<{ step: string; workspaceId: string; workspace?: Workspace }>) => {
             const { step, workspaceId, workspace } = event.detail;
 
             // Show overlay when switching starts
             if (step === 'saving') {
                 const targetWorkspace = workspace || workspaces.find(w => w.id === workspaceId);
-                startSwitch(targetWorkspace);
+                startSwitch(targetWorkspace ?? null);
             }
         };
 
@@ -57,12 +58,12 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
         };
 
         // Add event listeners
-        window.addEventListener('workspace-switch-progress', handleSwitchProgress as EventListener);
+        window.addEventListener('workspace-switch-progress', handleSwitchProgress);
         window.addEventListener('workspace-data-applied', handleSwitchComplete);
 
         // Cleanup
         return () => {
-            window.removeEventListener('workspace-switch-progress', handleSwitchProgress as EventListener);
+            window.removeEventListener('workspace-switch-progress', handleSwitchProgress);
             window.removeEventListener('workspace-data-applied', handleSwitchComplete);
         };
     }, [startSwitch, completeSwitch, workspaces, activeWorkspaceId, switchState]);

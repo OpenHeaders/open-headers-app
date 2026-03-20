@@ -79,22 +79,22 @@ const WorkspaceStatus = () => {
     
     if (personalWorkspaces.length > 0) {
         finalMenuItems.push(
-            { key: 'personal-header', type: 'group', label: 'Personal Workspaces' },
+            { key: 'personal-header', type: 'group' as const, label: 'Personal Workspaces' },
             ...personalWorkspaces
         );
     }
-    
+
     if (teamWorkspaces.length > 0) {
         if (personalWorkspaces.length > 0) {
-            finalMenuItems.push({ key: 'divider', type: 'divider' });
+            finalMenuItems.push({ key: 'divider', type: 'divider' as const });
         }
         finalMenuItems.push(
-            { key: 'team-header', type: 'group', label: 'Team Workspaces' },
+            { key: 'team-header', type: 'group' as const, label: 'Team Workspaces' },
             ...teamWorkspaces
         );
     }
     
-    const menu: React.ComponentProps<typeof Dropdown>['menu'] = { items: finalMenuItems as NonNullable<React.ComponentProps<typeof Dropdown>['menu']>['items'] };
+    const menu = { items: finalMenuItems };
     
     const handleShareWorkspace = () => {
         setShareModalVisible(true);

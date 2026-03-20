@@ -143,7 +143,7 @@ const WorkspaceEditModal = ({
             setGitStatus(status);
         } catch (error) {
             console.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: (error as Error).message });
+            setGitStatus({ isInstalled: false, error: error instanceof Error ? error.message : String(error) });
         }
     };
     
@@ -263,7 +263,7 @@ const WorkspaceEditModal = ({
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
-            setConnectionTestResult({ success: false, error: (error as Error).message });
+            setConnectionTestResult({ success: false, error: error instanceof Error ? error.message : String(error) });
             setIsTestingConnection(false);
         }
     };
@@ -316,8 +316,9 @@ const WorkspaceEditModal = ({
             }
         } catch (error) {
             console.error('Workspace update failed:', error);
-            setUpdateError(error as { message: string });
-            message.error(`Failed to update workspace: ${(error as Error).message}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            setUpdateError({ message: errorMessage });
+            message.error(`Failed to update workspace: ${errorMessage}`);
         } finally {
             setIsUpdating(false);
         }

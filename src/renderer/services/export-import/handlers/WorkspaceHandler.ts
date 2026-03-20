@@ -181,8 +181,8 @@ export class WorkspaceHandler {
   async _switchToWorkspace(workspace: WorkspaceData) {
     try {
       const { switchWorkspace } = this.dependencies;
-      if (switchWorkspace) {
-        await switchWorkspace(workspace.id as string);
+      if (switchWorkspace && workspace.id) {
+        await switchWorkspace(workspace.id);
         log.debug(`Switched to imported workspace: ${workspace.name}`);
       }
     } catch (error) {

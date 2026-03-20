@@ -103,7 +103,7 @@ export const prepareAuthData = async (values: WorkspaceFormValues, authType: str
             let sshKeyContent = '';
             if (values.sshKeySource === 'file' && values.sshKeyPath) {
                 try {
-                    sshKeyContent = await window.electronAPI.readFile(values.sshKeyPath, 'utf-8') as string;
+                    sshKeyContent = String(await window.electronAPI.readFile(values.sshKeyPath, 'utf-8'));
                 } catch (error) {
                     throw new Error(`Failed to read SSH key file: ${error instanceof Error ? error.message : String(error)}`);
                 }

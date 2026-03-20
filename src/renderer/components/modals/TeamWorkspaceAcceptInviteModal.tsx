@@ -4,7 +4,7 @@ import { TeamOutlined, CheckCircleOutlined, SyncOutlined, FolderOpenOutlined, Qu
 import { DEFAULT_VALUES, WORKSPACE_TYPES, AUTH_TYPES, SSH_KEY_SOURCES, TOKEN_TYPES } from '../features/workspaces';
 import { useWorkspaceCreation } from '../features/workspaces/hooks/useWorkspaceCreation';
 import { WorkspaceServiceAdapterFactory } from '../features/workspaces/services/WorkspaceServiceAdapter';
-import type { WorkspaceCreationDependencies } from '../features/workspaces/controllers/WorkspaceCreationController';
+
 import { useWorkspaces } from '../../hooks/workspace';
 import { prepareAuthData } from '../features/workspaces';
 import type { WorkspaceFormValues } from '../features/workspaces/utils/WorkspaceUtils';
@@ -62,7 +62,7 @@ const TeamWorkspaceAcceptInviteModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services as WorkspaceCreationDependencies, { disableNotifications: true });
+    } = useWorkspaceCreation(services, { disableNotifications: true });
 
     const authTypeValue = Form.useWatch('authType', form);
     const sshKeySourceValue = Form.useWatch('sshKeySource', form);
