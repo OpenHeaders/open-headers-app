@@ -1,6 +1,6 @@
 /**
  * CentralizedWorkspaceService - Refactored to use modular components
- * 
+ *
  * This service coordinates:
  * - Workspace switching
  * - Sources (HTTP, File, Environment)
@@ -12,6 +12,8 @@
 import { createLogger } from '../utils/error-handling/logger';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
 import type { Source } from '../../types/source';
+import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType, CommitInfo } from '../../types/workspace';
+import type { ProxyRule } from '../../types/proxy';
 import {
   BaseStateManager,
   WorkspaceManager,
@@ -21,6 +23,7 @@ import {
   SyncManager,
   BroadcastManager
 } from './workspace';
+import type { RulesCollection } from './workspace';
 
 const log = createLogger('CentralizedWorkspaceService');
 
@@ -28,15 +31,14 @@ export interface WorkspaceServiceState {
   initialized: boolean;
   loading: boolean;
   error: string | null;
-  workspaces: Record<string, unknown>[];
+  workspaces: Workspace[];
   activeWorkspaceId: string;
   isWorkspaceSwitching: boolean;
-  syncStatus: Record<string, unknown>;
+  syncStatus: Record<string, WorkspaceSyncStatus>;
   sources: Source[];
-  rules: { header: Record<string, unknown>[]; request: Record<string, unknown>[]; response: Record<string, unknown>[] };
-  proxyRules: Record<string, unknown>[];
-  lastSaved: Record<string, unknown>;
-  [key: string]: unknown;
+  rules: RulesCollection;
+  proxyRules: ProxyRule[];
+  lastSaved: Record<string, number>;
 }
 
 class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState> {
@@ -59,22 +61,22 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       initialized: false,
       loading: false,
       error: null,
-      
+
       // Workspace state
       workspaces: [],
       activeWorkspaceId: 'default-personal',
       isWorkspaceSwitching: false,
       syncStatus: {},
-      
+
       // Data state (current workspace data)
       sources: [],
       rules: { header: [], request: [], response: [] },
       proxyRules: [],
-      
+
       // Metadata
       lastSaved: {}
     };
-    
+
     // Initialize managers
     // Manager constructors accept narrower API interfaces. ElectronAPI satisfies
     // all required shapes structurally, but some properties (e.g. deleteDirectory)
@@ -87,26 +89,26 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     this.autoSaveManager = new AutoSaveManager();
     this.syncManager = new SyncManager(api as ConstructorParameters<typeof SyncManager>[0]);
     this.broadcastManager = new BroadcastManager(api as ConstructorParameters<typeof BroadcastManager>[0]);
-    
+
     // Other properties
     this.initPromise = null;
     this.loadPromises = new Map();
     this.eventCleanup = [];
-    
+
     log.info('CentralizedWorkspaceService initialized');
   }
 
   /**
    * Override setState to handle dirty flags
    */
-  setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
+  setState(updates: Partial<WorkspaceServiceState>, changedKeys: string[] = []) {
     // Mark as dirty if data changed
     if (changedKeys.includes('sources')) this.autoSaveManager.markDirty('sources');
     if (changedKeys.includes('rules')) this.autoSaveManager.markDirty('rules');
     if (changedKeys.includes('proxyRules')) this.autoSaveManager.markDirty('proxyRules');
-    
+
     super.setState(updates, changedKeys);
-    
+
     // Schedule auto-save for dirty data
     this.autoSaveManager.scheduleAutoSave(() => this.saveAll());
   }
@@ -126,13 +128,13 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   async _doInitialize() {
     try {
       this.setState({ loading: true, error: null });
-      
+
       // Load workspaces configuration
       const workspaceConfig = await this.workspaceManager.loadWorkspaces();
       this.state.workspaces = workspaceConfig.workspaces;
       this.state.activeWorkspaceId = workspaceConfig.activeWorkspaceId;
       this.state.syncStatus = workspaceConfig.syncStatus;
-      
+
       // NOTE: Skipping validateWorkspaceIntegrity here because it reads
       // sources.json, rules.json, proxy-rules.json to check existence,
       // and loadWorkspaceData() will read the same files next.
@@ -153,18 +155,18 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       this.setupSyncListener();
       this.setupRefreshListener();
       this.setupCliJoinListener();
-      
+
       // Start auto-save
       this.autoSaveManager.startAutoSave(() => this.saveAll());
-      
+
       this.setState({ initialized: true, loading: false }, ['initialized']);
       log.info('Service initialized successfully');
-      
+
       // Check source activations after initialization
       setTimeout(async () => {
         await this.activateReadySources();
       }, 100);
-      
+
       return true;
     } catch (error) {
       log.error('Initialization failed:', error);
@@ -197,7 +199,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
 
   async _doLoadWorkspaceData(workspaceId: string) {
     log.info(`Loading data for workspace: ${workspaceId}`);
-    
+
     try {
       // Load sources, rules, and proxy rules in parallel
       const [sources, rules, proxyRules] = await Promise.all([
@@ -219,7 +221,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       this.autoSaveManager.markClean('proxyRules');
 
       // Update workspace metadata with actual counts
-      const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+      const totalRules = rules.header.length + rules.request.length + rules.response.length;
       await this.updateWorkspaceMetadata(workspaceId, {
         sourceCount: sources.length,
         ruleCount: totalRules,
@@ -233,7 +235,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       await this.broadcastManager.broadcastState(sources, rules.header, {
         includeWebSocket: this.state.isWorkspaceSwitching
       });
-      
+
       log.info(`Successfully loaded workspace data: ${sources.length} sources, ${totalRules} rules, ${proxyRules.length} proxy rules`);
     } catch (error) {
       log.error('Failed to load workspace data:', error);
@@ -251,17 +253,17 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     }
 
     const previousWorkspaceId = this.state.activeWorkspaceId;
-    
+
     try {
       // Verify workspace exists
       const workspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-      
+
       log.info(`Starting workspace switch: ${previousWorkspaceId} → ${workspaceId} (${workspace.type})`);
       this.setState({ loading: true, error: null, isWorkspaceSwitching: true });
-      
+
       // Notify AutoSaveManager that workspace is switching
       this.autoSaveManager.setWorkspaceSwitching(true);
-      
+
       // Progress tracking helper
       const updateProgress = (step: string, progress: number, label: string, isGitOperation: boolean = false) => {
         if (progressCallback) {
@@ -272,52 +274,52 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
           detail: { step, progress, label, isGitOperation, workspaceId, workspace }
         }));
       };
-      
+
       // Step 0: Wait for any pending saves to complete
       updateProgress('preparing', 5, 'Waiting for pending saves...');
       await this.autoSaveManager.waitForSaves();
-      
+
       // Step 1: Save current workspace data (5-25%)
       updateProgress('saving', 10, 'Saving current workspace data...');
       await this.saveAll();
       updateProgress('saving', 25, 'Current workspace saved');
-      
+
       // Step 2: Clear current data (25-35%)
       updateProgress('clearing', 30, 'Clearing current data...');
-      
+
       // Dispatch event to notify RefreshManager to clean up sources
       window.dispatchEvent(new CustomEvent('workspace-switching', {
         detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
       }));
-      
+
       await this.clearAllData();
       updateProgress('clearing', 35, 'Data cleared');
-      
+
       // Step 3: Update active workspace (35-45%)
       updateProgress('switching', 40, `Switching to "${workspace.name}"...`);
       this.setState({ activeWorkspaceId: workspaceId }, ['activeWorkspaceId']);
       await this.saveWorkspaces();
-      
+
       // Dispatch workspace-switched event
       window.dispatchEvent(new CustomEvent('workspace-switched', {
         detail: { workspaceId, previousWorkspaceId }
       }));
-      
+
       // Notify main process
       if (window.electronAPI && window.electronAPI.send) {
         window.electronAPI.send('workspace-switched', workspaceId);
       }
-      
+
       updateProgress('switching', 45, 'Workspace context updated');
-      
+
       // Give main process a moment to start processing
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Step 4: Handle Git sync if needed (45-75%)
       if (workspace.type === 'git' && await this.syncManager.needsInitialSync(workspaceId)) {
         log.info(`New Git workspace detected (${workspaceId}), waiting for initial sync...`);
         updateProgress('syncing', 50, 'Syncing Git workspace...', true);
-        
+
         try {
           await this.syncManager.waitForInitialSync(workspaceId);
           updateProgress('syncing', 70, 'Git sync completed', true);
@@ -332,26 +334,26 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       } else {
         updateProgress('syncing', 75, 'No sync required');
       }
-      
+
       // Step 5: Load new workspace data (75-95%)
       updateProgress('loading', 80, 'Loading workspace data...');
       // Set flag to suppress broadcasts during entire switch operation
       this.setState({ isWorkspaceSwitching: true });
       await this.loadWorkspaceData(workspaceId);
       updateProgress('loading', 90, 'Workspace data loaded');
-      
+
       // Step 6: Finalize (95-100%)
       updateProgress('finalizing', 95, 'Updating interface...');
-      
+
       // Dispatch workspace-data-applied event
       window.dispatchEvent(new CustomEvent('workspace-data-applied', {
         detail: { workspaceId, previousWorkspaceId }
       }));
-      
+
       this.setState({ loading: false }, ['activeWorkspaceId']);
       updateProgress('complete', 100, `Successfully switched to "${workspace.name}"`);
       log.info(`Successfully switched to workspace: ${workspaceId}`);
-      
+
       // Clear the suppression flag after a delay to ensure all follow-up operations are suppressed
       setTimeout(() => {
         this.setState({ isWorkspaceSwitching: false });
@@ -359,10 +361,10 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
         this.autoSaveManager.setWorkspaceSwitching(false);
         log.debug('Workspace switch broadcast suppression cleared');
       }, 500);
-      
+
     } catch (error) {
       log.error('Failed to switch workspace:', error);
-      
+
       // Update progress with error
       const errorMessage = error instanceof Error ? error.message : String(error);
       if (progressCallback) {
@@ -371,21 +373,21 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       window.dispatchEvent(new CustomEvent('workspace-switch-error', {
         detail: { error: errorMessage, workspaceId, previousWorkspaceId }
       }));
-      
+
       // Attempt to recover by switching back to previous workspace
       try {
         log.info(`Attempting to recover by switching back to: ${previousWorkspaceId}`);
         this.setState({ activeWorkspaceId: previousWorkspaceId }, ['activeWorkspaceId']);
         await this.saveWorkspaces();
         await this.loadWorkspaceData(previousWorkspaceId);
-        
+
         log.info(`Successfully recovered to workspace: ${previousWorkspaceId}`);
       } catch (recoveryError) {
         log.error('Recovery failed:', recoveryError);
         // If recovery fails, reset to default
         this.setState({ activeWorkspaceId: 'default-personal' }, ['activeWorkspaceId']);
       }
-      
+
       this.setState({ loading: false, error: errorMessage, isWorkspaceSwitching: false });
       // Re-enable auto-save even on error
       this.autoSaveManager.setWorkspaceSwitching(false);
@@ -411,13 +413,13 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     try {
       // Clear proxy rules
       await this.broadcastManager.clearProxyRules();
-      
+
       this.setState({
         sources: [],
         rules: { header: [], request: [], response: [] },
         proxyRules: []
       }, ['sources', 'rules', 'proxyRules']);
-      
+
       // Update WebSocket
       await this.broadcastManager.broadcastState([], []);
     } catch (error) {
@@ -431,7 +433,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   async saveAll() {
     const saves = [];
     const dirtyState = this.autoSaveManager.getDirtyState();
-    
+
     if (dirtyState.sources) {
       saves.push(this.saveSources());
     }
@@ -461,7 +463,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Save rules
    */
   async saveRules() {
-    await this.rulesManager.saveRules(this.state.activeWorkspaceId, this.state.rules as never);
+    await this.rulesManager.saveRules(this.state.activeWorkspaceId, this.state.rules);
     this.autoSaveManager.markClean('rules');
     this.state.lastSaved.rules = Date.now();
   }
@@ -470,7 +472,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Save proxy rules
    */
   async saveProxyRules() {
-    await this.rulesManager.saveProxyRules(this.state.activeWorkspaceId, this.state.proxyRules as never);
+    await this.rulesManager.saveProxyRules(this.state.activeWorkspaceId, this.state.proxyRules);
     this.autoSaveManager.markClean('proxyRules');
     this.state.lastSaved.proxyRules = Date.now();
   }
@@ -580,7 +582,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       }
       return source;
     });
-    
+
     this.setState({ sources }, ['sources']);
   }
 
@@ -591,9 +593,9 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     const sources = this.state.sources.filter((source) =>
       source.sourceId !== String(sourceId)
     );
-    
+
     this.setState({ sources }, ['sources']);
-    
+
     // Update workspace metadata
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       sourceCount: sources.length,
@@ -614,11 +616,11 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Add a header rule
    */
   async addHeaderRule(ruleData: Record<string, unknown>) {
-    const rules = this.rulesManager.addHeaderRule(this.state.rules as never, ruleData);
+    const rules = this.rulesManager.addHeaderRule(this.state.rules, ruleData);
     this.setState({ rules }, ['rules']);
-    
+
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = rules.header.length + rules.request.length + rules.response.length;
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -629,11 +631,11 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Update a header rule
    */
   async updateHeaderRule(ruleId: string, updates: Record<string, unknown>) {
-    const rules = this.rulesManager.updateHeaderRule(this.state.rules as never, ruleId, updates);
+    const rules = this.rulesManager.updateHeaderRule(this.state.rules, ruleId, updates);
     this.setState({ rules }, ['rules']);
-    
+
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = rules.header.length + rules.request.length + rules.response.length;
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -644,11 +646,11 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Remove a header rule
    */
   async removeHeaderRule(ruleId: string) {
-    const rules = this.rulesManager.removeHeaderRule(this.state.rules as never, ruleId);
+    const rules = this.rulesManager.removeHeaderRule(this.state.rules, ruleId);
     this.setState({ rules }, ['rules']);
-    
+
     // Update workspace metadata
-    const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
+    const totalRules = rules.header.length + rules.request.length + rules.response.length;
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       ruleCount: totalRules,
       lastDataUpdate: new Date().toISOString()
@@ -660,12 +662,12 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Add a proxy rule
    */
-  async addProxyRule(ruleData: Record<string, unknown>) {
+  async addProxyRule(ruleData: ProxyRule) {
     const proxyRules = [...this.state.proxyRules, ruleData];
     this.setState({ proxyRules }, ['proxyRules']);
-    
-    await this.rulesManager.syncProxyRule(ruleData as { id: string; [key: string]: unknown }, 'add');
-    
+
+    await this.rulesManager.syncProxyRule(ruleData, 'add');
+
     // Update workspace metadata
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       proxyRuleCount: proxyRules.length,
@@ -677,14 +679,14 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Remove a proxy rule
    */
   async removeProxyRule(ruleId: string) {
-    const rule = this.state.proxyRules.find((r: Record<string, unknown>) => r.id === ruleId);
-    const proxyRules = this.state.proxyRules.filter((r: Record<string, unknown>) => r.id !== ruleId);
+    const rule = this.state.proxyRules.find(r => r.id === ruleId);
+    const proxyRules = this.state.proxyRules.filter(r => r.id !== ruleId);
     this.setState({ proxyRules }, ['proxyRules']);
-    
+
     if (rule) {
-      await this.rulesManager.syncProxyRule(rule as never, 'remove');
+      await this.rulesManager.syncProxyRule(rule, 'remove');
     }
-    
+
     // Update workspace metadata
     await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
       proxyRuleCount: proxyRules.length,
@@ -697,28 +699,27 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Create a new workspace with full initialization and auto-switch
    */
-  async createWorkspace(workspace: Record<string, unknown>) {
+  async createWorkspace(workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }) {
     try {
       log.info(`Starting workspace creation: ${workspace.id} (${workspace.type})`);
-      
+
       // Create workspace with enhanced validation
-      const newWorkspace = await this.workspaceManager.createWorkspace(this.state.workspaces, workspace) as Record<string, unknown>;
+      const newWorkspace = this.workspaceManager.createWorkspace(this.state.workspaces, workspace);
 
       // Add to workspaces list
       const workspaces = [...this.state.workspaces, newWorkspace];
       this.setState({ workspaces }, ['workspaces']);
 
       // Initialize data containers for the new workspace
-      const newWorkspaceId = newWorkspace.id as string;
-      await this.initializeWorkspaceData(newWorkspaceId);
+      await this.initializeWorkspaceData(newWorkspace.id);
 
       // Save workspaces configuration
       await this.saveWorkspaces();
 
       // Auto-switch to the newly created workspace
-      await this.switchWorkspace(newWorkspaceId);
+      await this.switchWorkspace(newWorkspace.id);
 
-      log.info(`Successfully created and switched to workspace: ${newWorkspaceId}`);
+      log.info(`Successfully created and switched to workspace: ${newWorkspace.id}`);
       return newWorkspace;
     } catch (error) {
       log.error('Failed to create workspace:', error);
@@ -732,12 +733,12 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   async initializeWorkspaceData(workspaceId: string) {
     try {
       log.info(`Initializing data containers for workspace: ${workspaceId}`);
-      
+
       // Initialize empty data containers
       await this.sourceManager.saveSources(workspaceId, []);
       await this.rulesManager.saveRules(workspaceId, { header: [], request: [], response: [] });
       await this.rulesManager.saveProxyRules(workspaceId, []);
-      
+
       // Update workspace metadata
       await this.updateWorkspaceMetadata(workspaceId, {
         sourceCount: 0,
@@ -745,7 +746,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
         proxyRuleCount: 0,
         lastDataUpdate: new Date().toISOString()
       });
-      
+
       log.info(`Successfully initialized data containers for workspace: ${workspaceId}`);
     } catch (error) {
       log.error(`Failed to initialize workspace data for ${workspaceId}:`, error);
@@ -756,17 +757,17 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Update workspace metadata
    */
-  async updateWorkspaceMetadata(workspaceId: string, metadata: Record<string, unknown>) {
+  async updateWorkspaceMetadata(workspaceId: string, metadata: Partial<WorkspaceMetadata>) {
     try {
-      const workspaces = this.state.workspaces.map((w: Record<string, unknown>) =>
+      const workspaces = this.state.workspaces.map(w =>
         w.id === workspaceId
-          ? { ...w, metadata: { ...(w.metadata as Record<string, unknown>), ...metadata }, updatedAt: new Date().toISOString() }
+          ? { ...w, metadata: { ...w.metadata, ...metadata }, updatedAt: new Date().toISOString() }
           : w
       );
-      
+
       this.setState({ workspaces }, ['workspaces']);
       await this.saveWorkspaces();
-      
+
       log.debug(`Updated metadata for workspace: ${workspaceId}`);
     } catch (error) {
       log.error(`Failed to update workspace metadata for ${workspaceId}:`, error);
@@ -777,42 +778,40 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Update an existing workspace
    */
-  async updateWorkspace(workspaceId: string, updates: Record<string, unknown>) {
+  async updateWorkspace(workspaceId: string, updates: Partial<Workspace>) {
     try {
       // Validate workspace exists
       const existingWorkspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-      
+
       // Validate updates don't break workspace integrity
       const updatedWorkspace = { ...existingWorkspace, ...updates };
-      
+
       // Re-validate the updated workspace
-      const name = updates.name as string | undefined;
-      if (name && (name.length < 1 || name.length > 100)) {
+      if (updates.name && (updates.name.length < 1 || updates.name.length > 100)) {
         throw new Error('Workspace name must be between 1 and 100 characters');
       }
 
-      const type = updates.type as string | undefined;
-      if (type && !['personal', 'team', 'git'].includes(type)) {
+      if (updates.type && !['personal', 'team', 'git'].includes(updates.type)) {
         throw new Error('Invalid workspace type. Must be personal, team, or git');
       }
 
-      if (type === 'git' && !updatedWorkspace.gitUrl) {
+      if (updatedWorkspace.type === 'git' && !updatedWorkspace.gitUrl) {
         throw new Error('Git workspace must have a gitUrl');
       }
-      
+
       // Add updatedAt timestamp
-      const finalUpdates = {
+      const finalUpdates: Partial<Workspace> = {
         ...updates,
         updatedAt: new Date().toISOString()
       };
-      
-      const workspaces = this.state.workspaces.map((w: Record<string, unknown>) =>
+
+      const workspaces = this.state.workspaces.map(w =>
         w.id === workspaceId ? { ...w, ...finalUpdates } : w
       );
       this.setState({ workspaces }, ['workspaces']);
-      
+
       await this.saveWorkspaces();
-      
+
       log.info(`Updated workspace: ${workspaceId}`);
       return true;
     } catch (error) {
@@ -829,17 +828,17 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       if (workspaceId === 'default-personal') {
         throw new Error('Cannot delete default personal workspace');
       }
-      
-      const workspaces = this.state.workspaces.filter((w: Record<string, unknown>) => w.id !== workspaceId);
+
+      const workspaces = this.state.workspaces.filter(w => w.id !== workspaceId);
       this.setState({ workspaces }, ['workspaces']);
-      
+
       if (this.state.activeWorkspaceId === workspaceId) {
         await this.switchWorkspace('default-personal');
       }
-      
+
       await this.workspaceManager.deleteWorkspaceData(workspaceId);
       await this.saveWorkspaces();
-      
+
       log.info(`Deleted workspace: ${workspaceId}`);
       return true;
     } catch (error) {
@@ -855,10 +854,10 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     try {
       log.info(`Copying workspace data: ${sourceWorkspaceId} → ${targetWorkspaceId}`);
       await this.workspaceManager.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
-      
+
       // Update target workspace metadata after copy
       await this.updateTargetWorkspaceMetadata(targetWorkspaceId);
-      
+
       log.info(`Successfully copied workspace data: ${sourceWorkspaceId} → ${targetWorkspaceId}`);
     } catch (error) {
       log.error('Failed to copy workspace data:', error);
@@ -877,9 +876,9 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
         this.rulesManager.loadRules(workspaceId),
         this.rulesManager.loadProxyRules(workspaceId)
       ]);
-      
-      const totalRules = Object.values(rules as Record<string, unknown[]>).reduce((sum: number, ruleArray) => sum + ruleArray.length, 0);
-      
+
+      const totalRules = rules.header.length + rules.request.length + rules.response.length;
+
       await this.updateWorkspaceMetadata(workspaceId, {
         sourceCount: sources.length,
         ruleCount: totalRules,
@@ -897,11 +896,11 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   async validateWorkspaceIntegrity(workspaceId: string) {
     try {
       const workspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-      
+
       // Check if data files exist
       const dataFiles = ['sources.json', 'rules.json', 'proxy-rules.json'];
       const missingFiles = [];
-      
+
       for (const file of dataFiles) {
         try {
           const path = `workspaces/${workspaceId}/${file}`;
@@ -913,9 +912,9 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
           missingFiles.push(file);
         }
       }
-      
+
       const isValid = missingFiles.length === 0;
-      
+
       return {
         isValid,
         workspace,
@@ -972,12 +971,12 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    */
   async activateReadySources() {
     const result = await this.sourceManager.activateReadySources(this.state.sources);
-    
+
     if (result.hasChanges) {
       this.setState({ sources: result.sources }, ['sources']);
       await this.saveSources();
     }
-    
+
     return result.activatedCount;
   }
 
@@ -991,15 +990,15 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       log.debug('Environment variables changed, checking source activations');
       await this.activateReadySources();
     };
-    
+
     const handleEnvLoaded = async () => {
       log.debug('Environments loaded, checking source activations');
       await this.activateReadySources();
     };
-    
+
     window.addEventListener('environment-variables-changed', handleEnvChange);
     window.addEventListener('environments-loaded', handleEnvLoaded);
-    
+
     this.eventCleanup.push(() => {
       window.removeEventListener('environment-variables-changed', handleEnvChange);
       window.removeEventListener('environments-loaded', handleEnvLoaded);
@@ -1011,12 +1010,12 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    */
   setupSyncListener() {
     const unsubscribe = this.syncManager.setupSyncListener((data: Record<string, unknown>) => {
-      const syncData = data as { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: Record<string, unknown>; hasChanges?: boolean };
-      const currentSyncStatus: Record<string, Record<string, unknown>> = { ...(this.state.syncStatus as Record<string, Record<string, unknown>>) };
+      const syncData = data as { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: CommitInfo; hasChanges?: boolean };
+      const currentSyncStatus = { ...this.state.syncStatus };
 
       if (syncData.success) {
         // Only update lastSync if it's explicitly provided (meaning actual sync happened with changes)
-        const statusUpdate: Record<string, unknown> = {
+        const statusUpdate: WorkspaceSyncStatus = {
           syncing: false,
           error: null
         };
@@ -1050,7 +1049,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
             }));
           }
 
-          this.loadWorkspaceData(syncData.workspaceId as string).catch(error => {
+          this.loadWorkspaceData(syncData.workspaceId).catch(error => {
             log.error('Failed to reload workspace data after sync:', error);
           });
         }
@@ -1063,7 +1062,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
 
       this.setState({ syncStatus: currentSyncStatus }, ['syncStatus']);
     });
-    
+
     this.eventCleanup.push(unsubscribe);
   }
 
@@ -1078,9 +1077,9 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
         await this.loadWorkspaceData(workspaceId);
       }
     };
-    
+
     window.addEventListener('workspace-data-refresh-needed', handleRefresh);
-    
+
     this.eventCleanup.push(() => {
       window.removeEventListener('workspace-data-refresh-needed', handleRefresh);
     });
@@ -1160,7 +1159,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   cleanup() {
     // Stop auto-save
     this.autoSaveManager.stopAutoSave();
-    
+
     // Clean up event listeners
     this.eventCleanup.forEach(cleanup => {
       try {
@@ -1172,10 +1171,10 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       }
     });
     this.eventCleanup = [];
-    
+
     // Clear base class listeners
     super.cleanup();
-    
+
     log.info('CentralizedWorkspaceService cleaned up');
   }
 }
@@ -1186,7 +1185,7 @@ let serviceInstance: CentralizedWorkspaceService | null = null;
 export function getCentralizedWorkspaceService() {
   if (!serviceInstance) {
     serviceInstance = new CentralizedWorkspaceService();
-    
+
     // Auto-initialize on first access
     serviceInstance.initialize().catch(error => {
       log.error('Auto-initialization failed:', error);

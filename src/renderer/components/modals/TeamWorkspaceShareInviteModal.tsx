@@ -14,7 +14,9 @@ import {
  * @param {Function} props.onClose - Handler for closing the modal
  * @returns {JSX.Element} TeamWorkspaceShareInviteModal component
  */
-interface TeamWorkspaceShareInviteModalProps { visible: boolean; workspace: { name?: string; gitUrl?: string; [key: string]: unknown } | null; onClose: () => void; }
+import type { Workspace } from '../../../types/workspace';
+
+interface TeamWorkspaceShareInviteModalProps { visible: boolean; workspace: Workspace | null; onClose: () => void; }
 const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWorkspaceShareInviteModalProps) => {
     const { message } = App.useApp();
     const { token } = theme.useToken();

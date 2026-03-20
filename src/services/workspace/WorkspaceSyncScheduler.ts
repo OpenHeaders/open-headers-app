@@ -19,7 +19,7 @@ const log = createLogger('WorkspaceSyncScheduler');
 
 import { DATA_FORMAT_VERSION } from '../../config/version';
 import type { Source } from '../../types/source';
-import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus } from '../../types/workspace';
+import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus, CommitInfo } from '../../types/workspace';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -61,7 +61,7 @@ interface SyncResult {
   error?: string;
   data?: SyncData;
   commitHash?: string;
-  commitInfo?: Record<string, unknown>;
+  commitInfo?: CommitInfo;
 }
 
 interface SyncData {

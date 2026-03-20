@@ -3,12 +3,19 @@
  */
 import { createLogger } from '../../utils/error-handling/logger';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
+import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '../../../types/workspace';
 const log = createLogger('WorkspaceManager');
 
 interface StorageAPI {
   loadFromStorage: (filename: string) => Promise<string | null>;
   saveToStorage: (filename: string, content: string) => Promise<void>;
   deleteDirectory: (dirPath: string) => Promise<unknown>;
+}
+
+export interface WorkspacesConfig {
+  workspaces: Workspace[];
+  activeWorkspaceId: string;
+  syncStatus: Record<string, WorkspaceSyncStatus>;
 }
 
 class WorkspaceManager {
@@ -21,7 +28,7 @@ class WorkspaceManager {
   /**
    * Load workspaces configuration
    */
-  async loadWorkspaces() {
+  async loadWorkspaces(): Promise<WorkspacesConfig> {
     try {
       const data = await this.storageAPI.loadFromStorage('workspaces.json');
       if (data) {
@@ -33,7 +40,7 @@ class WorkspaceManager {
         };
       } else {
         // Initialize with default
-        const defaultConfig = {
+        const defaultConfig: WorkspacesConfig = {
           workspaces: [{
             id: 'default-personal',
             name: 'Personal Workspace',
@@ -66,7 +73,7 @@ class WorkspaceManager {
   /**
    * Save workspaces configuration
    */
-  async saveWorkspaces(config: { workspaces: Record<string, any>[]; activeWorkspaceId: string; syncStatus: Record<string, any> }) {
+  async saveWorkspaces(config: WorkspacesConfig) {
     try {
       await this.storageAPI.saveToStorage('workspaces.json', JSON.stringify({
         workspaces: config.workspaces,
@@ -82,9 +89,9 @@ class WorkspaceManager {
   /**
    * Create a new workspace with enhanced validation
    */
-  async createWorkspace(workspaces: Array<Record<string, any>>, workspace: Record<string, any>) {
+  createWorkspace(workspaces: Workspace[], workspace: Partial<Workspace> & { id: string; name: string; type: Workspace['type'] }): Workspace {
     // Validate workspace ID uniqueness
-    if (workspaces.some((w: Record<string, any>) => w.id === workspace.id)) {
+    if (workspaces.some(w => w.id === workspace.id)) {
       throw new Error(`Workspace with ID ${workspace.id} already exists`);
     }
 
@@ -121,25 +128,23 @@ class WorkspaceManager {
       }
     }
 
-    const newWorkspace: Record<string, any> = {
+    const existingMetadata = workspace.metadata || {};
+    const newMetadata: WorkspaceMetadata = {
+      ...existingMetadata,
+      version: DATA_FORMAT_VERSION,
+      sourceCount: 0,
+      ruleCount: 0,
+      proxyRuleCount: 0
+    };
+
+    const newWorkspace: Workspace = {
       ...workspace,
-      id: workspace.id,
-      name: workspace.name,
-      type: workspace.type,
       createdAt: workspace.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      // Ensure proper defaults based on type
       isDefault: workspace.id === 'default-personal',
       isPersonal: workspace.type === 'personal',
       isTeam: workspace.type === 'team' || workspace.type === 'git',
-      // Initialize metadata
-      metadata: {
-        ...(workspace.metadata as Record<string, any>),
-        version: DATA_FORMAT_VERSION,
-        sourceCount: 0,
-        ruleCount: 0,
-        proxyRuleCount: 0
-      }
+      metadata: newMetadata
     };
 
     log.info(`Creating workspace: ${newWorkspace.id} (${newWorkspace.type})`);
@@ -149,8 +154,8 @@ class WorkspaceManager {
   /**
    * Validate workspace exists
    */
-  validateWorkspaceExists(workspaces: Array<Record<string, any>>, workspaceId: string) {
-    const workspace = workspaces.find((w: Record<string, any>) => w.id === workspaceId);
+  validateWorkspaceExists(workspaces: Workspace[], workspaceId: string): Workspace {
+    const workspace = workspaces.find(w => w.id === workspaceId);
     if (!workspace) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
@@ -180,7 +185,7 @@ class WorkspaceManager {
   async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string) {
     try {
       const files = ['sources.json', 'rules.json', 'proxy-rules.json', 'environments.json'];
-      
+
       for (const file of files) {
         try {
           const sourcePath = `workspaces/${sourceWorkspaceId}/${file}`;

@@ -362,10 +362,8 @@ export class ExportService {
     
     // Remove potentially sensitive workspace data
     if (sanitized.currentWorkspace && sanitized.currentWorkspace.authData) {
-      sanitized.currentWorkspace = {
-        ...sanitized.currentWorkspace,
-        authData: '[REDACTED]'
-      };
+      const { authData: _redacted, ...rest } = sanitized.currentWorkspace;
+      sanitized.currentWorkspace = rest;
     }
 
     return sanitized;

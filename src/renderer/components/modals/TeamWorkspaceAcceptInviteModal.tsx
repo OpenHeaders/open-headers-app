@@ -88,11 +88,11 @@ const TeamWorkspaceAcceptInviteModal = ({
         setSshKeySource(sshKeySourceValue || DEFAULT_VALUES.sshKeySource);
     }, [sshKeySourceValue]);
 
-    const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<Record<string, unknown>>) => {
+    const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<{ name: string }>) => {
         let counter = 1;
         let newName = baseName;
 
-        while (existingWorkspaces.find((w: Record<string, unknown>) => w.name === newName)) {
+        while (existingWorkspaces.find(w => w.name === newName)) {
             counter++;
             newName = `${baseName} (${counter})`;
         }
@@ -106,7 +106,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                 ? generateUniqueWorkspaceName(inviteData.workspaceName, workspaceContext.workspaces)
                 : inviteData.workspaceName;
 
-            const formValues: Record<string, any> = {
+            const formValues: Record<string, unknown> = {
                 name: workspaceName,
                 description: inviteData.description || `Shared workspace: ${inviteData.workspaceName}`,
                 type: 'team',

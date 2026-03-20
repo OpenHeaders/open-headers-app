@@ -13,6 +13,8 @@ import ConnectionProgressModal from './ConnectionProgressModal';
 import AuthenticationForm from './AuthenticationForm';
 import WorkspaceCreationProgressModal from './WorkspaceCreationProgressModal';
 import { FILE_FORMATS, ExportService, type ExportData } from '../../../../services/export-import';
+import type { Workspace } from '../../../../../types/workspace';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 const { Text, Title } = Typography;
 
@@ -23,7 +25,7 @@ const ENVIRONMENT_OPTIONS = {
     FULL: 'full'
 };
 
-interface WorkspaceModalProps { visible: boolean; editingWorkspace: Record<string, unknown> | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
+interface WorkspaceModalProps { visible: boolean; editingWorkspace: Workspace | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
 const WorkspaceModal = ({
     visible,
     editingWorkspace,
@@ -56,19 +58,7 @@ const WorkspaceModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        }) as unknown as {
-            gitService: {
-                getStatus: () => Promise<Record<string, unknown>>;
-                install: () => Promise<{ success: boolean }>;
-                testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; [key: string]: unknown }>;
-                subscribeToConnectionProgress: () => (() => void);
-                onProgress: (callback: (event: { type: string; data: { summary?: { step: string; status: string; details?: string; progress?: number }[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void);
-                [key: string]: unknown;
-            };
-            workspaceService: Record<string, unknown>;
-            syncService: Record<string, unknown>;
-            cleanup: () => void;
-        } | null;
+        });
     }, [workspaceContext]);
     
     useEffect(() => {
@@ -94,7 +84,7 @@ const WorkspaceModal = ({
         resetCreation,
         retryCreation,
         workspaceId
-    } = useWorkspaceCreation(services as unknown as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
+    } = useWorkspaceCreation(services as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
 
     const watchedType = Form.useWatch('type', form);
     const watchedGitUrl = Form.useWatch('gitUrl', form);
@@ -148,7 +138,7 @@ const WorkspaceModal = ({
     const checkGitStatus = async () => {
         try {
             const status = await services!.gitService.getStatus();
-            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
+            setGitStatus(status);
         } catch (error) {
             console.error('Failed to check Git status:', error);
             setGitStatus({ isInstalled: false, error: (error instanceof Error ? error.message : String(error)) });
@@ -245,9 +235,12 @@ const WorkspaceModal = ({
             
             unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress();
 
-            progressUnsubscribeRef.current = services!.gitService.onProgress((event: { type: string; data: { summary?: { step: string; status: string; details?: string; progress?: number }[]; [key: string]: unknown }; [key: string]: unknown }) => {
+            progressUnsubscribeRef.current = services!.gitService.onProgress((event) => {
                 if (event.type === 'git-connection') {
-                    setConnectionProgress(event.data.summary || []);
+                    const summary = (event.data.summary || []).map(item =>
+                        typeof item === 'string' ? { step: item, status: 'done' } : item
+                    );
+                    setConnectionProgress(summary);
                 }
             });
 
@@ -263,7 +256,7 @@ const WorkspaceModal = ({
             });
             
             setConnectionTested(result.success);
-            setConnectionTestResult(result as { success: boolean; message?: string; error?: string });
+            setConnectionTestResult({ success: result.success, message: result.message, error: result.error });
             setIsTestingConnection(false);
         } catch (error) {
             setConnectionTested(false);
@@ -279,7 +272,7 @@ const WorkspaceModal = ({
         }
     };
     
-    const handleFinish = async (values: Record<string,unknown>) => {
+    const handleFinish = async (values: WorkspaceFormValues) => {
         // For new team workspaces, include export data in the workspace creation values
         if (!editingWorkspace && values.type === 'team') {
             try {
@@ -302,8 +295,8 @@ const WorkspaceModal = ({
                 // Prepare export options
                 const exportOptions = {
                     selectedItems,
-                    environmentOption: (values.environmentOption as string) || ENVIRONMENT_OPTIONS.SCHEMA,
-                    fileFormat: (values.fileFormat as string) || FILE_FORMATS.SINGLE,
+                    environmentOption: values.environmentOption || ENVIRONMENT_OPTIONS.SCHEMA,
+                    fileFormat: values.fileFormat || FILE_FORMATS.SINGLE,
                     appVersion: await window.electronAPI.getAppVersion()
                 };
                 

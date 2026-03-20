@@ -18,12 +18,12 @@ interface RulesElectronAPI {
   proxyDeleteRule?: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-interface HeaderRule {
+export interface HeaderRule {
   id: string;
   [key: string]: unknown;
 }
 
-interface RulesCollection {
+export interface RulesCollection {
   header: HeaderRule[];
   request: HeaderRule[];
   response: HeaderRule[];

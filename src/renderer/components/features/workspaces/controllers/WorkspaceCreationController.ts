@@ -9,6 +9,7 @@ import WorkspaceCreationStateMachine, {
     type StateChangeData
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
+import type { Workspace, WorkspaceType } from '../../../../../types/workspace';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceCreationController');
@@ -21,7 +22,7 @@ export interface WorkspaceCreationDependencies {
         commitConfiguration: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
     };
     workspaceService: {
-        create: (data: Record<string, unknown>) => Promise<{ id?: string } | null>;
+        create: (data: Record<string, unknown>) => Promise<Workspace | null>;
     };
 }
 

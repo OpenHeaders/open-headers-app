@@ -47,7 +47,7 @@ interface EnvironmentCollection {
   };
 }
 
-interface Workspace {
+interface WorkspaceName {
   name: string;
 }
 
@@ -272,12 +272,12 @@ export function isEnvironmentVariableDuplicate(varName: string, envName: string,
  * @param {Array} existingWorkspaces - Array of existing workspaces
  * @returns {boolean} - True if workspace name is a duplicate
  */
-export function isWorkspaceNameDuplicate(workspaceName: string, existingWorkspaces: Workspace[]) {
+export function isWorkspaceNameDuplicate(workspaceName: string, existingWorkspaces: WorkspaceName[]) {
   if (!workspaceName || !Array.isArray(existingWorkspaces)) {
     return false;
   }
 
-  return existingWorkspaces.some((workspace: Workspace) => workspace.name === workspaceName);
+  return existingWorkspaces.some(workspace => workspace.name === workspaceName);
 }
 
 /**

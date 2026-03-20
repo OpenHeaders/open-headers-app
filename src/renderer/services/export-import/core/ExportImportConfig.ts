@@ -41,7 +41,16 @@ export const FILE_FILTERS = {
 /**
  * Default configuration values
  */
-export const DEFAULTS = {
+export const DEFAULTS: {
+  APP_VERSION: string;
+  DATA_FORMAT_VERSION: string;
+  ENVIRONMENT_NAME: string;
+  WORKSPACE_TYPE: import('../../../../types/workspace').WorkspaceType;
+  WORKSPACE_BRANCH: string;
+  WORKSPACE_PATH: string;
+  AUTH_TYPE: import('../../../../types/workspace').AuthType;
+  AUTO_SYNC: boolean;
+} = {
   APP_VERSION: APP_VERSION,
   DATA_FORMAT_VERSION: DATA_FORMAT_VERSION,
   ENVIRONMENT_NAME: 'Default',

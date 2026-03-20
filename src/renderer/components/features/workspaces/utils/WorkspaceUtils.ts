@@ -1,4 +1,29 @@
 import { AUTH_TYPES, PROVIDER_ICONS } from '../constants';
+import type { WorkspaceType, WorkspaceAuthData, AuthType } from '../../../../../types/workspace';
+
+/** Form values from workspace creation/edit forms */
+export interface WorkspaceFormValues {
+    name?: string;
+    description?: string;
+    type?: WorkspaceType;
+    gitUrl?: string;
+    gitBranch?: string;
+    gitPath?: string;
+    authType?: AuthType;
+    autoSync?: boolean;
+    gitToken?: string;
+    tokenType?: string;
+    sshKeySource?: string;
+    sshKey?: string;
+    sshKeyPath?: string;
+    sshPassphrase?: string;
+    gitUsername?: string;
+    gitPassword?: string;
+    environmentOption?: string;
+    fileFormat?: string;
+    initialCommit?: { files: Record<string, string>; message: string };
+    [key: string]: unknown;
+}
 
 /**
  * Utility functions for workspace management
@@ -66,18 +91,15 @@ export const getProviderIcon = (url: string) => {
  * @param {string} authType - Selected authentication type
  * @returns {Object} Prepared authentication data
  */
-export const prepareAuthData = async (values: Record<string, any>, authType: string) => {
-    let authData = {};
-    
+export const prepareAuthData = async (values: WorkspaceFormValues, authType: string): Promise<WorkspaceAuthData> => {
     switch (authType) {
         case AUTH_TYPES.TOKEN:
-            authData = {
+            return {
                 token: values.gitToken,
                 tokenType: values.tokenType || 'auto'
             };
-            break;
-            
-        case AUTH_TYPES.SSH_KEY:
+
+        case AUTH_TYPES.SSH_KEY: {
             let sshKeyContent = '';
             if (values.sshKeySource === 'file' && values.sshKeyPath) {
                 try {
@@ -86,27 +108,24 @@ export const prepareAuthData = async (values: Record<string, any>, authType: str
                     throw new Error(`Failed to read SSH key file: ${error instanceof Error ? error.message : String(error)}`);
                 }
             } else {
-                sshKeyContent = values.sshKey;
+                sshKeyContent = values.sshKey || '';
             }
-            
-            authData = {
+
+            return {
                 sshKey: sshKeyContent,
                 sshPassphrase: values.sshPassphrase
             };
-            break;
-            
+        }
+
         case AUTH_TYPES.BASIC:
-            authData = {
+            return {
                 username: values.gitUsername,
                 password: values.gitPassword
             };
-            break;
-            
+
         default:
-            authData = {};
+            return {};
     }
-    
-    return authData;
 };
 
 /**
@@ -121,26 +140,26 @@ export const prepareAuthData = async (values: Record<string, any>, authType: str
  * @param {Object} authData - Prepared authentication data
  * @returns {Object} Prepared workspace object with sensitive fields removed
  */
-export const prepareWorkspaceData = (values: Record<string, unknown>, editingWorkspace: Record<string, unknown> | null, authData: Record<string, unknown>) => {
-    const workspace = {
-        ...values,
+export const prepareWorkspaceData = (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null, authData: WorkspaceAuthData) => {
+    // Extract form-only fields that shouldn't be stored on the workspace
+    const {
+        gitToken: _gitToken,
+        tokenType: _tokenType,
+        sshKey: _sshKey,
+        sshKeyPath: _sshKeyPath,
+        sshPassphrase: _sshPassphrase,
+        gitUsername: _gitUsername,
+        gitPassword: _gitPassword,
+        ...rest
+    } = values;
+
+    return {
+        ...rest,
         id: editingWorkspace?.id || Date.now().toString(),
-        type: values.gitUrl ? 'git' : 'personal',
+        type: (values.gitUrl ? 'git' : 'personal') as WorkspaceType,
         authData: values.gitUrl ? authData : undefined,
         sshKeySource: values.authType === AUTH_TYPES.SSH_KEY ? values.sshKeySource : undefined
     };
-    
-    // Remove individual auth fields from workspace object
-    const fieldsToRemove = [
-        'gitToken', 'tokenType', 'sshKey', 'sshKeyPath', 
-        'sshPassphrase', 'gitUsername', 'gitPassword'
-    ];
-    
-    fieldsToRemove.forEach(field => {
-        delete (workspace as Record<string, unknown>)[field];
-    });
-    
-    return workspace;
 };
 
 

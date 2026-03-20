@@ -212,7 +212,7 @@ describe('ExportService._sanitizeOptionsForLogging', () => {
         authData: { token: 'secret' },
       },
     });
-    expect(result.currentWorkspace.authData).toBe('[REDACTED]');
+    expect(result.currentWorkspace.authData).toBeUndefined();
     expect(result.currentWorkspace.name).toBe('WS');
     expect(result.fileFormat).toBe('single');
   });

@@ -13,7 +13,7 @@ const log = createLogger('SyncOperations');
  * @param {Object} workspaceContext - Workspace context object
  * @returns {Object} Sync operations and utilities
  */
-export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string) => Promise<unknown>; switchWorkspace: (id: string) => Promise<unknown>; [key: string]: unknown }) => {
+export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string) => Promise<boolean>; switchWorkspace: (id: string) => Promise<boolean> }) => {
     const { message } = App.useApp();
     const { syncWorkspace, switchWorkspace } = workspaceContext;
     
@@ -90,8 +90,8 @@ export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string
      * @param {Object} workspace - Workspace object
      * @param {Object} syncListeners - Sync listeners object
      */
-    const handleWorkspaceSwitch = async (result: { id?: string; [key: string]: unknown }, workspace: { id?: string; type?: string; [key: string]: unknown }, syncListeners: { setupListeners: (id: string) => void; startTimeout: (id: string) => void; messageKey: string; cleanup: () => void } | null) => {
-        const workspaceId = (result.id || workspace.id) as string;
+    const handleWorkspaceSwitch = async (result: { id?: string }, workspace: { id?: string; type?: string }, syncListeners: { setupListeners: (id: string) => void; startTimeout: (id: string) => void; messageKey: string; cleanup: () => void } | null) => {
+        const workspaceId = result.id || workspace.id || '';
 
         if (workspace.type === 'git' && syncListeners) {
             syncListeners.setupListeners(workspaceId);
@@ -112,13 +112,13 @@ export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string
      * Handles workspace sync
      * @param {Object} workspace - Workspace to sync
      */
-    const handleSyncWorkspace = async (workspace: { id?: string; type?: string; [key: string]: unknown }) => {
+    const handleSyncWorkspace = async (workspace: { id: string; type: string }) => {
         if (workspace.type !== 'git') {
             return;
         }
 
         // Call syncWorkspace which will handle its own success/error notifications
-        await syncWorkspace(workspace.id as string);
+        await syncWorkspace(workspace.id);
     };
     
     return {

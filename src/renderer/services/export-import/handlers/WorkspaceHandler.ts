@@ -9,6 +9,7 @@ import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
 import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection';
 import { DEFAULTS } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, WorkspaceData, ExportOptions } from '../core/types';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceHandler');
@@ -19,23 +20,6 @@ interface WorkspaceImportOptions {
   isGitSync?: boolean;
   includeCredentials?: boolean;
   switchToNewWorkspace?: boolean;
-  [key: string]: unknown;
-}
-
-/** Auth data structure for workspace credentials */
-interface AuthData {
-  type?: string;
-  token?: string;
-  tokens?: {
-    accessToken?: string;
-    refreshToken?: string;
-    expiresAt?: string;
-    tokenType?: string;
-    [key: string]: unknown;
-  };
-  debugInfo?: unknown;
-  lastError?: unknown;
-  internalTokens?: unknown;
   [key: string]: unknown;
 }
 
@@ -67,7 +51,7 @@ export class WorkspaceHandler {
       const workspaceData: WorkspaceData = {
         name: currentWorkspace.name,
         description: currentWorkspace.description,
-        type: currentWorkspace.type || DEFAULTS.WORKSPACE_TYPE,
+        type: currentWorkspace.type,
         gitUrl: currentWorkspace.gitUrl,
         gitBranch: currentWorkspace.gitBranch || DEFAULTS.WORKSPACE_BRANCH,
         gitPath: currentWorkspace.gitPath || DEFAULTS.WORKSPACE_PATH,
@@ -77,7 +61,7 @@ export class WorkspaceHandler {
       
       // Only include credentials if explicitly requested
       if (includeCredentials && currentWorkspace.authData) {
-        workspaceData.authData = this._sanitizeAuthData(currentWorkspace.authData as AuthData);
+        workspaceData.authData = this._sanitizeWorkspaceAuthData(currentWorkspace.authData);
       }
 
       log.info(`Exporting workspace configuration: ${workspaceData.name} (${workspaceData.type})`);
@@ -150,11 +134,11 @@ export class WorkspaceHandler {
     const { workspaces, createWorkspace } = this.dependencies;
 
     // Check if workspace with same name exists and generate unique name if needed
-    let workspaceName = workspaceInfo.name as string;
-    if (isWorkspaceNameDuplicate(workspaceName, workspaces as unknown as { name: string }[])) {
+    let workspaceName = workspaceInfo.name;
+    if (isWorkspaceNameDuplicate(workspaceName, workspaces)) {
       workspaceName = generateUniqueName(
-        workspaceInfo.name as string,
-        workspaces.map(w => w.name as string),
+        workspaceInfo.name,
+        workspaces.map(w => w.name),
         'Imported'
       );
       log.info(`Workspace name '${workspaceInfo.name}' already exists, using '${workspaceName}'`);
@@ -171,13 +155,12 @@ export class WorkspaceHandler {
       gitPath: workspaceInfo.gitPath || DEFAULTS.WORKSPACE_PATH,
       authType: workspaceInfo.authType || DEFAULTS.AUTH_TYPE,
       autoSync: workspaceInfo.autoSync !== false,
-      createdAt: new Date().toISOString(),
-      importedFrom: options.isGitSync ? 'git-sync' : 'manual-import'
+      createdAt: new Date().toISOString()
     };
 
     // Include auth data if provided and credentials are allowed
     if (workspaceInfo.authData && this._shouldImportCredentials(options)) {
-      workspace.authData = this._validateAndSanitizeAuthData(workspaceInfo.authData as AuthData);
+      workspace.authData = this._validateAndSanitizeWorkspaceAuthData(workspaceInfo.authData as WorkspaceAuthData);
     }
 
     // Create the workspace using the dependency function
@@ -231,24 +214,22 @@ export class WorkspaceHandler {
    * @returns {Object} - Sanitized authentication data
    * @private
    */
-  _sanitizeAuthData(authData: AuthData): AuthData {
+  _sanitizeWorkspaceAuthData(authData: WorkspaceAuthData): WorkspaceAuthData {
     if (!authData || typeof authData !== 'object') {
       return {};
     }
 
-    const sanitized: AuthData = { ...authData };
-
-    // Remove any potentially sensitive debugging information
-    delete sanitized.debugInfo;
-    delete sanitized.lastError;
-    delete sanitized.internalTokens;
-
-    // Ensure tokens are properly structured
-    if (sanitized.tokens && typeof sanitized.tokens === 'object') {
-      // Only include essential token fields, not internal metadata
-      const { accessToken, refreshToken, expiresAt, tokenType } = sanitized.tokens;
-      sanitized.tokens = { accessToken, refreshToken, expiresAt, tokenType };
-    }
+    // Return a clean copy with only known auth fields
+    const sanitized: WorkspaceAuthData = {};
+    if (authData.token) sanitized.token = authData.token;
+    if (authData.tokenType) sanitized.tokenType = authData.tokenType;
+    if (authData.username) sanitized.username = authData.username;
+    if (authData.password) sanitized.password = authData.password;
+    if (authData.sshKeyPath) sanitized.sshKeyPath = authData.sshKeyPath;
+    if (authData.sshKey) sanitized.sshKey = authData.sshKey;
+    if (authData.privateKey) sanitized.privateKey = authData.privateKey;
+    if (authData.publicKey) sanitized.publicKey = authData.publicKey;
+    if (authData.passphrase) sanitized.passphrase = authData.passphrase;
 
     return sanitized;
   }
@@ -259,23 +240,12 @@ export class WorkspaceHandler {
    * @returns {Object} - Validated and sanitized authentication data
    * @private
    */
-  _validateAndSanitizeAuthData(authData: AuthData): AuthData {
+  _validateAndSanitizeWorkspaceAuthData(authData: WorkspaceAuthData): WorkspaceAuthData {
     if (!authData || typeof authData !== 'object') {
       throw new Error('Authentication data must be an object');
     }
 
-    const validated = this._sanitizeAuthData(authData);
-    
-    // Validate required fields based on auth type
-    if (validated.type === 'oauth' && (!validated.tokens || !validated.tokens.accessToken)) {
-      throw new Error('OAuth authentication data missing required tokens');
-    }
-    
-    if (validated.type === 'personal-token' && !validated.token) {
-      throw new Error('Personal token authentication data missing token');
-    }
-
-    return validated;
+    return this._sanitizeWorkspaceAuthData(authData);
   }
 
   /**

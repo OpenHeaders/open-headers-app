@@ -13,12 +13,16 @@ export type AuthType = 'none' | 'token' | 'ssh' | 'ssh-key' | 'basic';
 
 export interface WorkspaceAuthData {
   token?: string;
+  tokenType?: string;
   username?: string;
   password?: string;
+  sshKeySource?: string;
+  sshKey?: string;
   sshKeyPath?: string;
   privateKey?: string;
   publicKey?: string;
   passphrase?: string;
+  sshPassphrase?: string;
   [key: string]: string | undefined;
 }
 
@@ -27,6 +31,8 @@ export interface WorkspaceMetadata {
   sourceCount?: number;
   ruleCount?: number;
   proxyRuleCount?: number;
+  lastDataLoad?: string;
+  lastDataUpdate?: string;
 }
 
 export interface Workspace {
@@ -51,12 +57,20 @@ export interface Workspace {
 
 // ── Workspace sync ──────────────────────────────────────────────────
 
+export interface CommitInfo {
+  commitHash?: string;
+  message?: string;
+  author?: string;
+  date?: string;
+  [key: string]: string | undefined;
+}
+
 export interface WorkspaceSyncStatus {
   syncing?: boolean;
   lastSync?: string | null;
   error?: string | null;
   lastCommit?: string;
-  commitInfo?: Record<string, unknown>;
+  commitInfo?: CommitInfo;
 }
 
 // ── Team invite ─────────────────────────────────────────────────────

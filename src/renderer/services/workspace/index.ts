@@ -18,3 +18,6 @@ export {
   SyncManager,
   BroadcastManager
 };
+
+export type { WorkspacesConfig } from './WorkspaceManager';
+export type { RulesCollection, HeaderRule } from './RulesManager';
