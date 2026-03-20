@@ -286,7 +286,7 @@ class WorkspaceHandlers {
                 const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
                 const envData = await fs.promises.readFile(envPath, 'utf8');
                 const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
-                const activeVars = environments[activeEnvironment] || {};
+                const activeVars = environments[activeEnvironment] ?? {};
                 proxyService.updateEnvironmentVariables(activeVars);
                 log.info(`Loaded ${Object.keys(activeVars).length} environment variables for proxy service`);
             } catch (error: unknown) {
@@ -370,7 +370,7 @@ class WorkspaceHandlers {
                             branch: workspace.gitBranch || 'main',
                             path: workspace.gitPath || 'config/open-headers.json',
                             authType: workspace.authType || 'none',
-                            authData: workspace.authData || {}
+                            authData: workspace.authData ?? {}
                         });
 
                         event.sender.send('workspace-sync-completed', {
@@ -596,7 +596,7 @@ class WorkspaceHandlers {
                     envConfigData.environments = envs;
                 } else {
                     // Only include structure (schema) from environments
-                    const schema: EnvironmentSchema = envConfigData.environmentSchema || { environments: {} };
+                    const schema: EnvironmentSchema = envConfigData.environmentSchema ?? { environments: {} };
 
                     // Extract schema from environment values
                     Object.entries(environmentData.environments).forEach(([envName, vars]) => {
@@ -612,7 +612,7 @@ class WorkspaceHandlers {
                             if (!existingVar) {
                                 schema.environments[envName].variables.push({
                                     name: varName,
-                                    isSecret: varData.isSecret || false
+                                    isSecret: varData.isSecret ?? false
                                 });
                             }
                         });

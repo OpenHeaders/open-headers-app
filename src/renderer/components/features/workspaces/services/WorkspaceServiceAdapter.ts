@@ -294,14 +294,14 @@ class WorkspaceServiceAdapter {
             const workspaces = await this.workspaceContext.getWorkspaces();
             return workspaces.find(w => w.id === workspaceId);
         }
-        return (this.workspaceContext.workspaces || []).find(w => w.id === workspaceId);
+        return (this.workspaceContext.workspaces ?? []).find(w => w.id === workspaceId);
     }
 
     async list() {
         if (this.workspaceContext.getWorkspaces) {
             return await this.workspaceContext.getWorkspaces();
         }
-        return this.workspaceContext.workspaces || [];
+        return this.workspaceContext.workspaces ?? [];
     }
 }
 

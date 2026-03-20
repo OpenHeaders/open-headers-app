@@ -24,7 +24,7 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
 
             // Show overlay when switching starts
             if (step === 'saving') {
-                const targetWorkspace = workspace || workspaces.find(w => w.id === workspaceId);
+                const targetWorkspace = workspace ?? workspaces.find(w => w.id === workspaceId);
                 startSwitch(targetWorkspace ?? null);
             }
         };
@@ -38,7 +38,7 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
             const workspaceName = String(switchState.targetWorkspace?.name || currentWorkspace?.name || 'workspace');
 
             // Calculate how long the overlay has been shown
-            const elapsed = Date.now() - (switchState.startTime || 0);
+            const elapsed = Date.now() - (switchState.startTime ?? 0);
             const remainingTime = Math.max(0, 1000 - elapsed); // Minimum 1 second overlay
 
             // Complete the switch (which may delay hiding overlay)
@@ -46,7 +46,7 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
 
             // Show success notification after overlay actually disappears
             setTimeout(() => {
-                const workspace = switchState.targetWorkspace || currentWorkspace;
+                const workspace = switchState.targetWorkspace ?? currentWorkspace;
                 const icon = workspace?.type === 'git' ? React.createElement(TeamOutlined) : React.createElement(UserOutlined);
 
                 showMessage('success',

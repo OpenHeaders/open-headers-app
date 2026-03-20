@@ -128,7 +128,7 @@ class WorkspaceManager {
       }
     }
 
-    const existingMetadata = workspace.metadata || {};
+    const existingMetadata = workspace.metadata ?? {};
     const newMetadata: WorkspaceMetadata = {
       ...existingMetadata,
       version: DATA_FORMAT_VERSION,

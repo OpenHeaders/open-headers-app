@@ -238,7 +238,7 @@ const WorkspaceModal = ({
 
             progressUnsubscribeRef.current = services!.gitService.onProgress((event) => {
                 if (event.type === 'git-connection') {
-                    const summary = (event.data.summary || []).map(item =>
+                    const summary = (event.data.summary ?? []).map(item =>
                         typeof item === 'string' ? { step: item, status: 'done' } : item
                     );
                     setConnectionProgress(summary);
@@ -280,7 +280,7 @@ const WorkspaceModal = ({
                 // Create export service with actual data from hooks
                 const exportService = new ExportService({
                     appVersion: await window.electronAPI.getAppVersion(),
-                    sources: sources || [],
+                    sources: sources ?? [],
                     activeWorkspaceId: workspaceContext.activeWorkspaceId,
                     exportSources: exportSources,
                     removeSource: async () => true, // Not needed for export

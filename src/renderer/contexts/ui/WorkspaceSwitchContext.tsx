@@ -51,7 +51,7 @@ export const WorkspaceSwitchProvider: React.FC<{ children: React.ReactNode }> = 
         setSwitchState(prev => {
             if (!prev.switching) return prev;
 
-            const elapsed = Date.now() - (prev.startTime || 0);
+            const elapsed = Date.now() - (prev.startTime ?? 0);
             const remainingTime = Math.max(0, 1000 - elapsed); // Minimum 1 second
 
             if (remainingTime > 0) {

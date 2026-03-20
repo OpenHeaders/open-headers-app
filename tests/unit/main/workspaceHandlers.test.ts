@@ -103,7 +103,7 @@ function buildEnvConfigData(environmentData: EnvironmentInput): EnvConfigOutput 
                 });
             });
         } else {
-            envConfigData.environmentSchema = envConfigData.environmentSchema || { environments: {} };
+            envConfigData.environmentSchema = envConfigData.environmentSchema ?? { environments: {} };
 
             Object.entries(environmentData.environments).forEach(([envName, vars]) => {
                 if (!envConfigData.environmentSchema!.environments[envName]) {
@@ -117,7 +117,7 @@ function buildEnvConfigData(environmentData: EnvironmentInput): EnvConfigOutput 
                     if (!existingVar) {
                         envConfigData.environmentSchema!.environments[envName].variables.push({
                             name: varName,
-                            isSecret: varData.isSecret || false
+                            isSecret: varData.isSecret ?? false
                         });
                     }
                 });

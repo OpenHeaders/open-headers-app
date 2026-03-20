@@ -518,7 +518,7 @@ class TeamWorkspaceSyncer {
       // Pull with rebase
       await this.executor.execute(`pull --rebase origin ${branch}`, {
         cwd: repoDir,
-        env: authData.env || process.env,
+        env: authData.env ?? process.env,
         timeout: 60000
       });
 
@@ -607,7 +607,7 @@ class TeamWorkspaceSyncer {
       const configPaths: ConfigPaths = {};
 
       if (metadata) {
-        for (const [key, relativePath] of Object.entries(metadata.configPaths || {})) {
+        for (const [key, relativePath] of Object.entries(metadata.configPaths ?? {})) {
           configPaths[key] = path.join(repoDir, relativePath);
         }
       }
