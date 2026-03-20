@@ -36,7 +36,7 @@ describe('WebSocketService', () => {
 
         it('initializes with empty sources and rules', () => {
             expect(service.sources).toEqual([]);
-            expect(service.rules).toEqual({});
+            expect(service.rules).toEqual({ header: [], request: [], response: [] });
         });
 
         it('creates all handler instances', () => {

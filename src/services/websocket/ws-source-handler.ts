@@ -10,13 +10,14 @@ import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import type { Workspace } from '../../types/workspace';
 import type { Source } from '../../types/source';
+import type { RulesCollection, RulesStorage } from '../../types/rules';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');
 
 interface RulesUpdateMessage {
     type: 'rules-update';
-    data?: { rules?: Record<string, unknown>; version?: string };
+    data?: RulesStorage;
 }
 
 interface SourceServiceLike {
@@ -25,7 +26,7 @@ interface SourceServiceLike {
 }
 
 interface WSServiceLike {
-    rules: Record<string, unknown>;
+    rules: RulesCollection;
     sources: Source[];
     appDataPath: string | null;
     sourceService: SourceServiceLike | null;
@@ -178,7 +179,7 @@ class WSSourceHandler {
                 log.info(`Loaded ${Object.keys(this.wsService.rules).length} rule types from workspace ${workspaceId}`);
             } else {
                 log.info(`No rules found for workspace ${workspaceId}, using empty rules`);
-                this.wsService.rules = {};
+                this.wsService.rules = { header: [], request: [], response: [] };
             }
 
             const sourcesPath = path.join(appDataPath, 'workspaces', workspaceId, 'sources.json');
@@ -198,7 +199,7 @@ class WSSourceHandler {
             this.broadcastSources();
         } catch (error) {
             log.error(`Error loading data for workspace ${workspaceId}:`, error);
-            this.wsService.rules = {};
+            this.wsService.rules = { header: [], request: [], response: [] };
             this.wsService.sources = [];
             this.wsService.ruleHandler.broadcastRules();
             this.broadcastSources();
@@ -273,7 +274,7 @@ class WSSourceHandler {
                 log.info(`Loaded ${Object.keys(this.wsService.rules).length} rule types from workspace`);
             } else {
                 log.info(`No rules file found at ${rulesPath}, starting with empty rules`);
-                this.wsService.rules = {};
+                this.wsService.rules = { header: [], request: [], response: [] };
             }
 
             const sourcesPath = path.join(appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
@@ -287,7 +288,7 @@ class WSSourceHandler {
             }
         } catch (error) {
             log.error('Error loading initial data:', error);
-            this.wsService.rules = {};
+            this.wsService.rules = { header: [], request: [], response: [] };
             this.wsService.sources = [];
         }
     }

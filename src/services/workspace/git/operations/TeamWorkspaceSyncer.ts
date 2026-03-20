@@ -10,6 +10,9 @@ import type { GitExecutor } from '../core/GitExecutor';
 import type { GitRepositoryManager, PullOptions, PushOptions, RepositoryStatus } from '../repository/GitRepositoryManager';
 import type { Source } from '../../../../types/source';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
+import type { RulesCollection } from '../../../../types/rules';
+import type { ProxyRule } from '../../../../types/proxy';
+import type { EnvironmentSchema, EnvironmentMap } from '../../../../types/environment';
 import type { GitBranchManager } from '../repository/GitBranchManager';
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
@@ -59,18 +62,18 @@ interface SyncOptions {
 /** Shape of the JSON config file on disk (external boundary). */
 interface ConfigFileJson {
   sources?: Source[];
-  rules?: Record<string, unknown>;
-  proxyRules?: unknown[];
-  environmentSchema?: unknown;
-  environments?: unknown;
+  rules?: RulesCollection;
+  proxyRules?: ProxyRule[];
+  environmentSchema?: EnvironmentSchema;
+  environments?: EnvironmentMap;
 }
 
 interface WorkspaceConfigData {
   sources: Source[];
-  rules: Record<string, unknown>;
-  proxyRules: unknown[];
-  environmentSchema?: unknown;
-  environments?: unknown;
+  rules: RulesCollection;
+  proxyRules: ProxyRule[];
+  environmentSchema?: EnvironmentSchema;
+  environments?: EnvironmentMap;
 }
 
 interface SyncResult {
@@ -729,15 +732,17 @@ class TeamWorkspaceSyncer {
         return null;
       }
 
+      const rules = configData.rules ?? { header: [], request: [], response: [] };
       const result: WorkspaceConfigData = {
         sources: configData.sources ?? [],
-        rules: configData.rules ?? {},
+        rules,
         proxyRules: configData.proxyRules ?? [],
         environmentSchema: configData.environmentSchema,
         environments: configData.environments,
       };
 
-      log.info(`Loaded config with ${result.sources.length} sources, ${Object.keys(result.rules).length} rule types, ${result.proxyRules.length} proxy rules`);
+      const totalRules = rules.header.length + rules.request.length + rules.response.length;
+      log.info(`Loaded config with ${result.sources.length} sources, ${totalRules} rules, ${result.proxyRules.length} proxy rules`);
 
       return result;
 

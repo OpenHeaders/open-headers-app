@@ -129,51 +129,37 @@ describe('isProxyRuleDuplicate', () => {
   });
 
   it('returns false when existingRules is not an array', () => {
-    expect(isProxyRuleDuplicate({ pattern: '*.com' }, null as any)).toBe(false);
+    expect(isProxyRuleDuplicate({ id: '1', headerName: 'X' }, null as never)).toBe(false);
   });
 
-  it('detects duplicate by pattern and matching headers', () => {
-    const rule = {
-      pattern: '*.example.com',
-      headers: [{ name: 'X-Key', isDynamic: false, value: 'v1' }],
-    };
-    const existing = [
-      {
-        pattern: '*.example.com',
-        headers: [{ name: 'X-Key', isDynamic: false, value: 'v1' }],
-      },
-    ];
+  it('detects duplicate by ID', () => {
+    const rule = { id: 'rule-1', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] };
+    const existing = [{ id: 'rule-1', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 
-  it('does not match rules with different patterns', () => {
-    const rule = { pattern: '*.a.com', headers: [] };
-    const existing = [{ pattern: '*.b.com', headers: [] }];
-    expect(isProxyRuleDuplicate(rule, existing)).toBe(false);
-  });
-
-  it('handles both rules without headers (both falsy)', () => {
-    const rule = { pattern: '*.com', headers: null };
-    const existing = [{ pattern: '*.com', headers: null }];
+  it('detects duplicate by header name, value, and domains', () => {
+    const rule = { id: 'rule-new', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] };
+    const existing = [{ id: 'rule-old', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 
-  it('returns false when one has headers and the other does not', () => {
-    const rule = { pattern: '*.com', headers: [{ name: 'X', isDynamic: false, value: '1' }] };
-    const existing = [{ pattern: '*.com', headers: null }];
+  it('does not match rules with different header names', () => {
+    const rule = { id: '1', headerName: 'X-A', headerValue: 'v1' };
+    const existing = [{ id: '2', headerName: 'X-B', headerValue: 'v1' }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(false);
   });
 
-  it('returns false for different header count', () => {
-    const rule = {
-      pattern: '*.com',
-      headers: [
-        { name: 'X', isDynamic: false, value: '1' },
-        { name: 'Y', isDynamic: false, value: '2' },
-      ],
-    };
-    const existing = [{ pattern: '*.com', headers: [{ name: 'X', isDynamic: false, value: '1' }] }];
+  it('does not match rules with different domains', () => {
+    const rule = { id: '1', headerName: 'X-Key', headerValue: 'v1', domains: ['a.com'] };
+    const existing = [{ id: '2', headerName: 'X-Key', headerValue: 'v1', domains: ['b.com'] }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(false);
+  });
+
+  it('matches rules with same headers and no domains', () => {
+    const rule = { id: '1', headerName: 'X-Key', headerValue: 'v1' };
+    const existing = [{ id: '2', headerName: 'X-Key', headerValue: 'v1' }];
+    expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 });
 

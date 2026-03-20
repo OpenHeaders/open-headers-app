@@ -77,18 +77,14 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
       lastSaved: {}
     };
 
-    // Initialize managers
-    // Manager constructors accept narrower API interfaces. ElectronAPI satisfies
-    // all required shapes structurally, but some properties (e.g. deleteDirectory)
-    // are defined in preload but not yet in the ElectronAPI global type declaration.
-    // We use targeted casts through unknown to bridge the gap.
-    const api = window.electronAPI as unknown;
-    this.workspaceManager = new WorkspaceManager(api as ConstructorParameters<typeof WorkspaceManager>[0]);
-    this.sourceManager = new SourceManager(api as ConstructorParameters<typeof SourceManager>[0], getCentralizedEnvironmentService());
-    this.rulesManager = new RulesManager(api as ConstructorParameters<typeof RulesManager>[0], api as ConstructorParameters<typeof RulesManager>[1]);
+    // Initialize managers — ElectronAPI structurally satisfies all narrow manager interfaces
+    const api = window.electronAPI;
+    this.workspaceManager = new WorkspaceManager(api);
+    this.sourceManager = new SourceManager(api, getCentralizedEnvironmentService());
+    this.rulesManager = new RulesManager(api, api);
     this.autoSaveManager = new AutoSaveManager();
-    this.syncManager = new SyncManager(api as ConstructorParameters<typeof SyncManager>[0]);
-    this.broadcastManager = new BroadcastManager(api as ConstructorParameters<typeof BroadcastManager>[0]);
+    this.syncManager = new SyncManager(api);
+    this.broadcastManager = new BroadcastManager(api);
 
     // Other properties
     this.initPromise = null;

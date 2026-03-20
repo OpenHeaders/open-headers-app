@@ -13,6 +13,7 @@
  */
 
 import type { Source } from '../../../../types/source';
+import type { ProxyRule } from '../../../../types/proxy';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 
@@ -97,33 +98,23 @@ export function isSourceDuplicate(source: ImportSource | null, currentSources: I
  * @param {Array} existingRules - Array of existing proxy rules
  * @returns {boolean} - True if rule is a duplicate
  */
-export function isProxyRuleDuplicate(rule: ImportProxyRule | null, existingRules: ImportProxyRule[]) {
+export function isProxyRuleDuplicate(rule: ProxyRule | null, existingRules: ProxyRule[]) {
   if (!rule || !Array.isArray(existingRules)) {
     return false;
   }
 
-  return existingRules.some((existingRule: ImportProxyRule) => {
-    // First check if URL patterns match
-    if (existingRule.pattern !== rule.pattern) {
-      return false;
-    }
+  return existingRules.some(existingRule => {
+    // Check by ID first
+    if (existingRule.id === rule.id) return true;
 
-    // Check if both rules have headers
-    if (!existingRule.headers || !rule.headers) {
-      return !existingRule.headers && !rule.headers; // Both must be falsy to be considered same
-    }
+    // Check by header name and domain match
+    if (existingRule.headerName !== rule.headerName) return false;
+    if (existingRule.headerValue !== rule.headerValue) return false;
 
-    // Check if header arrays have same length
-    if (existingRule.headers.length !== rule.headers.length) {
-      return false;
-    }
-
-    // Check each header for match
-    return rule.headers.every((importHeader: ImportHeader) => {
-      return existingRule.headers!.some((existingHeader: ImportHeader) => {
-        return areHeadersEqual(existingHeader, importHeader);
-      });
-    });
+    // Check domains match
+    const existingDomains = (existingRule.domains || []).sort().join(',');
+    const ruleDomains = (rule.domains || []).sort().join(',');
+    return existingDomains === ruleDomains;
   });
 }
 
@@ -314,7 +305,7 @@ export function createDuplicateDetector(dataType: string) {
     case 'sources':
       return (item: ImportSource, existingItems: ImportSource[]) => isSourceDuplicate(item, existingItems);
     case 'proxyRules':
-      return (item: ImportProxyRule, existingItems: ImportProxyRule[]) => isProxyRuleDuplicate(item, existingItems);
+      return (item: ProxyRule, existingItems: ProxyRule[]) => isProxyRuleDuplicate(item, existingItems);
     case 'rules':
       return (item: ImportRule, existingItems: ImportRule[]) => isRuleDuplicate(item, existingItems);
     default:

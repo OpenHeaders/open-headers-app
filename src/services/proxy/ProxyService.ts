@@ -9,23 +9,13 @@ import { ProxyCache } from './ProxyCache';
 import { ProxyRuleStore } from './ProxyRuleStore';
 import type { ProxyRule } from './ProxyRuleStore';
 import type { Source } from '../../types/source';
+import type { HeaderRule } from '../../types/rules';
 import { DomainMatcher } from './domainMatcher';
 import { errorMessage } from '../../types/common';
 
 const { createLogger } = mainLogger;
 
-export interface HeaderRule {
-    id: string;
-    isEnabled?: boolean;
-    headerName?: string;
-    headerValue?: string;
-    isDynamic?: boolean;
-    sourceId?: string | number | null;
-    prefix?: string;
-    suffix?: string;
-    domains?: string[];
-    [key: string]: unknown;
-}
+export type { HeaderRule };
 
 export interface ProxyStats {
     requestsProcessed: number;

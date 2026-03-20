@@ -5,6 +5,7 @@ import { createLogger } from '../../utils/error-handling/logger';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
 import type { Source } from '../../../types/source';
 import type { ProxyRule } from '../../../types/proxy';
+import type { HeaderRule, RulesCollection, RulesStorage } from '../../../types/rules';
 const log = createLogger('RulesManager');
 
 interface StorageAPI {
@@ -13,21 +14,9 @@ interface StorageAPI {
 }
 
 interface RulesElectronAPI {
-  updateWebSocketSources?: (sources: Source[] | { type: 'rules-update'; data: Record<string, unknown> }) => void;
-  proxySaveRule?: (rule: ProxyRule) => Promise<{ success: boolean; error?: string }>;
-  proxyDeleteRule?: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
-}
-
-export interface HeaderRule {
-  id: string;
-  [key: string]: unknown;
-}
-
-export interface RulesCollection {
-  header: HeaderRule[];
-  request: HeaderRule[];
-  response: HeaderRule[];
-  [key: string]: HeaderRule[];
+  updateWebSocketSources?: (sources: Source[] | { type: 'rules-update'; data: RulesStorage }) => void;
+  proxySaveRule?: typeof window.electronAPI.proxySaveRule;
+  proxyDeleteRule?: typeof window.electronAPI.proxyDeleteRule;
 }
 
 class RulesManager {
@@ -65,7 +54,7 @@ class RulesManager {
         version: DATA_FORMAT_VERSION,
         rules,
         metadata: {
-          totalRules: Object.values(rules).reduce((sum: number, ruleArray: HeaderRule[]) => sum + ruleArray.length, 0),
+          totalRules: rules.header.length + rules.request.length + rules.response.length,
           lastUpdated: new Date().toISOString()
         }
       };
@@ -119,13 +108,13 @@ class RulesManager {
   /**
    * Add a header rule
    */
-  addHeaderRule(rules: RulesCollection, ruleData: Partial<HeaderRule>) {
-    const newRule = {
+  addHeaderRule(rules: RulesCollection, ruleData: Partial<HeaderRule>): RulesCollection {
+    const newRule: HeaderRule = {
       ...ruleData,
       id: Date.now().toString(),
       createdAt: new Date().toISOString()
-    };
-    
+    } as HeaderRule;
+
     return {
       ...rules,
       header: [...rules.header, newRule]
@@ -135,10 +124,10 @@ class RulesManager {
   /**
    * Update a header rule
    */
-  updateHeaderRule(rules: RulesCollection, ruleId: string, updates: Partial<HeaderRule>) {
+  updateHeaderRule(rules: RulesCollection, ruleId: string, updates: Partial<HeaderRule>): RulesCollection {
     return {
       ...rules,
-      header: rules.header.map((rule: HeaderRule) =>
+      header: rules.header.map(rule =>
         rule.id === ruleId
           ? { ...rule, ...updates, updatedAt: new Date().toISOString() }
           : rule
@@ -149,10 +138,10 @@ class RulesManager {
   /**
    * Remove a header rule
    */
-  removeHeaderRule(rules: RulesCollection, ruleId: string) {
+  removeHeaderRule(rules: RulesCollection, ruleId: string): RulesCollection {
     return {
       ...rules,
-      header: rules.header.filter((rule: HeaderRule) => rule.id !== ruleId)
+      header: rules.header.filter(rule => rule.id !== ruleId)
     };
   }
 

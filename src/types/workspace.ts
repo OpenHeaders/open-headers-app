@@ -112,11 +112,17 @@ export interface CliWorkspaceJoinedData {
 
 // ── Services health ─────────────────────────────────────────────────
 
+export interface ServiceRegistryStatus {
+  initialized: boolean;
+  error: string | null;
+  dependencies: string[];
+}
+
 export interface ServicesHealth {
   gitSync: boolean;
   workspaceSyncScheduler: boolean;
   networkService: boolean;
   proxyService: boolean;
   webSocketService: boolean;
-  serviceRegistry: Record<string, unknown>;
+  serviceRegistry: Record<string, ServiceRegistryStatus>;
 }

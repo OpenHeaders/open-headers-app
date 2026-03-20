@@ -130,15 +130,19 @@ class WorkspaceSettingsService {
    */
   async getSettings(): Promise<WorkspaceSettings> {
     try {
-      const settings = await atomicWriter.readJson(this.settingsPath);
-      if (settings === null) {
-        // File doesn't exist, return defaults
+      const raw = await atomicWriter.readJson(this.settingsPath);
+      if (raw === null) {
         return this.defaultSettings;
       }
-      return settings as WorkspaceSettings;
+      const settings = raw as WorkspaceSettings;
+      return {
+        version: settings.version ?? this.defaultSettings.version,
+        activeWorkspaceId: settings.activeWorkspaceId ?? this.defaultSettings.activeWorkspaceId,
+        workspaces: settings.workspaces ?? this.defaultSettings.workspaces,
+        syncStatus: settings.syncStatus
+      };
     } catch (error) {
       log.error('Failed to read workspace settings:', error);
-      // Return default settings if file is corrupted
       return this.defaultSettings;
     }
   }

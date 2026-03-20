@@ -10,7 +10,6 @@ interface TargetWorkspace {
   id?: string;
   name?: string;
   type?: string;
-  [key: string]: unknown;
 }
 
 interface SwitchState {

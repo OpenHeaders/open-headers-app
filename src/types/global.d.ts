@@ -45,6 +45,7 @@ interface ElectronAPI {
   // Storage
   saveToStorage: (filename: string, content: string) => Promise<void>;
   loadFromStorage: (filename: string) => Promise<string | null>;
+  deleteDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
 
   // Settings
   saveSettings: (settings: Record<string, unknown>) => Promise<{ success: boolean; message?: string }>;
@@ -100,14 +101,14 @@ interface ElectronAPI {
     trustedCertificates: number;
     certificateExceptions: number;
   }>;
-  proxyGetRules: () => Promise<unknown[]>;
-  proxySaveRule: (rule: unknown) => Promise<{ success: boolean; error?: string }>;
+  proxyGetRules: () => Promise<import('./proxy').ProxyRule[]>;
+  proxySaveRule: (rule: import('./proxy').ProxyRule) => Promise<{ success: boolean; error?: string }>;
   proxyDeleteRule: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
   proxyClearCache: () => Promise<{ success: boolean; error?: string }>;
-  proxyGetCacheStats: () => Promise<Record<string, unknown> | null>;
-  proxyGetCacheEntries: () => Promise<unknown[]>;
+  proxyGetCacheStats: () => Promise<import('./proxy').CacheStats | null>;
+  proxyGetCacheEntries: () => Promise<import('./proxy').CacheEntry[]>;
   proxySetCacheEnabled: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
-  proxyUpdateHeaderRules: (headerRules: unknown[]) => Promise<{ success: boolean; error?: string }>;
+  proxyUpdateHeaderRules: (headerRules: import('./rules').HeaderRule[]) => Promise<{ success: boolean; error?: string }>;
   proxyClearRules: () => Promise<{ success: boolean; error?: string }>;
   proxyUpdateSource: (sourceId: string, value: string) => void;
   proxyUpdateSources: (sources: import('./source').Source[]) => void;
@@ -144,7 +145,7 @@ interface ElectronAPI {
   testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: import('./workspace').WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: unknown; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
   getGitStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } }>;
   installGit: () => Promise<{ success: boolean; message?: string; error?: string }>;
-  syncGitWorkspace: (config: unknown) => Promise<{ success: boolean; error?: string }>;
+  syncGitWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
   cleanupGitRepo: (gitUrl: string) => Promise<{ success: boolean; error?: string }>;
   commitConfiguration: (config: { url?: string; branch?: string; path?: string; files?: unknown; message?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: import('./workspace').CommitInfo; files?: string[]; noChanges?: boolean; message?: string }>;
   createBranch: (config: { url?: string; branch?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -194,7 +195,7 @@ interface ElectronAPI {
   restartApp: () => void;
 
   // Runtime updates
-  updateWebSocketSources: (sources: import('./source').Source[] | { type: 'rules-update'; data: Record<string, unknown> }) => void;
+  updateWebSocketSources: (sources: import('./source').Source[] | { type: 'rules-update'; data: import('./rules').RulesStorage }) => void;
   cleanupTempFiles: (...args: unknown[]) => void;
 
   // Event listeners (return cleanup function)

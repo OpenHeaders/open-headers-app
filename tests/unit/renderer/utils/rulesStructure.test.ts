@@ -143,8 +143,8 @@ describe('createRulesStorage', () => {
   it('creates empty storage with correct structure', () => {
     const storage = createRulesStorage();
     expect(storage.rules.header).toEqual([]);
-    expect(storage.rules.payload).toEqual([]);
-    expect(storage.rules.url).toEqual([]);
+    expect(storage.rules.request).toEqual([]);
+    expect(storage.rules.response).toEqual([]);
     expect(storage.metadata.totalRules).toBe(0);
     expect(storage.metadata.lastUpdated).toBeTruthy();
   });

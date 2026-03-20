@@ -20,4 +20,4 @@ export {
 };
 
 export type { WorkspacesConfig } from './WorkspaceManager';
-export type { RulesCollection, HeaderRule } from './RulesManager';
+export type { RulesCollection, HeaderRule } from '../../../types/rules';

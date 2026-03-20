@@ -27,14 +27,15 @@ import type { DomainValidation } from '../../../features/domain-tags/DomainTagDi
 import EnvVarInfo from './EnvVarInfo';
 import { buildHeaderValue, parseHeaderValue } from './utils';
 
-interface HeaderRuleValues {
-    headerName?: string;
-    headerValue?: string;
-    cookieName?: string;
+interface HeaderRuleValues extends Partial<import('../../../../../types/rules').HeaderRule> {
     cookieValue?: string;
-    tag?: string;
-    domains?: string[];
-    [key: string]: unknown;
+    cookiePath?: string;
+    sameSite?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    expirationMode?: string;
+    maxAge?: number;
+    expires?: string;
 }
 interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: Record<string, unknown>) => void; initialValues: HeaderRuleValues | null; }
 const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: UnifiedHeaderModalProps) => {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { App } from 'antd';
 import { useSources, useWorkspaces, useSettings } from '../../../contexts';
-import type { ProxyRule, HeaderRule } from '../components/tables/ProxyRuleTableColumns';
-import type { CacheStats, CacheEntry } from '../components/sections/ProxyCacheSection';
+import type { ProxyRule, CacheEntry, CacheStats } from '../../../../types/proxy';
+import type { HeaderRule } from '../../../../types/rules';
 
 /**
  * Proxy Server Management Hook
@@ -52,7 +52,7 @@ export const useProxyServer = () => {
      */
     const loadRules = async () => {
         const loadedRules = await window.electronAPI.proxyGetRules();
-        setRules(loadedRules as ProxyRule[]);
+        setRules(loadedRules);
     };
 
     /**
@@ -79,7 +79,7 @@ export const useProxyServer = () => {
      */
     const loadCacheStats = async () => {
         const stats = await window.electronAPI.proxyGetCacheStats();
-        setCacheStats(stats as CacheStats | null);
+        setCacheStats(stats);
     };
 
     /**
@@ -87,7 +87,7 @@ export const useProxyServer = () => {
      */
     const loadCacheEntries = async () => {
         const entries = await window.electronAPI.proxyGetCacheEntries();
-        setCacheEntries(entries as CacheEntry[]);
+        setCacheEntries(entries);
     };
 
     /**

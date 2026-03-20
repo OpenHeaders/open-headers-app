@@ -10,6 +10,8 @@ export interface EnvironmentSchema {
 
 import type { Source } from '../../../../types/source';
 import type { Workspace } from '../../../../types/workspace';
+import type { RulesCollection } from '../../../../types/rules';
+import type { ProxyRule } from '../../../../types/proxy';
 
 /** A single environment variable entry as stored in the environment service */
 export interface EnvironmentVariableEntry {
@@ -50,9 +52,9 @@ export interface ExportImportDependencies {
 export interface ExportData {
   version: string;
   sources?: Source[];
-  proxyRules?: Record<string, unknown>[];
-  rules?: Record<string, RuleEntry[]>;
-  rulesMetadata?: Record<string, unknown>;
+  proxyRules?: ProxyRule[];
+  rules?: RulesCollection;
+  rulesMetadata?: { totalRules: number; lastUpdated: string };
   environmentSchema?: EnvironmentSchema;
   environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
   workspace?: WorkspaceData;
@@ -79,7 +81,7 @@ export interface RulesStorage {
 export interface ImportData {
   version?: string;
   sources?: Source[];
-  proxyRules?: Record<string, unknown>[];
+  proxyRules?: ProxyRule[];
   rules?: Record<string, RuleEntry[]>;
   rulesMetadata?: Record<string, unknown>;
   environments?: Record<string, Record<string, { value?: string; isSecret?: boolean; [key: string]: unknown }>>;

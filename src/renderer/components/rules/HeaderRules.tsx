@@ -40,30 +40,12 @@ import {
     extractVariablesFromRule
 } from '../../utils/validation/environment-variables';
 
+import type { HeaderRule } from '../../../types/rules';
+import type { RulesStorage } from '../../../types/rules';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('HeaderRules');
 
 const { Title, Text } = Typography;
-
-interface HeaderRule {
-    id: string;
-    headerName: string;
-    headerValue?: string;
-    isEnabled: boolean;
-    isDynamic?: boolean;
-    isResponse?: boolean;
-    sourceId?: string;
-    prefix?: string;
-    suffix?: string;
-    hasEnvVars?: boolean;
-    envVars?: string[];
-    domains?: string[];
-    tag?: string;
-    cookieName?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    [key: string]: unknown;
-}
 
 type PlaceholderType = 'source_not_found' | 'empty_source' | 'empty_value' | 'missing_env_vars' | null;
 
@@ -249,19 +231,18 @@ const HeaderRules = () => {
     const saveRules = useCallback(async (newRules: HeaderRule[]) => {
         try {
             // Load existing rules storage or create new one
-            let rulesStorage;
+            let rulesStorage: RulesStorage;
             const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
             const existingData = await window.electronAPI.loadFromStorage(rulesPath);
             if (existingData) {
-                rulesStorage = JSON.parse(existingData);
+                rulesStorage = JSON.parse(existingData) as RulesStorage;
             } else {
                 rulesStorage = createRulesStorage();
             }
-            
+
             // Update header rules
-            rulesStorage.rules[RULE_TYPES.HEADER] = newRules;
-            rulesStorage.metadata.totalRules = Object.values(rulesStorage.rules)
-                .reduce((sum: number, rulesList: unknown) => sum + (rulesList as unknown[]).length, 0);
+            rulesStorage.rules.header = newRules;
+            rulesStorage.metadata.totalRules = rulesStorage.rules.header.length + rulesStorage.rules.request.length + rulesStorage.rules.response.length;
             rulesStorage.metadata.lastUpdated = new Date().toISOString();
             
             // Save in new format

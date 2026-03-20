@@ -4,16 +4,17 @@
  */
 
 import { createLogger } from '../utils/error-handling/logger';
+import type { EnvironmentMap } from '../../types/environment';
 const log = createLogger('EnvironmentStateManager');
 
 interface WorkspaceState {
-  environments: Record<string, Record<string, unknown>>;
+  environments: EnvironmentMap;
   activeEnvironment: string;
   loaded: boolean;
 }
 
 class EnvironmentStateManager {
-  environments: Record<string, Record<string, unknown>>;
+  environments: EnvironmentMap;
   activeEnvironment: string;
   workspaceStates: Record<string, WorkspaceState>;
   initialized: boolean;
@@ -51,7 +52,7 @@ class EnvironmentStateManager {
   /**
    * Set environments for a workspace
    */
-  setEnvironments(workspaceId: string, environments: Record<string, Record<string, unknown>>) {
+  setEnvironments(workspaceId: string, environments: EnvironmentMap) {
     this.initWorkspace(workspaceId);
     
     // Validate environments before setting

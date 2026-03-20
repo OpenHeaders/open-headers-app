@@ -10,43 +10,23 @@ import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import type { Source } from '../../types/source';
+import type { HeaderRule, RulesCollection, RulesStorage } from '../../types/rules';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { DATA_FORMAT_VERSION } from '../../config/version';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSRuleHandler');
 
-interface HeaderRule {
-    id: string | number;
-    headerName?: string;
-    headerValue?: string;
-    isEnabled?: boolean;
-    isDynamic?: boolean;
-    sourceId?: string | number;
-    prefix?: string;
-    suffix?: string;
-    domains?: string[];
-    hasEnvVars?: boolean;
-    envVars?: string[];
+/** HeaderRule with extra fields for extension broadcast (env vars resolved, activation state added). */
+interface ProcessedHeaderRule extends Omit<HeaderRule, 'hasEnvVars' | 'envVars'> {
     activationState?: string;
     missingDependencies?: string[];
-    updatedAt?: string;
-    [key: string]: unknown;
-}
-
-interface Rules {
-    header?: HeaderRule[];
-    [key: string]: unknown;
-}
-
-interface RulesStorage {
-    version?: string;
-    rules: Rules;
-    metadata?: Record<string, unknown>;
+    hasEnvVars?: boolean;
+    envVars?: string[];
 }
 
 interface WSServiceLike {
-    rules: Rules;
+    rules: RulesCollection;
     sources: Source[];
     appDataPath: string | null;
     environmentHandler: {
@@ -66,7 +46,7 @@ class WSRuleHandler {
     /**
      * Update rules and broadcast to all clients
      */
-    updateRules(rules: Rules): void {
+    updateRules(rules: RulesCollection): void {
         this.wsService.rules = rules;
         this.broadcastRules();
     }
@@ -82,12 +62,12 @@ class WSRuleHandler {
             }
 
             try {
-                const populatedRules = this._populateDynamicHeaderValues(this.wsService.rules);
+                const populatedRulesCollection = this._populateDynamicHeaderValues(this.wsService.rules);
 
                 const message = JSON.stringify({
                     type: 'rules-update',
                     data: {
-                        rules: populatedRules,
+                        rules: populatedRulesCollection,
                         version: DATA_FORMAT_VERSION
                     }
                 });
@@ -110,12 +90,12 @@ class WSRuleHandler {
      * Broadcast rules to all connected clients
      */
     broadcastRules(): void {
-        const populatedRules = this._populateDynamicHeaderValues(this.wsService.rules);
+        const populatedRulesCollection = this._populateDynamicHeaderValues(this.wsService.rules);
 
         const message = JSON.stringify({
             type: 'rules-update',
             data: {
-                rules: populatedRules,
+                rules: populatedRulesCollection,
                 version: DATA_FORMAT_VERSION
             }
         });
@@ -126,8 +106,8 @@ class WSRuleHandler {
     /**
      * Populate dynamic header values from sources and resolve environment variables
      */
-    _populateDynamicHeaderValues(rules: Rules): Rules {
-        const populatedRules: Rules = JSON.parse(JSON.stringify(rules));
+    _populateDynamicHeaderValues(rules: RulesCollection): { header: ProcessedHeaderRule[]; request: RulesCollection['request']; response: RulesCollection['response'] } {
+        const clonedRules: RulesCollection = JSON.parse(JSON.stringify(rules));
         const envHandler = this.wsService.environmentHandler;
 
         let environmentVariables: Record<string, string> | null = null;
@@ -137,46 +117,46 @@ class WSRuleHandler {
             log.warn('Failed to load environment variables:', errorMessage(error));
         }
 
-        if (populatedRules.header && Array.isArray(populatedRules.header)) {
-            populatedRules.header = populatedRules.header.map((rule: HeaderRule) => {
-                let processedRule: HeaderRule = { ...rule };
+        const processedHeaders: ProcessedHeaderRule[] = clonedRules.header
+            .map((rule): ProcessedHeaderRule | null => {
+                const processed: ProcessedHeaderRule = { ...rule };
 
                 if (rule.hasEnvVars && environmentVariables) {
                     try {
-                        const missingVars = rule.envVars ? rule.envVars.filter((varName: string) => {
+                        const missingVars = rule.envVars.filter(varName => {
                             const value = environmentVariables![varName];
                             return value === undefined || value === null || value === '';
-                        }) : [];
+                        });
 
                         if (missingVars.length > 0) {
-                            processedRule.activationState = 'waiting_for_deps';
-                            processedRule.missingDependencies = missingVars;
+                            processed.activationState = 'waiting_for_deps';
+                            processed.missingDependencies = missingVars;
                             return null;
                         }
 
-                        if (rule.headerName && rule.headerName.includes('{{')) {
-                            processedRule.headerName = envHandler.resolveTemplate(rule.headerName, environmentVariables);
+                        if (rule.headerName.includes('{{')) {
+                            processed.headerName = envHandler.resolveTemplate(rule.headerName, environmentVariables);
                         }
 
-                        if (!rule.isDynamic && rule.headerValue && rule.headerValue.includes('{{')) {
-                            processedRule.headerValue = envHandler.resolveTemplate(rule.headerValue, environmentVariables);
+                        if (!rule.isDynamic && rule.headerValue.includes('{{')) {
+                            processed.headerValue = envHandler.resolveTemplate(rule.headerValue, environmentVariables);
                         }
 
                         if (rule.isDynamic) {
-                            if (rule.prefix && rule.prefix.includes('{{')) {
-                                processedRule.prefix = envHandler.resolveTemplate(rule.prefix, environmentVariables);
+                            if (rule.prefix.includes('{{')) {
+                                processed.prefix = envHandler.resolveTemplate(rule.prefix, environmentVariables);
                             }
-                            if (rule.suffix && rule.suffix.includes('{{')) {
-                                processedRule.suffix = envHandler.resolveTemplate(rule.suffix, environmentVariables);
+                            if (rule.suffix.includes('{{')) {
+                                processed.suffix = envHandler.resolveTemplate(rule.suffix, environmentVariables);
                             }
                         }
 
-                        if (rule.domains && Array.isArray(rule.domains)) {
-                            processedRule.domains = rule.domains.flatMap((domain: string) => {
-                                if (domain && domain.includes('{{')) {
+                        if (rule.domains.length > 0) {
+                            processed.domains = rule.domains.flatMap(domain => {
+                                if (domain.includes('{{')) {
                                     const resolved = envHandler.resolveTemplate(domain, environmentVariables!);
-                                    if (resolved && resolved.includes(',')) {
-                                        return resolved.split(',').map((d: string) => d.trim()).filter((d: string) => d);
+                                    if (resolved.includes(',')) {
+                                        return resolved.split(',').map(d => d.trim()).filter(d => d);
                                     }
                                     return resolved;
                                 }
@@ -184,29 +164,27 @@ class WSRuleHandler {
                             });
                         }
 
-                        delete processedRule.hasEnvVars;
-                        delete processedRule.envVars;
-                        processedRule.activationState = 'active';
+                        delete processed.hasEnvVars;
+                        delete processed.envVars;
+                        processed.activationState = 'active';
                     } catch (error) {
                         log.error(`Error resolving env vars for rule "${rule.headerName}":`, error);
-                        processedRule.activationState = 'error';
+                        processed.activationState = 'error';
                     }
                 }
 
-                if (processedRule.isDynamic && processedRule.sourceId) {
-                    const source = this.wsService.sources.find((s: Source) => s.sourceId === processedRule.sourceId!.toString());
+                if (processed.isDynamic && processed.sourceId) {
+                    const source = this.wsService.sources.find(s => s.sourceId === processed.sourceId!.toString());
                     if (source && source.sourceContent) {
-                        const prefix = processedRule.prefix || '';
-                        const suffix = processedRule.suffix || '';
-                        processedRule.headerValue = prefix + source.sourceContent + suffix;
+                        processed.headerValue = (processed.prefix || '') + source.sourceContent + (processed.suffix || '');
                     }
                 }
 
-                return processedRule;
-            }).filter((rule: HeaderRule | null) => rule !== null) as HeaderRule[];
-        }
+                return processed;
+            })
+            .filter((rule): rule is ProcessedHeaderRule => rule !== null);
 
-        return populatedRules;
+        return { header: processedHeaders, request: clonedRules.request, response: clonedRules.response };
     }
 
     // ──────────────────────────────────────────────
@@ -224,7 +202,7 @@ class WSRuleHandler {
             }
 
             let ruleFound = false;
-            const updatedHeaderRules = this.wsService.rules.header.map((rule: HeaderRule) => {
+            const updatedHeaderRulesCollection = this.wsService.rules.header.map((rule: HeaderRule) => {
                 if (String(rule.id) === String(ruleId)) {
                     ruleFound = true;
                     return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
@@ -237,7 +215,7 @@ class WSRuleHandler {
                 return;
             }
 
-            this.wsService.rules.header = updatedHeaderRules;
+            this.wsService.rules.header = updatedHeaderRulesCollection;
             await this._persistAndNotify();
             log.info(`Successfully toggled rule ${ruleId} to ${enabled}`);
         } catch (error) {
@@ -258,7 +236,7 @@ class WSRuleHandler {
             }
 
             let rulesUpdated = 0;
-            const updatedHeaderRules = this.wsService.rules.header.map((rule: HeaderRule) => {
+            const updatedHeaderRulesCollection = this.wsService.rules.header.map((rule: HeaderRule) => {
                 if (ruleIds.includes(String(rule.id))) {
                     rulesUpdated++;
                     return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
@@ -271,7 +249,7 @@ class WSRuleHandler {
                 return;
             }
 
-            this.wsService.rules.header = updatedHeaderRules;
+            this.wsService.rules.header = updatedHeaderRulesCollection;
             await this._persistAndNotify();
             log.info(`Successfully toggled ${rulesUpdated} rules to ${enabled}`);
         } catch (error) {
@@ -303,14 +281,21 @@ class WSRuleHandler {
                     const existingData = await fs.promises.readFile(rulesPath, 'utf8');
                     rulesStorage = JSON.parse(existingData) as RulesStorage;
                 } catch (e) {
-                    rulesStorage = { version: DATA_FORMAT_VERSION, rules: this.wsService.rules, metadata: {} };
+                    rulesStorage = {
+                        version: DATA_FORMAT_VERSION,
+                        rules: this.wsService.rules,
+                        metadata: {
+                            totalRules: this.wsService.rules.header.length + this.wsService.rules.request.length + this.wsService.rules.response.length,
+                            lastUpdated: new Date().toISOString()
+                        }
+                    };
                 }
 
                 rulesStorage.rules = this.wsService.rules;
-                rulesStorage.metadata = rulesStorage.metadata || {};
-                rulesStorage.metadata.totalRules = Object.values(this.wsService.rules)
-                    .reduce((sum: number, rules: unknown) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
-                rulesStorage.metadata.lastUpdated = new Date().toISOString();
+                rulesStorage.metadata = {
+                    totalRules: this.wsService.rules.header.length + this.wsService.rules.request.length + this.wsService.rules.response.length,
+                    lastUpdated: new Date().toISOString()
+                };
 
                 await atomicWriter.writeJson(rulesPath, rulesStorage, { pretty: true });
                 log.info(`Rules persisted to disk for workspace ${activeWorkspaceId}`);
@@ -329,7 +314,7 @@ class WSRuleHandler {
                     const rulesData = {
                         rules: { header: this.wsService.rules.header || [] },
                         metadata: {
-                            totalRules: this.wsService.rules.header ? this.wsService.rules.header.length : 0,
+                            totalRules: this.wsService.rules.header.length,
                             lastUpdated: new Date().toISOString()
                         },
                         version: DATA_FORMAT_VERSION
