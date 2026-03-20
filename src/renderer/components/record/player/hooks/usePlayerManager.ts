@@ -18,46 +18,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { calculateViewportScale } from '../utils/playerUtils';
 import { createLogger } from '../../../../utils/error-handling/logger';
+import type { Recording, RRWebPlayerInstance, RRWebPlayerConstructor, RRWebEvent } from '../../../../../types/recording';
+import type { ProxyStatus } from '../../../../../types/proxy';
 
 const log = createLogger('usePlayerManager');
 
-export interface RecordMetadata {
-    recordId: string;
-    viewport?: { width: number; height: number };
-    [key: string]: unknown;
-}
-
-export interface RecordData {
-    metadata: RecordMetadata;
-    events: unknown[];
-    [key: string]: unknown;
-}
-
-export interface ProxyStatus {
-    running: boolean;
-    port?: number;
-    rulesCount?: number;
-    sourcesCount?: number;
-}
-
-export interface RRWebPlayerInstance {
-    getReplayer: () => { getCurrentTime: () => number; getMetaData: () => { playing?: boolean }; pause: () => void; play: (time?: number) => void } | null;
-    addEventListener: (event: string, handler: (event: { payload: unknown }) => void) => void;
-    _restoreConsole?: () => void;
-    _restoreCreateElement?: () => void;
-    _eventHandlers?: { timeUpdate: ((event: { payload: unknown }) => void) | null; stateUpdate: ((event: { payload: unknown }) => void) | null };
-    $destroy?: () => void;
-    [key: string]: unknown;
-}
-
-export type RRWebPlayerConstructor = new (options: { target: HTMLElement; props: Record<string, unknown> }) => RRWebPlayerInstance;
+export type RecordData = Recording;
+export type { ProxyStatus, RRWebPlayerConstructor };
 
 export const usePlayerManager = (
-    record: RecordData | null,
+    record: Recording | null,
     rrwebPlayer: RRWebPlayerConstructor | null,
     viewMode: string,
     autoHighlight: boolean,
-    processRecordForProxy: (record: RecordData, proxyStatus: ProxyStatus) => Promise<RecordData>,
+    processRecordForProxy: (record: Recording, proxyStatus: ProxyStatus) => Promise<Recording>,
     createConsoleOverrides: () => (() => void),
     onPlaybackTimeChange: ((time: number) => void) | null,
     onPlayingStateChange: ((playing: boolean) => void) | null
@@ -132,7 +106,7 @@ export const usePlayerManager = (
             }
 
             isInitializingRef.current = true;
-            recordIdRef.current = record.metadata.recordId;
+            recordIdRef.current = record.metadata.recordId ?? null;
             autoHighlightKeyRef.current = autoHighlight;
 
             try {
@@ -331,9 +305,8 @@ export const usePlayerManager = (
                         // Add error handling for missing nodes
                         plugins: [
                             {
-                                handler: (event: Record<string, unknown>) => {
+                                handler: (event: RRWebEvent) => {
                                     if (event.type === 3 && event.data) { // Incremental snapshot
-                                        // Add error boundary for mutations
                                         try {
                                             return event;
                                         } catch (e) {
@@ -344,23 +317,17 @@ export const usePlayerManager = (
                                     return event;
                                 }
                             },
-                            // Custom iframe handler plugin
                             {
-                                handler: (event: Record<string, unknown>, _isSync: boolean, _context: unknown) => {
-                                    // Handle iframe-related events
+                                handler: (event: RRWebEvent) => {
                                     if (event.type === 2) { // Full snapshot
-                                        // Already handled by preprocessor
                                         return event;
                                     }
 
-                                    const eventData = event.data as Record<string, unknown> | undefined;
-                                    if (event.type === 3 && eventData?.source === 0) { // DOM mutation
-                                        // Filter out iframe script errors
-                                        if (eventData.adds) {
-                                            eventData.adds = (eventData.adds as Array<Record<string, unknown>>).filter((add: Record<string, unknown>) => {
-                                                const node = add.node as Record<string, unknown> | undefined;
-                                                if (node?.tagName === 'script' &&
-                                                    (node?.textContent as string | undefined)?.includes('Blocked script execution')) {
+                                    if (event.type === 3 && event.data?.source === 0) { // DOM mutation
+                                        if (event.data.adds) {
+                                            event.data.adds = event.data.adds.filter(add => {
+                                                if (add.node?.tagName === 'script' &&
+                                                    add.node?.textContent?.includes('Blocked script execution')) {
                                                     return false;
                                                 }
                                                 return true;

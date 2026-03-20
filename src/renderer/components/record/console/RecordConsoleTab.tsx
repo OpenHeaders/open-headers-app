@@ -21,25 +21,12 @@ import SearchOverlay from '../shared/SearchOverlay';
 import TimestampCell from '../shared/TimestampCell';
 import ConsoleLogModal from './ConsoleLogModal';
 import { createSearchableColumnHeader, createStandardTableProps, createCopyButton, createViewButton, createTimestampColumn } from '../shared';
+import type { ConsoleRecord, Recording } from '../../../../types/recording';
 
 const { Text } = Typography;
 
-interface ConsoleRecord {
-    timestamp: number;
-    level: string;
-    args: unknown[];
-    key?: string;
-    [key: string]: unknown;
-}
-
-interface RecordData {
-    console: ConsoleRecord[];
-    startTime?: number;
-    [key: string]: unknown;
-}
-
 interface RecordConsoleTabProps {
-    record: RecordData;
+    record: Pick<Recording, 'console'> & { startTime?: number; metadata?: { startTime: number } };
     viewMode: string;
     activeTime: number;
     autoHighlight?: boolean;
@@ -78,16 +65,16 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
     /**
      * Extract searchable fields from console record
      */
-    const extractSearchableFields = (consoleRecord: Record<string, unknown>) => {
-        const message = ((consoleRecord as ConsoleRecord).args ?? []).map((arg: unknown) => formatConsoleArg(arg as never)).join(' ');
+    const extractSearchableFields = (consoleRecord: ConsoleRecord) => {
+        const message = (consoleRecord.args ?? []).map(formatConsoleArg).join(' ');
         return [message];
     };
 
     /**
      * Render console log message with actions
      */
-    const renderMessage = (args: unknown[], consoleRecord: ConsoleRecord) => {
-        const message = args.map((arg: unknown) => formatConsoleArg(arg as never)).join(' ');
+    const renderMessage = (args: ConsoleRecord['args'], consoleRecord: ConsoleRecord) => {
+        const message = args.map(formatConsoleArg).join(' ');
         const needsExpansion = message.length > 150;
         const displayMessage = needsExpansion ? message.substring(0, 150) + '...' : message;
 

@@ -8,13 +8,8 @@
 import React from 'react';
 import { Button, Tooltip } from 'antd';
 import type { ColumnType, TableProps } from 'antd/es/table';
+import type { GlobalToken } from 'antd/es/theme/interface';
 import { SearchOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';
-
-interface ThemeToken {
-    colorPrimary: string;
-    colorTextSecondary: string;
-    [key: string]: unknown;
-}
 
 interface MessageApi {
     success: (content: string) => void;
@@ -23,7 +18,6 @@ interface MessageApi {
 
 interface TableRecord {
     timestamp: number;
-    [key: string]: unknown;
 }
 
 /**
@@ -56,7 +50,7 @@ export const createSearchableColumnHeader = (
     isSearchActive: boolean,
     onSearchToggle: () => void,
     searchTooltip = 'Search',
-    token: ThemeToken
+    token: GlobalToken
 ) => {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -96,7 +90,7 @@ export const createStandardTableProps = <T extends TableRecord>(
     columns: ColumnType<T>[],
     onTableChange: TableProps<T>['onChange'],
     rowClassNameGenerator: (record: T) => string,
-    additionalProps: Record<string, unknown> = {}
+    additionalProps: Partial<TableProps<T>> = {}
 ) => ({
     dataSource,
     columns,
@@ -166,12 +160,12 @@ export const createViewButton = (onClick: () => void, tooltip = 'View details') 
  * @param {string} keyField - Field to use as React key (default: index)
  * @returns {Array} Formatted data with keys
  */
-export const formatTableData = (data: TableRecord[], sortField = 'timestamp', keyField?: string) => {
+export const formatTableData = (data: TableRecord[]) => {
     return data
         .slice()
-        .sort((a: TableRecord, b: TableRecord) => (a[sortField] as number) - (b[sortField] as number))
-        .map((item: TableRecord, index: number) => ({
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map((item, index) => ({
             ...item,
-            key: keyField ? item[keyField] : index
+            key: index
         }));
 };

@@ -1,10 +1,10 @@
 /**
  * TimestampCell Component
- * 
+ *
  * Reusable timestamp cell component for record tables
  * Displays relative time with milliseconds and tooltip with absolute time
  * Includes current entry indicator when highlighting is active
- * 
+ *
  * @param {Object} props - Component props
  * @param {number} props.timestamp - The timestamp to display
  * @param {Object} props.record - The full record for context
@@ -18,7 +18,13 @@ import { formatRelativeTimeWithSmallMs, format24HTimeWithMs } from '../../../uti
 
 const { Text } = Typography;
 
-interface TimestampCellProps { timestamp: number; record: { metadata?: { startTime: number }; [key: string]: unknown }; isCurrentEntry?: boolean; width?: number; }
+interface TimestampCellProps {
+    timestamp: number;
+    record: { metadata?: { startTime: number }; startTime?: number };
+    isCurrentEntry?: boolean;
+    width?: number;
+}
+
 const TimestampCell = ({
     timestamp,
     record,
@@ -26,16 +32,16 @@ const TimestampCell = ({
     width = 100
 }: TimestampCellProps) => {
     const { token } = theme.useToken();
-    
+
     // Format relative time
     const timeParts = formatRelativeTimeWithSmallMs(timestamp);
-    
+
     // Calculate absolute time
     const absoluteTime = new Date((record.metadata?.startTime ?? 0) + timestamp);
     const formattedAbsoluteTime = format24HTimeWithMs(absoluteTime);
 
     return (
-        <Tooltip 
+        <Tooltip
             title={
                 <span>
                     {formattedAbsoluteTime.date} {formattedAbsoluteTime.time}
@@ -45,12 +51,12 @@ const TimestampCell = ({
                 </span>
             }
         >
-            <div 
-                style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '4px', 
-                    minWidth: `${width}px` 
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    minWidth: `${width}px`
                 }}
             >
                 {/* Current entry indicator */}
@@ -64,9 +70,9 @@ const TimestampCell = ({
                         />
                     )}
                 </div>
-                
+
                 {/* Time display */}
-                <Text 
+                <Text
                     style={{
                         fontSize: '12px',
                         fontFamily: 'monospace',

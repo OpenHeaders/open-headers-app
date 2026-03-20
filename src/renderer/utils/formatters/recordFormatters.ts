@@ -22,7 +22,7 @@ export const formatTimestamp = (timestamp: number | string) => {
     return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
 };
 
-export const formatConsoleArg = (arg: null | undefined | string | number | boolean | { __type?: string; message?: string; tagName?: string; id?: string; className?: string; name?: string; [key: string]: unknown }) => {
+export const formatConsoleArg = (arg: null | undefined | string | number | boolean | { __type?: string; message?: string; tagName?: string; id?: string; className?: string; name?: string }) => {
     if (arg === null) return 'null';
     if (arg === undefined) return 'undefined';
 

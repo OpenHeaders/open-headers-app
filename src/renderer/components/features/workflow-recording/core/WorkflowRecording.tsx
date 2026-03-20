@@ -7,24 +7,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, Alert, theme, Button } from 'antd';
 import { TableOutlined } from '@ant-design/icons';
 import { useSettings } from '../../../../contexts';
-
 import { WorkflowViewer } from '../viewer';
 import { WorkflowsTable } from '../table';
 import { convertNewRecordingFormat } from '../../../../utils';
+import type { Recording, WorkflowRecordingEntry } from '../../../../../types/recording';
 
-/**
- * WorkflowRecording component
- * @param {Object} props - Component props
- * @param {Object} props.record - Current recording data
- * @param {Function} props.onRecordChange - Callback when record changes
- * @param {Function} props.onPlaybackTimeChange - Callback for playback time changes
- * @param {boolean} props.autoHighlight - Auto-highlight setting
- * @param {Function} props.renderDetails - Function to render details section
- * @returns {React.ReactNode} Rendered component
- */
 interface WorkflowRecordingProps {
-    record: { id?: string; metadata?: { recordId?: string }; [key: string]: unknown } | null;
-    onRecordChange: (record: Record<string, unknown> | null) => void;
+    record: Recording | null;
+    onRecordChange: (record: Recording | null) => void;
     onPlaybackTimeChange: (time: number) => void;
     autoHighlight: boolean;
     renderDetails?: (embedded: boolean) => React.ReactNode;
@@ -74,13 +64,13 @@ const WorkflowRecording = ({
      * Handles viewing a specific record
      * @param {Object} recordData - Record to view
      */
-    const handleViewRecord = async (recordData: { id?: string; [key: string]: unknown }) => {
+    const handleViewRecord = async (recordData: WorkflowRecordingEntry) => {
         try {
             // Load the full record data
-            const fullRecord = await window.electronAPI.loadRecording(recordData.id as string);
+            const fullRecord = await window.electronAPI.loadRecording(recordData.id);
             if (fullRecord && fullRecord.record) {
                 // Convert new format to old format if needed
-                const convertedRecord = convertNewRecordingFormat(fullRecord.record);
+                const convertedRecord = convertNewRecordingFormat(fullRecord.record) as Recording;
                 onRecordChange(convertedRecord);
                 setShowTable(false);
             }

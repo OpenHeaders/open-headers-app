@@ -6,18 +6,10 @@
 import React from 'react';
 import { Card } from 'antd';
 import { WorkflowViewer, VIEW_MODES } from '../viewer';
+import type { Recording } from '../../../../../types/recording';
 
-/**
- * WorkflowDetails component
- * @param {Object} props - Component props
- * @param {Object} props.record - Workflow data object
- * @param {number} props.playbackTime - Current playback time for session recordings
- * @param {boolean} props.autoHighlight - Whether to auto-highlight network requests
- * @param {Function} props.onAutoHighlightChange - Callback for auto-highlight changes
- * @returns {React.ReactNode} Rendered component
- */
 interface WorkflowDetailsProps {
-    record: Record<string, unknown> | null;
+    record: Recording | null;
     playbackTime: number;
     autoHighlight: boolean;
     onAutoHighlightChange: (value: boolean) => void;

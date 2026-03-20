@@ -13,15 +13,12 @@ import React from 'react';
 import { Space, Typography, Tooltip } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { formatDuration, format24HTimeWithMs } from '../../../../utils';
+import type { Recording } from '../../../../../types/recording';
 
 const { Text } = Typography;
 
 interface PlayerMetadataProps {
-    record: {
-        metadata?: { startTime?: number; timestamp?: number; url?: string; duration?: number; viewport?: { width: number; height: number } };
-        events?: unknown[];
-        [key: string]: unknown;
-    } | null;
+    record: Recording | null;
     hasVideo: boolean;
 }
 const PlayerMetadata = ({ record, hasVideo }: PlayerMetadataProps) => {

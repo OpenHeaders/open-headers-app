@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { Tabs } from 'antd';
-
 import {
   RecordConsoleTab,
   RecordNetworkTab,
@@ -14,23 +13,10 @@ import {
 } from '../../../record';
 import WorkflowViewerControls from './WorkflowViewerControls';
 import { TAB_KEYS, DEFAULT_TAB_STYLES } from './WorkflowViewerTypes';
-import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
+import type { Recording } from '../../../../../types/recording';
 
-/**
- * WorkflowViewerTabs component
- * @param {Object} props - Component props
- * @param {Object} props.record - Workflow record data
- * @param {string} props.viewMode - Current view mode
- * @param {number} props.activeTime - Current playback time
- * @param {boolean} props.autoHighlight - Auto-highlight enabled state
- * @param {boolean} props.autoScroll - Auto-scroll enabled state
- * @param {Function} props.onAutoHighlightChange - Auto-highlight change handler
- * @param {Function} props.onAutoScrollChange - Auto-scroll change handler
- * @param {Function} props.onTabChange - Tab change handler
- * @returns {React.ReactNode} Rendered tabs
- */
 interface WorkflowViewerTabsProps {
-    record: RecordData;
+    record: Recording;
     viewMode: string;
     activeTime: number;
     autoHighlight: boolean;
@@ -57,7 +43,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="console-tab">
             <RecordConsoleTab
-                record={record as unknown as Parameters<typeof RecordConsoleTab>[0]['record']}
+                record={record}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -71,7 +57,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="network-tab">
             <RecordNetworkTab
-                record={record as unknown as Parameters<typeof RecordNetworkTab>[0]['record']}
+                record={record}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -85,7 +71,7 @@ const WorkflowViewerTabs = ({
       children: (
           <div className="storage-tab">
             <RecordStorageTab
-                record={record as unknown as Parameters<typeof RecordStorageTab>[0]['record']}
+                record={record}
                 viewMode={viewMode}
                 activeTime={activeTime}
                 autoHighlight={autoHighlight}
@@ -98,7 +84,7 @@ const WorkflowViewerTabs = ({
       label: 'Info',
       children: (
           <div className="info-tab">
-            <RecordInfoTab record={record as unknown as Parameters<typeof RecordInfoTab>[0]['record']} />
+            <RecordInfoTab record={record} />
           </div>
       )
     }

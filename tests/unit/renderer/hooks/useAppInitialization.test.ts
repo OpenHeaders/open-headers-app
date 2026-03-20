@@ -23,15 +23,17 @@ vi.mock('../../../../src/renderer/utils/formatters/recordConverter', () => ({
   convertNewRecordingFormat: (record: unknown) => mockConvertNewRecordingFormat(record),
 }));
 
-type RecordCallback = (data: Record<string, unknown>) => void;
+type RecordCallback = (data: { recordId: string }) => void;
 
 const mockGetAppVersion = vi.fn();
+const mockLoadRecording = vi.fn();
 let capturedRecordCallback: RecordCallback | null = null;
 const mockUnsubscribeRecord = vi.fn();
 
 Object.defineProperty(window, 'electronAPI', {
   value: {
     getAppVersion: mockGetAppVersion,
+    loadRecording: mockLoadRecording,
     onOpenRecordRecording: vi.fn((cb: RecordCallback) => {
       capturedRecordCallback = cb;
       return mockUnsubscribeRecord;
@@ -54,6 +56,7 @@ describe('useAppInitialization', () => {
   beforeEach(() => {
     capturedRecordCallback = null;
     mockGetAppVersion.mockReset();
+    mockLoadRecording.mockReset();
     mockSetAppVersion.mockClear();
     mockSetActiveTab.mockClear();
     mockSetCurrentRecord.mockClear();
@@ -110,8 +113,9 @@ describe('useAppInitialization', () => {
     expect(capturedRecordCallback).not.toBeNull();
   });
 
-  it('opens record when IPC event fires', () => {
+  it('opens record when IPC event fires', async () => {
     const recordData = { id: 'rec-1', events: [] };
+    mockLoadRecording.mockResolvedValue({ record: recordData });
     mockConvertNewRecordingFormat.mockReturnValue({ id: 'rec-1', events: [], converted: true });
 
     renderHook(() => useAppInitialization({
@@ -120,11 +124,13 @@ describe('useAppInitialization', () => {
       setCurrentRecord: mockSetCurrentRecord,
     }));
 
-    act(() => {
-      capturedRecordCallback!({ record: recordData });
+    await act(async () => {
+      capturedRecordCallback!({ recordId: 'rec-1' });
+      await new Promise(resolve => setTimeout(resolve, 0));
     });
 
     expect(mockSetActiveTab).toHaveBeenCalledWith('record-viewer');
+    expect(mockLoadRecording).toHaveBeenCalledWith('rec-1');
     expect(mockConvertNewRecordingFormat).toHaveBeenCalledWith(recordData);
     expect(mockSetCurrentRecord).toHaveBeenCalledWith({ id: 'rec-1', events: [], converted: true });
   });

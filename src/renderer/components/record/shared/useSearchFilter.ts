@@ -55,8 +55,8 @@ export const useSearchFilter = (defaultSearchValue = '') => {
      * @param {Function} searchableFieldsExtractor - Function to extract searchable fields from record
      * @returns {Function} Filter function for table
      */
-    const createFilterFunction = (searchableFieldsExtractor: (record: Record<string, unknown>) => string[]) => {
-        return (value: boolean | React.Key, record: Record<string, unknown>) => {
+    const createFilterFunction = <T,>(searchableFieldsExtractor: (record: T) => string[]) => {
+        return (value: boolean | React.Key, record: T) => {
             const strValue = value as string;
             if (!strValue) return true;
 

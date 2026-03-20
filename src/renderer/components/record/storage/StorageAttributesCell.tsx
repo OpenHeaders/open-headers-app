@@ -1,19 +1,23 @@
 /**
  * StorageAttributesCell Component
- * 
+ *
  * Renders storage attributes like initial, HttpOnly, Secure, SameSite for cookies
  * Shows appropriate tags with tooltips for each attribute
- * 
+ *
  * @param {Object} props - Component props
  * @param {Object} props.record - Storage record with metadata
  */
 import React from 'react';
 import { Tag, Tooltip } from 'antd';
+import type { StorageRecord } from '../../../../types/recording';
 
-interface StorageAttributesCellProps { record: { type?: string; metadata?: { initial?: boolean; expired?: boolean; httpOnly?: boolean; secure?: boolean; sameSite?: string; [key: string]: unknown }; [key: string]: unknown }; }
+interface StorageAttributesCellProps {
+    record: StorageRecord;
+}
+
 const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
     const attributes = [];
-    
+
     // Initial attribute
     if (record.metadata?.initial) {
         attributes.push(
@@ -24,11 +28,11 @@ const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
             </Tooltip>
         );
     }
-    
+
     // Cookie-specific attributes
     if (record.type === 'cookie' && record.metadata) {
         const { metadata } = record;
-        
+
         if (metadata.httpOnly) {
             attributes.push(
                 <Tooltip key="httpOnly-tooltip" title="This cookie cannot be accessed by JavaScript (more secure)">
@@ -38,7 +42,7 @@ const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
                 </Tooltip>
             );
         }
-        
+
         if (metadata.secure) {
             attributes.push(
                 <Tooltip key="secure-tooltip" title="This cookie is only sent over HTTPS connections">
@@ -48,20 +52,20 @@ const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
                 </Tooltip>
             );
         }
-        
+
         if (metadata.sameSite && metadata.sameSite !== 'unspecified') {
             const sameSiteColor = {
                 'strict': 'blue',
                 'lax': 'green',
                 'none': 'orange'
             }[metadata.sameSite] || 'default';
-            
+
             const sameSiteTooltip = {
                 'strict': 'Cookie only sent to same site that created it (most restrictive)',
                 'lax': 'Cookie sent on same-site requests and top-level navigation (default)',
                 'none': 'Cookie sent on all requests (requires Secure attribute)'
             }[metadata.sameSite] || 'Cookie same-site policy';
-            
+
             attributes.push(
                 <Tooltip key="sameSite-tooltip" title={sameSiteTooltip}>
                     <Tag key="sameSite" color={sameSiteColor} style={{ fontSize: '10px', margin: '2px' }}>
@@ -71,7 +75,7 @@ const StorageAttributesCell = ({ record }: StorageAttributesCellProps) => {
             );
         }
     }
-    
+
     return (
         <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {attributes.length > 0 ? attributes : null}

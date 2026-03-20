@@ -7,13 +7,10 @@ import React, { useState, useEffect } from 'react';
 import { Table, Typography, Empty, theme } from 'antd';
 import { useNavigation } from '../../../../contexts';
 import { createLogger } from '../../../../utils/error-handling/logger';
-
-const log = createLogger('WorkflowsTable');
-
-import { 
-  loadWorkflowRecordings, 
-  deleteWorkflowRecording, 
-  applyWorkflowRecordingHighlight 
+import {
+  loadWorkflowRecordings,
+  deleteWorkflowRecording,
+  applyWorkflowRecordingHighlight
 } from '../shared';
 import { showMessage } from '../../../../utils';
 import { createWorkflowColumns } from './WorkflowTableColumns';
@@ -23,52 +20,15 @@ import RecordingExportModal from '../../../modals/export-recording';
 import ProcessingOverlay from './ProcessingOverlay';
 import EditDescriptionModal from '../modals/EditDescriptionModal';
 import EditTagModal from '../modals/EditTagModal';
+import type { WorkflowRecordingEntry, WorkflowTag, PreprocessProgressDetails } from '../../../../../types/recording';
 
+const log = createLogger('WorkflowsTable');
 const { Text } = Typography;
-
-/**
- * WorkflowsTable component
- * @param {Object} props - Component props
- * @param {Function} props.onViewRecord - Callback when viewing a record
- * @param {Function} props.onRecordDeleted - Callback when a record is deleted
- * @returns {React.ReactNode} Rendered component
- */
-interface WorkflowTag {
-    name?: string;
-    url?: string;
-    [key: string]: unknown;
-}
-
-interface WorkflowRecording {
-    id: string;
-    url?: string;
-    tag?: WorkflowTag | null;
-    description?: string;
-    currentDescription?: string;
-    currentTag?: string | WorkflowTag;
-    viewOnly?: boolean;
-    hasVideo?: boolean;
-    eventCount?: number;
-    timestamp?: string;
-    duration?: number;
-    size?: number;
-    source?: string;
-    metadata?: { url?: string; initialUrl?: string };
-    [key: string]: unknown;
-}
-
-interface ProcessingDetails {
-    eventCount?: number;
-    totalEvents?: number;
-    phase?: string;
-    resourcesFound?: number;
-    eventsProcessed?: number;
-}
 
 interface ProcessingState {
     stage?: string;
     progress?: number;
-    details?: ProcessingDetails;
+    details?: PreprocessProgressDetails;
 }
 
 interface EditingRecord {
@@ -80,16 +40,26 @@ interface EditingRecord {
     viewOnly?: boolean;
 }
 
+interface MetadataUpdateAction {
+    _action: string;
+    recordUrl?: string;
+    recordTag?: WorkflowRecordingEntry['tag'];
+    currentDescription?: string;
+    currentTag?: WorkflowRecordingEntry['tag'] | string | null;
+}
+
+type MetadataUpdate = MetadataUpdateAction | { description?: string | null; tag?: { name: string; url: string } | null };
+
 interface WorkflowsTableProps {
-    onViewRecord: (record: WorkflowRecording) => void;
+    onViewRecord: (record: WorkflowRecordingEntry) => void;
     onRecordDeleted?: (recordId: string) => void;
 }
 
 const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) => {
-    const [workflowRecordings, setWorkflowRecordings] = useState<WorkflowRecording[]>([]);
+    const [workflowRecordings, setWorkflowRecordings] = useState<WorkflowRecordingEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [exportModalVisible, setExportModalVisible] = useState(false);
-    const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null);
+    const [selectedRecord, setSelectedRecord] = useState<WorkflowRecordingEntry | null>(null);
     const [processingRecords, setProcessingRecords] = useState<Record<string, ProcessingState>>({});
     const [descriptionModalVisible, setDescriptionModalVisible] = useState(false);
     const [tagModalVisible, setTagModalVisible] = useState(false);
@@ -102,7 +72,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      */
     const handleLoadWorkflowRecordings = async () => {
         setLoading(true);
-        const records = await loadWorkflowRecordings() as WorkflowRecording[];
+        const records = await loadWorkflowRecordings() as WorkflowRecordingEntry[];
         setWorkflowRecordings(records);
         setLoading(false);
     };
@@ -127,8 +97,8 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles record export via modal
      * @param {Object} record - Record to export
      */
-    const handleExport = (record: WorkflowRecording) => {
-        setSelectedRecord(record as Record<string, unknown>);
+    const handleExport = (record: WorkflowRecordingEntry) => {
+        setSelectedRecord(record);
         setExportModalVisible(true);
     };
 
@@ -136,12 +106,11 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * Handles JSON export completion
      * @param {Object} record - Record metadata being exported
      */
-    const handleExportJson = async (record: Record<string, unknown> | WorkflowRecording) => {
+    const handleExportJson = async (record: WorkflowRecordingEntry) => {
         try {
-            const timestamp = new Date(record.timestamp as string).toISOString().replace(/:/g, '-').split('.')[0];
+            const timestamp = new Date(record.timestamp).toISOString().replace(/:/g, '-').split('.')[0];
             const filename = `open-headers_recording_${timestamp}.json`;
-            
-            // Show save dialog
+
             const filePath = await window.electronAPI.saveFileDialog({
                 title: 'Export Recording as JSON',
                 buttonLabel: 'Export',
@@ -154,13 +123,11 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
             if (!filePath) return;
 
-            // Load the actual recording data
-            const recordingData = await window.electronAPI.loadRecording(record.id as string) as Record<string, unknown>;
+            const recordingData = await window.electronAPI.loadRecording(record.id);
 
-            // Add tag and description to the recording data if they exist
             if (record.tag || record.description) {
                 recordingData.metadata = {
-                    ...(recordingData.metadata as Record<string, unknown>),
+                    ...recordingData.metadata,
                     tag: record.tag || null,
                     description: record.description || null
                 };
@@ -208,7 +175,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         
         // Listen for recordings being processed
         const unsubscribeProcessing = window.electronAPI.onRecordingProcessing((processingRecord) => {
-            const rec = processingRecord as unknown as WorkflowRecording;
+            const rec = processingRecord as WorkflowRecordingEntry;
             log.debug('[WorkflowsTable] Recording processing:', rec.id);
             // Add the processing record to our table immediately
             setWorkflowRecordings(prev => {
@@ -235,7 +202,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         
         // Listen for processing progress updates
         const unsubscribeProgress = window.electronAPI.onRecordingProgress((data) => {
-            const { recordId, stage, progress, details } = data as { recordId: string; stage: string; progress: number; details?: ProcessingDetails };
+            const { recordId, stage, progress, details } = data as { recordId: string; stage: string; progress: number; details?: PreprocessProgressDetails };
             log.debug(`[WorkflowsTable] Recording progress: ${recordId} ${stage}`, progress);
             setProcessingRecords(prev => {
                 const existing = prev[recordId] || {};
@@ -283,12 +250,11 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
         
         // Listen for metadata updates (e.g., when video recording completes or tag/description updates)
         const unsubscribeMetadataUpdated = window.electronAPI.onRecordingMetadataUpdated((rawData) => {
-            const data = rawData as { recordId?: string; recordingId?: string; metadata?: Record<string, unknown>; hasVideo?: boolean };
+            const data = rawData as { recordId?: string; recordingId?: string; metadata?: Partial<WorkflowRecordingEntry>; hasVideo?: boolean };
             if (data.metadata) {
-                // Full metadata update from updateRecordingMetadata
                 log.debug('[WorkflowsTable] Full metadata updated for recording:', data.recordId);
                 setWorkflowRecordings(prev => prev.map(r =>
-                    r.id === data.recordId ? { ...r, ...data.metadata } as WorkflowRecording : r
+                    r.id === data.recordId ? { ...r, ...data.metadata } : r
                 ));
             } else if (data.hasVideo !== undefined) {
                 // Video status update
@@ -313,31 +279,25 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
      * @param {string} recordId - ID of the record to update
      * @param {Object} updates - Object containing fields to update (tag, description) or special actions
      */
-    const handleUpdateMetadata = async (recordId: string, updates: Record<string, unknown>) => {
-        // Check if this is a special action to open the description modal
-        if (updates._action === 'editDescription' || updates._action === 'viewDescription') {
+    const handleUpdateMetadata = async (recordId: string, updates: MetadataUpdate) => {
+        if ('_action' in updates) {
             const record = workflowRecordings.find(r => r.id === recordId);
-            if (record) {
+            if (!record) return;
+
+            if (updates._action === 'editDescription' || updates._action === 'viewDescription') {
                 setEditingRecord({
                     id: recordId,
-                    url: (updates.recordUrl as string) || record.url,
-                    tag: (updates.recordTag as string) || record.tag,
-                    currentDescription: (updates.currentDescription as string) || record.description,
+                    url: updates.recordUrl || record.url,
+                    tag: updates.recordTag || record.tag,
+                    currentDescription: updates.currentDescription || record.description || undefined,
                     viewOnly: updates._action === 'viewDescription'
                 });
                 setDescriptionModalVisible(true);
-            }
-            return;
-        }
-
-        // Check if this is a special action to open the tag modal
-        if (updates._action === 'editTag') {
-            const record = workflowRecordings.find(r => r.id === recordId);
-            if (record) {
+            } else if (updates._action === 'editTag') {
                 setEditingRecord({
                     id: recordId,
-                    url: (updates.recordUrl as string) || record.url,
-                    currentTag: (updates.currentTag as string) || record.tag || ''
+                    url: updates.recordUrl || record.url,
+                    currentTag: updates.currentTag || record.tag || ''
                 });
                 setTagModalVisible(true);
             }
@@ -350,14 +310,13 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
                 showMessage('error', 'Update functionality not available');
                 return;
             }
-            
+
             await window.electronAPI.updateRecordingMetadata({ recordId, updates });
-            
-            // Update local state immediately for responsive UI
+
             setWorkflowRecordings(prev => prev.map(r =>
-                r.id === recordId ? { ...r, ...updates } as WorkflowRecording : r
+                r.id === recordId ? { ...r, ...updates } : r
             ));
-            
+
             showMessage('success', 'Recording updated successfully');
         } catch (error) {
             log.error('Failed to update recording metadata:', error);
@@ -391,11 +350,11 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
     // Create table columns
     const columns = createWorkflowColumns(
-        onViewRecord as (record: { id: string; timestamp?: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
+        onViewRecord,
         handleDelete,
-        handleExport as (record: { id: string; timestamp?: string; url?: string; metadata?: { url?: string; initialUrl?: string }; hasVideo?: boolean; duration?: number; tag?: { name?: string; url?: string } | null; description?: string; size?: number; eventCount?: number; source?: string }) => void,
+        handleExport,
         handleUpdateMetadata,
-        processingRecords as unknown as Record<string, boolean>
+        processingRecords
     );
 
     return (
@@ -479,7 +438,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
                 
                 {/* Show overlay if any recording is being processed */}
                 {Object.keys(processingRecords).length > 0 && (
-                    <ProcessingOverlay processing={Object.values(processingRecords)[0] as { stage?: string; progress?: number; details?: ProcessingDetails } | null} />
+                    <ProcessingOverlay processing={Object.values(processingRecords)[0] ?? null} />
                 )}
             </div>
 

@@ -6,24 +6,15 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Input, Form, Typography, Space } from 'antd';
 import { TagOutlined, LinkOutlined } from '@ant-design/icons';
+import type { WorkflowTag } from '../../../../../types/recording';
 
 const { Text } = Typography;
 
-/**
- * EditTagModal component
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether modal is visible
- * @param {string} props.recordId - ID of the record being edited
- * @param {string} props.recordUrl - URL of the record for display
- * @param {string|Object} props.currentTag - Current tag value (string or {name, url})
- * @param {Function} props.onSave - Callback when saving tag
- * @param {Function} props.onCancel - Callback when canceling
- */
 interface EditTagModalProps {
     visible: boolean;
     recordId: string;
     recordUrl: string;
-    currentTag: string | { name?: string; url?: string; [key: string]: unknown };
+    currentTag: string | WorkflowTag;
     onSave: (tag: { name: string; url: string } | null) => Promise<void>;
     onCancel: () => void;
 }
@@ -40,7 +31,7 @@ const EditTagModal = ({
     const [loading, setLoading] = useState(false);
 
     // Parse tag data - always object with name/url
-    const getTagData = (tag: string | { name?: string; url?: string; [key: string]: unknown } | null) => {
+    const getTagData = (tag: string | WorkflowTag | null) => {
         if (!tag) return { name: '', url: '' };
         if (typeof tag === 'string') return { name: tag, url: '' };
         return { name: tag.name || '', url: tag.url || '' };

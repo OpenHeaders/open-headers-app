@@ -1,25 +1,25 @@
 /**
  * Network Type Utilities
- * 
+ *
  * Utilities for determining and formatting network request types
  * Extracted from RecordNetworkTab for reusability
  */
 
+import type { NetworkRecord } from '../../../../types/recording';
+
 /**
  * Get request type from network record with intelligent fallbacks
- * @param {Object} req - Network request record
- * @returns {string} Formatted request type
  */
-export const getTypeFromRecord = (req: { type?: string; status?: number; method?: string; responseHeaders?: Record<string, string>; [key: string]: unknown }) => {
+export const getTypeFromRecord = (req: NetworkRecord) => {
     if (!req || typeof req !== 'object') {
         return 'unknown';
     }
-    
+
     const type = req.type;
-    
+
     // Handle Chrome DevTools resource types
     if (type && type !== 'fetch' && type !== 'xhr') {
-        const typeMap = {
+        const typeMap: Record<string, string> = {
             'main_frame': 'document',
             'sub_frame': 'document',
             'stylesheet': 'css',
@@ -40,7 +40,7 @@ export const getTypeFromRecord = (req: { type?: string; status?: number; method?
             if (mimeType.includes('html')) return 'xhr';
         }
 
-        return (typeMap as Record<string, string>)[type as string] || type;
+        return typeMap[type] || type;
     }
 
     // Fallback based on MIME type and other indicators
@@ -66,15 +66,13 @@ export const getTypeFromRecord = (req: { type?: string; status?: number; method?
 
 /**
  * Get unique type values from network records for filters
- * @param {Array} networkRecords - Array of network request records
- * @returns {Array} Sorted array of unique type values
  */
-export const getUniqueTypes = (networkRecords: { [key: string]: unknown }[]) => {
+export const getUniqueTypes = (networkRecords: NetworkRecord[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }
-    
-    const types = new Set();
+
+    const types = new Set<string>();
     for (const record of networkRecords) {
         types.add(getTypeFromRecord(record));
     }
@@ -83,15 +81,13 @@ export const getUniqueTypes = (networkRecords: { [key: string]: unknown }[]) => 
 
 /**
  * Get unique status groups from network records for filters
- * @param {Array} networkRecords - Array of network request records
- * @returns {Array} Sorted array of unique status groups
  */
-export const getUniqueStatusGroups = (networkRecords: { status?: number; error?: unknown; [key: string]: unknown }[]) => {
+export const getUniqueStatusGroups = (networkRecords: NetworkRecord[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }
 
-    const statusGroups = new Set();
+    const statusGroups = new Set<string>();
     for (const req of networkRecords) {
         if (req.error) statusGroups.add('Failed');
         else if (!req.status) statusGroups.add('Pending');
@@ -106,15 +102,13 @@ export const getUniqueStatusGroups = (networkRecords: { status?: number; error?:
 
 /**
  * Get unique method values from network records for filters
- * @param {Array} networkRecords - Array of network request records
- * @returns {Array} Sorted array of unique method values
  */
-export const getUniqueMethods = (networkRecords: { method?: string; [key: string]: unknown }[]) => {
+export const getUniqueMethods = (networkRecords: NetworkRecord[]) => {
     if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
         return [];
     }
-    
-    const methods = new Set();
+
+    const methods = new Set<string>();
     for (const req of networkRecords) {
         if (req.method) {
             methods.add(req.method);
