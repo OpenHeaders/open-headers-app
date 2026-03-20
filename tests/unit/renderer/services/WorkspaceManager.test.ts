@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StorageAPI } from '../../../../src/renderer/services/workspace/WorkspaceManager';
+import WorkspaceManager, { type StorageAPI } from '../../../../src/renderer/services/workspace/WorkspaceManager';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -15,10 +15,6 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 vi.mock('../../../../src/config/version', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
 }));
-
-const WorkspaceManager = (
-  await import('../../../../src/renderer/services/workspace/WorkspaceManager')
-).default;
 
 describe('WorkspaceManager', () => {
   let manager: InstanceType<typeof WorkspaceManager>;

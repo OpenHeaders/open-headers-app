@@ -7,8 +7,8 @@
  * patterns that mirror CWS behaviour.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type BaseStateManagerType from '../../../../src/renderer/services/workspace/BaseStateManager';
-import type AutoSaveManagerType from '../../../../src/renderer/services/workspace/AutoSaveManager';
+import BaseStateManager from '../../../../src/renderer/services/workspace/BaseStateManager';
+import AutoSaveManager from '../../../../src/renderer/services/workspace/AutoSaveManager';
 
 // Mock logger for all sub-module imports
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -19,15 +19,6 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
     error: vi.fn(),
   }),
 }));
-
-// Import the CJS sub-managers that CWS delegates to
-const { default: BaseStateManager } = await import(
-  '../../../../src/renderer/services/workspace/BaseStateManager'
-);
-
-const { default: AutoSaveManager } = await import(
-  '../../../../src/renderer/services/workspace/AutoSaveManager'
-);
 
 // ======================================================================
 // Test-local interfaces for the CWS-like state used in pattern tests
@@ -71,7 +62,7 @@ interface TestRules {
 // BaseStateManager (base class of CentralizedWorkspaceService)
 // ======================================================================
 describe('BaseStateManager', () => {
-  let manager: InstanceType<typeof BaseStateManagerType>;
+  let manager: InstanceType<typeof BaseStateManager>;
 
   beforeEach(() => {
     manager = new BaseStateManager('TestManager');
@@ -159,7 +150,7 @@ describe('BaseStateManager', () => {
 // AutoSaveManager (used by CWS for dirty tracking and auto-save)
 // ======================================================================
 describe('AutoSaveManager', () => {
-  let asm: InstanceType<typeof AutoSaveManagerType>;
+  let asm: InstanceType<typeof AutoSaveManager>;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -281,7 +272,7 @@ describe('AutoSaveManager', () => {
 // Tests the coordination logic that CWS implements using BaseStateManager.
 // ======================================================================
 describe('CWS state management patterns', () => {
-  let manager: InstanceType<typeof BaseStateManagerType>;
+  let manager: InstanceType<typeof BaseStateManager>;
 
   beforeEach(() => {
     manager = new BaseStateManager('CWSLike');

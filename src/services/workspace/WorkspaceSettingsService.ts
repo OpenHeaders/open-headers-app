@@ -134,7 +134,7 @@ class WorkspaceSettingsService {
       if (raw === null || typeof raw !== 'object') {
         return this.defaultSettings;
       }
-      const settings = raw as WorkspaceSettings;
+      const settings: Partial<WorkspaceSettings> = raw as Partial<WorkspaceSettings>;
       return {
         version: settings.version ?? this.defaultSettings.version,
         activeWorkspaceId: settings.activeWorkspaceId ?? this.defaultSettings.activeWorkspaceId,
