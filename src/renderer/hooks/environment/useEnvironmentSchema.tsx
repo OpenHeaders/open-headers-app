@@ -3,7 +3,6 @@ import { useEnvironmentCore } from './useEnvironmentCore';
 import type { Source } from '../../../types/source';
 import type { EnvironmentSchema } from '../../services/export-import/core/types';
 
-type SourceData = Source;
 
 interface VariableUsage {
   [varName: string]: string[];
@@ -23,8 +22,8 @@ interface EnvironmentVarEntry {
 }
 
 interface UseEnvironmentSchemaReturn {
-  findVariableUsage: (sources: SourceData[]) => VariableUsage;
-  generateEnvironmentSchema: (sources: SourceData[]) => EnvironmentSchema;
+  findVariableUsage: (sources: Source[]) => VariableUsage;
+  generateEnvironmentSchema: (sources: Source[]) => EnvironmentSchema;
 }
 
 /**
@@ -33,11 +32,11 @@ interface UseEnvironmentSchemaReturn {
 export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
   const { environments } = useEnvironmentCore();
 
-  const findVariableUsage = useCallback((sources: SourceData[]): VariableUsage => {
+  const findVariableUsage = useCallback((sources: Source[]): VariableUsage => {
     const usage: VariableUsage = {};
     const variablePattern = /\{\{(\w+)\}\}/g;
 
-    sources.forEach((source: SourceData) => {
+    sources.forEach((source: Source) => {
       if (source.sourceType === 'http') {
         // Check all string fields in the source
         const checkField = (field: unknown, path: string) => {
@@ -99,7 +98,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
     return usage;
   }, []);
 
-  const generateEnvironmentSchema = useCallback((sources: SourceData[]): EnvironmentSchema => {
+  const generateEnvironmentSchema = useCallback((sources: Source[]): EnvironmentSchema => {
     const variableUsage = findVariableUsage(sources);
     const schema: EnvironmentSchema = {
       environments: {},

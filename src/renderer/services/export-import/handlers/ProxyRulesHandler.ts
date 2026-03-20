@@ -29,7 +29,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Export options
    * @returns {Promise<Array|null>} - Array of proxy rules or null if not selected
    */
-  async exportProxyRules(options: ExportOptions) {
+  async exportProxyRules(options: ExportOptions): Promise<Record<string, unknown>[] | null> {
     const { selectedItems } = options;
 
     if (!selectedItems.proxyRules) {
@@ -38,7 +38,9 @@ export class ProxyRulesHandler {
     }
 
     try {
-      const proxyRules = await window.electronAPI.proxyGetRules();
+      const proxyRules: Record<string, unknown>[] = (await window.electronAPI.proxyGetRules()).filter(
+        (rule): rule is Record<string, unknown> => typeof rule === 'object' && rule !== null
+      );
 
       // Filter out invalid proxy rules before export
       const validProxyRules = proxyRules.filter(rule => {

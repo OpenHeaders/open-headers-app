@@ -91,7 +91,7 @@ class FormSubmissionHandler {
             sourceType: values.sourceType
         });
 
-        const jsonFilter = this.form.getFieldValue('jsonFilter') as JsonFilter | null;
+        const jsonFilter: JsonFilter | null = this.form.getFieldValue('jsonFilter');
         if (!this.validateJsonFilter(jsonFilter)) {
             throw new Error('JSON filter validation failed');
         }

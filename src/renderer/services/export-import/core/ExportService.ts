@@ -100,28 +100,23 @@ export class ExportService {
 
     log.debug('Gathering export data for selected items:', selectedItems);
 
-    // Collect data from each handler in parallel for better performance
-    const gatherPromises = [];
-
+    // Collect data from each handler in parallel
     if (selectedItems.sources) {
-      gatherPromises.push(
-        this.sourcesHandler.exportSources(exportOptions)
-          .then(data => ({ key: 'sources', data }))
-      );
+      const data = await this.sourcesHandler.exportSources(exportOptions);
+      if (data) exportData.sources = data;
     }
 
     if (selectedItems.proxyRules) {
-      gatherPromises.push(
-        this.proxyRulesHandler.exportProxyRules(exportOptions)
-          .then(data => ({ key: 'proxyRules', data }))
-      );
+      const data = await this.proxyRulesHandler.exportProxyRules(exportOptions);
+      if (data) exportData.proxyRules = data;
     }
 
     if (selectedItems.rules) {
-      gatherPromises.push(
-        this.rulesHandler.exportRules(exportOptions)
-          .then(data => ({ key: 'rules', data }))
-      );
+      const data = await this.rulesHandler.exportRules(exportOptions);
+      if (data) {
+        if (data.rules) exportData.rules = data.rules;
+        if (data.rulesMetadata) exportData.rulesMetadata = data.rulesMetadata;
+      }
     }
 
     // Environment data export
@@ -135,24 +130,6 @@ export class ExportService {
     if (workspaceData) {
       exportData.workspace = workspaceData;
     }
-
-    // Wait for all data gathering to complete
-    const results = await Promise.all(gatherPromises);
-    
-    // Merge results into export data
-    results.forEach(({ key, data }) => {
-      if (data !== null) {
-        if (key === 'sources') {
-          exportData.sources = data as SourceData[];
-        } else if (key === 'proxyRules') {
-          exportData.proxyRules = data as Record<string, unknown>[];
-        } else if (key === 'rules') {
-          const rulesData = data as { rules?: Record<string, RuleEntry[]>; rulesMetadata?: Record<string, unknown> };
-          if (rulesData.rules) exportData.rules = rulesData.rules;
-          if (rulesData.rulesMetadata) exportData.rulesMetadata = rulesData.rulesMetadata;
-        }
-      }
-    });
 
     const itemCount = this._countExportItems(exportData);
     log.info(`Gathered export data: ${itemCount} total items`);

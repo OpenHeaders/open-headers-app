@@ -6,6 +6,7 @@
  */
 
 import { createLogger } from '../error-handling/logger';
+import type { Source, SourceType } from '../../../types/source';
 const log = createLogger('ConfigValidator');
 
 /**
@@ -108,12 +109,14 @@ function validateConfigStructure(data: Record<string, unknown>) {
       throw new Error('Invalid configuration: sources must be an array');
     }
     
-    (data.sources as Array<Record<string, unknown>>).forEach((source: Record<string, unknown>, index: number) => {
+    const sources = data.sources as Partial<Source>[];
+    sources.forEach((source, index: number) => {
       if (!source.sourceId || !source.sourceType || !source.sourcePath) {
         throw new Error(`Invalid source at index ${index}: missing required fields`);
       }
-      
-      if (!['http', 'file', 'env'].includes(source.sourceType as string)) {
+
+      const validTypes: SourceType[] = ['http', 'file', 'env', 'manual'];
+      if (!validTypes.includes(source.sourceType)) {
         throw new Error(`Invalid source type at index ${index}: ${source.sourceType}`);
       }
     });
