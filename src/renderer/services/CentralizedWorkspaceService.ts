@@ -509,7 +509,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Update a source
    */
   async updateSource(sourceId: string, updates: Partial<Source>): Promise<Source | null> {
-    let result: Source | null = null;
+    let updatedSource: Source | null = null;
     const sources = this.state.sources.map((source) => {
       if (source.sourceId === String(sourceId)) {
         const mergedUpdates: Partial<Source> = { ...updates };
@@ -531,7 +531,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
           });
         }
 
-        result = updated;
+        updatedSource = updated;
         return updated;
       }
       return source;
@@ -546,14 +546,14 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
     });
 
     // Broadcast the source update to proxy if it has content
-    if (result) {
-      const updatedSource = result as Source;
-      if (updatedSource.sourceContent && window.electronAPI?.proxyUpdateSource) {
-        window.electronAPI.proxyUpdateSource(updatedSource.sourceId, updatedSource.sourceContent);
+    if (updatedSource !== null) {
+      const src: Source = updatedSource;
+      if (src.sourceContent && window.electronAPI?.proxyUpdateSource) {
+        window.electronAPI.proxyUpdateSource(src.sourceId, src.sourceContent);
       }
     }
 
-    return result;
+    return updatedSource;
   }
 
   /**

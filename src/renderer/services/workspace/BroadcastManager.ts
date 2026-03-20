@@ -2,6 +2,7 @@
  * BroadcastManager - Handles broadcasting state to WebSocket and proxy
  */
 import { createLogger } from '../../utils/error-handling/logger';
+import type { Source } from '../../../types/source';
 const log = createLogger('BroadcastManager');
 
 interface BroadcastElectronAPI {
@@ -22,7 +23,7 @@ class BroadcastManager {
   /**
    * Broadcast current state to WebSocket and proxy
    */
-  async broadcastState(sources: Record<string, unknown>[], headerRules: Record<string, unknown>[], { includeWebSocket = false } = {}) {
+  async broadcastState(sources: Source[], headerRules: Record<string, unknown>[], { includeWebSocket = false } = {}) {
     try {
       // WebSocket source broadcasting is normally handled by WebSocketContext
       // (with cleaning, debouncing, and change detection).
@@ -45,7 +46,7 @@ class BroadcastManager {
         // Fallback to individual updates
         for (const source of sources) {
           if (source.sourceContent) {
-            this.electronAPI.proxyUpdateSource(source.sourceId as string, source.sourceContent);
+            this.electronAPI.proxyUpdateSource(source.sourceId, source.sourceContent);
           }
         }
       }
