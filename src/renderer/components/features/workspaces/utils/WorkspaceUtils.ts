@@ -156,7 +156,7 @@ export const prepareWorkspaceData = (values: WorkspaceFormValues, editingWorkspa
     return {
         ...rest,
         id: editingWorkspace?.id || Date.now().toString(),
-        type: (values.gitUrl ? 'git' : 'personal') as WorkspaceType,
+        type: values.gitUrl ? 'git' as const : 'personal' as const,
         authData: values.gitUrl ? authData : undefined,
         sshKeySource: values.authType === AUTH_TYPES.SSH_KEY ? values.sshKeySource : undefined
     };

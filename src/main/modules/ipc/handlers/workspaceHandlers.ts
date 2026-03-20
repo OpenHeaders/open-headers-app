@@ -17,7 +17,7 @@ import { errorMessage } from '../../../../types/common';
 import type { Workspace, WorkspaceAuthData, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
 import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
-import type { RulesStorage, HeaderRule } from '../../../../types/rules';
+import type { RulesStorage } from '../../../../types/rules';
 import serviceRegistry from '../../../../services/core/ServiceRegistry';
 import type { AppSettings } from '../../../../types/settings';
 
@@ -311,7 +311,7 @@ class WorkspaceHandlers {
             try {
                 const rulesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'rules.json');
                 const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
+                const rulesStorage: Partial<RulesStorage> = JSON.parse(rulesData);
                 if (rulesStorage.rules && rulesStorage.rules.header) {
                     proxyService.updateHeaderRules(rulesStorage.rules.header);
                     log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
