@@ -8,6 +8,7 @@ import mainLogger from '../../utils/mainLogger';
 import { WSNetworkStateHandler } from './ws-network-state';
 import { WSCertificateHandler } from './ws-certificate-handler';
 import { WSRecordingHandler } from './ws-recording-handler';
+import type { SaveRecordingMessageData, StartSyncRecordingData, StopSyncRecordingData, RecordingStateSyncData } from './ws-recording-handler';
 import { WSRuleHandler } from './ws-rule-handler';
 import { WSSourceHandler } from './ws-source-handler';
 import { WSEnvironmentHandler } from './ws-environment-handler';
@@ -54,17 +55,16 @@ interface NetworkServiceLike {
     on(event: string, cb: (event: { newState?: { isOnline: boolean; networkQuality: string; lastUpdate: number } }) => void): void;
 }
 
-interface WSMessage {
-    type: string;
-    ruleId?: string | number;
-    enabled?: boolean;
-    ruleIds?: string[];
-    navigation?: Record<string, unknown>;
-    data?: Record<string, unknown>;
-    browser?: string;
-    version?: string;
-    extensionVersion?: string;
-}
+type WSMessage =
+    | { type: 'requestSources' | 'requestRules' | 'getVideoRecordingState' | 'getRecordingHotkey' }
+    | { type: 'browserInfo'; browser: string; version?: string; extensionVersion?: string }
+    | { type: 'toggleRule'; ruleId: string | number; enabled: boolean }
+    | { type: 'toggleAllRules'; ruleIds: string[]; enabled: boolean }
+    | { type: 'focusApp'; navigation?: { tab?: string; subTab?: string } }
+    | { type: 'saveRecording' | 'saveWorkflow'; recording: SaveRecordingMessageData['recording'] }
+    | { type: 'startSyncRecording'; data: StartSyncRecordingData }
+    | { type: 'stopSyncRecording'; data: StopSyncRecordingData }
+    | { type: 'recordingStateSync'; data: RecordingStateSyncData };
 
 interface InitializeOptions {
     wsPort?: number;
@@ -399,36 +399,36 @@ class WebSocketService {
                 this.recordingHandler.sendRecordingHotkey(ws);
                 break;
             case 'toggleRule':
-                this.ruleHandler.handleToggleRule(data.ruleId as string | number, data.enabled as boolean);
+                this.ruleHandler.handleToggleRule(data.ruleId, data.enabled);
                 break;
             case 'toggleAllRules':
-                this.ruleHandler.handleToggleAllRules(data.ruleIds as string[], data.enabled as boolean);
+                this.ruleHandler.handleToggleAllRules(data.ruleIds, data.enabled);
                 break;
             case 'saveRecording':
             case 'saveWorkflow':
-                this.recordingHandler.handleSaveRecordingMessage(ws, data as unknown as Parameters<WSRecordingHandler['handleSaveRecordingMessage']>[1]);
+                this.recordingHandler.handleSaveRecordingMessage(ws, { type: data.type, recording: data.recording });
                 break;
             case 'focusApp':
-                this._handleFocusApp(data.navigation || {});
+                this._handleFocusApp(data.navigation ?? {});
                 break;
             case 'startSyncRecording':
                 log.info('Received startSyncRecording request:', data.data);
-                this.recordingHandler.handleStartSyncRecording(ws, data.data as unknown as Parameters<WSRecordingHandler['handleStartSyncRecording']>[1]);
+                this.recordingHandler.handleStartSyncRecording(ws, data.data);
                 break;
             case 'stopSyncRecording':
                 log.info('Received stopSyncRecording request:', data.data);
-                this.recordingHandler.handleStopSyncRecording(ws, data.data as unknown as Parameters<WSRecordingHandler['handleStopSyncRecording']>[1]);
+                this.recordingHandler.handleStopSyncRecording(ws, data.data);
                 break;
             case 'recordingStateSync':
                 log.info('Received recordingStateSync:', data.data);
-                this.recordingHandler.handleRecordingStateSync(ws, data.data as unknown as Parameters<WSRecordingHandler['handleRecordingStateSync']>[1]);
+                this.recordingHandler.handleRecordingStateSync(ws, data.data);
                 break;
         }
     }
 
     // ── Shared utilities ──────────────────────────
 
-    async _handleFocusApp(navigation: Record<string, unknown>): Promise<void> {
+    async _handleFocusApp(navigation: { tab?: string; subTab?: string; action?: string; itemId?: string }): Promise<void> {
         try {
             log.info('_handleFocusApp called with navigation:', navigation);
             const { BrowserWindow } = electron;

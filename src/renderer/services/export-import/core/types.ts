@@ -31,9 +31,9 @@ import type { Source } from '../../../../types/source';
 import type { Workspace } from '../../../../types/workspace';
 import type { RulesCollection, RulesStorage as SharedRulesStorage } from '../../../../types/rules';
 import type { ProxyRule } from '../../../../types/proxy';
-import type { EnvironmentVariableEntry } from '../../../hooks/environment/useEnvironmentCore';
+import type { EnvironmentVariable } from '../../../../types/environment';
 
-export type { EnvironmentVariableEntry };
+export type { EnvironmentVariable };
 
 /** Workspace data as used in the export/import system — id is optional since imports create new workspaces */
 export type WorkspaceData = Partial<Workspace> & { name: string; type: Workspace['type'] };
@@ -56,7 +56,7 @@ export interface ExportImportDependencies {
   workspaces: WorkspaceData[];
   createWorkspace(workspace: WorkspaceData): Promise<WorkspaceData | null>;
   switchWorkspace(workspaceId: string): Promise<boolean>;
-  environments: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments: Record<string, Record<string, EnvironmentVariable>>;
   createEnvironment(name: string): Promise<boolean>;
   setVariable(name: string, value: string | null, environment?: string | null, isSecret?: boolean): Promise<boolean>;
   generateEnvironmentSchema(sources: Source[]): EnvironmentSchema;
@@ -70,7 +70,7 @@ export interface ExportData {
   rules?: RulesCollection;
   rulesMetadata?: { totalRules: number; lastUpdated: string };
   environmentSchema?: EnvironmentSchema;
-  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments?: Record<string, Record<string, EnvironmentVariable>>;
   workspace?: WorkspaceData;
 }
 
@@ -97,7 +97,7 @@ export interface ImportData {
   proxyRules?: ProxyRule[];
   rules?: Record<string, RuleEntry[]>;
   rulesMetadata?: { totalRules?: number; lastUpdated?: string };
-  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments?: Record<string, Record<string, EnvironmentVariable>>;
   environmentSchema?: EnvironmentSchema;
   workspace?: WorkspaceData;
 }

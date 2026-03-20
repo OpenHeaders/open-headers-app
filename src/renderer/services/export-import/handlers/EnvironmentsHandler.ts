@@ -9,7 +9,7 @@ import { getCentralizedEnvironmentService } from '../../../services/CentralizedE
 import { validateEnvironmentVariable, validateEnvironmentSchema } from '../utilities/ValidationUtils';
 import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
 import { IMPORT_MODES, EVENTS, DEFAULTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, EnvironmentVariableEntry, EnvironmentSchema, SchemaVariableDefinition } from '../core/types';
+import type { ExportImportDependencies, EnvironmentVariable, EnvironmentSchema, SchemaVariableDefinition } from '../core/types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentsHandler');
@@ -28,7 +28,7 @@ interface ImportOptions {
 
 interface ImportData {
   environmentSchema?: EnvironmentSchema;
-  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments?: Record<string, Record<string, EnvironmentVariable>>;
 }
 
 interface ImportStats {
@@ -44,7 +44,7 @@ interface VariableToSet {
 }
 
 interface EnvironmentData {
-  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments?: Record<string, Record<string, EnvironmentVariable>>;
   environmentSchema?: EnvironmentSchema;
 }
 
@@ -127,14 +127,14 @@ export class EnvironmentsHandler {
    */
   _exportFullEnvironments(fullSchema: EnvironmentSchema, selectedEnvironments: string[] | undefined) {
     const { environments } = this.dependencies;
-    let exportEnvironments: Record<string, Record<string, EnvironmentVariableEntry>> = environments;
+    let exportEnvironments: Record<string, Record<string, EnvironmentVariable>> = environments;
     let schema = fullSchema;
     
     if (selectedEnvironments && selectedEnvironments.length > 0) {
       exportEnvironments = {};
       selectedEnvironments.forEach((envName: string) => {
         if (environments[envName]) {
-          exportEnvironments[envName] = environments[envName] as Record<string, EnvironmentVariableEntry>;
+          exportEnvironments[envName] = environments[envName] as Record<string, EnvironmentVariable>;
         }
       });
 
@@ -150,7 +150,7 @@ export class EnvironmentsHandler {
     }
 
     const envCount = Object.keys(exportEnvironments).length;
-    const totalVars = Object.values(exportEnvironments).reduce((sum: number, env: Record<string, EnvironmentVariableEntry>) => sum + Object.keys(env).length, 0);
+    const totalVars = Object.values(exportEnvironments).reduce((sum: number, env: Record<string, EnvironmentVariable>) => sum + Object.keys(env).length, 0);
     log.info(`Exporting ${envCount} environments with ${totalVars} total variables`);
     
     return {
@@ -210,7 +210,7 @@ export class EnvironmentsHandler {
    * @returns {Promise<Object>} - Import statistics
    * @private
    */
-  async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariableEntry>>, options: ImportOptions) {
+  async _importFullEnvironments(environmentsData: Record<string, Record<string, EnvironmentVariable>>, options: ImportOptions) {
     const stats: ImportStats = {
       environmentsImported: 0,
       variablesCreated: 0,

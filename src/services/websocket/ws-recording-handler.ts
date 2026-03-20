@@ -21,7 +21,7 @@ const log = createLogger('WSRecordingHandler');
 interface WSServiceLike {
     appDataPath: string | null;
     _broadcastToAll(message: string): number;
-    _handleFocusApp(navigation: { tab: string; action?: string; itemId?: string }): void;
+    _handleFocusApp(navigation: { tab?: string; subTab?: string; action?: string; itemId?: string }): void;
 }
 
 interface DisplayInfo {
@@ -607,4 +607,5 @@ class WSRecordingHandler {
 }
 
 export { WSRecordingHandler };
+export type { SaveRecordingMessageData, StartSyncRecordingData, StopSyncRecordingData, RecordingStateSyncData };
 export default WSRecordingHandler;

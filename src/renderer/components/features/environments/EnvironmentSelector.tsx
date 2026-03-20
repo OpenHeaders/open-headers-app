@@ -17,7 +17,7 @@ import {
 } from '@ant-design/icons';
 import { checkMissingVariables } from './EnvironmentUtils';
 import EnvironmentShareModal from '../../modals/EnvironmentShareModal';
-import type { EnvironmentVariableEntry } from '../../../hooks/environment/useEnvironmentCore';
+import type { EnvironmentVariable } from '../../../../types/environment';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -27,7 +27,7 @@ interface ThemeToken {
 }
 
 interface EnvironmentSelectorProps {
-  environments: Record<string, Record<string, EnvironmentVariableEntry>>;
+  environments: Record<string, Record<string, EnvironmentVariable>>;
   activeEnvironment: string;
   sources: Source[];
   onEnvironmentSwitch: (envName: string) => void;

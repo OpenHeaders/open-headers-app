@@ -1,22 +1,23 @@
 import electron from 'electron';
+import type { IpcRendererEvent } from 'electron';
+
 const { ipcRenderer } = electron;
 
 const systemAPI = {
     isDevelopment: process.env.NODE_ENV === 'development',
     platform: process.platform,
 
-    getAppVersion: (): Promise<unknown> => ipcRenderer.invoke('getAppVersion'),
-    openExternal: (url: string): Promise<unknown> => ipcRenderer.invoke('openExternal', url),
-    showItemInFolder: (filePath: string): Promise<unknown> => ipcRenderer.invoke('showItemInFolder', filePath),
-    openAppPath: (pathKey: string): Promise<unknown> => ipcRenderer.invoke('openAppPath', pathKey),
-    getSystemTimezone: (): Promise<unknown> => ipcRenderer.invoke('getSystemTimezone'),
+    getAppVersion: (): Promise<string> => ipcRenderer.invoke('getAppVersion'),
+    openExternal: (url: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('openExternal', url),
+    showItemInFolder: (filePath: string): Promise<void> => ipcRenderer.invoke('showItemInFolder', filePath),
+    openAppPath: (pathKey: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('openAppPath', pathKey),
+    getSystemTimezone: (): Promise<{ timezone: string; offset: number; method: string }> => ipcRenderer.invoke('getSystemTimezone'),
 
-    checkScreenRecordingPermission: (): Promise<unknown> => ipcRenderer.invoke('checkScreenRecordingPermission'),
-    requestScreenRecordingPermission: (): Promise<unknown> => ipcRenderer.invoke('requestScreenRecordingPermission'),
+    checkScreenRecordingPermission: (): Promise<{ success: boolean; hasPermission?: boolean }> => ipcRenderer.invoke('checkScreenRecordingPermission'),
+    requestScreenRecordingPermission: (): Promise<{ success: boolean; hasPermission?: boolean; platform: string; needsManualGrant?: boolean; error?: string }> => ipcRenderer.invoke('requestScreenRecordingPermission'),
 
-    // Global hotkey management
-    disableRecordingHotkey: (): Promise<unknown> => ipcRenderer.invoke('disableRecordingHotkey'),
-    enableRecordingHotkey: (): Promise<unknown> => ipcRenderer.invoke('enableRecordingHotkey'),
+    disableRecordingHotkey: (): Promise<void> => ipcRenderer.invoke('disableRecordingHotkey'),
+    enableRecordingHotkey: (): Promise<void> => ipcRenderer.invoke('enableRecordingHotkey'),
 
     showMainWindow: (): void => ipcRenderer.send('showMainWindow'),
     hideMainWindow: (): void => ipcRenderer.send('hideMainWindow'),
@@ -38,7 +39,6 @@ const systemAPI = {
         }
     },
 
-    // Signal that renderer is ready to receive protocol messages
     signalRendererReady: (): void => {
         ipcRenderer.send('renderer-ready');
     },
@@ -61,8 +61,8 @@ const systemAPI = {
         return () => ipcRenderer.removeListener('quitApp', subscription);
     },
 
-    onNavigateTo: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => callback(data);
+    onNavigateTo: (callback: (data: NavigationData) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: NavigationData) => callback(data);
         ipcRenderer.on('navigate-to', subscription);
         return () => ipcRenderer.removeListener('navigate-to', subscription);
     },

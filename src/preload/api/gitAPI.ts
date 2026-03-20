@@ -1,35 +1,92 @@
 import electron from 'electron';
+import type { IpcRendererEvent } from 'electron';
+import type { WorkspaceAuthData, CommitInfo } from '../../types/workspace';
+
 const { ipcRenderer } = electron;
 
-const gitAPI = {
-    // Git sync APIs
-    testGitConnection: (config: unknown): Promise<unknown> => ipcRenderer.invoke('testGitConnection', config),
-    syncGitWorkspace: (config: unknown): Promise<unknown> => ipcRenderer.invoke('syncGitWorkspace', config),
-    getGitStatus: (): Promise<unknown> => ipcRenderer.invoke('getGitStatus'),
-    installGit: (): Promise<unknown> => ipcRenderer.invoke('installGit'),
-    cleanupGitRepository: (gitUrl: string): Promise<unknown> => ipcRenderer.invoke('cleanupGitRepository', gitUrl),
-    cleanupGitRepo: (gitUrl: string): Promise<unknown> => ipcRenderer.invoke('cleanupGitRepository', gitUrl), // Alias for backward compatibility
-    commitConfiguration: (config: unknown): Promise<unknown> => ipcRenderer.invoke('commitConfiguration', config),
-    createBranch: (config: unknown): Promise<unknown> => ipcRenderer.invoke('createBranch', config),
-    checkWritePermissions: (config: unknown): Promise<unknown> => ipcRenderer.invoke('checkWritePermissions', config),
+interface GitTestConfig {
+    url?: string;
+    branch?: string;
+    authType?: string;
+    filePath?: string;
+    authData?: WorkspaceAuthData;
+    checkWriteAccess?: boolean;
+    isInvite?: boolean;
+}
 
-    // Git installation progress event
-    onGitInstallProgress: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => callback(data);
+interface GitTestResult {
+    success: boolean;
+    error?: string;
+    message?: string;
+    branches?: string[];
+    configFileValid?: boolean;
+    validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number };
+    readAccess?: boolean;
+    writeAccess?: boolean;
+    warning?: string;
+    hint?: string;
+    debugHint?: string;
+}
+
+interface GitStatusResult {
+    isInstalled: boolean;
+    version?: string;
+    error?: string;
+    user?: { name?: string };
+}
+
+interface CommitConfig {
+    url?: string;
+    branch?: string;
+    path?: string;
+    files?: Record<string, string>;
+    message?: string;
+    authType?: string;
+    authData?: WorkspaceAuthData;
+}
+
+interface CommitResult {
+    success: boolean;
+    error?: string;
+    commitHash?: string;
+    commitInfo?: CommitInfo;
+    files?: string[];
+    noChanges?: boolean;
+    message?: string;
+}
+
+interface BranchConfig {
+    url?: string;
+    branch?: string;
+    authType?: string;
+    authData?: WorkspaceAuthData;
+}
+
+const gitAPI = {
+    testGitConnection: (config: GitTestConfig): Promise<GitTestResult> => ipcRenderer.invoke('testGitConnection', config),
+    syncGitWorkspace: (workspaceId: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('syncGitWorkspace', workspaceId),
+    getGitStatus: (): Promise<GitStatusResult> => ipcRenderer.invoke('getGitStatus'),
+    installGit: (): Promise<{ success: boolean; message?: string; error?: string }> => ipcRenderer.invoke('installGit'),
+    cleanupGitRepository: (gitUrl: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('cleanupGitRepository', gitUrl),
+    cleanupGitRepo: (gitUrl: string): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('cleanupGitRepository', gitUrl),
+    commitConfiguration: (config: CommitConfig): Promise<CommitResult> => ipcRenderer.invoke('commitConfiguration', config),
+    createBranch: (config: BranchConfig): Promise<{ success: boolean; error?: string; message?: string }> => ipcRenderer.invoke('createBranch', config),
+    checkWritePermissions: (config: BranchConfig): Promise<{ success: boolean; error?: string; details?: { canPush?: boolean; reason?: string } }> => ipcRenderer.invoke('checkWritePermissions', config),
+
+    onGitInstallProgress: (callback: (data: GitProgressEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: GitProgressEvent) => callback(data);
         ipcRenderer.on('git-install-progress', subscription);
         return () => ipcRenderer.removeListener('git-install-progress', subscription);
     },
 
-    // Git connection test progress event
-    onGitConnectionProgress: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => callback(data);
+    onGitConnectionProgress: (callback: (data: GitProgressEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: GitProgressEvent) => callback(data);
         ipcRenderer.on('git-connection-progress', subscription);
         return () => ipcRenderer.removeListener('git-connection-progress', subscription);
     },
 
-    // Git commit progress event
-    onGitCommitProgress: (callback: (data: unknown) => void): (() => void) => {
-        const subscription = (_: unknown, data: unknown) => callback(data);
+    onGitCommitProgress: (callback: (data: GitProgressEvent) => void): (() => void) => {
+        const subscription = (_event: IpcRendererEvent, data: GitProgressEvent) => callback(data);
         ipcRenderer.on('git-commit-progress', subscription);
         return () => ipcRenderer.removeListener('git-commit-progress', subscription);
     }

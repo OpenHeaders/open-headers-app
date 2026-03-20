@@ -11,7 +11,7 @@ import { ImportService } from './core/ImportService';
 export { ExportService, ImportService };
 
 // Shared types
-export type { ExportImportDependencies, ExportData, ImportData, ExportOptions, ImportOptions, RuleEntry, RulesStorage, EnvironmentVariableEntry } from './core/types';
+export type { ExportImportDependencies, ExportData, ImportData, ExportOptions, ImportOptions, RuleEntry, RulesStorage, EnvironmentVariable } from './core/types';
 
 // Configuration and Constants
 export * from './core/ExportImportConfig';

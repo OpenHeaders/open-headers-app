@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Space, Button, Input, Typography, Alert, Checkbox, Tooltip, App, theme } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
-import type { EnvironmentVariableEntry } from '../../hooks/environment/useEnvironmentCore';
+import type { EnvironmentVariable } from '../../../types/environment';
 import type { EnvironmentVariables } from '../../../types/environment';
 import {
     DatabaseOutlined,
@@ -21,7 +21,7 @@ import {
 interface EnvironmentShareModalProps {
     visible: boolean;
     environmentName: string;
-    environmentData: Record<string, EnvironmentVariableEntry>;
+    environmentData: Record<string, EnvironmentVariable>;
     onClose: () => void;
 }
 
@@ -50,7 +50,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
     const generateEnvironmentLink = async (includeValues: boolean) => {
         try {
             setLoading(true);
-            // Convert EnvironmentVariableEntry (value optional) to EnvironmentVariable (value required)
+            // Convert EnvironmentVariable (value optional) to EnvironmentVariable (value required)
             const envVars: EnvironmentVariables = {};
             for (const [key, entry] of Object.entries(environmentData || {})) {
                 envVars[key] = { value: entry.value ?? '', isSecret: entry.isSecret ?? false };

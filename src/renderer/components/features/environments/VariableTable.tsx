@@ -37,9 +37,9 @@ const { Text } = Typography;
  * @param {Object} props.form - Ant Design form instance
  */
 interface VariableMetadata {
-    value?: string;
-    isSecret?: boolean;
-    [key: string]: unknown;
+    value: string;
+    isSecret: boolean;
+    updatedAt?: string;
 }
 
 interface VariableRecord {

@@ -2,41 +2,28 @@
  * EnvironmentVariableManager - Manages environment variables and operations
  */
 import { createLogger } from '../../utils/error-handling/logger';
+import type { EnvironmentVariable, EnvironmentVariables } from '../../../types/environment';
 const log = createLogger('EnvironmentVariableManager');
 
-interface EnvVariable {
-  value: string;
-  isSecret?: boolean;
-  updatedAt?: string;
-}
-
-type EnvStore = Record<string, Record<string, EnvVariable>>;
+type EnvStore = Record<string, EnvironmentVariables>;
 
 class EnvironmentVariableManager {
   constructor() {}
 
-  /**
-   * Get all variables for an environment
-   */
   getAllVariables(environments: EnvStore, activeEnvironment: string) {
-    const envVars = environments[activeEnvironment] || {};
+    const envVars = environments[activeEnvironment] ?? {};
     const result: Record<string, string> = {};
 
     Object.entries(envVars).forEach(([key, variable]) => {
-      // Variables are always stored as objects with value property
-      result[key] = variable.value || '';
+      result[key] = variable.value ?? '';
     });
 
     return result;
   }
 
-  /**
-   * Set variable in an environment
-   */
-  setVariable(environments: Record<string, Record<string, { value: string; isSecret: boolean; updatedAt: string }>>, environmentName: string, name: string, value: string | null, isSecret = false) {
-    // Deep copy to avoid mutations
-    const updatedEnvironments = JSON.parse(JSON.stringify(environments));
-    
+  setVariable(environments: EnvStore, environmentName: string, name: string, value: string | null, isSecret = false): EnvStore {
+    const updatedEnvironments: EnvStore = JSON.parse(JSON.stringify(environments));
+
     if (!updatedEnvironments[environmentName]) {
       throw new Error(`Environment '${environmentName}' does not exist`);
     }
@@ -59,10 +46,7 @@ class EnvironmentVariableManager {
     return updatedEnvironments;
   }
 
-  /**
-   * Create a new environment
-   */
-  createEnvironment(environments: Record<string, Record<string, unknown>>, name: string) {
+  createEnvironment(environments: EnvStore, name: string): EnvStore {
     if (environments[name]) {
       throw new Error(`Environment '${name}' already exists`);
     }
@@ -76,10 +60,7 @@ class EnvironmentVariableManager {
     return updatedEnvironments;
   }
 
-  /**
-   * Delete an environment
-   */
-  deleteEnvironment(environments: Record<string, Record<string, unknown>>, name: string) {
+  deleteEnvironment(environments: EnvStore, name: string): EnvStore {
     if (name === 'Default') {
       throw new Error('Cannot delete Default environment');
     }
@@ -91,26 +72,17 @@ class EnvironmentVariableManager {
     return updatedEnvironments;
   }
 
-  /**
-   * Validate environment exists
-   */
-  validateEnvironmentExists(environments: Record<string, Record<string, unknown>>, name: string) {
+  validateEnvironmentExists(environments: EnvStore, name: string) {
     if (!environments[name]) {
       throw new Error(`Environment '${name}' does not exist`);
     }
   }
 
-  /**
-   * Get variable count for an environment
-   */
-  getVariableCount(environments: Record<string, Record<string, unknown>>, environmentName: string) {
+  getVariableCount(environments: EnvStore, environmentName: string) {
     const env = environments[environmentName];
     return env ? Object.keys(env).length : 0;
   }
 
-  /**
-   * Export environment variables in a specific format
-   */
   exportEnvironment(environments: EnvStore, environmentName: string, format = 'json') {
     const env = environments[environmentName];
     if (!env) {
@@ -120,38 +92,32 @@ class EnvironmentVariableManager {
     switch (format) {
       case 'json':
         return JSON.stringify(env, null, 2);
-      
+
       case 'env':
-        // Export as .env format
         return Object.entries(env)
-          .map(([key, variable]) => `${key}=${variable.value || ''}`)
+          .map(([key, variable]) => `${key}=${variable.value ?? ''}`)
           .join('\n');
-      
+
       case 'shell':
-        // Export as shell export commands
         return Object.entries(env)
-          .map(([key, variable]) => `export ${key}="${variable.value || ''}"`)
+          .map(([key, variable]) => `export ${key}="${variable.value ?? ''}"`)
           .join('\n');
-      
+
       default:
         throw new Error(`Unsupported export format: ${format}`);
     }
   }
 
-  /**
-   * Import environment variables from different formats
-   */
   importEnvironment(data: string, format = 'json') {
-    const variables: Record<string, EnvVariable> = {};
+    const variables: EnvironmentVariables = {};
 
     switch (format) {
       case 'json':
-        const parsed = JSON.parse(data);
+        const parsed = JSON.parse(data) as Record<string, EnvironmentVariable | string>;
         Object.entries(parsed).forEach(([key, value]) => {
-          if (typeof value === 'object' && value !== null && (value as { value?: unknown }).value !== undefined) {
-            variables[key] = value as EnvVariable;
+          if (typeof value === 'object' && value !== null && 'value' in value) {
+            variables[key] = value;
           } else {
-            // Convert simple key-value to variable object
             variables[key] = {
               value: String(value),
               isSecret: false,
@@ -160,9 +126,8 @@ class EnvironmentVariableManager {
           }
         });
         break;
-      
+
       case 'env':
-        // Parse .env format
         data.split('\n').forEach(line => {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#')) {
@@ -177,7 +142,7 @@ class EnvironmentVariableManager {
           }
         });
         break;
-      
+
       default:
         throw new Error(`Unsupported import format: ${format}`);
     }

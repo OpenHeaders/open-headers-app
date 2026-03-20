@@ -14,12 +14,13 @@ const { createLogger } = mainLogger;
 const log = createLogger('SettingsHandlers');
 
 class SettingsHandlers {
-    async handleSaveSettings(_: IpcInvokeEvent | null, settings: Partial<AppSettings> & Record<string, unknown>) {
+    async handleSaveSettings(_: IpcInvokeEvent | null, settings: Partial<AppSettings>) {
         try {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
             // Ensure ALL boolean settings are properly typed
-            const booleanSettings: (keyof AppSettings)[] = [
+            type BooleanKey = { [K in keyof AppSettings]-?: NonNullable<AppSettings[K]> extends boolean ? K : never }[keyof AppSettings];
+            const booleanSettings: BooleanKey[] = [
                 'hideOnLaunch', 'showStatusBarIcon', 'showDockIcon', 'launchAtLogin',
                 'tutorialMode', 'autoStartProxy', 'proxyCacheEnabled',
                 'autoHighlightTableEntries', 'autoScrollTableEntries',
@@ -28,11 +29,11 @@ class SettingsHandlers {
             ];
 
             const mutableSettings = { ...settings };
-            booleanSettings.forEach(key => {
+            for (const key of booleanSettings) {
                 if (key in mutableSettings) {
-                    (mutableSettings as Record<string, unknown>)[key] = Boolean(mutableSettings[key]);
+                    mutableSettings[key] = Boolean(mutableSettings[key]);
                 }
-            });
+            }
 
             await atomicWriter.writeJson(settingsPath, mutableSettings, { pretty: true });
 
@@ -137,7 +138,7 @@ class SettingsHandlers {
             const execPath = app.getPath('exe');
 
 
-            const autoLauncher = new (AutoLaunch as unknown as new (opts: { name: string; path: string; args: string[]; isHidden: boolean }) => { enable(): Promise<void>; disable(): Promise<void> })({
+            const autoLauncher = new AutoLaunch({
                 name: appName,
                 path: execPath,
                 args: args,

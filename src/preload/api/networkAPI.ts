@@ -1,20 +1,34 @@
 import electron from 'electron';
+import type { IpcRendererEvent } from 'electron';
+
 const { ipcRenderer } = electron;
 
-const networkAPI = {
-    checkNetworkConnectivity: (): Promise<unknown> => ipcRenderer.invoke('checkNetworkConnectivity'),
+interface NetworkState {
+    isOnline: boolean;
+    networkQuality: string;
+    vpnActive: boolean;
+    interfaces: [string, { name: string; addresses: import('os').NetworkInterfaceInfo[]; type: string }][];
+    primaryInterface: string | null;
+    connectionType: string;
+    diagnostics: { dnsResolvable: boolean; internetReachable: boolean; captivePortal: boolean; latency: number };
+    lastUpdate: number;
+    version: number;
+    confidence?: number;
+}
 
-    getNetworkState: (): Promise<unknown> => {
+const networkAPI = {
+    checkNetworkConnectivity: (): Promise<{ isOnline: boolean }> => ipcRenderer.invoke('checkNetworkConnectivity'),
+
+    getNetworkState: (): Promise<NetworkState> => {
         return ipcRenderer.invoke('getNetworkState');
     },
 
-    forceNetworkCheck: (): Promise<unknown> => ipcRenderer.invoke('forceNetworkCheck'),
+    forceNetworkCheck: (): Promise<{ isOnline: boolean }> => ipcRenderer.invoke('forceNetworkCheck'),
 
-    getSystemState: (): Promise<unknown> => ipcRenderer.invoke('getSystemState'),
+    getSystemState: (): Promise<NetworkState> => ipcRenderer.invoke('getSystemState'),
 
-    // Network state synchronization - used by RefreshManager and DebugNetworkState
     onNetworkStateSync: (callback: (data: NetworkStateSyncData) => void): (() => void) => {
-        const subscription = (_: unknown, data: NetworkStateSyncData) => {
+        const subscription = (_event: IpcRendererEvent, data: NetworkStateSyncData) => {
             callback(data);
         };
         ipcRenderer.on('network-state-sync', subscription);
