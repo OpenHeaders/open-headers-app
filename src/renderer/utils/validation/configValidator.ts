@@ -144,7 +144,7 @@ function validateConfigStructure(data: Record<string, unknown>) {
     (data.proxyRules as Array<Record<string, unknown>>).forEach((rule: Record<string, unknown>, index: number) => {
       // Validate based on rule type
       const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
-      const isStaticRule = rule.isDynamic === false || (rule.domains && (rule.domains as unknown[]).length > 0);
+      const isStaticRule = rule.isDynamic === false || (Array.isArray(rule.domains) && rule.domains.length > 0);
       
       if (!isDynamicRule && !isStaticRule) {
         throw new Error(`Invalid proxy rule at index ${index}: must have either domains (for static rules) or headerRuleId (for dynamic rules)`);

@@ -166,7 +166,7 @@ export class ExportService {
     
     const filePath = await handleSingleFileExport({
       filename,
-      data: exportData as unknown as Record<string, unknown>
+      data: exportData
     });
 
     return [filePath];
@@ -205,8 +205,8 @@ export class ExportService {
       title: 'Export Configuration',
       mainFilename,
       environmentFilename: envFilename,
-      mainData: mainData as unknown as Record<string, unknown>,
-      environmentData: environmentData ? environmentData as unknown as Record<string, unknown> : undefined
+      mainData,
+      environmentData: environmentData ?? undefined
     });
   }
 

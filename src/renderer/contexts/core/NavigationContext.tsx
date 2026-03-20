@@ -93,10 +93,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         log.info('Navigation requested:', intent);
 
         // Focus the window when navigation is triggered (same as protocol handler)
-        const win = window as unknown as { electronAPI?: { showMainWindow?: () => void } };
-        if (win.electronAPI?.showMainWindow) {
-            win.electronAPI.showMainWindow();
-        }
+        window.electronAPI?.showMainWindow?.();
 
         setNavigationIntent({
             ...intent,

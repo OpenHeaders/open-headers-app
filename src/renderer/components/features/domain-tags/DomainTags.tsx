@@ -126,7 +126,7 @@ const DomainTags = ({ value = [], onChange, onValidate, validationResults = [] }
         }
     };
 
-    const showInput = createShowInputHandler(setInputVisible, inputRef as unknown as React.RefObject<HTMLInputElement | null>);
+    const showInput = createShowInputHandler(setInputVisible, inputRef);
 
     const handlePaste = createPasteHandler({
         value,

@@ -180,7 +180,7 @@ export const usePlayerManager = (
                     const element = (originalCreateElement as (tagName: string) => HTMLElement).call(document, tagName);
                     
                     if (tagName.toLowerCase() === 'iframe') {
-                        const iframeElement = element as unknown as HTMLIFrameElement;
+                        const iframeElement = element as HTMLIFrameElement;
                         // Store reference for cleanup
                         iframeRefs.push(iframeElement);
                         

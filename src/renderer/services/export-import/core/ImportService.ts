@@ -225,7 +225,7 @@ export class ImportService {
     if (selectedItems.environments) {
       // Cast through intermediate type for handler-specific ImportData compatibility
       const envStats = await this.environmentsHandler.importEnvironments(
-        importData as unknown as Parameters<typeof this.environmentsHandler.importEnvironments>[0],
+        importData,
         importOptions
       );
       allStats.environmentsImported = envStats.environmentsImported;
@@ -323,7 +323,7 @@ export class ImportService {
    * @private
    */
   _validateImportPayload(importData: ImportData) {
-    const validation = validateImportPayload(importData as unknown as Parameters<typeof validateImportPayload>[0]) as { success: boolean; error?: string; warnings?: string[] };
+    const validation = validateImportPayload(importData);
     if (!validation.success) {
       throw new Error(`Import data validation failed: ${validation.error}`);
     }

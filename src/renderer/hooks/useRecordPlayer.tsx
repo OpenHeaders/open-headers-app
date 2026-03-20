@@ -52,10 +52,9 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 setError(null);
 
                 // Check if already loaded
-                const win = window as unknown as Record<string, unknown>;
-                const rrwebModule = win.rrwebPlayer as Record<string, unknown> | undefined;
-                if (rrwebModule) {
-                    const player = (rrwebModule.default || rrwebModule.Player || rrwebModule) as RRWebPlayerConstructor;
+                if (window.rrwebPlayer) {
+                    const mod = window.rrwebPlayer;
+                    const player = ('default' in mod ? mod.default : 'Player' in mod ? mod.Player : mod) as RRWebPlayerConstructor;
                     setRrwebPlayer(() => player);
                     return;
                 }
@@ -67,9 +66,8 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                 await new Promise<void>((resolve, reject) => {
                     script.onload = () => {
                         // The UMD bundle exports the player as default or Player property
-                        const winRef = window as unknown as Record<string, unknown>;
-                        const rrwebMod = winRef.rrwebPlayer as Record<string, unknown> | undefined;
-                        const player = (rrwebMod?.default || rrwebMod?.Player || rrwebMod) as RRWebPlayerConstructor;
+                        const rrwebMod = window.rrwebPlayer;
+                        const player = (rrwebMod && 'default' in rrwebMod ? rrwebMod.default : rrwebMod && 'Player' in rrwebMod ? rrwebMod.Player : rrwebMod) as RRWebPlayerConstructor;
                         setRrwebPlayer(() => player);
                         resolve();
                     };

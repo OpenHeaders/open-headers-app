@@ -415,7 +415,21 @@ interface ElectronAPI {
   signalRendererReady?: () => void;
 }
 
+interface RRWebPlayerModule {
+  default?: RRWebPlayerConstructor;
+  Player?: RRWebPlayerConstructor;
+}
+
+interface RRWebPlayerConstructor {
+  new (options: { target: HTMLElement; data: { events: unknown[] }; [key: string]: unknown }): {
+    destroy(): void;
+    play(): void;
+    pause(): void;
+  };
+}
+
 interface Window {
   electronAPI: ElectronAPI;
   generateTOTP: (secret: string, period?: number, digits?: number, timeOffset?: number) => Promise<string>;
+  rrwebPlayer?: RRWebPlayerModule | RRWebPlayerConstructor;
 }

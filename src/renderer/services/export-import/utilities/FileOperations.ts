@@ -102,7 +102,7 @@ export async function showImportFileDialog({
  * @param {boolean} pretty - Whether to pretty-print the JSON (default: true)
  * @returns {Promise<void>}
  */
-export async function writeJsonFile(filePath: string, data: Record<string, unknown>, pretty = true) {
+export async function writeJsonFile(filePath: string, data: object, pretty = true) {
   try {
     const jsonString = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
     await window.electronAPI.writeFile(filePath, jsonString);
@@ -201,7 +201,7 @@ export async function handleMultiFileExport({
   environmentFilename,
   mainData,
   environmentData
-}: { title?: string; mainFilename: string; environmentFilename?: string; mainData: Record<string, unknown>; environmentData?: Record<string, unknown> }) {
+}: { title?: string; mainFilename: string; environmentFilename?: string; mainData: object; environmentData?: object }) {
   const writtenFiles = [];
 
   // Get main file path
@@ -240,7 +240,7 @@ export async function handleMultiFileExport({
  * @param {Object} data - Data to export
  * @returns {Promise<string>} - Path to written file
  */
-export async function handleSingleFileExport({ filename, data }: { filename: string; data: Record<string, unknown> }) {
+export async function handleSingleFileExport({ filename, data }: { filename: string; data: object }) {
   const filePath = await showExportFileDialog({
     title: 'Export Configuration',
     defaultPath: filename,

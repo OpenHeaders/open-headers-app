@@ -50,8 +50,8 @@ export function createExportImportServices(dependencies: ExportImportDependencie
  * @returns {Object} - Validation result
  */
 export function validateDependencies(dependencies: ExportImportDependencies) {
-  const required = [
-    'sources', 
+  const required: (keyof ExportImportDependencies)[] = [
+    'sources',
     'activeWorkspaceId',
     'exportSources',
     'removeSource',
@@ -64,10 +64,7 @@ export function validateDependencies(dependencies: ExportImportDependencies) {
     'generateEnvironmentSchema'
   ];
 
-  const depsRecord = dependencies as unknown as Record<string, unknown>;
-
-  // appVersion can be empty string initially, so check differently
-  const missing = required.filter(dep => !depsRecord[dep]);
+  const missing = required.filter(dep => !dependencies[dep]);
 
   // Allow appVersion to be empty string during initial load
   if (!Object.prototype.hasOwnProperty.call(dependencies, 'appVersion')) {
