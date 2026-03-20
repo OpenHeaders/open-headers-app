@@ -12,32 +12,8 @@ import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
 import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
 import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
 import type { TeamWorkspaceInvite } from '../types/workspace';
-
-/** Data for environment config import via protocol links */
-interface EnvironmentConfigData {
-    [key: string]: unknown;
-}
-
-/** Partial settings for saving */
-interface PartialSettings {
-    launchAtLogin?: boolean;
-    hideOnLaunch?: boolean;
-    showDockIcon?: boolean;
-    showStatusBarIcon?: boolean;
-    theme?: string;
-    autoStartProxy?: boolean;
-    proxyCacheEnabled?: boolean;
-    videoRecording?: boolean;
-    videoQuality?: string;
-    autoHighlightTableEntries?: boolean;
-    autoScrollTableEntries?: boolean;
-    compactMode?: boolean;
-    tutorialMode?: boolean;
-    developerMode?: boolean;
-    recordingHotkey?: string;
-    logLevel?: string;
-    [key: string]: string | boolean | number | undefined;
-}
+import type { AppSettings } from '../types/settings';
+import type { EnvironmentConfigData } from '../types/environment';
 
 const AppComponent: React.FC = () => {
     // Core hooks
@@ -116,7 +92,7 @@ const AppComponent: React.FC = () => {
     const [inviteData, setTeamWorkspaceInvite] = useState<TeamWorkspaceInvite | null>(null);
 
     // Environment import data for protocol links
-    const [preloadedEnvData, setPreloadedEnvData] = useState<EnvironmentConfigData | null>(null);
+    const [preloadedEnvData, setPreloadedEnvData] = useState<Partial<EnvironmentConfigData> | null>(null);
 
     // Update autoHighlight when settings change
     useEffect(() => {
@@ -200,7 +176,7 @@ const AppComponent: React.FC = () => {
         setSettingsAction(null); // Reset action
     }, []);
 
-    const handleSettingsSave = useCallback(async (newSettings: PartialSettings) => {
+    const handleSettingsSave = useCallback(async (newSettings: Partial<AppSettings>) => {
         const success = await saveSettings(newSettings);
         if (success) {
             setSettingsVisible(false);
@@ -239,7 +215,7 @@ const AppComponent: React.FC = () => {
     }, []);
 
     // Handle environment config import
-    const handleEnvironmentConfigImport = useCallback(async (envData: EnvironmentConfigData) => {
+    const handleEnvironmentConfigImport = useCallback(async (envData: Partial<EnvironmentConfigData>) => {
         if (envData) {
             try {
                 setPreloadedEnvData(envData);
@@ -349,7 +325,7 @@ const AppComponent: React.FC = () => {
                     onOpenAbout={handleOpenAbout}
                     onSettingsCancel={handleSettingsCancel}
                     onAboutCancel={handleAboutCancel}
-                    onSettingsSave={handleSettingsSave as (values: Record<string, unknown>) => Promise<void>}
+                    onSettingsSave={handleSettingsSave}
                     onExportModalCancel={() => setExportModalVisible(false)}
                     onImportModalCancel={() => {
                         setImportModalVisible(false);

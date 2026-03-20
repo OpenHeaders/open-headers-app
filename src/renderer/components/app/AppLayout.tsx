@@ -12,7 +12,8 @@ import TrayMenu from '../features/TrayMenu';
 import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
 import { DebugSourceInfo } from '../status/DebugSourceInfo';
 import { DebugNetworkState } from '../status/DebugNetworkState';
-import type { Settings } from '../../contexts/ui/SettingsContext';
+import type { AppSettings } from '../../../types/settings';
+import type { EnvironmentConfigData } from '../../../types/environment';
 import type { Source } from '../../../types/source';
 import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
 import type { InitialAction } from '../modals/settings/SettingsModal';
@@ -32,7 +33,7 @@ interface AppLayoutProps {
   recordPlaybackTime: number;
   autoHighlight: boolean;
   loading: { export: boolean; import: boolean };
-  settings: Settings;
+  settings: AppSettings;
   sources: Source[];
   onTabChange: (tab: string) => void;
   onTabScrollPositionChange: (tab: string, scrollTop: number) => void;
@@ -50,12 +51,12 @@ interface AppLayoutProps {
   onOpenAbout: () => void;
   onSettingsCancel: () => void;
   onAboutCancel: () => void;
-  onSettingsSave: (values: Record<string, unknown>) => Promise<void>;
+  onSettingsSave: (values: Partial<AppSettings>) => Promise<void>;
   onExportModalCancel: () => void;
   onImportModalCancel: () => void;
   onHandleExport: (config: Record<string, unknown>) => void;
   onHandleImport: (data: Record<string, unknown>) => Promise<void>;
-  preloadedEnvData: Record<string, unknown> | null;
+  preloadedEnvData: Partial<EnvironmentConfigData> | null;
   updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
 }
 
