@@ -197,7 +197,7 @@ class WorkspaceSyncScheduler {
     this.gitSyncService = gitSyncService;
     this.workspaceSettingsService = workspaceSettingsService;
     this.networkService = networkService;
-    this.broadcaster = options.broadcaster || null;
+    this.broadcaster = options.broadcaster ?? null;
 
     // State
     this.syncTimers = new Map();
@@ -408,7 +408,7 @@ class WorkspaceSyncScheduler {
         branch: workspace.gitBranch || DEFAULT_GIT_BRANCH,
         path: workspace.gitPath || DEFAULT_CONFIG_PATH,
         authType: workspace.authType || DEFAULT_AUTH_TYPE,
-        authData: workspace.authData || {}
+        authData: workspace.authData ?? {}
       };
 
       // Perform the sync
@@ -524,7 +524,7 @@ class WorkspaceSyncScheduler {
    */
   async checkGitConnectivity(workspaceId: string, workspace: Workspace): Promise<boolean> {
     const now = Date.now();
-    const lastCheck = this.lastGitConnectivityCheck.get(workspaceId) || 0;
+    const lastCheck = this.lastGitConnectivityCheck.get(workspaceId) ?? 0;
 
     // Use cached result if checked recently
     if (now - lastCheck < GIT_CONNECTIVITY_CHECK_INTERVAL) {
@@ -542,7 +542,7 @@ class WorkspaceSyncScheduler {
         url: workspace.gitUrl,
         branch: workspace.gitBranch || DEFAULT_GIT_BRANCH,
         authType: workspace.authType || DEFAULT_AUTH_TYPE,
-        authData: workspace.authData || {}
+        authData: workspace.authData ?? {}
       };
 
       // Use a shorter timeout for connectivity check
@@ -669,7 +669,7 @@ class WorkspaceSyncScheduler {
             return structure;
           };
 
-          const existingStructure = getEnvStructure(existingEnv.environments || {});
+          const existingStructure = getEnvStructure(existingEnv.environments ?? {});
 
           let newStructure: Record<string, string[]> | undefined;
           if (newData.environments) {
@@ -759,12 +759,12 @@ class WorkspaceSyncScheduler {
             return {
               ...remoteSource,
               // Preserve local execution state
-              sourceContent: existingSource.sourceContent || '',
-              originalResponse: existingSource.originalResponse || '{}',
+              sourceContent: existingSource.sourceContent ?? '',
+              originalResponse: existingSource.originalResponse ?? '{}',
               isFiltered: existingSource.isFiltered,
               filteredWith: existingSource.filteredWith,
-              activationState: existingSource.activationState || remoteSource.activationState,
-              missingDependencies: existingSource.missingDependencies || [],
+              activationState: existingSource.activationState ?? remoteSource.activationState,
+              missingDependencies: existingSource.missingDependencies ?? [],
               // Preserve refresh timing but take enabled/interval from remote
               refreshOptions: remoteSource.refreshOptions
                 ? {
@@ -774,8 +774,8 @@ class WorkspaceSyncScheduler {
                   }
                 : existingSource.refreshOptions,
               // Preserve other local metadata
-              createdAt: existingSource.createdAt || remoteSource.createdAt,
-              updatedAt: existingSource.updatedAt || remoteSource.updatedAt
+              createdAt: existingSource.createdAt ?? remoteSource.createdAt,
+              updatedAt: existingSource.updatedAt ?? remoteSource.updatedAt
             };
           }
 
@@ -930,7 +930,7 @@ class WorkspaceSyncScheduler {
                     // Variable doesn't exist locally, create it with empty value
                     environmentsToImport[envName][varDef.name] = {
                       value: '',
-                      isSecret: varDef.isSecret || false
+                      isSecret: varDef.isSecret ?? false
                     };
                   } else {
                     // Variable exists locally - ALWAYS preserve its value
@@ -1202,8 +1202,8 @@ class WorkspaceSyncScheduler {
     for (const [workspaceId] of this.syncTimers) {
       status[workspaceId] = {
         scheduled: true,
-        syncing: this.syncInProgress.get(workspaceId) || false,
-        lastSync: this.lastSyncTime.get(workspaceId) || null
+        syncing: this.syncInProgress.get(workspaceId) ?? false,
+        lastSync: this.lastSyncTime.get(workspaceId) ?? null
       };
     }
 

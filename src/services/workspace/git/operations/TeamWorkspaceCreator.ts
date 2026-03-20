@@ -414,7 +414,7 @@ class TeamWorkspaceCreator {
 
         if (metadata && metadata.workspaceId === workspaceId) {
           const configPaths: Record<string, string> = {};
-          const metaConfigPaths = metadata.configPaths || {};
+          const metaConfigPaths = metadata.configPaths ?? {};
 
           for (const [key, relativePath] of Object.entries(metaConfigPaths)) {
             configPaths[key] = path.join(repoDir, relativePath);

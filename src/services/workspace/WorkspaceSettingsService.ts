@@ -183,7 +183,7 @@ class WorkspaceSettingsService {
       // Add workspace
       const newWorkspace: Workspace = {
         ...workspace, // Keep any additional properties
-        isDefault: workspace.isDefault || false,
+        isDefault: workspace.isDefault ?? false,
         createdAt: new Date().toISOString(),
       };
       settings.workspaces.push(newWorkspace);
@@ -292,7 +292,7 @@ class WorkspaceSettingsService {
   async getWorkspaces(): Promise<Workspace[]> {
     try {
       const settings = await this.getSettings();
-      return settings.workspaces || [];
+      return settings.workspaces ?? [];
     } catch (error) {
       log.error('Failed to get workspaces:', error);
       return [];
@@ -308,7 +308,7 @@ class WorkspaceSettingsService {
       return {
         activeWorkspaceId: settings.activeWorkspaceId,
         workspaces: settings.workspaces,
-        syncStatus: settings.syncStatus || {}
+        syncStatus: settings.syncStatus ?? {}
       };
     } catch (error) {
       log.error('Failed to load workspaces data:', error);

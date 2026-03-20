@@ -279,7 +279,7 @@ const TeamWorkspaceAcceptInviteModal = ({
 
             progressUnsubscribeRef.current = services!.gitService.onProgress?.((event) => {
                 if (event.type === 'git-connection') {
-                    const summary = event.data.summary || [];
+                    const summary = event.data.summary ?? [];
                     setConnectionProgress(summary.map(item =>
                         typeof item === 'string' ? { step: item, status: 'done' } : item
                     ));

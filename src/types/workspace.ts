@@ -62,7 +62,6 @@ export interface CommitInfo {
   message?: string;
   author?: string;
   date?: string;
-  [key: string]: string | undefined;
 }
 
 export interface WorkspaceSyncStatus {

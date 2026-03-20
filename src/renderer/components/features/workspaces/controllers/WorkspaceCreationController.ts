@@ -383,7 +383,7 @@ class WorkspaceCreationController {
     }
 
     isAborted() {
-        return this.abortController?.signal.aborted || false;
+        return this.abortController?.signal.aborted ?? false;
     }
 
     abort() {

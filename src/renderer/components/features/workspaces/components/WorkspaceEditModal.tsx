@@ -68,7 +68,7 @@ const WorkspaceEditModal = ({
     useEffect(() => {
         if (visible && workspace) {
             // Extract auth data from workspace
-            const authData = workspace.authData || {};
+            const authData = workspace.authData ?? {};
 
             // Set form values from the workspace
             const formValues: WorkspaceFormValues = {
@@ -240,7 +240,7 @@ const WorkspaceEditModal = ({
 
             progressUnsubscribeRef.current = services!.gitService.onProgress((event) => {
                 if (event.type === 'git-connection') {
-                    const summary = event.data.summary || [];
+                    const summary = event.data.summary ?? [];
                     setConnectionProgress(summary.map(item =>
                         typeof item === 'string' ? { step: item, status: 'done' } : item
                     ));
