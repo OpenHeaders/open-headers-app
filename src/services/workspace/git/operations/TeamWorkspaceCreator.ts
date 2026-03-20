@@ -12,6 +12,7 @@ import type { SparseCheckoutManager } from '../repository/SparseCheckoutManager'
 import type { CommitManager } from './CommitManager';
 import type { ConfigFileDetector, DetectedFile } from '../../ConfigFileDetector';
 import type { ConfigFileValidator } from '../../config-file-validator';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -42,7 +43,7 @@ interface CreateOptions {
   branch?: string;
   configDir?: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   progressCallback?: (progress: ProgressInfo) => void;
   tempDir: string;
 }
@@ -54,7 +55,7 @@ interface InvitationOptions {
   workspaceId: string;
   workspaceName: string;
   authType?: string;
-  authData?: Record<string, string>;
+  authData?: WorkspaceAuthData;
   progressCallback?: (progress: ProgressInfo) => void;
   tempDir: string;
 }

@@ -155,12 +155,12 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
             if (!filePath) return;
 
             // Load the actual recording data
-            const recordingData = await window.electronAPI.loadRecording(record.id as string) as Record<string, any>;
+            const recordingData = await window.electronAPI.loadRecording(record.id as string) as Record<string, unknown>;
 
             // Add tag and description to the recording data if they exist
             if (record.tag || record.description) {
                 recordingData.metadata = {
-                    ...(recordingData.metadata as Record<string, any>),
+                    ...(recordingData.metadata as Record<string, unknown>),
                     tag: record.tag || null,
                     description: record.description || null
                 };

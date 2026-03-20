@@ -179,8 +179,8 @@ class SSHAuthStrategy {
   /**
    * Cleanup any remaining SSH resources
    */
-  async cleanup(authResult: SSHAuthResult | null): Promise<void> {
-    if (authResult && authResult.cleanup) {
+  async cleanup(authResult: { cleanup?: () => Promise<void> } | null): Promise<void> {
+    if (authResult?.cleanup) {
       await authResult.cleanup();
     }
   }

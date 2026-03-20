@@ -19,6 +19,7 @@ const log = createLogger('WorkspaceSyncScheduler');
 
 import { DATA_FORMAT_VERSION } from '../../config/version';
 import type { Source } from '../../types/source';
+import type { Workspace, WorkspaceAuthData, WorkspaceSyncStatus } from '../../types/workspace';
 
 // Constants
 const DEFAULT_SYNC_INTERVAL = 60 * 60 * 1000; // 1 hour
@@ -31,7 +32,6 @@ const MAX_OFFLINE_DURATION = 30 * 60 * 1000; // 30 minutes before forcing retry
 const GIT_CONNECTIVITY_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const RESUME_SYNC_DELAY = 5000; // 5 seconds delay after network recovery to let system stabilize
 
-// Type definitions
 interface NetworkState {
   isOnline: boolean;
 }
@@ -46,18 +46,6 @@ interface NetworkStateChange {
   oldState: NetworkState;
 }
 
-interface Workspace {
-  id?: string;
-  name: string;
-  type: string;
-  autoSync?: boolean;
-  gitUrl?: string;
-  gitBranch?: string;
-  gitPath?: string;
-  authType?: string;
-  authData?: Record<string, unknown>;
-}
-
 interface SyncConfig {
   workspaceId: string;
   workspaceName: string;
@@ -65,7 +53,7 @@ interface SyncConfig {
   branch: string;
   path: string;
   authType: string;
-  authData: Record<string, unknown>;
+  authData: WorkspaceAuthData;
 }
 
 interface SyncResult {
@@ -103,7 +91,7 @@ interface GitSyncService {
 interface WorkspaceSettingsService {
   getWorkspaces(): Promise<Workspace[]>;
   updateWorkspace(workspaceId: string, workspace: Partial<Workspace>): Promise<unknown>;
-  updateSyncStatus(workspaceId: string, status: Record<string, unknown>): Promise<void>;
+  updateSyncStatus(workspaceId: string, status: WorkspaceSyncStatus): Promise<void>;
 }
 
 interface SyncStatus {
@@ -1114,7 +1102,7 @@ class WorkspaceSyncScheduler {
   /**
    * Update sync status in workspace settings
    */
-  async updateSyncStatus(workspaceId: string, status: Record<string, unknown>): Promise<void> {
+  async updateSyncStatus(workspaceId: string, status: WorkspaceSyncStatus): Promise<void> {
     try {
       await this.workspaceSettingsService.updateSyncStatus(workspaceId, status);
     } catch (error) {

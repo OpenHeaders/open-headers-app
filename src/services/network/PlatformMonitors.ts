@@ -518,7 +518,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             try {
                 let activeVPN = false;
                 let vpnName: string | null = null;
-                let vpnDetails: Record<string, unknown> = {};
+                let vpnDetails: { serverAddress?: string; tunnelType?: string; description?: string } = {};
 
                 // First check using PowerShell to get VPN connections
                 try {

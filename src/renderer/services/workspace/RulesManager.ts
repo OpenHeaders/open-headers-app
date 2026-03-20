@@ -4,6 +4,7 @@
 import { createLogger } from '../../utils/error-handling/logger';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
 import type { Source } from '../../../types/source';
+import type { ProxyRule } from '../../../types/proxy';
 const log = createLogger('RulesManager');
 
 interface StorageAPI {
@@ -13,7 +14,7 @@ interface StorageAPI {
 
 interface RulesElectronAPI {
   updateWebSocketSources?: (sources: Source[] | { type: 'rules-update'; data: Record<string, unknown> }) => void;
-  proxySaveRule?: (rule: unknown) => Promise<{ success: boolean; error?: string }>;
+  proxySaveRule?: (rule: ProxyRule) => Promise<{ success: boolean; error?: string }>;
   proxyDeleteRule?: (ruleId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -27,11 +28,6 @@ interface RulesCollection {
   request: HeaderRule[];
   response: HeaderRule[];
   [key: string]: HeaderRule[];
-}
-
-interface ProxyRule {
-  id: string;
-  [key: string]: unknown;
 }
 
 class RulesManager {

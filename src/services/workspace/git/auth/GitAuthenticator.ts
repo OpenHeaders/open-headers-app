@@ -12,12 +12,10 @@ const { createLogger } = mainLogger;
 
 const log = createLogger('GitAuthenticator');
 
-// Polymorphic dispatch — strategies have different result/param shapes
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface AuthStrategy {
-  setup: (url: string, authData: Record<string, string>) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
-  validate?: (authData: Record<string, string>) => { valid: boolean; error?: string };
-  cleanup?: (authResult: any) => Promise<void>; // any: strategies accept different result types
+  setup: (url: string, authData: Record<string, string | undefined>) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
+  validate?: (authData: Record<string, string | undefined>) => { valid: boolean; error?: string };
+  cleanup?: (authResult: { cleanup?: () => Promise<void> } | null) => Promise<void>;
 }
 
 interface SetupAuthResult {
@@ -43,7 +41,7 @@ class GitAuthenticator {
   /**
    * Setup authentication for Git operation
    */
-  async setupAuth(url: string, authType = 'none', authData: Record<string, any> = {}): Promise<SetupAuthResult> {
+  async setupAuth(url: string, authType = 'none', authData: Record<string, string | undefined> = {}): Promise<SetupAuthResult> {
     log.debug(`Setting up ${authType} authentication`);
 
     if (authType === 'none' || !authType) {
@@ -88,7 +86,7 @@ class GitAuthenticator {
   /**
    * Validate authentication data
    */
-  validateAuthData(authType: string, authData: Record<string, any>): { valid: boolean; error?: string } {
+  validateAuthData(authType: string, authData: Record<string, string | undefined>): { valid: boolean; error?: string } {
     if (authType === 'none' || !authType) {
       return { valid: true };
     }

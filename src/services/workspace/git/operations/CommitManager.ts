@@ -338,7 +338,7 @@ class CommitManager {
     }
 
     // Create default configuration files
-    const defaults: Record<string, any> = {
+    const defaults = {
       headers: {
         version: '1.0.0',
         headers: []
@@ -371,12 +371,13 @@ class CommitManager {
 
     // Write configuration files
     for (const [key, filePath] of Object.entries(configPaths)) {
-      if (filePath && defaults[key]) {
+      const defaultContent = defaults[key as keyof typeof defaults];
+      if (filePath && defaultContent) {
         const exists = await this.fileExists(String(filePath));
         if (!exists) {
           await fsPromises.writeFile(
             String(filePath),
-            JSON.stringify(defaults[key], null, 2),
+            JSON.stringify(defaultContent, null, 2),
             'utf8'
           );
           log.info(`Created ${key} configuration at: ${filePath}`);

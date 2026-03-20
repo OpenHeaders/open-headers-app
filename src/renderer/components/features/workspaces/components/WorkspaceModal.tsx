@@ -324,8 +324,8 @@ const WorkspaceModal = ({
                     files['open-headers-config.json'] = JSON.stringify(exportData, null, 2);
                 } else {
                     // Separate main config and environment
-                    const mainData: Record<string, any> = { ...exportData };
-                    const envData: Record<string, any> = {};
+                    const mainData: Record<string, unknown> = { ...exportData };
+                    const envData: Record<string, unknown> = {};
                     
                     if (exportData.environmentSchema) {
                         envData.environmentSchema = exportData.environmentSchema;

@@ -273,8 +273,8 @@ async function validateGitWorkspaceConfig(content: string, filePath: string) {
  * @returns {Object} Combined configuration object
  */
 async function readAndValidateMultiFileConfig(readFile: (path: string, options?: { list: boolean }) => Promise<string[] & string>, basePath: string) {
-  let config: Record<string, any> = {};
-  let validationResults: Record<string, any> = {
+  let config: Record<string, unknown> = {};
+  let validationResults: { mainFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null; envFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null } = {
     mainFile: null,
     envFile: null
   };
