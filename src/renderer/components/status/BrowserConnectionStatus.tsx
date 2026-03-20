@@ -129,7 +129,7 @@ const BrowserConnectionStatus = () => {
         };
 
         if (window.electronAPI && window.electronAPI.onWsConnectionStatusChanged) {
-            unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data: Record<string, unknown>) => {
+            unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data) => {
                 handleStatusUpdate(data as unknown as ConnectionStatus);
             });
         }

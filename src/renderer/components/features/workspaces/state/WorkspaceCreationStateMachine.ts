@@ -796,7 +796,7 @@ class WorkspaceCreationStateMachine {
                 break;
             case 'cleanup_temp_files':
                 if (window.electronAPI?.cleanupTempFiles && action?.paths) {
-                    await window.electronAPI.cleanupTempFiles(action.paths);
+                    await window.electronAPI.cleanupTempFiles(...action.paths);
                 } else {
                     console.warn('cleanupTempFiles function not available in electronAPI or paths missing');
                 }

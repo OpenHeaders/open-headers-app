@@ -58,7 +58,10 @@ interface ConfigContent {
   workspaceName?: string;
   createdAt?: string;
   configPaths?: Record<string, string>;
-  [key: string]: unknown;
+  sources?: Array<{ sourceType?: string; url?: string }>;
+  proxyRules?: Array<{ pattern?: string; target?: string }>;
+  // Index sig required: validator iterates schema fields dynamically via content[field]
+  [field: string]: string | HeaderEntry[] | EnvironmentEntry[] | Array<{ pattern?: string; url?: string; target?: string }> | Record<string, string> | Array<{ sourceType?: string; url?: string }> | undefined;
 }
 
 interface MetadataOptions {

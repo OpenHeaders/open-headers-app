@@ -5,7 +5,8 @@ export interface EnvironmentVariableEntry {
   value?: string;
   isSecret?: boolean;
   updatedAt?: string;
-  [key: string]: unknown;
+  // Index sig: downstream services (EnvironmentVariableData, VariableMetadata) require open indexing
+  [key: string]: string | boolean | undefined;
 }
 
 interface EnvironmentCoreState {
@@ -13,7 +14,6 @@ interface EnvironmentCoreState {
   activeEnvironment: string;
   isLoading: boolean;
   isReady: boolean;
-  [key: string]: unknown;
 }
 
 interface UseEnvironmentCoreReturn extends EnvironmentCoreState {
@@ -31,8 +31,8 @@ export function useEnvironmentCore(): UseEnvironmentCoreReturn {
 
   // Subscribe to service state changes
   useEffect(() => {
-    const unsubscribe = service.subscribe((newState: Record<string, unknown>) => {
-      setState(newState as EnvironmentCoreState);
+    const unsubscribe = service.subscribe((newState) => {
+      setState(newState as unknown as EnvironmentCoreState);
     });
     return () => { unsubscribe(); };
   }, [service]);

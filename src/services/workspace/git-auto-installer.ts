@@ -11,7 +11,7 @@ const { createLogger } = mainLogger;
 const execAsync = promisify(exec);
 
 // Utility to execute commands with proper type handling
-const runCommand = (command: string, options: Record<string, unknown> = {}): Promise<{ stdout: string; stderr: string }> => {
+const runCommand = (command: string, options: { timeout?: number; env?: NodeJS.ProcessEnv; cwd?: string } = {}): Promise<{ stdout: string; stderr: string }> => {
   return execAsync(command, options) as Promise<{ stdout: string; stderr: string }>;
 };
 
@@ -42,7 +42,7 @@ class GitAutoInstaller {
     this.progressCallback = null;
   }
 
-  setProgressCallback(callback: ProgressCallback): void {
+  setProgressCallback(callback: ProgressCallback | null): void {
     this.progressCallback = callback;
   }
 

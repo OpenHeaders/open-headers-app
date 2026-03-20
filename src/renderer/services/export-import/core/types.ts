@@ -4,22 +4,17 @@
 
 /** Environment schema structure returned by generateEnvironmentSchema */
 export interface EnvironmentSchema {
-  environments: Record<string, Record<string, unknown>>;
-  variableDefinitions: Record<string, Record<string, unknown>>;
+  environments: Record<string, { variables?: Array<{ name: string; isSecret: boolean }> } | Record<string, { value?: string; isSecret?: boolean }>>;
+  variableDefinitions: Record<string, { name?: string; defaultValue?: string; isSecret?: boolean; sensitive?: boolean; usedIn?: string[]; description?: string; example?: string }>;
 }
 
 import type { Source } from '../../../../types/source';
 import type { Workspace } from '../../../../types/workspace';
-import type { RulesCollection } from '../../../../types/rules';
+import type { RulesCollection, RulesStorage as SharedRulesStorage } from '../../../../types/rules';
 import type { ProxyRule } from '../../../../types/proxy';
+import type { EnvironmentVariableEntry } from '../../../hooks/environment/useEnvironmentCore';
 
-/** A single environment variable entry as stored in the environment service */
-export interface EnvironmentVariableEntry {
-  value?: string;
-  isSecret?: boolean;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
+export type { EnvironmentVariableEntry };
 
 /** Workspace data as used in the export/import system — id is optional since imports create new workspaces */
 export type WorkspaceData = Partial<Workspace> & { name: string; type: Workspace['type'] };
@@ -63,18 +58,17 @@ export interface ExportData {
 /** Individual rule entry stored in rules storage */
 export interface RuleEntry {
   id: string;
-  [key: string]: unknown;
+  name?: string;
+  enabled?: boolean;
+  pattern?: string;
+  matchType?: string;
+  ruleType?: string;
+  headers?: Array<{ name: string; value: string; operation?: string }>;
 }
 
-/** Rules storage structure */
-export interface RulesStorage {
-  rules: Record<string, RuleEntry[]>;
-  metadata: {
-    totalRules: number;
-    lastUpdated: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
+/** Rules storage structure — re-exports shared RulesStorage with extended rules map */
+export interface RulesStorage extends SharedRulesStorage {
+  rules: SharedRulesStorage['rules'] & Record<string, RuleEntry[]>;
 }
 
 /** Import data parsed from file */
@@ -83,11 +77,10 @@ export interface ImportData {
   sources?: Source[];
   proxyRules?: ProxyRule[];
   rules?: Record<string, RuleEntry[]>;
-  rulesMetadata?: Record<string, unknown>;
-  environments?: Record<string, Record<string, { value?: string; isSecret?: boolean; [key: string]: unknown }>>;
+  rulesMetadata?: { totalRules?: number; lastUpdated?: string };
+  environments?: Record<string, Record<string, EnvironmentVariableEntry>>;
   environmentSchema?: EnvironmentSchema;
   workspace?: WorkspaceData;
-  [key: string]: unknown;
 }
 
 /** Export options passed to the export handlers */
@@ -100,7 +93,8 @@ export interface ExportOptions {
   includeCredentials?: boolean;
   currentWorkspace?: WorkspaceData;
   appVersion?: string;
-  [key: string]: unknown;
+  // Handlers may attach extra context properties
+  [key: string]: string | boolean | string[] | WorkspaceData | Record<string, boolean> | undefined;
 }
 
 /** Import options passed to the import handlers */
@@ -113,5 +107,6 @@ export interface ImportOptions {
   workspaceInfo?: WorkspaceData;
   includeCredentials?: boolean;
   switchToNewWorkspace?: boolean;
-  [key: string]: unknown;
+  // Handlers may attach extra context properties
+  [key: string]: string | boolean | WorkspaceData | Record<string, boolean> | undefined;
 }

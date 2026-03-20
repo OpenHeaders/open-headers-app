@@ -7,14 +7,9 @@ import { createLogger } from '../../../../utils/error-handling/logger';
 import type { Workspace, WorkspaceSyncStatus, WorkspaceType, WorkspaceAuthData, CommitInfo, WorkspaceSyncCompletedData } from '../../../../../types/workspace';
 const log = createLogger('WorkspaceServiceAdapter');
 
-interface GitProgressEvent {
+interface AdapterGitProgressEvent {
     type: string;
-    data: {
-        summary?: Array<string | { step: string; status: string; details?: string; progress?: number }>;
-        message?: string;
-        progress?: number;
-        phase?: string;
-    };
+    data: GitProgressEvent;
 }
 
 interface GitResult {
@@ -73,7 +68,7 @@ interface ServiceAdapterDependencies {
  * Adapter for Git-related operations
  */
 class GitServiceAdapter {
-    progressListeners: Set<(event: GitProgressEvent) => void>;
+    progressListeners: Set<(event: AdapterGitProgressEvent) => void>;
 
     constructor() {
         this.progressListeners = new Set();
@@ -99,7 +94,7 @@ class GitServiceAdapter {
     async install() {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data: GitProgressEvent['data']) => {
+            const progressHandler = (data: GitProgressEvent) => {
                 this.progressListeners.forEach(listener => {
                     listener({ type: 'git-install', data });
                 });
@@ -151,7 +146,7 @@ class GitServiceAdapter {
     async commitConfiguration(config: GitConfig) {
         try {
             // Subscribe to progress updates
-            const progressHandler = (data: GitProgressEvent['data']) => {
+            const progressHandler = (data: GitProgressEvent) => {
                 this.progressListeners.forEach(listener => {
                     listener({ type: 'git-commit', data });
                 });
@@ -223,7 +218,7 @@ class GitServiceAdapter {
      * Returns unsubscribe function that should be called when done
      */
     subscribeToConnectionProgress() {
-        const progressHandler = (data: GitProgressEvent['data']) => {
+        const progressHandler = (data: GitProgressEvent) => {
             this.progressListeners.forEach(listener => {
                 listener({ type: 'git-connection', data });
             });
@@ -232,7 +227,7 @@ class GitServiceAdapter {
         return window.electronAPI.onGitConnectionProgress(progressHandler);
     }
 
-    onProgress(listener: (event: GitProgressEvent) => void): () => void {
+    onProgress(listener: (event: AdapterGitProgressEvent) => void): () => void {
         this.progressListeners.add(listener);
         return () => { this.progressListeners.delete(listener); };
     }

@@ -56,7 +56,7 @@ class TrayManager {
                         app.quit();
                     }
                 }
-            ] as any);
+            ]);
 
             this.tray.setContextMenu(contextMenu);
 
@@ -208,7 +208,7 @@ class TrayManager {
         }
     }
 
-    updateTray(settings: Record<string, unknown>) {
+    updateTray(settings: { showStatusBarIcon?: boolean; showDockIcon?: boolean }) {
         if (!settings) return;
 
         // Normalize settings to prevent type coercion issues
@@ -245,10 +245,10 @@ class TrayManager {
 
             if (showDockIcon) {
                 log.info('Showing dock icon');
-                (app as any).dock.show();
+                app.dock?.show();
             } else {
                 log.info('Hiding dock icon');
-                (app as any).dock.hide();
+                app.dock?.hide();
 
                 // Preserve window focus after hiding dock
                 // Note: Do NOT call window.show() here as it may cause macOS to re-show the dock

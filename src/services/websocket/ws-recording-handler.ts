@@ -21,7 +21,13 @@ const log = createLogger('WSRecordingHandler');
 interface WSServiceLike {
     appDataPath: string | null;
     _broadcastToAll(message: string): number;
-    _handleFocusApp(navigation: Record<string, unknown>): void;
+    _handleFocusApp(navigation: { tab: string; action?: string; itemId?: string }): void;
+}
+
+interface DisplayInfo {
+    currentDisplay?: { id: string | number; name?: string; bounds: { left: number; top: number; width: number; height: number } };
+    allDisplays?: Array<{ id: string | number; name?: string; bounds: { left: number; top: number; width: number; height: number } }>;
+    windowPosition?: { x: number; y: number };
 }
 
 interface RecordingOptions {
@@ -31,7 +37,7 @@ interface RecordingOptions {
     windowId?: string;
     tabId?: string;
     timestamp?: number;
-    displayInfo?: Record<string, unknown>;
+    displayInfo?: DisplayInfo;
 }
 
 interface VideoCaptureServiceLike {
@@ -76,7 +82,7 @@ interface StartSyncRecordingData {
     windowId?: string;
     tabId?: string;
     timestamp?: number;
-    displayInfo?: Record<string, unknown>;
+    displayInfo?: DisplayInfo;
 }
 
 interface StopSyncRecordingData {
@@ -250,7 +256,7 @@ class WSRecordingHandler {
     /**
      * Notify UI of recording processing progress
      */
-    notifyRecordingProgress(recordId: string, stage: string, progress: number, details: Record<string, unknown> = {}): void {
+    notifyRecordingProgress(recordId: string, stage: string, progress: number, details: { eventCount?: number } = {}): void {
         try {
             const { BrowserWindow } = electron;
             const windows = BrowserWindow.getAllWindows();
@@ -321,7 +327,7 @@ class WSRecordingHandler {
                     log.warn('Could not check proxy status:', errorMessage(error));
                 }
 
-                const onProgress = (stage: string, progress: number, details?: Record<string, unknown>) => {
+                const onProgress = (stage: string, progress: number, details?: { eventCount?: number }) => {
                     if (stage === 'preprocessing') {
                         const overallProgress = 10 + Math.round(progress * 0.15);
                         this.notifyRecordingProgress(recordId, 'preprocessing', overallProgress, {

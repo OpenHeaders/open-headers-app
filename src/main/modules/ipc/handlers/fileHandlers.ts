@@ -116,7 +116,7 @@ class FileHandlers {
             const fileWatchers = appLifecycle.getFileWatchers();
             if (fileWatchers.has(filePath)) {
                 const watcher = fileWatchers.get(filePath);
-                await watcher.close();
+                watcher?.close();
                 fileWatchers.delete(filePath);
                 log.info(`File watch removed for ${filePath}`);
                 return true;

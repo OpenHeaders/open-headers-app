@@ -1,6 +1,7 @@
 import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
+import type { NetworkState } from '../../../services/network/NetworkService';
 import webSocketService from '../../../services/websocket/ws-service';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
 import timeManager from '../../../services/core/TimeManager';
@@ -13,7 +14,7 @@ class NetworkHandlers {
     async initializeNetworkService() {
         log.info('Setting up network service event handlers...');
 
-        networkService.on('stateChanged', (event: { newState: Record<string, unknown>; oldState: Record<string, unknown>; version: number }) => {
+        networkService.on('stateChanged', (event: { newState: NetworkState; oldState: NetworkState; version: number }) => {
             log.info('NetworkService state changed event:', {
                 isOnline: event.newState.isOnline,
                 wasOnline: event.oldState.isOnline,
@@ -52,9 +53,9 @@ class NetworkHandlers {
 
         log.info('Network service initialized with state:', networkService.getState());
 
-        if (webSocketService && (webSocketService as any).networkStateHandler) {
+        if (webSocketService && webSocketService.networkStateHandler) {
             log.info('Connecting network service to WebSocket service...');
-            (webSocketService as any).networkStateHandler.initialize(networkService);
+            webSocketService.networkStateHandler.initialize(networkService);
         }
     }
 
@@ -83,8 +84,8 @@ class NetworkHandlers {
                     if (state) {
                         log.info('Network state after resume:', {
                             isOnline: state.isOnline,
-                            networkQuality: (state as any).networkQuality,
-                            vpnActive: (state as any).vpnActive
+                            networkQuality: state.networkQuality,
+                            vpnActive: state.vpnActive
                         });
                     }
 

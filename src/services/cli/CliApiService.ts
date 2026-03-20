@@ -8,7 +8,7 @@ import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
-import type { CliSetupHandler } from './CliSetupHandler';
+import type { CliSetupHandler, JoinWorkspaceData, EnvironmentImportData } from './CliSetupHandler';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -368,7 +368,7 @@ class CliApiService {
         }
         const result: Record<string, unknown> = {};
         const sensitiveKeys = ['token', 'password', 'secret', 'authData', 'sshKey', 'sshPassphrase', 'value'];
-        for (const [key, val] of Object.entries(obj as Record<string, unknown>)) {
+        for (const [key, val] of Object.entries(obj)) {
             if (sensitiveKeys.includes(key) && typeof val === 'string') {
                 result[key] = '***';
             } else if (typeof val === 'object' && val !== null) {
@@ -432,24 +432,24 @@ class CliApiService {
         const startTime = Date.now();
         res.setHeader('Content-Type', 'application/json');
 
-        const originalWriteHead = res.writeHead.bind(res);
         let loggedStatusCode = 200;
-        res.writeHead = (statusCode: number, ...args: unknown[]) => {
+        const origWriteHead = res.writeHead;
+        res.writeHead = function(this: http.ServerResponse, statusCode: number, ...rest: Parameters<typeof origWriteHead> extends [number, ...infer R] ? R : never[]) {
             loggedStatusCode = statusCode;
-            return (originalWriteHead as (...a: unknown[]) => http.ServerResponse)(statusCode, ...args);
-        };
+            return origWriteHead.call(this, statusCode, ...rest);
+        } as typeof res.writeHead;
 
-        const originalEnd = res.end.bind(res);
         let logErrorMessage: string | null = null;
-        res.end = (data?: unknown, ...args: unknown[]) => {
-            if (loggedStatusCode >= 400 && data) {
+        const origEnd = res.end;
+        res.end = function(this: http.ServerResponse, chunk?: string | Buffer | (() => void), ...rest: Parameters<typeof origEnd> extends [infer _, ...infer R] ? R : never[]) {
+            if (loggedStatusCode >= 400 && chunk && typeof chunk !== 'function') {
                 try {
-                    const parsed = JSON.parse(typeof data === 'string' ? data : String(data)) as Record<string, unknown>;
-                    logErrorMessage = (parsed.error as string) || null;
+                    const parsed: { error?: string } = JSON.parse(typeof chunk === 'string' ? chunk : String(chunk));
+                    logErrorMessage = parsed.error ?? null;
                 } catch { /* ignore */ }
             }
-            return (originalEnd as (...a: unknown[]) => http.ServerResponse)(data, ...args);
-        };
+            return origEnd.call(this, chunk, ...rest);
+        } as typeof res.end;
 
         const url = new URL(req.url || '/', `http://${CLI_HOST}:${this.port}`);
         const pathname = url.pathname;
@@ -518,7 +518,12 @@ class CliApiService {
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        const result = await this.setupHandler.joinWorkspace(body as import('./CliSetupHandler').JoinWorkspaceData);
+        if (!body || typeof body !== 'object') {
+            res.writeHead(400);
+            res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
+            return;
+        }
+        const result = await this.setupHandler.joinWorkspace(body as JoinWorkspaceData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }
@@ -529,7 +534,12 @@ class CliApiService {
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        const result = await this.setupHandler.importEnvironment(body as import('./CliSetupHandler').EnvironmentImportData);
+        if (!body || typeof body !== 'object') {
+            res.writeHead(400);
+            res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
+            return;
+        }
+        const result = await this.setupHandler.importEnvironment(body as EnvironmentImportData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }

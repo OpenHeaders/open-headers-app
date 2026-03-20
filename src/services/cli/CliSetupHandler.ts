@@ -8,7 +8,7 @@ import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
 import type { EnvironmentsFile, EnvironmentMap } from '../../types/environment';
 import type { HeaderRule } from '../../types/rules';
-import type { WorkspaceAuthData } from '../../types/workspace';
+import type { WorkspaceAuthData, AuthType } from '../../types/workspace';
 import type { Source } from '../../types/source';
 
 const { app } = electron;
@@ -63,21 +63,21 @@ class CliSetupHandler {
         }
 
         try {
-            const normalizedAuthType = authType || 'none';
+            const normalizedAuthType = (authType || 'none') as AuthType;
             const normalizedAuthData = this._normalizeAuthData(normalizedAuthType, authData);
 
             log.info(`Testing connection to ${repoUrl} (branch: ${branch || 'main'})`);
             const connectionResult = await gitSyncService.testConnection({
                 url: repoUrl,
                 branch: branch || 'main',
-                path: configPath || 'config/open-headers.json',
+                filePath: configPath || 'config/open-headers.json',
                 authType: normalizedAuthType,
                 authData: normalizedAuthData,
                 onProgress: () => {}
             });
 
             if (!connectionResult.success) {
-                return { success: false, error: `Connection test failed: ${connectionResult.message || connectionResult.error || 'Unknown error'}` };
+                return { success: false, error: `Connection test failed: ${connectionResult.error || 'Unknown error'}` };
             }
             log.info('Connection test passed');
 
@@ -104,8 +104,11 @@ class CliSetupHandler {
             });
 
             log.info(`Syncing workspace ${workspaceId}...`);
+            const repoDir = path.join(app.getPath('userData'), 'git-repos', workspaceId);
             const syncResult = await gitSyncService.syncWorkspace({
                 workspaceId,
+                workspaceName: uniqueName,
+                repoDir,
                 url: repoUrl,
                 branch: branch || 'main',
                 path: configPath || 'config/open-headers.json',
@@ -275,7 +278,7 @@ class CliSetupHandler {
         } catch { /* No rules yet */ }
     }
 
-    _notifyRenderer(channel: string, data: Record<string, unknown>): void {
+    _notifyRenderer(channel: string, data: { workspaceId?: string; timestamp: number }): void {
         if (this.mainWindow && !this.mainWindow.isDestroyed()) {
             this.mainWindow.webContents.send(channel, data);
         }

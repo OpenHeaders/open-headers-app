@@ -12,6 +12,7 @@ import WorkspaceSyncScheduler from '../../../services/workspace/WorkspaceSyncSch
 import networkService from '../../../services/network/NetworkService';
 import proxyService from '../../../services/proxy/ProxyService';
 import webSocketService from '../../../services/websocket/ws-service';
+import type { CliApiService } from '../../../services/cli/CliApiService';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
 const { app } = electron;
@@ -21,14 +22,16 @@ const log = createLogger('AppLifecycle');
 class AppLifecycle {
     isQuitting: boolean;
     _cleanupDone: boolean;
-    fileWatchers: Map<string, any>;
-    services: Map<string, any>;
+    fileWatchers: Map<string, fs.FSWatcher>;
+    private _gitSyncService: GitSyncService | null = null;
+    private _workspaceSettingsService: WorkspaceSettingsService | null = null;
+    private _workspaceSyncScheduler: WorkspaceSyncScheduler | null = null;
+    private _cliApiService: CliApiService | null = null;
 
     constructor() {
         this.isQuitting = false;
         this._cleanupDone = false;
         this.fileWatchers = new Map();
-        this.services = new Map(); // Replace global variables with instance storage
     }
 
     async initializeApp() {
@@ -50,14 +53,19 @@ class AppLifecycle {
     async initializeServices() {
         try {
             // Create services and store them in instance map
-            const gitSyncService = new (GitSyncService as any)();
-            const workspaceSettingsService = new (WorkspaceSettingsService as any)();
-            const workspaceSyncScheduler = new (WorkspaceSyncScheduler as any)(gitSyncService, workspaceSettingsService, networkService);
+            const gitSyncService = new GitSyncService();
+            const workspaceSettingsService = new WorkspaceSettingsService();
+            // WorkspaceSyncScheduler declares its own GitSyncService interface; structurally compatible at runtime
+            const workspaceSyncScheduler = new WorkspaceSyncScheduler(
+                gitSyncService as ConstructorParameters<typeof WorkspaceSyncScheduler>[0],
+                workspaceSettingsService as ConstructorParameters<typeof WorkspaceSyncScheduler>[1],
+                networkService
+            );
 
-            // Store services in instance map for later access
-            this.services.set('gitSyncService', gitSyncService);
-            this.services.set('workspaceSettingsService', workspaceSettingsService);
-            this.services.set('workspaceSyncScheduler', workspaceSyncScheduler);
+            // Store services for later access
+            this._gitSyncService = gitSyncService;
+            this._workspaceSettingsService = workspaceSettingsService;
+            this._workspaceSyncScheduler = workspaceSyncScheduler;
 
             // Initialize workspace settings first (dependency)
             await workspaceSettingsService.initialize();
@@ -101,7 +109,7 @@ class AppLifecycle {
                 const cliApiService = new CliApiService();
                 const cliSetupHandler = new CliSetupHandler();
                 cliApiService.setSetupHandler(cliSetupHandler);
-                this.services.set('cliApiService', cliApiService);
+                this._cliApiService = cliApiService;
                 await cliApiService.start();
             } catch (error: unknown) {
                 log.warn('CLI API server failed to start (non-critical):', errorMessage(error));
@@ -159,12 +167,14 @@ class AppLifecycle {
                         ['--hidden', '--autostart'] :
                         ['--hidden'];
 
-                    const autoLauncher = new AutoLaunch({
+                    // auto-launch supports args at runtime but @types/auto-launch doesn't declare it
+                    const autoLaunchOptions: ConstructorParameters<typeof AutoLaunch>[0] & { args?: string[] } = {
                         name: app.getName(),
                         path: app.getPath('exe'),
                         args: args,
                         isHidden: true
-                    } as any);
+                    };
+                    const autoLauncher = new AutoLaunch(autoLaunchOptions as ConstructorParameters<typeof AutoLaunch>[0]);
 
                     await autoLauncher.enable();
                     log.info('Auto-launch enabled for first-time user');
@@ -172,7 +182,7 @@ class AppLifecycle {
                     log.error('Error setting up auto-launch for first-time user:', autoLaunchError);
                 }
 
-                (global as any).isFirstRun = true;
+                (globalThis as typeof globalThis & { isFirstRun?: boolean }).isFirstRun = true;
             }
         } catch (err) {
             log.error('Error during first run setup:', err);
@@ -221,7 +231,7 @@ class AppLifecycle {
         }
 
         // Stop CLI API server first (fast, deletes cli.json)
-        const cliApiService = this.services.get('cliApiService');
+        const cliApiService = this.getCliApiService();
         if (cliApiService) {
             try {
                 await cliApiService.stop();
@@ -240,20 +250,20 @@ class AppLifecycle {
         }
     }
 
-    getGitSyncService() {
-        return this.services.get('gitSyncService');
+    getGitSyncService(): GitSyncService | null {
+        return this._gitSyncService;
     }
 
-    getWorkspaceSettingsService() {
-        return this.services.get('workspaceSettingsService');
+    getWorkspaceSettingsService(): WorkspaceSettingsService | null {
+        return this._workspaceSettingsService;
     }
 
-    getWorkspaceSyncScheduler() {
-        return this.services.get('workspaceSyncScheduler');
+    getWorkspaceSyncScheduler(): WorkspaceSyncScheduler | null {
+        return this._workspaceSyncScheduler;
     }
 
-    getCliApiService() {
-        return this.services.get('cliApiService');
+    getCliApiService(): CliApiService | null {
+        return this._cliApiService;
     }
 
     isCleanupDone() {
@@ -282,13 +292,13 @@ class AppLifecycle {
                 const settingsData = await fs.promises.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(settingsData);
 
-                if (process.platform === 'darwin') {
+                if (process.platform === 'darwin' && app.dock) {
                     if (settings.showDockIcon === false) {
                         log.info('Hiding dock icon at startup based on settings');
-                        (app as any).dock.hide();
+                        app.dock.hide();
                     } else {
                         log.info('Showing dock icon at startup based on settings');
-                        await (app as any).dock.show();
+                        await app.dock.show();
                     }
                 }
             } catch (accessError) {
