@@ -23,7 +23,7 @@ import {
   SyncManager,
   BroadcastManager
 } from './workspace';
-import type { RulesCollection } from './workspace';
+import type { RulesCollection, HeaderRule } from './workspace';
 
 const log = createLogger('CentralizedWorkspaceService');
 
@@ -615,7 +615,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Add a header rule
    */
-  async addHeaderRule(ruleData: Record<string, unknown>) {
+  async addHeaderRule(ruleData: Partial<HeaderRule>) {
     const rules = this.rulesManager.addHeaderRule(this.state.rules, ruleData);
     this.setState({ rules }, ['rules']);
 
@@ -630,7 +630,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Update a header rule
    */
-  async updateHeaderRule(ruleId: string, updates: Record<string, unknown>) {
+  async updateHeaderRule(ruleId: string, updates: Partial<HeaderRule>) {
     const rules = this.rulesManager.updateHeaderRule(this.state.rules, ruleId, updates);
     this.setState({ rules }, ['rules']);
 
@@ -1009,8 +1009,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
    * Setup workspace sync listener
    */
   setupSyncListener() {
-    const unsubscribe = this.syncManager.setupSyncListener((data: Record<string, unknown>) => {
-      const syncData = data as { workspaceId: string; success: boolean; error?: string; timestamp?: number; commitInfo?: CommitInfo; hasChanges?: boolean };
+    const unsubscribe = this.syncManager.setupSyncListener((syncData) => {
       const currentSyncStatus = { ...this.state.syncStatus };
 
       if (syncData.success) {
@@ -1093,8 +1092,8 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   setupCliJoinListener() {
     if (!window.electronAPI?.onCliWorkspaceJoined) return;
 
-    const unsubscribe = window.electronAPI.onCliWorkspaceJoined((data: Record<string, unknown>) => {
-      const workspaceId = data.workspaceId as string;
+    const unsubscribe = window.electronAPI.onCliWorkspaceJoined((data) => {
+      const workspaceId = data.workspaceId;
       log.info(`CLI workspace joined: ${workspaceId}, reloading workspace state`);
 
       void (async () => {

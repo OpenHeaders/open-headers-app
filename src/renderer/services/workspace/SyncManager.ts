@@ -2,10 +2,11 @@
  * SyncManager - Handles workspace synchronization
  */
 import { createLogger } from '../../utils/error-handling/logger';
+import type { WorkspaceSyncCompletedData } from '../../../types/workspace';
 const log = createLogger('SyncManager');
 
 interface SyncElectronAPI {
-  onWorkspaceSyncCompleted?: (callback: (data: Record<string, unknown>) => void) => (() => void);
+  onWorkspaceSyncCompleted?: (callback: (data: WorkspaceSyncCompletedData) => void) => (() => void);
   loadFromStorage: (filename: string) => Promise<string | null>;
 }
 
@@ -113,7 +114,7 @@ class SyncManager {
   /**
    * Setup sync status listener
    */
-  setupSyncListener(onSyncComplete: (data: Record<string, unknown>) => void) {
+  setupSyncListener(onSyncComplete: (data: WorkspaceSyncCompletedData) => void) {
     if (!this.electronAPI || !this.electronAPI.onWorkspaceSyncCompleted) {
       log.warn('Workspace sync listener not available in electronAPI');
       return () => {};

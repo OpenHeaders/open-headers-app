@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { App } from 'antd';
 import { prepareAuthData, formatValidationDetails } from '../../utils';
+import type { WorkspaceFormValues } from '../../utils/WorkspaceUtils';
 import { TIMING } from '../../constants';
 
 import { createLogger } from '../../../../../utils/error-handling/logger';
@@ -86,7 +87,7 @@ export const useGitActions = () => {
      * Tests Git connection with progress tracking
      * @param {Object} formValues - Form values for connection test
      */
-    const handleTestConnection = useCallback(async (formValues: Record<string,unknown>) => {
+    const handleTestConnection = useCallback(async (formValues: WorkspaceFormValues) => {
         if (!formValues.gitUrl) {
             message.warning('Please enter a Git repository URL');
             return;
@@ -102,7 +103,7 @@ export const useGitActions = () => {
         });
         
         try {
-            const authData = await prepareAuthData(formValues, formValues.authType as string);
+            const authData = await prepareAuthData(formValues, formValues.authType || 'none');
             
             const result = await window.electronAPI.testGitConnection({
                 url: formValues.gitUrl,

@@ -119,7 +119,7 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
      * Handles SSH key file browsing
      * @param {Object} form - Form instance
      */
-    const handleBrowseSSHKey = async (form: { setFieldsValue: (values: Record<string, unknown>) => void; [key: string]: unknown }) => {
+    const handleBrowseSSHKey = async (form: { setFieldsValue: (values: { sshKeyPath: string }) => void }) => {
         const filePath = await window.electronAPI.openFileDialog();
         if (filePath) {
             form.setFieldsValue({ sshKeyPath: filePath });

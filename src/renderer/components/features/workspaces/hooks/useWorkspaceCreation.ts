@@ -7,6 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { App } from 'antd';
 import WorkspaceCreationController, { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
 import { WORKSPACE_CREATION_STATES, type StateMachineContext, type StateChangeData } from '../state/WorkspaceCreationStateMachine';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('useWorkspaceCreation');
@@ -79,7 +80,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
      * @param {Object} options - Additional options
      * @returns {Promise<boolean>} Success status
      */
-    const createWorkspace = useCallback(async (formData: Record<string,unknown>, options = {}) => {
+    const createWorkspace = useCallback(async (formData: WorkspaceFormValues, options: { disableNotifications?: boolean } = {}) => {
         if (!controllerRef.current) {
             throw new Error('Controller not initialized');
         }
@@ -189,7 +190,7 @@ export const useWorkspaceCreation = (dependencies: WorkspaceCreationDependencies
         WORKSPACE_CREATION_STATES.CANCELLING,
         WORKSPACE_CREATION_STATES.CANCELLED
     ].includes(state) === false;
-    const progressMessage = getProgressMessage(state as string);
+    const progressMessage = getProgressMessage(state);
 
     return {
         // State
@@ -288,7 +289,7 @@ function getProgressFromState(state: string) {
         }
     };
 
-    return (progressMap as Record<string, { step: number; total: number; title: string; description: string }>)[state] || null;
+    return (progressMap as Record<string, ProgressState>)[state] || null;
 }
 
 /**

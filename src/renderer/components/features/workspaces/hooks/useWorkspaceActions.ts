@@ -5,7 +5,7 @@ import { useGitActions } from './git';
 import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
 import type { WorkspaceContextType } from '../services/WorkspaceServiceAdapter';
 import { useMemo } from 'react';
-import type { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 /**
  * Main orchestrator hook for workspace actions
@@ -22,7 +22,7 @@ export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
     }, [workspaceContext]);
 
     // Use new workspace creation hook
-    const workspaceCreation = useWorkspaceCreation(services as WorkspaceCreationDependencies);
+    const workspaceCreation = useWorkspaceCreation(services);
 
     // Keep existing hooks for backward compatibility
     const gitActions = useGitActions();
@@ -35,7 +35,7 @@ export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
     /**
      * Enhanced save workspace that uses new state machine architecture
      */
-    const handleSaveWorkspace = async (values: Record<string, unknown>, editingWorkspace: Record<string, unknown> | null) => {
+    const handleSaveWorkspace = async (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null) => {
         // Use new architecture for new workspaces
         if (!editingWorkspace) {
             return await workspaceCreation.createWorkspace(values);
@@ -45,11 +45,13 @@ export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
         const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
 
         if (saveResult.success && saveResult.result) {
-            const result = saveResult.result as { id?: string };
+            const result = typeof saveResult.result === 'object' && saveResult.result !== null && 'id' in saveResult.result
+                ? saveResult.result as { id: string }
+                : { id: Date.now().toString() };
             const workspace = {
                 ...values,
-                id: result.id || Date.now().toString(),
-                type: values.gitUrl ? 'git' : 'personal'
+                id: result.id,
+                type: values.gitUrl ? 'git' as const : 'personal' as const
             };
 
             // Handle sync operations for updated workspaces

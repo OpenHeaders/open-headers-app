@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DATA_FORMAT_VERSION } from '../../../src/config/version';
+import type { TeamWorkspaceInvite, Workspace, WorkspaceAuthData } from '../../../src/types/workspace';
 
 /**
  * Tests for pure logic extracted from WorkspaceHandlers.
@@ -17,19 +18,23 @@ function generateInviteId(): string {
 
 // ---------- buildInviteData ----------
 // Mirrors the invite-data construction inside handleGenerateTeamWorkspaceInvite
+interface InviteInput extends Partial<Workspace> {
+    includeAuthData?: boolean;
+}
+
 function buildInviteData(
-    workspaceData: any,
+    workspaceData: InviteInput,
     inviterName: string,
     inviteId: string
-): any {
-    const inviteData: any = {
+): TeamWorkspaceInvite {
+    const inviteData: TeamWorkspaceInvite = {
         version: DATA_FORMAT_VERSION,
-        workspaceName: workspaceData.name,
+        workspaceName: workspaceData.name || '',
         description: workspaceData.description,
-        repoUrl: workspaceData.gitUrl,
+        repoUrl: workspaceData.gitUrl || '',
         branch: workspaceData.gitBranch || 'main',
         configPath: workspaceData.gitPath || 'config/open-headers.json',
-        authType: workspaceData.authType,
+        authType: workspaceData.authType || 'none',
         inviterName,
         inviteId,
         createdAt: new Date().toISOString()
@@ -43,7 +48,7 @@ function buildInviteData(
 }
 
 // ---------- buildInviteLinks ----------
-function buildInviteLinks(payload: any): { appLink: string; webLink: string } {
+function buildInviteLinks(payload: TeamWorkspaceInvite): { appLink: string; webLink: string } {
     const zlib = require('zlib');
     const payloadJson = JSON.stringify(payload);
     const compressed = zlib.gzipSync(payloadJson, { level: 9 });
@@ -57,8 +62,26 @@ function buildInviteLinks(payload: any): { appLink: string; webLink: string } {
 
 // ---------- buildEnvConfigData ----------
 // Mirrors the environment data builder inside handleGenerateEnvironmentConfigLink
-function buildEnvConfigData(environmentData: any): any {
-    const envConfigData: any = {
+
+interface EnvVarData { value?: string; isSecret?: boolean }
+interface EnvSchemaVariable { name: string; isSecret?: boolean }
+interface EnvSchemaEnv { variables: EnvSchemaVariable[] }
+interface EnvSchema { environments: Record<string, EnvSchemaEnv> }
+
+interface EnvironmentInput {
+    environmentSchema?: EnvSchema;
+    environments?: Record<string, Record<string, EnvVarData>>;
+    includeValues?: boolean;
+}
+
+interface EnvConfigOutput {
+    version: string;
+    environmentSchema?: EnvSchema;
+    environments?: Record<string, Record<string, { value?: string; isSecret?: boolean }>>;
+}
+
+function buildEnvConfigData(environmentData: EnvironmentInput): EnvConfigOutput {
+    const envConfigData: EnvConfigOutput = {
         version: DATA_FORMAT_VERSION
     };
 
@@ -69,10 +92,10 @@ function buildEnvConfigData(environmentData: any): any {
     if (environmentData.environments) {
         if (environmentData.includeValues) {
             envConfigData.environments = {};
-            Object.entries(environmentData.environments).forEach(([envName, vars]: [string, any]) => {
-                envConfigData.environments[envName] = {};
-                Object.entries(vars).forEach(([varName, varData]: [string, any]) => {
-                    envConfigData.environments[envName][varName] = {
+            Object.entries(environmentData.environments).forEach(([envName, vars]) => {
+                envConfigData.environments![envName] = {};
+                Object.entries(vars).forEach(([varName, varData]) => {
+                    envConfigData.environments![envName][varName] = {
                         value: varData.value,
                         ...(varData.isSecret && { isSecret: varData.isSecret })
                     };
@@ -81,17 +104,17 @@ function buildEnvConfigData(environmentData: any): any {
         } else {
             envConfigData.environmentSchema = envConfigData.environmentSchema || { environments: {} };
 
-            Object.entries(environmentData.environments).forEach(([envName, vars]: [string, any]) => {
-                if (!envConfigData.environmentSchema.environments[envName]) {
-                    envConfigData.environmentSchema.environments[envName] = { variables: [] };
+            Object.entries(environmentData.environments).forEach(([envName, vars]) => {
+                if (!envConfigData.environmentSchema!.environments[envName]) {
+                    envConfigData.environmentSchema!.environments[envName] = { variables: [] };
                 }
 
-                Object.entries(vars).forEach(([varName, varData]: [string, any]) => {
-                    const existingVar = envConfigData.environmentSchema.environments[envName].variables
-                        .find((v: any) => v.name === varName);
+                Object.entries(vars).forEach(([varName, varData]) => {
+                    const existingVar = envConfigData.environmentSchema!.environments[envName].variables
+                        .find((v) => v.name === varName);
 
                     if (!existingVar) {
-                        envConfigData.environmentSchema.environments[envName].variables.push({
+                        envConfigData.environmentSchema!.environments[envName].variables.push({
                             name: varName,
                             isSecret: varData.isSecret || false
                         });
@@ -118,7 +141,21 @@ function buildWorkspacePath(userDataPath: string, workspaceId: string): string {
 }
 
 // ---------- default WebSocket status shape ----------
-function defaultWsStatus(): any {
+interface WsStatus {
+    totalConnections: number;
+    browserCounts: Record<string, number>;
+    clients: { id: string; browser: string; browserVersion: string; platform: string; connectionType: string; connectedAt: number; lastActivity: number; extensionVersion: string }[];
+    wsServerRunning: boolean;
+    wssServerRunning: boolean;
+    wsPort: number;
+    wssPort: number;
+    certificateFingerprint: string | null;
+    certificatePath: string | null;
+    certificateExpiry: string | null;
+    certificateSubject: string | null;
+}
+
+function defaultWsStatus(): WsStatus {
     return {
         totalConnections: 0,
         browserCounts: {},
@@ -253,10 +290,10 @@ describe('WorkspaceHandlers — pure logic', () => {
                 }
             };
             const result = buildEnvConfigData(envData);
-            expect(result.environments.production.API_KEY).toEqual({ value: 'key123', isSecret: true });
-            expect(result.environments.production.BASE_URL).toEqual({ value: 'https://api.com' });
+            expect(result.environments!.production.API_KEY).toEqual({ value: 'key123', isSecret: true });
+            expect(result.environments!.production.BASE_URL).toEqual({ value: 'https://api.com' });
             // updatedAt should be stripped
-            expect(result.environments.production.API_KEY.updatedAt).toBeUndefined();
+            expect((result.environments!.production.API_KEY as Record<string, unknown>).updatedAt).toBeUndefined();
         });
 
         it('extracts schema when includeValues is false', () => {
@@ -271,7 +308,7 @@ describe('WorkspaceHandlers — pure logic', () => {
             };
             const result = buildEnvConfigData(envData);
             expect(result.environments).toBeUndefined();
-            expect(result.environmentSchema.environments.staging.variables).toEqual([
+            expect(result.environmentSchema!.environments.staging.variables).toEqual([
                 { name: 'DB_HOST', isSecret: false },
                 { name: 'DB_PASS', isSecret: true }
             ]);
@@ -293,8 +330,8 @@ describe('WorkspaceHandlers — pure logic', () => {
                 }
             };
             const result = buildEnvConfigData(envData);
-            const devVars = result.environmentSchema.environments.dev.variables;
-            const existingCount = devVars.filter((v: any) => v.name === 'EXISTING').length;
+            const devVars = result.environmentSchema!.environments.dev.variables;
+            const existingCount = devVars.filter((v) => v.name === 'EXISTING').length;
             expect(existingCount).toBe(1);
             expect(devVars).toHaveLength(2);
         });

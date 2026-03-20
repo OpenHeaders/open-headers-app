@@ -11,15 +11,7 @@ import { showMessage } from './utils';
 import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
 import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
 import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
-
-/** Data for a team workspace invite */
-interface InviteData {
-    workspaceName: string;
-    repoUrl: string;
-    inviterName?: string;
-    description?: string;
-    [key: string]: unknown;
-}
+import type { TeamWorkspaceInvite } from '../types/workspace';
 
 /** Data for environment config import via protocol links */
 interface EnvironmentConfigData {
@@ -121,7 +113,7 @@ const AppComponent: React.FC = () => {
 
     // Team workspace invite processing
     const [inviteModalVisible, setInviteModalVisible] = useState(false);
-    const [inviteData, setInviteData] = useState<InviteData | null>(null);
+    const [inviteData, setTeamWorkspaceInvite] = useState<TeamWorkspaceInvite | null>(null);
 
     // Environment import data for protocol links
     const [preloadedEnvData, setPreloadedEnvData] = useState<EnvironmentConfigData | null>(null);
@@ -238,12 +230,12 @@ const AppComponent: React.FC = () => {
     // Handle team workspace invite processing
     const handleInviteSuccess = useCallback(() => {
         setInviteModalVisible(false);
-        setInviteData(null);
+        setTeamWorkspaceInvite(null);
     }, []);
 
     const handleInviteCancel = useCallback(() => {
         setInviteModalVisible(false);
-        setInviteData(null);
+        setTeamWorkspaceInvite(null);
     }, []);
 
     // Handle environment config import
@@ -275,7 +267,7 @@ const AppComponent: React.FC = () => {
                     throw new Error('Invalid invite data structure');
                 }
 
-                setInviteData(inviteRaw as unknown as InviteData);
+                setTeamWorkspaceInvite(inviteRaw as unknown as TeamWorkspaceInvite);
                 setInviteModalVisible(true);
                 setActiveTab('workspaces');
             } catch (error: unknown) {

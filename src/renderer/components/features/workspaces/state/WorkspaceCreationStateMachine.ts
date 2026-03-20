@@ -56,22 +56,7 @@ interface RollbackAction {
     paths?: string[];
 }
 
-interface InitialCommitData {
-    files?: unknown;
-    message?: string;
-    [key: string]: unknown;
-}
-
-export interface WorkspaceFormData {
-    name?: string;
-    type?: string;
-    initialCommit?: InitialCommitData;
-    gitUrl?: string;
-    gitBranch?: string;
-    gitPath?: string;
-    authType?: string;
-    [key: string]: unknown;
-}
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 interface GitStatus {
     isInstalled?: boolean;
@@ -90,18 +75,18 @@ interface SyncProgress {
 }
 
 interface TransitionEventPayload {
-    formData?: WorkspaceFormData;
+    formData?: WorkspaceFormValues;
     isTeamWorkspace?: boolean;
     error?: Error;
     gitStatus?: GitStatus;
     result?: ConnectionResult;
     workspaceId?: string;
     progress?: SyncProgress;
-    options?: Record<string, unknown>;
+    options?: { disableNotifications?: boolean };
 }
 
 export interface StateMachineContext {
-    formData: WorkspaceFormData | undefined;
+    formData: WorkspaceFormValues | undefined;
     workspaceId: string | undefined;
     gitStatus: GitStatus | undefined;
     connectionResult: ConnectionResult | undefined;

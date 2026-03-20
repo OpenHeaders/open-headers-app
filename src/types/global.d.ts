@@ -141,14 +141,14 @@ interface ElectronAPI {
   wsUntrustCert: () => Promise<{ success: boolean; error?: string }>;
 
   // Git
-  testGitConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: unknown; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
+  testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: import('./workspace').WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: unknown; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
   getGitStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } }>;
   installGit: () => Promise<{ success: boolean; message?: string; error?: string }>;
   syncGitWorkspace: (config: unknown) => Promise<{ success: boolean; error?: string }>;
   cleanupGitRepo: (gitUrl: string) => Promise<{ success: boolean; error?: string }>;
-  commitConfiguration: (config: unknown) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: unknown; files?: string[]; noChanges?: boolean; message?: string }>;
-  createBranch: (config: unknown) => Promise<{ success: boolean; error?: string; message?: string }>;
-  checkWritePermissions: (config: unknown) => Promise<{ success: boolean; error?: string; details?: unknown }>;
+  commitConfiguration: (config: { url?: string; branch?: string; path?: string; files?: unknown; message?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: import('./workspace').CommitInfo; files?: string[]; noChanges?: boolean; message?: string }>;
+  createBranch: (config: { url?: string; branch?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; message?: string }>;
+  checkWritePermissions: (config: { url?: string; branch?: string; authType?: string; authData?: import('./workspace').WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; details?: { canPush?: boolean; reason?: string } }>;
 
   // CLI API
   cliApiStatus: () => Promise<{
@@ -221,11 +221,11 @@ interface ElectronAPI {
   onGitCommitProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onGitInstallProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onFileChanged: (callback: (sourceId: string, content: string) => void) => (() => void);
-  onWorkspaceDataUpdated: (callback: (data: Record<string, unknown>) => void) => (() => void);
-  onWorkspaceSyncProgress: (callback: (data: Record<string, unknown>) => void) => (() => void);
-  onWorkspaceSyncCompleted: (callback: (data: Record<string, unknown>) => void) => (() => void);
-  onWorkspaceSyncStarted: (callback: (data: Record<string, unknown>) => void) => (() => void);
-  onCliWorkspaceJoined: (callback: (data: Record<string, unknown>) => void) => (() => void);
+  onWorkspaceDataUpdated: (callback: (data: import('./workspace').WorkspaceDataUpdatedData) => void) => (() => void);
+  onWorkspaceSyncProgress: (callback: (data: import('./workspace').WorkspaceSyncCompletedData) => void) => (() => void);
+  onWorkspaceSyncCompleted: (callback: (data: import('./workspace').WorkspaceSyncCompletedData) => void) => (() => void);
+  onWorkspaceSyncStarted: (callback: (data: import('./workspace').WorkspaceSyncCompletedData) => void) => (() => void);
+  onCliWorkspaceJoined: (callback: (data: import('./workspace').CliWorkspaceJoinedData) => void) => (() => void);
   onEnvironmentsStructureChanged: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onEnvironmentVariablesChanged: (callback: (data: Record<string, unknown>) => void) => (() => void);
   onWsConnectionStatusChanged: (callback: (data: Record<string, unknown>) => void) => (() => void);

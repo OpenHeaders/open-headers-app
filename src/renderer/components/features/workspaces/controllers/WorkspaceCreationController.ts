@@ -9,20 +9,33 @@ import WorkspaceCreationStateMachine, {
     type StateChangeData
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 import type { Workspace, WorkspaceType } from '../../../../../types/workspace';
 
 import { createLogger } from '../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceCreationController');
 
+interface GitConfig {
+    url?: string;
+    branch?: string;
+    authType?: string;
+    filePath?: string;
+    path?: string;
+    files?: Record<string, string> | unknown;
+    message?: string;
+    authData?: import('../../../../../types/workspace').WorkspaceAuthData;
+    checkWriteAccess?: boolean;
+}
+
 export interface WorkspaceCreationDependencies {
     gitService: {
         getStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string }>;
         install: () => Promise<{ success: boolean; error?: string; message?: string }>;
-        testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; message?: string }>;
-        commitConfiguration: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string }>;
+        testConnection: (config: GitConfig) => Promise<{ success: boolean; error?: string; message?: string }>;
+        commitConfiguration: (config: GitConfig) => Promise<{ success: boolean; error?: string }>;
     };
     workspaceService: {
-        create: (data: Record<string, unknown>) => Promise<Workspace | null>;
+        create: (data: Partial<Workspace> & { id: string; type: WorkspaceType }) => Promise<Workspace | null>;
     };
 }
 
@@ -46,7 +59,7 @@ class WorkspaceCreationController {
         this.stateMachine.addListener(this.handleStateChange);
     }
 
-    async create(formData: Record<string, unknown>, options: Record<string, unknown> = {}) {
+    async create(formData: WorkspaceFormValues, options: { disableNotifications?: boolean } = {}) {
         // Reset any existing operation
         this.reset();
         
@@ -126,17 +139,17 @@ class WorkspaceCreationController {
         this.stateMachine.transition(WORKSPACE_CREATION_EVENTS.WORKSPACE_ACTIVATED);
     }
 
-    async validateForm(formData: Record<string, unknown>) {
+    async validateForm(formData: WorkspaceFormValues) {
         this.checkAborted();
 
         // Validate required fields
-        if (!(formData.name as string)?.trim()) {
+        if (!formData.name?.trim()) {
             const error = new Error('Workspace name is required');
             this.stateMachine.setError(error);
             return;
         }
 
-        if (formData.type === 'team' && !(formData.gitUrl as string)?.trim()) {
+        if (formData.type === 'team' && !formData.gitUrl?.trim()) {
             const error = new Error('Git repository URL is required for team workspaces');
             this.stateMachine.setError(error);
             return;
@@ -145,7 +158,7 @@ class WorkspaceCreationController {
         // Validate Git URL format if provided
         if (formData.gitUrl) {
             try {
-                await this.validateGitUrl(formData.gitUrl as string);
+                await this.validateGitUrl(formData.gitUrl!);
             } catch (error) {
                 this.stateMachine.setError(error instanceof Error ? error : new Error(String(error)));
                 return;
@@ -157,7 +170,7 @@ class WorkspaceCreationController {
         });
     }
 
-    async handleGitOperations(formData: Record<string, unknown>) {
+    async handleGitOperations(formData: WorkspaceFormValues) {
         this.checkAborted();
         
         // Check Git status
@@ -226,21 +239,21 @@ class WorkspaceCreationController {
         }
     }
 
-    async testConnection(formData: Record<string, unknown>) {
+    async testConnection(formData: WorkspaceFormValues) {
         this.checkAborted();
         
         try {
             // Set timeout for connection test
             this.stateMachine.setTimeout('connection_test', 30000);
             
-            const authData = await prepareAuthData(formData, (formData.authType as string));
+            const authData = await prepareAuthData(formData, formData.authType || 'none');
 
             const connectionConfig = {
                 url: formData.gitUrl,
-                branch: (formData.gitBranch as string) || 'main',
-                authType: (formData.authType as string) || 'none',
+                branch: formData.gitBranch || 'main',
+                authType: formData.authType || 'none',
                 authData,
-                filePath: (formData.gitPath as string) || 'config/open-headers.json'
+                filePath: formData.gitPath || 'config/open-headers.json'
             };
             
             const result = await this.dependencies.gitService.testConnection(connectionConfig);
@@ -265,7 +278,7 @@ class WorkspaceCreationController {
         }
     }
 
-    async createWorkspace(formData: Record<string, unknown>) {
+    async createWorkspace(formData: WorkspaceFormValues) {
         this.checkAborted();
         
         try {
@@ -273,7 +286,7 @@ class WorkspaceCreationController {
             this.stateMachine.setTimeout('workspace_creation', 30000);
             
             const authData = formData.type === 'team' ?
-                await prepareAuthData(formData, (formData.authType as string)) :
+                await prepareAuthData(formData, formData.authType || 'none') :
                 undefined;
             
             const workspaceData = prepareWorkspaceData(formData, null, authData ?? {});
@@ -302,7 +315,7 @@ class WorkspaceCreationController {
 
     // Removed handlePostCreation since initial commit is now done before workspace creation
 
-    async performInitialCommit(formData: Record<string, unknown>) {
+    async performInitialCommit(formData: WorkspaceFormValues) {
         this.checkAborted();
         
         try {
@@ -315,16 +328,16 @@ class WorkspaceCreationController {
             this.stateMachine.setTimeout('initial_commit', 45000);
             
             // Prepare auth data
-            const authData = await prepareAuthData(formData, (formData.authType as string) || 'none');
+            const authData = await prepareAuthData(formData, formData.authType || 'none');
 
             // Commit configuration
-            const initialCommit = formData.initialCommit as Record<string, unknown>;
+            const initialCommit = formData.initialCommit;
             const commitConfig = {
                 url: formData.gitUrl,
-                branch: (formData.gitBranch as string) || 'main',
-                path: (formData.gitPath as string) || 'config/',
-                files: initialCommit.files,
-                message: initialCommit.message,
+                branch: formData.gitBranch || 'main',
+                path: formData.gitPath || 'config/',
+                files: initialCommit?.files,
+                message: initialCommit?.message,
                 authType: formData.authType || 'none',
                 authData
             };

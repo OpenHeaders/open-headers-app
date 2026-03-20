@@ -4,7 +4,7 @@
  */
 
 import { createLogger } from '../../../../utils/error-handling/logger';
-import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../../../types/workspace';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType, WorkspaceAuthData, CommitInfo, WorkspaceSyncCompletedData } from '../../../../../types/workspace';
 const log = createLogger('WorkspaceServiceAdapter');
 
 interface GitProgressEvent {
@@ -21,14 +21,14 @@ interface GitResult {
     message?: string;
     branches?: string[];
     configFileValid?: boolean;
-    validationDetails?: unknown;
+    validationDetails?: { sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; variableCount?: number };
     readAccess?: boolean;
     writeAccess?: boolean;
     commitHash?: string;
-    commitInfo?: unknown;
+    commitInfo?: CommitInfo;
     files?: string[];
     noChanges?: boolean;
-    details?: unknown;
+    details?: { canPush?: boolean; reason?: string };
 }
 
 interface GitConfig {
@@ -36,14 +36,17 @@ interface GitConfig {
     branch?: string;
     authType?: string;
     filePath?: string;
-    authData?: Record<string, unknown>;
+    path?: string;
+    files?: Record<string, string> | unknown;
+    message?: string;
+    authData?: WorkspaceAuthData;
     checkWriteAccess?: boolean;
-    [key: string]: unknown;
+    isInvite?: boolean;
 }
 
 interface SyncEvent {
     type: string;
-    data: unknown;
+    data: WorkspaceSyncCompletedData;
 }
 
 export interface WorkspaceContextType {
@@ -243,8 +246,8 @@ class WorkspaceServiceAdapter {
         this.workspaceContext = workspaceContext;
     }
 
-    async create(workspaceData: Record<string, unknown>): Promise<Workspace | null> {
-        const typed = workspaceData as Partial<Workspace> & { id: string; name: string; type: WorkspaceType };
+    async create(workspaceData: Partial<Workspace> & { id: string; type: WorkspaceType }): Promise<Workspace | null> {
+        const typed = { ...workspaceData, name: workspaceData.name || '' };
         const result = await this.workspaceContext.createWorkspace(typed);
 
         if (!result) {
@@ -381,7 +384,7 @@ class SyncServiceAdapter {
         return result;
     }
 
-    async syncWorkspace(workspaceId: string, options: Record<string, unknown> = {}) {
+    async syncWorkspace(workspaceId: string, options: { silent?: boolean } = {}) {
         const result = await window.electronAPI.syncWorkspace(workspaceId, options);
 
         if (!result.success) {
@@ -393,7 +396,7 @@ class SyncServiceAdapter {
         return result;
     }
 
-    onSyncCompleted(listener: (data: unknown) => void) {
+    onSyncCompleted(listener: (data: WorkspaceSyncCompletedData) => void) {
         const wrappedListener = (event: SyncEvent) => {
             if (event.type === 'sync-completed') {
                 listener(event.data);
