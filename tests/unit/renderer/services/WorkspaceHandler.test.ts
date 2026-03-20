@@ -29,122 +29,72 @@ function validWorkspace(overrides: Record<string, any> = {}) {
 }
 
 // ---------------------------------------------------------------------------
-// _sanitizeAuthData  (pure)
+// _sanitizeWorkspaceAuthData  (pure)
 // ---------------------------------------------------------------------------
-describe('WorkspaceHandler._sanitizeAuthData', () => {
+describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
   it('returns empty object for null input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._sanitizeAuthData(null)).toEqual({});
+    expect((handler as any)._sanitizeWorkspaceAuthData(null)).toEqual({});
   });
 
   it('returns empty object for non-object input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect((handler as any)._sanitizeAuthData('str')).toEqual({});
+    expect((handler as any)._sanitizeWorkspaceAuthData('str')).toEqual({});
   });
 
-  it('removes sensitive debugging fields', () => {
+  it('copies only known auth fields', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._sanitizeAuthData({
-      type: 'oauth',
-      debugInfo: 'secret',
-      lastError: 'err',
-      internalTokens: ['tok'],
-      otherField: 'keep',
+    const result = (handler as any)._sanitizeWorkspaceAuthData({
+      token: 'ghp_123',
+      tokenType: 'auto',
+      username: 'user',
+      password: 'pass',
+      sshKeyPath: '/path/to/key',
+      unknownField: 'should-be-excluded',
     });
-    expect(result.debugInfo).toBeUndefined();
-    expect(result.lastError).toBeUndefined();
-    expect(result.internalTokens).toBeUndefined();
-    expect(result.otherField).toBe('keep');
-  });
-
-  it('sanitizes tokens to essential fields only', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._sanitizeAuthData({
-      tokens: {
-        accessToken: 'at',
-        refreshToken: 'rt',
-        expiresAt: 123,
-        tokenType: 'Bearer',
-        internalMeta: 'should-be-removed',
-      },
-    });
-    expect(result.tokens).toEqual({
-      accessToken: 'at',
-      refreshToken: 'rt',
-      expiresAt: 123,
-      tokenType: 'Bearer',
-    });
-    expect(result.tokens.internalMeta).toBeUndefined();
-  });
-
-  it('preserves non-object tokens as-is', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._sanitizeAuthData({ tokens: 'plain' });
-    expect(result.tokens).toBe('plain');
+    expect(result.token).toBe('ghp_123');
+    expect(result.tokenType).toBe('auto');
+    expect(result.username).toBe('user');
+    expect(result.password).toBe('pass');
+    expect(result.sshKeyPath).toBe('/path/to/key');
+    expect(result.unknownField).toBeUndefined();
   });
 });
 
 // ---------------------------------------------------------------------------
-// _validateAndSanitizeAuthData  (pure with validation)
+// _validateAndSanitizeWorkspaceAuthData  (pure with validation)
 // ---------------------------------------------------------------------------
-describe('WorkspaceHandler._validateAndSanitizeAuthData', () => {
+describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
   it('throws for null input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeAuthData(null))
+    expect(() => (handler as any)._validateAndSanitizeWorkspaceAuthData(null))
       .toThrow('must be an object');
   });
 
   it('throws for non-object input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeAuthData('str'))
+    expect(() => (handler as any)._validateAndSanitizeWorkspaceAuthData('str'))
       .toThrow('must be an object');
   });
 
-  it('throws for OAuth without access token', () => {
+  it('accepts valid token auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeAuthData({
-      type: 'oauth',
-      tokens: {},
-    })).toThrow('missing required tokens');
-  });
-
-  it('throws for OAuth without tokens at all', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeAuthData({
-      type: 'oauth',
-    })).toThrow('missing required tokens');
-  });
-
-  it('throws for personal-token without token', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    expect(() => (handler as any)._validateAndSanitizeAuthData({
-      type: 'personal-token',
-    })).toThrow('missing token');
-  });
-
-  it('accepts valid OAuth auth data', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._validateAndSanitizeAuthData({
-      type: 'oauth',
-      tokens: { accessToken: 'abc', refreshToken: 'def' },
-    });
-    expect(result.type).toBe('oauth');
-    expect(result.tokens.accessToken).toBe('abc');
-  });
-
-  it('accepts valid personal-token auth data', () => {
-    const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._validateAndSanitizeAuthData({
-      type: 'personal-token',
+    const result = (handler as any)._validateAndSanitizeWorkspaceAuthData({
       token: 'ghp_123',
+      tokenType: 'auto',
     });
     expect(result.token).toBe('ghp_123');
+    expect(result.tokenType).toBe('auto');
   });
 
-  it('accepts auth data with no special type', () => {
+  it('accepts valid basic auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = (handler as any)._validateAndSanitizeAuthData({ type: 'none' });
-    expect(result.type).toBe('none');
+    const result = (handler as any)._validateAndSanitizeWorkspaceAuthData({
+      username: 'user',
+      password: 'pass',
+    });
+    expect(result.username).toBe('user');
+    expect(result.password).toBe('pass');
   });
 });
 
@@ -287,13 +237,14 @@ describe('WorkspaceHandler.exportWorkspace', () => {
       includeCredentials: false,
       currentWorkspace: {
         name: 'Test WS',
+        type: 'git',
         description: 'Desc',
         gitUrl: 'https://github.com/test',
       },
     });
 
     expect(result.name).toBe('Test WS');
-    expect(result.type).toBe(DEFAULTS.WORKSPACE_TYPE);
+    expect(result.type).toBe('git');
     expect(result.gitBranch).toBe(DEFAULTS.WORKSPACE_BRANCH);
     expect(result.gitPath).toBe(DEFAULTS.WORKSPACE_PATH);
     expect(result.authType).toBe(DEFAULTS.AUTH_TYPE);
@@ -310,12 +261,12 @@ describe('WorkspaceHandler.exportWorkspace', () => {
         name: 'Test WS',
         type: 'git',
         gitUrl: 'https://github.com/test',
-        authData: { type: 'oauth', tokens: { accessToken: 'at' } },
+        authData: { token: 'ghp_123', tokenType: 'auto' },
       },
     });
 
     expect(result.authData).toBeDefined();
-    expect(result.authData.type).toBe('oauth');
+    expect(result.authData.token).toBe('ghp_123');
   });
 
   it('omits credentials when not requested even if present', async () => {

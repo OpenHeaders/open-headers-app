@@ -2,39 +2,20 @@ import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../types/workspace';
 const log = createLogger('useWorkspaces');
 
-interface WorkspaceData {
-  id: string;
-  name: string;
-  type: string;
-  isPersonal?: boolean;
-  isTeam?: boolean;
-  gitUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  clonedFrom?: string;
-  metadata?: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-interface WorkspaceSyncStatusEntry {
-  syncing: boolean;
-  lastSync?: string | null;
-  error?: string | null;
-}
-
 interface UseWorkspacesReturn {
-  workspaces: WorkspaceData[];
+  workspaces: Workspace[];
   activeWorkspaceId: string;
-  syncStatus: Record<string, WorkspaceSyncStatusEntry>;
+  syncStatus: Record<string, WorkspaceSyncStatus>;
   loading: boolean;
-  createWorkspace: (workspace: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+  createWorkspace: (workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }) => Promise<Workspace | null>;
   switchWorkspace: (workspaceId: string) => Promise<boolean>;
   deleteWorkspace: (workspaceId: string) => Promise<boolean>;
-  updateWorkspace: (workspaceId: string, updates: Record<string, unknown>) => Promise<boolean>;
+  updateWorkspace: (workspaceId: string, updates: Partial<Workspace>) => Promise<boolean>;
   syncWorkspace: (workspaceId: string, options?: { silent?: boolean }) => Promise<boolean>;
-  cloneWorkspaceToPersonal: (workspaceId: string, newName?: string | null) => Promise<WorkspaceData | null>;
+  cloneWorkspaceToPersonal: (workspaceId: string, newName?: string | null) => Promise<Workspace | null>;
 }
 
 /**
@@ -42,26 +23,25 @@ interface UseWorkspacesReturn {
  */
 export function useWorkspaces(): UseWorkspacesReturn {
   const {
-    workspaces: rawWorkspaces,
+    workspaces,
     activeWorkspaceId,
     syncStatus,
     loading,
     service
   } = useCentralizedWorkspace();
-  const workspaces = rawWorkspaces as WorkspaceData[];
 
-  const createWorkspace = useCallback(async (workspace: Record<string, unknown>): Promise<Record<string, unknown> | null> => {
+  const createWorkspace = useCallback(async (workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }): Promise<Workspace | null> => {
     try {
       // Ensure workspace has an ID
-      const workspaceData: Record<string, unknown> = {
+      const workspaceData = {
         ...workspace,
-        id: (workspace.id as string) || Date.now().toString()
+        id: workspace.id || Date.now().toString()
       };
 
       // Use the service method to create workspace (handles validation, data init, and auto-switch)
       const result = await service.createWorkspace(workspaceData);
 
-      showMessage('success', `Workspace '${String(workspaceData.name || '')}' created and activated`);
+      showMessage('success', `Workspace '${workspaceData.name}' created and activated`);
       return result;
     } catch (error: unknown) {
       showMessage('error', error instanceof Error ? error.message : String(error));
@@ -105,7 +85,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
     }
   }, [service]);
 
-  const updateWorkspace = useCallback(async (workspaceId: string, updates: Record<string, unknown>): Promise<boolean> => {
+  const updateWorkspace = useCallback(async (workspaceId: string, updates: Partial<Workspace>): Promise<boolean> => {
     try {
       // Use the service method to update workspace
       const result = await service.updateWorkspace(workspaceId, updates);
@@ -113,7 +93,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
       if (result) {
         // If this is the active workspace and it's a git workspace, notify main process
         // to handle auto-sync changes
-        const workspace = (service.state.workspaces as WorkspaceData[]).find((w: WorkspaceData) => w.id === workspaceId);
+        const workspace = service.state.workspaces.find(w => w.id === workspaceId);
         if (workspaceId === activeWorkspaceId && workspace?.type === 'git') {
           if (window.electronAPI && window.electronAPI.send) {
             window.electronAPI.send('workspace-updated', {
@@ -134,7 +114,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
 
   const syncWorkspace = useCallback(async (workspaceId: string, options: { silent?: boolean } = {}): Promise<boolean> => {
     try {
-      const workspace = workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+      const workspace = workspaces.find(w => w.id === workspaceId);
       if (!workspace) {
         throw new Error('Workspace not found');
       }
@@ -198,9 +178,9 @@ export function useWorkspaces(): UseWorkspacesReturn {
     }
   }, [service, workspaces, activeWorkspaceId]);
 
-  const cloneWorkspaceToPersonal = useCallback(async (workspaceId: string, newName: string | null = null): Promise<WorkspaceData | null> => {
+  const cloneWorkspaceToPersonal = useCallback(async (workspaceId: string, newName: string | null = null): Promise<Workspace | null> => {
     try {
-      const workspace = workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+      const workspace = workspaces.find(w => w.id === workspaceId);
       if (!workspace) {
         throw new Error('Workspace not found');
       }
@@ -210,7 +190,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
         ...workspace,
         id: `personal-${Date.now()}`,
         name: newName || `${workspace.name} (Personal Copy)`,
-        type: 'personal',
+        type: 'personal' as const,
         isPersonal: true,
         isTeam: false,
         gitUrl: undefined,
@@ -220,7 +200,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
 
       // First, create the workspace without switching to it
       // We'll manually handle the creation to avoid auto-switch
-      const newWorkspace = await service.workspaceManager.createWorkspace(service.state.workspaces, clonedWorkspace);
+      const newWorkspace = service.workspaceManager.createWorkspace(service.state.workspaces, clonedWorkspace);
 
       // Add to workspaces list
       const updatedWorkspaces = [...service.state.workspaces, newWorkspace];
@@ -239,7 +219,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
       await service.switchWorkspace(newWorkspace.id);
 
       showMessage('success', `Created personal copy of '${workspace.name}' and switched to it`);
-      return newWorkspace as WorkspaceData;
+      return newWorkspace;
     } catch (error: unknown) {
       showMessage('error', error instanceof Error ? error.message : String(error));
       return null;
@@ -249,7 +229,7 @@ export function useWorkspaces(): UseWorkspacesReturn {
   return {
     workspaces,
     activeWorkspaceId,
-    syncStatus: syncStatus as Record<string, WorkspaceSyncStatusEntry>,
+    syncStatus,
     loading,
     createWorkspace,
     switchWorkspace,

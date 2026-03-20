@@ -23,7 +23,7 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
 
             // Show overlay when switching starts
             if (step === 'saving') {
-                const targetWorkspace = workspace || workspaces.find((w: Record<string, unknown>) => w.id === workspaceId);
+                const targetWorkspace = workspace || workspaces.find(w => w.id === workspaceId);
                 startSwitch(targetWorkspace);
             }
         };
@@ -33,7 +33,7 @@ export const useWorkspaceSwitchIntegration = (): UseWorkspaceSwitchIntegrationRe
             console.log('[WorkspaceSwitch] Received workspace-data-applied event, calling completeSwitch');
 
             // Get the workspace that was switched to
-            const currentWorkspace = workspaces.find((w: Record<string, unknown>) => w.id === activeWorkspaceId);
+            const currentWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
             const workspaceName = String(switchState.targetWorkspace?.name || currentWorkspace?.name || 'workspace');
 
             // Calculate how long the overlay has been shown

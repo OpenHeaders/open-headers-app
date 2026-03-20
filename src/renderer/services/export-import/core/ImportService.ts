@@ -18,21 +18,10 @@ import {
 } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ImportData } from './types';
+import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ImportService');
-
-/** Import options configuration */
-interface ImportOptions {
-  fileContent: string;
-  envFileContent?: string;
-  selectedItems: Record<string, boolean>;
-  importMode?: string;
-  isGitSync?: boolean;
-  workspaceInfo?: Record<string, unknown>;
-  [key: string]: unknown;
-}
 
 /** Import statistics */
 interface ImportStats {

@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
+import type { Workspace } from '../../types/workspace';
 import type { Source } from '../../types/source';
 
 const { createLogger } = mainLogger;
@@ -94,7 +95,7 @@ class WSSourceHandler {
                         }
 
                         const workspaceList = JSON.parse(await fs.promises.readFile(workspacesPath, 'utf8')).workspaces || [];
-                        const activeWorkspace = workspaceList.find((w: { id: string; type?: string }) => w.id === activeWorkspaceId);
+                        const activeWorkspace = workspaceList.find((w: Workspace) => w.id === activeWorkspaceId);
 
                         if (activeWorkspace && (activeWorkspace.type === 'git' || activeWorkspace.type === 'team')) {
                             const sourcesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');

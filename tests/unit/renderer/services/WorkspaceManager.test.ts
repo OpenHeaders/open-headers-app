@@ -42,8 +42,8 @@ describe('WorkspaceManager', () => {
       type: 'personal' as const,
     };
 
-    it('creates a workspace with proper defaults', async () => {
-      const result = await manager.createWorkspace([], baseWorkspace);
+    it('creates a workspace with proper defaults', () => {
+      const result = manager.createWorkspace([], baseWorkspace);
       expect(result.id).toBe('test-ws');
       expect(result.name).toBe('Test Workspace');
       expect(result.isPersonal).toBe(true);
@@ -55,75 +55,75 @@ describe('WorkspaceManager', () => {
       expect(result.updatedAt).toBeDefined();
     });
 
-    it('sets isDefault true only for default-personal', async () => {
+    it('sets isDefault true only for default-personal', () => {
       const ws = { ...baseWorkspace, id: 'default-personal' };
-      const result = await manager.createWorkspace([], ws);
+      const result = manager.createWorkspace([], ws);
       expect(result.isDefault).toBe(true);
     });
 
-    it('sets isTeam true for team type', async () => {
-      const ws = { ...baseWorkspace, type: 'team' };
-      const result = await manager.createWorkspace([], ws);
+    it('sets isTeam true for team type', () => {
+      const ws = { ...baseWorkspace, type: 'team' as const };
+      const result = manager.createWorkspace([], ws);
       expect(result.isTeam).toBe(true);
       expect(result.isPersonal).toBe(false);
     });
 
-    it('sets isTeam true for git type', async () => {
+    it('sets isTeam true for git type', () => {
       const ws = {
         ...baseWorkspace,
-        type: 'git',
+        type: 'git' as const,
         gitUrl: 'https://github.com/test/repo',
       };
-      const result = await manager.createWorkspace([], ws);
+      const result = manager.createWorkspace([], ws);
       expect(result.isTeam).toBe(true);
     });
 
-    it('throws on duplicate ID', async () => {
-      const existing = [{ id: 'test-ws' }];
-      await expect(
+    it('throws on duplicate ID', () => {
+      const existing = [{ id: 'test-ws', name: 'Test', type: 'personal' as const }];
+      expect(() =>
         manager.createWorkspace(existing, baseWorkspace)
-      ).rejects.toThrow('already exists');
+      ).toThrow('already exists');
     });
 
-    it('throws when name is missing', async () => {
-      await expect(
+    it('throws when name is missing', () => {
+      expect(() =>
         manager.createWorkspace([], { id: 'x', name: '', type: 'personal' })
-      ).rejects.toThrow('must have name and type');
+      ).toThrow('must have name and type');
     });
 
-    it('throws when type is missing', async () => {
-      await expect(
-        manager.createWorkspace([], { id: 'x', name: 'Y', type: '' })
-      ).rejects.toThrow('must have name and type');
+    it('throws when type is missing', () => {
+      expect(() =>
+        manager.createWorkspace([], { id: 'x', name: 'Y', type: '' as 'personal' })
+      ).toThrow('must have name and type');
     });
 
-    it('throws on invalid workspace type', async () => {
-      await expect(
-        manager.createWorkspace([], { id: 'x', name: 'Y', type: 'invalid' })
-      ).rejects.toThrow('Invalid workspace type');
+    it('throws on invalid workspace type', () => {
+      expect(() =>
+        manager.createWorkspace([], { id: 'x', name: 'Y', type: 'invalid' as 'personal' })
+      ).toThrow('Invalid workspace type');
     });
 
-    it('throws when name is too long (>100 chars)', async () => {
+    it('throws when name is too long (>100 chars)', () => {
       const longName = 'a'.repeat(101);
-      await expect(
+      expect(() =>
         manager.createWorkspace([], { id: 'x', name: longName, type: 'personal' })
-      ).rejects.toThrow('between 1 and 100');
+      ).toThrow('between 1 and 100');
     });
 
-    it('allows name of exactly 100 characters', async () => {
+    it('allows name of exactly 100 characters', () => {
       const name100 = 'a'.repeat(100);
-      const result = await manager.createWorkspace([], { id: 'x', name: name100, type: 'personal' });
+      const result = manager.createWorkspace([], { id: 'x', name: name100, type: 'personal' });
       expect(result.name).toBe(name100);
     });
 
-    it('throws on invalid ID format (special chars)', async () => {
-      await expect(
+    it('throws on invalid ID format (special chars)', () => {
+      expect(() =>
         manager.createWorkspace([], { id: 'bad id!', name: 'Y', type: 'personal' })
-      ).rejects.toThrow('letters, numbers, hyphens, and underscores');
+      ).toThrow('letters, numbers, hyphens, and underscores');
     });
 
-    it('allows hyphens and underscores in ID', async () => {
-      const result = await manager.createWorkspace([], {
+    it('allows hyphens and underscores in ID', () => {
+      const result = manager.createWorkspace([], {
         id: 'my-test_ws',
         name: 'Y',
         type: 'personal',
@@ -131,25 +131,25 @@ describe('WorkspaceManager', () => {
       expect(result.id).toBe('my-test_ws');
     });
 
-    it('throws when git workspace has no gitUrl', async () => {
-      await expect(
+    it('throws when git workspace has no gitUrl', () => {
+      expect(() =>
         manager.createWorkspace([], { id: 'x', name: 'Y', type: 'git' })
-      ).rejects.toThrow('must have a gitUrl');
+      ).toThrow('must have a gitUrl');
     });
 
-    it('throws on invalid git URL format', async () => {
-      await expect(
+    it('throws on invalid git URL format', () => {
+      expect(() =>
         manager.createWorkspace([], {
           id: 'x',
           name: 'Y',
           type: 'git',
           gitUrl: 'ftp://example.com',
         })
-      ).rejects.toThrow('Invalid git URL format');
+      ).toThrow('Invalid git URL format');
     });
 
-    it('accepts valid https git URL', async () => {
-      const result = await manager.createWorkspace([], {
+    it('accepts valid https git URL', () => {
+      const result = manager.createWorkspace([], {
         id: 'x',
         name: 'Y',
         type: 'git',
@@ -158,8 +158,8 @@ describe('WorkspaceManager', () => {
       expect(result.id).toBe('x');
     });
 
-    it('accepts valid ssh git URL', async () => {
-      const result = await manager.createWorkspace([], {
+    it('accepts valid ssh git URL', () => {
+      const result = manager.createWorkspace([], {
         id: 'x',
         name: 'Y',
         type: 'git',
@@ -168,8 +168,8 @@ describe('WorkspaceManager', () => {
       expect(result.id).toBe('x');
     });
 
-    it('accepts ssh:// git URL', async () => {
-      const result = await manager.createWorkspace([], {
+    it('accepts ssh:// git URL', () => {
+      const result = manager.createWorkspace([], {
         id: 'x',
         name: 'Y',
         type: 'git',
@@ -178,9 +178,9 @@ describe('WorkspaceManager', () => {
       expect(result.id).toBe('x');
     });
 
-    it('preserves provided createdAt', async () => {
+    it('preserves provided createdAt', () => {
       const timestamp = '2024-01-01T00:00:00.000Z';
-      const result = await manager.createWorkspace([], {
+      const result = manager.createWorkspace([], {
         ...baseWorkspace,
         createdAt: timestamp,
       });
@@ -193,9 +193,9 @@ describe('WorkspaceManager', () => {
   // ========================================================================
   describe('validateWorkspaceExists', () => {
     it('returns workspace when it exists', () => {
-      const workspaces = [{ id: 'ws-1', name: 'One' }];
+      const workspaces = [{ id: 'ws-1', name: 'One', type: 'personal' as const }];
       const result = manager.validateWorkspaceExists(workspaces, 'ws-1');
-      expect(result).toEqual({ id: 'ws-1', name: 'One' });
+      expect(result).toEqual({ id: 'ws-1', name: 'One', type: 'personal' });
     });
 
     it('throws when workspace does not exist', () => {

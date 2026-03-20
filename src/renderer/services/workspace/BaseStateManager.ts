@@ -3,7 +3,7 @@
  */
 import { createLogger } from '../../utils/error-handling/logger';
 
-class BaseStateManager<TState extends Record<string, unknown> = Record<string, unknown>> {
+class BaseStateManager<TState extends object = Record<string, unknown>> {
   serviceName: string;
   log: ReturnType<typeof createLogger>;
   listeners: Set<(state: TState, changedKeys: string[]) => void>;

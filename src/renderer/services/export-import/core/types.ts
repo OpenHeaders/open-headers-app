@@ -9,6 +9,7 @@ export interface EnvironmentSchema {
 }
 
 import type { Source } from '../../../../types/source';
+import type { Workspace } from '../../../../types/workspace';
 
 /** A single environment variable entry as stored in the environment service */
 export interface EnvironmentVariableEntry {
@@ -18,8 +19,8 @@ export interface EnvironmentVariableEntry {
   [key: string]: unknown;
 }
 
-/** Workspace data object as used in the export/import system */
-export type WorkspaceData = Record<string, unknown>;
+/** Workspace data as used in the export/import system — id is optional since imports create new workspaces */
+export type WorkspaceData = Partial<Workspace> & { name: string; type: Workspace['type'] };
 
 /**
  * All dependencies required by ExportService, ImportService, and their handlers.

@@ -4,12 +4,15 @@
  */
 
 import { createLogger } from '../../../../utils/error-handling/logger';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../../../types/workspace';
 const log = createLogger('WorkspaceServiceAdapter');
 
 interface GitProgressEvent {
     type: string;
-    data: unknown;
-    [key: string]: unknown;
+    data: {
+        summary?: Array<string | { step: string; status: string; details?: string; progress?: number }>;
+        [key: string]: unknown;
+    };
 }
 
 interface GitResult {
@@ -29,11 +32,12 @@ interface GitResult {
 }
 
 interface GitConfig {
-    [key: string]: unknown;
-}
-
-interface WorkspaceData {
-    id?: string;
+    url?: string;
+    branch?: string;
+    authType?: string;
+    filePath?: string;
+    authData?: Record<string, unknown>;
+    checkWriteAccess?: boolean;
     [key: string]: unknown;
 }
 
@@ -42,17 +46,17 @@ interface SyncEvent {
     data: unknown;
 }
 
-interface WorkspaceContextType {
-    createWorkspace: (data: WorkspaceData) => Promise<WorkspaceData | null | boolean>;
-    updateWorkspace: (id: string, data: Partial<WorkspaceData>) => Promise<WorkspaceData | null | boolean>;
-    deleteWorkspace: (id: string) => Promise<boolean | { success: boolean; message?: string }>;
-    getWorkspaces?: () => Promise<WorkspaceData[]>;
-    workspaces?: WorkspaceData[];
-    switchWorkspace?: (id: string) => Promise<unknown>;
-    syncWorkspace?: (id: string, options?: Record<string, unknown>) => Promise<unknown>;
-    cloneWorkspaceToPersonal?: (id: string, newName?: string | null) => Promise<unknown>;
+export interface WorkspaceContextType {
+    createWorkspace: (data: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }) => Promise<Workspace | null>;
+    updateWorkspace: (id: string, data: Partial<Workspace>) => Promise<boolean>;
+    deleteWorkspace: (id: string) => Promise<boolean>;
+    getWorkspaces?: () => Promise<Workspace[]>;
+    workspaces?: Workspace[];
+    switchWorkspace?: (id: string) => Promise<boolean>;
+    syncWorkspace?: (id: string, options?: { silent?: boolean }) => Promise<boolean>;
+    cloneWorkspaceToPersonal?: (id: string, newName?: string | null) => Promise<Workspace | null>;
     activeWorkspaceId?: string;
-    syncStatus?: Record<string, { syncing?: boolean; error?: string | null; lastSync?: string | null }>;
+    syncStatus?: Record<string, WorkspaceSyncStatus>;
     loading?: boolean;
 }
 
@@ -92,7 +96,7 @@ class GitServiceAdapter {
             // Subscribe to progress updates
             const progressHandler = (data: unknown) => {
                 this.progressListeners.forEach(listener => {
-                    listener({ type: 'git-install', data });
+                    listener({ type: 'git-install', data: data as GitProgressEvent['data'] });
                 });
             };
 
@@ -144,7 +148,7 @@ class GitServiceAdapter {
             // Subscribe to progress updates
             const progressHandler = (data: unknown) => {
                 this.progressListeners.forEach(listener => {
-                    listener({ type: 'git-commit', data });
+                    listener({ type: 'git-commit', data: data as GitProgressEvent['data'] });
                 });
             };
 
@@ -216,7 +220,7 @@ class GitServiceAdapter {
     subscribeToConnectionProgress() {
         const progressHandler = (data: unknown) => {
             this.progressListeners.forEach(listener => {
-                listener({ type: 'git-connection', data });
+                listener({ type: 'git-connection', data: data as GitProgressEvent['data'] });
             });
         };
 
@@ -239,26 +243,24 @@ class WorkspaceServiceAdapter {
         this.workspaceContext = workspaceContext;
     }
 
-    async create(workspaceData: WorkspaceData) {
-        const result = await this.workspaceContext.createWorkspace(workspaceData);
+    async create(workspaceData: Record<string, unknown>): Promise<Workspace | null> {
+        const typed = workspaceData as Partial<Workspace> & { id: string; name: string; type: WorkspaceType };
+        const result = await this.workspaceContext.createWorkspace(typed);
 
-        if (!result || typeof result === 'boolean') {
+        if (!result) {
             const error = new Error('Workspace creation returned null');
             log.error('Failed to create workspace:', error);
             throw error;
         }
 
-        return {
-            id: result.id || workspaceData.id,
-            ...result
-        };
+        return result;
     }
 
-    async update(workspaceId: string, workspaceData: WorkspaceData) {
+    async update(workspaceId: string, workspaceData: Partial<Workspace>) {
         const result = await this.workspaceContext.updateWorkspace(workspaceId, workspaceData);
 
-        if (!result || typeof result === 'boolean') {
-            const error = new Error('Workspace update returned null');
+        if (!result) {
+            const error = new Error('Workspace update failed');
             log.error('Failed to update workspace:', error);
             throw error;
         }
@@ -285,9 +287,9 @@ class WorkspaceServiceAdapter {
     async get(workspaceId: string) {
         if (this.workspaceContext.getWorkspaces) {
             const workspaces = await this.workspaceContext.getWorkspaces();
-            return workspaces.find((w: WorkspaceData) => w.id === workspaceId);
+            return workspaces.find(w => w.id === workspaceId);
         }
-        return (this.workspaceContext.workspaces || []).find((w: WorkspaceData) => w.id === workspaceId);
+        return (this.workspaceContext.workspaces || []).find(w => w.id === workspaceId);
     }
 
     async list() {

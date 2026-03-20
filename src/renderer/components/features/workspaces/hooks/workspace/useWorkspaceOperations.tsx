@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { App } from 'antd';
 import { prepareAuthData, prepareWorkspaceData } from '../../utils';
+import type { WorkspaceFormValues } from '../../utils/WorkspaceUtils';
+import type { WorkspaceContextType } from '../../services/WorkspaceServiceAdapter';
 
 import { createLogger } from '../../../../../utils/error-handling/logger';
 const log = createLogger('WorkspaceOperations');
 
 /**
  * Custom hook for workspace CRUD operations
- * 
+ *
  * Handles workspace creation, updating, deletion, and cloning
  * with proper error handling and user feedback.
- * 
- * @param {Object} workspaceContext - Workspace context object
- * @returns {Object} Workspace operations and state
  */
-export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (data: Record<string, unknown>) => Promise<unknown>; updateWorkspace: (id: string, data: Record<string, unknown>) => Promise<unknown>; deleteWorkspace: (id: string) => Promise<boolean>; cloneWorkspaceToPersonal?: (id: string, name: string) => Promise<boolean>; [key: string]: unknown }) => {
+export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) => {
     const { message, modal } = App.useApp();
     const {
         createWorkspace,
@@ -31,15 +30,19 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
      * @param {Object} editingWorkspace - Workspace being edited (if any)
      * @returns {Promise<Object>} Save result with success status and result data
      */
-    const handleSaveWorkspace = async (values: Record<string,unknown>, editingWorkspace: Record<string,unknown> | null) => {
+    const handleSaveWorkspace = async (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null) => {
         setLoading(true);
         try {
-            const authData = await prepareAuthData(values, values.authType as string);
+            const authData = await prepareAuthData(values, values.authType || 'none');
             const workspace = prepareWorkspaceData(values, editingWorkspace, authData);
 
+            if (!workspace.name) {
+                throw new Error('Workspace name is required');
+            }
+
             const result = editingWorkspace
-                ? await updateWorkspace(workspace.id as string, workspace)
-                : await createWorkspace(workspace);
+                ? await updateWorkspace(workspace.id, workspace)
+                : await createWorkspace({ ...workspace, name: workspace.name, type: workspace.type, id: workspace.id });
 
             if (result) {
                 void message.success(`Workspace ${editingWorkspace ? 'updated' : 'created'} successfully`);
@@ -61,7 +64,7 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
      * Handles workspace deletion with confirmation
      * @param {Object} workspace - Workspace to delete
      */
-    const handleDeleteWorkspace = async (workspace: { id?: string; name?: string; isDefault?: boolean; [key: string]: unknown }) => {
+    const handleDeleteWorkspace = async (workspace: { id: string; name: string; isDefault?: boolean }) => {
         if (workspace.id === 'default-personal' || workspace.isDefault) {
             void message.error('Cannot delete the default personal workspace');
             return;
@@ -73,7 +76,7 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
             okText: 'Delete',
             okType: 'danger',
             onOk: async () => {
-                const success = await deleteWorkspace(workspace.id as string);
+                const success = await deleteWorkspace(workspace.id);
                 if (success) {
                     void message.success('Workspace deleted successfully');
                 } else {
@@ -82,18 +85,17 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
             }
         });
     };
-    
+
     /**
      * Handles cloning workspace to personal
-     * @param {Object} workspace - Workspace to clone
      */
-    const handleCloneToPersonal = async (workspace: { id?: string; name?: string; [key: string]: unknown }) => {
+    const handleCloneToPersonal = async (workspace: { id: string; name: string }) => {
         modal.confirm({
             title: 'Clone to Personal Workspace',
             content: (
                 <div>
                     <p>
-                        This will create a new personal workspace with the current configuration from "{workspace.name as string}".
+                        This will create a new personal workspace with the current configuration from "{workspace.name}".
                     </p>
                     <p style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
                         The new workspace will be independent and won't sync with the Git repository.
@@ -102,8 +104,8 @@ export const useWorkspaceOperations = (workspaceContext: { createWorkspace: (dat
             ),
             okText: 'Clone',
             onOk: async () => {
-                const newName = `${workspace.name as string} (Personal Copy)`;
-                const success = await cloneWorkspaceToPersonal?.(workspace.id as string, newName);
+                const newName = `${workspace.name} (Personal Copy)`;
+                const success = await cloneWorkspaceToPersonal?.(workspace.id, newName);
                 if (success) {
                     void message.success(`Created personal workspace: ${newName}`);
                 } else {

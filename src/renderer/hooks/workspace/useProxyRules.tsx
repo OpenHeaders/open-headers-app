@@ -1,15 +1,11 @@
 import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 import { showMessage } from '../../utils';
-
-interface ProxyRuleData {
-  id?: string;
-  [key: string]: unknown;
-}
+import type { ProxyRule } from '../../../types/proxy';
 
 interface UseProxyRulesReturn {
-  rules: ProxyRuleData[];
-  addRule: (ruleData: ProxyRuleData) => Promise<boolean>;
+  rules: ProxyRule[];
+  addRule: (ruleData: ProxyRule) => Promise<boolean>;
   removeRule: (ruleId: string) => Promise<boolean>;
 }
 
@@ -19,7 +15,7 @@ interface UseProxyRulesReturn {
 export function useProxyRules(): UseProxyRulesReturn {
   const { proxyRules, service } = useCentralizedWorkspace();
 
-  const addRule = useCallback(async (ruleData: ProxyRuleData): Promise<boolean> => {
+  const addRule = useCallback(async (ruleData: ProxyRule): Promise<boolean> => {
     try {
       await service.addProxyRule(ruleData);
       showMessage('success', 'Proxy rule added');

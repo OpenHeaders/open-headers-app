@@ -3,6 +3,7 @@ import { Card, Button, Space, Typography, Alert, Divider, Modal, Input, App, Che
 import { PlusOutlined, UserAddOutlined, CopyOutlined, TeamOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useWorkspaces, useSettings } from '../../../../contexts';
 import { useWorkspaceActions } from '../hooks';
+import type { Workspace } from '../../../../../types/workspace';
 import WorkspacesTable from './WorkspacesTable';
 import WorkspaceModal from './WorkspaceModal';
 import WorkspaceEditModal from './WorkspaceEditModal';
@@ -61,14 +62,14 @@ const Workspaces = () => {
     
     // Component state
     const [modalVisible, setModalVisible] = useState(false);
-    const [editingWorkspace, setEditingWorkspace] = useState<Record<string,unknown> | null>(null);
-    
+    const [editingWorkspace, setEditingWorkspace] = useState<Workspace | null>(null);
+
     // Workspace actions hook
     const {
         handleDeleteWorkspace,
         handleCloneToPersonal,
         handleSyncWorkspace
-    } = useWorkspaceActions(workspaceContext as unknown as Parameters<typeof useWorkspaceActions>[0]);
+    } = useWorkspaceActions(workspaceContext);
     
     
     /**
@@ -83,7 +84,7 @@ const Workspaces = () => {
      * Handles editing an existing workspace
      * @param {Object} workspace - Workspace object to edit
      */
-    const handleEditWorkspace = (workspace: Record<string,unknown>) => {
+    const handleEditWorkspace = (workspace: Workspace) => {
         setEditingWorkspace(workspace);
         setModalVisible(true);
     };
@@ -110,7 +111,7 @@ const Workspaces = () => {
      * Handles sharing a workspace by generating and displaying invite links
      * @param {Object} workspace - Workspace object to share
      */
-    const handleShareWorkspace = async (workspace: Record<string,unknown>) => {
+    const handleShareWorkspace = async (workspace: Workspace) => {
         try {
             // Generate initial invite without auth data
             const result = await window.electronAPI.generateTeamWorkspaceInvite({
@@ -124,7 +125,7 @@ const Workspaces = () => {
                 modal.info({
                     title: (
                         <Space>
-                            Share access to Team Workspace <TeamOutlined /> {workspace.name as string}
+                            Share access to Team Workspace <TeamOutlined /> {workspace.name}
                         </Space>
                     ),
                     content: (

@@ -8,11 +8,13 @@ const { Text, Title } = Typography;
  * ImportWorkspaceCard component for workspace configuration import
  * Handles Git workspace configuration import with credentials and conflict detection
  */
+import type { Workspace } from '../../../../types/workspace';
+
 interface ImportWorkspaceCardProps {
-    workspaceInfo: { name?: string; type?: string; gitUrl?: string; gitBranch?: string; gitPath?: string; authType?: string; authData?: Record<string, unknown>; [key: string]: unknown } | null;
+    workspaceInfo: Partial<Workspace> | null;
     importWorkspace: boolean;
     onImportWorkspaceChange: (checked: boolean) => void;
-    workspaces: { name?: string; [key: string]: unknown }[];
+    workspaces: Workspace[];
 }
 
 const ImportWorkspaceCard = ({

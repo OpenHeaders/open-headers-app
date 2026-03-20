@@ -3,50 +3,49 @@ import { useWorkspaceOperations } from './workspace';
 import { useSyncOperations } from './sync';
 import { useGitActions } from './git';
 import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
+import type { WorkspaceContextType } from '../services/WorkspaceServiceAdapter';
 import { useMemo } from 'react';
+import type { WorkspaceCreationDependencies } from '../controllers/WorkspaceCreationController';
 
 /**
  * Main orchestrator hook for workspace actions
- * 
+ *
  * Now uses the new state machine architecture for workspace creation
  * while maintaining backward compatibility for other operations.
- * 
- * @param {Object} workspaceContext - Workspace context object
- * @returns {Object} Combined workspace actions and state
  */
-export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: Record<string, unknown>) => Promise<unknown>; updateWorkspace: (id: string, data: Record<string, unknown>) => Promise<unknown>; deleteWorkspace: (id: string) => Promise<boolean>; cloneWorkspaceToPersonal?: (id: string, name: string) => Promise<boolean>; syncWorkspace: (id: string) => Promise<unknown>; switchWorkspace: (id: string) => Promise<unknown>; [key: string]: unknown }) => {
+export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
     // Create service adapters for new architecture (using singleton pattern)
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
-            workspaceContext: workspaceContext as Parameters<typeof WorkspaceServiceAdapterFactory.create>[0]['workspaceContext']
+            workspaceContext
         });
     }, [workspaceContext]);
-    
+
     // Use new workspace creation hook
-    const workspaceCreation = useWorkspaceCreation(services as unknown as import('../controllers/WorkspaceCreationController').WorkspaceCreationDependencies);
-    
+    const workspaceCreation = useWorkspaceCreation(services as WorkspaceCreationDependencies);
+
     // Keep existing hooks for backward compatibility
     const gitActions = useGitActions();
     const workspaceOps = useWorkspaceOperations(workspaceContext);
-    const syncOps = useSyncOperations(workspaceContext);
-    
+    const syncOps = useSyncOperations({
+        syncWorkspace: workspaceContext.syncWorkspace!,
+        switchWorkspace: workspaceContext.switchWorkspace!
+    });
+
     /**
      * Enhanced save workspace that uses new state machine architecture
-     * @param {Object} values - Form values
-     * @param {Object} editingWorkspace - Workspace being edited (if any)
-     * @returns {Promise<boolean>} Success status
      */
-    const handleSaveWorkspace = async (values: Record<string,unknown>, editingWorkspace: Record<string,unknown> | null) => {
+    const handleSaveWorkspace = async (values: Record<string, unknown>, editingWorkspace: Record<string, unknown> | null) => {
         // Use new architecture for new workspaces
         if (!editingWorkspace) {
             return await workspaceCreation.createWorkspace(values);
         }
-        
+
         // Use old architecture for editing existing workspaces
         const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
-        
+
         if (saveResult.success && saveResult.result) {
-            const result = saveResult.result as { id?: string; [key: string]: unknown };
+            const result = saveResult.result as { id?: string };
             const workspace = {
                 ...values,
                 id: result.id || Date.now().toString(),
@@ -61,10 +60,10 @@ export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: 
                 await syncOps.handleWorkspaceSwitch(result, workspace, null);
             }
         }
-        
+
         return saveResult.success;
     };
-    
+
     // Combine all actions and state
     return {
         // New workspace creation state (preferred)
@@ -75,7 +74,7 @@ export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: 
         creationCompleted: workspaceCreation.isCompleted,
         canRetryCreation: workspaceCreation.canRetry,
         canAbortCreation: workspaceCreation.canAbort,
-        
+
         // Git actions state (backward compatibility)
         gitStatus: gitActions.gitStatus,
         checkingGitStatus: gitActions.checkingGitStatus,
@@ -85,31 +84,31 @@ export const useWorkspaceActions = (workspaceContext: { createWorkspace: (data: 
         connectionTested: gitActions.connectionTested,
         connectionProgress: gitActions.connectionProgress,
         showProgressModal: gitActions.showProgressModal,
-        
+
         // Workspace operations state
         loading: workspaceOps.loading,
-        
+
         // Actions - new architecture
         createWorkspace: workspaceCreation.createWorkspace,
         abortCreation: workspaceCreation.abortCreation,
         resetCreation: workspaceCreation.resetCreation,
         retryCreation: workspaceCreation.retryCreation,
-        
+
         // Actions - backward compatibility
         checkGitStatus: gitActions.checkGitStatus,
         handleInstallGit: gitActions.handleInstallGit,
         handleTestConnection: gitActions.handleTestConnection,
         resetConnectionTest: gitActions.resetConnectionTest,
-        
+
         // Workspace operations
         handleSaveWorkspace,
         handleDeleteWorkspace: workspaceOps.handleDeleteWorkspace,
         handleCloneToPersonal: workspaceOps.handleCloneToPersonal,
         handleBrowseSSHKey: workspaceOps.handleBrowseSSHKey,
-        
+
         // Sync operations
         handleSyncWorkspace: syncOps.handleSyncWorkspace,
-        
+
         // Utilities
         setShowProgressModal: gitActions.setShowProgressModal
     };

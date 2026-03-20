@@ -8,32 +8,12 @@ import { prepareAuthData } from '../utils';
 import GitStatusAlert from './GitStatusAlert';
 import ConnectionProgressModal from './ConnectionProgressModal';
 import AuthenticationForm from './AuthenticationForm';
+import type { Workspace } from '../../../../../types/workspace';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 const { Text } = Typography;
 
-interface WorkspaceAuthData {
-    token?: string;
-    tokenType?: string;
-    username?: string;
-    password?: string;
-    sshKeySource?: string;
-    sshKey?: string;
-    sshKeyPath?: string;
-}
-interface WorkspaceData {
-    id?: string;
-    name?: string;
-    description?: string;
-    type?: string;
-    gitUrl?: string;
-    gitBranch?: string;
-    gitPath?: string;
-    authType?: string;
-    autoSync?: boolean;
-    authData?: WorkspaceAuthData;
-    [key: string]: unknown;
-}
-interface WorkspaceEditModalProps { visible: boolean; workspace: WorkspaceData | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
+interface WorkspaceEditModalProps { visible: boolean; workspace: Workspace | null; onCancel: () => void; onSuccess: (workspaceId?: string) => void; }
 const WorkspaceEditModal = ({
     visible,
     workspace,
@@ -48,7 +28,7 @@ const WorkspaceEditModal = ({
     const [gitStatus, setGitStatus] = useState<{ isInstalled: boolean; gitPath?: string; error?: string } | null>(null);
     const [connectionProgress, setConnectionProgress] = useState<{ step: string; status: string; details?: string; progress?: number }[]>([]);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
-    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; error?: string; [key: string]: unknown } | null>(null);
+    const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; error?: string } | null>(null);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
     const unsubscribeProgressRef = useRef<(() => void) | null>(null);
     const progressUnsubscribeRef = useRef<(() => void) | null>(null);
@@ -59,7 +39,7 @@ const WorkspaceEditModal = ({
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
             workspaceContext
-        }) as unknown as { gitService: { getStatus: () => Promise<Record<string, unknown>>; install: () => Promise<{ success: boolean }>; subscribeToConnectionProgress: () => (() => void); onProgress: (listener: (event: { type: string; data: { summary?: string[]; [key: string]: unknown }; [key: string]: unknown }) => void) => (() => void); testConnection: (config: Record<string, unknown>) => Promise<{ success: boolean; error?: string; [key: string]: unknown }> }; workspaceService: Record<string, unknown>; syncService: Record<string, unknown>; cleanup: () => void } | null;
+        });
     }, [workspaceContext]);
 
     useEffect(() => {
@@ -89,7 +69,7 @@ const WorkspaceEditModal = ({
         if (visible && workspace) {
             // Extract auth data from workspace
             const authData = workspace.authData || {};
-            
+
             // Set form values from the workspace
             const formValues: Record<string, unknown> = {
                 name: workspace.name,
@@ -160,7 +140,7 @@ const WorkspaceEditModal = ({
     const checkGitStatus = async () => {
         try {
             const status = await services!.gitService.getStatus();
-            setGitStatus(status as { isInstalled: boolean; gitPath?: string; error?: string });
+            setGitStatus(status);
         } catch (error) {
             console.error('Failed to check Git status:', error);
             setGitStatus({ isInstalled: false, error: (error as Error).message });
@@ -258,7 +238,7 @@ const WorkspaceEditModal = ({
             
             unsubscribeProgressRef.current = services!.gitService.subscribeToConnectionProgress();
 
-            progressUnsubscribeRef.current = services!.gitService.onProgress((event: { type: string; data: { summary?: ({ step: string; status: string; details?: string; progress?: number } | string)[]; [key: string]: unknown }; [key: string]: unknown }) => {
+            progressUnsubscribeRef.current = services!.gitService.onProgress((event) => {
                 if (event.type === 'git-connection') {
                     const summary = event.data.summary || [];
                     setConnectionProgress(summary.map(item =>
@@ -295,25 +275,25 @@ const WorkspaceEditModal = ({
         }
     };
     
-    const handleFinish = async (values: Record<string,unknown>) => {
+    const handleFinish = async (values: WorkspaceFormValues) => {
         try {
             setIsUpdating(true);
             setUpdateError(null);
-            
+
             // Prepare auth data if it's a Git workspace
             let authData = null;
             if (workspace?.type === WORKSPACE_TYPES.GIT) {
                 try {
-                    authData = await prepareAuthData(values, (values.authType as string) || 'none');
+                    authData = await prepareAuthData(values, values.authType || 'none');
                 } catch (error) {
-                    message.error(`Failed to prepare authentication: ${(error as Error).message}`);
+                    message.error(`Failed to prepare authentication: ${(error instanceof Error) ? error.message : String(error)}`);
                     setIsUpdating(false);
                     return;
                 }
             }
-            
+
             // Prepare update values
-            const updateValues = {
+            const updateValues: Partial<Workspace> = {
                 name: values.name,
                 description: values.description,
                 gitUrl: values.gitUrl,
@@ -321,7 +301,7 @@ const WorkspaceEditModal = ({
                 gitPath: values.gitPath,
                 authType: values.authType,
                 autoSync: values.autoSync,
-                authData: authData
+                authData: authData || undefined
             };
             
             // Update the workspace

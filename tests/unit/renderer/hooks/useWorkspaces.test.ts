@@ -305,7 +305,7 @@ describe('useWorkspaces', () => {
 
   describe('cloneWorkspaceToPersonal', () => {
     it('clones team workspace to personal', async () => {
-      mockWorkspaceManagerCreate.mockImplementation((_workspaces: unknown, data: Record<string, unknown>) => Promise.resolve(data));
+      mockWorkspaceManagerCreate.mockImplementation((_workspaces: unknown, data: Record<string, unknown>) => data);
 
       const { result } = renderHook(() => useWorkspaces());
 
