@@ -84,7 +84,7 @@ class WorkspaceHandlers {
                 }
             };
 
-            return await gitSyncService.testConnection({ url: gitConfig.url ?? '', ...gitConfig, onProgress });
+            return await gitSyncService.testConnection({ ...gitConfig, url: gitConfig.url || '', onProgress });
         } catch (error: unknown) {
             log.error('Error testing workspace connection:', error);
             return { success: false, error: errorMessage(error) };
@@ -583,7 +583,7 @@ class WorkspaceHandlers {
                             // Copy only essential fields (value and isSecret)
                             envs[envName][varName] = {
                                 value: varData.value,
-                                isSecret: varData.isSecret
+                                isSecret: varData.isSecret || false
                             };
                         });
                     });

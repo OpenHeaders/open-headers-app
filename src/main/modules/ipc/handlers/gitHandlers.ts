@@ -95,16 +95,16 @@ class GitHandlers {
                     return { success: false, error: 'Workspace not found' };
                 }
 
-                const config: Partial<SyncOptions> = {
+                const config: SyncOptions = {
                     workspaceId,
                     url: workspace.gitUrl,
                     branch: workspace.gitBranch || 'main',
                     path: workspace.gitPath || 'config/open-headers.json',
-                    authType: (workspace.authType || 'none'),
+                    authType: workspace.authType || 'none',
                     authData: workspace.authData ?? {}
                 };
 
-                return await gitSyncService.syncWorkspace(config as SyncOptions);
+                return await gitSyncService.syncWorkspace(config);
             }
             return { success: false, error: 'Services not ready' };
         } catch (error: unknown) {
