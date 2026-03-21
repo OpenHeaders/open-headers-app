@@ -40,7 +40,7 @@ const makeForm = (opts: FormFields = {}) => ({
     }
     return val;
   },
-});
+}) as unknown as import('antd').FormInstance;
 
 // ======================================================================
 // validateVariableExists
