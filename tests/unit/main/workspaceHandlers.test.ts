@@ -98,7 +98,7 @@ function buildEnvConfigData(environmentData: EnvironmentInput): EnvConfigOutput 
                 Object.entries(vars).forEach(([varName, varData]) => {
                     envConfigData.environments![envName][varName] = {
                         value: varData.value,
-                        ...(varData.isSecret && { isSecret: varData.isSecret })
+                        isSecret: varData.isSecret || false
                     };
                 });
             });
@@ -290,7 +290,7 @@ describe('WorkspaceHandlers — pure logic', () => {
             };
             const result = buildEnvConfigData(envData);
             expect(result.environments!.production.API_KEY).toEqual({ value: 'key123', isSecret: true });
-            expect(result.environments!.production.BASE_URL).toEqual({ value: 'https://api.com' });
+            expect(result.environments!.production.BASE_URL).toEqual({ value: 'https://api.com', isSecret: false });
             // updatedAt should be stripped
             expect('updatedAt' in result.environments!.production.API_KEY).toBe(false);
         });
