@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
 import type { ProxyService } from '../../../src/services/proxy/ProxyService';
+import type { HeaderRule } from '../../../src/types/rules';
+import type { ProxyRule } from '../../../src/types/proxy';
+import type { Source } from '../../../src/types/source';
 
 // Mock atomicFileWriter (ProxyCache and ProxyRuleStore use it for disk I/O)
 vi.mock('../../../src/utils/atomicFileWriter', () => ({
@@ -37,6 +40,39 @@ function createMockResponse(): MockResponse {
         },
     };
     return res;
+}
+
+/** Create a minimal HeaderRule for testing */
+function makeHeaderRule(overrides: Partial<HeaderRule> = {}): HeaderRule {
+    return {
+        id: 'hr-1',
+        type: 'header',
+        name: 'Test Rule',
+        description: '',
+        isEnabled: true,
+        domains: [],
+        createdAt: '',
+        updatedAt: '',
+        headerName: 'Authorization',
+        headerValue: 'Bearer token',
+        tag: '',
+        isResponse: false,
+        isDynamic: false,
+        sourceId: null,
+        prefix: '',
+        suffix: '',
+        hasEnvVars: false,
+        envVars: [],
+        ...overrides,
+    };
+}
+
+/** Create a minimal ProxyRule for testing */
+function makeProxyRule(overrides: Partial<ProxyRule> = {}): ProxyRule {
+    return {
+        id: 'pr-1',
+        ...overrides,
+    };
 }
 
 describe('ProxyService', () => {
@@ -82,9 +118,10 @@ describe('ProxyService', () => {
         });
 
         it('returns non-string input unchanged', () => {
-            expect(proxyService.resolveEnvironmentVariables(null)).toBeNull();
-            expect(proxyService.resolveEnvironmentVariables(undefined)).toBeUndefined();
-            expect(proxyService.resolveEnvironmentVariables(42)).toBe(42);
+            // intentionally passing invalid input to test runtime handling
+            expect(proxyService.resolveEnvironmentVariables(null as unknown as string)).toBeNull();
+            expect(proxyService.resolveEnvironmentVariables(undefined as unknown as string)).toBeUndefined();
+            expect(proxyService.resolveEnvironmentVariables(42 as unknown as string)).toBe(42);
         });
 
         it('returns plain string unchanged', () => {
@@ -142,20 +179,24 @@ describe('ProxyService', () => {
 
         it('updateSources loads from array', () => {
             proxyService.updateSources([
-                { sourceId: '1', sourceContent: 'value-a' },
-                { sourceId: '2', sourceContent: 'value-b' },
+                { sourceId: '1', sourceContent: 'value-a' } as unknown as Source,
+                { sourceId: '2', sourceContent: 'value-b' } as unknown as Source,
             ]);
             expect(proxyService.sources.get('1')).toBe('value-a');
             expect(proxyService.sources.get('2')).toBe('value-b');
         });
 
         it('updateSources skips entries without sourceId', () => {
-            proxyService.updateSources([{ sourceContent: 'orphan' }, { sourceId: '1', sourceContent: 'valid' }]);
+            proxyService.updateSources([
+                { sourceContent: 'orphan' } as unknown as Source,
+                { sourceId: '1', sourceContent: 'valid' } as unknown as Source,
+            ]);
             expect(proxyService.sources.size).toBe(1);
         });
 
         it('updateSources ignores non-array input', () => {
-            proxyService.updateSources('not an array');
+            // intentionally passing invalid input to test runtime handling
+            proxyService.updateSources('not an array' as unknown as Source[]);
             expect(proxyService.sources.size).toBe(0);
         });
     });
@@ -165,29 +206,32 @@ describe('ProxyService', () => {
     describe('resolveHeaderValue()', () => {
         it('resolves dynamic rule from source', () => {
             proxyService.sources.set('10', 'source-token');
-            expect(proxyService.resolveHeaderValue('fallback', { isDynamic: true, sourceId: 10 })).toBe('source-token');
+            // intentionally passing partial rule to test runtime handling
+            expect(proxyService.resolveHeaderValue('fallback', { isDynamic: true, sourceId: 10 } as unknown as HeaderRule)).toBe('source-token');
         });
 
         it('returns fallback for dynamic rule when source is missing', () => {
-            expect(proxyService.resolveHeaderValue('fallback', { isDynamic: true, sourceId: 99 })).toBe('fallback');
+            // intentionally passing partial rule to test runtime handling
+            expect(proxyService.resolveHeaderValue('fallback', { isDynamic: true, sourceId: 99 } as unknown as HeaderRule)).toBe('fallback');
         });
 
         it('resolves __source_N reference', () => {
             proxyService.sources.set('5', 'resolved-value');
-            expect(proxyService.resolveHeaderValue('__source_5', {})).toBe('resolved-value');
+            // intentionally passing partial rule to test runtime handling
+            expect(proxyService.resolveHeaderValue('__source_5', {} as unknown as HeaderRule)).toBe('resolved-value');
         });
 
         it('keeps __source_N if source not found', () => {
-            expect(proxyService.resolveHeaderValue('__source_999', {})).toBe('__source_999');
+            expect(proxyService.resolveHeaderValue('__source_999', {} as unknown as HeaderRule)).toBe('__source_999');
         });
 
         it('resolves environment variables in static values', () => {
             proxyService.environmentVariables = { TOKEN: 'xyz' };
-            expect(proxyService.resolveHeaderValue('Bearer {{TOKEN}}', {})).toBe('Bearer xyz');
+            expect(proxyService.resolveHeaderValue('Bearer {{TOKEN}}', {} as unknown as HeaderRule)).toBe('Bearer xyz');
         });
 
         it('returns empty string for undefined values', () => {
-            expect(proxyService.resolveHeaderValue(undefined, {})).toBe('');
+            expect(proxyService.resolveHeaderValue(undefined, {} as unknown as HeaderRule)).toBe('');
         });
     });
 
@@ -199,8 +243,8 @@ describe('ProxyService', () => {
         });
 
         it('matches header rule via proxy rule reference', () => {
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: true, headerName: 'Authorization', headerValue: 'Bearer token', domains: [] }];
-            proxyService.ruleStore.rules = [{ enabled: true, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, headerName: 'Authorization', headerValue: 'Bearer token', domains: [] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
 
             const result = proxyService.getApplicableRules('https://example.com/api');
             expect(result).toHaveLength(1);
@@ -208,20 +252,20 @@ describe('ProxyService', () => {
         });
 
         it('skips disabled proxy rules', () => {
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: true, domains: [] }];
-            proxyService.ruleStore.rules = [{ enabled: false, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, domains: [] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: false, headerRuleId: 'hr-1' })];
             expect(proxyService.getApplicableRules('https://example.com')).toEqual([]);
         });
 
         it('skips disabled header rules', () => {
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: false, domains: [] }];
-            proxyService.ruleStore.rules = [{ enabled: true, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: false, domains: [] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
             expect(proxyService.getApplicableRules('https://example.com')).toEqual([]);
         });
 
         it('filters by domain when header rule has domains', () => {
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: true, domains: ['api.example.com'] }];
-            proxyService.ruleStore.rules = [{ enabled: true, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, domains: ['api.example.com'] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
 
             expect(proxyService.getApplicableRules('https://api.example.com/v1')).toHaveLength(1);
             expect(proxyService.getApplicableRules('https://other.com/v1')).toHaveLength(0);
@@ -229,16 +273,16 @@ describe('ProxyService', () => {
 
         it('resolves environment variables in domain patterns', () => {
             proxyService.environmentVariables = { API_DOMAIN: 'api.example.com' };
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: true, domains: ['{{API_DOMAIN}}'] }];
-            proxyService.ruleStore.rules = [{ enabled: true, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, domains: ['{{API_DOMAIN}}'] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
 
             expect(proxyService.getApplicableRules('https://api.example.com/v1')).toHaveLength(1);
         });
 
         it('handles comma-separated domains from env variable', () => {
             proxyService.environmentVariables = { DOMAINS: 'api.example.com,cdn.example.com' };
-            proxyService.headerRules = [{ id: 'hr-1', isEnabled: true, domains: ['{{DOMAINS}}'] }];
-            proxyService.ruleStore.rules = [{ enabled: true, headerRuleId: 'hr-1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, domains: ['{{DOMAINS}}'] })];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
 
             expect(proxyService.getApplicableRules('https://api.example.com/v1')).toHaveLength(1);
             expect(proxyService.getApplicableRules('https://cdn.example.com/v1')).toHaveLength(1);
@@ -246,12 +290,12 @@ describe('ProxyService', () => {
         });
 
         it('matches custom proxy rules (no header rule reference)', () => {
-            proxyService.ruleStore.rules = [{ enabled: true, headerName: 'X-Custom', headerValue: 'val', domains: [] }];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerName: 'X-Custom', headerValue: 'val', domains: [] })];
             expect(proxyService.getApplicableRules('https://anything.com')).toHaveLength(1);
         });
 
         it('filters custom proxy rules by domain', () => {
-            proxyService.ruleStore.rules = [{ enabled: true, headerName: 'X-Custom', headerValue: 'val', domains: ['specific.com'] }];
+            proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerName: 'X-Custom', headerValue: 'val', domains: ['specific.com'] })];
             expect(proxyService.getApplicableRules('https://specific.com/path')).toHaveLength(1);
             expect(proxyService.getApplicableRules('https://other.com/path')).toHaveLength(0);
         });
@@ -261,7 +305,7 @@ describe('ProxyService', () => {
 
     describe('clearRules()', () => {
         it('clears all rules, sources, and environment variables', () => {
-            proxyService.headerRules = [{ id: '1' }];
+            proxyService.headerRules = [makeHeaderRule({ id: '1' })];
             proxyService.sources.set('1', 'val');
             proxyService.environmentVariables = { KEY: 'val' };
 
@@ -277,7 +321,7 @@ describe('ProxyService', () => {
 
     describe('getStatus()', () => {
         it('returns current state', () => {
-            proxyService.headerRules = [{ id: '1' }, { id: '2' }];
+            proxyService.headerRules = [makeHeaderRule({ id: '1' }), makeHeaderRule({ id: '2' })];
             proxyService.sources.set('1', 'val');
             const status = proxyService.getStatus();
 
@@ -308,23 +352,23 @@ describe('ProxyService', () => {
 
             const info = proxyService.getCertificateInfo();
             const entry = info.certificateExceptions.find((e: { domain: string; fingerprints?: string[] }) => e.domain === 'example.com');
-            expect(entry.fingerprints).toContain('fp-1');
-            expect(entry.fingerprints).toContain('fp-2');
+            expect(entry!.fingerprints).toContain('fp-1');
+            expect(entry!.fingerprints).toContain('fp-2');
 
             proxyService.removeCertificateException('example.com');
             expect(proxyService.getCertificateInfo().certificateExceptions).toHaveLength(0);
         });
 
         it('setStrictSSL updates flag and agent', () => {
-            proxyService.httpsAgent = { options: { rejectUnauthorized: false } };
+            proxyService.httpsAgent = { options: { rejectUnauthorized: false } } as unknown as typeof proxyService.httpsAgent;
 
             proxyService.setStrictSSL(true);
             expect(proxyService.strictSSL).toBe(true);
-            expect(proxyService.httpsAgent.options.rejectUnauthorized).toBe(true);
+            expect(proxyService.httpsAgent!.options.rejectUnauthorized).toBe(true);
 
             proxyService.setStrictSSL(false);
             expect(proxyService.strictSSL).toBe(false);
-            expect(proxyService.httpsAgent.options.rejectUnauthorized).toBe(false);
+            expect(proxyService.httpsAgent!.options.rejectUnauthorized).toBe(false);
         });
     });
 
@@ -358,13 +402,13 @@ describe('ProxyService', () => {
     describe('handleRequest() URL routing', () => {
         it('rejects non-proxy URLs with 400', async () => {
             const res = createMockResponse();
-            await proxyService.handleRequest({ method: 'GET', url: '/not-a-proxy-url', headers: {} }, res);
+            await proxyService.handleRequest({ method: 'GET', url: '/not-a-proxy-url', headers: {} } as unknown as Parameters<typeof proxyService.handleRequest>[0], res as unknown as Parameters<typeof proxyService.handleRequest>[1]);
             expect(res.statusCode).toBe(400);
         });
 
         it('responds to OPTIONS with CORS headers', async () => {
             const res = createMockResponse();
-            await proxyService.handleRequest({ method: 'OPTIONS', url: '/', headers: {} }, res);
+            await proxyService.handleRequest({ method: 'OPTIONS', url: '/', headers: {} } as unknown as Parameters<typeof proxyService.handleRequest>[0], res as unknown as Parameters<typeof proxyService.handleRequest>[1]);
             expect(res.statusCode).toBe(200);
             expect(res.headers['Access-Control-Allow-Origin']).toBe('*');
         });
@@ -372,10 +416,10 @@ describe('ProxyService', () => {
         it('increments requestsProcessed counter', async () => {
             proxyService.cacheEnabled = false;
             const originalDoProxy = proxyService.doProxy;
-            proxyService.doProxy = vi.fn();
+            proxyService.doProxy = vi.fn() as typeof proxyService.doProxy;
 
             const res = createMockResponse();
-            await proxyService.handleRequest({ method: 'GET', url: 'https://example.com', headers: {}, on: vi.fn() }, res);
+            await proxyService.handleRequest({ method: 'GET', url: 'https://example.com', headers: {}, on: vi.fn() } as unknown as Parameters<typeof proxyService.handleRequest>[0], res as unknown as Parameters<typeof proxyService.handleRequest>[1]);
             expect(proxyService.stats.requestsProcessed).toBe(1);
 
             proxyService.doProxy = originalDoProxy;

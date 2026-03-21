@@ -9,25 +9,39 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 
 import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
 import { IMPORT_MODES, DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportImportDependencies, EnvironmentVariable, EnvironmentSchema } from '../../../../src/renderer/services/export-import/core/types';
+import type { Mock } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Build a minimal dependency bag, overridable per test. */
-function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
+    appVersion: '3.0.0',
     activeWorkspaceId: 'ws-1',
     environments: {},
     sources: [],
+    workspaces: [],
+    exportSources: vi.fn(() => []),
+    addSource: vi.fn(),
+    removeSource: vi.fn(),
+    createWorkspace: vi.fn(),
+    switchWorkspace: vi.fn(),
+    setVariable: vi.fn(),
     generateEnvironmentSchema: vi.fn(() => ({
       environments: {},
       variableDefinitions: {},
     })),
     createEnvironment: vi.fn(),
     ...overrides,
-  };
+  } as ExportImportDependencies;
+}
+
+// Helper to make env vars with the correct EnvironmentVariable shape
+function envVar(value: string, isSecret = false): EnvironmentVariable {
+  return { value, isSecret };
 }
 
 // ---------------------------------------------------------------------------
@@ -39,7 +53,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
     const fullSchema = {
       environments: { dev: { a: 1 }, staging: { b: 2 } },
       variableDefinitions: { API_KEY: { type: 'string' } },
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportEnvironmentSchema(fullSchema, []);
     expect(result).toEqual({ environmentSchema: fullSchema });
@@ -50,9 +64,9 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
     const fullSchema = {
       environments: { dev: {}, staging: {} },
       variableDefinitions: {},
-    };
+    } as unknown as EnvironmentSchema;
 
-    const result = handler._exportEnvironmentSchema(fullSchema, null);
+    const result = handler._exportEnvironmentSchema(fullSchema, null as unknown as undefined);
     expect(result).toEqual({ environmentSchema: fullSchema });
   });
 
@@ -61,7 +75,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
     const fullSchema = {
       environments: { dev: { a: 1 }, staging: { b: 2 }, prod: { c: 3 } },
       variableDefinitions: { KEY: {} },
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportEnvironmentSchema(fullSchema, ['dev', 'prod']);
     expect(Object.keys(result.environmentSchema.environments)).toEqual(['dev', 'prod']);
@@ -73,7 +87,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
     const fullSchema = {
       environments: { dev: {} },
       variableDefinitions: {},
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportEnvironmentSchema(fullSchema, ['nonexistent']);
     expect(Object.keys(result.environmentSchema.environments)).toEqual([]);
@@ -85,12 +99,12 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
 // ---------------------------------------------------------------------------
 describe('EnvironmentsHandler._exportFullEnvironments', () => {
   it('returns all environments when no selection filter', () => {
-    const envs = { dev: { A: 'val' }, staging: { B: 'val2' } };
+    const envs = { dev: { A: envVar('val') }, staging: { B: envVar('val2') } };
     const handler = new EnvironmentsHandler(makeDeps({ environments: envs }));
     const fullSchema = {
       environments: { dev: {}, staging: {} },
       variableDefinitions: {},
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportFullEnvironments(fullSchema, []);
     expect(result.environments).toBe(envs);
@@ -98,12 +112,12 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
   });
 
   it('filters environments and schema by selected names', () => {
-    const envs = { dev: { A: '1' }, staging: { B: '2' }, prod: { C: '3' } };
+    const envs = { dev: { A: envVar('1') }, staging: { B: envVar('2') }, prod: { C: envVar('3') } };
     const handler = new EnvironmentsHandler(makeDeps({ environments: envs }));
     const fullSchema = {
       environments: { dev: {}, staging: {}, prod: {} },
       variableDefinitions: { VAR: {} },
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportFullEnvironments(fullSchema, ['dev']);
     expect(Object.keys(result.environments)).toEqual(['dev']);
@@ -112,12 +126,12 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
   });
 
   it('ignores selected names that do not exist', () => {
-    const envs = { dev: { A: '1' } };
+    const envs = { dev: { A: envVar('1') } };
     const handler = new EnvironmentsHandler(makeDeps({ environments: envs }));
     const fullSchema = {
       environments: { dev: {} },
       variableDefinitions: {},
-    };
+    } as unknown as EnvironmentSchema;
 
     const result = handler._exportFullEnvironments(fullSchema, ['missing']);
     expect(Object.keys(result.environments)).toEqual([]);
@@ -135,7 +149,7 @@ describe('EnvironmentsHandler.exportEnvironments', () => {
   });
 
   it('delegates to _exportEnvironmentSchema for schema option', async () => {
-    const fullSchema = { environments: { dev: {} }, variableDefinitions: {} };
+    const fullSchema = { environments: { dev: {} }, variableDefinitions: {} } as unknown as EnvironmentSchema;
     const handler = new EnvironmentsHandler(
       makeDeps({ generateEnvironmentSchema: vi.fn(() => fullSchema) })
     );
@@ -149,8 +163,8 @@ describe('EnvironmentsHandler.exportEnvironments', () => {
   });
 
   it('delegates to _exportFullEnvironments for full option', async () => {
-    const envs = { dev: { A: '1' } };
-    const fullSchema = { environments: { dev: {} }, variableDefinitions: {} };
+    const envs = { dev: { A: envVar('1') } };
+    const fullSchema = { environments: { dev: {} }, variableDefinitions: {} } as unknown as EnvironmentSchema;
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: envs, generateEnvironmentSchema: vi.fn(() => fullSchema) })
     );
@@ -205,7 +219,7 @@ describe('EnvironmentsHandler.getEnvironmentStatistics', () => {
     const stats = handler.getEnvironmentStatistics({
       environments: {
         dev: { A: { value: 'x', isSecret: false }, B: { value: '', isSecret: true } },
-        staging: { C: 'direct-val' },
+        staging: { C: 'direct-val' as unknown as EnvironmentVariable },
       },
     });
     expect(stats.environments).toBe(2);
@@ -218,7 +232,7 @@ describe('EnvironmentsHandler.getEnvironmentStatistics', () => {
     const handler = new EnvironmentsHandler(makeDeps());
     const stats = handler.getEnvironmentStatistics({
       environments: {
-        dev: { A: '' },
+        dev: { A: '' as unknown as EnvironmentVariable },
       },
     });
     expect(stats.emptyVariables).toBe(1);
@@ -229,7 +243,7 @@ describe('EnvironmentsHandler.getEnvironmentStatistics', () => {
     const stats = handler.getEnvironmentStatistics({
       environmentSchema: {
         variableDefinitions: { KEY1: {}, KEY2: {}, KEY3: {} },
-      },
+      } as unknown as EnvironmentSchema,
     });
     expect(stats.schemaVariables).toBe(3);
   });
@@ -247,8 +261,9 @@ describe('EnvironmentsHandler.validateEnvironmentsForExport', () => {
 
   it('reports invalid environment schema', () => {
     const handler = new EnvironmentsHandler(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     const result = handler.validateEnvironmentsForExport({
-      environmentSchema: 'not-an-object',
+      environmentSchema: 'not-an-object' as unknown as EnvironmentSchema,
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain('Schema validation failed');
@@ -256,8 +271,9 @@ describe('EnvironmentsHandler.validateEnvironmentsForExport', () => {
 
   it('reports invalid environment variables type', () => {
     const handler = new EnvironmentsHandler(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     const result = handler.validateEnvironmentsForExport({
-      environments: { dev: 'not-an-object' },
+      environments: { dev: 'not-an-object' as unknown as Record<string, EnvironmentVariable> },
     });
     expect(result.success).toBe(false);
     expect(result.error).toContain('must be an object');
@@ -266,8 +282,8 @@ describe('EnvironmentsHandler.validateEnvironmentsForExport', () => {
   it('accepts valid environment data with environments and schema', () => {
     const handler = new EnvironmentsHandler(makeDeps());
     const result = handler.validateEnvironmentsForExport({
-      environmentSchema: { environments: {}, variableDefinitions: {} },
-      environments: { dev: { API_KEY: { name: 'API_KEY', value: 'x' } } },
+      environmentSchema: { environments: {}, variableDefinitions: {} } as unknown as EnvironmentSchema,
+      environments: { dev: { API_KEY: { value: 'x', isSecret: false } } },
     });
     expect(result.success).toBe(true);
   });
@@ -313,8 +329,8 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
-      { dev: { API_KEY: 'val123', SECRET: { value: 's', isSecret: true } } },
-      { importMode: IMPORT_MODES.REPLACE }
+      { dev: { API_KEY: 'val123', SECRET: { value: 's', isSecret: true } } } as unknown as Record<string, Record<string, EnvironmentVariable>>,
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
     );
 
     expect(createEnvironment).toHaveBeenCalledWith('dev');
@@ -323,15 +339,15 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
   });
 
   it('skips duplicate variables in merge mode', async () => {
-    const existingEnvs = { dev: { API_KEY: { value: 'existing' } } };
+    const existingEnvs = { dev: { API_KEY: { value: 'existing', isSecret: false } } };
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: existingEnvs, createEnvironment: vi.fn() })
     );
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
-      { dev: { API_KEY: 'new-val', NEW_VAR: 'hello' } },
-      { importMode: IMPORT_MODES.MERGE }
+      { dev: { API_KEY: 'new-val', NEW_VAR: 'hello' } } as unknown as Record<string, Record<string, EnvironmentVariable>>,
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
     );
 
     // API_KEY should be skipped (existing with non-empty value), NEW_VAR imported
@@ -345,8 +361,8 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
-      { dev: { A: '1' }, staging: { B: '2' }, prod: { C: '3' } },
-      { importMode: IMPORT_MODES.REPLACE, selectedEnvironments: ['dev', 'prod'] }
+      { dev: { A: '1' }, staging: { B: '2' }, prod: { C: '3' } } as unknown as Record<string, Record<string, EnvironmentVariable>>,
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {}, selectedEnvironments: ['dev', 'prod'] }
     );
 
     expect(stats.environmentsImported).toBe(2);
@@ -359,12 +375,12 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
-      { dev: { KEY: 'plain-string-value' } },
-      { importMode: IMPORT_MODES.REPLACE }
+      { dev: { KEY: 'plain-string-value' } } as unknown as Record<string, Record<string, EnvironmentVariable>>,
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
     );
 
     expect(stats.variablesCreated).toBe(1);
-    const callArgs = handler._batchCreateVariables.mock.calls[0];
+    const callArgs = (handler._batchCreateVariables as Mock).mock.calls[0];
     expect(callArgs[1][0]).toEqual({ name: 'KEY', value: 'plain-string-value', isSecret: false });
   });
 
@@ -376,11 +392,11 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
 
     const stats = await handler._importFullEnvironments(
       { dev: { TOKEN: { value: 'abc', isSecret: true } } },
-      { importMode: IMPORT_MODES.REPLACE }
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
     );
 
     expect(stats.variablesCreated).toBe(1);
-    const callArgs = handler._batchCreateVariables.mock.calls[0];
+    const callArgs = (handler._batchCreateVariables as Mock).mock.calls[0];
     expect(callArgs[1][0]).toEqual({ name: 'TOKEN', value: 'abc', isSecret: true });
   });
 
@@ -391,8 +407,8 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     handler._batchCreateVariables = vi.fn().mockRejectedValue(new Error('batch fail'));
 
     const stats = await handler._importFullEnvironments(
-      { dev: { A: 'x' } },
-      { importMode: IMPORT_MODES.REPLACE }
+      { dev: { A: envVar('x') } },
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
     );
 
     expect(stats.errors.length).toBe(1);

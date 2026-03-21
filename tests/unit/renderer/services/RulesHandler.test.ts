@@ -2,16 +2,31 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import { RULE_TYPES } from '../../../../src/renderer/utils/data-structures/rulesStructure';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
+    appVersion: '3.0.0',
     activeWorkspaceId: 'ws-1',
+    environments: {},
+    sources: [],
+    workspaces: [],
+    exportSources: vi.fn(() => []),
+    addSource: vi.fn(),
+    removeSource: vi.fn(),
+    createWorkspace: vi.fn(),
+    switchWorkspace: vi.fn(),
+    setVariable: vi.fn(),
+    generateEnvironmentSchema: vi.fn(() => ({
+      environments: {},
+      variableDefinitions: {},
+    })),
+    createEnvironment: vi.fn(),
     ...overrides,
-  };
+  } as ExportImportDependencies;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,7 +47,8 @@ describe('RulesHandler.validateRulesForExport', () => {
 
   it('rejects non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    const r = handler.validateRulesForExport({ rules: { header: 'bad' } });
+    // intentionally passing invalid input to test runtime validation
+    const r = handler.validateRulesForExport({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
     expect(r.success).toBe(false);
     expect(r.error).toContain('must be an array');
   });
@@ -40,7 +56,7 @@ describe('RulesHandler.validateRulesForExport', () => {
   it('rejects rules without id', () => {
     const handler = new RulesHandler(makeDeps());
     const r = handler.validateRulesForExport({
-      rules: { header: [{ name: 'No ID' }] },
+      rules: { header: [{ name: 'No ID' } as unknown as RuleEntry] },
     });
     expect(r.success).toBe(false);
     expect(r.error).toContain('missing an ID');
@@ -62,10 +78,11 @@ describe('RulesHandler.validateRulesForExport', () => {
 
   it('aggregates multiple errors', () => {
     const handler = new RulesHandler(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     const r = handler.validateRulesForExport({
       rules: {
-        header: [{ name: 'no id' }],
-        payload: 'not-array',
+        header: [{ name: 'no id' } as unknown as RuleEntry],
+        payload: 'not-array' as unknown as RuleEntry[],
       },
     });
     expect(r.success).toBe(false);
@@ -79,7 +96,8 @@ describe('RulesHandler.validateRulesForExport', () => {
 describe('RulesHandler.getRulesStatistics', () => {
   it('returns zero total for null input', () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = handler.getRulesStatistics(null);
+    // intentionally passing null to test runtime handling
+    const stats = handler.getRulesStatistics(null as unknown as { rules?: Record<string, RuleEntry[]> });
     expect(stats.total).toBe(0);
     expect(stats.metadata).toBeNull();
   });
@@ -100,17 +118,19 @@ describe('RulesHandler.getRulesStatistics', () => {
       },
     });
     expect(stats.total).toBe(3);
-    expect(stats.byType.header).toBe(2);
-    expect(stats.byType.payload).toBe(1);
-    expect(stats.byType.url).toBe(0);
+    const byType = stats.byType as Record<string, number>;
+    expect(byType.header).toBe(2);
+    expect(byType.payload).toBe(1);
+    expect(byType.url).toBe(0);
   });
 
   it('handles non-array entries gracefully', () => {
     const handler = new RulesHandler(makeDeps());
+    // intentionally passing invalid input to test runtime handling
     const stats = handler.getRulesStatistics({
-      rules: { header: 'bad' },
+      rules: { header: 'bad' } as unknown as Record<string, RuleEntry[]>,
     });
-    expect(stats.byType.header).toBe(0);
+    expect((stats.byType as Record<string, number>).header).toBe(0);
     expect(stats.total).toBe(0);
   });
 
@@ -141,7 +161,8 @@ describe('RulesHandler.getRulesStatistics', () => {
 describe('RulesHandler.analyzeRules', () => {
   it('returns empty arrays for null input', () => {
     const handler = new RulesHandler(makeDeps());
-    const analysis = handler.analyzeRules(null);
+    // intentionally passing null to test runtime handling
+    const analysis = handler.analyzeRules(null as unknown as { rules?: Record<string, RuleEntry[]> });
     expect(analysis.warnings).toEqual([]);
     expect(analysis.suggestions).toEqual([]);
   });
@@ -154,7 +175,8 @@ describe('RulesHandler.analyzeRules', () => {
 
   it('warns about non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    const analysis = handler.analyzeRules({ rules: { header: 'bad' } });
+    // intentionally passing invalid input to test runtime handling
+    const analysis = handler.analyzeRules({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
     expect(analysis.warnings.some(w => w.includes('not an array'))).toBe(true);
   });
 
@@ -217,23 +239,24 @@ describe('RulesHandler.analyzeRules', () => {
 describe('RulesHandler._importRulesOfType', () => {
   it('returns zeros for empty import array', async () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = await handler._importRulesOfType('header', [], { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', [], { rules: { header: [] } } as unknown as RulesStorage, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(0);
     expect(stats.skipped).toBe(0);
   });
 
   it('returns zeros for non-array input', async () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = await handler._importRulesOfType('header', null, { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
+    // intentionally passing null to test runtime handling
+    const stats = await handler._importRulesOfType('header', null as unknown as RuleEntry[], { rules: { header: [] } } as unknown as RulesStorage, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(0);
   });
 
   it('replaces all rules in replace mode', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [{ id: 'old' }] } };
-    const incoming = [{ id: 'new1' }, { id: 'new2' }];
+    const existing = { rules: { header: [{ id: 'old' }] } } as unknown as RulesStorage;
+    const incoming: RuleEntry[] = [{ id: 'new1' }, { id: 'new2' }];
 
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE, selectedItems: {} });
     expect(stats.imported).toBe(2);
     expect(stats.skipped).toBe(0);
     expect(existing.rules.header).toHaveLength(2);
@@ -241,10 +264,10 @@ describe('RulesHandler._importRulesOfType', () => {
 
   it('merges and skips duplicates by ID', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [{ id: 'r1' }] } };
-    const incoming = [{ id: 'r1' }, { id: 'r2' }];
+    const existing = { rules: { header: [{ id: 'r1' }] } } as unknown as RulesStorage;
+    const incoming: RuleEntry[] = [{ id: 'r1' }, { id: 'r2' }];
 
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(1);
     expect(stats.skipped).toBe(1);
     expect(existing.rules.header).toHaveLength(2);
@@ -252,27 +275,27 @@ describe('RulesHandler._importRulesOfType', () => {
 
   it('initializes rule type array if missing in existing storage', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: {} };
-    const incoming = [{ id: 'r1' }];
+    const existing = { rules: {} } as unknown as RulesStorage;
+    const incoming: RuleEntry[] = [{ id: 'r1' }];
 
     // In merge mode, if existingRulesStorage.rules[ruleType] is undefined,
     // the code tries `const existingRules = existingRulesStorage.rules[ruleType] || []`
     // but then pushes into it. We need to ensure the array exists:
-    existing.rules['header'] = [];
+    (existing.rules as Record<string, RuleEntry[]>)['header'] = [];
 
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(1);
   });
 
   it('generates ID for rules missing one in merge mode', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [] } };
-    const incoming = [{ name: 'No-ID Rule' }]; // no id
+    const existing = { rules: { header: [] } } as unknown as RulesStorage;
+    const incoming = [{ name: 'No-ID Rule' }] as unknown as RuleEntry[]; // no id
 
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(1);
-    expect(existing.rules.header[0].id).toBeDefined();
-    expect(existing.rules.header[0].id.length).toBeGreaterThan(0);
+    expect((existing.rules as Record<string, RuleEntry[]>).header[0].id).toBeDefined();
+    expect((existing.rules as Record<string, RuleEntry[]>).header[0].id.length).toBeGreaterThan(0);
   });
 });
 
