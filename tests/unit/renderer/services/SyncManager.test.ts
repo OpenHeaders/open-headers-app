@@ -95,7 +95,7 @@ describe('SyncManager', () => {
   describe('setupSyncListener', () => {
     it('returns cleanup function when electronAPI is available', () => {
       const unsubscribe = vi.fn();
-      mockElectronAPI.onWorkspaceSyncCompleted.mockReturnValue(unsubscribe);
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockReturnValue(unsubscribe);
 
       const cleanup = manager.setupSyncListener(vi.fn());
       expect(typeof cleanup).toBe('function');
@@ -118,7 +118,7 @@ describe('SyncManager', () => {
 
     it('calls onSyncComplete for non-initial sync events', () => {
       let capturedCallback: Function;
-      mockElectronAPI.onWorkspaceSyncCompleted.mockImplementation((cb: Function) => {
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockImplementation((cb: Function) => {
         capturedCallback = cb;
         return vi.fn();
       });
@@ -137,7 +137,7 @@ describe('SyncManager', () => {
 
     it('skips initial sync events', () => {
       let capturedCallback: Function;
-      mockElectronAPI.onWorkspaceSyncCompleted.mockImplementation((cb: Function) => {
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockImplementation((cb: Function) => {
         capturedCallback = cb;
         return vi.fn();
       });
@@ -162,7 +162,7 @@ describe('SyncManager', () => {
     it('resolves when sync event fires with matching workspace and success', async () => {
       vi.useFakeTimers();
       let capturedCallback: Function;
-      mockElectronAPI.onWorkspaceSyncCompleted.mockImplementation((cb: Function) => {
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockImplementation((cb: Function) => {
         capturedCallback = cb;
         return vi.fn();
       });
@@ -184,7 +184,7 @@ describe('SyncManager', () => {
     it('rejects when sync event fires with failure', async () => {
       vi.useFakeTimers();
       let capturedCallback: Function;
-      mockElectronAPI.onWorkspaceSyncCompleted.mockImplementation((cb: Function) => {
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockImplementation((cb: Function) => {
         capturedCallback = cb;
         return vi.fn();
       });
@@ -205,7 +205,7 @@ describe('SyncManager', () => {
     it('ignores sync events for different workspaces', async () => {
       vi.useFakeTimers();
       let capturedCallback: Function;
-      mockElectronAPI.onWorkspaceSyncCompleted.mockImplementation((cb: Function) => {
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockImplementation((cb: Function) => {
         capturedCallback = cb;
         return vi.fn();
       });
@@ -255,7 +255,7 @@ describe('SyncManager', () => {
 
     it('rejects on timeout', async () => {
       vi.useFakeTimers();
-      mockElectronAPI.onWorkspaceSyncCompleted.mockReturnValue(vi.fn());
+      mockElectronAPI.onWorkspaceSyncCompleted!.mockReturnValue(vi.fn());
       mockElectronAPI.loadFromStorage.mockResolvedValue(null);
 
       const promise = manager.waitForInitialSync('ws-1', 2000);

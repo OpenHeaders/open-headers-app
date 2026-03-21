@@ -94,9 +94,10 @@ describe('EnvironmentVariableManager', () => {
     it('returns empty string for variables without value', () => {
       const environments = {
         Default: {
+          // Intentionally omitting value to test ?? '' fallback
           EMPTY: { isSecret: false },
         },
-      };
+      } as unknown as Parameters<typeof vm.getAllVariables>[0];
       const result = vm.getAllVariables(environments, 'Default');
       expect(result.EMPTY).toBe('');
     });
@@ -123,13 +124,13 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('deletes variable when value is null', () => {
-      const envs = { Default: { TO_DELETE: { value: 'old' } } };
+      const envs = { Default: { TO_DELETE: { value: 'old', isSecret: false } } };
       const result = vm.setVariable(envs, 'Default', 'TO_DELETE', null);
       expect(result.Default.TO_DELETE).toBeUndefined();
     });
 
     it('deletes variable when value is empty string', () => {
-      const envs = { Default: { TO_DELETE: { value: 'old' } } };
+      const envs = { Default: { TO_DELETE: { value: 'old', isSecret: false } } };
       const result = vm.setVariable(envs, 'Default', 'TO_DELETE', '');
       expect(result.Default.TO_DELETE).toBeUndefined();
     });
@@ -141,7 +142,7 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('does not mutate the original environments object', () => {
-      const envs: Record<string, Record<string, { value: string }>> = { Default: { EXISTING: { value: 'keep' } } };
+      const envs: Record<string, Record<string, { value: string; isSecret: boolean }>> = { Default: { EXISTING: { value: 'keep', isSecret: false } } };
       const result = vm.setVariable(envs, 'Default', 'NEW', 'added');
       expect(envs.Default.NEW).toBeUndefined();
       expect(result.Default.NEW.value).toBe('added');
@@ -197,7 +198,7 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('returns correct count', () => {
-      const envs = { Default: { A: { value: '1' }, B: { value: '2' } } };
+      const envs = { Default: { A: { value: '1', isSecret: false }, B: { value: '2', isSecret: false } } };
       expect(vm.getVariableCount(envs, 'Default')).toBe(2);
     });
 
@@ -320,9 +321,9 @@ describe('EnvironmentStateManager', () => {
 
   describe('getState()', () => {
     it('returns a copy of state with environments spread', () => {
-      esm.state.environments = { Default: { key: { value: 'val' } } };
+      esm.state.environments = { Default: { key: { value: 'val', isSecret: false } } };
       const state = esm.getState();
-      expect(state.environments.Default).toEqual({ key: { value: 'val' } });
+      expect(state.environments.Default).toEqual({ key: { value: 'val', isSecret: false } });
     });
   });
 
@@ -346,7 +347,7 @@ describe('EnvironmentStateManager', () => {
 
   describe('init promise management', () => {
     it('setInitPromise / getInitPromise round-trip', () => {
-      const promise = Promise.resolve();
+      const promise = Promise.resolve(true);
       esm.setInitPromise(promise);
       expect(esm.getInitPromise()).toBe(promise);
     });
@@ -354,7 +355,7 @@ describe('EnvironmentStateManager', () => {
 
   describe('load promise management', () => {
     it('setLoadPromise / getLoadPromise / clearLoadPromise round-trip', () => {
-      const promise = Promise.resolve();
+      const promise = Promise.resolve(true);
       esm.setLoadPromise('ws1', promise);
       expect(esm.getLoadPromise('ws1')).toBe(promise);
       expect(esm.isLoadingWorkspace('ws1')).toBe(true);

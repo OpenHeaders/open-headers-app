@@ -8,6 +8,7 @@ function makeScheduleEntry(overrides: Partial<ScheduleEntry> = {}): ScheduleEntr
     return {
         sourceId: 's1', intervalMs: 60000, lastRefresh: null, nextRefresh: null,
         retryCount: 0, maxRetries: 3, backoffFactor: 2, failureCount: 0,
+        maxConsecutiveFailures: 5, alignToMinute: false, alignToHour: false, alignToDay: false,
         ...overrides,
     };
 }
