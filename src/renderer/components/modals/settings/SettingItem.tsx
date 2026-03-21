@@ -67,13 +67,13 @@ const styles = {
 interface SettingItemProps {
     icon?: React.ComponentType<{ style?: React.CSSProperties }>;
     title: string;
-    description?: string | React.ReactNode;
+    description?: React.ReactNode;
     fieldName: string;
     isActive?: boolean;
     disabled?: boolean;
     tooltip?: string;
     type?: 'switch' | 'select' | 'text';
-    options?: { value: string; label: string | React.ReactNode }[];
+    options?: { value: string; label: React.ReactNode }[];
     placeholder?: string;
     value?: unknown;
     onChange?: (fieldName: string, newValue: unknown) => void;
