@@ -18,7 +18,11 @@ vi.mock('../../../../src/config/version', () => ({
 
 describe('WorkspaceManager', () => {
   let manager: InstanceType<typeof WorkspaceManager>;
-  let mockStorageAPI: StorageAPI;
+  let mockStorageAPI: {
+    loadFromStorage: ReturnType<typeof vi.fn>;
+    saveToStorage: ReturnType<typeof vi.fn>;
+    deleteDirectory: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mockStorageAPI = {
@@ -26,7 +30,7 @@ describe('WorkspaceManager', () => {
       saveToStorage: vi.fn(),
       deleteDirectory: vi.fn(),
     };
-    manager = new WorkspaceManager(mockStorageAPI);
+    manager = new WorkspaceManager(mockStorageAPI as StorageAPI);
   });
 
   // ========================================================================
@@ -46,9 +50,9 @@ describe('WorkspaceManager', () => {
       expect(result.isPersonal).toBe(true);
       expect(result.isTeam).toBe(false);
       expect(result.isDefault).toBe(false);
-      expect(result.metadata.version).toBe('3.0.0');
-      expect(result.metadata.sourceCount).toBe(0);
-      expect(result.metadata.ruleCount).toBe(0);
+      expect(result.metadata!.version).toBe('3.0.0');
+      expect(result.metadata!.sourceCount).toBe(0);
+      expect(result.metadata!.ruleCount).toBe(0);
       expect(result.updatedAt).toBeDefined();
     });
 
@@ -250,7 +254,7 @@ describe('WorkspaceManager', () => {
         workspaces: [{ id: 'ws-1' }],
         activeWorkspaceId: 'ws-1',
         syncStatus: {},
-      };
+      } as Parameters<typeof manager.saveWorkspaces>[0];
       await manager.saveWorkspaces(config);
       expect(mockStorageAPI.saveToStorage).toHaveBeenCalledWith(
         'workspaces.json',

@@ -2,9 +2,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { WSSourceHandler } from '../../../src/services/websocket/ws-source-handler';
 import type { Source } from '../../../src/types/source';
 
+function makeSource(overrides: Partial<Source> & { sourceId: string }): Source {
+    return { sourceType: 'http', ...overrides };
+}
+
 function createMockService(sources: Source[] = []): ConstructorParameters<typeof WSSourceHandler>[0] {
     return {
-        rules: {},
+        rules: { header: [], request: [], response: [] },
         sources,
         appDataPath: null,
         sourceService: null,
@@ -27,24 +31,24 @@ describe('WSSourceHandler', () => {
         it('returns true when current sources is empty and new has items', () => {
             mockService.sources = [];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '1', sourceContent: 'abc' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' })
             ])).toBe(true);
         });
 
         it('returns true when lengths differ', () => {
             mockService.sources = [
-                { sourceId: '1', sourceContent: 'abc' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '1', sourceContent: 'abc' },
-                { sourceId: '2', sourceContent: 'def' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' }),
+                makeSource({ sourceId: '2', sourceContent: 'def' })
             ])).toBe(true);
         });
 
         it('returns false when content is the same', () => {
             const sources = [
-                { sourceId: '1', sourceContent: 'abc' },
-                { sourceId: '2', sourceContent: 'def' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' }),
+                makeSource({ sourceId: '2', sourceContent: 'def' })
             ];
             mockService.sources = [...sources];
             expect(handler._hasSourceContentChanged([...sources])).toBe(false);
@@ -52,48 +56,48 @@ describe('WSSourceHandler', () => {
 
         it('returns true when content has changed', () => {
             mockService.sources = [
-                { sourceId: '1', sourceContent: 'abc' },
-                { sourceId: '2', sourceContent: 'def' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' }),
+                makeSource({ sourceId: '2', sourceContent: 'def' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '1', sourceContent: 'abc' },
-                { sourceId: '2', sourceContent: 'CHANGED' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' }),
+                makeSource({ sourceId: '2', sourceContent: 'CHANGED' })
             ])).toBe(true);
         });
 
         it('returns true when a source has no sourceId', () => {
             mockService.sources = [
-                { sourceId: '1', sourceContent: 'abc' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceContent: 'abc' }
+                makeSource({ sourceId: '', sourceContent: 'abc' })
             ])).toBe(true);
         });
 
         it('returns true when new source added with different id', () => {
             mockService.sources = [
-                { sourceId: '1', sourceContent: 'abc' }
+                makeSource({ sourceId: '1', sourceContent: 'abc' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '2', sourceContent: 'abc' }
+                makeSource({ sourceId: '2', sourceContent: 'abc' })
             ])).toBe(true);
         });
 
         it('treats missing sourceContent as empty string', () => {
             mockService.sources = [
-                { sourceId: '1' }
+                makeSource({ sourceId: '1' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '1' }
+                makeSource({ sourceId: '1' })
             ])).toBe(false);
         });
 
         it('detects change from empty to non-empty content', () => {
             mockService.sources = [
-                { sourceId: '1', sourceContent: '' }
+                makeSource({ sourceId: '1', sourceContent: '' })
             ];
             expect(handler._hasSourceContentChanged([
-                { sourceId: '1', sourceContent: 'new content' }
+                makeSource({ sourceId: '1', sourceContent: 'new content' })
             ])).toBe(true);
         });
     });

@@ -394,7 +394,7 @@ describe('batchDuplicateDetection', () => {
     const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/a' })];
     const detector = createDuplicateDetector('sources');
 
-    const results = await batchDuplicateDetection(items, existing, detector);
+    const results = await batchDuplicateDetection(items, existing, detector as (item: ImportSource, existing: ImportSource[]) => boolean);
     expect(results).toHaveLength(2);
     expect(results[0].isDuplicate).toBe(true);
     expect(results[1].isDuplicate).toBe(false);
@@ -413,7 +413,7 @@ describe('batchDuplicateDetection', () => {
     const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/file-0' })];
     const detector = createDuplicateDetector('sources');
 
-    const results = await batchDuplicateDetection(items, existing, detector, 25);
+    const results = await batchDuplicateDetection(items, existing, detector as (item: ImportSource, existing: ImportSource[]) => boolean, 25);
     expect(results).toHaveLength(120);
     expect(results[0].isDuplicate).toBe(true);
     expect(results[1].isDuplicate).toBe(false);
