@@ -5,6 +5,7 @@
 
 import electron from 'electron';
 import mainLogger from '../../../../utils/mainLogger';
+import { toError, errorMessage } from '../../../../types/common';
 import GitConnectionProgress from '../utils/GitConnectionProgress';
 import type { ProgressStep } from '../utils/GitConnectionProgress';
 import type { GitExecutor } from '../core/GitExecutor';
@@ -260,15 +261,15 @@ class ConnectionTester {
       const summary = progress.getSummary();
       const lastStep = summary[summary.length - 1];
       if (!lastStep || lastStep.status !== 'error') {
-        progress.error('Connection test failed', (error as Error).message);
+        progress.error('Connection test failed', errorMessage(error));
       }
 
       return {
         success: false,
         accessible: false,
-        error: (error as Error).message,
-        errorType: this.classifyError(error as Error),
-        hint: this.getErrorHint(error as Error),
+        error: errorMessage(error),
+        errorType: this.classifyError(toError(error)),
+        hint: this.getErrorHint(toError(error)),
         progressSteps: progress.getSummary()
       };
     }
@@ -299,10 +300,10 @@ class ConnectionTester {
       const hasToken = url.includes('@') && (url.includes('x-oauth-basic') || url.includes(':x-oauth-basic@'));
 
       if (isGitHub && hasToken) {
-        if ((error as Error).message.includes('Authentication failed') ||
-            (error as Error).message.includes('Invalid username or password') ||
-            (error as Error).message.includes('fatal: Authentication failed') ||
-            (error as Error).message.includes('remote: Invalid username or password')) {
+        if (errorMessage(error).includes('Authentication failed') ||
+            errorMessage(error).includes('Invalid username or password') ||
+            errorMessage(error).includes('fatal: Authentication failed') ||
+            errorMessage(error).includes('remote: Invalid username or password')) {
           return {
             accessible: false,
             error: 'Invalid GitHub access token. Please check your token has the required permissions.'
@@ -310,7 +311,7 @@ class ConnectionTester {
         }
       }
 
-      if ((error as Error).message.includes('Authentication failed') && (!isGitHub || !hasToken)) {
+      if (errorMessage(error).includes('Authentication failed') && (!isGitHub || !hasToken)) {
         try {
           const { stdout } = await this.executor.execute(
             `ls-remote --heads "${this.stripAuth(url)}"`,
@@ -333,7 +334,7 @@ class ConnectionTester {
 
       return {
         accessible: false,
-        error: (error as Error).message
+        error: errorMessage(error)
       };
     }
   }
@@ -374,7 +375,7 @@ class ConnectionTester {
       log.error('Failed to check branch:', error);
       return {
         exists: false,
-        error: (error as Error).message,
+        error: errorMessage(error),
         alternatives: []
       };
     }
@@ -396,7 +397,7 @@ class ConnectionTester {
     } catch (error) {
       return {
         hasConfig: false,
-        error: (error as Error).message,
+        error: errorMessage(error),
         configDir: configDir || '.openheaders',
         files: []
       };

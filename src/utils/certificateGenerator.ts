@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import type nodeForge from 'node-forge';
 
 interface Logger {
   info(message: string, ...args: unknown[]): void;
@@ -48,7 +49,7 @@ class CertificateGenerator {
     }
   }
 
-  async generateWithForge(keyPath: string, certPath: string, forge: typeof import('node-forge')): Promise<CertResult> {
+  async generateWithForge(keyPath: string, certPath: string, forge: typeof nodeForge): Promise<CertResult> {
     const keys = forge.pki.rsa.generateKeyPair(2048);
     const cert = forge.pki.createCertificate();
 

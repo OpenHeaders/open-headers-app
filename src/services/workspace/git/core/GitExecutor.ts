@@ -6,6 +6,7 @@
 import child_process from 'child_process';
 import util from 'util';
 import mainLogger from '../../../../utils/mainLogger';
+import { toError } from '../../../../types/common';
 
 const { exec } = child_process;
 const { promisify } = util;
@@ -102,7 +103,7 @@ class GitExecutor {
       return await execAsync(fullCommand, execOptions);
     } catch (error) {
       log.error(`Command failed: ${fullCommand}`, error);
-      throw this.enhanceError(error as Error, fullCommand);
+      throw this.enhanceError(toError(error), fullCommand);
     }
   }
 

@@ -5,6 +5,7 @@
 
 import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
+import { errorMessage } from '../../../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -70,7 +71,7 @@ class GitBranchManager {
         message: `Created branch '${branchName}'`
       };
     } catch (error) {
-      if ((error as Error).message.includes('already exists')) {
+      if (errorMessage(error).includes('already exists')) {
         throw new Error(`Branch '${branchName}' already exists`);
       }
       throw error;
@@ -95,7 +96,7 @@ class GitBranchManager {
         message: `Switched to branch '${branchName}'`
       };
     } catch (error) {
-      if ((error as Error).message.includes('did not match any file')) {
+      if (errorMessage(error).includes('did not match any file')) {
         throw new Error(`Branch '${branchName}' does not exist`);
       }
       throw error;
@@ -186,7 +187,7 @@ class GitBranchManager {
         message: `Deleted branch '${branchName}'`
       };
     } catch (error) {
-      if ((error as Error).message.includes('not fully merged')) {
+      if (errorMessage(error).includes('not fully merged')) {
         throw new Error(`Branch '${branchName}' has unmerged changes. Use force to delete.`);
       }
       throw error;

@@ -13,7 +13,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { createLogger } from './mainLogger';
-import { errorMessage } from '../types/common';
+import { errorMessage, toErrno } from '../types/common';
 
 const log = createLogger('AtomicFileWriter');
 
@@ -218,7 +218,7 @@ class AtomicFileWriter {
               await fs.promises.unlink(filePath);
               break; // Successfully deleted
             } catch (unlinkError: unknown) {
-              const errCode = (unlinkError as NodeJS.ErrnoException).code;
+              const errCode = toErrno(unlinkError).code;
               if (errCode === 'ENOENT') {
                 // File doesn't exist, that's fine
                 break;
@@ -269,7 +269,7 @@ class AtomicFileWriter {
         this.lockFiles.set(lockPath, true);
         return;
       } catch (error: unknown) {
-        const errCode = (error as NodeJS.ErrnoException).code;
+        const errCode = toErrno(error).code;
         if (errCode === 'EEXIST') {
           // Lock exists, wait and retry
           await new Promise(resolve => setTimeout(resolve, 50));
@@ -288,7 +288,7 @@ class AtomicFileWriter {
       await fs.promises.unlink(lockPath);
     } catch (error: unknown) {
       // Ignore if lock was already removed
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (toErrno(error).code !== 'ENOENT') {
         log.debug(`Could not remove stale lock: ${errorMessage(error)}`);
       }
     }
@@ -354,7 +354,7 @@ class AtomicFileWriter {
         await this.releaseLock(lockPath);
       }
     } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (toErrno(error).code === 'ENOENT') {
         return null;
       }
       throw error;

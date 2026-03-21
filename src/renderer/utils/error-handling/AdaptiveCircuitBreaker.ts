@@ -1,5 +1,6 @@
 import { createLogger } from './logger';
 import timeManager from '../../services/TimeManager';
+import { errorMessage } from '../../../types/common';
 
 const log = createLogger('AdaptiveCircuitBreaker');
 
@@ -112,7 +113,7 @@ class AdaptiveCircuitBreaker {
       log.debug(`Circuit breaker ${this.name} execution successful`);
       return result;
     } catch (error) {
-      log.error(`Circuit breaker ${this.name} execution failed: ${(error as Error).message}`);
+      log.error(`Circuit breaker ${this.name} execution failed: ${errorMessage(error)}`);
       this.onFailure();
       throw error;
     }
@@ -135,7 +136,7 @@ class AdaptiveCircuitBreaker {
       
       return result;
     } catch (error) {
-      log.warn(`Manual bypass failed for ${this.name}: ${(error as Error).message}`);
+      log.warn(`Manual bypass failed for ${this.name}: ${errorMessage(error)}`);
       this.manualBypassActive = false;
       this.metrics.totalFailures++;
       

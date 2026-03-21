@@ -45,7 +45,7 @@ class ProxyService extends EventEmitter {
     server: http.Server | null = null;
     port = 59212;
     isRunning = false;
-    private _connections = new Set<import('net').Socket>();
+    private _connections = new Set<net.Socket>();
 
     // Rule management
     ruleStore = new ProxyRuleStore();

@@ -4,6 +4,7 @@ import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import type { IpcInvokeEvent } from '../../../../types/common';
+import { toErrno } from '../../../../types/common';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -54,7 +55,7 @@ class StorageHandlers {
             log.info(`Deleted from storage: ${storagePath}`);
             return true;
         } catch (error: unknown) {
-            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (toErrno(error).code === 'ENOENT') {
                 log.debug(`File not found for deletion: ${filename}`);
                 return true;
             }
@@ -73,7 +74,7 @@ class StorageHandlers {
             log.info(`Deleted directory: ${fullPath}`);
             return true;
         } catch (error: unknown) {
-            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (toErrno(error).code === 'ENOENT') {
                 log.debug(`Directory not found for deletion: ${dirPath}`);
                 return true;
             }
@@ -110,7 +111,7 @@ class StorageHandlers {
 
             return content;
         } catch (err: unknown) {
-            if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (toErrno(err).code === 'ENOENT') {
                 log.info(`Storage file not found: ${filename}`);
                 return null;
             }

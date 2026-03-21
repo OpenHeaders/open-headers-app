@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import http from 'http';
+import type { ProxyService } from '../../src/services/proxy/ProxyService';
 
 // Mock atomicFileWriter to avoid filesystem I/O
 vi.mock('../../src/utils/atomicFileWriter', () => ({
@@ -73,7 +74,7 @@ function proxyRequest(
 
 // ── Test suite ──────────────────────────────────────────────────────
 
-let proxyService: InstanceType<typeof import('../../src/services/proxy/ProxyService').ProxyService>;
+let proxyService: ProxyService;
 let proxyPort: number;
 
 beforeAll(async () => {

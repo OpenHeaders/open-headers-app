@@ -3,7 +3,7 @@ import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
-import { errorMessage } from '../../../types/common';
+import { errorMessage, toErrno } from '../../../types/common';
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('AutoUpdater');
@@ -136,8 +136,8 @@ class AutoUpdaterManager {
         if (err.message.includes('code signature')) {
             log.error('Code signature validation error details:', {
                 message: err.message,
-                code: (err as NodeJS.ErrnoException).code,
-                errno: (err as NodeJS.ErrnoException).errno
+                code: toErrno(err).code,
+                errno: toErrno(err).errno
             });
         }
     }

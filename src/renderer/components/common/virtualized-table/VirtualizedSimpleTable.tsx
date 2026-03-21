@@ -52,7 +52,7 @@ interface RowEventHandlers {
   onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-interface VirtualizedSimpleTableProps<T extends object = Record<string, unknown>> {
+interface VirtualizedSimpleTableProps<T extends object = object> {
   columns: SimpleColumnDef<T>[];
   dataSource: T[];
   rowHeight?: number;

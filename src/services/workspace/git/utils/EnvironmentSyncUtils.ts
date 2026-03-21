@@ -12,6 +12,7 @@
 import mainLogger from '../../../../utils/mainLogger';
 import atomicWriter from '../../../../utils/atomicFileWriter';
 import type { EnvironmentVariable, EnvironmentMap } from '../../../../types/environment';
+import { toError, toErrno, errorMessage } from '../../../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -87,11 +88,11 @@ async function readFileWithAtomicWriter(filePath: string, maxRetries = ENV_FILE_
       return { exists: true, content };
 
     } catch (error) {
-      lastError = error as Error;
+      lastError = toError(error);
 
       // For transient errors (EBUSY, EIO, EAGAIN, etc.), retry with exponential backoff
       if (attempt < maxRetries) {
-        log.warn(`Retry ${attempt}/${maxRetries} reading ${filePath} via atomicWriter: ${(error as Error).message}`);
+        log.warn(`Retry ${attempt}/${maxRetries} reading ${filePath} via atomicWriter: ${errorMessage(error)}`);
         await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
       }
     }
@@ -117,11 +118,11 @@ async function createBackupIfNeeded(fs: FsPromises, filePath: string): Promise<s
     log.info(`Created backup: ${backupPath}`);
     return backupPath;
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (toErrno(error).code === 'ENOENT') {
       // File doesn't exist, no backup needed
       return null;
     }
-    log.warn(`Failed to create backup of ${filePath}: ${(error as Error).message}`);
+    log.warn(`Failed to create backup of ${filePath}: ${errorMessage(error)}`);
     return null;
   }
 }
@@ -162,7 +163,7 @@ async function cleanupOldBackups(fs: FsPromises, workspacePath: string, pathModu
     }
   } catch (error) {
     // Ignore cleanup errors
-    log.debug(`Backup cleanup skipped: ${(error as Error).message}`);
+    log.debug(`Backup cleanup skipped: ${errorMessage(error)}`);
   }
 }
 

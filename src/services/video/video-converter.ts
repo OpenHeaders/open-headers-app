@@ -2,7 +2,7 @@ import child_process from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../utils/mainLogger';
-import { errorMessage as errMsg } from '../../types/common';
+import { errorMessage as errMsg, toErrno } from '../../types/common';
 
 const { spawn } = child_process;
 const { createLogger } = mainLogger;
@@ -342,7 +342,7 @@ class VideoConverter {
             await this.validateVideoFormat(inputPath);
 
         } catch (error: unknown) {
-            if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+            if (toErrno(error).code === 'ENOENT') {
                 throw new Error(`Input file not found: ${inputPath}`);
             }
             throw error;

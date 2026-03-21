@@ -7,6 +7,7 @@ const log = createLogger('ConfigFileDetector');
 
 import { analyzeConfigFile } from '../../utils/configValidator';
 import type { AnalysisResult, MainAnalysisResult, ConfigData } from '../../utils/configValidator';
+import { toErrno } from '../../types/common';
 
 interface DetectionResult {
   success: boolean;
@@ -79,8 +80,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
           };
         }
       } catch (error: unknown) {
-        const err = error as NodeJS.ErrnoException;
-        if (err.code === 'ENOENT') {
+        if (toErrno(error).code === 'ENOENT') {
           throw new Error(`One or both files not found: ${searchPatterns.configFiles[0]}, ${searchPatterns.envFiles[0]}`);
         }
         throw error;

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from 'vitest';
+import type { ProxyService } from '../../../src/services/proxy/ProxyService';
 
 // Mock atomicFileWriter (ProxyCache and ProxyRuleStore use it for disk I/O)
 vi.mock('../../../src/utils/atomicFileWriter', () => ({
@@ -7,7 +8,7 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
     writeJson: () => Promise.resolve(),
 }));
 
-let proxyService: InstanceType<typeof import('../../../src/services/proxy/ProxyService').ProxyService>;
+let proxyService: ProxyService;
 
 beforeAll(async () => {
     const mod = await import('../../../src/services/proxy/ProxyService');

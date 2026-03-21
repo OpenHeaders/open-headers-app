@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type TimeManagerDefault from '../../../../src/renderer/services/TimeManager';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -99,7 +100,7 @@ vi.stubGlobal('window', {
 });
 
 const NetworkAwareScheduler = (await import('../../../../src/renderer/services/NetworkAwareScheduler')).default;
-const timeManager = (await import('../../../../src/renderer/services/TimeManager')).default as typeof import('../../../../src/renderer/services/TimeManager').default & { _setNow: (v: number) => void };
+const timeManager = (await import('../../../../src/renderer/services/TimeManager')).default as typeof TimeManagerDefault & { _setNow: (v: number) => void };
 
 describe('NetworkAwareScheduler', () => {
   let scheduler: InstanceType<typeof NetworkAwareScheduler>;

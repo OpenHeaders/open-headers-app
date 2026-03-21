@@ -4,6 +4,7 @@
  */
 
 import type { JsonObject } from '../../types/common';
+import { errorMessage } from '../../types/common';
 
 /**
  * Decodes a JWT token without verification
@@ -31,7 +32,7 @@ export function decodeJWT(token: string) {
       signature: parts[2]
     };
   } catch (error) {
-    throw new Error(`Failed to decode JWT: ${(error as Error).message}`);
+    throw new Error(`Failed to decode JWT: ${errorMessage(error)}`);
   }
 }
 
@@ -58,7 +59,7 @@ export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '
     // Return JWT with original signature (or empty if not provided)
     return `${encodedHeader}.${encodedPayload}.${signature}`;
   } catch (error) {
-    throw new Error(`Failed to encode JWT: ${(error as Error).message}`);
+    throw new Error(`Failed to encode JWT: ${errorMessage(error)}`);
   }
 }
 
@@ -160,7 +161,7 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
 
     return `${dataToSign}.${signature}`;
   } catch (error) {
-    throw new Error(`Failed to sign JWT: ${(error as Error).message}`);
+    throw new Error(`Failed to sign JWT: ${errorMessage(error)}`);
   }
 }
 
@@ -211,7 +212,7 @@ export function validateJSON(jsonString: string) {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    throw new Error(`Invalid JSON: ${(error as Error).message}`);
+    throw new Error(`Invalid JSON: ${errorMessage(error)}`);
   }
 }
 

@@ -9,6 +9,7 @@ import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
 import { GitAuthenticator } from '../auth/GitAuthenticator';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
+import { errorMessage, toErrno } from '../../../../types/common';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -354,7 +355,7 @@ class GitRepositoryManager {
           }
         } catch (error) {
           // If the command fails, it might be because origin/branch doesn't exist
-          log.warn(`Could not count unpushed commits: ${(error as Error).message}`);
+          log.warn(`Could not count unpushed commits: ${errorMessage(error)}`);
           // Continue with push anyway
           unpushedCount = 1; // Assume at least one commit
         }
@@ -557,7 +558,7 @@ class GitRepositoryManager {
         }
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (toErrno(error).code !== 'ENOENT') {
         throw error;
       }
       // Directory doesn't exist, create it

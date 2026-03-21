@@ -5,6 +5,7 @@
 
 import mainLogger from '../../../../utils/mainLogger';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
+import { toError, errorMessage } from '../../../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -391,14 +392,14 @@ class GitErrorHandler {
     try {
       return await operation();
     } catch (error) {
-      const handled = this.handle(error as Error, context);
+      const handled = this.handle(toError(error), context);
 
       // Re-throw as enhanced error
       const enhancedError = this.createError(
         handled.message,
         handled.type,
         {
-          original: (error as Error).message,
+          original: errorMessage(error),
           recovery: handled.recovery,
           context: handled.context
         }

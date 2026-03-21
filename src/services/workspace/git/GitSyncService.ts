@@ -28,8 +28,8 @@ import SparseCheckoutManager from './repository/SparseCheckoutManager';
 // Operation modules
 import TeamWorkspaceCreator from './operations/TeamWorkspaceCreator';
 import type { CreateOptions, InvitationOptions, CreateResult } from './operations/TeamWorkspaceCreator';
-import TeamWorkspaceSyncer from './operations/TeamWorkspaceSyncer';
-import type { SyncOptions, SyncResult, SyncStatusResult, SyncStatusType } from './operations/TeamWorkspaceSyncer';
+import TeamWorkspaceSyncer, { SYNC_STATUS } from './operations/TeamWorkspaceSyncer';
+import type { SyncOptions, SyncResult, SyncStatusResult } from './operations/TeamWorkspaceSyncer';
 import ConnectionTester from './operations/ConnectionTester';
 import type { ConnectionTestOptions, ConnectionTestResult } from './operations/ConnectionTester';
 import CommitManager from './operations/CommitManager';
@@ -46,6 +46,7 @@ import { ConfigFileDetector } from '../ConfigFileDetector';
 import type { DetectedFile } from '../ConfigFileDetector';
 import { ConfigFileValidator } from '../config-file-validator';
 import type { ValidationResult, ConfigPaths } from '../config-file-validator';
+import { toError, errorMessage } from '../../../types/common';
 
 // Legacy support
 import { GitAutoInstaller } from '../git-auto-installer';
@@ -202,7 +203,7 @@ class GitSyncService {
       log.info('GitSyncService initialized successfully');
 
     } catch (error) {
-      this.initializationError = error as Error;
+      this.initializationError = toError(error);
       log.error('GitSyncService initialization failed:', error);
       throw error;
     }
@@ -232,7 +233,7 @@ class GitSyncService {
         platform: process.platform,
         tempDir: '',
         sshDir: '',
-        error: (error as Error).message
+        error: errorMessage(error)
       };
     }
   }
@@ -246,8 +247,8 @@ class GitSyncService {
     try {
       return await this.connectionTester!.testConnection(options);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, { operation: 'testConnection', ...options });
-      return { success: false, accessible: false, error: handled.message } as ConnectionTestResult;
+      const handled = this.errorHandler.handle(toError(error), { operation: 'testConnection', ...options });
+      return { success: false, accessible: false, error: handled.message };
     }
   }
 
@@ -281,7 +282,7 @@ class GitSyncService {
       return result;
 
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'createTeamWorkspace',
         ...options
       });
@@ -304,7 +305,7 @@ class GitSyncService {
       return await this.teamWorkspaceCreator!.createFromInvitation(fullOptions);
 
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'createFromInvitation',
         ...options
       });
@@ -359,13 +360,13 @@ class GitSyncService {
 
       return await this.teamWorkspaceSyncer!.syncWorkspace(syncOptions);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'syncWorkspace',
         ...options
       });
       return {
         success: false,
-        status: 'error' as SyncStatusType,
+        status: SYNC_STATUS.ERROR,
         message: handled.message,
         error: handled.message,
       };
@@ -390,13 +391,13 @@ class GitSyncService {
 
       return await this.teamWorkspaceSyncer!.autoSync(syncOptions);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'autoSyncWorkspace',
         ...options
       });
       return {
         success: false,
-        status: 'error' as SyncStatusType,
+        status: SYNC_STATUS.ERROR,
         message: handled.message,
         error: handled.message,
         autoSync: true
@@ -413,7 +414,7 @@ class GitSyncService {
     try {
       return await this.repositoryManager!.cloneRepository(options);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'cloneRepository',
         ...options
       });
@@ -430,7 +431,7 @@ class GitSyncService {
     try {
       return await this.repositoryManager!.pullRepository(options);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'pullRepository',
         ...options
       });
@@ -447,7 +448,7 @@ class GitSyncService {
     try {
       return await this.repositoryManager!.pushRepository(options);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'pushRepository',
         ...options
       });
@@ -570,7 +571,7 @@ class GitSyncService {
       return await this.commitManager!.commitConfiguration(options as CommitOptions);
 
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'commitConfiguration',
         ...options
       });
@@ -587,7 +588,7 @@ class GitSyncService {
     try {
       return await this.repositoryManager!.getStatus(repoDir);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'getRepositoryStatus',
         repoDir
       });
@@ -608,9 +609,9 @@ class GitSyncService {
       );
     } catch (error) {
       return {
-        status: 'error' as SyncStatusType,
-        error: (error as Error).message
-      } as SyncStatusResult;
+        status: SYNC_STATUS.ERROR,
+        error: errorMessage(error)
+      };
     }
   }
 
@@ -635,8 +636,8 @@ class GitSyncService {
     } catch (error) {
       return {
         valid: false,
-        errors: [(error as Error).message]
-      } as ValidationResult;
+        errors: [errorMessage(error)]
+      };
     }
   }
 
@@ -650,7 +651,7 @@ class GitSyncService {
       return await this.cleanupManager!.performCleanup(options);
     } catch (error) {
       log.error('Cleanup failed:', error);
-      return { success: false, error: (error as Error).message };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -663,7 +664,7 @@ class GitSyncService {
     try {
       return await this.cleanupManager!.getCleanupStats();
     } catch (error) {
-      return { error: (error as Error).message };
+      return { error: errorMessage(error) };
     }
   }
 
@@ -739,7 +740,7 @@ class GitSyncService {
       const { repoDir, branchName, baseBranch } = options;
       return await this.branchManager!.createBranch(repoDir, branchName, baseBranch);
     } catch (error) {
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'createBranch',
         ...options
       });
@@ -801,9 +802,9 @@ class GitSyncService {
 
     } catch (error) {
       // Check if it's a permission error
-      if ((error as Error).message.includes('permission') ||
-          (error as Error).message.includes('forbidden') ||
-          (error as Error).message.includes('unauthorized')) {
+      if (errorMessage(error).includes('permission') ||
+          errorMessage(error).includes('forbidden') ||
+          errorMessage(error).includes('unauthorized')) {
         return {
           success: true,
           hasWriteAccess: false,
@@ -811,7 +812,7 @@ class GitSyncService {
         };
       }
 
-      const handled = this.errorHandler.handle(error as Error, {
+      const handled = this.errorHandler.handle(toError(error), {
         operation: 'checkWritePermissions',
         ...options
       });

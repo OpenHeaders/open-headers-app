@@ -4,6 +4,7 @@ import { prepareAuthData, formatValidationDetails } from '../../utils';
 import type { WorkspaceFormValues } from '../../utils/WorkspaceUtils';
 import { TIMING } from '../../constants';
 
+import { errorMessage } from '../../../../../../types/common';
 import { createLogger } from '../../../../../utils/error-handling/logger';
 const log = createLogger('GitActions');
 
@@ -64,7 +65,7 @@ export const useGitActions = () => {
             setGitStatus(status);
         } catch (error) {
             log.error('Failed to check Git status:', error);
-            setGitStatus({ isInstalled: false, error: (error as Error).message });
+            setGitStatus({ isInstalled: false, error: errorMessage(error) });
         } finally {
             setCheckingGitStatus(false);
         }
@@ -88,7 +89,7 @@ export const useGitActions = () => {
             }
         } catch (error) {
             log.error('Git installation error:', error);
-            message.error('Failed to install Git: ' + (error as Error).message);
+            message.error('Failed to install Git: ' + errorMessage(error));
         } finally {
             setInstallingGit(false);
             setGitInstallProgress('');
@@ -133,7 +134,7 @@ export const useGitActions = () => {
                 handleConnectionError(result);
             }
         } catch (error) {
-            message.error(`Connection test failed: ${(error as Error).message}`);
+            message.error(`Connection test failed: ${errorMessage(error)}`);
             setConnectionTested(false);
         } finally {
             setTestingConnection(false);

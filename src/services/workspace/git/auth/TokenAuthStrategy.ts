@@ -3,6 +3,7 @@
  */
 
 import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage } from '../../../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -104,7 +105,7 @@ class TokenAuthStrategy {
 
       return urlObj.toString();
     } catch (error) {
-      throw new Error(`Failed to parse Git URL: ${(error as Error).message}`);
+      throw new Error(`Failed to parse Git URL: ${errorMessage(error)}`);
     }
   }
 

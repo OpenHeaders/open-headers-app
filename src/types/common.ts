@@ -39,3 +39,15 @@ export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
   return String(error);
 }
+
+/** Narrows an unknown catch value to Error. */
+export function toError(error: unknown): Error {
+  if (error instanceof Error) return error;
+  return new Error(String(error));
+}
+
+/** Narrows an unknown catch value to NodeJS.ErrnoException. */
+export function toErrno(error: unknown): NodeJS.ErrnoException {
+  if (error instanceof Error) return error as NodeJS.ErrnoException;
+  return new Error(String(error));
+}
