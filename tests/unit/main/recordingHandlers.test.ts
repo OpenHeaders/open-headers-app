@@ -210,7 +210,7 @@ describe('RecordingHandlers — pure logic', () => {
             const recordData = {
                 record: {
                     metadata: { timestamp: 1700000000000, url: 'https://example.com', duration: 5000 },
-                    events: [{ type: 'click' }, { type: 'keypress' }]
+                    events: [{ type: 1 }, { type: 2 }]
                 },
                 source: 'extension',
                 tag: 'regression',
@@ -289,9 +289,9 @@ describe('RecordingHandlers — pure logic', () => {
 
         it('uses processed data for size calculation', () => {
             const recordData = {
-                record: { metadata: {}, events: [1, 2, 3] }
-            };
-            const processedData = { record: { metadata: {}, events: [1] } };
+                record: { metadata: {}, events: [{}, {}, {}] }
+            } as RecordData;
+            const processedData = { record: { metadata: {}, events: [{}] } } as RecordData;
             const meta = buildUploadedRecordingMetadata('up-2', recordData, processedData);
             // eventCount comes from original data, not processed
             expect(meta.eventCount).toBe(3);

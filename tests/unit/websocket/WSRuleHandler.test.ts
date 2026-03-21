@@ -53,7 +53,7 @@ describe('WSRuleHandler', () => {
 
     beforeEach(() => {
         mockService = createMockService();
-        handler = new WSRuleHandler(mockService as Parameters<typeof WSRuleHandler.prototype.constructor>[0]);
+        handler = new WSRuleHandler(mockService as ConstructorParameters<typeof WSRuleHandler>[0]);
     });
 
     // ------- _populateDynamicHeaderValues -------

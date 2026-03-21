@@ -19,7 +19,7 @@ describe('calculateViewportScale', () => {
   });
 
   it('uses default viewport when null', () => {
-    const scale = calculateViewportScale(null, 540, 458);
+    const scale = calculateViewportScale(null as unknown as { width: number; height: number }, 540, 458);
     expect(scale).toBeGreaterThan(0);
     expect(scale).toBeLessThanOrEqual(1);
   });

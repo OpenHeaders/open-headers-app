@@ -422,7 +422,7 @@ describe('AdaptiveCircuitBreakerManager', () => {
   });
 
   it('resets a specific breaker', async () => {
-    const breaker = manager.getBreaker('svc', { failureThreshold: 1 });
+    const breaker = manager.getBreaker('svc', { failureThreshold: 1 })!;
     breaker.onFailure();
     expect(breaker.state).toBe(CircuitState.OPEN);
 

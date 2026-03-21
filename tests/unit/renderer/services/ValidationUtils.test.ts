@@ -187,7 +187,7 @@ describe('validateProxyRule', () => {
 // ---------------------------------------------------------------------------
 describe('validateSource', () => {
   it('rejects null', () => {
-    const r = validateSource(null);
+    const r = validateSource(null as unknown as Parameters<typeof validateSource>[0]);
     expect(r.success).toBe(false);
   });
 
@@ -301,7 +301,7 @@ describe('validateEnvironmentSchema', () => {
 // ---------------------------------------------------------------------------
 describe('validateImportPayload', () => {
   it('rejects null payload', () => {
-    const r = validateImportPayload(null);
+    const r = validateImportPayload(null as unknown as Parameters<typeof validateImportPayload>[0]);
     expect(r.success).toBe(false);
   });
 
@@ -340,7 +340,7 @@ describe('validateImportPayload', () => {
 
   it('collects environment schema errors', () => {
     const r = validateImportPayload({
-      environmentSchema: 'invalid',
+      environmentSchema: 'invalid' as never,
     });
     expect(r.success).toBe(false);
     expect(r.error).toContain('Environment schema');

@@ -47,11 +47,13 @@ interface InstallationInfo {
 }
 
 interface SyncOptions {
+    workspaceId?: string;
     url: string;
     branch?: string;
     authType?: string;
     authData?: Record<string, string>;
     repoDir?: string;
+    depth?: number;
 }
 
 interface SyncResult {
@@ -219,7 +221,7 @@ describe('GitSyncService — pure logic', () => {
 
         it('does not overwrite existing repoDir if already present', () => {
             // The spread puts options first, then repoDir overwrites
-            const options = { repoDir: '/old/path' };
+            const options = { url: 'https://repo.git', repoDir: '/old/path' };
             const result = buildSyncOptions(options, '/new/path');
             expect(result.repoDir).toBe('/new/path');
         });

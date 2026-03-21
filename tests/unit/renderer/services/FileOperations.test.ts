@@ -322,7 +322,7 @@ describe('FileOperations', () => {
         const result = await handleMultiFileExport({
           mainFilename: 'config.json',
           mainData: { sources: [] },
-          environmentData: null,
+          environmentData: undefined,
           environmentFilename: undefined,
         });
 

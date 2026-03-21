@@ -47,7 +47,7 @@ describe('getFieldsWithTemplateVariables', () => {
   });
 
   it('returns empty when sourcePath is not a string', () => {
-    expect(getFieldsWithTemplateVariables({ sourcePath: 123 })).toEqual([]);
+    expect(getFieldsWithTemplateVariables({ sourcePath: 123 as unknown as string })).toEqual([]);
   });
 
   it('returns empty when sourcePath is undefined', () => {

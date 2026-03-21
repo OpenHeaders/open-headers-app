@@ -109,6 +109,7 @@ describe('WSClientHandler', () => {
                 browserVersion: '120.0',
                 platform: 'windows',
                 connectionType: 'WS',
+                userAgent: 'Mozilla/5.0 Chrome/120.0',
                 connectedAt: new Date(),
                 lastActivity: new Date(),
                 extensionVersion: '1.0.0'
@@ -119,6 +120,7 @@ describe('WSClientHandler', () => {
                 browserVersion: '121.0',
                 platform: 'linux',
                 connectionType: 'WSS',
+                userAgent: 'Mozilla/5.0 Firefox/121.0',
                 connectedAt: new Date(),
                 lastActivity: new Date()
             });
@@ -134,11 +136,11 @@ describe('WSClientHandler', () => {
         it('counts multiple same-browser connections', () => {
             mockService.connectedClients.set('c1', {
                 id: 'c1', browser: 'chrome', browserVersion: '120', platform: 'windows',
-                connectionType: 'WS', connectedAt: new Date(), lastActivity: new Date()
+                connectionType: 'WS', userAgent: 'Chrome/120', connectedAt: new Date(), lastActivity: new Date()
             });
             mockService.connectedClients.set('c2', {
                 id: 'c2', browser: 'chrome', browserVersion: '121', platform: 'macos',
-                connectionType: 'WS', connectedAt: new Date(), lastActivity: new Date()
+                connectionType: 'WS', userAgent: 'Chrome/121', connectedAt: new Date(), lastActivity: new Date()
             });
 
             const status = handler.getConnectionStatus();

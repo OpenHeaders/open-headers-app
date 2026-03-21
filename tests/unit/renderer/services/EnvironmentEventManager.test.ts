@@ -54,7 +54,7 @@ describe('EnvironmentEventManager', () => {
   // ========================================================================
   describe('dispatchEnvironmentsLoaded', () => {
     it('dispatches environments-loaded event with correct detail', () => {
-      const environments = { Default: { KEY: { value: 'val' } } };
+      const environments = { Default: { KEY: { value: 'val', isSecret: false } } };
       manager.dispatchEnvironmentsLoaded('ws-1', environments, 'Default');
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('EnvironmentEventManager', () => {
   // ========================================================================
   describe('dispatchVariablesChanged', () => {
     it('dispatches environment-variables-changed event', () => {
-      const variables = { KEY: 'val' };
+      const variables = { KEY: { value: 'val', isSecret: false } };
       manager.dispatchVariablesChanged('Default', variables);
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
@@ -87,7 +87,7 @@ describe('EnvironmentEventManager', () => {
   // ========================================================================
   describe('dispatchEnvironmentChanged', () => {
     it('dispatches environment-switched event', () => {
-      const variables = { KEY: 'val' };
+      const variables = { KEY: { value: 'val', isSecret: false } };
       manager.dispatchEnvironmentChanged('Production', variables);
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
