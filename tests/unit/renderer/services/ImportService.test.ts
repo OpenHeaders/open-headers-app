@@ -9,24 +9,45 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 
 import { ImportService } from '../../../../src/renderer/services/export-import/core/ImportService';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportImportDependencies, ImportOptions } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
+    appVersion: '3.0.0',
     activeWorkspaceId: 'ws-1',
     environments: {},
     sources: [],
     workspaces: [],
+    exportSources: vi.fn(() => []),
+    addSource: vi.fn(),
+    removeSource: vi.fn(),
+    createWorkspace: vi.fn(async (ws) => ws),
+    switchWorkspace: vi.fn(),
+    setVariable: vi.fn(),
     generateEnvironmentSchema: vi.fn(() => ({
       environments: {},
       variableDefinitions: {},
     })),
     createEnvironment: vi.fn(),
-    createWorkspace: vi.fn(async (ws) => ws),
-    switchWorkspace: vi.fn(),
+    ...overrides,
+  } as ExportImportDependencies;
+}
+
+/** Minimal valid import stats for _hasImportedData */
+function makeStats(overrides: Record<string, unknown> = {}) {
+  return {
+    sourcesImported: 0,
+    sourcesSkipped: 0,
+    proxyRulesImported: 0,
+    proxyRulesSkipped: 0,
+    rulesImported: { total: 0 },
+    rulesSkipped: { total: 0 },
+    environmentsImported: 0,
+    variablesCreated: 0,
+    errors: [] as Array<{ error: string }>,
     ...overrides,
   };
 }
@@ -37,37 +58,42 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
 describe('ImportService._validateImportOptions', () => {
   it('throws for null options', () => {
     const service = new ImportService(makeDeps());
-    expect(() => service._validateImportOptions(null))
+    // intentionally passing invalid input to test runtime validation
+    expect(() => service._validateImportOptions(null as unknown as ImportOptions))
       .toThrow('Import options must be provided');
   });
 
   it('throws for non-object options', () => {
     const service = new ImportService(makeDeps());
-    expect(() => service._validateImportOptions('str'))
+    // intentionally passing invalid input to test runtime validation
+    expect(() => service._validateImportOptions('str' as unknown as ImportOptions))
       .toThrow('Import options must be provided');
   });
 
   it('throws when fileContent is missing', () => {
     const service = new ImportService(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     expect(() => service._validateImportOptions({
       selectedItems: { sources: true },
       importMode: IMPORT_MODES.MERGE,
-    })).toThrow('File content must be provided');
+    } as unknown as ImportOptions)).toThrow('File content must be provided');
   });
 
   it('throws when fileContent is not a string', () => {
     const service = new ImportService(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     expect(() => service._validateImportOptions({
       fileContent: 123,
       selectedItems: { sources: true },
-    })).toThrow('File content must be provided as a string');
+    } as unknown as ImportOptions)).toThrow('File content must be provided as a string');
   });
 
   it('throws when selectedItems is missing', () => {
     const service = new ImportService(makeDeps());
+    // intentionally passing invalid input to test runtime validation
     expect(() => service._validateImportOptions({
       fileContent: '{}',
-    })).toThrow('Selected items must be specified');
+    } as unknown as ImportOptions)).toThrow('Selected items must be specified');
   });
 
   it('throws when no items are selected', () => {
@@ -120,63 +146,32 @@ describe('ImportService._validateImportOptions', () => {
 describe('ImportService._hasImportedData', () => {
   it('returns false when nothing was imported', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 0,
-      proxyRulesImported: 0,
-      rulesImported: { total: 0 },
-      environmentsImported: 0,
-    })).toBe(false);
+    expect(service._hasImportedData(makeStats())).toBe(false);
   });
 
   it('returns true when sources were imported', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 1,
-      proxyRulesImported: 0,
-      rulesImported: { total: 0 },
-      environmentsImported: 0,
-    })).toBe(true);
+    expect(service._hasImportedData(makeStats({ sourcesImported: 1 }))).toBe(true);
   });
 
   it('returns true when proxy rules were imported', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 0,
-      proxyRulesImported: 3,
-      rulesImported: { total: 0 },
-      environmentsImported: 0,
-    })).toBe(true);
+    expect(service._hasImportedData(makeStats({ proxyRulesImported: 3 }))).toBe(true);
   });
 
   it('returns true when rules were imported', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 0,
-      proxyRulesImported: 0,
-      rulesImported: { total: 5 },
-      environmentsImported: 0,
-    })).toBe(true);
+    expect(service._hasImportedData(makeStats({ rulesImported: { total: 5 } }))).toBe(true);
   });
 
   it('returns true when environments were imported', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 0,
-      proxyRulesImported: 0,
-      rulesImported: { total: 0 },
-      environmentsImported: 2,
-    })).toBe(true);
+    expect(service._hasImportedData(makeStats({ environmentsImported: 2 }))).toBe(true);
   });
 
   it('returns true when a workspace was created', () => {
     const service = new ImportService(makeDeps());
-    expect(service._hasImportedData({
-      sourcesImported: 0,
-      proxyRulesImported: 0,
-      rulesImported: { total: 0 },
-      environmentsImported: 0,
-      createdWorkspace: { name: 'WS' },
-    })).toBe(true);
+    expect(service._hasImportedData(makeStats({ createdWorkspace: { name: 'WS' } }))).toBe(true);
   });
 });
 
@@ -186,17 +181,7 @@ describe('ImportService._hasImportedData', () => {
 describe('ImportService.getImportStatistics', () => {
   it('returns zeros for empty stats', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
-      sourcesImported: 0,
-      sourcesSkipped: 0,
-      proxyRulesImported: 0,
-      proxyRulesSkipped: 0,
-      rulesImported: { total: 0 },
-      rulesSkipped: { total: 0 },
-      environmentsImported: 0,
-      variablesCreated: 0,
-      errors: [],
-    });
+    const stats = service.getImportStatistics(makeStats());
     expect(stats.totalImported).toBe(0);
     expect(stats.totalSkipped).toBe(0);
     expect(stats.totalErrors).toBe(0);
@@ -204,11 +189,10 @@ describe('ImportService.getImportStatistics', () => {
 
   it('aggregates sources stats', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       sourcesImported: 3,
       sourcesSkipped: 1,
-      errors: [],
-    });
+    }));
     expect(stats.totalImported).toBe(3);
     expect(stats.totalSkipped).toBe(1);
     expect(stats.dataTypes.sources).toEqual({ imported: 3, skipped: 1 });
@@ -216,11 +200,10 @@ describe('ImportService.getImportStatistics', () => {
 
   it('aggregates proxy rules stats', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       proxyRulesImported: 5,
       proxyRulesSkipped: 2,
-      errors: [],
-    });
+    }));
     expect(stats.totalImported).toBe(5);
     expect(stats.totalSkipped).toBe(2);
     expect(stats.dataTypes.proxyRules).toEqual({ imported: 5, skipped: 2 });
@@ -228,27 +211,25 @@ describe('ImportService.getImportStatistics', () => {
 
   it('aggregates rules stats with byType', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       rulesImported: { total: 4, header: 2, payload: 2 },
       rulesSkipped: { total: 1 },
-      errors: [],
-    });
+    }));
     expect(stats.totalImported).toBe(4);
     expect(stats.totalSkipped).toBe(1);
-    expect(stats.dataTypes.rules.imported).toBe(4);
-    expect(stats.dataTypes.rules.skipped).toBe(1);
+    expect(stats.dataTypes.rules!.imported).toBe(4);
+    expect(stats.dataTypes.rules!.skipped).toBe(1);
     // byType should not have 'total' key
-    expect(stats.dataTypes.rules.byType.total).toBeUndefined();
-    expect(stats.dataTypes.rules.byType.header).toBe(2);
+    expect(stats.dataTypes.rules!.byType.total).toBeUndefined();
+    expect(stats.dataTypes.rules!.byType.header).toBe(2);
   });
 
   it('aggregates environment stats', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       environmentsImported: 2,
       variablesCreated: 10,
-      errors: [],
-    });
+    }));
     expect(stats.dataTypes.environments).toEqual({
       environmentsImported: 2,
       variablesCreated: 10,
@@ -257,10 +238,9 @@ describe('ImportService.getImportStatistics', () => {
 
   it('aggregates workspace stats', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       createdWorkspace: { name: 'WS', type: 'git' },
-      errors: [],
-    });
+    }));
     expect(stats.dataTypes.workspace).toEqual({
       created: true,
       name: 'WS',
@@ -270,21 +250,21 @@ describe('ImportService.getImportStatistics', () => {
 
   it('counts errors', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       errors: [{ error: 'e1' }, { error: 'e2' }],
-    });
+    }));
     expect(stats.totalErrors).toBe(2);
   });
 
   it('handles missing errors array', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({});
+    const stats = service.getImportStatistics(makeStats({ errors: undefined }));
     expect(stats.totalErrors).toBe(0);
   });
 
   it('handles combined import with all data types', () => {
     const service = new ImportService(makeDeps());
-    const stats = service.getImportStatistics({
+    const stats = service.getImportStatistics(makeStats({
       sourcesImported: 2,
       sourcesSkipped: 0,
       proxyRulesImported: 3,
@@ -295,7 +275,7 @@ describe('ImportService.getImportStatistics', () => {
       variablesCreated: 4,
       createdWorkspace: { name: 'WS', type: 'git' },
       errors: [{ error: 'minor' }],
-    });
+    }));
 
     expect(stats.totalImported).toBe(10); // 2+3+5
     expect(stats.totalSkipped).toBe(1); // 0+1+0
@@ -314,7 +294,7 @@ describe('ImportService._parseImportFiles', () => {
     const service = new ImportService(makeDeps());
     const result = await service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0', sources: [] }),
-    });
+    } as ImportOptions);
     expect(result.importData.version).toBe('3.0.0');
     expect(result.envData).toBeNull();
   });
@@ -323,7 +303,7 @@ describe('ImportService._parseImportFiles', () => {
     const service = new ImportService(makeDeps());
     await expect(service._parseImportFiles({
       fileContent: 'not-json',
-    })).rejects.toThrow('Main file parsing failed');
+    } as ImportOptions)).rejects.toThrow('Main file parsing failed');
   });
 
   it('merges env file data into importData', async () => {
@@ -334,7 +314,7 @@ describe('ImportService._parseImportFiles', () => {
         environmentSchema: { environments: { dev: {} } },
         environments: { dev: { KEY: 'val' } },
       }),
-    });
+    } as ImportOptions);
     expect(result.importData.environmentSchema).toBeDefined();
     expect(result.importData.environments).toBeDefined();
     expect(result.envData).toBeDefined();
@@ -345,7 +325,7 @@ describe('ImportService._parseImportFiles', () => {
     await expect(service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0' }),
       envFileContent: 'bad-json',
-    })).rejects.toThrow('Environment file parsing failed');
+    } as ImportOptions)).rejects.toThrow('Environment file parsing failed');
   });
 
   it('handles env file with only environmentSchema', async () => {
@@ -355,7 +335,7 @@ describe('ImportService._parseImportFiles', () => {
       envFileContent: JSON.stringify({
         environmentSchema: { environments: { dev: {} } },
       }),
-    });
+    } as ImportOptions);
     expect(result.importData.environmentSchema).toBeDefined();
     expect(result.importData.environments).toBeUndefined();
   });
@@ -367,7 +347,7 @@ describe('ImportService._parseImportFiles', () => {
       envFileContent: JSON.stringify({
         environments: { dev: { KEY: 'val' } },
       }),
-    });
+    } as ImportOptions);
     expect(result.importData.environmentSchema).toBeUndefined();
     expect(result.importData.environments).toBeDefined();
   });
@@ -379,18 +359,18 @@ describe('ImportService._parseImportFiles', () => {
 describe('ImportService._handleWorkspaceImport', () => {
   it('returns null workspace when no workspace data', async () => {
     const service = new ImportService(makeDeps());
-    const stats = await service._handleWorkspaceImport({}, {});
+    const stats = await service._handleWorkspaceImport({}, {} as ImportOptions);
     expect(stats.createdWorkspace).toBeNull();
   });
 
   it('uses workspaceInfo from options when present', async () => {
     const service = new ImportService(makeDeps());
     const importSpy = vi.spyOn(service.workspaceHandler, 'importWorkspace')
-      .mockResolvedValue({ createdWorkspace: { name: 'WS' }, errors: [] });
+      .mockResolvedValue({ createdWorkspace: { name: 'WS', type: 'git' }, errors: [] });
 
     await service._handleWorkspaceImport(
       {},
-      { workspaceInfo: { name: 'WS', type: 'git' } }
+      { workspaceInfo: { name: 'WS', type: 'git' } } as ImportOptions
     );
 
     expect(importSpy).toHaveBeenCalledWith(
@@ -402,11 +382,11 @@ describe('ImportService._handleWorkspaceImport', () => {
   it('falls back to importData.workspace', async () => {
     const service = new ImportService(makeDeps());
     const importSpy = vi.spyOn(service.workspaceHandler, 'importWorkspace')
-      .mockResolvedValue({ createdWorkspace: { name: 'WS2' }, errors: [] });
+      .mockResolvedValue({ createdWorkspace: { name: 'WS2', type: 'git' }, errors: [] });
 
     await service._handleWorkspaceImport(
       { workspace: { name: 'WS2', type: 'git' } },
-      {}
+      {} as ImportOptions
     );
 
     expect(importSpy).toHaveBeenCalledWith(
