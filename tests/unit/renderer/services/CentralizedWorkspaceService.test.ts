@@ -53,19 +53,19 @@ interface TestWorkspace {
 }
 
 interface TestRules {
-  header: number[];
-  request: number[];
-  response: number[];
+  header: Array<{ id: string }>;
+  request: Array<{ id: string }>;
+  response: Array<{ id: string }>;
 }
 
 // ======================================================================
 // BaseStateManager (base class of CentralizedWorkspaceService)
 // ======================================================================
 describe('BaseStateManager', () => {
-  let manager: InstanceType<typeof BaseStateManager>;
+  let manager: BaseStateManager<Record<string, unknown>>;
 
   beforeEach(() => {
-    manager = new BaseStateManager('TestManager', {});
+    manager = new BaseStateManager<Record<string, unknown>>('TestManager', {});
   });
 
   afterEach(() => {
@@ -91,9 +91,9 @@ describe('BaseStateManager', () => {
   describe('getState()', () => {
     it('returns an immutable deep copy of state', () => {
       manager.state = { nested: { key: 'value' } };
-      const copy = manager.getState();
+      const copy = manager.getState() as Record<string, Record<string, string>>;
       copy.nested.key = 'modified';
-      expect(manager.state.nested.key).toBe('value');
+      expect((manager.state as Record<string, Record<string, string>>).nested.key).toBe('value');
     });
   });
 
@@ -271,11 +271,25 @@ describe('AutoSaveManager', () => {
 // CWS-style state management patterns
 // Tests the coordination logic that CWS implements using BaseStateManager.
 // ======================================================================
+interface CWSState {
+  initialized: boolean;
+  loading: boolean;
+  error: string | null;
+  workspaces: TestWorkspace[];
+  activeWorkspaceId: string;
+  isWorkspaceSwitching: boolean;
+  syncStatus: Record<string, unknown>;
+  sources: TestSource[];
+  rules: TestRules;
+  proxyRules: TestProxyRule[];
+  lastSaved: Record<string, unknown>;
+}
+
 describe('CWS state management patterns', () => {
-  let manager: InstanceType<typeof BaseStateManager>;
+  let manager: BaseStateManager<CWSState>;
 
   beforeEach(() => {
-    manager = new BaseStateManager('CWSLike', {
+    manager = new BaseStateManager<CWSState>('CWSLike', {
       initialized: false,
       loading: false,
       error: null,
@@ -319,7 +333,7 @@ describe('CWS state management patterns', () => {
       ];
       manager.state.sources = initialSources;
 
-      const updates = { refreshOptions: { interval: 10000 } };
+      const updates: Partial<TestSource> = { refreshOptions: { interval: 10000 } };
       const sources = initialSources.map((source) => {
         if (source.sourceId === '1') {
           const mergedUpdates = { ...updates };
@@ -494,9 +508,9 @@ describe('CWS state management patterns', () => {
 
   describe('rule count calculation', () => {
     it('calculates total rules across all types', () => {
-      const rules: TestRules = { header: [1, 2, 3], request: [4], response: [5, 6] };
+      const rules: TestRules = { header: [{ id: '1' }, { id: '2' }, { id: '3' }], request: [{ id: '4' }], response: [{ id: '5' }, { id: '6' }] };
       const totalRules = Object.values(rules).reduce(
-        (sum: number, ruleArray: number[]) => sum + ruleArray.length,
+        (sum: number, ruleArray: { id: string }[]) => sum + ruleArray.length,
         0
       );
       expect(totalRules).toBe(6);
