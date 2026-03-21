@@ -54,7 +54,8 @@ describe('ProxyRulesHandler.validateProxyRulesForExport', () => {
 
   it('rejects invalid proxy rules in array', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const r = handler.validateProxyRulesForExport([{}]);
+    // Intentionally invalid rule to test validation
+    const r = handler.validateProxyRulesForExport([{} as ProxyRule]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Proxy rule 1');
   });
@@ -73,7 +74,8 @@ describe('ProxyRulesHandler.validateProxyRulesForExport', () => {
 
   it('aggregates multiple errors', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const r = handler.validateProxyRulesForExport([{}, {}]);
+    // Intentionally invalid rules to test validation
+    const r = handler.validateProxyRulesForExport([{} as ProxyRule, {} as ProxyRule]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Proxy rule 1');
     expect(r.error).toContain('Proxy rule 2');
@@ -220,7 +222,7 @@ describe('ProxyRulesHandler.exportProxyRules', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = await handler.exportProxyRules({ selectedItems: { proxyRules: true } });
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('pr-1');
+    expect(result![0].id).toBe('pr-1');
 
     vi.unstubAllGlobals();
   });

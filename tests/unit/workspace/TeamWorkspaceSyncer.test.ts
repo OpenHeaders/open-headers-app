@@ -33,7 +33,7 @@ describe('TeamWorkspaceSyncer', () => {
 
     beforeEach(() => {
         deps = createMockDependencies();
-        syncer = new TeamWorkspaceSyncer(deps);
+        syncer = new TeamWorkspaceSyncer(deps as ConstructorParameters<typeof TeamWorkspaceSyncer>[0]);
     });
 
     // ------- SYNC_STATUS constants -------
@@ -243,7 +243,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { behind: 3 },
+                status: { status: SYNC_STATUS.NEEDS_PULL, behind: 3 },
                 progressCallback,
                 path: 'config/'
             });
@@ -270,7 +270,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { ahead: 2 },
+                status: { status: SYNC_STATUS.NEEDS_PUSH, ahead: 2 },
                 progressCallback
             });
 
@@ -291,7 +291,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { ahead: 1, behind: 2 },
+                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 2 },
                 autoResolve: false,
                 progressCallback: vi.fn()
             });
@@ -314,7 +314,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { ahead: 1, behind: 2 },
+                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 2 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });
@@ -339,7 +339,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: { env: {} },
-                status: { ahead: 1, behind: 1 },
+                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 1 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });
@@ -359,7 +359,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { ahead: 1, behind: 1 },
+                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 1 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });

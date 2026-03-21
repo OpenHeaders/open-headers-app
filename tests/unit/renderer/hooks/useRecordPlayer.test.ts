@@ -13,7 +13,23 @@ import { renderHook, act } from '@testing-library/react';
 vi.stubGlobal('rrwebPlayer', undefined);
 
 import { useRecordPlayer } from '../../../../src/renderer/hooks/useRecordPlayer';
-import type { RecordData } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
+import type { Recording, RRWebEvent } from '../../../../src/types/recording';
+import type { RecordData, ProxyStatus } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
+
+function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
+    return { running: false, port: 59212, rulesCount: 0, sourcesCount: 0, cacheEnabled: false, ...overrides };
+}
+
+function makeRecording(overrides: Record<string, unknown> = {}): Recording {
+    return {
+        metadata: { startTime: 0 },
+        events: [],
+        console: [],
+        network: [],
+        storage: [],
+        ...overrides,
+    } as Recording;
+}
 
 describe('useRecordPlayer', () => {
   beforeEach(() => {
@@ -31,13 +47,13 @@ describe('useRecordPlayer', () => {
   describe('processRecordForProxy', () => {
     it('returns record unchanged when proxy is not running', async () => {
       const { result } = renderHook(() => useRecordPlayer());
-      const record = { events: [{ data: { href: 'https://example.com/page' } }] };
+      const record = makeRecording({ events: [{ data: { href: 'https://example.com/page' } }] });
 
       let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
-          { running: false, port: 59212 }
+          makeProxyStatus({ running: false })
         );
       });
 
@@ -46,13 +62,13 @@ describe('useRecordPlayer', () => {
 
     it('rewrites HTTP URLs to go through proxy', async () => {
       const { result } = renderHook(() => useRecordPlayer());
-      const record = { url: 'https://example.com/style.css' };
+      const record = makeRecording({ url: 'https://example.com/style.css' });
 
       let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
-          { running: true, port: 59212 }
+          makeProxyStatus({ running: true })
         );
       });
 
@@ -61,13 +77,13 @@ describe('useRecordPlayer', () => {
 
     it('does not double-proxy already proxied URLs', async () => {
       const { result } = renderHook(() => useRecordPlayer());
-      const record = { url: 'http://localhost:59212/https://example.com/page' };
+      const record = makeRecording({ url: 'http://localhost:59212/https://example.com/page' });
 
       let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
-          { running: true, port: 59212 }
+          makeProxyStatus({ running: true })
         );
       });
 
@@ -77,33 +93,33 @@ describe('useRecordPlayer', () => {
 
     it('converts protocol-relative URLs to https before proxying', async () => {
       const { result } = renderHook(() => useRecordPlayer());
-      const record = { src: '//cdn.example.com/lib.js' };
+      const record = makeRecording({ src: '//cdn.example.com/lib.js' });
 
       let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
-          { running: true, port: 59212 }
+          makeProxyStatus({ running: true })
         );
       });
 
-      expect(processed.src).toBe('http://localhost:59212/https://cdn.example.com/lib.js');
+      expect((processed as unknown as Record<string, unknown>).src).toBe('http://localhost:59212/https://cdn.example.com/lib.js');
     });
 
     it('rewrites nested URLs in events array', async () => {
       const { result } = renderHook(() => useRecordPlayer());
-      const record = {
+      const record = makeRecording({
         events: [
           { data: { href: 'https://example.com/a.css' } },
           { data: { src: 'https://cdn.example.com/b.js' } },
         ],
-      };
+      });
 
       let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
-          { running: true, port: 8080 }
+          makeProxyStatus({ running: true, port: 8080 })
         );
       });
 

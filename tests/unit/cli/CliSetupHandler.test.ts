@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
+import type { BrowserWindow } from 'electron';
 import { CliSetupHandler } from '../../../src/services/cli/CliSetupHandler';
+
+type AuthData = Parameters<CliSetupHandler['_normalizeAuthData']>[1];
+type NotifyData = Parameters<CliSetupHandler['_notifyRenderer']>[1];
+
+function makeMockWindow(overrides: { isDestroyed?: () => boolean; send?: (...args: unknown[]) => void } = {}): BrowserWindow {
+    return {
+        isDestroyed: overrides.isDestroyed ?? (() => false),
+        webContents: { send: overrides.send ?? (() => {}) },
+    } as unknown as BrowserWindow;
+}
 
 describe('CliSetupHandler', () => {
     const handler = new CliSetupHandler();
@@ -38,7 +49,7 @@ describe('CliSetupHandler', () => {
         });
 
         it('passes through unknown auth types', () => {
-            const data = { custom: 'field' };
+            const data = { custom: 'field' } as unknown as AuthData;
             expect(handler._normalizeAuthData('custom-type', data)).toBe(data);
         });
     });
@@ -71,22 +82,22 @@ describe('CliSetupHandler', () => {
     describe('_notifyRenderer()', () => {
         it('does nothing when no main window', () => {
             handler.mainWindow = null;
-            expect(() => handler._notifyRenderer('test', {})).not.toThrow();
+            expect(() => handler._notifyRenderer('test', { timestamp: Date.now() })).not.toThrow();
         });
 
         it('does nothing when window is destroyed', () => {
-            handler.mainWindow = { isDestroyed: () => true, webContents: { send: () => {} } };
-            expect(() => handler._notifyRenderer('test', {})).not.toThrow();
+            handler.mainWindow = makeMockWindow({ isDestroyed: () => true });
+            expect(() => handler._notifyRenderer('test', { timestamp: Date.now() })).not.toThrow();
         });
 
         it('sends to window when available', () => {
-            let sent: { channel: string; data: { foo: number } } | null = null;
-            handler.mainWindow = {
-                isDestroyed: () => false,
-                webContents: { send: (channel: string, data: { foo: number }) => { sent = { channel, data }; } }
-            };
-            handler._notifyRenderer('my-event', { foo: 1 });
-            expect(sent).toEqual({ channel: 'my-event', data: { foo: 1 } });
+            let sent: { channel: string; data: NotifyData } | null = null;
+            handler.mainWindow = makeMockWindow({
+                send: (channel: unknown, data: unknown) => { sent = { channel: channel as string, data: data as NotifyData }; }
+            });
+            const data: NotifyData = { workspaceId: 'ws-1', timestamp: Date.now() };
+            handler._notifyRenderer('my-event', data);
+            expect(sent).toEqual({ channel: 'my-event', data });
             handler.mainWindow = null;
         });
     });

@@ -259,6 +259,7 @@ export class ProxyRulesHandler {
         total: 0,
         withHeaders: 0,
         patterns: [],
+        totalHeaders: 0,
         averageHeadersPerRule: 0
       };
     }

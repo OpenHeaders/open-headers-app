@@ -43,7 +43,8 @@ describe('SourcesHandler.validateSourcesForExport', () => {
 
   it('rejects invalid sources within array', () => {
     const handler = new SourcesHandler(makeDeps());
-    const r = handler.validateSourcesForExport([{ sourceType: 'file' }]); // missing required fields
+    // Intentionally invalid source to test validation
+    const r = handler.validateSourcesForExport([{ sourceType: 'file' } as Source]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Source 1');
   });
@@ -56,7 +57,8 @@ describe('SourcesHandler.validateSourcesForExport', () => {
 
   it('aggregates multiple source errors', () => {
     const handler = new SourcesHandler(makeDeps());
-    const r = handler.validateSourcesForExport([{}, {}]);
+    // Intentionally invalid sources to test validation
+    const r = handler.validateSourcesForExport([{} as Source, {} as Source]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Source 1');
     expect(r.error).toContain('Source 2');
@@ -94,7 +96,8 @@ describe('SourcesHandler.getSourcesStatistics', () => {
 
   it('counts unknown type as "unknown"', () => {
     const handler = new SourcesHandler(makeDeps());
-    const stats = handler.getSourcesStatistics([{ sourceId: 'x' }]);
+    // Intentionally missing sourceType to test unknown type handling
+    const stats = handler.getSourcesStatistics([{ sourceId: 'x' } as Source]);
     expect(stats.byType.unknown).toBe(1);
   });
 });
@@ -111,11 +114,12 @@ describe('SourcesHandler.exportSources', () => {
 
   it('returns valid sources, filtering invalid ones', async () => {
     const handler = new SourcesHandler(
-      makeDeps({ sources: [validSource(), { bad: true }] })
+      // Intentionally invalid source to test filtering
+      makeDeps({ sources: [validSource(), { bad: true } as unknown as Source] })
     );
     const result = await handler.exportSources({ selectedItems: { sources: true } });
     expect(result).toHaveLength(1);
-    expect(result[0].sourceId).toBe('s1');
+    expect(result![0].sourceId).toBe('s1');
   });
 
   it('returns empty array when no sources exist', async () => {
