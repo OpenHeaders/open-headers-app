@@ -7,6 +7,11 @@ import {
   getSourcesUsingVariables,
   formatVariableUsage,
 } from '../../../../src/renderer/components/features/environments/EnvironmentUtils';
+import type { Source } from '../../../../src/types/source';
+
+function makeSource(overrides: Partial<Source> = {}): Source {
+  return { sourceId: 'test', sourceType: 'http', ...overrides };
+}
 
 // ======================================================================
 // extractVariables
@@ -34,69 +39,64 @@ describe('extractVariables', () => {
 // ======================================================================
 describe('checkMissingVariables', () => {
   it('returns empty when all variables exist', () => {
-    const sources = [{ sourceType: 'http', sourcePath: '{{HOST}}/api' }];
-    expect(checkMissingVariables(sources, { HOST: 'example.com' })).toEqual([]);
+    const sources = [makeSource({ sourcePath: '{{HOST}}/api' })];
+    expect(checkMissingVariables(sources, { HOST: { value: 'example.com', isSecret: false } })).toEqual([]);
   });
 
   it('detects missing URL variable', () => {
-    const sources = [{ sourceType: 'http', sourcePath: '{{HOST}}/api' }];
+    const sources = [makeSource({ sourcePath: '{{HOST}}/api' })];
     expect(checkMissingVariables(sources, {})).toContain('HOST');
   });
 
   it('detects missing header variable', () => {
-    const sources = [{
-      sourceType: 'http',
+    const sources = [makeSource({
       sourcePath: 'https://api.com',
-      requestOptions: { headers: [{ value: '{{TOKEN}}' }] },
-    }];
+      requestOptions: { headers: [{ key: 'auth', value: '{{TOKEN}}' }] },
+    })];
     expect(checkMissingVariables(sources, {})).toContain('TOKEN');
   });
 
   it('detects missing body variable', () => {
-    const sources = [{
-      sourceType: 'http',
+    const sources = [makeSource({
       sourcePath: 'https://api.com',
       requestOptions: { body: '{{BODY_VAR}}' },
-    }];
+    })];
     expect(checkMissingVariables(sources, {})).toContain('BODY_VAR');
   });
 
   it('detects missing totpSecret variable', () => {
-    const sources = [{
-      sourceType: 'http',
+    const sources = [makeSource({
       sourcePath: 'https://api.com',
       requestOptions: { totpSecret: '{{TOTP_KEY}}' },
-    }];
+    })];
     expect(checkMissingVariables(sources, {})).toContain('TOTP_KEY');
   });
 
   it('detects missing query param variable', () => {
-    const sources = [{
-      sourceType: 'http',
+    const sources = [makeSource({
       sourcePath: 'https://api.com',
-      requestOptions: { queryParams: [{ value: '{{Q_VAR}}' }] },
-    }];
+      requestOptions: { queryParams: [{ key: 'q', value: '{{Q_VAR}}' }] },
+    })];
     expect(checkMissingVariables(sources, {})).toContain('Q_VAR');
   });
 
   it('detects missing JSON filter path variable', () => {
-    const sources = [{
-      sourceType: 'http',
+    const sources = [makeSource({
       sourcePath: 'https://api.com',
       jsonFilter: { enabled: true, path: '{{FILTER_PATH}}' },
-    }];
+    })];
     expect(checkMissingVariables(sources, {})).toContain('FILTER_PATH');
   });
 
   it('skips non-http sources', () => {
-    const sources = [{ sourceType: 'file', sourcePath: '{{HOST}}' }];
+    const sources = [makeSource({ sourceType: 'file', sourcePath: '{{HOST}}' })];
     expect(checkMissingVariables(sources, {})).toEqual([]);
   });
 
   it('returns unique missing vars', () => {
     const sources = [
-      { sourceType: 'http', sourcePath: '{{X}}' },
-      { sourceType: 'http', sourcePath: '{{X}}' },
+      makeSource({ sourcePath: '{{X}}' }),
+      makeSource({ sourcePath: '{{X}}' }),
     ];
     const result = checkMissingVariables(sources, {});
     expect(result.filter(v => v === 'X').length).toBe(1);
@@ -105,7 +105,7 @@ describe('checkMissingVariables', () => {
   it('checks rules for env vars', () => {
     const rules = {
       header: [{ hasEnvVars: true, envVars: ['RULE_VAR'] }],
-    };
+    } as Parameters<typeof checkMissingVariables>[2];
     const result = checkMissingVariables([], {}, rules);
     expect(result).toContain('RULE_VAR');
   });
@@ -113,8 +113,8 @@ describe('checkMissingVariables', () => {
   it('does not flag rule var that exists', () => {
     const rules = {
       header: [{ hasEnvVars: true, envVars: ['RULE_VAR'] }],
-    };
-    const result = checkMissingVariables([], { RULE_VAR: 'val' }, rules);
+    } as Parameters<typeof checkMissingVariables>[2];
+    const result = checkMissingVariables([], { RULE_VAR: { value: 'val', isSecret: false } }, rules);
     expect(result).not.toContain('RULE_VAR');
   });
 });
@@ -146,15 +146,15 @@ describe('sourceUsesVariables', () => {
   });
 
   it('returns false for source without variables', () => {
-    expect(sourceUsesVariables({ sourcePath: 'https://api.com' })).toBe(false);
+    expect(sourceUsesVariables(makeSource({ sourcePath: 'https://api.com' }))).toBe(false);
   });
 
   it('returns true for source with variables', () => {
-    expect(sourceUsesVariables({ sourcePath: '{{HOST}}' })).toBe(true);
+    expect(sourceUsesVariables(makeSource({ sourcePath: '{{HOST}}' }))).toBe(true);
   });
 
   it('detects variables in nested fields', () => {
-    expect(sourceUsesVariables({ requestOptions: { headers: [{ value: '{{TOKEN}}' }] } })).toBe(true);
+    expect(sourceUsesVariables(makeSource({ requestOptions: { headers: [{ key: 'auth', value: '{{TOKEN}}' }] } }))).toBe(true);
   });
 });
 
@@ -168,9 +168,9 @@ describe('getSourcesUsingVariables', () => {
 
   it('filters sources using variables', () => {
     const sources = [
-      { sourcePath: '{{HOST}}' },
-      { sourcePath: 'https://api.com' },
-      { requestOptions: { body: '{{BODY}}' } },
+      makeSource({ sourcePath: '{{HOST}}' }),
+      makeSource({ sourcePath: 'https://api.com' }),
+      makeSource({ requestOptions: { body: '{{BODY}}' } }),
     ];
     const result = getSourcesUsingVariables(sources);
     expect(result.length).toBe(2);
@@ -186,7 +186,7 @@ describe('formatVariableUsage', () => {
   });
 
   it('formats regular source', () => {
-    const sources = [{ sourceId: 's1', sourceName: 'My Source' }];
+    const sources = [makeSource({ sourceId: 's1', sourceName: 'My Source' })];
     const result = formatVariableUsage('VAR', ['s1'], sources);
     expect(result[0].sourceId).toBe('s1');
     expect(result[0].sourceName).toBe('My Source');
@@ -194,7 +194,7 @@ describe('formatVariableUsage', () => {
   });
 
   it('formats rule identifier', () => {
-    const rules = { header: [{ id: '42', headerName: 'X-Custom' }] };
+    const rules = { header: [{ id: '42', headerName: 'X-Custom' }] } as Parameters<typeof formatVariableUsage>[3];
     const result = formatVariableUsage('VAR', ['rule-42'], [], rules);
     expect(result[0].isRule).toBe(true);
     expect(result[0].sourceName).toBe('X-Custom');
