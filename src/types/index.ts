@@ -4,7 +4,7 @@
  * Import from 'types/' or from individual domain files.
  */
 
-export type { OperationResult, IpcInvokeEvent, IpcFireEvent } from './common';
+export type { OperationResult, IpcInvokeEvent, IpcFireEvent, JsonPrimitive, JsonArray, JsonObject, JsonValue } from './common';
 export { errorMessage } from './common';
 
 export type {
@@ -12,9 +12,13 @@ export type {
   WorkspaceType,
   AuthType,
   WorkspaceAuthData,
+  WorkspaceMetadata,
   WorkspaceSyncStatus,
+  WorkspaceSyncCompletedData,
+  WorkspaceDataUpdatedData,
   TeamWorkspaceInvite,
   ServicesHealth,
+  ServiceRegistryStatus,
 } from './workspace';
 
 export type {
@@ -65,7 +69,7 @@ export type {
   ProxyCertificateInfo,
 } from './proxy';
 
-export type { AppSettings } from './settings';
+export type { AppSettings, ScreenRecordingPermission } from './settings';
 
 export type {
   HttpConnectionOptions,
@@ -76,6 +80,8 @@ export type {
   TestResponseContent,
   EnvironmentContextLike,
 } from './http';
+
+export type { RulesCollection } from './rules';
 
 export type {
   StorageCookieMetadata,

@@ -18,6 +18,27 @@ import { SUCCESS_MESSAGES, FILE_FORMATS } from '../core/ExportImportConfig';
 import type { ExportData, ExportOptions, ImportData, ImportOptions } from '../core/types';
 import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 
+/** Import statistics shape used by message generation */
+interface ImportStatsLike {
+  sourcesImported?: number;
+  sourcesSkipped?: number;
+  proxyRulesImported?: number;
+  proxyRulesSkipped?: number;
+  rulesImported?: { total: number; [key: string]: number };
+  rulesSkipped?: { total: number; [key: string]: number };
+  environmentsImported?: number;
+  variablesCreated?: number;
+  createdWorkspace?: { name?: string; type?: string } | null;
+  errors?: Array<{ error: string }>;
+}
+
+/** Error context for message generation */
+interface ErrorContext {
+  fileName?: string;
+  dataType?: string;
+  step?: string;
+}
+
 /**
  * Generates a success message for export operations
  * 
@@ -83,7 +104,7 @@ export function generateExportSuccessMessage(options: ExportOptions, exportedDat
  * @param {boolean} isGitSync - Whether this was a Git sync operation
  * @returns {string} - Formatted success message
  */
-export function generateImportSuccessMessage(importStats: Record<string, any>, isGitSync = false) {
+export function generateImportSuccessMessage(importStats: ImportStatsLike, isGitSync = false) {
   const {
     sourcesImported = 0,
     sourcesSkipped = 0,
@@ -154,7 +175,7 @@ export function generateImportSuccessMessage(importStats: Record<string, any>, i
  * @param {Object} importStats - Statistics about what was imported
  * @returns {string} - Detailed summary for logging
  */
-export function generateImportSummary(importStats: Record<string, any>) {
+export function generateImportSummary(importStats: ImportStatsLike) {
   const {
     sourcesImported = 0,
     sourcesSkipped = 0,
@@ -252,7 +273,7 @@ export function generateEnvironmentVariablesMessage(count: number, environmentNa
  * @param {Object} context - Additional context about the operation
  * @returns {string} - Formatted error message
  */
-export function generateErrorMessage(error: Error, operation: string, context: Record<string, any> = {}) {
+export function generateErrorMessage(error: Error, operation: string, context: ErrorContext = {}) {
   const baseMessage = operation === 'export' 
     ? 'Error exporting data' 
     : 'Error importing data';

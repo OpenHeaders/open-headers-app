@@ -3,6 +3,7 @@ import { Button, Space } from 'antd';
 import { FolderOpenOutlined, FileSearchOutlined, FolderOutlined } from '@ant-design/icons';
 import SettingItem from './SettingItem';
 import { getSettingsConfig, settingsStyles } from './SettingsConfig';
+import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
 
 /**
  * DeveloperSettings component for displaying developer/diagnostics settings
@@ -14,11 +15,11 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {Object} screenRecordingPermission - Screen recording permission state
  * @param {function} onChange - Callback function for handling setting changes
  */
-interface DeveloperSettingsProps { formValues: Record<string, unknown>; screenRecordingPermission: Record<string, unknown>; onChange: (key: string, value: unknown) => void; }
+interface DeveloperSettingsProps { formValues: Partial<AppSettings>; screenRecordingPermission: ScreenRecordingPermission | null; onChange: (key: string, value: unknown) => void; }
 const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: DeveloperSettingsProps) => {
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
 
-    const renderSettingItems = (items: { fieldName: string; title: string; [key: string]: unknown }[]) => (
+    const renderSettingItems = (items: ReturnType<typeof getSettingsConfig>['developer']) => (
         <>
             {items.map((setting, index: number) => (
                 <SettingItem

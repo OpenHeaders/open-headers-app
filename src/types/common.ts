@@ -17,6 +17,14 @@ export type IpcInvokeEvent = IpcMainInvokeEvent;
 /** First param of ipcMain.on callbacks (fire-and-forget). */
 export type IpcFireEvent = IpcMainEvent;
 
+// ── JSON value types ───────────────────────────────────────────────
+// Used for genuinely dynamic JSON data (HTTP bodies, JWT payloads, parsed config files)
+
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonArray = JsonValue[];
+export type JsonObject = { [key: string]: JsonValue };
+export type JsonValue = JsonPrimitive | JsonObject | JsonArray;
+
 // ── Generic result types ────────────────────────────────────────────
 
 /** Minimal success/error result returned by most IPC handlers. */

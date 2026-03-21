@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import SettingItem from './SettingItem';
 import { getSettingsConfig, settingsStyles } from './SettingsConfig';
+import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
 
 /**
  * WorkflowSettings component for displaying workflow and recording settings
@@ -31,15 +32,15 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {function} onChange - Callback function for handling setting changes
  */
 interface WorkflowSettingsProps {
-    formValues: Record<string, unknown>;
-    screenRecordingPermission: { hasPermission: boolean; canRequest: boolean } | null;
+    formValues: Partial<AppSettings>;
+    screenRecordingPermission: ScreenRecordingPermission | null;
     onChange: (fieldName: string, value: unknown) => void;
     initialAction: { action: string } | null;
 }
 
 const WorkflowSettings = ({ formValues, screenRecordingPermission, onChange, initialAction }: WorkflowSettingsProps) => {
     // Get settings configuration for workflows section
-    const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission as Record<string, unknown>);
+    const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
     const hotkeyRef = useRef<{ triggerEdit?: () => void } | null>(null);
 
     // Handle initial action to trigger hotkey edit
@@ -59,7 +60,7 @@ const WorkflowSettings = ({ formValues, screenRecordingPermission, onChange, ini
      * @param {Array} items - Array of setting configuration objects
      * @returns {React.ReactNode} Rendered setting items
      */
-    const renderSettingItems = (items: { fieldName: string; title: string; [key: string]: unknown }[]) => (
+    const renderSettingItems = (items: ReturnType<typeof getSettingsConfig>['records']) => (
         <>
             {items.map((setting, index: number) => (
                 <SettingItem

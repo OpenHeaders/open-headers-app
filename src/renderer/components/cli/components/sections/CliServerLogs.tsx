@@ -13,7 +13,7 @@ interface LogEntry {
     duration?: number;
     statusCode: number;
     errorMessage?: string;
-    bodySummary?: Record<string, unknown>;
+    bodySummary?: { type?: string; size?: number };
 }
 
 interface FilterUpdate {

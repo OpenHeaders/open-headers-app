@@ -9,8 +9,8 @@ const { Text } = Typography;
  * Shows file information, statistics, and validation results
  */
 interface ImportFileAnalysisProps {
-    fileInfo: { version?: string; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; ruleBreakdown?: Record<string, number>; [key: string]: unknown } | null;
-    envFileData: { variableCount?: number; environmentCount?: number; [key: string]: unknown } | null;
+    fileInfo: { version?: string | number; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; ruleBreakdown?: Record<string, number> } | null;
+    envFileData: { variableCount?: number; environmentCount?: number } | null;
     hasAnyData: boolean;
     combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number };
 }

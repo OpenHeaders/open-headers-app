@@ -23,7 +23,7 @@ export const useCliServer = ({ active = false } = {}) => {
         running: false, port: 59213, discoveryPath: '',
         token: '', startedAt: null, totalRequests: 0
     });
-    const [logs, setLogs] = useState<{ timestamp: number; method: string; path: string; statusCode: number; [key: string]: unknown }[]>([]);
+    const [logs, setLogs] = useState<{ timestamp: number; method: string; path: string; statusCode: number; duration?: number; bodySummary?: { type?: string; size?: number } }[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Log filters

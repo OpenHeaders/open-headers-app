@@ -12,24 +12,17 @@ import ImportModeSelector from './ImportModeSelector';
 import ImportWarnings from './ImportWarnings';
 
 import { useWorkspaces } from '../../../contexts';
+import type { ImportOptions, WorkspaceData } from '../../../services/export-import/core/types';
+import type { Workspace } from '../../../../types/workspace';
+import type { EnvironmentConfigData } from '../../../../types/environment';
 
 const { Title } = Typography;
 
-/**
- * ImportModal component for importing configuration files
- * Orchestrates the import process with file selection, analysis, and configuration
- * Provides a step-by-step interface for importing various configuration types
- * 
- * @param {boolean} visible - Whether the modal is visible
- * @param {function} onClose - Handler for modal close events
- * @param {function} onImport - Handler for import action
- * @param {Object} preloadedEnvData - Preloaded environment data from protocol links
- */
 interface ImportModalProps {
     visible: boolean;
     onClose: () => void;
-    onImport: ((data: Record<string, unknown>) => Promise<void>) | null;
-    preloadedEnvData: Record<string, unknown> | null;
+    onImport: ((data: ImportOptions) => Promise<void>) | null;
+    preloadedEnvData: Partial<EnvironmentConfigData> | null;
 }
 
 interface FileAnalysis {
@@ -45,16 +38,24 @@ interface FileAnalysis {
     ruleCount: number;
     proxyRuleCount: number;
     isEmpty: boolean;
-    rawData: Record<string, unknown>;
+    rawData: ConfigData;
     environments: Record<string, { varCount: number }>;
-    [key: string]: unknown;
+}
+
+interface ConfigData {
+    version?: string | number;
+    sources?: unknown[];
+    rules?: unknown;
+    proxyRules?: unknown[];
+    environments?: Record<string, Record<string, unknown>>;
+    environmentSchema?: unknown;
+    workspace?: WorkspaceData;
 }
 
 interface FileEntry {
     file: File | (Blob & { name: string });
     content: string;
     analysis: FileAnalysis;
-    [key: string]: unknown;
 }
 
 interface FilesState {
@@ -70,7 +71,6 @@ interface CombinedEnvInfo {
     hasEnvironments: boolean;
     variableCount: number;
     environmentCount: number;
-    [key: string]: unknown;
 }
 
 const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportModalProps) => {
@@ -98,14 +98,9 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         variableCount: 0,
         environmentCount: 0
     });
-    const [workspaceInfo, setWorkspaceInfo] = useState<Record<string, unknown> | null>(null);
-    
-    /**
-     * Analyze configuration data and extract information
-     * @param {Object} data - The parsed configuration data
-     * @returns {Object} Analysis result
-     */
-    const analyzeConfigData = (data: Record<string, unknown>): FileAnalysis => {
+    const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceData | null>(null);
+
+    const analyzeConfigData = (data: ConfigData): FileAnalysis => {
         let totalVariableCount = 0;
         let environmentCount = 0;
         const envs: Record<string, { varCount: number }> = {};
@@ -117,7 +112,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
         // Extract available environments
         if (data.environments) {
-            Object.entries(data.environments as Record<string, Record<string, unknown>>).forEach(([envName, vars]) => {
+            Object.entries(data.environments).forEach(([envName, vars]) => {
                 const varCount = Object.keys(vars).length;
                 totalVariableCount += varCount;
                 environmentCount++;
@@ -188,7 +183,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
             // Process the preloaded environment data
             try {
                 console.log('ImportModal: Processing preloaded environment data');
-                const analysis = analyzeConfigData(preloadedEnvData as Record<string, unknown>);
+                const analysis = analyzeConfigData(preloadedEnvData as ConfigData);
                 
                 // Create a virtual file for the environment data
                 const envContent = JSON.stringify(preloadedEnvData);
@@ -378,19 +373,17 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
             // Handle separate files mode where only environment file is selected
             if (fileMode === 'separate' && !files.sources && files.environments) {
                 const envData = files.environments.analysis.rawData;
-                const filteredEnvData: Record<string, unknown> = {};
+                const filteredEnvData: Partial<ConfigData> = {};
 
                 if (selectedItems.environments) {
                     if (envData.environmentSchema) {
                         filteredEnvData.environmentSchema = envData.environmentSchema;
                     }
-                    const envDataEnvs = envData.environments as Record<string, unknown> | undefined;
-                    if (envDataEnvs) {
-                        // Filter environments based on selection
-                        const filteredEnvs: Record<string, unknown> = {};
+                    if (envData.environments) {
+                        const filteredEnvs: Record<string, Record<string, unknown>> = {};
                         selectedEnvNames.forEach(envName => {
-                            if (envDataEnvs[envName]) {
-                                filteredEnvs[envName] = envDataEnvs[envName];
+                            if (envData.environments![envName]) {
+                                filteredEnvs[envName] = envData.environments![envName];
                             }
                         });
                         filteredEnvData.environments = filteredEnvs;
@@ -425,8 +418,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
             const envData = files.environments?.analysis?.rawData;
 
             // Create filtered data based on selected items
-            const filteredMainData: Record<string, unknown> = {};
-            const filteredEnvData: Record<string, unknown> = {};
+            const filteredMainData: Partial<ConfigData> = {};
+            const filteredEnvData: Partial<ConfigData> = {};
 
             // Always include version if present
             if (mainData.version) {
@@ -451,13 +444,11 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                 if (mainData.environmentSchema) {
                     filteredMainData.environmentSchema = mainData.environmentSchema;
                 }
-                const mainEnvs = mainData.environments as Record<string, unknown> | undefined;
-                if (mainEnvs) {
-                    // Filter environments based on selection
-                    const filteredMainEnvs: Record<string, unknown> = {};
+                if (mainData.environments) {
+                    const filteredMainEnvs: Record<string, Record<string, unknown>> = {};
                     selectedEnvNames.forEach(envName => {
-                        if (mainEnvs[envName]) {
-                            filteredMainEnvs[envName] = mainEnvs[envName];
+                        if (mainData.environments![envName]) {
+                            filteredMainEnvs[envName] = mainData.environments![envName];
                         }
                     });
                     filteredMainData.environments = filteredMainEnvs;
@@ -468,13 +459,11 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                     if (envData.environmentSchema) {
                         filteredEnvData.environmentSchema = envData.environmentSchema;
                     }
-                    const envDataEnvs = envData.environments as Record<string, unknown> | undefined;
-                    if (envDataEnvs) {
-                        // Filter environments based on selection
-                        const filteredEnvEnvs: Record<string, unknown> = {};
+                    if (envData.environments) {
+                        const filteredEnvEnvs: Record<string, Record<string, unknown>> = {};
                         selectedEnvNames.forEach(envName => {
-                            if (envDataEnvs[envName]) {
-                                filteredEnvEnvs[envName] = envDataEnvs[envName];
+                            if (envData.environments![envName]) {
+                                filteredEnvEnvs[envName] = envData.environments![envName];
                             }
                         });
                         filteredEnvData.environments = filteredEnvEnvs;
@@ -615,15 +604,15 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                         <Space direction="vertical" style={{ width: '100%' }} size="middle">
                             {/* File Analysis Results */}
                             <ImportFileAnalysis
-                                fileInfo={fileInfo as { version?: string; sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; isEmpty?: boolean; [key: string]: unknown } | null}
-                                envFileData={files.environments}
+                                fileInfo={fileInfo}
+                                envFileData={files.environments?.analysis ?? null}
                                 hasAnyData={!!(fileInfo && (fileInfo.hasSources || fileInfo.hasRules || fileInfo.hasProxyRules || combinedEnvInfo.hasEnvironmentSchema || combinedEnvInfo.variableCount > 0))}
                                 combinedEnvInfo={combinedEnvInfo}
                             />
 
                             {/* Item Selection */}
                             <ImportItemsSelector
-                                fileInfo={fileInfo as unknown as Record<string, number | boolean>}
+                                fileInfo={fileInfo}
                                 combinedEnvInfo={combinedEnvInfo}
                                 selectedItems={selectedItems}
                                 onItemChange={handleItemChange}

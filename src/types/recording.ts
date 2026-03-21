@@ -34,8 +34,8 @@ export interface StorageRecord {
   path?: string;
   metadata?: StorageCookieMetadata;
   data?: {
-    localStorage?: Record<string, unknown>;
-    sessionStorage?: Record<string, unknown>;
+    localStorage?: Record<string, string>;
+    sessionStorage?: Record<string, string>;
     cookies?: string;
   };
 }
@@ -215,8 +215,8 @@ export interface RecordingEventData {
   path?: string;
   title?: string;
   transitionType?: string;
-  localStorage?: Record<string, unknown>;
-  sessionStorage?: Record<string, unknown>;
+  localStorage?: Record<string, string>;
+  sessionStorage?: Record<string, string>;
   cookies?: string;
 }
 

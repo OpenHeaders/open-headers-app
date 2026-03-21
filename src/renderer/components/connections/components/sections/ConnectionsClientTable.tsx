@@ -42,7 +42,7 @@ interface ClientRecord {
     browser: string;
     browserVersion: string;
     extensionVersion?: string;
-    connectedAt?: string;
+    connectedAt?: string | number;
 }
 
 interface ConnectionsClientTableProps {

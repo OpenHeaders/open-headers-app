@@ -279,7 +279,7 @@ const HeaderRules = () => {
     }, []);
 
     // Handle add/edit rule (generic header rule)
-    const handleSaveRule = async (ruleData: Record<string, unknown>) => {
+    const handleSaveRule = async (ruleData: Partial<HeaderRule>) => {
         try {
             let newRules: HeaderRule[];
             if (editingRule) {

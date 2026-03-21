@@ -49,7 +49,10 @@ interface TotpTrackingHandlerParams {
 
 interface FormValues {
     sourcePath?: string;
-    [key: string]: unknown;
+    sourceType?: string;
+    sourceName?: string;
+    sourceTag?: string;
+    sourceMethod?: string;
 }
 
 /**

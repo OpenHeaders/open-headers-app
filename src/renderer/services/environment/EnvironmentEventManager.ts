@@ -2,6 +2,8 @@
  * EnvironmentEventManager - Manages environment-related events
  */
 import { createLogger } from '../../utils/error-handling/logger';
+import type { EnvironmentMap, EnvironmentVariables } from '../../../types/environment';
+
 const log = createLogger('EnvironmentEventManager');
 
 class EnvironmentEventManager {
@@ -35,9 +37,9 @@ class EnvironmentEventManager {
   /**
    * Setup environment structure change listener
    */
-  setupEnvironmentStructureListener(onStructureChange: (data: { workspaceId: string; [key: string]: unknown }) => Promise<void>) {
+  setupEnvironmentStructureListener(onStructureChange: (data: { workspaceId: string }) => Promise<void>) {
     const handleStructureChange = async (event: Event | { detail: unknown }) => {
-      const data = (event as CustomEvent).detail as { workspaceId: string; [key: string]: unknown } | null;
+      const data = (event as CustomEvent).detail as { workspaceId: string } | null;
       if (!data || !data.workspaceId) return;
       
       log.info(`Environment structure changed for workspace: ${data.workspaceId}`);
@@ -64,7 +66,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment loaded event
    */
-  dispatchEnvironmentsLoaded(workspaceId: string, environments: Record<string, unknown>, activeEnvironment: string) {
+  dispatchEnvironmentsLoaded(workspaceId: string, environments: EnvironmentMap, activeEnvironment: string) {
     window.dispatchEvent(new CustomEvent('environments-loaded', {
       detail: { 
         workspaceId,
@@ -83,7 +85,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment variables changed event
    */
-  dispatchVariablesChanged(environmentName: string, variables: Record<string, unknown>) {
+  dispatchVariablesChanged(environmentName: string, variables: EnvironmentVariables) {
     window.dispatchEvent(new CustomEvent('environment-variables-changed', {
       detail: { 
         environment: environmentName, 
@@ -100,7 +102,7 @@ class EnvironmentEventManager {
   /**
    * Dispatch environment changed event
    */
-  dispatchEnvironmentChanged(environmentName: string, variables: Record<string, unknown>) {
+  dispatchEnvironmentChanged(environmentName: string, variables: EnvironmentVariables) {
     window.dispatchEvent(new CustomEvent('environment-switched', {
       detail: { 
         environment: environmentName, 

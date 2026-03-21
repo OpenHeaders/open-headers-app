@@ -10,6 +10,8 @@ import { EnvironmentOutlined } from '@ant-design/icons';
 
 import { useEnvironments, useSources, useSettings, useWorkspaces } from '../../../contexts';
 import { showMessage } from '../../../utils/ui/messageUtil';
+import type { RulesStorage } from '../../../../types/rules';
+import type { HeaderRule } from '../../../../types/rules';
 
 import EnvironmentSelector from './EnvironmentSelector';
 import VariableTable from './VariableTable';
@@ -58,7 +60,7 @@ const Environments = () => {
   // Data states
   const [variableUsage, setVariableUsage] = useState<Record<string, string[]>>({});
   const [missingVariables, setMissingVariables] = useState<string[]>([]);
-  const [rules, setRules] = useState<{ header?: Array<Record<string, unknown>>; [key: string]: unknown } | null>(null);
+  const [rules, setRules] = useState<{ header?: HeaderRule[] } | null>(null);
 
   /**
    * Load rules to check for environment variable usage
@@ -71,8 +73,8 @@ const Environments = () => {
         const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
         const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
         if (rulesData) {
-          const rulesStorage = JSON.parse(rulesData) as Record<string, unknown>;
-          setRules((rulesStorage.rules as typeof rules) ?? {});
+          const rulesStorage = JSON.parse(rulesData) as RulesStorage;
+          setRules(rulesStorage.rules ?? {});
         } else {
           setRules({});
         }
@@ -105,9 +107,9 @@ const Environments = () => {
     
     // Add usage from rules
     if (rules && rules.header) {
-      rules.header.forEach((rule: Record<string, unknown>) => {
+      rules.header.forEach((rule: HeaderRule) => {
         if (rule.hasEnvVars && rule.envVars) {
-          (rule.envVars as string[]).forEach((varName: string) => {
+          rule.envVars.forEach((varName: string) => {
             if (!usage[varName]) {
               usage[varName] = [];
             }
@@ -191,7 +193,7 @@ const Environments = () => {
    * @param {Object} newData - New variable data
    */
   const handleEditVariable = async (oldName: string, newData: unknown) => {
-    const data = newData as { name: string; value: string; isSecret?: boolean; [key: string]: unknown };
+    const data = newData as { name: string; value: string; isSecret?: boolean };
     try {
       // If name changed, delete old and create new
       if (oldName !== data.name) {
@@ -297,7 +299,7 @@ const Environments = () => {
             missingVariables={missingVariables}
             variableUsage={variableUsage}
             sources={sources}
-            rules={(rules ?? {}) as { header?: Array<{ id: string; headerName?: string }>; [key: string]: unknown }}
+            rules={rules ?? {}}
             onAddVariable={() => setShowAddVariableModal(true)}
             onEditVariable={handleEditVariable}
             onDeleteVariable={deleteVariable}

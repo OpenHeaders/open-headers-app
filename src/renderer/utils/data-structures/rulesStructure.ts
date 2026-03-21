@@ -142,7 +142,7 @@ export const RULE_MESSAGE_TYPES = {
 };
 
 // Validate rule based on type
-export const validateRule = (rule: { type?: string; domains?: string[]; headerName?: string; isDynamic?: boolean; headerValue?: string; [key: string]: unknown }) => {
+export const validateRule = (rule: Partial<{ type: string; domains: string[]; headerName: string; isDynamic: boolean; headerValue: string; sourceId: string | number | null; matchPattern: string; replaceWith: string; action: string; redirectTo: string }>) => {
     if (!rule.type || !Object.values(RULE_TYPES).includes(rule.type)) {
         return { valid: false, error: 'Invalid rule type' };
     }

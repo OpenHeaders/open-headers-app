@@ -5,6 +5,8 @@
  * (renderer → preload → main) and the renderer-side processing pipeline.
  */
 
+import type { JsonObject } from './common';
+
 // ── IPC wire format (what crosses the preload bridge) ────────────────
 
 export interface HttpConnectionOptions {
@@ -17,7 +19,7 @@ export interface HttpConnectionOptions {
 export interface HttpRequestOptions {
   headers?: Record<string, string>;
   queryParams?: Record<string, string>;
-  body?: string | Record<string, unknown>;
+  body?: string | JsonObject;
   contentType?: string;
   enableRetries?: boolean;
   connectionOptions?: HttpConnectionOptions;

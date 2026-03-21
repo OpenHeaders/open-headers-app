@@ -11,15 +11,15 @@ import { useState, useEffect, useCallback } from 'react';
  * @returns {Object} Connection status and client data
  */
 export const useConnectionsServer = ({ active = false } = {}) => {
-    const [status, setStatus] = useState<Record<string, any>>({
+    const [status, setStatus] = useState({
         totalConnections: 0,
-        browserCounts: {},
-        clients: [],
+        browserCounts: {} as Record<string, number>,
+        clients: [] as Array<{ id: string; browser: string; browserVersion: string; platform?: string; connectionType?: string; connectedAt?: string | number; lastActivity?: number; extensionVersion?: string }>,
         wsServerRunning: false,
         wssServerRunning: false,
         wsPort: 59210,
         wssPort: 59211,
-        certificateFingerprint: null
+        certificateFingerprint: undefined as string | undefined
     });
 
     /**
@@ -28,7 +28,7 @@ export const useConnectionsServer = ({ active = false } = {}) => {
     const loadStatus = useCallback(async () => {
         try {
             const result = await window.electronAPI.wsGetConnectionStatus();
-            if (result) setStatus(result);
+            if (result) setStatus(prev => ({ ...prev, ...result, certificateFingerprint: result.certificateFingerprint ?? undefined }));
         } catch (error) {
             console.error('Failed to load WebSocket connection status:', error);
         }
@@ -37,7 +37,7 @@ export const useConnectionsServer = ({ active = false } = {}) => {
     // Subscribe to real-time push updates
     useEffect(() => {
         const unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data) => {
-            if (data) setStatus(data);
+            if (data) setStatus(prev => ({ ...prev, ...data }));
         });
         return unsubscribe;
     }, []);

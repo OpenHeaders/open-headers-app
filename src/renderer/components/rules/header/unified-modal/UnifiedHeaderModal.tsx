@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { HeaderRule } from '../../../../../types/rules';
 import {
     Modal,
     Form,
@@ -37,7 +38,7 @@ interface HeaderRuleValues extends Partial<import('../../../../../types/rules').
     maxAge?: number;
     expires?: string;
 }
-interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: Record<string, unknown>) => void; initialValues: HeaderRuleValues | null; }
+interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: Partial<HeaderRule> & Record<string, unknown>) => void; initialValues: HeaderRuleValues | null; }
 const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: UnifiedHeaderModalProps) => {
     const [form] = Form.useForm();
     const envContext = useEnvironments();

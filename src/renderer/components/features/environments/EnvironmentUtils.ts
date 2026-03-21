@@ -5,26 +5,15 @@
 import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
 import { showMessage } from '../../../utils/ui/messageUtil';
 import type { Source } from '../../../../types/source';
+import type { HeaderRule } from '../../../../types/rules';
+import type { EnvironmentVariables, EnvironmentMap } from '../../../../types/environment';
 
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('EnvironmentUtils');
 
-
-/** Header rule with optional environment variable tracking */
-interface HeaderRule {
-  id?: string;
-  headerName?: string;
-  hasEnvVars?: boolean;
-  envVars?: string[];
-  enabled?: boolean;
-  name?: string;
-  [key: string]: unknown;
-}
-
 /** Rules object containing header rules */
 interface RulesConfig {
   header?: HeaderRule[];
-  [key: string]: unknown;
 }
 
 /** Variable usage information */
@@ -53,7 +42,7 @@ export const extractVariables = (text: string): string[] => {
  * @param {Object} rules - Rules object containing header rules
  * @returns {string[]} Array of missing variable names
  */
-export const checkMissingVariables = (sources: Source[], targetEnvironment: Record<string, unknown>, rules: RulesConfig | null = null): string[] => {
+export const checkMissingVariables = (sources: Source[], targetEnvironment: EnvironmentVariables, rules: RulesConfig | null = null): string[] => {
   const missingVars = new Set<string>();
   
   if (!sources || !Array.isArray(sources)) {
@@ -144,7 +133,7 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Reco
  * @param {Object} existingEnvironments - Existing environments object
  * @returns {string} Unique environment name
  */
-export const generateUniqueEnvironmentName = (baseName: string, existingEnvironments: Record<string, unknown>): string => {
+export const generateUniqueEnvironmentName = (baseName: string, existingEnvironments: EnvironmentMap): string => {
   let newName = `${baseName}-copy`;
   let counter = 1;
   

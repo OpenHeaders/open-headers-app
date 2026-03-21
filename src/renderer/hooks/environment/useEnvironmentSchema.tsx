@@ -40,7 +40,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
               }
             });
           } else if (typeof field === 'object' && field !== null) {
-            Object.entries(field as Record<string, unknown>).forEach(([key, value]) => {
+            Object.entries(field as Record<string, string>).forEach(([key, value]) => {
               checkField(value, `${path}.${key}`);
             });
           }

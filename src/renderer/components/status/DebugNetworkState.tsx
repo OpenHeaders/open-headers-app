@@ -9,7 +9,8 @@ interface NetworkDiagnostics {
 
 interface NetworkInterface {
     name?: string;
-    [key: string]: unknown;
+    type?: string;
+    address?: string;
 }
 
 interface NetworkStateData {

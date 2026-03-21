@@ -24,6 +24,7 @@ import {
 } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import { THEME_MODES } from '../../../contexts';
+import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
 
 /**
  * Settings configuration factory
@@ -55,7 +56,7 @@ import { THEME_MODES } from '../../../contexts';
  * @param {string} screenRecordingPermission.platform - Operating system platform
  * @returns {Object} Configuration object with general, appearance, and records sections
  */
-export const getSettingsConfig = (formValues: Record<string,unknown>, screenRecordingPermission: Record<string,unknown>) => ({
+export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecordingPermission: ScreenRecordingPermission | null) => ({
     // General application behavior settings
     general: [
         {

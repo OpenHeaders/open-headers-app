@@ -110,22 +110,19 @@ export interface ExportOptions {
   selectedEnvironments?: string[];
   includeWorkspace?: boolean;
   includeCredentials?: boolean;
-  currentWorkspace?: WorkspaceData;
+  currentWorkspace?: WorkspaceData | null;
   appVersion?: string;
-  // Handlers may attach extra context properties
-  [key: string]: string | boolean | string[] | WorkspaceData | Record<string, boolean> | undefined;
 }
 
 /** Import options passed to the import handlers */
 export interface ImportOptions {
   fileContent: string;
-  envFileContent?: string;
+  envFileContent?: string | null;
   selectedItems: Record<string, boolean>;
   importMode?: string;
   isGitSync?: boolean;
-  workspaceInfo?: WorkspaceData;
+  workspaceInfo?: WorkspaceData | null;
   includeCredentials?: boolean;
   switchToNewWorkspace?: boolean;
-  // Handlers may attach extra context properties
-  [key: string]: string | boolean | WorkspaceData | Record<string, boolean> | undefined;
+  selectedEnvironments?: string[];
 }

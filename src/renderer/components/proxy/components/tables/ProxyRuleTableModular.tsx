@@ -74,7 +74,7 @@ const ProxyRuleTable = ({
 
     return (
         <Table
-            dataSource={rules as { id: string; [key: string]: unknown }[]}
+            dataSource={rules}
             columns={columns}
             rowKey="id"
             pagination={false}
