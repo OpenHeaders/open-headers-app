@@ -42,7 +42,7 @@ class WindowManager {
                 webSecurity: true,
                 webviewTag: false,
                 allowRunningInsecureContent: false,
-                devTools: process.argv.includes('--dev')
+                devTools: !app.isPackaged
             },
             show: false,
             autoHideMenuBar: true,
@@ -76,8 +76,8 @@ class WindowManager {
         this.detectAutoLaunch();
         this.setupWindowEvents();
 
-        // Development mode DevTools
-        if (process.argv.includes('--dev')) {
+        // Development mode DevTools — auto-open only when unpackaged with --dev flag
+        if (!app.isPackaged && process.argv.includes('--dev')) {
             this.mainWindow.webContents.openDevTools();
         }
 

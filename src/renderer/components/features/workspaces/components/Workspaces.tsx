@@ -7,6 +7,7 @@ import type { Workspace } from '../../../../../types/workspace';
 import WorkspacesTable from './WorkspacesTable';
 import WorkspaceModal from './WorkspaceModal';
 import WorkspaceEditModal from './WorkspaceEditModal';
+import { copyToClipboard } from '../../../../utils/ui/copyToClipboard';
 
 const { Title, Text } = Typography;
 
@@ -274,7 +275,7 @@ const Workspaces = () => {
                                         <Button
                                             icon={<CopyOutlined />}
                                             onClick={() => {
-                                                navigator.clipboard.writeText(getLinkValue());
+                                                copyToClipboard(getLinkValue());
                                                 message.success('Link copied to clipboard');
                                             }}
                                             type="primary"

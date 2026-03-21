@@ -59,7 +59,23 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
                     return;
                 }
 
-                // Load rrweb-player from local files
+                // Try ESM dynamic import first (works in dev via Vite, may also work in prod)
+                try {
+                    const mod = await import('rrweb-player') as Record<string, unknown>;
+                    const player = ('default' in mod ? mod.default : 'Player' in mod ? mod.Player : mod) as RRWebPlayerConstructor;
+                    setRrwebPlayer(() => player);
+                    try {
+                        // @ts-expect-error — CSS import handled by Vite, no type declarations
+                        await import('rrweb-player/dist/style.css');
+                    } catch {
+                        // CSS import may fail in production — UMD path below loads it
+                    }
+                    return;
+                } catch {
+                    // ESM import not available — fall back to UMD script tag
+                }
+
+                // Load rrweb-player from local UMD files (production build)
                 const script = document.createElement('script');
                 script.src = './lib/rrweb-player.js';
 

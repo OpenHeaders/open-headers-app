@@ -29,10 +29,8 @@ interface LogLevels {
 
 const LOG_LEVELS: LogLevels = { error: 0, warn: 1, info: 2, debug: 3 };
 
-// Initialize log level from environment
-let currentLevel: number = (process.env.DEBUG_MODE === 'true' || process.env.NODE_ENV === 'development')
-    ? LOG_LEVELS.debug
-    : LOG_LEVELS.info;
+// Initialize log level — defaults to info until settings override via setGlobalLogLevel
+let currentLevel: number = LOG_LEVELS.info;
 
 /**
  * Archive the current log file and start fresh.

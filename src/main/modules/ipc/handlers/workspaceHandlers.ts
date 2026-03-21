@@ -364,8 +364,7 @@ class WorkspaceHandlers {
                             branch: workspace.gitBranch || 'main',
                             path: workspace.gitPath || 'config/open-headers.json',
                             authType: workspace.authType || 'none',
-                            authData: workspace.authData ?? {},
-                            repoDir: path.join(app.getPath('userData'), 'git-repos', workspaceId)
+                            authData: workspace.authData ?? {}
                         });
 
                         event.sender.send('workspace-sync-completed', {
