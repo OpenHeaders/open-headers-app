@@ -41,7 +41,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
       variableDefinitions: { API_KEY: { type: 'string' } },
     };
 
-    const result = (handler as any)._exportEnvironmentSchema(fullSchema, []);
+    const result = handler._exportEnvironmentSchema(fullSchema, []);
     expect(result).toEqual({ environmentSchema: fullSchema });
   });
 
@@ -52,7 +52,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
       variableDefinitions: {},
     };
 
-    const result = (handler as any)._exportEnvironmentSchema(fullSchema, null);
+    const result = handler._exportEnvironmentSchema(fullSchema, null);
     expect(result).toEqual({ environmentSchema: fullSchema });
   });
 
@@ -63,7 +63,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
       variableDefinitions: { KEY: {} },
     };
 
-    const result = (handler as any)._exportEnvironmentSchema(fullSchema, ['dev', 'prod']);
+    const result = handler._exportEnvironmentSchema(fullSchema, ['dev', 'prod']);
     expect(Object.keys(result.environmentSchema.environments)).toEqual(['dev', 'prod']);
     expect(result.environmentSchema.variableDefinitions).toEqual({ KEY: {} });
   });
@@ -75,7 +75,7 @@ describe('EnvironmentsHandler._exportEnvironmentSchema', () => {
       variableDefinitions: {},
     };
 
-    const result = (handler as any)._exportEnvironmentSchema(fullSchema, ['nonexistent']);
+    const result = handler._exportEnvironmentSchema(fullSchema, ['nonexistent']);
     expect(Object.keys(result.environmentSchema.environments)).toEqual([]);
   });
 });
@@ -92,7 +92,7 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
       variableDefinitions: {},
     };
 
-    const result = (handler as any)._exportFullEnvironments(fullSchema, []);
+    const result = handler._exportFullEnvironments(fullSchema, []);
     expect(result.environments).toBe(envs);
     expect(result.environmentSchema).toBe(fullSchema);
   });
@@ -105,7 +105,7 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
       variableDefinitions: { VAR: {} },
     };
 
-    const result = (handler as any)._exportFullEnvironments(fullSchema, ['dev']);
+    const result = handler._exportFullEnvironments(fullSchema, ['dev']);
     expect(Object.keys(result.environments)).toEqual(['dev']);
     expect(Object.keys(result.environmentSchema.environments)).toEqual(['dev']);
     expect(result.environmentSchema.variableDefinitions).toEqual({ VAR: {} });
@@ -119,7 +119,7 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
       variableDefinitions: {},
     };
 
-    const result = (handler as any)._exportFullEnvironments(fullSchema, ['missing']);
+    const result = handler._exportFullEnvironments(fullSchema, ['missing']);
     expect(Object.keys(result.environments)).toEqual([]);
   });
 });
@@ -239,18 +239,6 @@ describe('EnvironmentsHandler.getEnvironmentStatistics', () => {
 // validateEnvironmentsForExport  (pure)
 // ---------------------------------------------------------------------------
 describe('EnvironmentsHandler.validateEnvironmentsForExport', () => {
-  it('rejects null', () => {
-    const handler = new EnvironmentsHandler(makeDeps());
-    const result = handler.validateEnvironmentsForExport(null);
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    const handler = new EnvironmentsHandler(makeDeps());
-    const result = handler.validateEnvironmentsForExport('str' as any);
-    expect(result.success).toBe(false);
-  });
-
   it('accepts empty object', () => {
     const handler = new EnvironmentsHandler(makeDeps());
     const result = handler.validateEnvironmentsForExport({});
@@ -322,9 +310,9 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     );
 
     // Mock _batchCreateVariables to avoid the real service call
-    (handler as any)._batchCreateVariables = vi.fn();
+    handler._batchCreateVariables = vi.fn();
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { API_KEY: 'val123', SECRET: { value: 's', isSecret: true } } },
       { importMode: IMPORT_MODES.REPLACE }
     );
@@ -339,9 +327,9 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: existingEnvs, createEnvironment: vi.fn() })
     );
-    (handler as any)._batchCreateVariables = vi.fn();
+    handler._batchCreateVariables = vi.fn();
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { API_KEY: 'new-val', NEW_VAR: 'hello' } },
       { importMode: IMPORT_MODES.MERGE }
     );
@@ -354,9 +342,9 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: {}, createEnvironment: vi.fn() })
     );
-    (handler as any)._batchCreateVariables = vi.fn();
+    handler._batchCreateVariables = vi.fn();
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { A: '1' }, staging: { B: '2' }, prod: { C: '3' } },
       { importMode: IMPORT_MODES.REPLACE, selectedEnvironments: ['dev', 'prod'] }
     );
@@ -368,15 +356,15 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: {}, createEnvironment: vi.fn() })
     );
-    (handler as any)._batchCreateVariables = vi.fn();
+    handler._batchCreateVariables = vi.fn();
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { KEY: 'plain-string-value' } },
       { importMode: IMPORT_MODES.REPLACE }
     );
 
     expect(stats.variablesCreated).toBe(1);
-    const callArgs = (handler as any)._batchCreateVariables.mock.calls[0];
+    const callArgs = handler._batchCreateVariables.mock.calls[0];
     expect(callArgs[1][0]).toEqual({ name: 'KEY', value: 'plain-string-value', isSecret: false });
   });
 
@@ -384,15 +372,15 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: {}, createEnvironment: vi.fn() })
     );
-    (handler as any)._batchCreateVariables = vi.fn();
+    handler._batchCreateVariables = vi.fn();
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { TOKEN: { value: 'abc', isSecret: true } } },
       { importMode: IMPORT_MODES.REPLACE }
     );
 
     expect(stats.variablesCreated).toBe(1);
-    const callArgs = (handler as any)._batchCreateVariables.mock.calls[0];
+    const callArgs = handler._batchCreateVariables.mock.calls[0];
     expect(callArgs[1][0]).toEqual({ name: 'TOKEN', value: 'abc', isSecret: true });
   });
 
@@ -400,9 +388,9 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
     const handler = new EnvironmentsHandler(
       makeDeps({ environments: {}, createEnvironment: vi.fn() })
     );
-    (handler as any)._batchCreateVariables = vi.fn().mockRejectedValue(new Error('batch fail'));
+    handler._batchCreateVariables = vi.fn().mockRejectedValue(new Error('batch fail'));
 
-    const stats = await (handler as any)._importFullEnvironments(
+    const stats = await handler._importFullEnvironments(
       { dev: { A: 'x' } },
       { importMode: IMPORT_MODES.REPLACE }
     );

@@ -37,19 +37,19 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
 describe('ImportService._validateImportOptions', () => {
   it('throws for null options', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions(null))
+    expect(() => service._validateImportOptions(null))
       .toThrow('Import options must be provided');
   });
 
   it('throws for non-object options', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions('str'))
+    expect(() => service._validateImportOptions('str'))
       .toThrow('Import options must be provided');
   });
 
   it('throws when fileContent is missing', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       selectedItems: { sources: true },
       importMode: IMPORT_MODES.MERGE,
     })).toThrow('File content must be provided');
@@ -57,7 +57,7 @@ describe('ImportService._validateImportOptions', () => {
 
   it('throws when fileContent is not a string', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: 123,
       selectedItems: { sources: true },
     })).toThrow('File content must be provided as a string');
@@ -65,14 +65,14 @@ describe('ImportService._validateImportOptions', () => {
 
   it('throws when selectedItems is missing', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
     })).toThrow('Selected items must be specified');
   });
 
   it('throws when no items are selected', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
       selectedItems: { sources: false, rules: false },
     })).toThrow('At least one data type');
@@ -80,7 +80,7 @@ describe('ImportService._validateImportOptions', () => {
 
   it('throws for invalid import mode', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
       selectedItems: { sources: true },
       importMode: 'invalid-mode',
@@ -89,7 +89,7 @@ describe('ImportService._validateImportOptions', () => {
 
   it('accepts valid merge mode', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
       selectedItems: { sources: true },
       importMode: IMPORT_MODES.MERGE,
@@ -98,7 +98,7 @@ describe('ImportService._validateImportOptions', () => {
 
   it('accepts valid replace mode', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
       selectedItems: { sources: true },
       importMode: IMPORT_MODES.REPLACE,
@@ -107,7 +107,7 @@ describe('ImportService._validateImportOptions', () => {
 
   it('accepts options without importMode (optional)', () => {
     const service = new ImportService(makeDeps());
-    expect(() => (service as any)._validateImportOptions({
+    expect(() => service._validateImportOptions({
       fileContent: '{}',
       selectedItems: { rules: true },
     })).not.toThrow();
@@ -120,7 +120,7 @@ describe('ImportService._validateImportOptions', () => {
 describe('ImportService._hasImportedData', () => {
   it('returns false when nothing was imported', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 0,
       proxyRulesImported: 0,
       rulesImported: { total: 0 },
@@ -130,7 +130,7 @@ describe('ImportService._hasImportedData', () => {
 
   it('returns true when sources were imported', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 1,
       proxyRulesImported: 0,
       rulesImported: { total: 0 },
@@ -140,7 +140,7 @@ describe('ImportService._hasImportedData', () => {
 
   it('returns true when proxy rules were imported', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 0,
       proxyRulesImported: 3,
       rulesImported: { total: 0 },
@@ -150,7 +150,7 @@ describe('ImportService._hasImportedData', () => {
 
   it('returns true when rules were imported', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 0,
       proxyRulesImported: 0,
       rulesImported: { total: 5 },
@@ -160,7 +160,7 @@ describe('ImportService._hasImportedData', () => {
 
   it('returns true when environments were imported', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 0,
       proxyRulesImported: 0,
       rulesImported: { total: 0 },
@@ -170,7 +170,7 @@ describe('ImportService._hasImportedData', () => {
 
   it('returns true when a workspace was created', () => {
     const service = new ImportService(makeDeps());
-    expect((service as any)._hasImportedData({
+    expect(service._hasImportedData({
       sourcesImported: 0,
       proxyRulesImported: 0,
       rulesImported: { total: 0 },
@@ -312,7 +312,7 @@ describe('ImportService.getImportStatistics', () => {
 describe('ImportService._parseImportFiles', () => {
   it('parses valid main file content', async () => {
     const service = new ImportService(makeDeps());
-    const result = await (service as any)._parseImportFiles({
+    const result = await service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0', sources: [] }),
     });
     expect(result.importData.version).toBe('3.0.0');
@@ -321,14 +321,14 @@ describe('ImportService._parseImportFiles', () => {
 
   it('throws for invalid main file JSON', async () => {
     const service = new ImportService(makeDeps());
-    await expect((service as any)._parseImportFiles({
+    await expect(service._parseImportFiles({
       fileContent: 'not-json',
     })).rejects.toThrow('Main file parsing failed');
   });
 
   it('merges env file data into importData', async () => {
     const service = new ImportService(makeDeps());
-    const result = await (service as any)._parseImportFiles({
+    const result = await service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0' }),
       envFileContent: JSON.stringify({
         environmentSchema: { environments: { dev: {} } },
@@ -342,7 +342,7 @@ describe('ImportService._parseImportFiles', () => {
 
   it('throws for invalid env file JSON', async () => {
     const service = new ImportService(makeDeps());
-    await expect((service as any)._parseImportFiles({
+    await expect(service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0' }),
       envFileContent: 'bad-json',
     })).rejects.toThrow('Environment file parsing failed');
@@ -350,7 +350,7 @@ describe('ImportService._parseImportFiles', () => {
 
   it('handles env file with only environmentSchema', async () => {
     const service = new ImportService(makeDeps());
-    const result = await (service as any)._parseImportFiles({
+    const result = await service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0' }),
       envFileContent: JSON.stringify({
         environmentSchema: { environments: { dev: {} } },
@@ -362,7 +362,7 @@ describe('ImportService._parseImportFiles', () => {
 
   it('handles env file with only environments', async () => {
     const service = new ImportService(makeDeps());
-    const result = await (service as any)._parseImportFiles({
+    const result = await service._parseImportFiles({
       fileContent: JSON.stringify({ version: '3.0.0' }),
       envFileContent: JSON.stringify({
         environments: { dev: { KEY: 'val' } },
@@ -379,7 +379,7 @@ describe('ImportService._parseImportFiles', () => {
 describe('ImportService._handleWorkspaceImport', () => {
   it('returns null workspace when no workspace data', async () => {
     const service = new ImportService(makeDeps());
-    const stats = await (service as any)._handleWorkspaceImport({}, {});
+    const stats = await service._handleWorkspaceImport({}, {});
     expect(stats.createdWorkspace).toBeNull();
   });
 
@@ -388,7 +388,7 @@ describe('ImportService._handleWorkspaceImport', () => {
     const importSpy = vi.spyOn(service.workspaceHandler, 'importWorkspace')
       .mockResolvedValue({ createdWorkspace: { name: 'WS' }, errors: [] });
 
-    await (service as any)._handleWorkspaceImport(
+    await service._handleWorkspaceImport(
       {},
       { workspaceInfo: { name: 'WS', type: 'git' } }
     );
@@ -404,7 +404,7 @@ describe('ImportService._handleWorkspaceImport', () => {
     const importSpy = vi.spyOn(service.workspaceHandler, 'importWorkspace')
       .mockResolvedValue({ createdWorkspace: { name: 'WS2' }, errors: [] });
 
-    await (service as any)._handleWorkspaceImport(
+    await service._handleWorkspaceImport(
       { workspace: { name: 'WS2', type: 'git' } },
       {}
     );

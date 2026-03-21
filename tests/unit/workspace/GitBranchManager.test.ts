@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GitBranchManager } from '../../../src/services/workspace/git/repository/GitBranchManager';
+import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
 
 function createMockExecutor() {
-    return {
-        execute: vi.fn()
-    };
+    const executor = new GitExecutor();
+    vi.spyOn(executor, 'execute').mockResolvedValue({ stdout: '', stderr: '' });
+    return executor;
 }
 
 describe('GitBranchManager', () => {
@@ -13,7 +14,7 @@ describe('GitBranchManager', () => {
 
     beforeEach(() => {
         mockExecutor = createMockExecutor();
-        manager = new GitBranchManager(mockExecutor as any);
+        manager = new GitBranchManager(mockExecutor);
     });
 
     // ------- getLocalBranches -------

@@ -482,13 +482,13 @@ describe('CES state management patterns', () => {
 
   describe('resolveTemplate pattern', () => {
     it('returns string result directly', () => {
-      const result = 'resolved-value';
-      const output = typeof result === 'string' ? result : (result as any).resolved;
+      const result: string | { resolved: string; missing: string[] } = 'resolved-value';
+      const output = typeof result === 'string' ? result : result.resolved;
       expect(output).toBe('resolved-value');
     });
 
     it('extracts resolved from object result', () => {
-      const result = { resolved: 'from-object', missing: ['VAR1'] } as any;
+      const result: string | { resolved: string; missing: string[] } = { resolved: 'from-object', missing: ['VAR1'] };
       const output = typeof result === 'string' ? result : result.resolved;
       expect(output).toBe('from-object');
     });

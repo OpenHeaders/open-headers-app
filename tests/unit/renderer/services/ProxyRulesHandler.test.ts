@@ -42,7 +42,7 @@ function validDynamicProxyRule(overrides: Record<string, string | boolean | stri
 describe('ProxyRulesHandler.validateProxyRulesForExport', () => {
   it('rejects non-array', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const r = handler.validateProxyRulesForExport('bad' as any);
+    const r = handler.validateProxyRulesForExport(undefined);
     expect(r.success).toBe(false);
     expect(r.error).toContain('must be an array');
   });
@@ -86,7 +86,7 @@ describe('ProxyRulesHandler.validateProxyRulesForExport', () => {
 describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
   it('returns zeros for non-array', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const stats = handler.getProxyRulesStatistics('bad' as any);
+    const stats = handler.getProxyRulesStatistics(undefined);
     expect(stats.total).toBe(0);
     expect(stats.withHeaders).toBe(0);
     expect(stats.patterns).toEqual([]);
@@ -148,7 +148,7 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
 describe('ProxyRulesHandler.analyzeProxyRules', () => {
   it('returns empty arrays for non-array', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const result = handler.analyzeProxyRules('bad' as any);
+    const result = handler.analyzeProxyRules(undefined);
     expect(result.warnings).toEqual([]);
     expect(result.suggestions).toEqual([]);
   });
@@ -240,14 +240,14 @@ describe('ProxyRulesHandler.importProxyRules', () => {
 
   it('returns empty stats for non-array', async () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const stats = await handler.importProxyRules(null as any, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler.importProxyRules(null, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(0);
   });
 
   it('clears existing rules in replace mode and imports new ones', async () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const clearSpy = vi.spyOn(handler as any, '_clearExistingProxyRules').mockResolvedValue(undefined);
-    vi.spyOn(handler as any, '_importSingleProxyRule').mockResolvedValue({ imported: true });
+    const clearSpy = vi.spyOn(handler, '_clearExistingProxyRules').mockResolvedValue(undefined);
+    vi.spyOn(handler, '_importSingleProxyRule').mockResolvedValue({ imported: true });
 
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
     const stats = await handler.importProxyRules(
@@ -262,7 +262,7 @@ describe('ProxyRulesHandler.importProxyRules', () => {
 
   it('records errors for failed imports', async () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    vi.spyOn(handler as any, '_importSingleProxyRule').mockRejectedValue(new Error('save fail'));
+    vi.spyOn(handler, '_importSingleProxyRule').mockRejectedValue(new Error('save fail'));
 
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
     const stats = await handler.importProxyRules(

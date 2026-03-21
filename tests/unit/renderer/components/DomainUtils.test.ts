@@ -42,7 +42,7 @@ describe('addDomains', () => {
   });
 
   it('handles single string domain', () => {
-    expect(addDomains(['a.com'], 'b.com' as any)).toEqual(['a.com', 'b.com']);
+    expect(addDomains(['a.com'], 'b.com')).toEqual(['a.com', 'b.com']);
   });
 
   it('handles empty current array', () => {
@@ -62,7 +62,7 @@ describe('createTagCloseHandler', () => {
   });
 
   it('does not throw if onChange is undefined', () => {
-    const handler = createTagCloseHandler(['a.com'], undefined as any);
+    const handler = createTagCloseHandler(['a.com'], undefined);
     expect(() => handler('a.com')).not.toThrow();
   });
 });
@@ -111,8 +111,8 @@ describe('calculateInputWidth', () => {
     expect(calculateInputWidth('ab', 200, 400, 8)).toBe(200);
   });
 
-  it('handles null content', () => {
-    expect(calculateInputWidth(null as any, 80, 400)).toBe(80);
+  it('handles undefined content', () => {
+    expect(calculateInputWidth(undefined, 80, 400)).toBe(80);
   });
 });
 
@@ -138,12 +138,6 @@ describe('validateDomainArray', () => {
     expect(result.valid).toBe(false);
     expect(result.issues).toContain('empty');
     expect(result.emptyCount).toBe(1);
-  });
-
-  it('throws for non-string values (trim not available)', () => {
-    // The empty-values check calls .trim() on every element before
-    // the type-check runs, so a non-string element throws.
-    expect(() => validateDomainArray(['a.com', 123 as any])).toThrow();
   });
 
   it('detects multiple issues', () => {

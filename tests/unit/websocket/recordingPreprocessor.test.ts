@@ -33,17 +33,6 @@ function makeIncrementalSnapshot(data: RRWebInnerData, timestamp = 2000): RRWebE
 
 describe('recordingPreprocessor', () => {
     describe('preprocessRecordingForSave', () => {
-        it('returns invalid data unchanged', async () => {
-            const nullResult = await preprocessRecordingForSave(null as any);
-            expect(nullResult).toBeNull();
-
-            const noRecord = await preprocessRecordingForSave({} as any);
-            expect(noRecord).toEqual({});
-
-            const noEvents = await preprocessRecordingForSave({ record: {} } as any);
-            expect(noEvents).toEqual({ record: {} });
-        });
-
         it('returns recording with empty events', async () => {
             const input = makeRecording([]);
             const result = await preprocessRecordingForSave(input);

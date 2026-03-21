@@ -34,32 +34,32 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
 describe('ExportService._validateExportOptions', () => {
   it('throws for null options', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions(null))
+    expect(() => service._validateExportOptions(null))
       .toThrow('Export options must be provided');
   });
 
   it('throws for non-object options', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions('str'))
+    expect(() => service._validateExportOptions('str'))
       .toThrow('Export options must be provided');
   });
 
   it('throws when selectedItems is missing', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({}))
+    expect(() => service._validateExportOptions({}))
       .toThrow('Selected items must be specified');
   });
 
   it('throws when no items are selected', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({
+    expect(() => service._validateExportOptions({
       selectedItems: { sources: false, rules: false },
     })).toThrow('At least one data type');
   });
 
   it('throws for invalid file format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({
+    expect(() => service._validateExportOptions({
       selectedItems: { sources: true },
       fileFormat: 'invalid-format',
     })).toThrow('Invalid file format');
@@ -67,7 +67,7 @@ describe('ExportService._validateExportOptions', () => {
 
   it('accepts valid options with single format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({
+    expect(() => service._validateExportOptions({
       selectedItems: { sources: true },
       fileFormat: FILE_FORMATS.SINGLE,
     })).not.toThrow();
@@ -75,7 +75,7 @@ describe('ExportService._validateExportOptions', () => {
 
   it('accepts valid options with separate format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({
+    expect(() => service._validateExportOptions({
       selectedItems: { sources: true },
       fileFormat: FILE_FORMATS.SEPARATE,
     })).not.toThrow();
@@ -83,7 +83,7 @@ describe('ExportService._validateExportOptions', () => {
 
   it('accepts valid options without fileFormat (optional)', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportOptions({
+    expect(() => service._validateExportOptions({
       selectedItems: { rules: true },
     })).not.toThrow();
   });
@@ -95,22 +95,22 @@ describe('ExportService._validateExportOptions', () => {
 describe('ExportService._countExportItems', () => {
   it('returns 0 for empty data', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({})).toBe(0);
+    expect(service._countExportItems({})).toBe(0);
   });
 
   it('counts sources array', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ sources: [1, 2, 3] })).toBe(3);
+    expect(service._countExportItems({ sources: [1, 2, 3] })).toBe(3);
   });
 
   it('counts proxyRules array', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ proxyRules: [1, 2] })).toBe(2);
+    expect(service._countExportItems({ proxyRules: [1, 2] })).toBe(2);
   });
 
   it('counts rules across types', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({
+    expect(service._countExportItems({
       rules: {
         header: [1, 2],
         payload: [3],
@@ -121,7 +121,7 @@ describe('ExportService._countExportItems', () => {
 
   it('counts environment variables', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({
+    expect(service._countExportItems({
       environments: {
         dev: { A: 1, B: 2 },
         staging: { C: 3 },
@@ -131,12 +131,12 @@ describe('ExportService._countExportItems', () => {
 
   it('counts workspace as 1', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ workspace: { name: 'ws' } })).toBe(1);
+    expect(service._countExportItems({ workspace: { name: 'ws' } })).toBe(1);
   });
 
   it('counts all types combined', () => {
     const service = new ExportService(makeDeps());
-    const count = (service as any)._countExportItems({
+    const count = service._countExportItems({
       sources: [1],
       proxyRules: [2, 3],
       rules: { header: [4] },
@@ -148,23 +148,23 @@ describe('ExportService._countExportItems', () => {
 
   it('skips non-array sources', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ sources: 'not-array' })).toBe(0);
+    expect(service._countExportItems({ sources: 'not-array' })).toBe(0);
   });
 
   it('skips non-array proxyRules', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ proxyRules: 'not-array' })).toBe(0);
+    expect(service._countExportItems({ proxyRules: 'not-array' })).toBe(0);
   });
 
   it('skips non-object rules', () => {
     const service = new ExportService(makeDeps());
-    expect((service as any)._countExportItems({ rules: 'not-object' })).toBe(0);
+    expect(service._countExportItems({ rules: 'not-object' })).toBe(0);
   });
 
   it('handles array values in environments gracefully', () => {
     const service = new ExportService(makeDeps());
     // Arrays inside environments should not be counted
-    expect((service as any)._countExportItems({
+    expect(service._countExportItems({
       environments: { dev: [1, 2] },
     })).toBe(0);
   });
@@ -176,7 +176,7 @@ describe('ExportService._countExportItems', () => {
 describe('ExportService._calculateExportSize', () => {
   it('returns size string for small data', () => {
     const service = new ExportService(makeDeps());
-    const size = (service as any)._calculateExportSize({ a: 1 });
+    const size = service._calculateExportSize({ a: 1 });
     expect(size).toContain('bytes');
   });
 
@@ -186,7 +186,7 @@ describe('ExportService._calculateExportSize', () => {
     for (let i = 0; i < 200; i++) {
       largeObj[`key${i}`] = 'x'.repeat(10);
     }
-    const size = (service as any)._calculateExportSize(largeObj);
+    const size = service._calculateExportSize(largeObj);
     expect(size).toContain('KB');
   });
 
@@ -195,7 +195,7 @@ describe('ExportService._calculateExportSize', () => {
     // Circular reference causes JSON.stringify to throw
     const circular: Record<string, unknown> = {};
     circular.self = circular;
-    const size = (service as any)._calculateExportSize(circular);
+    const size = service._calculateExportSize(circular);
     expect(size).toBe('unknown size');
   });
 });
@@ -206,7 +206,7 @@ describe('ExportService._calculateExportSize', () => {
 describe('ExportService._sanitizeOptionsForLogging', () => {
   it('redacts authData in workspace', () => {
     const service = new ExportService(makeDeps());
-    const result = (service as any)._sanitizeOptionsForLogging({
+    const result = service._sanitizeOptionsForLogging({
       fileFormat: 'single',
       currentWorkspace: {
         name: 'WS',
@@ -220,7 +220,7 @@ describe('ExportService._sanitizeOptionsForLogging', () => {
 
   it('does not modify options without authData', () => {
     const service = new ExportService(makeDeps());
-    const result = (service as any)._sanitizeOptionsForLogging({
+    const result = service._sanitizeOptionsForLogging({
       fileFormat: 'single',
       currentWorkspace: { name: 'WS' },
     });
@@ -229,7 +229,7 @@ describe('ExportService._sanitizeOptionsForLogging', () => {
 
   it('handles options without currentWorkspace', () => {
     const service = new ExportService(makeDeps());
-    const result = (service as any)._sanitizeOptionsForLogging({ fileFormat: 'single' });
+    const result = service._sanitizeOptionsForLogging({ fileFormat: 'single' });
     expect(result.fileFormat).toBe('single');
   });
 });
@@ -321,7 +321,7 @@ describe('ExportService.getExportStatistics', () => {
 describe('ExportService._validateExportData', () => {
   it('does not throw for empty export data with no selections', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { version: '3.0.0' },
       { selectedItems: {} }
     )).not.toThrow();
@@ -329,7 +329,7 @@ describe('ExportService._validateExportData', () => {
 
   it('throws when sources validation fails', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { sources: 'not-array' },
       { selectedItems: { sources: true } }
     )).toThrow('Sources validation failed');
@@ -337,7 +337,7 @@ describe('ExportService._validateExportData', () => {
 
   it('throws when proxy rules validation fails', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { proxyRules: 'not-array' },
       { selectedItems: { proxyRules: true } }
     )).toThrow('Proxy rules validation failed');
@@ -345,7 +345,7 @@ describe('ExportService._validateExportData', () => {
 
   it('throws when rules validation fails', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { rules: 'not-object' },
       { selectedItems: { rules: true } }
     )).toThrow('Rules validation failed');
@@ -353,7 +353,7 @@ describe('ExportService._validateExportData', () => {
 
   it('throws when environment schema validation fails', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { environmentSchema: 'bad' },
       { selectedItems: {} }
     )).toThrow('Environments validation failed');
@@ -361,7 +361,7 @@ describe('ExportService._validateExportData', () => {
 
   it('throws when workspace validation fails', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       { workspace: { type: 'git' } }, // missing name
       { selectedItems: {} }
     )).toThrow('Workspace validation failed');
@@ -369,7 +369,7 @@ describe('ExportService._validateExportData', () => {
 
   it('does not throw for valid data', () => {
     const service = new ExportService(makeDeps());
-    expect(() => (service as any)._validateExportData(
+    expect(() => service._validateExportData(
       {
         sources: [{ sourceId: 's1', sourceType: 'file', sourcePath: '/a' }],
         workspace: { name: 'WS', type: 'git' },

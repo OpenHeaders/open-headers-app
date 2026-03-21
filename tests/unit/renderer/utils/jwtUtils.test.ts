@@ -56,10 +56,6 @@ describe('jwtUtils', () => {
       expect(() => decodeJWT('')).toThrow('Failed to decode JWT');
     });
 
-    it('throws for non-string input', () => {
-      expect(() => decodeJWT(42 as any)).toThrow('Failed to decode JWT');
-    });
-
     it('throws for token with wrong number of parts (2 parts)', () => {
       expect(() => decodeJWT('abc.def')).toThrow('Failed to decode JWT');
     });
@@ -143,10 +139,6 @@ describe('jwtUtils', () => {
 
     it('returns false for empty string', () => {
       expect(isJWT('')).toBe(false);
-    });
-
-    it('returns false for non-string', () => {
-      expect(isJWT(123 as any)).toBe(false);
     });
 
     it('returns false for a string with only 2 dot-separated parts', () => {

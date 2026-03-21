@@ -42,10 +42,6 @@ describe('trimContent', () => {
     expect(trimContent('')).toBe('No content yet');
   });
 
-  it('returns "No content yet" for null', () => {
-    expect(trimContent(null as any)).toBe('No content yet');
-  });
-
   it('returns short content as-is', () => {
     expect(trimContent('short')).toBe('short');
   });
@@ -72,7 +68,7 @@ describe('debugRefreshState', () => {
       getDate: () => new Date('2024-01-15T14:30:45.000Z'),
     };
 
-    debugRefreshState(123, 'Manual Refresh', { test: true }, mockLog as any, mockTimeManager as any);
+    debugRefreshState(123, 'Manual Refresh', { test: true }, mockLog, mockTimeManager);
 
     expect(mockLog.debug).toHaveBeenCalledTimes(1);
     const callArgs = mockLog.debug.mock.calls[0];

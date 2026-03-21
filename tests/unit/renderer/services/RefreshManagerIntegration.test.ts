@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before the import under test
@@ -37,7 +38,7 @@ vi.mock('../../../../src/renderer/services/RefreshManager', () => ({
 }));
 
 const mockWorkspaceServiceState = {
-  sources: [] as any[],
+  sources: [] as Source[],
 };
 
 const mockWorkspaceService = {

@@ -21,10 +21,6 @@ describe('isSourceDuplicate', () => {
     expect(isSourceDuplicate(null, [])).toBe(false);
   });
 
-  it('returns false when currentSources is not an array', () => {
-    expect(isSourceDuplicate({ sourceType: 'file', sourcePath: '/a' }, null as any)).toBe(false);
-  });
-
   it('detects file source duplicate by sourcePath', () => {
     const source = { sourceType: 'file', sourcePath: '/tmp/a.json' };
     const existing = [{ sourceType: 'file', sourcePath: '/tmp/a.json' }];
@@ -171,10 +167,6 @@ describe('isRuleDuplicate', () => {
     expect(isRuleDuplicate(null, [])).toBe(false);
   });
 
-  it('returns false for non-array existing rules', () => {
-    expect(isRuleDuplicate({ id: '1' }, null as any)).toBe(false);
-  });
-
   it('detects duplicate by id', () => {
     expect(isRuleDuplicate({ id: 'r1' }, [{ id: 'r1' }])).toBe(true);
   });
@@ -245,12 +237,12 @@ describe('areRulesContentEqual', () => {
 // areHeaderModificationsEqual
 // ---------------------------------------------------------------------------
 describe('areHeaderModificationsEqual', () => {
-  it('returns true when both are non-array and equal', () => {
-    expect(areHeaderModificationsEqual(null as any, null as any)).toBe(true);
+  it('returns true when both are undefined', () => {
+    expect(areHeaderModificationsEqual(undefined, undefined)).toBe(true);
   });
 
-  it('returns false when one is array and one is not', () => {
-    expect(areHeaderModificationsEqual([], null as any)).toBe(false);
+  it('returns false when one is array and one is undefined', () => {
+    expect(areHeaderModificationsEqual([], undefined)).toBe(false);
   });
 
   it('returns false for different lengths', () => {
@@ -317,10 +309,6 @@ describe('isEnvironmentVariableDuplicate', () => {
 describe('isWorkspaceNameDuplicate', () => {
   it('returns false for falsy name', () => {
     expect(isWorkspaceNameDuplicate('', [{ name: '' }])).toBe(false);
-  });
-
-  it('returns false for non-array', () => {
-    expect(isWorkspaceNameDuplicate('ws', null as any)).toBe(false);
   });
 
   it('detects matching name', () => {

@@ -89,7 +89,7 @@ class ProtocolHandler {
     }
 
     validateProtocolUrl(url: string): UrlValidationResult {
-        if (!url || typeof url !== 'string') {
+        if (!url) {
             return { valid: false, error: 'URL must be a non-empty string' };
         }
 

@@ -161,7 +161,7 @@ test.describe('IPC Communication', () => {
 
     test('can check network state via renderer', async () => {
         const hasElectronAPI = await page.evaluate(() => {
-            return typeof (window as any).electronAPI !== 'undefined';
+            return typeof window.electronAPI !== 'undefined';
         });
 
         expect(hasElectronAPI).toBe(true);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WSCertificateHandler } from '../../../src/services/websocket/ws-certificate-handler';
 
-function createMockWSService() {
+function createMockWSService(): ConstructorParameters<typeof WSCertificateHandler>[0] {
     return {
         appDataPath: '/tmp/test-app-data',
         _broadcastToAll: vi.fn().mockReturnValue(2)
@@ -14,7 +14,7 @@ describe('WSCertificateHandler', () => {
 
     beforeEach(() => {
         mockService = createMockWSService();
-        handler = new WSCertificateHandler(mockService as any);
+        handler = new WSCertificateHandler(mockService);
     });
 
     // ------- constructor -------

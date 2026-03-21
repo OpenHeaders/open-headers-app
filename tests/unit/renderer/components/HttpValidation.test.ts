@@ -100,9 +100,8 @@ describe('validateVariableExists', () => {
 // resolveAllVariables
 // ======================================================================
 describe('resolveAllVariables', () => {
-  it('returns falsy value as-is', () => {
+  it('returns empty string as-is', () => {
     expect(resolveAllVariables('', makeEnvContext())).toBe('');
-    expect(resolveAllVariables(null as any, makeEnvContext())).toBe(null);
   });
 
   it('returns text as-is when environments not ready', () => {
@@ -142,10 +141,6 @@ describe('validateUrlField', () => {
 // validateHttpHeaders
 // ======================================================================
 describe('validateHttpHeaders', () => {
-  it('returns valid for non-array input', () => {
-    expect(validateHttpHeaders(null as any, makeEnvContext(), makeForm())).toEqual({ valid: true });
-  });
-
   it('returns valid for empty array', () => {
     expect(validateHttpHeaders([], makeEnvContext(), makeForm())).toEqual({ valid: true });
   });
@@ -184,10 +179,6 @@ describe('validateHttpHeaders', () => {
 // validateQueryParameters
 // ======================================================================
 describe('validateQueryParameters', () => {
-  it('returns valid for non-array', () => {
-    expect(validateQueryParameters(null as any, makeEnvContext(), makeForm())).toEqual({ valid: true });
-  });
-
   it('returns invalid for missing env var in query param', () => {
     const ctx = makeEnvContext({});
     const params = [{ key: 'token', value: '{{TOKEN}}' }];

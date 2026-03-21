@@ -327,7 +327,7 @@ class RefreshCoordinator {
   /**
    * Check if a source is currently refreshing
    */
-  async isRefreshing(sourceId: string) {
+  async isRefreshing(sourceId: string | number) {
     // Normalize sourceId
     sourceId = RefreshCoordinator.normalizeSourceId(sourceId);
     return this.activeRefreshes.has(sourceId);

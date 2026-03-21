@@ -61,7 +61,7 @@ describe('ConfigFileValidator', () => {
         version: { type: 'string', required: true },
         headers: { type: 'array', required: true }
       };
-      const result = validator.validateAgainstSchema(content as any, schema, 'headers');
+      const result = validator.validateAgainstSchema(content, schema, 'headers');
       expect(result.valid).toBe(false);
       expect(result.errors.some(e => e.includes("type string, got number"))).toBe(true);
     });

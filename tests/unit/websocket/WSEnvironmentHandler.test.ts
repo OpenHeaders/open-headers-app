@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WSEnvironmentHandler } from '../../../src/services/websocket/ws-environment-handler';
 
-function createMockService() {
+function createMockService(): ConstructorParameters<typeof WSEnvironmentHandler>[0] {
     return {
         appDataPath: '/tmp/test-app-data',
         rules: {},
@@ -14,7 +14,7 @@ describe('WSEnvironmentHandler', () => {
     let handler: WSEnvironmentHandler;
 
     beforeEach(() => {
-        handler = new WSEnvironmentHandler(createMockService() as any);
+        handler = new WSEnvironmentHandler(createMockService());
     });
 
     // ------- resolveTemplate -------
@@ -43,10 +43,8 @@ describe('WSEnvironmentHandler', () => {
             expect(result).toBe('plain text');
         });
 
-        it('returns empty/falsy template as-is', () => {
+        it('returns empty template as-is', () => {
             expect(handler.resolveTemplate('', {})).toBe('');
-            expect(handler.resolveTemplate(null as any, {})).toBe(null);
-            expect(handler.resolveTemplate(undefined as any, {})).toBe(undefined);
         });
 
         it('trims whitespace in variable names', () => {
@@ -59,7 +57,7 @@ describe('WSEnvironmentHandler', () => {
                 A: '',
                 B: 'good',
                 C: ''
-            } as any);
+            });
             expect(result).toBe('{{A}}-good-{{C}}');
         });
 

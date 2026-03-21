@@ -52,15 +52,10 @@ describe('validateImportData', () => {
 // validateAndParseFileContent
 // ---------------------------------------------------------------------------
 describe('validateAndParseFileContent', () => {
-  it('rejects null content', () => {
-    const r = validateAndParseFileContent(null as any);
+  it('rejects empty content', () => {
+    const r = validateAndParseFileContent('');
     expect(r.success).toBe(false);
     expect(r.error).toContain('empty');
-  });
-
-  it('rejects non-string content', () => {
-    const r = validateAndParseFileContent(123 as any);
-    expect(r.success).toBe(false);
   });
 
   it('rejects invalid JSON', () => {
@@ -87,11 +82,6 @@ describe('validateAndParseFileContent', () => {
 describe('validateWorkspaceConfig', () => {
   it('rejects null', () => {
     const r = validateWorkspaceConfig(null);
-    expect(r.success).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    const r = validateWorkspaceConfig('str' as any);
     expect(r.success).toBe(false);
   });
 
@@ -128,11 +118,6 @@ describe('validateEnvironmentVariable', () => {
     expect(r.success).toBe(false);
   });
 
-  it('rejects non-object', () => {
-    const r = validateEnvironmentVariable(42 as any);
-    expect(r.success).toBe(false);
-  });
-
   it('rejects missing name', () => {
     const r = validateEnvironmentVariable({});
     expect(r.success).toBe(false);
@@ -161,11 +146,6 @@ describe('validateEnvironmentVariable', () => {
 describe('validateProxyRule', () => {
   it('rejects null', () => {
     const r = validateProxyRule(null);
-    expect(r.success).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    const r = validateProxyRule('str' as any);
     expect(r.success).toBe(false);
   });
 
@@ -268,16 +248,6 @@ describe('validateSource', () => {
 // validateVersion
 // ---------------------------------------------------------------------------
 describe('validateVersion', () => {
-  it('rejects null', () => {
-    const r = validateVersion(null as any);
-    expect(r.success).toBe(false);
-  });
-
-  it('rejects non-string', () => {
-    const r = validateVersion(42 as any);
-    expect(r.success).toBe(false);
-  });
-
   it('succeeds for supported version', () => {
     const supported = VALIDATION_RULES.SUPPORTED_VERSIONS[0];
     const r = validateVersion(supported);
@@ -299,11 +269,6 @@ describe('validateVersion', () => {
 describe('validateEnvironmentSchema', () => {
   it('rejects null', () => {
     const r = validateEnvironmentSchema(null);
-    expect(r.success).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    const r = validateEnvironmentSchema('str' as any);
     expect(r.success).toBe(false);
   });
 

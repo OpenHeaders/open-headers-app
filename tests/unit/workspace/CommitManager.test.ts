@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { CommitManager } from '../../../src/services/workspace/git/operations/CommitManager';
+import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
 
 describe('CommitManager (pure logic)', () => {
-    // Use a dummy executor for pure logic tests
-    const manager = new CommitManager({} as any);
+    const manager = new CommitManager(new GitExecutor());
 
     describe('generateCommitMessage()', () => {
         it('generates create message', () => {

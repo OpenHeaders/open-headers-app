@@ -202,7 +202,7 @@ describe('RefreshCoordinator', () => {
 
     it('normalizes sourceId', async () => {
       await coordinator.activeRefreshes.set('42', { startTime: _now });
-      expect(await coordinator.isRefreshing(42 as any)).toBe(true);
+      expect(await coordinator.isRefreshing(42)).toBe(true);
     });
   });
 

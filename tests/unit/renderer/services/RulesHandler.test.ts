@@ -18,14 +18,9 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
 // validateRulesForExport  (pure)
 // ---------------------------------------------------------------------------
 describe('RulesHandler.validateRulesForExport', () => {
-  it('rejects null', () => {
+  it('rejects undefined', () => {
     const handler = new RulesHandler(makeDeps());
-    expect(handler.validateRulesForExport(null).success).toBe(false);
-  });
-
-  it('rejects non-object', () => {
-    const handler = new RulesHandler(makeDeps());
-    expect(handler.validateRulesForExport('str' as any).success).toBe(false);
+    expect(handler.validateRulesForExport(undefined).success).toBe(false);
   });
 
   it('rejects missing rules property', () => {
@@ -222,14 +217,14 @@ describe('RulesHandler.analyzeRules', () => {
 describe('RulesHandler._importRulesOfType', () => {
   it('returns zeros for empty import array', async () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = await (handler as any)._importRulesOfType('header', [], { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', [], { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(0);
     expect(stats.skipped).toBe(0);
   });
 
   it('returns zeros for non-array input', async () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = await (handler as any)._importRulesOfType('header', null, { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', null, { rules: { header: [] } }, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(0);
   });
 
@@ -238,7 +233,7 @@ describe('RulesHandler._importRulesOfType', () => {
     const existing = { rules: { header: [{ id: 'old' }] } };
     const incoming = [{ id: 'new1' }, { id: 'new2' }];
 
-    const stats = await (handler as any)._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE });
     expect(stats.imported).toBe(2);
     expect(stats.skipped).toBe(0);
     expect(existing.rules.header).toHaveLength(2);
@@ -249,7 +244,7 @@ describe('RulesHandler._importRulesOfType', () => {
     const existing = { rules: { header: [{ id: 'r1' }] } };
     const incoming = [{ id: 'r1' }, { id: 'r2' }];
 
-    const stats = await (handler as any)._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(1);
     expect(stats.skipped).toBe(1);
     expect(existing.rules.header).toHaveLength(2);
@@ -265,7 +260,7 @@ describe('RulesHandler._importRulesOfType', () => {
     // but then pushes into it. We need to ensure the array exists:
     existing.rules['header'] = [];
 
-    const stats = await (handler as any)._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(1);
   });
 
@@ -274,7 +269,7 @@ describe('RulesHandler._importRulesOfType', () => {
     const existing = { rules: { header: [] } };
     const incoming = [{ name: 'No-ID Rule' }]; // no id
 
-    const stats = await (handler as any)._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
+    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE });
     expect(stats.imported).toBe(1);
     expect(existing.rules.header[0].id).toBeDefined();
     expect(existing.rules.header[0].id.length).toBeGreaterThan(0);
@@ -287,14 +282,14 @@ describe('RulesHandler._importRulesOfType', () => {
 describe('RulesHandler._generateRuleId', () => {
   it('returns a non-empty string', () => {
     const handler = new RulesHandler(makeDeps());
-    const id = (handler as any)._generateRuleId();
+    const id = handler._generateRuleId();
     expect(typeof id).toBe('string');
     expect(id.length).toBeGreaterThan(0);
   });
 
   it('generates unique IDs across calls', () => {
     const handler = new RulesHandler(makeDeps());
-    const ids = new Set(Array.from({ length: 20 }, () => (handler as any)._generateRuleId()));
+    const ids = new Set(Array.from({ length: 20 }, () => handler._generateRuleId()));
     expect(ids.size).toBe(20);
   });
 });

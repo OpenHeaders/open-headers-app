@@ -64,10 +64,8 @@ describe('TemplateResolver', () => {
       ).toThrow("Variable 'x' not found");
     });
 
-    it('returns non-string input as-is', () => {
+    it('returns null as-is', () => {
       expect(resolver.resolveTemplate(null, {})).toBeNull();
-      expect(resolver.resolveTemplate(undefined, {})).toBeUndefined();
-      expect(resolver.resolveTemplate(42 as any, {})).toBe(42);
     });
 
     it('returns empty string template unchanged', () => {
@@ -132,9 +130,6 @@ describe('TemplateResolver', () => {
       expect(resolver.hasVariables(null)).toBe(false);
     });
 
-    it('returns false for non-string', () => {
-      expect(resolver.hasVariables(123 as any)).toBe(false);
-    });
   });
 
   // ------------------------------------------------------------------

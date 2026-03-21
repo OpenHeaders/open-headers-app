@@ -65,7 +65,7 @@ export class ProxyRulesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importProxyRules(rulesToImport: ProxyRule[], options: { importMode?: string }) {
+  async importProxyRules(rulesToImport: ProxyRule[] | null, options: { importMode?: string }) {
     const stats: { imported: number; skipped: number; errors: Array<{ pattern: string; error: string }> } = {
       imported: 0,
       skipped: 0,
@@ -222,7 +222,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules to validate
    * @returns {Object} - Validation result
    */
-  validateProxyRulesForExport(rules: ProxyRule[]) {
+  validateProxyRulesForExport(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {
       return {
         success: false,
@@ -253,7 +253,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules array
    * @returns {Object} - Statistics object
    */
-  getProxyRulesStatistics(rules: ProxyRule[]) {
+  getProxyRulesStatistics(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {
       return {
         total: 0,
@@ -293,7 +293,7 @@ export class ProxyRulesHandler {
    * @param {Array} rules - Proxy rules to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeProxyRules(rules: ProxyRule[]) {
+  analyzeProxyRules(rules: ProxyRule[] | undefined) {
     if (!Array.isArray(rules)) {
       return { warnings: [], suggestions: [] };
     }

@@ -929,4 +929,5 @@ class RefreshManager {
 }
 
 const refreshManager = new RefreshManager();
+export { RefreshManager };
 export default refreshManager;

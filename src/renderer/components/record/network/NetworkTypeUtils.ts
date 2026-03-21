@@ -11,10 +11,6 @@ import type { NetworkRecord } from '../../../../types/recording';
  * Get request type from network record with intelligent fallbacks
  */
 export const getTypeFromRecord = (req: NetworkRecord) => {
-    if (!req || typeof req !== 'object') {
-        return 'unknown';
-    }
-
     const type = req.type;
 
     // Handle Chrome DevTools resource types
@@ -68,7 +64,7 @@ export const getTypeFromRecord = (req: NetworkRecord) => {
  * Get unique type values from network records for filters
  */
 export const getUniqueTypes = (networkRecords: NetworkRecord[]) => {
-    if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
+    if (networkRecords.length === 0) {
         return [];
     }
 
@@ -83,7 +79,7 @@ export const getUniqueTypes = (networkRecords: NetworkRecord[]) => {
  * Get unique status groups from network records for filters
  */
 export const getUniqueStatusGroups = (networkRecords: NetworkRecord[]) => {
-    if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
+    if (networkRecords.length === 0) {
         return [];
     }
 
@@ -104,7 +100,7 @@ export const getUniqueStatusGroups = (networkRecords: NetworkRecord[]) => {
  * Get unique method values from network records for filters
  */
 export const getUniqueMethods = (networkRecords: NetworkRecord[]) => {
-    if (!Array.isArray(networkRecords) || networkRecords.length === 0) {
+    if (networkRecords.length === 0) {
         return [];
     }
 

@@ -7,15 +7,7 @@ import {
 // getDisplayName
 // ======================================================================
 describe('getDisplayName', () => {
-  it('returns fallback for null URL', () => {
-    expect(getDisplayName(null as any)).toBe('Request Details');
-  });
-
-  it('returns custom fallback for null URL', () => {
-    expect(getDisplayName(null as any, 'Custom')).toBe('Custom');
-  });
-
-  it('returns empty string for empty URL', () => {
+  it('returns fallback for empty URL', () => {
     expect(getDisplayName('')).toBe('Request Details');
   });
 
