@@ -44,10 +44,6 @@ describe('formatBytes', () => {
 // truncateValue
 // ======================================================================
 describe('truncateValue', () => {
-  it('returns empty string for null', () => {
-    expect(truncateValue(null as any)).toBe('');
-  });
-
   it('returns empty string for empty input', () => {
     expect(truncateValue('')).toBe('');
   });
@@ -71,10 +67,6 @@ describe('truncateValue', () => {
 // truncateDomain
 // ======================================================================
 describe('truncateDomain', () => {
-  it('returns empty string for null', () => {
-    expect(truncateDomain(null as any)).toBe('');
-  });
-
   it('returns empty string for empty input', () => {
     expect(truncateDomain('')).toBe('');
   });

@@ -9,15 +9,8 @@ describe('ProtocolHandler', () => {
     });
 
     describe('validateProtocolUrl', () => {
-        it('rejects null/undefined/empty values', () => {
-            expect(handler.validateProtocolUrl(null as any).valid).toBe(false);
-            expect(handler.validateProtocolUrl(undefined as any).valid).toBe(false);
+        it('rejects empty string', () => {
             expect(handler.validateProtocolUrl('').valid).toBe(false);
-        });
-
-        it('rejects non-string values', () => {
-            expect(handler.validateProtocolUrl(42 as any).valid).toBe(false);
-            expect(handler.validateProtocolUrl({} as any).valid).toBe(false);
         });
 
         it('rejects URLs without openheaders:// prefix', () => {

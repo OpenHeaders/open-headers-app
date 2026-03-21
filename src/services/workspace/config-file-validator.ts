@@ -6,6 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
+import type { JsonObject } from '../../types/common';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileValidator');
@@ -40,29 +41,7 @@ interface ConfigPaths {
   [type: string]: string | undefined;
 }
 
-interface HeaderEntry {
-  name?: string;
-  value?: string;
-}
-
-interface EnvironmentEntry {
-  name?: string;
-}
-
-interface ConfigContent {
-  version?: string;
-  headers?: HeaderEntry[];
-  environments?: EnvironmentEntry[];
-  rules?: Array<{ pattern?: string; url?: string; target?: string }>;
-  workspaceId?: string;
-  workspaceName?: string;
-  createdAt?: string;
-  configPaths?: Record<string, string>;
-  sources?: Array<{ sourceType?: string; url?: string }>;
-  proxyRules?: Array<{ pattern?: string; target?: string }>;
-  // Index sig required: validator iterates schema fields dynamically via content[field]
-  [field: string]: string | HeaderEntry[] | EnvironmentEntry[] | Array<{ pattern?: string; url?: string; target?: string }> | Record<string, string> | Array<{ sourceType?: string; url?: string }> | undefined;
-}
+type ConfigContent = JsonObject;
 
 interface MetadataOptions {
   workspaceId?: string;
@@ -263,12 +242,14 @@ class ConfigFileValidator {
 
     switch (type) {
       case 'headers':
-        if (content.headers) {
+        if (Array.isArray(content.headers)) {
           for (const [index, header] of content.headers.entries()) {
-            if (!header.name) {
+            const h = header as JsonObject | null;
+            if (!h || typeof h !== 'object') continue;
+            if (!h.name) {
               errors.push(`Header at index ${index} missing 'name' field`);
             }
-            if (!header.value && header.value !== '') {
+            if (!h.value && h.value !== '') {
               errors.push(`Header at index ${index} missing 'value' field`);
             }
           }
@@ -276,43 +257,49 @@ class ConfigFileValidator {
         break;
 
       case 'environments':
-        if (content.environments) {
+        if (Array.isArray(content.environments)) {
           const names = new Set<string>();
           for (const [index, env] of content.environments.entries()) {
-            if (!env.name) {
+            const e = env as JsonObject | null;
+            if (!e || typeof e !== 'object') continue;
+            const envName = typeof e.name === 'string' ? e.name : '';
+            if (!envName) {
               errors.push(`Environment at index ${index} missing 'name' field`);
-            } else if (names.has(env.name)) {
-              errors.push(`Duplicate environment name: ${env.name}`);
+            } else if (names.has(envName)) {
+              errors.push(`Duplicate environment name: ${envName}`);
             } else {
-              names.add(env.name);
+              names.add(envName);
             }
           }
         }
         break;
 
       case 'proxy':
-        if (content.rules) {
+        if (Array.isArray(content.rules)) {
           for (const [index, rule] of content.rules.entries()) {
-            if (!rule.pattern && !rule.url) {
+            const r = rule as JsonObject | null;
+            if (!r || typeof r !== 'object') continue;
+            if (!r.pattern && !r.url) {
               errors.push(`Proxy rule at index ${index} must have either 'pattern' or 'url'`);
             }
-            if (!rule.target) {
+            if (!r.target) {
               errors.push(`Proxy rule at index ${index} missing 'target' field`);
             }
           }
         }
         break;
 
-      case 'metadata':
-        // Validate workspace ID format
-        if (content.workspaceId && !/^[a-zA-Z0-9-_]+$/.test(content.workspaceId)) {
+      case 'metadata': {
+        const workspaceId = typeof content.workspaceId === 'string' ? content.workspaceId : '';
+        const version = typeof content.version === 'string' ? content.version : '';
+        if (workspaceId && !/^[a-zA-Z0-9-_]+$/.test(workspaceId)) {
           errors.push('Invalid workspaceId format');
         }
-        // Validate version format
-        if (content.version && !/^\d+\.\d+\.\d+$/.test(content.version)) {
+        if (version && !/^\d+\.\d+\.\d+$/.test(version)) {
           warnings.push('Version should follow semver format (e.g., 1.0.0)');
         }
         break;
+      }
     }
 
     return { errors, warnings };
@@ -398,40 +385,46 @@ class ConfigFileValidator {
     switch (type) {
       case 'headers':
         if (Array.isArray(override.headers)) {
-          merged.headers = [...(base.headers || []), ...override.headers];
+          const baseHeaders = Array.isArray(base.headers) ? base.headers : [];
+          merged.headers = [...baseHeaders, ...override.headers];
         }
         break;
 
       case 'rules':
         if (Array.isArray(override.rules)) {
-          merged.rules = [...(base.rules || []), ...override.rules];
+          const baseRules = Array.isArray(base.rules) ? base.rules : [];
+          merged.rules = [...baseRules, ...override.rules];
         }
         break;
 
       case 'environments':
-        // Merge environments by name
         if (Array.isArray(override.environments)) {
-          const envMap = new Map<string, EnvironmentEntry>();
-          (base.environments || []).forEach(env => envMap.set(env.name!, env));
-          override.environments.forEach(env => envMap.set(env.name!, env));
+          const envMap = new Map<string, JsonObject>();
+          const baseEnvs = Array.isArray(base.environments) ? base.environments : [];
+          for (const env of baseEnvs) {
+            const e = env as JsonObject | null;
+            if (e && typeof e.name === 'string') envMap.set(e.name, e);
+          }
+          for (const env of override.environments) {
+            const e = env as JsonObject | null;
+            if (e && typeof e.name === 'string') envMap.set(e.name, e);
+          }
           merged.environments = Array.from(envMap.values());
         }
         break;
 
       case 'proxy':
-        // Replace proxy rules entirely
         if (Array.isArray(override.rules)) {
           merged.rules = override.rules;
         }
         break;
 
-      case 'metadata':
-        // Deep merge metadata
-        merged.configPaths = {
-          ...(base.configPaths || {}),
-          ...(override.configPaths || {})
-        };
+      case 'metadata': {
+        const baseConfigPaths = typeof base.configPaths === 'object' && base.configPaths && !Array.isArray(base.configPaths) ? base.configPaths : {};
+        const overrideConfigPaths = typeof override.configPaths === 'object' && override.configPaths && !Array.isArray(override.configPaths) ? override.configPaths : {};
+        merged.configPaths = { ...baseConfigPaths, ...overrideConfigPaths };
         break;
+      }
     }
 
     return merged;

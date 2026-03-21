@@ -65,7 +65,7 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport: Source[], options: { importMode?: string }) {
+  async importSources(sourcesToImport: Source[] | undefined, options: { importMode?: string; selectedItems?: Record<string, boolean> }) {
     const stats: { imported: number; skipped: number; errors: Array<{ source: string; error: string }> } = {
       imported: 0,
       skipped: 0,
@@ -195,7 +195,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources to validate
    * @returns {Object} - Validation result
    */
-  validateSourcesForExport(sources: Source[]) {
+  validateSourcesForExport(sources: Source[] | undefined) {
     if (!Array.isArray(sources)) {
       return {
         success: false,
@@ -226,7 +226,7 @@ export class SourcesHandler {
    * @param {Array} sources - Sources array
    * @returns {Object} - Statistics object
    */
-  getSourcesStatistics(sources: Source[]) {
+  getSourcesStatistics(sources: Source[] | undefined) {
     if (!Array.isArray(sources)) {
       return { total: 0, byType: {} };
     }

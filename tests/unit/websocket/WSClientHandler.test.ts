@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WSClientHandler } from '../../../src/services/websocket/ws-client-handler';
 
-function createMockService() {
+function createMockService(): ConstructorParameters<typeof WSClientHandler>[0] {
     return {
         connectedClients: new Map(),
         clientInitializationLocks: new Map(),
@@ -30,7 +30,7 @@ describe('WSClientHandler', () => {
 
     beforeEach(() => {
         mockService = createMockService();
-        handler = new WSClientHandler(mockService as any);
+        handler = new WSClientHandler(mockService);
     });
 
     describe('constructor', () => {

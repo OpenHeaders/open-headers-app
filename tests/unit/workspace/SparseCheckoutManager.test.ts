@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest';
-
-// We can test the pure logic methods without mocking since they don't call the executor
 import { SparseCheckoutManager } from '../../../src/services/workspace/git/repository/SparseCheckoutManager';
+import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
 
 describe('SparseCheckoutManager (pure logic)', () => {
-    // Create instance with a dummy executor for pure-logic-only tests
-    const manager = new SparseCheckoutManager({} as any);
+    const manager = new SparseCheckoutManager(new GitExecutor());
 
     describe('validatePatterns()', () => {
         it('accepts valid patterns', () => {
@@ -72,10 +70,8 @@ describe('SparseCheckoutManager (pure logic)', () => {
             expect(dirPatterns).toHaveLength(1);
         });
 
-        it('skips non-string config paths', () => {
+        it('handles valid config paths', () => {
             const patterns = manager.createWorkspacePatterns({
-                headers: null as any,
-                proxy: undefined as any,
                 valid: 'config/proxy.json'
             });
             expect(patterns).toContain('/*');

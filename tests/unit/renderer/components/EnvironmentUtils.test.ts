@@ -12,14 +12,6 @@ import {
 // extractVariables
 // ======================================================================
 describe('extractVariables', () => {
-  it('returns empty for null', () => {
-    expect(extractVariables(null as any)).toEqual([]);
-  });
-
-  it('returns empty for non-string', () => {
-    expect(extractVariables(123 as any)).toEqual([]);
-  });
-
   it('returns empty for text without variables', () => {
     expect(extractVariables('plain text')).toEqual([]);
   });
@@ -41,14 +33,6 @@ describe('extractVariables', () => {
 // checkMissingVariables
 // ======================================================================
 describe('checkMissingVariables', () => {
-  it('returns empty for null sources', () => {
-    expect(checkMissingVariables(null as any, {})).toEqual([]);
-  });
-
-  it('returns empty for non-array sources', () => {
-    expect(checkMissingVariables('not array' as any, {})).toEqual([]);
-  });
-
   it('returns empty when all variables exist', () => {
     const sources = [{ sourceType: 'http', sourcePath: '{{HOST}}/api' }];
     expect(checkMissingVariables(sources, { HOST: 'example.com' })).toEqual([]);
@@ -158,7 +142,7 @@ describe('generateUniqueEnvironmentName', () => {
 // ======================================================================
 describe('sourceUsesVariables', () => {
   it('returns false for null', () => {
-    expect(sourceUsesVariables(null as any)).toBe(false);
+    expect(sourceUsesVariables(null)).toBe(false);
   });
 
   it('returns false for source without variables', () => {
@@ -178,12 +162,8 @@ describe('sourceUsesVariables', () => {
 // getSourcesUsingVariables
 // ======================================================================
 describe('getSourcesUsingVariables', () => {
-  it('returns empty for null', () => {
-    expect(getSourcesUsingVariables(null as any)).toEqual([]);
-  });
-
-  it('returns empty for non-array', () => {
-    expect(getSourcesUsingVariables('x' as any)).toEqual([]);
+  it('returns empty for empty array', () => {
+    expect(getSourcesUsingVariables([])).toEqual([]);
   });
 
   it('filters sources using variables', () => {
@@ -201,12 +181,8 @@ describe('getSourcesUsingVariables', () => {
 // formatVariableUsage
 // ======================================================================
 describe('formatVariableUsage', () => {
-  it('returns empty for null sourceIds', () => {
-    expect(formatVariableUsage('VAR', null as any, [])).toEqual([]);
-  });
-
-  it('returns empty for non-array sourceIds', () => {
-    expect(formatVariableUsage('VAR', 'x' as any, [])).toEqual([]);
+  it('returns empty for empty sourceIds', () => {
+    expect(formatVariableUsage('VAR', [], [])).toEqual([]);
   });
 
   it('formats regular source', () => {

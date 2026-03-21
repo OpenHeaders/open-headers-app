@@ -74,7 +74,7 @@ class WSEnvironmentHandler {
      * Resolve template with environment variables
      */
     resolveTemplate(template: string, variables: Record<string, string>): string {
-        if (!template || typeof template !== 'string') {
+        if (!template) {
             return template;
         }
 

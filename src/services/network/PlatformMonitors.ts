@@ -9,14 +9,21 @@ import { errorMessage } from '../../types/common';
 const { createLogger } = mainLogger;
 const { spawn, exec } = child_process;
 
-type ChildProcess = child_process.ChildProcess;
-type FSWatcher = fs.FSWatcher;
+interface Stoppable {
+    killed?: boolean;
+    kill(): void;
+}
+
+interface Closeable {
+    close(): void;
+}
+
 type Logger = ReturnType<typeof createLogger>;
 
 // Base class for platform monitors
 class BasePlatformMonitor extends EventEmitter {
-    processes: ChildProcess[] = [];
-    watchers: FSWatcher[] = [];
+    processes: Stoppable[] = [];
+    watchers: Closeable[] = [];
     intervals: ReturnType<typeof setInterval>[] = [];
     log: Logger;
 

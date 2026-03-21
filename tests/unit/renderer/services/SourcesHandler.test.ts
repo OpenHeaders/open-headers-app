@@ -29,9 +29,9 @@ function validSource(overrides: Partial<Source> = {}): Source {
 // validateSourcesForExport  (pure)
 // ---------------------------------------------------------------------------
 describe('SourcesHandler.validateSourcesForExport', () => {
-  it('rejects non-array', () => {
+  it('rejects undefined', () => {
     const handler = new SourcesHandler(makeDeps());
-    const r = handler.validateSourcesForExport('bad' as any);
+    const r = handler.validateSourcesForExport(undefined);
     expect(r.success).toBe(false);
     expect(r.error).toContain('must be an array');
   });
@@ -69,7 +69,7 @@ describe('SourcesHandler.validateSourcesForExport', () => {
 describe('SourcesHandler.getSourcesStatistics', () => {
   it('returns zero for non-array', () => {
     const handler = new SourcesHandler(makeDeps());
-    const stats = handler.getSourcesStatistics('bad' as any);
+    const stats = handler.getSourcesStatistics(undefined);
     expect(stats.total).toBe(0);
     expect(stats.byType).toEqual({});
   });
@@ -144,14 +144,14 @@ describe('SourcesHandler.importSources', () => {
 
   it('returns empty stats for non-array', async () => {
     const handler = new SourcesHandler(makeDeps());
-    const stats = await handler.importSources(null as any, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
+    const stats = await handler.importSources(undefined, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(0);
   });
 
   it('calls _clearExistingSources in replace mode', async () => {
     const handler = new SourcesHandler(makeDeps({ exportSources: vi.fn(() => []) }));
-    const clearSpy = vi.spyOn(handler as any, '_clearExistingSources').mockResolvedValue(undefined);
-    vi.spyOn(handler as any, '_importSingleSource').mockResolvedValue({ imported: true });
+    const clearSpy = vi.spyOn(handler, '_clearExistingSources').mockResolvedValue(undefined);
+    vi.spyOn(handler, '_importSingleSource').mockResolvedValue({ imported: true });
 
     await handler.importSources(
       [validSource()],
@@ -163,7 +163,7 @@ describe('SourcesHandler.importSources', () => {
 
   it('records errors for failed individual imports', async () => {
     const handler = new SourcesHandler(makeDeps());
-    vi.spyOn(handler as any, '_importSingleSource').mockRejectedValue(new Error('fail'));
+    vi.spyOn(handler, '_importSingleSource').mockRejectedValue(new Error('fail'));
 
     const stats = await handler.importSources(
       [validSource()],
@@ -175,7 +175,7 @@ describe('SourcesHandler.importSources', () => {
 
   it('counts imported and skipped correctly', async () => {
     const handler = new SourcesHandler(makeDeps());
-    vi.spyOn(handler as any, '_importSingleSource')
+    vi.spyOn(handler, '_importSingleSource')
       .mockResolvedValueOnce({ imported: true })
       .mockResolvedValueOnce({ skipped: true })
       .mockResolvedValueOnce({ imported: true });
@@ -196,18 +196,18 @@ describe('SourcesHandler._getCurrentSources', () => {
   it('returns result of exportSources dependency', () => {
     const sources = [validSource()];
     const handler = new SourcesHandler(makeDeps({ exportSources: () => sources }));
-    expect((handler as any)._getCurrentSources()).toBe(sources);
+    expect(handler._getCurrentSources()).toBe(sources);
   });
 
   it('returns empty array when exportSources throws', () => {
     const handler = new SourcesHandler(makeDeps({
       exportSources: () => { throw new Error('boom'); },
     }));
-    expect((handler as any)._getCurrentSources()).toEqual([]);
+    expect(handler._getCurrentSources()).toEqual([]);
   });
 
   it('returns empty array when exportSources is not defined', () => {
     const handler = new SourcesHandler(makeDeps({ exportSources: undefined }));
-    expect((handler as any)._getCurrentSources()).toEqual([]);
+    expect(handler._getCurrentSources()).toEqual([]);
   });
 });

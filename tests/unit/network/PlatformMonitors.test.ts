@@ -37,7 +37,7 @@ describe('PlatformMonitors', () => {
 
         it('stop handles watchers with close method', () => {
             const monitor = new BasePlatformMonitor();
-            const fakeWatcher = { close: () => {} } as any;
+            const fakeWatcher = { close: () => {} };
             monitor.watchers.push(fakeWatcher);
             expect(() => monitor.stop()).not.toThrow();
             expect(monitor.watchers).toEqual([]);
@@ -45,7 +45,7 @@ describe('PlatformMonitors', () => {
 
         it('stop handles processes that are already killed', () => {
             const monitor = new BasePlatformMonitor();
-            const fakeProcess = { killed: true, kill: () => {} } as any;
+            const fakeProcess = { killed: true, kill: () => {} };
             monitor.processes.push(fakeProcess);
             expect(() => monitor.stop()).not.toThrow();
         });

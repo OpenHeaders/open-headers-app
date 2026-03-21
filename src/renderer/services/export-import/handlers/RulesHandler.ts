@@ -337,8 +337,8 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to validate
    * @returns {Object} - Validation result
    */
-  validateRulesForExport(rulesDataInput: RulesData) {
-    const rulesData = rulesDataInput as RulesData;
+  validateRulesForExport(rulesDataInput: RulesData | undefined) {
+    const rulesData = rulesDataInput;
     if (!rulesData || typeof rulesData !== 'object') {
       return {
         success: false,

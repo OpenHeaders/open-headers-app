@@ -10,14 +10,6 @@ import {
 // getTypeFromRecord
 // ======================================================================
 describe('getTypeFromRecord', () => {
-  it('returns "unknown" for null', () => {
-    expect(getTypeFromRecord(null as any)).toBe('unknown');
-  });
-
-  it('returns "unknown" for non-object', () => {
-    expect(getTypeFromRecord('string' as any)).toBe('unknown');
-  });
-
   it('maps main_frame to document', () => {
     expect(getTypeFromRecord({ type: 'main_frame' })).toBe('document');
   });
@@ -110,10 +102,6 @@ describe('getTypeFromRecord', () => {
 // getUniqueTypes
 // ======================================================================
 describe('getUniqueTypes', () => {
-  it('returns empty for non-array', () => {
-    expect(getUniqueTypes(null as any)).toEqual([]);
-  });
-
   it('returns empty for empty array', () => {
     expect(getUniqueTypes([])).toEqual([]);
   });
@@ -134,10 +122,6 @@ describe('getUniqueTypes', () => {
 // getUniqueStatusGroups
 // ======================================================================
 describe('getUniqueStatusGroups', () => {
-  it('returns empty for non-array', () => {
-    expect(getUniqueStatusGroups(null as any)).toEqual([]);
-  });
-
   it('returns empty for empty array', () => {
     expect(getUniqueStatusGroups([])).toEqual([]);
   });
@@ -165,10 +149,6 @@ describe('getUniqueStatusGroups', () => {
 // getUniqueMethods
 // ======================================================================
 describe('getUniqueMethods', () => {
-  it('returns empty for non-array', () => {
-    expect(getUniqueMethods(null as any)).toEqual([]);
-  });
-
   it('returns empty for empty array', () => {
     expect(getUniqueMethods([])).toEqual([]);
   });

@@ -103,24 +103,8 @@ describe('FileOperations', () => {
       expect(result.success).toBe(true);
     });
 
-    it('rejects null path', () => {
-      const result = validateFilePath(null as any);
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('non-empty string');
-    });
-
-    it('rejects undefined path', () => {
-      const result = validateFilePath(undefined as any);
-      expect(result.success).toBe(false);
-    });
-
     it('rejects empty string path', () => {
       const result = validateFilePath('');
-      expect(result.success).toBe(false);
-    });
-
-    it('rejects non-string path', () => {
-      const result = validateFilePath(123 as any);
       expect(result.success).toBe(false);
     });
 

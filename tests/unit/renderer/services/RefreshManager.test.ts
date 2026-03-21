@@ -89,13 +89,14 @@ vi.mock('../../../../src/renderer/constants/retryConfig', () => ({
 }));
 
 // Stub window.electronAPI
+const mockGetNetworkState = vi.fn().mockResolvedValue({
+  isOnline: true,
+  networkQuality: 'good',
+  confidence: 0.9,
+});
 vi.stubGlobal('window', {
   electronAPI: {
-    getNetworkState: vi.fn().mockResolvedValue({
-      isOnline: true,
-      networkQuality: 'good',
-      confidence: 0.9,
-    }),
+    getNetworkState: mockGetNetworkState,
     onNetworkStateSync: vi.fn(() => vi.fn()),
     onSystemSuspend: vi.fn(() => vi.fn()),
     onSystemResume: vi.fn(() => vi.fn()),
@@ -103,10 +104,12 @@ vi.stubGlobal('window', {
 });
 
 let refreshManager: InstanceType<typeof import('../../../../src/renderer/services/RefreshManager').default>;
+let RefreshManager: typeof import('../../../../src/renderer/services/RefreshManager').RefreshManager;
 
 beforeAll(async () => {
   const mod = await import('../../../../src/renderer/services/RefreshManager');
   refreshManager = mod.default;
+  RefreshManager = mod.RefreshManager;
 });
 
 describe('RefreshManager', () => {
@@ -141,19 +144,19 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('normalizeSourceId', () => {
     it('converts number to string', () => {
-      expect((refreshManager.constructor as any).normalizeSourceId(42)).toBe('42');
+      expect(RefreshManager.normalizeSourceId(42)).toBe('42');
     });
 
     it('returns string as-is', () => {
-      expect((refreshManager.constructor as any).normalizeSourceId('s1')).toBe('s1');
+      expect(RefreshManager.normalizeSourceId('s1')).toBe('s1');
     });
 
     it('throws for null', () => {
-      expect(() => (refreshManager.constructor as any).normalizeSourceId(null)).toThrow();
+      expect(() => RefreshManager.normalizeSourceId(null)).toThrow();
     });
 
     it('throws for undefined', () => {
-      expect(() => (refreshManager.constructor as any).normalizeSourceId(undefined)).toThrow();
+      expect(() => RefreshManager.normalizeSourceId(undefined)).toThrow();
     });
   });
 
@@ -162,37 +165,37 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('getNetworkTimeout', () => {
     it('returns base timeout for good network', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'good' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(15000);
     });
 
     it('returns reduced timeout for excellent network', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'excellent' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'excellent' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(12000);
     });
 
     it('returns increased timeout for moderate network', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'moderate' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'moderate' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(22500);
     });
 
     it('returns doubled timeout for poor network', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'poor' });
       const timeout = await refreshManager.getNetworkTimeout(15000);
       expect(timeout).toBe(30000);
     });
 
     it('caps timeout at 60000ms', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'poor' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'poor' });
       const timeout = await refreshManager.getNetworkTimeout(50000);
       expect(timeout).toBe(60000);
     });
 
     it('uses default base timeout of 15000', async () => {
-      ((window as any).electronAPI.getNetworkState as any).mockResolvedValue({ networkQuality: 'good' });
+      mockGetNetworkState.mockResolvedValue({ networkQuality: 'good' });
       const timeout = await refreshManager.getNetworkTimeout();
       expect(timeout).toBe(15000);
     });

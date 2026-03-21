@@ -47,7 +47,7 @@ class WSNetworkStateHandler {
     /**
      * Initialize network state handling
      */
-    initialize(networkService: NetworkServiceLike): void {
+    initialize(networkService: NetworkServiceLike | null | undefined): void {
         if (!networkService) {
             log.warn('NetworkService not provided, network state updates will not be available');
             return;
@@ -73,10 +73,7 @@ class WSNetworkStateHandler {
      * Update the current network state and broadcast to clients
      */
     updateNetworkState(state: Partial<NetworkState> | null): void {
-        if (!state || typeof state !== 'object') {
-            log.warn('Invalid network state received:', state);
-            return;
-        }
+        if (!state) return;
 
         // Update our cached state
         this.currentNetworkState = {

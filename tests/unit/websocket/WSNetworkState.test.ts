@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WSNetworkStateHandler } from '../../../src/services/websocket/ws-network-state';
 
-function createMockService() {
+function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler>[0] {
     return {
         wss: null,
         secureWss: null
@@ -12,7 +12,7 @@ describe('WSNetworkStateHandler', () => {
     let handler: WSNetworkStateHandler;
 
     beforeEach(() => {
-        handler = new WSNetworkStateHandler(createMockService() as any);
+        handler = new WSNetworkStateHandler(createMockService());
     });
 
     describe('constructor', () => {
@@ -57,13 +57,6 @@ describe('WSNetworkStateHandler', () => {
             const after = handler.getCurrentState();
             expect(after.isOnline).toBe(before.isOnline);
         });
-
-        it('ignores non-object state', () => {
-            const before = handler.getCurrentState();
-            handler.updateNetworkState('bad' as any);
-            const after = handler.getCurrentState();
-            expect(after.isOnline).toBe(before.isOnline);
-        });
     });
 
     describe('getCurrentState', () => {
@@ -95,7 +88,7 @@ describe('WSNetworkStateHandler', () => {
         });
 
         it('handles null network service gracefully', () => {
-            handler.initialize(null as any);
+            handler.initialize(null);
             // Should not throw
             expect(handler.getCurrentState().isOnline).toBe(true);
         });

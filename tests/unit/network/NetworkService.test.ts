@@ -28,11 +28,6 @@ describe('NetworkService', () => {
             expect(svc.isValidIPv4('192.168.1.1.1')).toBe(false);
         });
 
-        it('rejects non-string / empty input', () => {
-            expect(svc.isValidIPv4(null as any)).toBe(false);
-            expect(svc.isValidIPv4(undefined as any)).toBe(false);
-        });
-
         it('rejects addresses with octets > 255', () => {
             expect(svc.isValidIPv4('999.999.999.999')).toBe(false);
             expect(svc.isValidIPv4('1.2.3.256')).toBe(false);

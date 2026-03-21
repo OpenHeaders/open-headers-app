@@ -52,10 +52,6 @@ describe('extractEnvironmentVariables', () => {
     expect(extractEnvironmentVariables('')).toEqual([]);
   });
 
-  it('returns empty array for non-string', () => {
-    expect(extractEnvironmentVariables(42 as any)).toEqual([]);
-  });
-
   it('returns empty array when no variables present', () => {
     expect(extractEnvironmentVariables('plain text')).toEqual([]);
   });
@@ -83,9 +79,6 @@ describe('hasEnvironmentVariables', () => {
     expect(hasEnvironmentVariables(null)).toBe(false);
   });
 
-  it('returns false for non-string', () => {
-    expect(hasEnvironmentVariables(123 as any)).toBe(false);
-  });
 });
 
 // ======================================================================
@@ -183,7 +176,7 @@ describe('findMissingVariables', () => {
   });
 
   it('returns empty array for non-array requiredVars', () => {
-    expect(findMissingVariables(null as any, {})).toEqual([]);
+    expect(findMissingVariables(null, {})).toEqual([]);
   });
 });
 
@@ -300,10 +293,6 @@ describe('resolveEnvironmentVariables', () => {
 
   it('returns input for null', () => {
     expect(resolveEnvironmentVariables(null, {})).toBeNull();
-  });
-
-  it('returns input for non-string', () => {
-    expect(resolveEnvironmentVariables(42 as any, {})).toBe(42);
   });
 
   it('handles empty variables value correctly', () => {

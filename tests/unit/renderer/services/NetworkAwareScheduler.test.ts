@@ -99,7 +99,7 @@ vi.stubGlobal('window', {
 });
 
 const NetworkAwareScheduler = (await import('../../../../src/renderer/services/NetworkAwareScheduler')).default;
-const timeManager = (await import('../../../../src/renderer/services/TimeManager')).default;
+const timeManager = (await import('../../../../src/renderer/services/TimeManager')).default as typeof import('../../../../src/renderer/services/TimeManager').default & { _setNow: (v: number) => void };
 
 describe('NetworkAwareScheduler', () => {
   let scheduler: InstanceType<typeof NetworkAwareScheduler>;
@@ -107,7 +107,7 @@ describe('NetworkAwareScheduler', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: false });
     scheduler = new NetworkAwareScheduler();
-    (timeManager as any)._setNow(1000000);
+    timeManager._setNow(1000000);
   });
 
   afterEach(async () => {

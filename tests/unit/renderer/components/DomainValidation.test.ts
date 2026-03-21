@@ -148,19 +148,12 @@ describe('isWildcardDomain', () => {
     expect(isWildcardDomain('')).toBeFalsy();
   });
 
-  it('returns falsy for null', () => {
-    expect(isWildcardDomain(null as any)).toBeFalsy();
-  });
 });
 
 // ======================================================================
 // extractBaseDomain
 // ======================================================================
 describe('extractBaseDomain', () => {
-  it('returns empty for null', () => {
-    expect(extractBaseDomain(null as any)).toBe('');
-  });
-
   it('returns empty for empty string', () => {
     expect(extractBaseDomain('')).toBe('');
   });

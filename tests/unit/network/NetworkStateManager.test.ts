@@ -54,13 +54,6 @@ describe('NetworkStateManager', () => {
             expect(result.primaryInterface).toBeNull();
         });
 
-        it('adds new keys', () => {
-            const current = { isOnline: true };
-            const changes = { newField: 'hello' };
-            const result = mgr.mergeStateChanges(current, changes);
-            expect((result as any).newField).toBe('hello');
-        });
-
         it('produces a new object (does not mutate input)', () => {
             const current = { isOnline: false };
             const changes = { isOnline: true };

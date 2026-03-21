@@ -135,7 +135,6 @@ class WSSourceHandler {
      * Check whether any source's content has changed
      */
     _hasSourceContentChanged(newSources: Source[]): boolean {
-        if (!Array.isArray(newSources)) return true;
         const current = this.wsService.sources;
         if (!current || current.length !== newSources.length) return true;
 

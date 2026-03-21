@@ -97,7 +97,7 @@ export const trimContent = (content: string) => {
  * debugRefreshState(123, "Manual Refresh Started", { userId: 'user1' }, log, timeManager);
  * // Outputs: [14:30:15] [RefreshTable] Source 123 - Manual Refresh Started: { userId: 'user1' }
  */
-export const debugRefreshState = (sourceId: string, action: string, data = {}, log: { debug: (message: string, data?: unknown) => void }, timeManager: { getDate: () => Date }) => {
+export const debugRefreshState = (sourceId: string | number, action: string, data = {}, log: { debug: (message: string, data?: unknown) => void }, timeManager: { getDate: () => Date }) => {
     // Extract time portion from ISO string for compact timestamp display
     // Format: HH:MM:SS for easy scanning in debug logs
     const timestamp = timeManager.getDate().toISOString().substring(11, 19);

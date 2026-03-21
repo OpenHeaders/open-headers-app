@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { analyzeConfigFile } from '../../../src/utils/configValidator';
+import type { MainAnalysisResult, EnvAnalysisResult } from '../../../src/utils/configValidator';
 
 describe('configValidator', () => {
     describe('analyzeConfigFile()', () => {
@@ -14,12 +15,13 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).hasSources).toBe(true);
-                    expect((result as any).hasRules).toBe(true);
-                    expect((result as any).hasProxyRules).toBe(true);
-                    expect((result as any).sourceCount).toBe(2);
-                    expect((result as any).ruleCount).toBe(1);
-                    expect((result as any).proxyRuleCount).toBe(1);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.hasSources).toBe(true);
+                    expect(mainResult.hasRules).toBe(true);
+                    expect(mainResult.hasProxyRules).toBe(true);
+                    expect(mainResult.sourceCount).toBe(2);
+                    expect(mainResult.ruleCount).toBe(1);
+                    expect(mainResult.proxyRuleCount).toBe(1);
                 }
             });
 
@@ -36,9 +38,10 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).hasEnvironmentSchema).toBe(true);
-                    expect((result as any).environmentCount).toBe(3);
-                    expect((result as any).variableCount).toBe(2);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.hasEnvironmentSchema).toBe(true);
+                    expect(mainResult.environmentCount).toBe(3);
+                    expect(mainResult.variableCount).toBe(2);
                 }
             });
 
@@ -51,7 +54,8 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).environmentCount).toBe(2);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.environmentCount).toBe(2);
                 }
             });
 
@@ -61,7 +65,8 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).rawData).toEqual(config);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.rawData).toEqual(config);
                 }
             });
         });
@@ -93,9 +98,10 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).hasEnvironmentSchema).toBe(true);
-                    expect((result as any).environmentCount).toBe(2);
-                    expect((result as any).variableCount).toBe(1);
+                    const envResult = result as EnvAnalysisResult;
+                    expect(envResult.hasEnvironmentSchema).toBe(true);
+                    expect(envResult.environmentCount).toBe(2);
+                    expect(envResult.variableCount).toBe(1);
                 }
             });
 
@@ -107,8 +113,9 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).hasEnvironments).toBe(true);
-                    expect((result as any).environmentCount).toBe(3);
+                    const envResult = result as EnvAnalysisResult;
+                    expect(envResult.hasEnvironments).toBe(true);
+                    expect(envResult.environmentCount).toBe(3);
                 }
             });
 
@@ -188,9 +195,10 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).sourceCount).toBe(0);
-                    expect((result as any).ruleCount).toBe(0);
-                    expect((result as any).proxyRuleCount).toBe(0);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.sourceCount).toBe(0);
+                    expect(mainResult.ruleCount).toBe(0);
+                    expect(mainResult.proxyRuleCount).toBe(0);
                 }
             });
 
@@ -205,7 +213,8 @@ describe('configValidator', () => {
 
                 expect(result.valid).toBe(true);
                 if (result.valid) {
-                    expect((result as any).variableCount).toBe(0);
+                    const mainResult = result as MainAnalysisResult;
+                    expect(mainResult.variableCount).toBe(0);
                 }
             });
         });

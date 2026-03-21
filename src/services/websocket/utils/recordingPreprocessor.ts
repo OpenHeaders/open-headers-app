@@ -326,10 +326,6 @@ function clearUrlNormalizationCache(): void {
  * This is called when saving a recording from the browser extension
  */
 async function preprocessRecordingForSave(recordingData: PreprocessorData, options: PreprocessOptions = {}): Promise<PreprocessorData> {
-    if (!recordingData || !recordingData.record || !recordingData.record.events) {
-        log.warn('Invalid recording data for preprocessing');
-        return recordingData;
-    }
 
     // Clear cache if it's too large before starting new recording
     if (urlNormalizationCache.size > CACHE_MAX_SIZE / 2) {

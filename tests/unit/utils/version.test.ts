@@ -65,11 +65,6 @@ describe('version config', () => {
             expect(isVersionCompatible('')).toBe(false);
         });
 
-        it('returns false for null-like values', () => {
-            expect(isVersionCompatible(null as any)).toBe(false);
-            expect(isVersionCompatible(undefined as any)).toBe(false);
-        });
-
         it('returns true for exact current version', () => {
             expect(isVersionCompatible(DATA_FORMAT_VERSION)).toBe(true);
         });

@@ -132,7 +132,7 @@ describe('createRule', () => {
   });
 
   it('throws for unknown rule type', () => {
-    expect(() => createRule('unknown' as any)).toThrow('Unknown rule type');
+    expect(() => createRule('unknown')).toThrow('Unknown rule type');
   });
 });
 

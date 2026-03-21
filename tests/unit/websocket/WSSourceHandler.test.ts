@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { WSSourceHandler } from '../../../src/services/websocket/ws-source-handler';
 import type { Source } from '../../../src/types/source';
 
-function createMockService(sources: Source[] = []) {
+function createMockService(sources: Source[] = []): ConstructorParameters<typeof WSSourceHandler>[0] {
     return {
         rules: {},
         sources,
@@ -19,17 +19,11 @@ describe('WSSourceHandler', () => {
 
     beforeEach(() => {
         mockService = createMockService();
-        handler = new WSSourceHandler(mockService as any);
+        handler = new WSSourceHandler(mockService);
     });
 
     // ------- _hasSourceContentChanged -------
     describe('_hasSourceContentChanged', () => {
-        it('returns true for non-array input', () => {
-            expect(handler._hasSourceContentChanged(null as any)).toBe(true);
-            expect(handler._hasSourceContentChanged('bad' as any)).toBe(true);
-            expect(handler._hasSourceContentChanged(undefined as any)).toBe(true);
-        });
-
         it('returns true when current sources is empty and new has items', () => {
             mockService.sources = [];
             expect(handler._hasSourceContentChanged([

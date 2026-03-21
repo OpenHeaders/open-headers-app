@@ -236,10 +236,6 @@ describe('ErrorRecovery', () => {
             }
         });
 
-        it('returns handleUnknownError for unrecognized types', () => {
-            const strategy = recovery.getStrategy('nonexistent' as any);
-            expect(typeof strategy).toBe('function');
-        });
     });
 
     describe('sleep()', () => {

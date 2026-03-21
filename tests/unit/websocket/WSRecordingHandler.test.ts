@@ -8,7 +8,7 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
     }
 }));
 
-function createMockWSService() {
+function createMockWSService(): ConstructorParameters<typeof WSRecordingHandler>[0] {
     return {
         appDataPath: '/tmp/test-app-data',
         _broadcastToAll: vi.fn().mockReturnValue(3),
@@ -25,7 +25,7 @@ describe('WSRecordingHandler', () => {
 
     beforeEach(() => {
         mockService = createMockWSService();
-        handler = new WSRecordingHandler(mockService as any);
+        handler = new WSRecordingHandler(mockService);
     });
 
     // ------- constructor -------
@@ -269,16 +269,12 @@ describe('WSRecordingHandler', () => {
             const data = {
                 type: 'saveRecording',
                 recording: {
-                    record: null as any
+                    record: { events: [] }
                 }
             };
 
             handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId: 'test' });
             handler.notifyRecordingProcessing = vi.fn();
-
-            // The code accesses data.recording.record.metadata.recordId,
-            // so if record is null it will fail. But if record exists without metadata it creates it.
-            data.recording.record = {};
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
