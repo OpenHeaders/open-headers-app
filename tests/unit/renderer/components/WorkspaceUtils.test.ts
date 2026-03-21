@@ -5,14 +5,19 @@ import {
   prepareWorkspaceData,
   formatValidationDetails,
 } from '../../../../src/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import type { WorkspaceFormValues } from '../../../../src/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import { PROVIDER_ICONS } from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
+
+function makeFormValues(overrides: Partial<WorkspaceFormValues> = {}): WorkspaceFormValues {
+  return { name: 'ws', authType: 'none', ...overrides };
+}
 
 // ======================================================================
 // extractRepoName
 // ======================================================================
 describe('extractRepoName', () => {
   it('returns empty string for null', () => {
-    expect(extractRepoName(null)).toBe('');
+    expect(extractRepoName(null as unknown as string)).toBe('');
   });
 
   it('returns empty string for empty', () => {
@@ -37,7 +42,7 @@ describe('extractRepoName', () => {
 // ======================================================================
 describe('getProviderIcon', () => {
   it('returns generic icon for null', () => {
-    expect(getProviderIcon(null)).toBe(PROVIDER_ICONS.generic);
+    expect(getProviderIcon(null as unknown as string)).toBe(PROVIDER_ICONS.generic);
   });
 
   it('returns github icon for github URL', () => {
@@ -66,7 +71,7 @@ describe('getProviderIcon', () => {
 // ======================================================================
 describe('prepareWorkspaceData', () => {
   it('creates workspace object with authData for git URL', () => {
-    const values = { name: 'ws', gitUrl: 'https://github.com/u/r', authType: 'none' };
+    const values = makeFormValues({ gitUrl: 'https://github.com/u/r' });
     const result = prepareWorkspaceData(values, null, { token: 'abc' });
     expect(result.name).toBe('ws');
     expect(result.type).toBe('git');
@@ -74,28 +79,27 @@ describe('prepareWorkspaceData', () => {
   });
 
   it('creates personal workspace without authData', () => {
-    const values = { name: 'ws', authType: 'none' };
+    const values = makeFormValues();
     const result = prepareWorkspaceData(values, null, {});
     expect(result.type).toBe('personal');
     expect(result.authData).toBeUndefined();
   });
 
   it('uses existing workspace id when editing', () => {
-    const values = { name: 'ws', authType: 'none' };
+    const values = makeFormValues();
     const result = prepareWorkspaceData(values, { id: 'existing-123' }, {});
     expect(result.id).toBe('existing-123');
   });
 
   it('generates new id when creating', () => {
-    const values = { name: 'ws', authType: 'none' };
+    const values = makeFormValues();
     const result = prepareWorkspaceData(values, null, {});
     expect(result.id).toBeDefined();
     expect(typeof result.id).toBe('string');
   });
 
   it('removes sensitive auth fields', () => {
-    const values = {
-      name: 'ws',
+    const values = makeFormValues({
       gitUrl: 'https://github.com/u/r',
       authType: 'token',
       gitToken: 'secret-token',
@@ -105,8 +109,8 @@ describe('prepareWorkspaceData', () => {
       gitUsername: 'user',
       gitPassword: 'pass',
       tokenType: 'github',
-    };
-    const result = prepareWorkspaceData(values, null, { token: 'x' });
+    });
+    const result = prepareWorkspaceData(values, null, { token: 'x' }) as Record<string, unknown>;
     expect(result.gitToken).toBeUndefined();
     expect(result.sshKey).toBeUndefined();
     expect(result.sshKeyPath).toBeUndefined();
