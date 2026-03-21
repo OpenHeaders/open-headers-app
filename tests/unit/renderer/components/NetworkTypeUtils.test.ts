@@ -5,96 +5,101 @@ import {
   getUniqueStatusGroups,
   getUniqueMethods,
 } from '../../../../src/renderer/components/record/network/NetworkTypeUtils';
+import type { NetworkRecord } from '../../../../src/types/recording';
+
+function makeNetRecord(overrides: Partial<NetworkRecord> = {}): NetworkRecord {
+  return { id: 'r1', url: '', method: 'GET', status: 200, timestamp: 0, ...overrides };
+}
 
 // ======================================================================
 // getTypeFromRecord
 // ======================================================================
 describe('getTypeFromRecord', () => {
   it('maps main_frame to document', () => {
-    expect(getTypeFromRecord({ type: 'main_frame' })).toBe('document');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'main_frame' }))).toBe('document');
   });
 
   it('maps sub_frame to document', () => {
-    expect(getTypeFromRecord({ type: 'sub_frame' })).toBe('document');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'sub_frame' }))).toBe('document');
   });
 
   it('maps stylesheet to css', () => {
-    expect(getTypeFromRecord({ type: 'stylesheet' })).toBe('css');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'stylesheet' }))).toBe('css');
   });
 
   it('maps image to img', () => {
-    expect(getTypeFromRecord({ type: 'image' })).toBe('img');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'image' }))).toBe('img');
   });
 
   it('maps xmlhttprequest to xhr', () => {
-    expect(getTypeFromRecord({ type: 'xmlhttprequest' })).toBe('xhr');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'xmlhttprequest' }))).toBe('xhr');
   });
 
   it('handles "other" type with JSON content-type as xhr', () => {
-    const req = {
+    const req = makeNetRecord({
       type: 'other',
       responseHeaders: { 'content-type': 'application/json' },
-    };
+    });
     expect(getTypeFromRecord(req)).toBe('xhr');
   });
 
   it('handles "other" type with status 101 as websocket', () => {
-    const req = { type: 'other', status: 101 };
+    const req = makeNetRecord({ type: 'other', status: 101 });
     expect(getTypeFromRecord(req)).toBe('websocket');
   });
 
   it('handles "other" type with HTML content-type as xhr', () => {
-    const req = {
+    const req = makeNetRecord({
       type: 'other',
       responseHeaders: { 'content-type': 'text/html' },
-    };
+    });
     expect(getTypeFromRecord(req)).toBe('xhr');
   });
 
   it('returns "fetch" for untyped records', () => {
-    expect(getTypeFromRecord({})).toBe('fetch');
+    expect(getTypeFromRecord(makeNetRecord())).toBe('fetch');
   });
 
   it('identifies preflight requests', () => {
-    expect(getTypeFromRecord({ method: 'OPTIONS' })).toBe('preflight');
+    expect(getTypeFromRecord(makeNetRecord({ method: 'OPTIONS' }))).toBe('preflight');
   });
 
   it('identifies websocket by status 101', () => {
-    expect(getTypeFromRecord({ status: 101 })).toBe('websocket');
+    expect(getTypeFromRecord(makeNetRecord({ status: 101 }))).toBe('websocket');
   });
 
   it('identifies JSON by mime type for fetch/xhr', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'application/json; charset=utf-8' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'application/json; charset=utf-8' } });
     expect(getTypeFromRecord(req)).toBe('json');
   });
 
   it('identifies JavaScript by mime type', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'application/javascript' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'application/javascript' } });
     expect(getTypeFromRecord(req)).toBe('js');
   });
 
   it('identifies CSS by mime type', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'text/css' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'text/css' } });
     expect(getTypeFromRecord(req)).toBe('css');
   });
 
   it('identifies HTML by mime type', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'text/html' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'text/html' } });
     expect(getTypeFromRecord(req)).toBe('document');
   });
 
   it('identifies image by mime type', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'image/png' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'image/png' } });
     expect(getTypeFromRecord(req)).toBe('img');
   });
 
   it('identifies font by mime type', () => {
-    const req = { type: 'fetch', responseHeaders: { 'content-type': 'font/woff2' } };
+    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'font/woff2' } });
     expect(getTypeFromRecord(req)).toBe('font');
   });
 
   it('passes through unknown type for non-fetch/xhr', () => {
-    expect(getTypeFromRecord({ type: 'media' })).toBe('media');
+    expect(getTypeFromRecord(makeNetRecord({ type: 'media' }))).toBe('media');
   });
 });
 
@@ -108,10 +113,10 @@ describe('getUniqueTypes', () => {
 
   it('returns sorted unique types', () => {
     const records = [
-      { type: 'script' },
-      { type: 'stylesheet' },
-      { type: 'script' },
-      {},
+      makeNetRecord({ type: 'script' }),
+      makeNetRecord({ type: 'stylesheet' }),
+      makeNetRecord({ type: 'script' }),
+      makeNetRecord(),
     ];
     const result = getUniqueTypes(records);
     expect(result).toEqual(['css', 'fetch', 'script']);
@@ -128,12 +133,12 @@ describe('getUniqueStatusGroups', () => {
 
   it('groups by status ranges', () => {
     const records = [
-      { status: 200 },
-      { status: 301 },
-      { status: 404 },
-      { status: 500 },
-      { error: true },
-      {},
+      makeNetRecord({ status: 200 }),
+      makeNetRecord({ status: 301 }),
+      makeNetRecord({ status: 404 }),
+      makeNetRecord({ status: 500 }),
+      makeNetRecord({ status: 0, error: true }),
+      makeNetRecord({ status: 0 }),
     ];
     const result = getUniqueStatusGroups(records);
     expect(result).toContain('2xx');
@@ -155,10 +160,10 @@ describe('getUniqueMethods', () => {
 
   it('returns sorted unique methods', () => {
     const records = [
-      { method: 'GET' },
-      { method: 'POST' },
-      { method: 'GET' },
-      {},
+      makeNetRecord({ method: 'GET' }),
+      makeNetRecord({ method: 'POST' }),
+      makeNetRecord({ method: 'GET' }),
+      makeNetRecord(),
     ];
     expect(getUniqueMethods(records)).toEqual(['GET', 'POST']);
   });
