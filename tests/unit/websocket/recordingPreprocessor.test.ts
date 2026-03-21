@@ -27,8 +27,8 @@ function makeFullSnapshot(node: DomNode, timestamp = 1000): RRWebEvent {
 }
 
 /** Create a wrapped rrweb full-snapshot event */
-function makeWrappedFullSnapshot(node: DomNode, timestamp = 1000) {
-    return { type: 'rrweb', timestamp, data: { type: 2, data: { node } } };
+function makeWrappedFullSnapshot(node: DomNode, timestamp = 1000): RRWebEvent {
+    return { type: 'rrweb' as unknown as number, timestamp, data: { type: 2, data: { node } } } as unknown as RRWebEvent;
 }
 
 /** Create an incremental snapshot (rrweb type 3) */
@@ -97,8 +97,8 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const iframe = getNode(result, 0).childNodes[0].childNodes[0];
-            expect(iframe.attributes.sandbox).toBe('allow-scripts allow-same-origin allow-forms allow-popups');
+            const iframe = getNode(result, 0).childNodes![0].childNodes![0];
+            expect(iframe.attributes!.sandbox).toBe('allow-scripts allow-same-origin allow-forms allow-popups');
         });
 
         // --- font-display: swap injection ---
@@ -116,7 +116,7 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const style = getNode(result, 0).childNodes[0].childNodes[0];
+            const style = getNode(result, 0).childNodes![0].childNodes![0];
             expect(style.textContent).toContain('font-display: swap');
         });
 
@@ -134,8 +134,8 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const style = getNode(result, 0).childNodes[0].childNodes[0];
-            const count = (style.textContent.match(/font-display/g) || []).length;
+            const style = getNode(result, 0).childNodes![0].childNodes![0];
+            const count = (style.textContent!.match(/font-display/g) || []).length;
             expect(count).toBe(1);
         });
 
@@ -275,9 +275,9 @@ describe('recordingPreprocessor', () => {
 
             const input = makeRecording(events);
             const result = await preprocessRecordingForSave(input);
-            const addedNode = result.record.events[1].data.adds[0].node;
-            expect(addedNode.attributes.sandbox).toContain('allow-scripts');
-            expect(addedNode.attributes.sandbox).toContain('allow-same-origin');
+            const addedNode = (result.record.events[1] as unknown as { data: { adds: Array<{ node: DomNode }> } }).data.adds[0].node;
+            expect(addedNode.attributes!.sandbox).toContain('allow-scripts');
+            expect(addedNode.attributes!.sandbox).toContain('allow-same-origin');
         });
 
         // --- mouse events are always kept ---
@@ -347,7 +347,7 @@ describe('recordingPreprocessor', () => {
                     }
                 ]
             };
-            const input = makeRecording([makeFullSnapshot(node)]);
+            const input = makeRecording([makeFullSnapshot(node as unknown as DomNode)]);
             const result = await preprocessRecordingForSave(input);
             expect(result.record._staticResources!.scripts).toContain('https://example.com/app/main.js');
         });
@@ -370,8 +370,8 @@ describe('recordingPreprocessor', () => {
             };
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
-            const link = getNode(result, 0).childNodes[0].childNodes[0];
-            expect(link.attributes.rel).toBe('prefetch');
+            const link = getNode(result, 0).childNodes![0].childNodes![0];
+            expect(link.attributes!.rel).toBe('prefetch');
         });
 
         // --- URL deduplication ---
