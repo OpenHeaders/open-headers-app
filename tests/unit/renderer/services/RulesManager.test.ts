@@ -275,7 +275,8 @@ describe('RulesManager', () => {
     });
 
     it('does nothing when electronAPI is null', async () => {
-      const mgr = new RulesManager(mockStorageAPI as ConstructorParameters<typeof RulesManager>[0], null);
+      // Intentionally null to test defensive guard
+      const mgr = new RulesManager(mockStorageAPI as ConstructorParameters<typeof RulesManager>[0], null as unknown as ConstructorParameters<typeof RulesManager>[1]);
       await mgr.syncProxyRule({ id: '1' }, 'add');
       // Should not throw
     });

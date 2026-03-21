@@ -17,6 +17,23 @@ import {
   generateProgressMessage,
 } from '../../../../src/renderer/services/export-import/utilities/MessageGeneration';
 import { SUCCESS_MESSAGES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportData, ExportOptions, ImportData, ImportOptions } from '../../../../src/renderer/services/export-import/core/types';
+
+function makeExportData(overrides: Record<string, unknown> = {}): ExportData {
+  return { version: '3.0.0', ...overrides } as ExportData;
+}
+
+function makeExportOptions(overrides: Partial<ExportOptions> = {}): ExportOptions {
+  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+}
+
+function makeImportData(overrides: Record<string, unknown> = {}): ImportData {
+  return { version: '3.0.0', ...overrides } as ImportData;
+}
+
+function makeImportOptions(overrides: Record<string, unknown> = {}): ImportOptions {
+  return { mode: 'merge', ...overrides } as unknown as ImportOptions;
+}
 
 // ---------------------------------------------------------------------------
 // generateExportSuccessMessage
@@ -24,8 +41,8 @@ import { SUCCESS_MESSAGES } from '../../../../src/renderer/services/export-impor
 describe('generateExportSuccessMessage', () => {
   it('includes source count', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: { sources: true }, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false },
-      { sources: [{ id: 1 }, { id: 2 }] },
+      makeExportOptions({ selectedItems: { sources: true } }),
+      makeExportData({ sources: [{}, {}] }),
       ['/path/file.json'],
     );
     expect(msg).toContain('2 source(s)');
@@ -33,8 +50,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes rules total count', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: { rules: true }, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false },
-      { rules: { request: [1, 2], response: [3] } },
+      makeExportOptions({ selectedItems: { rules: true } }),
+      makeExportData({ rules: { header: [], request: [{}, {}], response: [{}] } }),
       ['/path'],
     );
     expect(msg).toContain('3 rule(s)');
@@ -42,8 +59,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes proxy rules count', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: { proxyRules: true }, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false },
-      { proxyRules: [1] },
+      makeExportOptions({ selectedItems: { proxyRules: true } }),
+      makeExportData({ proxyRules: [{}] }),
       ['/path'],
     );
     expect(msg).toContain('1 proxy rule(s)');
@@ -51,8 +68,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes environment schema description', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: {}, fileFormat: 'single', environmentOption: 'schema', includeWorkspace: false },
-      {},
+      makeExportOptions({ environmentOption: 'schema' }),
+      makeExportData(),
       ['/path'],
     );
     expect(msg).toContain('environment schema');
@@ -60,8 +77,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes environment values description', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: {}, fileFormat: 'single', environmentOption: 'values', includeWorkspace: false },
-      {},
+      makeExportOptions({ environmentOption: 'values' }),
+      makeExportData(),
       ['/path'],
     );
     expect(msg).toContain('environments with values');
@@ -69,8 +86,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes workspace configuration', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: true, includeCredentials: false },
-      {},
+      makeExportOptions({ includeWorkspace: true, includeCredentials: false }),
+      makeExportData(),
       ['/path'],
     );
     expect(msg).toContain('workspace configuration');
@@ -79,8 +96,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('includes workspace with credentials', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: true, includeCredentials: true },
-      {},
+      makeExportOptions({ includeWorkspace: true, includeCredentials: true }),
+      makeExportData(),
       ['/path'],
     );
     expect(msg).toContain('workspace configuration with credentials');
@@ -88,8 +105,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('mentions file count for separate format', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: { sources: true }, fileFormat: 'separate', environmentOption: 'none', includeWorkspace: false },
-      { sources: [1] },
+      makeExportOptions({ selectedItems: { sources: true }, fileFormat: 'separate' }),
+      makeExportData({ sources: [{}] }),
       ['/a.json', '/b.json'],
     );
     expect(msg).toContain('2 files');
@@ -97,8 +114,8 @@ describe('generateExportSuccessMessage', () => {
 
   it('defaults to "configuration" when nothing selected', () => {
     const msg = generateExportSuccessMessage(
-      { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false },
-      {},
+      makeExportOptions(),
+      makeExportData(),
       ['/path'],
     );
     expect(msg).toContain('configuration');
@@ -210,40 +227,40 @@ describe('generateImportSummary', () => {
 // ---------------------------------------------------------------------------
 describe('generateImportWarnings', () => {
   it('returns null for no warnings', () => {
-    const result = generateImportWarnings({ version: '3.0.0' }, {});
+    const result = generateImportWarnings(makeImportData(), makeImportOptions());
     expect(result).toBeNull();
   });
 
   it('warns about version mismatch', () => {
-    const result = generateImportWarnings({ version: '1.0.0' }, {});
+    const result = generateImportWarnings(makeImportData({ version: '1.0.0' }), makeImportOptions());
     expect(result).toContain('version 1.0.0');
   });
 
   it('warns about large dataset', () => {
-    const sources = Array.from({ length: 101 }, (_, i) => ({ id: i }));
-    const result = generateImportWarnings({ sources }, {});
+    const sources = Array.from({ length: 101 }, () => ({}));
+    const result = generateImportWarnings(makeImportData({ sources }), makeImportOptions());
     expect(result).toContain('Large dataset');
   });
 
   it('warns about replace mode on large dataset', () => {
-    const sources = Array.from({ length: 51 }, (_, i) => ({ id: i }));
-    const result = generateImportWarnings({ sources }, { importMode: 'replace' });
+    const sources = Array.from({ length: 51 }, () => ({}));
+    const result = generateImportWarnings(makeImportData({ sources }), makeImportOptions({ importMode: 'replace' }));
     expect(result).toContain('Replace mode');
   });
 
   it('warns about workspace credentials', () => {
     const result = generateImportWarnings(
-      { workspace: { authData: { token: 'x' } } },
-      { includeCredentials: false },
+      makeImportData({ workspace: { authData: { token: 'x' } } }),
+      makeImportOptions({ includeCredentials: false }),
     );
     expect(result).toContain('authentication data');
   });
 
   it('combines multiple warnings', () => {
-    const sources = Array.from({ length: 110 }, (_, i) => ({ id: i }));
+    const sources = Array.from({ length: 110 }, () => ({}));
     const result = generateImportWarnings(
-      { version: '1.0.0', sources },
-      { importMode: 'replace' },
+      makeImportData({ version: '1.0.0', sources }),
+      makeImportOptions({ importMode: 'replace' }),
     );
     expect(result).toContain(';');
   });
