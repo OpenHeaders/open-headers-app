@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
-function s(overrides: Record<string, unknown> = {}): Source {
+function makeSource(overrides: Record<string, unknown> = {}): Source {
   return { sourceId: 'test', sourceType: 'http', ...overrides } as Source;
 }
 
@@ -47,12 +47,12 @@ describe('SourceManager', () => {
   // ========================================================================
   describe('extractVariablesFromSource', () => {
     it('extracts variables from sourcePath (URL)', () => {
-      const source = s({ sourcePath: 'https://api.example.com/{{host}}/data' });
+      const source = makeSource({ sourcePath: 'https://api.example.com/{{host}}/data' });
       expect(manager.extractVariablesFromSource(source)).toEqual(['host']);
     });
 
     it('extracts multiple distinct variables', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: '{{proto}}://{{host}}',
         requestOptions: { headers: [{ key: 'Authorization', value: 'Bearer {{token}}' }] },
       });
@@ -64,7 +64,7 @@ describe('SourceManager', () => {
     });
 
     it('deduplicates variables', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: '{{api}}',
         requestOptions: { body: '{{api}}' },
       });
@@ -73,12 +73,12 @@ describe('SourceManager', () => {
     });
 
     it('returns empty array when no variables present', () => {
-      const source = s({ sourcePath: 'https://example.com/data' });
+      const source = makeSource({ sourcePath: 'https://example.com/data' });
       expect(manager.extractVariablesFromSource(source)).toEqual([]);
     });
 
     it('extracts from headers and queryParams', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: 'https://example.com',
         requestOptions: {
           headers: [
@@ -95,7 +95,7 @@ describe('SourceManager', () => {
     });
 
     it('extracts from jsonFilter path', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: 'https://example.com',
         jsonFilter: { path: '$.data.{{field}}' },
       });
@@ -103,12 +103,12 @@ describe('SourceManager', () => {
     });
 
     it('handles source with no requestOptions or jsonFilter', () => {
-      const source = s({ sourcePath: 'https://example.com' });
+      const source = makeSource({ sourcePath: 'https://example.com' });
       expect(manager.extractVariablesFromSource(source)).toEqual([]);
     });
 
     it('extracts from header keys and values', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: 'https://example.com',
         requestOptions: {
           headers: [
@@ -122,7 +122,7 @@ describe('SourceManager', () => {
     });
 
     it('extracts from body and totpSecret', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: 'https://example.com',
         requestOptions: {
           body: '{"key": "{{bodyVar}}"}',
@@ -135,7 +135,7 @@ describe('SourceManager', () => {
     });
 
     it('extracts from contentType', () => {
-      const source = s({
+      const source = makeSource({
         sourcePath: 'https://example.com',
         requestOptions: { contentType: '{{contentVar}}' },
       });
@@ -149,7 +149,7 @@ describe('SourceManager', () => {
   // ========================================================================
   describe('evaluateSourceDependencies', () => {
     it('returns ready for non-http sources', async () => {
-      const source = s({ sourceType: 'file', sourcePath: '/path/to/file' });
+      const source = makeSource({ sourceType: 'file', sourcePath: '/path/to/file' });
       const result = await manager.evaluateSourceDependencies(source);
       expect(result).toEqual({ ready: true, missing: [] });
     });
@@ -159,7 +159,7 @@ describe('SourceManager', () => {
         host: 'api.example.com',
         token: 'abc123',
       });
-      const source = s({
+      const source = makeSource({
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
         requestOptions: { headers: [{ key: 'Authorization', value: '{{token}}' }] },
@@ -171,7 +171,7 @@ describe('SourceManager', () => {
 
     it('returns not ready with missing variables', async () => {
       mockEnvironmentService.getAllVariables.mockReturnValue({ host: 'api.example.com' });
-      const source = s({
+      const source = makeSource({
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
         requestOptions: { headers: [{ key: 'Authorization', value: '{{token}}' }] },
@@ -183,7 +183,7 @@ describe('SourceManager', () => {
 
     it('treats empty string values as missing', async () => {
       mockEnvironmentService.getAllVariables.mockReturnValue({ host: '' });
-      const source = s({
+      const source = makeSource({
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
       });
@@ -194,7 +194,7 @@ describe('SourceManager', () => {
 
     it('returns not ready when environment service is not ready', async () => {
       mockEnvironmentService.waitForReady.mockRejectedValue(new Error('timeout'));
-      const source = s({
+      const source = makeSource({
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
       });
@@ -205,7 +205,7 @@ describe('SourceManager', () => {
 
     it('returns ready for http source with no variables', async () => {
       mockEnvironmentService.getAllVariables.mockReturnValue({});
-      const source = s({
+      const source = makeSource({
         sourceType: 'http',
         sourcePath: 'https://example.com/data',
       });
@@ -224,26 +224,26 @@ describe('SourceManager', () => {
         { sourceId: '1', sourceType: 'file', sourcePath: '/a' },
         { sourceId: '3', sourceType: 'file', sourcePath: '/b' },
       ];
-      const newData = s({ sourceType: 'file', sourcePath: '/c' });
+      const newData = makeSource({ sourceType: 'file', sourcePath: '/c' });
       const result = await manager.addSource(sources, newData);
       expect(result.sourceId).toBe('4');
     });
 
     it('starts at 1 for empty sources', async () => {
-      const result = await manager.addSource([], s({ sourceType: 'file', sourcePath: '/a' }));
+      const result = await manager.addSource([], makeSource({ sourceType: 'file', sourcePath: '/a' }));
       expect(result.sourceId).toBe('1');
     });
 
     it('throws on duplicate source (same type and path)', async () => {
-      const sources: Source[] = [s({ sourceType: 'file', sourcePath: '/a' })];
+      const sources: Source[] = [makeSource({ sourceType: 'file', sourcePath: '/a' })];
       await expect(
-        manager.addSource(sources, s({ sourceType: 'file', sourcePath: '/a' }))
+        manager.addSource(sources, makeSource({ sourceType: 'file', sourcePath: '/a' }))
       ).rejects.toThrow('Source already exists');
     });
 
     it('allows same path with different type', async () => {
       const sources: Source[] = [{ sourceId: '1', sourceType: 'file', sourcePath: '/a' }];
-      const result = await manager.addSource(sources, s({ sourceType: 'http', sourcePath: '/a' }));
+      const result = await manager.addSource(sources, makeSource({ sourceType: 'http', sourcePath: '/a' }));
       expect(result.sourceId).toBe('2');
     });
 
@@ -252,7 +252,7 @@ describe('SourceManager', () => {
         { sourceId: '1', sourceType: 'http', sourcePath: 'https://api.com', sourceMethod: 'GET' },
       ];
       // Same URL but different method should be allowed
-      const result = await manager.addSource(sources, s({
+      const result = await manager.addSource(sources, makeSource({
         sourceType: 'http',
         sourcePath: 'https://api.com',
         sourceMethod: 'POST',
@@ -265,7 +265,7 @@ describe('SourceManager', () => {
         { sourceId: '1', sourceType: 'http', sourcePath: 'https://api.com', sourceMethod: 'GET' },
       ];
       await expect(
-        manager.addSource(sources, s({
+        manager.addSource(sources, makeSource({
           sourceType: 'http',
           sourcePath: 'https://api.com',
           sourceMethod: 'GET',
@@ -274,20 +274,20 @@ describe('SourceManager', () => {
     });
 
     it('includes createdAt timestamp', async () => {
-      const result = await manager.addSource([], s({ sourceType: 'file', sourcePath: '/a' }));
+      const result = await manager.addSource([], makeSource({ sourceType: 'file', sourcePath: '/a' }));
       expect(result.createdAt).toBeDefined();
       expect(new Date(result.createdAt).getTime()).not.toBeNaN();
     });
 
     it('sets activationState to active for non-http source', async () => {
-      const result = await manager.addSource([], s({ sourceType: 'file', sourcePath: '/a' }));
+      const result = await manager.addSource([], makeSource({ sourceType: 'file', sourcePath: '/a' }));
       expect(result.activationState).toBe('active');
       expect(result.missingDependencies).toEqual([]);
     });
 
     it('evaluates dependencies for http sources', async () => {
       mockEnvironmentService.getAllVariables.mockReturnValue({});
-      const result = await manager.addSource([], s({
+      const result = await manager.addSource([], makeSource({
         sourceType: 'http',
         sourcePath: 'https://{{host}}/data',
       }));
@@ -340,7 +340,7 @@ describe('SourceManager', () => {
   // ========================================================================
   describe('saveSources', () => {
     it('saves sources to correct path', async () => {
-      const sources: Source[] = [s({ sourceId: '1' })];
+      const sources: Source[] = [makeSource({ sourceId: '1' })];
       await manager.saveSources('ws-1', sources);
       expect(mockStorageAPI.saveToStorage).toHaveBeenCalledWith(
         'workspaces/ws-1/sources.json',

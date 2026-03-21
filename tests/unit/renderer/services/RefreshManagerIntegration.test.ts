@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
-function s(overrides: Record<string, unknown> = {}): Source {
+function makeSource(overrides: Record<string, unknown> = {}): Source {
   return { sourceId: 'test', sourceType: 'http', ...overrides } as Source;
 }
 
@@ -202,15 +202,13 @@ describe('RefreshManagerIntegration', () => {
   // ========================================================================
   describe('trackSourceData()', () => {
     it('stores source data in lastSeenSources map', () => {
-      const source = {
+      const source = makeSource({
         sourceId: 's1',
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
-        requestOptions: undefined,
-        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
-      };
+      });
       refreshManagerIntegration.trackSourceData(source);
       expect(refreshManagerIntegration.lastSeenSources.has('s1')).toBe(true);
       const tracked = refreshManagerIntegration.lastSeenSources.get('s1');
@@ -225,7 +223,7 @@ describe('RefreshManagerIntegration', () => {
   describe('resolveSourceData()', () => {
     it('resolves source URL via environment service', () => {
       mockEnvService.resolveTemplate.mockReturnValue('https://resolved.com');
-      const source = { sourcePath: 'https://{{HOST}}', requestOptions: {} };
+      const source = makeSource({ sourcePath: 'https://{{HOST}}', requestOptions: {} });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.sourcePath).toBe('https://resolved.com');
     });
@@ -234,12 +232,12 @@ describe('RefreshManagerIntegration', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{TOKEN}}' ? 'abc123' : s
       );
-      const source = {
+      const source = makeSource({
         sourcePath: 'https://api.com',
         requestOptions: {
           headers: [{ key: 'Authorization', value: '{{TOKEN}}' }],
         },
-      };
+      });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions.headers?.[0].value).toBe('abc123');
     });
@@ -248,17 +246,17 @@ describe('RefreshManagerIntegration', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{BODY}}' ? '{"data": true}' : s
       );
-      const source = {
+      const source = makeSource({
         sourcePath: 'https://api.com',
         requestOptions: { body: '{{BODY}}' },
-      };
+      });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions.body).toBe('{"data": true}');
     });
 
     it('handles null requestOptions', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) => s);
-      const source = { sourcePath: 'https://api.com', requestOptions: undefined };
+      const source = makeSource({ sourcePath: 'https://api.com', requestOptions: undefined });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions).toEqual({});
     });
@@ -267,7 +265,7 @@ describe('RefreshManagerIntegration', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{VAL}}' ? 'resolved' : s
       );
-      const source = {
+      const source = makeSource({
         sourcePath: 'https://api.com',
         requestOptions: {
           headers: [
@@ -275,7 +273,7 @@ describe('RefreshManagerIntegration', () => {
             { key: 'Accept', value: 'application/json' },
           ],
         },
-      };
+      });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions.headers?.[0].value).toBe('resolved');
       expect(result.requestOptions.headers?.[1].value).toBe('application/json');
@@ -285,12 +283,12 @@ describe('RefreshManagerIntegration', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
         s === '{{A}}' ? 'x' : s
       );
-      const source = {
+      const source = makeSource({
         sourcePath: 'https://api.com',
         requestOptions: {
           queryParams: [{ key: 'filter', value: '{{A}}' }],
         },
-      };
+      });
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions.queryParams?.[0].value).toBe('x');
     });
@@ -302,20 +300,20 @@ describe('RefreshManagerIntegration', () => {
   describe('addSource()', () => {
     it('does nothing when not initialized', async () => {
       refreshManagerIntegration.initialized = false;
-      await refreshManagerIntegration.addSource({ sourceId: 's1', sourceType: 'http' });
+      await refreshManagerIntegration.addSource(makeSource({ sourceId: 's1', sourceType: 'http' }));
       expect(mockRefreshManager.addSource).not.toHaveBeenCalled();
     });
 
     it('adds HTTP source to refreshManager', async () => {
       refreshManagerIntegration.initialized = true;
-      const source = { sourceId: 's1', sourceType: 'http' };
+      const source = makeSource({ sourceId: 's1', sourceType: 'http' });
       await refreshManagerIntegration.addSource(source);
       expect(mockRefreshManager.addSource).toHaveBeenCalledWith(source);
     });
 
     it('ignores non-HTTP sources', async () => {
       refreshManagerIntegration.initialized = true;
-      await refreshManagerIntegration.addSource({ sourceId: 's1', sourceType: 'file' });
+      await refreshManagerIntegration.addSource(makeSource({ sourceId: 's1', sourceType: 'file' }));
       expect(mockRefreshManager.addSource).not.toHaveBeenCalled();
     });
   });
@@ -323,20 +321,20 @@ describe('RefreshManagerIntegration', () => {
   describe('updateSource()', () => {
     it('does nothing when not initialized', async () => {
       refreshManagerIntegration.initialized = false;
-      await refreshManagerIntegration.updateSource({ sourceId: 's1', sourceType: 'http' });
+      await refreshManagerIntegration.updateSource(makeSource({ sourceId: 's1', sourceType: 'http' }));
       expect(mockRefreshManager.updateSource).not.toHaveBeenCalled();
     });
 
     it('updates HTTP source', async () => {
       refreshManagerIntegration.initialized = true;
-      const source = { sourceId: 's1', sourceType: 'http' };
+      const source = makeSource({ sourceId: 's1', sourceType: 'http' });
       await refreshManagerIntegration.updateSource(source);
       expect(mockRefreshManager.updateSource).toHaveBeenCalledWith(source);
     });
 
     it('ignores non-HTTP sources', async () => {
       refreshManagerIntegration.initialized = true;
-      await refreshManagerIntegration.updateSource({ sourceId: 's1', sourceType: 'file' });
+      await refreshManagerIntegration.updateSource(makeSource({ sourceId: 's1', sourceType: 'file' }));
       expect(mockRefreshManager.updateSource).not.toHaveBeenCalled();
     });
   });
@@ -391,7 +389,7 @@ describe('RefreshManagerIntegration', () => {
 
     it('passes sourceData parameter', () => {
       refreshManagerIntegration.initialized = true;
-      const sourceData = { refreshOptions: { interval: 10000 } };
+      const sourceData = makeSource({ refreshOptions: { interval: 10000 } });
       refreshManagerIntegration.getTimeUntilRefresh('s1', sourceData);
       expect(mockRefreshManager.getTimeUntilRefresh).toHaveBeenCalledWith('s1', sourceData);
     });
@@ -445,8 +443,8 @@ describe('RefreshManagerIntegration', () => {
 
     it('removes all tracked sources', async () => {
       refreshManagerIntegration.initialized = true;
-      refreshManagerIntegration.lastSeenSources.set('s1', {});
-      refreshManagerIntegration.lastSeenSources.set('s2', {});
+      refreshManagerIntegration.lastSeenSources.set('s1', makeSource({}));
+      refreshManagerIntegration.lastSeenSources.set('s2', makeSource({}));
 
       await refreshManagerIntegration.cleanupAllSources();
       expect(mockRefreshManager.removeSource).toHaveBeenCalledWith('s1');
@@ -492,7 +490,7 @@ describe('RefreshManagerIntegration', () => {
 
     it('removes sources that no longer exist', async () => {
       refreshManagerIntegration.initialized = true;
-      refreshManagerIntegration.lastSeenSources.set('removed-source', { sourcePath: 'https://old.com' });
+      refreshManagerIntegration.lastSeenSources.set('removed-source', makeSource({ sourcePath: 'https://old.com' }));
       await refreshManagerIntegration._performSourceSync([]);
       expect(mockRefreshManager.removeSource).toHaveBeenCalledWith('removed-source');
       expect(refreshManagerIntegration.lastSeenSources.has('removed-source')).toBe(false);
@@ -509,14 +507,14 @@ describe('RefreshManagerIntegration', () => {
 
     it('detects source data changes', async () => {
       refreshManagerIntegration.initialized = true;
-      refreshManagerIntegration.lastSeenSources.set('s1', {
+      refreshManagerIntegration.lastSeenSources.set('s1', makeSource({
         sourcePath: 'https://old.com',
         sourceMethod: 'GET',
         requestOptions: undefined,
         jsonFilter: undefined,
         refreshOptions: undefined,
         activationState: 'active',
-      });
+      }));
 
       const sources: Source[] = [
         { sourceId: 's1', sourceType: 'http', sourcePath: 'https://new.com', sourceMethod: 'GET' },
@@ -527,14 +525,14 @@ describe('RefreshManagerIntegration', () => {
 
     it('detects refresh settings changes', async () => {
       refreshManagerIntegration.initialized = true;
-      refreshManagerIntegration.lastSeenSources.set('s1', {
+      refreshManagerIntegration.lastSeenSources.set('s1', makeSource({
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
         requestOptions: undefined,
         jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
-      });
+      }));
 
       const sources: Source[] = [
         {
@@ -554,15 +552,13 @@ describe('RefreshManagerIntegration', () => {
 
     it('does not update when nothing changed', async () => {
       refreshManagerIntegration.initialized = true;
-      const sourceData = {
+      const sourceData = makeSource({
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
-        requestOptions: undefined,
-        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
         resolvedData: { sourcePath: 'https://api.com', requestOptions: {} },
-      };
+      });
       refreshManagerIntegration.lastSeenSources.set('s1', sourceData);
 
       const sources: Source[] = [
@@ -583,7 +579,7 @@ describe('RefreshManagerIntegration', () => {
 
     it('detects resolved value changes for template sources', async () => {
       refreshManagerIntegration.initialized = true;
-      refreshManagerIntegration.lastSeenSources.set('s1', {
+      refreshManagerIntegration.lastSeenSources.set('s1', makeSource({
         sourcePath: 'https://{{HOST}}/api',
         sourceMethod: 'GET',
         requestOptions: undefined,
@@ -591,7 +587,7 @@ describe('RefreshManagerIntegration', () => {
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
         resolvedData: { sourcePath: 'https://old-host.com/api', requestOptions: {} },
-      });
+      }));
 
       // Now the env var resolves to a different value
       mockEnvService.resolveTemplate.mockImplementation((s: string) =>
@@ -650,7 +646,7 @@ describe('RefreshManagerIntegration', () => {
     it('resets instance state', async () => {
       refreshManagerIntegration.initialized = true;
       refreshManagerIntegration.httpService = mockHttpService;
-      refreshManagerIntegration.lastSeenSources.set('s1', {});
+      refreshManagerIntegration.lastSeenSources.set('s1', makeSource({}));
 
       await refreshManagerIntegration.destroy();
       expect(refreshManagerIntegration.initialized).toBe(false);
