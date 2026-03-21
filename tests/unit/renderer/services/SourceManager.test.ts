@@ -19,8 +19,8 @@ const SourceManager = (
 // ---------------------------------------------------------------------------
 describe('SourceManager', () => {
   let manager: InstanceType<typeof SourceManager>;
-  let mockStorageAPI: any;
-  let mockEnvironmentService: any;
+  let mockStorageAPI: { loadFromStorage: ReturnType<typeof vi.fn>; saveToStorage: ReturnType<typeof vi.fn> };
+  let mockEnvironmentService: { waitForReady: ReturnType<typeof vi.fn>; getAllVariables: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockStorageAPI = {
@@ -356,10 +356,10 @@ describe('SourceManager', () => {
         ...globalThis.window,
         dispatchEvent: vi.fn(),
       });
-      (globalThis as any).CustomEvent = class CustomEvent {
+      (globalThis as unknown as { CustomEvent: unknown }).CustomEvent = class CustomEvent {
         type: string;
-        detail: any;
-        constructor(type: string, opts?: any) {
+        detail: unknown;
+        constructor(type: string, opts?: { detail?: unknown }) {
           this.type = type;
           this.detail = opts?.detail;
         }

@@ -2,11 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import { RULE_TYPES } from '../../../../src/renderer/utils/data-structures/rulesStructure';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     activeWorkspaceId: 'ws-1',
     ...overrides,

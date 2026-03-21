@@ -60,7 +60,7 @@ interface HttpTestHandlerParams {
     form: FormInstance;
     getTotpStateFromForm: () => TotpState;
     getCooldownSeconds: (sourceId: string) => number;
-    checkIfRequestUsesTotp: (url: string, method: string, requestOptions: Record<string, unknown>) => boolean;
+    checkIfRequestUsesTotp: (url: string, method: string, requestOptions: SourceRequestOptions) => boolean;
     envContext: EnvironmentContextLike;
     http: { testRequest: TestRequestFn };
     setTesting: (testing: boolean) => void;

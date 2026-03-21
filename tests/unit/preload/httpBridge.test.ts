@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { HttpBridge } from '../../../src/preload/modules/httpBridge';
 import timeUtils from '../../../src/preload/modules/timeUtils';
 import { ipcRenderer } from 'electron';
+import type { HttpRequestOptions, HttpConnectionOptions } from '../../../src/types/http';
 
 describe('HttpBridge', () => {
     let bridge: InstanceType<typeof HttpBridge>;
@@ -31,9 +32,9 @@ describe('HttpBridge', () => {
 
             await bridge.makeHttpRequest('https://api.test.com', 'POST', { body: 'data' });
 
-            const calledOptions = invokeSpy.mock.calls[0][3] as Record<string, unknown>;
+            const calledOptions = invokeSpy.mock.calls[0][3] as HttpRequestOptions;
             expect(calledOptions.connectionOptions).toBeDefined();
-            const connOpts = calledOptions.connectionOptions as Record<string, unknown>;
+            const connOpts = calledOptions.connectionOptions as HttpConnectionOptions;
             expect(connOpts.keepAlive).toBe(true);
             expect(connOpts.timeout).toBe(30000);
             expect(typeof connOpts.requestId).toBe('string');
@@ -47,7 +48,7 @@ describe('HttpBridge', () => {
                 connectionOptions: customOpts
             });
 
-            const calledOptions = invokeSpy.mock.calls[0][3] as Record<string, unknown>;
+            const calledOptions = invokeSpy.mock.calls[0][3] as HttpRequestOptions;
             expect(calledOptions.connectionOptions).toEqual(customOpts);
         });
 
@@ -95,8 +96,8 @@ describe('HttpBridge', () => {
             await bridge.makeHttpRequest('https://a.com', 'GET', opts1);
             await bridge.makeHttpRequest('https://b.com', 'GET', opts2);
 
-            const id1 = (opts1 as Record<string, unknown> & { connectionOptions: { requestId: string } }).connectionOptions.requestId;
-            const id2 = (opts2 as Record<string, unknown> & { connectionOptions: { requestId: string } }).connectionOptions.requestId;
+            const id1 = (opts1 as HttpRequestOptions & { connectionOptions: HttpConnectionOptions }).connectionOptions.requestId;
+            const id2 = (opts2 as HttpRequestOptions & { connectionOptions: HttpConnectionOptions }).connectionOptions.requestId;
             expect(id1).not.toBe(id2);
         });
     });

@@ -3,7 +3,7 @@ import { useTotpState, useEnvironments } from '../contexts';
 import { createLogger } from '../utils/error-handling/logger';
 import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../types/source';
 import type { HttpRequestOptions, HttpResult, HttpProgressCallback } from '../../types/http';
-import type { JsonObject } from '../../types/common';
+import type { JsonObject, JsonArray, JsonValue } from '../../types/common';
 const log = createLogger('useHttp');
 
 interface RequestOptions {
@@ -164,11 +164,11 @@ export function useHttp(): UseHttpReturn {
                     }
 
                     const idx = parseInt(index, 10);
-                    if (idx >= (currentObj[propName] as unknown[]).length) {
+                    if (idx >= (currentObj[propName] as JsonArray).length) {
                         return `The array index [${idx}] is out of bounds.`;
                     }
 
-                    current = (currentObj[propName] as unknown[])[idx];
+                    current = (currentObj[propName] as JsonArray)[idx];
                 } else {
                     const currentObj = current as JsonObject;
                     if (currentObj[part] === undefined) {

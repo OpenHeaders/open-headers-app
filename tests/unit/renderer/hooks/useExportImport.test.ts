@@ -41,12 +41,13 @@ import {
   createExportImportServices,
   validateDependencies,
 } from '../../../../src/renderer/services/export-import';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     appVersion: '1.0.0',
     sources: [],

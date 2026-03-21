@@ -77,10 +77,10 @@ describe('WSNetworkStateHandler', () => {
 
     describe('initialize', () => {
         it('subscribes to state-changed events', () => {
-            let registeredCallback: ((event: any) => void) | null = null;
+            let registeredCallback: ((event: { newState: { isOnline: boolean; networkQuality: string; lastUpdate: number } }) => void) | null = null;
             const mockNetworkService = {
                 getState: () => ({ isOnline: true, networkQuality: 'good', lastUpdate: Date.now() }),
-                on: (event: string, cb: any) => {
+                on: (event: string, cb: (event: { newState: { isOnline: boolean; networkQuality: string; lastUpdate: number } }) => void) => {
                     if (event === 'state-changed') registeredCallback = cb;
                 }
             };

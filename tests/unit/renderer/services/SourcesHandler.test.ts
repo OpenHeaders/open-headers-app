@@ -1,26 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
 import { SourcesHandler } from '../../../../src/renderer/services/export-import/handlers/SourcesHandler';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     sources: [],
     exportSources: vi.fn(() => []),
     removeSource: vi.fn(),
     ...overrides,
-  };
+  } as ExportImportDependencies;
 }
 
-function validSource(overrides: Record<string, any> = {}) {
+function validSource(overrides: Partial<Source> = {}): Source {
   return {
     sourceId: 's1',
     sourceType: 'file',
     sourcePath: '/tmp/data.json',
     ...overrides,
-  };
+  } as Source;
 }
 
 // ---------------------------------------------------------------------------

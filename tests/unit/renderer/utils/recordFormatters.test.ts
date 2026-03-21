@@ -108,7 +108,7 @@ describe('formatConsoleArg', () => {
   });
 
   it('handles circular objects gracefully', () => {
-    const circular: any = {};
+    const circular: Record<string, unknown> = {};
     circular.self = circular;
     expect(formatConsoleArg(circular)).toBe('[Object]');
   });

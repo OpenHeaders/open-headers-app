@@ -3,6 +3,16 @@ import timeManager from '../../services/TimeManager';
 
 const log = createLogger('AdaptiveCircuitBreaker');
 
+interface CircuitBreakerOptions {
+  name?: string;
+  failureThreshold?: number;
+  halfOpenMaxAttempts?: number;
+  baseTimeout?: number;
+  maxTimeout?: number;
+  backoffMultiplier?: number;
+  timeoutJitter?: number;
+}
+
 const CircuitState = {
   CLOSED: 'CLOSED',
   OPEN: 'OPEN',
@@ -42,15 +52,15 @@ class AdaptiveCircuitBreaker {
     timeoutHistory: Array<{ timestamp: number; timeout: number; opening: number }>;
   };
 
-  constructor(options: Record<string, unknown> = {}) {
-    this.name = (options.name as string) || 'unnamed';
-    this.failureThreshold = (options.failureThreshold as number) || 5;
-    this.halfOpenMaxAttempts = (options.halfOpenMaxAttempts as number) || 3;
+  constructor(options: CircuitBreakerOptions = {}) {
+    this.name = options.name || 'unnamed';
+    this.failureThreshold = options.failureThreshold || 5;
+    this.halfOpenMaxAttempts = options.halfOpenMaxAttempts || 3;
 
-    this.baseTimeout = (options.baseTimeout as number) || 30000;
-    this.maxTimeout = (options.maxTimeout as number) || 3600000;
-    this.backoffMultiplier = (options.backoffMultiplier as number) || 2;
-    this.timeoutJitter = (options.timeoutJitter as number) || 0.1;
+    this.baseTimeout = options.baseTimeout || 30000;
+    this.maxTimeout = options.maxTimeout || 3600000;
+    this.backoffMultiplier = options.backoffMultiplier || 2;
+    this.timeoutJitter = options.timeoutJitter || 0.1;
 
     this.resetTimeout = this.baseTimeout;
     this.state = CircuitState.CLOSED;

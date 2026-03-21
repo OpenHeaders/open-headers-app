@@ -32,7 +32,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/ConcurrencyControl', () =
   class ConcurrentMap {
     private map = new Map();
     async get(key: string) { return this.map.get(key); }
-    async set(key: string, value: any) { this.map.set(key, value); }
+    async set(key: string, value: unknown) { this.map.set(key, value); }
     async delete(key: string) { return this.map.delete(key); }
     async has(key: string) { return this.map.has(key); }
     async entries() { return Array.from(this.map.entries()); }
@@ -102,7 +102,7 @@ vi.stubGlobal('window', {
   },
 });
 
-let refreshManager: any;
+let refreshManager: InstanceType<typeof import('../../../../src/renderer/services/RefreshManager').default>;
 
 beforeAll(async () => {
   const mod = await import('../../../../src/renderer/services/RefreshManager');

@@ -21,8 +21,8 @@ const RulesManager = (
 
 describe('RulesManager', () => {
   let manager: InstanceType<typeof RulesManager>;
-  let mockStorageAPI: any;
-  let mockElectronAPI: any;
+  let mockStorageAPI: { loadFromStorage: ReturnType<typeof vi.fn>; saveToStorage: ReturnType<typeof vi.fn> };
+  let mockElectronAPI: { updateWebSocketSources: ReturnType<typeof vi.fn>; proxySaveRule: ReturnType<typeof vi.fn>; proxyDeleteRule: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockStorageAPI = {

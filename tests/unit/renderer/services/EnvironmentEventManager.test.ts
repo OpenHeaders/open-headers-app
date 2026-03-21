@@ -32,10 +32,10 @@ describe('EnvironmentEventManager', () => {
       electronAPI: undefined,
     });
 
-    (globalThis as any).CustomEvent = class CustomEvent {
+    (globalThis as unknown as { CustomEvent: unknown }).CustomEvent = class CustomEvent {
       type: string;
-      detail: any;
-      constructor(type: string, opts?: any) {
+      detail: unknown;
+      constructor(type: string, opts?: { detail?: unknown }) {
         this.type = type;
         this.detail = opts?.detail;
       }

@@ -16,6 +16,7 @@ import {
   getJWTExpiration,
   JWT_CLAIM_DESCRIPTIONS 
 } from '../../../utils/jwtUtils';
+import type { JsonObject } from '../../../../types/common';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -96,7 +97,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   /**
    * Update the encoded token (with or without signing)
    */
-  const updateEncodedToken = async (headerObj: Record<string, unknown>, payloadObj: Record<string, unknown>) => {
+  const updateEncodedToken = async (headerObj: JsonObject, payloadObj: JsonObject) => {
     try {
       let newToken;
       

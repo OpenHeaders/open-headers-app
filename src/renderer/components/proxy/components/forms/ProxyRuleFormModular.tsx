@@ -69,7 +69,18 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             if (rule) {
                 // Initialize form with existing rule data
                 const isReference = !!rule.headerRuleId;
-                const formValues: Record<string, unknown> = {
+                const formValues: {
+                    name: string | undefined;
+                    headerType: string;
+                    headerRuleId: string | undefined;
+                    headerName: string;
+                    valueType: string;
+                    headerValue: string;
+                    sourceId: string | number | undefined;
+                    prefix: string;
+                    suffix: string;
+                    domains?: string[];
+                } = {
                     name: rule.name,
                     headerType: isReference ? 'reference' : 'custom',
                     headerRuleId: rule.headerRuleId || undefined,
@@ -80,7 +91,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
                     prefix: rule.prefix || '',
                     suffix: rule.suffix || ''
                 };
-                
+
                 // Only set domains for custom headers
                 if (!isReference) {
                     formValues.domains = rule.domains || [];

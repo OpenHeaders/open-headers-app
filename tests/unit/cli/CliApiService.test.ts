@@ -180,8 +180,8 @@ describe('CliApiService', () => {
         });
 
         it('passes window to setup handler', () => {
-            let receivedWindow: any = null;
-            const handler = { setMainWindow: (w: any) => { receivedWindow = w; } };
+            let receivedWindow: { id: number } | null = null;
+            const handler = { setMainWindow: (w: { id: number }) => { receivedWindow = w; } };
             svc.setSetupHandler(handler);
 
             const win = { id: 1 };

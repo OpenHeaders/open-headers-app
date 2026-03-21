@@ -59,16 +59,17 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 }));
 
 // Stub window
-const windowListeners: Record<string, any[]> = {};
+type EventHandler = (...args: unknown[]) => void;
+const windowListeners: Record<string, EventHandler[]> = {};
 vi.stubGlobal('window', {
   electronAPI: { send: vi.fn() },
-  addEventListener: vi.fn((event: string, handler: any) => {
+  addEventListener: vi.fn((event: string, handler: EventHandler) => {
     if (!windowListeners[event]) windowListeners[event] = [];
     windowListeners[event].push(handler);
   }),
-  removeEventListener: vi.fn((event: string, handler: any) => {
+  removeEventListener: vi.fn((event: string, handler: EventHandler) => {
     if (windowListeners[event]) {
-      windowListeners[event] = windowListeners[event].filter((h: any) => h !== handler);
+      windowListeners[event] = windowListeners[event].filter((h: EventHandler) => h !== handler);
     }
   }),
   dispatchEvent: vi.fn(),

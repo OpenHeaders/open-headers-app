@@ -3,7 +3,7 @@ import querystring from 'querystring';
 import mainLogger from '../../../../utils/mainLogger';
 import networkService from '../../../../services/network/NetworkService';
 import timeManager from '../../../../services/core/TimeManager';
-import type { IpcInvokeEvent } from '../../../../types/common';
+import type { IpcInvokeEvent, JsonObject } from '../../../../types/common';
 import type { HttpRequestOptions } from '../../../../types/http';
 
 const { net } = electron;
@@ -17,7 +17,7 @@ interface NetworkStateWithQuality {
 
 class HttpHandlers {
     handleMakeHttpRequest: (event: IpcInvokeEvent, url: string, method: string, options?: HttpRequestOptions) => Promise<string>;
-    processFormData: (body: string | Record<string, unknown> | null, requestId: string) => string | null;
+    processFormData: (body: string | JsonObject | null, requestId: string) => string | null;
 
     constructor() {
         // Bind methods to ensure context is preserved
@@ -262,7 +262,7 @@ class HttpHandlers {
         return performRequest();
     }
 
-    _processFormData(body: string | Record<string, unknown> | null, requestId: string): string | null {
+    _processFormData(body: string | JsonObject | null, requestId: string): string | null {
         if (body === null || body === undefined) return body as null;
 
         const formData: Record<string, string> = {};

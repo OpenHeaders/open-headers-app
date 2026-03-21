@@ -40,7 +40,37 @@ function getInstallInstructions(platform: string): string {
 }
 
 // ---------- getInstallationInfo ----------
-function getInstallationInfo(platform: string): any {
+interface InstallationInfo {
+    platform: string;
+    downloadUrl: string;
+    instructions: string;
+}
+
+interface SyncOptions {
+    url: string;
+    branch?: string;
+    authType?: string;
+    authData?: Record<string, string>;
+    repoDir?: string;
+}
+
+interface SyncResult {
+    success: boolean;
+    error?: string;
+    recovery?: string;
+    autoSync?: boolean;
+}
+
+interface CloneDefaults {
+    url: string;
+    targetDir: string;
+    branch: string;
+    authType: string;
+    authData: Record<string, string>;
+    depth: number;
+}
+
+function getInstallationInfo(platform: string): InstallationInfo {
     return {
         platform,
         downloadUrl: getGitDownloadUrl(platform),
@@ -56,7 +86,7 @@ function getWorkspaceRepoDir(tempDir: string, workspaceId: string): string {
 
 // ---------- syncWorkspace option assembly ----------
 // Mirrors the syncOptions construction in GitSyncService.syncWorkspace()
-function buildSyncOptions(options: any, repoDir: string): any {
+function buildSyncOptions(options: SyncOptions, repoDir: string): SyncOptions & { repoDir: string } {
     return {
         ...options,
         repoDir
@@ -65,7 +95,7 @@ function buildSyncOptions(options: any, repoDir: string): any {
 
 // ---------- syncWorkspace default values ----------
 // Mirrors the default values used in syncWorkspace when calling cloneRepository
-function buildCloneDefaults(options: any, repoDir: string): any {
+function buildCloneDefaults(options: SyncOptions, repoDir: string): CloneDefaults {
     return {
         url: options.url,
         targetDir: repoDir,
@@ -78,7 +108,7 @@ function buildCloneDefaults(options: any, repoDir: string): any {
 
 // ---------- error result shape ----------
 // Mirrors the catch block in syncWorkspace
-function buildSyncErrorResult(message: string, recovery?: string): any {
+function buildSyncErrorResult(message: string, recovery?: string): SyncResult {
     return {
         success: false,
         error: message,
@@ -87,7 +117,7 @@ function buildSyncErrorResult(message: string, recovery?: string): any {
 }
 
 // ---------- autoSync error result ----------
-function buildAutoSyncErrorResult(message: string): any {
+function buildAutoSyncErrorResult(message: string): SyncResult {
     return {
         success: false,
         error: message,

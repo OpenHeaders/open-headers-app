@@ -80,10 +80,10 @@ describe('CliSetupHandler', () => {
         });
 
         it('sends to window when available', () => {
-            let sent: any = null;
+            let sent: { channel: string; data: { foo: number } } | null = null;
             handler.mainWindow = {
                 isDestroyed: () => false,
-                webContents: { send: (channel: string, data: any) => { sent = { channel, data }; } }
+                webContents: { send: (channel: string, data: { foo: number }) => { sent = { channel, data }; } }
             };
             handler._notifyRenderer('my-event', { foo: 1 });
             expect(sent).toEqual({ channel: 'my-event', data: { foo: 1 } });

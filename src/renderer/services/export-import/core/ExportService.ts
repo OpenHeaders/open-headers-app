@@ -379,7 +379,13 @@ export class ExportService {
       version: exportData.version,
       totalItems: this._countExportItems(exportData),
       estimatedSize: this._calculateExportSize(exportData),
-      dataTypes: {} as Record<string, unknown>
+      dataTypes: {} as {
+        sources?: ReturnType<SourcesHandler['getSourcesStatistics']>;
+        proxyRules?: ReturnType<ProxyRulesHandler['getProxyRulesStatistics']>;
+        rules?: ReturnType<RulesHandler['getRulesStatistics']>;
+        environments?: ReturnType<EnvironmentsHandler['getEnvironmentStatistics']>;
+        workspace?: ReturnType<WorkspaceHandler['getWorkspaceStatistics']>;
+      }
     };
 
     if (exportData.sources) {

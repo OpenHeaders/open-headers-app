@@ -3,6 +3,7 @@ import type { App } from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import path from 'path';
 import fs from 'fs';
+import type { AppSettings } from '../../../types/settings';
 
 const { globalShortcut } = electron;
 const { createLogger } = mainLogger;
@@ -23,11 +24,11 @@ class GlobalShortcuts {
         try {
             // Load settings to get the current hotkey
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: Record<string, unknown> = {};
+            let settings: Partial<AppSettings> = {};
 
             try {
                 const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(settingsData);
+                settings = JSON.parse(settingsData) as Partial<AppSettings>;
             } catch (error) {
                 // Settings file might not exist yet
                 log.debug('Settings file not found, using default hotkey');

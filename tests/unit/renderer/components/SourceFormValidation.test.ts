@@ -20,12 +20,22 @@ const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) => ({
   getAllVariables: () => vars,
 });
 
-const makeForm = (fields: Record<string, any> = {}) => ({
+interface FormFields {
+  requestOptions?: {
+    headers?: Array<{ key: string; value: string }>;
+    queryParams?: Array<{ key: string; value: string }>;
+    body?: string;
+    totpSecret?: string;
+  };
+  jsonFilter?: { enabled: boolean; path?: string };
+}
+
+const makeForm = (fields: FormFields = {}) => ({
   getFieldValue: (key: string | string[]) => {
-    if (typeof key === 'string') return fields[key];
-    let val: any = fields;
+    if (typeof key === 'string') return fields[key as keyof FormFields];
+    let val: unknown = fields;
     for (const k of key) {
-      val = val?.[k];
+      val = (val as Record<string, unknown>)?.[k];
     }
     return val;
   },

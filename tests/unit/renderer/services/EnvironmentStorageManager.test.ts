@@ -16,7 +16,7 @@ const EnvironmentStorageManager = (
 
 describe('EnvironmentStorageManager', () => {
   let manager: InstanceType<typeof EnvironmentStorageManager>;
-  let mockStorageAPI: any;
+  let mockStorageAPI: { loadFromStorage: ReturnType<typeof vi.fn>; saveToStorage: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockStorageAPI = {

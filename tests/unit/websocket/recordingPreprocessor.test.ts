@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { preprocessRecordingForSave } from '../../../src/services/websocket/utils/recordingPreprocessor';
+import type { DomNode, RRWebEvent, RRWebInnerData, RecordingMetadata } from '../../../src/types/recording';
 
 // ---------- helpers ----------
 
 /** Create a minimal valid recording */
-function makeRecording(events: any[] = [], metadata: any = {}) {
+function makeRecording(events: RRWebEvent[] = [], metadata: Partial<RecordingMetadata> = {}) {
     return {
         record: {
             events,
@@ -14,17 +15,17 @@ function makeRecording(events: any[] = [], metadata: any = {}) {
 }
 
 /** Create a full-snapshot event (rrweb type 2) */
-function makeFullSnapshot(node: any, timestamp = 1000) {
+function makeFullSnapshot(node: DomNode, timestamp = 1000): RRWebEvent {
     return { type: 2, timestamp, data: { node } };
 }
 
 /** Create a wrapped rrweb full-snapshot event */
-function makeWrappedFullSnapshot(node: any, timestamp = 1000) {
+function makeWrappedFullSnapshot(node: DomNode, timestamp = 1000) {
     return { type: 'rrweb', timestamp, data: { type: 2, data: { node } } };
 }
 
 /** Create an incremental snapshot (rrweb type 3) */
-function makeIncrementalSnapshot(data: any, timestamp = 2000) {
+function makeIncrementalSnapshot(data: RRWebInnerData, timestamp = 2000): RRWebEvent {
     return { type: 3, timestamp, data };
 }
 
@@ -323,7 +324,7 @@ describe('recordingPreprocessor', () => {
                 progressCalls.push({ stage, progress });
             };
 
-            const events: any[] = [];
+            const events: RRWebEvent[] = [];
             for (let i = 0; i < 25; i++) {
                 events.push({ type: 4, timestamp: i * 100, data: {} });
             }
