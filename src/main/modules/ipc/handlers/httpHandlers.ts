@@ -230,7 +230,7 @@ class HttpHandlers {
 
                         // Transform body based on content type
                         if (options.contentType === 'application/x-www-form-urlencoded') {
-                            requestBody = self._processFormData(options.body, requestId) as string;
+                            requestBody = self._processFormData(options.body, requestId) ?? '';
                             request.setHeader('Content-Type', 'application/x-www-form-urlencoded');
                         }
                         else if (options.contentType === 'application/json') {
@@ -263,7 +263,7 @@ class HttpHandlers {
     }
 
     _processFormData(body: string | JsonObject | null, requestId: string): string | null {
-        if (body === null || body === undefined) return body as null;
+        if (body === null) return null;
 
         const formData: Record<string, string> = {};
 

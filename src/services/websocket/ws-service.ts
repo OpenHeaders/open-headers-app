@@ -26,8 +26,6 @@ interface InitLock {
 }
 
 
-type Rules = RulesCollection;
-
 interface SourceServiceLike {
     on?(event: string, handler: () => void): void;
     getAllSources?(): Source[];
@@ -67,7 +65,7 @@ class WebSocketService {
     host: string;
     isInitializing: boolean;
     sources: Source[];
-    rules: Rules;
+    rules: RulesCollection;
     sourceService: SourceServiceLike | null;
     appDataPath: string | null;
     connectedClients: Map<string, WSClientInfo>;
@@ -453,7 +451,7 @@ class WebSocketService {
     onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
 
     // Rule delegators
-    updateRules(rules: Rules): void { this.ruleHandler.updateRules(rules); }
+    updateRules(rules: RulesCollection): void { this.ruleHandler.updateRules(rules); }
     broadcastRules(): void { this.ruleHandler.broadcastRules(); }
 
     // Client delegators

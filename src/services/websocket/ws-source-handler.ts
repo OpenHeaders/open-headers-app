@@ -95,14 +95,15 @@ class WSSourceHandler {
                             }
                         }
 
-                        const workspaceList = JSON.parse(await fs.promises.readFile(workspacesPath, 'utf8')).workspaces || [];
-                        const activeWorkspace = workspaceList.find((w: Workspace) => w.id === activeWorkspaceId);
+                        const workspacesJson: { workspaces?: Workspace[] } = JSON.parse(await fs.promises.readFile(workspacesPath, 'utf8'));
+                        const workspaceList = workspacesJson.workspaces ?? [];
+                        const activeWorkspace = workspaceList.find(w => w.id === activeWorkspaceId);
 
                         if (activeWorkspace && (activeWorkspace.type === 'git' || activeWorkspace.type === 'team')) {
                             const sourcesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
                             if (fs.existsSync(sourcesPath)) {
                                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                                const freshSources = JSON.parse(sourcesData) || [];
+                                const freshSources: Source[] = JSON.parse(sourcesData) ?? [];
                                 log.info(`Reloaded ${freshSources.length} sources from disk for git workspace ${activeWorkspaceId}`);
                                 this.wsService.sources = freshSources;
                             }
@@ -173,8 +174,8 @@ class WSSourceHandler {
             const rulesPath = path.join(appDataPath, 'workspaces', workspaceId, 'rules.json');
             if (fs.existsSync(rulesPath)) {
                 const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage = JSON.parse(rulesData);
-                this.wsService.rules = rulesStorage.rules || {};
+                const rulesStorage: Partial<RulesStorage> = JSON.parse(rulesData);
+                this.wsService.rules = rulesStorage.rules ?? { header: [], request: [], response: [] };
                 log.info(`Loaded ${Object.keys(this.wsService.rules).length} rule types from workspace ${workspaceId}`);
             } else {
                 log.info(`No rules found for workspace ${workspaceId}, using empty rules`);
@@ -184,7 +185,8 @@ class WSSourceHandler {
             const sourcesPath = path.join(appDataPath, 'workspaces', workspaceId, 'sources.json');
             if (fs.existsSync(sourcesPath)) {
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                this.wsService.sources = JSON.parse(sourcesData) || [];
+                const parsedSources: Source[] = JSON.parse(sourcesData);
+                this.wsService.sources = parsedSources ?? [];
                 log.info(`Loaded ${this.wsService.sources.length} sources from workspace ${workspaceId}`);
             } else {
                 log.info(`No sources found for workspace ${workspaceId}, using empty sources`);
@@ -268,8 +270,8 @@ class WSSourceHandler {
             const rulesPath = path.join(appDataPath, 'workspaces', activeWorkspaceId, 'rules.json');
             if (fs.existsSync(rulesPath)) {
                 const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage = JSON.parse(rulesData);
-                this.wsService.rules = rulesStorage.rules || {};
+                const rulesStorage: Partial<RulesStorage> = JSON.parse(rulesData);
+                this.wsService.rules = rulesStorage.rules ?? { header: [], request: [], response: [] };
                 log.info(`Loaded ${Object.keys(this.wsService.rules).length} rule types from workspace`);
             } else {
                 log.info(`No rules file found at ${rulesPath}, starting with empty rules`);
@@ -279,7 +281,8 @@ class WSSourceHandler {
             const sourcesPath = path.join(appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
             if (fs.existsSync(sourcesPath)) {
                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                this.wsService.sources = JSON.parse(sourcesData) || [];
+                const parsedSources: Source[] = JSON.parse(sourcesData);
+                this.wsService.sources = parsedSources ?? [];
                 log.info(`Loaded ${this.wsService.sources.length} sources from workspace`);
             } else {
                 log.info(`No sources file found at ${sourcesPath}, starting with empty sources`);

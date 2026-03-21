@@ -7,14 +7,8 @@
 
 import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies } from '../core/types';
-import type { RulesStorage as SharedRulesStorage, RulesCollection } from '../../../../types/rules';
-
-/** Import/export rules storage — uses dynamic keys for iterating over rule types */
-interface RulesStorage extends SharedRulesStorage {
-  rules: SharedRulesStorage['rules'] & Record<string, RuleEntry[]>;
-}
-
+import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../core/types';
+import type { RulesCollection } from '../../../../types/rules';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
 
@@ -27,13 +21,6 @@ interface ExportOptions {
 interface ImportOptions {
   importMode?: string;
   selectedItems: Record<string, boolean>;
-}
-
-/** Individual rule entry */
-interface RuleEntry {
-  id: string;
-  name?: string;
-  enabled?: boolean;
 }
 
 /** Rules to import structure */
