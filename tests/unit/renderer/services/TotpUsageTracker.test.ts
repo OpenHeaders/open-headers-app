@@ -31,7 +31,7 @@ describe('TotpUsageTracker', () => {
   describe('recordUsage', () => {
     it('records usage with correct fields', () => {
       tracker.recordUsage('src1', 'secret', '123456');
-      const usage = tracker.usageMap.get('src1');
+      const usage = tracker.usageMap.get('src1')!;
       expect(usage).toBeTruthy();
       expect(usage.lastCode).toBe('123456');
       expect(usage.secret).toBe('secret');
@@ -41,19 +41,21 @@ describe('TotpUsageTracker', () => {
     });
 
     it('does nothing for null sourceId', () => {
-      tracker.recordUsage(null, 'secret', '123');
+      // Intentionally null to test runtime guard
+      tracker.recordUsage(null as unknown as string, 'secret', '123');
       expect(tracker.usageMap.size).toBe(0);
     });
 
     it('does nothing for null code', () => {
-      tracker.recordUsage('src1', 'secret', null);
+      // Intentionally null to test runtime guard
+      tracker.recordUsage('src1', 'secret', null as unknown as string);
       expect(tracker.usageMap.size).toBe(0);
     });
 
     it('overwrites previous usage for same sourceId', () => {
       tracker.recordUsage('src1', 'secret', '111111');
       tracker.recordUsage('src1', 'secret', '222222');
-      expect(tracker.usageMap.get('src1').lastCode).toBe('222222');
+      expect(tracker.usageMap.get('src1')!.lastCode).toBe('222222');
     });
 
     it('starts cleanup interval on first recording', () => {
@@ -75,7 +77,8 @@ describe('TotpUsageTracker', () => {
     });
 
     it('returns not in cooldown for null sourceId', () => {
-      const result = tracker.checkCooldown(null);
+      // Intentionally null to test runtime guard
+      const result = tracker.checkCooldown(null as unknown as string);
       expect(result.inCooldown).toBe(false);
     });
 
@@ -92,7 +95,7 @@ describe('TotpUsageTracker', () => {
     it('returns not in cooldown when cooldownUntil is in the past', () => {
       tracker.recordUsage('src1', 'secret', '123456');
       // Manually set cooldownUntil to the past
-      const usage = tracker.usageMap.get('src1');
+      const usage = tracker.usageMap.get('src1')!;
       usage.cooldownUntil = Date.now() - 1000;
 
       const result = tracker.checkCooldown('src1');
@@ -124,7 +127,7 @@ describe('TotpUsageTracker', () => {
       tracker.recordUsage('src2', 'secret', '222222');
 
       // Expire only src1
-      tracker.usageMap.get('src1').cooldownUntil = Date.now() - 1000;
+      tracker.usageMap.get('src1')!.cooldownUntil = Date.now() - 1000;
 
       tracker.cleanup();
 
@@ -141,7 +144,7 @@ describe('TotpUsageTracker', () => {
       expect(tracker.cleanupInterval).not.toBeNull();
 
       // Expire the entry
-      tracker.usageMap.get('src1').cooldownUntil = Date.now() - 1000;
+      tracker.usageMap.get('src1')!.cooldownUntil = Date.now() - 1000;
       tracker.cleanup();
 
       expect(tracker.cleanupInterval).toBeNull();
@@ -170,7 +173,7 @@ describe('TotpUsageTracker', () => {
       tracker.recordUsage('src2', 'secret', '222');
 
       // Expire src1
-      tracker.usageMap.get('src1').cooldownUntil = Date.now() - 1000;
+      tracker.usageMap.get('src1')!.cooldownUntil = Date.now() - 1000;
 
       const active = tracker.getAllActiveCooldowns();
       expect(active).not.toContain('src1');

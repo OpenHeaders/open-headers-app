@@ -1,6 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { TeamWorkspaceCreator } from '../../../src/services/workspace/git/operations/TeamWorkspaceCreator';
 
+type CreateOptions = Parameters<TeamWorkspaceCreator['validateOptions']>[0];
+
+function makeCreateOptions(overrides: Record<string, unknown> = {}): CreateOptions {
+    return {
+        workspaceId: 'ws-1',
+        workspaceName: 'Test',
+        repositoryUrl: 'https://github.com/owner/repo',
+        tempDir: '/tmp/test',
+        ...overrides,
+    } as CreateOptions;
+}
+
 describe('TeamWorkspaceCreator', () => {
     const creator = new TeamWorkspaceCreator({
         repositoryManager: {},
@@ -9,60 +21,50 @@ describe('TeamWorkspaceCreator', () => {
         commitManager: {},
         configDetector: {},
         configValidator: {}
-    });
+    } as unknown as ConstructorParameters<typeof TeamWorkspaceCreator>[0]);
 
     describe('validateOptions()', () => {
         it('accepts valid options', () => {
-            expect(() => creator.validateOptions({
+            expect(() => creator.validateOptions(makeCreateOptions({
                 workspaceId: 'ws-123',
                 workspaceName: 'Test Workspace',
-                repositoryUrl: 'https://github.com/owner/repo'
-            })).not.toThrow();
+            }))).not.toThrow();
         });
 
         it('throws when workspaceId is missing', () => {
-            expect(() => creator.validateOptions({
-                workspaceName: 'Test',
-                repositoryUrl: 'https://github.com/owner/repo'
-            })).toThrow('Missing required field: workspaceId');
+            expect(() => creator.validateOptions(makeCreateOptions({
+                workspaceId: undefined,
+            }))).toThrow('Missing required field: workspaceId');
         });
 
         it('throws when workspaceName is missing', () => {
-            expect(() => creator.validateOptions({
-                workspaceId: 'ws-1',
-                repositoryUrl: 'https://github.com/owner/repo'
-            })).toThrow('Missing required field: workspaceName');
+            expect(() => creator.validateOptions(makeCreateOptions({
+                workspaceName: undefined,
+            }))).toThrow('Missing required field: workspaceName');
         });
 
         it('throws when repositoryUrl is missing', () => {
-            expect(() => creator.validateOptions({
-                workspaceId: 'ws-1',
-                workspaceName: 'Test'
-            })).toThrow('Missing required field: repositoryUrl');
+            expect(() => creator.validateOptions(makeCreateOptions({
+                repositoryUrl: undefined,
+            }))).toThrow('Missing required field: repositoryUrl');
         });
 
         it('throws for invalid workspace ID format', () => {
-            expect(() => creator.validateOptions({
+            expect(() => creator.validateOptions(makeCreateOptions({
                 workspaceId: 'ws 123!',
-                workspaceName: 'Test',
-                repositoryUrl: 'https://github.com/owner/repo'
-            })).toThrow('Invalid workspace ID format');
+            }))).toThrow('Invalid workspace ID format');
         });
 
         it('accepts workspace IDs with letters, numbers, hyphens, underscores', () => {
-            expect(() => creator.validateOptions({
+            expect(() => creator.validateOptions(makeCreateOptions({
                 workspaceId: 'my_workspace-123',
-                workspaceName: 'Test',
-                repositoryUrl: 'https://github.com/owner/repo'
-            })).not.toThrow();
+            }))).not.toThrow();
         });
 
         it('throws for invalid repository URL', () => {
-            expect(() => creator.validateOptions({
-                workspaceId: 'ws-1',
-                workspaceName: 'Test',
-                repositoryUrl: 'not-a-valid-url'
-            })).toThrow('Invalid repository URL');
+            expect(() => creator.validateOptions(makeCreateOptions({
+                repositoryUrl: 'not-a-valid-url',
+            }))).toThrow('Invalid repository URL');
         });
     });
 });

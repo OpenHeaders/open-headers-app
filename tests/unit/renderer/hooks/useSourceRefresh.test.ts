@@ -43,7 +43,15 @@ vi.mock('../../../../src/renderer/hooks/useHttp', () => ({
 
 import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSourceRefresh';
 import { showMessage } from '../../../../src/renderer/utils';
-import type { Source } from '../../../../src/types/source';
+import type { Source, NewSourceData } from '../../../../src/types/source';
+
+function makeSource(overrides: Partial<Source> & { sourceId: string; sourceType: Source['sourceType'] }): Source {
+  return { sourcePath: '', ...overrides };
+}
+
+function makeNewSource(overrides: Partial<NewSourceData> & { sourceType: Source['sourceType']; sourcePath: string }): NewSourceData {
+  return { sourceTag: '', ...overrides };
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -161,7 +169,7 @@ describe('useSourceRefresh', () => {
     });
 
     it('returns false when source is not type http', async () => {
-      const fileSource = { sourceId: 'file-1', sourceType: 'file', sourcePath: '/tmp/f' };
+      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/tmp/f' });
       const deps = makeDeps({ sources: [fileSource] });
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -289,7 +297,7 @@ describe('useSourceRefresh', () => {
     });
 
     it('delegates to refreshSource for non-HTTP sources', async () => {
-      const fileSource = { sourceId: 'file-1', sourceType: 'file', sourcePath: '/f' };
+      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/f' });
       const deps = makeDeps({ sources: [fileSource] });
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -322,13 +330,13 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = {
+      const sourceData = makeNewSource({
         sourceType: 'http',
         sourcePath: 'https://api.example.com',
         sourceMethod: 'POST',
         requestOptions: { body: '{}' },
         jsonFilter: { enabled: false },
-      };
+      });
 
       let ok!: boolean;
       await act(async () => {
@@ -356,11 +364,11 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = {
+      const sourceData = makeNewSource({
         sourceType: 'http',
         sourcePath: 'https://api.example.com',
         jsonFilter: { enabled: true, path: 'key' },
-      };
+      });
 
       await act(async () => {
         await result.current.handleAddSource(sourceData);
@@ -377,11 +385,11 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = {
+      const sourceData = makeNewSource({
         sourceType: 'http',
         sourcePath: 'https://api.example.com',
-        refreshOptions: { interval: 60 },
-      };
+        refreshOptions: { enabled: true, interval: 60 },
+      });
 
       const before = Date.now();
       await act(async () => {
@@ -400,10 +408,10 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = {
+      const sourceData = makeNewSource({
         sourceType: 'http',
         sourcePath: 'https://api.example.com',
-      };
+      });
 
       await act(async () => {
         await result.current.handleAddSource(sourceData);
@@ -422,10 +430,10 @@ describe('useSourceRefresh', () => {
 
       let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource({
+        ok = await result.current.handleAddSource(makeNewSource({
           sourceType: 'http',
           sourcePath: 'https://api.example.com',
-        });
+        }));
       });
 
       expect(ok).toBe(false);
@@ -439,7 +447,7 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = { sourceType: 'file', sourcePath: '/tmp/data.json' };
+      const sourceData = makeNewSource({ sourceType: 'file', sourcePath: '/tmp/data.json' });
 
       let ok!: boolean;
       await act(async () => {
@@ -466,7 +474,7 @@ describe('useSourceRefresh', () => {
       const { result } = renderHook(() => useSourceRefresh(deps));
 
       await act(async () => {
-        await result.current.handleAddSource({ sourceType: 'env', sourcePath: 'MY_VAR' });
+        await result.current.handleAddSource(makeNewSource({ sourceType: 'env', sourcePath: 'MY_VAR' }));
       });
 
       await act(async () => {
@@ -483,7 +491,7 @@ describe('useSourceRefresh', () => {
 
       let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource({ sourceType: 'file', sourcePath: '/tmp/f' });
+        ok = await result.current.handleAddSource(makeNewSource({ sourceType: 'file', sourcePath: '/tmp/f' }));
       });
 
       expect(ok).toBe(false);
