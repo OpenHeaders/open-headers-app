@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { GitAuthenticator } from '../../../src/services/workspace/git/auth/GitAuthenticator';
 
+type SetupAuthResult = Parameters<GitAuthenticator['cleanup']>[1];
+
+function makeAuthResult(overrides: Partial<SetupAuthResult> = {}): SetupAuthResult {
+    return {
+        effectiveUrl: '',
+        env: {},
+        type: 'none',
+        ...overrides,
+    };
+}
+
 describe('GitAuthenticator', () => {
     const auth = new GitAuthenticator('/tmp/ssh-test');
 
@@ -26,11 +37,11 @@ describe('GitAuthenticator', () => {
 
     describe('cleanup()', () => {
         it('does nothing for auth type "none"', async () => {
-            await expect(auth.cleanup('none', {} as Parameters<typeof auth.cleanup>[1])).resolves.toBeUndefined();
+            await expect(auth.cleanup('none', makeAuthResult())).resolves.toBeUndefined();
         });
 
         it('does nothing for empty auth type', async () => {
-            await expect(auth.cleanup('', {} as Parameters<typeof auth.cleanup>[1])).resolves.toBeUndefined();
+            await expect(auth.cleanup('', makeAuthResult())).resolves.toBeUndefined();
         });
     });
 });

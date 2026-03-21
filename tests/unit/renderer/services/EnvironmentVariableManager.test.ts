@@ -42,9 +42,10 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('returns empty string for variables without value', () => {
+      // Intentionally omitting `value` to test the ?? '' fallback
       const environments = {
         Default: { KEY: { isSecret: false } },
-      } as Parameters<typeof manager.getAllVariables>[0];
+      } as unknown as Parameters<typeof manager.getAllVariables>[0];
       const result = manager.getAllVariables(environments, 'Default');
       expect(result).toEqual({ KEY: '' });
     });

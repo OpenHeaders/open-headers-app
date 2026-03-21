@@ -20,6 +20,12 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 
 import { ConfigFileDetector } from '../../../src/services/workspace/ConfigFileDetector';
 
+type ConfigData = Parameters<ConfigFileDetector['detectFileType']>[0];
+
+function makeConfigData(overrides: Record<string, unknown>): ConfigData {
+  return overrides as ConfigData;
+}
+
 describe('ConfigFileDetector', () => {
   let detector: ConfigFileDetector;
 
@@ -65,23 +71,19 @@ describe('ConfigFileDetector', () => {
     });
 
     it('detects environments type', () => {
-      const data = { environments: [{ name: 'prod' }] };
-      expect(detector.detectFileType(data, 'envs.json')).toBe('environments');
+      expect(detector.detectFileType(makeConfigData({ environments: [{ name: 'prod' }] }), 'envs.json')).toBe('environments');
     });
 
     it('detects proxy type when path contains "proxy"', () => {
-      const data = { rules: [{ pattern: '*.com' }] };
-      expect(detector.detectFileType(data, 'proxy/rules.json')).toBe('proxy');
+      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.com' }] }), 'proxy/rules.json')).toBe('proxy');
     });
 
     it('detects rules type for rules array without "proxy" in path', () => {
-      const data = { rules: [{ pattern: '*.com' }] };
-      expect(detector.detectFileType(data, 'config/rules.json')).toBe('rules');
+      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.com' }] }), 'config/rules.json')).toBe('rules');
     });
 
     it('detects combined type', () => {
-      const data = { sources: [{ url: 'http://example.com' }] };
-      expect(detector.detectFileType(data, 'config.json')).toBe('combined');
+      expect(detector.detectFileType(makeConfigData({ sources: [{ url: 'http://example.com' }] }), 'config.json')).toBe('combined');
     });
 
     it('detects combined type with proxy field', () => {
@@ -90,8 +92,7 @@ describe('ConfigFileDetector', () => {
     });
 
     it('returns unknown for unrecognized data', () => {
-      const data = { foo: 'bar' };
-      expect(detector.detectFileType(data, 'config.json')).toBe('unknown');
+      expect(detector.detectFileType(makeConfigData({ foo: 'bar' }), 'config.json')).toBe('unknown');
     });
 
     it('prioritizes workspace-metadata over other types', () => {

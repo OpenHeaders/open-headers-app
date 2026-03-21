@@ -9,6 +9,14 @@ function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler
     };
 }
 
+function makeMockWs(overrides: { readyState?: number; send?: (msg: string) => void } = {}): WebSocket {
+    return {
+        readyState: 1,
+        send: () => {},
+        ...overrides,
+    } as unknown as WebSocket;
+}
+
 describe('WSNetworkStateHandler', () => {
     let handler: WSNetworkStateHandler;
 
@@ -108,11 +116,8 @@ describe('WSNetworkStateHandler', () => {
     describe('sendInitialState', () => {
         it('sends state to open client', () => {
             let sentMessage: string | null = null;
-            const ws = {
-                readyState: 1,
-                send: (msg: string) => { sentMessage = msg; }
-            };
-            handler.sendInitialState(ws as unknown as WebSocket);
+            const ws = makeMockWs({ send: (msg: string) => { sentMessage = msg; } });
+            handler.sendInitialState(ws);
             expect(sentMessage).not.toBeNull();
             const parsed = JSON.parse(sentMessage!);
             expect(parsed.type).toBe('network-state-initial');
@@ -121,11 +126,8 @@ describe('WSNetworkStateHandler', () => {
 
         it('does not send to non-open client', () => {
             let sentMessage: string | null = null;
-            const ws = {
-                readyState: 3, // CLOSED
-                send: (msg: string) => { sentMessage = msg; }
-            };
-            handler.sendInitialState(ws as unknown as WebSocket);
+            const ws = makeMockWs({ readyState: 3, send: (msg: string) => { sentMessage = msg; } });
+            handler.sendInitialState(ws);
             expect(sentMessage).toBeNull();
         });
 

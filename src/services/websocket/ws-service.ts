@@ -1,5 +1,5 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
-import WS from 'ws';
+import WS, { WebSocketServer } from 'ws';
 import electron from 'electron';
 import https from 'https';
 import http from 'http';
@@ -56,8 +56,8 @@ interface InitializeOptions {
 }
 
 class WebSocketService {
-    wss: WS.Server | null;
-    secureWss: WS.Server | null;
+    wss: WebSocketServer | null;
+    secureWss: WebSocketServer | null;
     httpServer: http.Server | null;
     httpsServer: https.Server | null;
     wsPort: number;
@@ -169,7 +169,7 @@ class WebSocketService {
      */
     _broadcastToAll(message: string): number {
         let count = 0;
-        const send = (server: WS.Server | null) => {
+        const send = (server: WebSocketServer | null) => {
             if (!server) return;
             server.clients.forEach((client: WS) => {
                 if (client.readyState === WS.OPEN) {
@@ -195,7 +195,7 @@ class WebSocketService {
                 else { res.writeHead(426, { 'Content-Type': 'text/plain' }); res.end('Upgrade Required - WebSocket Only'); }
             });
 
-            this.wss = new WS.Server({ server: this.httpServer, host: this.host });
+            this.wss = new WebSocketServer({ server: this.httpServer, host: this.host });
             this._configureWebSocketServer(this.wss, 'WS');
 
             this._listenWithRetry(this.httpServer, this.wsPort, this.host, 'WS', () => {
@@ -223,7 +223,7 @@ class WebSocketService {
                 this.certificateHandler.createHttpsRequestHandler()
             );
 
-            this.secureWss = new WS.Server({ server: this.httpsServer, host: this.host });
+            this.secureWss = new WebSocketServer({ server: this.httpsServer, host: this.host });
             this._configureWebSocketServer(this.secureWss, 'WSS');
 
             this._listenWithRetry(this.httpsServer, this.wssPort, this.host, 'WSS', () => {
@@ -280,14 +280,14 @@ class WebSocketService {
         this.connectedClients.clear();
         this.clientInitializationLocks.clear();
 
-        const terminateAll = (server: WS.Server | null) => {
+        const terminateAll = (server: WebSocketServer | null) => {
             if (!server) return;
             for (const c of server.clients) { try { c.terminate(); } catch (e) { /* ignore */ } }
         };
         terminateAll(this.wss);
         terminateAll(this.secureWss);
 
-        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: WS.Server | null, label: string): Promise<void> => {
+        const closeServer = (httpSrv: http.Server | https.Server | null, wsSrv: WebSocketServer | null, label: string): Promise<void> => {
             if (!httpSrv) return Promise.resolve();
             return new Promise((resolve) => {
                 const t = setTimeout(() => { log.warn(`${label} close timed out`); resolve(); }, 2000);
@@ -303,7 +303,7 @@ class WebSocketService {
 
     // ── Message routing ───────────────────────────
 
-    _configureWebSocketServer(server: WS.Server, serverType: string): void {
+    _configureWebSocketServer(server: WebSocketServer, serverType: string): void {
         server.on('connection', (ws: ExtendedWebSocket, request: http.IncomingMessage) => {
             log.info(`${serverType} client connected`);
 
