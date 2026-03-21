@@ -1,17 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { preprocessRecordingForSave } from '../../../src/services/websocket/utils/recordingPreprocessor';
+import type { PreprocessorData } from '../../../src/services/websocket/utils/recordingPreprocessor';
 import type { DomNode, RRWebEvent, RRWebInnerData, RecordingMetadata } from '../../../src/types/recording';
+
+/** Get the DomNode from a preprocessor result event */
+function getNode(result: PreprocessorData, eventIndex: number): DomNode {
+    const event = result.record.events[eventIndex] as unknown as { data: { node: DomNode } };
+    return event.data.node;
+}
 
 // ---------- helpers ----------
 
 /** Create a minimal valid recording */
-function makeRecording(events: RRWebEvent[] = [], metadata: Partial<RecordingMetadata> = {}) {
+function makeRecording(events: RRWebEvent[] = [], metadata: Partial<RecordingMetadata> = {}): PreprocessorData {
     return {
         record: {
             events,
             metadata: { url: 'https://example.com', ...metadata }
         }
-    };
+    } as PreprocessorData;
 }
 
 /** Create a full-snapshot event (rrweb type 2) */
@@ -43,9 +50,9 @@ describe('recordingPreprocessor', () => {
         });
 
         it('preserves non-snapshot events', async () => {
-            const events = [
-                { type: 4, timestamp: 100, data: { tag: 'meta' } },
-                { type: 5, timestamp: 200, data: {} }
+            const events: RRWebEvent[] = [
+                { type: 4, timestamp: 100, data: { tag: 'meta' } } as RRWebEvent,
+                { type: 5, timestamp: 200, data: {} } as RRWebEvent
             ];
             const input = makeRecording(events);
             const result = await preprocessRecordingForSave(input);
@@ -69,8 +76,8 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const iframe = result.record.events[0].data.node.childNodes[0].childNodes[0];
-            const sandboxParts = iframe.attributes.sandbox.split(' ');
+            const iframe = getNode(result, 0).childNodes![0].childNodes![0];
+            const sandboxParts = iframe.attributes!.sandbox.split(' ');
             expect(sandboxParts).toContain('allow-forms');
             expect(sandboxParts).toContain('allow-scripts');
             expect(sandboxParts).toContain('allow-same-origin');
@@ -90,7 +97,7 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const iframe = result.record.events[0].data.node.childNodes[0].childNodes[0];
+            const iframe = getNode(result, 0).childNodes[0].childNodes[0];
             expect(iframe.attributes.sandbox).toBe('allow-scripts allow-same-origin allow-forms allow-popups');
         });
 
@@ -109,7 +116,7 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const style = result.record.events[0].data.node.childNodes[0].childNodes[0];
+            const style = getNode(result, 0).childNodes[0].childNodes[0];
             expect(style.textContent).toContain('font-display: swap');
         });
 
@@ -127,7 +134,7 @@ describe('recordingPreprocessor', () => {
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
 
-            const style = result.record.events[0].data.node.childNodes[0].childNodes[0];
+            const style = getNode(result, 0).childNodes[0].childNodes[0];
             const count = (style.textContent.match(/font-display/g) || []).length;
             expect(count).toBe(1);
         });
@@ -363,7 +370,7 @@ describe('recordingPreprocessor', () => {
             };
             const input = makeRecording([makeFullSnapshot(node)]);
             const result = await preprocessRecordingForSave(input);
-            const link = result.record.events[0].data.node.childNodes[0].childNodes[0];
+            const link = getNode(result, 0).childNodes[0].childNodes[0];
             expect(link.attributes.rel).toBe('prefetch');
         });
 
