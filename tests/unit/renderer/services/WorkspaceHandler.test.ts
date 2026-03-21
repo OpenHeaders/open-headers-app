@@ -1,12 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { WorkspaceHandler } from '../../../../src/renderer/services/export-import/handlers/WorkspaceHandler';
 import { DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportImportDependencies, ExportOptions, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
+
+function makeExportOpts(overrides: Record<string, unknown> = {}): ExportOptions {
+  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     appVersion: '1.0.0',
     sources: [],
@@ -14,14 +18,14 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
     exportSources: () => [],
     removeSource: vi.fn().mockResolvedValue(true),
     workspaces: [],
-    createWorkspace: vi.fn(async (ws) => ws),
+    createWorkspace: vi.fn(async (ws: WorkspaceData) => ws),
     switchWorkspace: vi.fn().mockResolvedValue(true),
     environments: {},
     createEnvironment: vi.fn().mockResolvedValue(true),
     setVariable: vi.fn().mockResolvedValue(true),
     generateEnvironmentSchema: vi.fn().mockReturnValue({ environments: {} }),
     ...overrides,
-  };
+  } as unknown as ExportImportDependencies;
 }
 
 function validWorkspace(overrides: Partial<WorkspaceData> = {}): WorkspaceData {
@@ -54,20 +58,21 @@ describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
 
   it('copies only known auth fields', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = handler._sanitizeWorkspaceAuthData({
+    const input = {
       token: 'ghp_123',
       tokenType: 'auto',
       username: 'user',
       password: 'pass',
       sshKeyPath: '/path/to/key',
       unknownField: 'should-be-excluded',
-    });
+    } as Parameters<typeof handler._sanitizeWorkspaceAuthData>[0];
+    const result = handler._sanitizeWorkspaceAuthData(input);
     expect(result.token).toBe('ghp_123');
     expect(result.tokenType).toBe('auto');
     expect(result.username).toBe('user');
     expect(result.password).toBe('pass');
     expect(result.sshKeyPath).toBe('/path/to/key');
-    expect(result.unknownField).toBeUndefined();
+    expect((result as Record<string, unknown>).unknownField).toBeUndefined();
   });
 });
 
@@ -162,7 +167,8 @@ describe('WorkspaceHandler.getWorkspaceStatistics', () => {
 
   it('returns hasWorkspace: false for undefined', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(handler.getWorkspaceStatistics(undefined).hasWorkspace).toBe(false);
+    // Intentionally undefined to test defensive guard
+    expect(handler.getWorkspaceStatistics(undefined as unknown as WorkspaceData | null).hasWorkspace).toBe(false);
   });
 
   it('returns detailed stats for valid workspace', () => {
@@ -179,7 +185,7 @@ describe('WorkspaceHandler.getWorkspaceStatistics', () => {
 
   it('detects when authData is present', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const stats = handler.getWorkspaceStatistics(validWorkspace({ authData: { type: 'oauth' } }));
+    const stats = handler.getWorkspaceStatistics(validWorkspace({ authData: { token: 'test' } }));
     expect(stats.hasAuthData).toBe(true);
   });
 
@@ -201,12 +207,14 @@ describe('WorkspaceHandler.validateWorkspaceForExport', () => {
 
   it('returns success for undefined', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(handler.validateWorkspaceForExport(undefined).success).toBe(true);
+    // Intentionally undefined to test defensive guard
+    expect(handler.validateWorkspaceForExport(undefined as unknown as WorkspaceData | null).success).toBe(true);
   });
 
   it('validates non-null workspace data', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const r = handler.validateWorkspaceForExport({ type: 'git' }); // missing name
+    // Intentionally missing name to test validation
+    const r = handler.validateWorkspaceForExport({ type: 'git' } as WorkspaceData);
     expect(r.success).toBe(false);
     expect(r.error).toContain('name');
   });
@@ -224,75 +232,68 @@ describe('WorkspaceHandler.validateWorkspaceForExport', () => {
 describe('WorkspaceHandler.exportWorkspace', () => {
   it('returns null when includeWorkspace is false', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace({
+    const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: false,
       currentWorkspace: validWorkspace(),
-    });
+    }));
     expect(result).toBeNull();
   });
 
   it('returns null when currentWorkspace is null', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace({
+    const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: true,
       currentWorkspace: null,
-    });
+    }));
     expect(result).toBeNull();
   });
 
   it('exports workspace data with defaults applied', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace({
+    const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: true,
       includeCredentials: false,
-      currentWorkspace: {
+      currentWorkspace: validWorkspace({
         name: 'Test WS',
-        type: 'git',
         description: 'Desc',
         gitUrl: 'https://github.com/test',
-      },
-    });
+      }),
+    }));
 
-    expect(result.name).toBe('Test WS');
-    expect(result.type).toBe('git');
-    expect(result.gitBranch).toBe(DEFAULTS.WORKSPACE_BRANCH);
-    expect(result.gitPath).toBe(DEFAULTS.WORKSPACE_PATH);
-    expect(result.authType).toBe(DEFAULTS.AUTH_TYPE);
-    expect(result.autoSync).toBe(true);
-    expect(result.authData).toBeUndefined();
+    expect(result!.name).toBe('Test WS');
+    expect(result!.type).toBe('git');
+    expect(result!.gitBranch).toBe(DEFAULTS.WORKSPACE_BRANCH);
+    expect(result!.gitPath).toBe(DEFAULTS.WORKSPACE_PATH);
+    expect(result!.authType).toBe(DEFAULTS.AUTH_TYPE);
+    expect(result!.autoSync).toBe(true);
+    expect(result!.authData).toBeUndefined();
   });
 
   it('includes credentials when requested', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace({
+    const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: true,
       includeCredentials: true,
-      currentWorkspace: {
-        name: 'Test WS',
-        type: 'git',
-        gitUrl: 'https://github.com/test',
+      currentWorkspace: validWorkspace({
         authData: { token: 'ghp_123', tokenType: 'auto' },
-      },
-    });
+      }),
+    }));
 
-    expect(result.authData).toBeDefined();
-    expect(result.authData.token).toBe('ghp_123');
+    expect(result!.authData).toBeDefined();
+    expect(result!.authData!.token).toBe('ghp_123');
   });
 
   it('omits credentials when not requested even if present', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace({
+    const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: true,
       includeCredentials: false,
-      currentWorkspace: {
-        name: 'Test WS',
-        type: 'git',
-        gitUrl: 'https://github.com/test',
-        authData: { type: 'oauth', tokens: { accessToken: 'at' } },
-      },
-    });
+      currentWorkspace: validWorkspace({
+        authData: { token: 'at' },
+      }),
+    }));
 
-    expect(result.authData).toBeUndefined();
+    expect(result!.authData).toBeUndefined();
   });
 });
 
@@ -309,7 +310,8 @@ describe('WorkspaceHandler.importWorkspace', () => {
 
   it('records validation errors for invalid workspace', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const stats = await handler.importWorkspace({ type: 'git' }, {}); // missing name
+    // Intentionally missing name to test validation
+    const stats = await handler.importWorkspace({ type: 'git' } as WorkspaceData, {});
     expect(stats.createdWorkspace).toBeNull();
     expect(stats.errors).toHaveLength(1);
     expect(stats.errors[0].error).toContain('Invalid workspace configuration');
