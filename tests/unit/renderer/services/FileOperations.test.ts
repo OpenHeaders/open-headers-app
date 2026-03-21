@@ -161,7 +161,7 @@ describe('FileOperations', () => {
   // (require window.electronAPI mock)
   // ========================================================================
   describe('electronAPI-dependent operations', () => {
-    let mockElectronAPI: any;
+    let mockElectronAPI: { saveFileDialog: ReturnType<typeof vi.fn>; openFileDialog: ReturnType<typeof vi.fn>; writeFile: ReturnType<typeof vi.fn>; readFile: ReturnType<typeof vi.fn> };
 
     beforeEach(() => {
       mockElectronAPI = {

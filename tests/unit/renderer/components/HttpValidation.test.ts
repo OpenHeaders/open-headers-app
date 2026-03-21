@@ -20,13 +20,22 @@ const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) => ({
   resolveTemplate: (t: string) => t,
 });
 
-const makeForm = (opts: Record<string, any> = {}) => ({
+interface FormFields {
+  requestOptions?: {
+    headers?: Array<{ key?: string; value?: string }>;
+    queryParams?: Array<{ key: string; value: string }>;
+    body?: string;
+    totpSecret?: string;
+  };
+  jsonFilter?: { enabled: boolean; path?: string };
+}
+
+const makeForm = (opts: FormFields = {}) => ({
   getFieldValue: (key: string | string[]) => {
-    if (typeof key === 'string') return opts[key];
-    // Support nested path like ['requestOptions', 'headers']
-    let val: any = opts;
+    if (typeof key === 'string') return opts[key as keyof FormFields];
+    let val: unknown = opts;
     for (const k of key) {
-      val = val?.[k];
+      val = (val as Record<string, unknown>)?.[k];
     }
     return val;
   },

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { StorageRecord } from '../../../../src/types/recording';
 import {
   convertNewRecordingFormat,
   processStorageEvents,
@@ -349,7 +350,7 @@ describe('processStorageEvents', () => {
     ];
     const result = processStorageEvents(storage, baseRecord);
     expect(result.length).toBeGreaterThanOrEqual(1);
-    const lsItem = result.find((r: any) => r.type === 'localStorage');
+    const lsItem = result.find((r: StorageRecord) => r.type === 'localStorage');
     expect(lsItem).toBeDefined();
     expect(lsItem.key).toBe('foo');
     expect(lsItem.value).toBe('bar');
@@ -367,7 +368,7 @@ describe('processStorageEvents', () => {
       },
     ];
     const result = processStorageEvents(storage, baseRecord);
-    const ssItem = result.find((r: any) => r.type === 'sessionStorage');
+    const ssItem = result.find((r: StorageRecord) => r.type === 'sessionStorage');
     expect(ssItem).toBeDefined();
     expect(ssItem.key).toBe('sess');
     expect(ssItem.value).toBe('val');
@@ -384,7 +385,7 @@ describe('processStorageEvents', () => {
       },
     ];
     const result = processStorageEvents(storage, baseRecord);
-    const cookies = result.filter((r: any) => r.type === 'cookie');
+    const cookies = result.filter((r: StorageRecord) => r.type === 'cookie');
     expect(cookies).toHaveLength(2);
     expect(cookies[0].key).toBe('a');
     expect(cookies[0].value).toBe('1');
@@ -472,7 +473,7 @@ describe('processStorageEvents', () => {
     ];
     const result = processStorageEvents(storage, baseRecord);
     // Only one entry for 'dup' since key is deduplicated
-    const dupItems = result.filter((r: any) => r.key === 'dup');
+    const dupItems = result.filter((r: StorageRecord) => r.key === 'dup');
     expect(dupItems).toHaveLength(1);
   });
 
@@ -496,7 +497,7 @@ describe('processStorageEvents', () => {
       },
     ];
     const result = processStorageEvents(storage, baseRecord);
-    const setEvent = result.find((r: any) => r.action === 'set' && !r.metadata?.initial);
+    const setEvent = result.find((r: StorageRecord) => r.action === 'set' && !r.metadata?.initial);
     expect(setEvent).toBeDefined();
     expect(setEvent.oldValue).toBe('initial');
     expect(setEvent.value).toBe('updated');
@@ -521,7 +522,7 @@ describe('processStorageEvents', () => {
       },
     ];
     const result = processStorageEvents(storage, baseRecord);
-    const removeEvent = result.find((r: any) => r.action === 'remove');
+    const removeEvent = result.find((r: StorageRecord) => r.action === 'remove');
     expect(removeEvent).toBeDefined();
     expect(removeEvent.oldValue).toBe('val');
     expect(removeEvent.value).toBeUndefined();
@@ -546,7 +547,7 @@ describe('processStorageEvents', () => {
       },
     ];
     const result = processStorageEvents(storage, baseRecord);
-    const clearEvent = result.find((r: any) => r.action === 'clear');
+    const clearEvent = result.find((r: StorageRecord) => r.action === 'clear');
     expect(clearEvent).toBeDefined();
     expect(clearEvent.metadata.clearedCount).toBe(2);
     expect(clearEvent.metadata.clearedKeys).toHaveLength(2);

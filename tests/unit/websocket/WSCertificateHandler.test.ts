@@ -54,8 +54,10 @@ describe('WSCertificateHandler', () => {
 
     // ------- createHttpsRequestHandler -------
     describe('createHttpsRequestHandler', () => {
-        let requestHandler: (req: any, res: any) => void;
-        let mockRes: any;
+        interface MockReq { url: string; headers: Record<string, string> }
+        interface MockRes { writeHead: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
+        let requestHandler: (req: MockReq, res: MockRes) => void;
+        let mockRes: MockRes;
 
         beforeEach(() => {
             requestHandler = handler.createHttpsRequestHandler();

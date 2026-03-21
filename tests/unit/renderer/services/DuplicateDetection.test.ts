@@ -255,7 +255,7 @@ describe('areHeaderModificationsEqual', () => {
 
   it('returns false for different lengths', () => {
     const a = [{ name: 'A', isDynamic: false, value: '1' }];
-    const b: any[] = [];
+    const b: Array<{ name: string; isDynamic: boolean; value: string }> = [];
     expect(areHeaderModificationsEqual(a, b)).toBe(false);
   });
 

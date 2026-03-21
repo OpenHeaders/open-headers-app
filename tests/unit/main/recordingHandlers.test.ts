@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
+import type { RecordingMetadata, RRWebEvent } from '../../../src/types/recording';
 
 /**
  * Tests for pure logic extracted from RecordingHandlers.
@@ -9,15 +10,46 @@ import path from 'path';
  * electron, atomicFileWriter, and filesystem access).
  */
 
+interface RecordData {
+    record: {
+        metadata: Partial<RecordingMetadata>;
+        events?: RRWebEvent[];
+    };
+    source?: string;
+    tag?: string | null;
+    description?: string | null;
+}
+
+interface RecordingEntry {
+    id: string;
+    timestamp: string | number;
+}
+
+interface RecordingMeta {
+    id: string;
+    timestamp: number;
+    url: string;
+    duration: number;
+    eventCount: number;
+    size: number;
+    source: string;
+    hasVideo: boolean;
+    hasProcessedVersion?: boolean;
+    tag: string | null;
+    description: string | null;
+    metadata: Partial<RecordingMetadata>;
+    lastModified?: number;
+}
+
 // ---------- record ID generation ----------
 // Mirrors handleSaveRecording's fallback ID generation
-function generateRecordId(recordData: any): string {
+function generateRecordId(recordData: Partial<RecordData>): string {
     return recordData.record?.metadata?.recordId ||
         `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 // Mirrors handleSaveUploadedRecording's fallback ID generation
-function generateUploadRecordId(recordData: any): string {
+function generateUploadRecordId(recordData: Partial<RecordData>): string {
     return recordData.record?.metadata?.recordId ||
         `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
@@ -49,7 +81,7 @@ function buildVideoMetaPath(userDataPath: string, recordId: string): string {
 
 // ---------- metadata construction ----------
 // Mirrors the metadata object built in handleSaveRecording
-function buildRecordingMetadata(recordId: string, recordData: any): any {
+function buildRecordingMetadata(recordId: string, recordData: RecordData): RecordingMeta {
     return {
         id: recordId,
         timestamp: recordData.record.metadata.timestamp || Date.now(),
@@ -66,7 +98,7 @@ function buildRecordingMetadata(recordId: string, recordData: any): any {
 }
 
 // Mirrors the metadata object built in handleSaveUploadedRecording
-function buildUploadedRecordingMetadata(recordId: string, recordData: any, processedData: any): any {
+function buildUploadedRecordingMetadata(recordId: string, recordData: RecordData, processedData: RecordData): RecordingMeta {
     return {
         id: recordId,
         timestamp: recordData.record?.metadata?.timestamp || Date.now(),
@@ -85,7 +117,7 @@ function buildUploadedRecordingMetadata(recordId: string, recordData: any, proce
 
 // ---------- recording sort ----------
 // Mirrors the sort in handleLoadRecordings
-function sortRecordings(recordings: any[]): any[] {
+function sortRecordings(recordings: RecordingEntry[]): RecordingEntry[] {
     return [...recordings].sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
@@ -93,12 +125,12 @@ function sortRecordings(recordings: any[]): any[] {
 
 // ---------- metadata update merge ----------
 // Mirrors handleUpdateRecordingMetadata merge logic
-function mergeMetadataUpdates(existingMetadata: any, updates: any): any {
+function mergeMetadataUpdates(existingMetadata: Partial<RecordingMeta>, updates: Partial<RecordingMeta>): RecordingMeta & { lastModified: number } {
     return {
         ...existingMetadata,
         ...updates,
         lastModified: Date.now()
-    };
+    } as RecordingMeta & { lastModified: number };
 }
 
 // ---------- meta file filter ----------
@@ -276,7 +308,7 @@ describe('RecordingHandlers — pure logic', () => {
                 { id: 'b', timestamp: '2024-02-01T00:00:00Z' }
             ];
             const sorted = sortRecordings(recordings);
-            expect(sorted.map((r: any) => r.id)).toEqual(['c', 'b', 'a']);
+            expect(sorted.map((r: RecordingEntry) => r.id)).toEqual(['c', 'b', 'a']);
         });
 
         it('handles numeric timestamps', () => {
@@ -286,7 +318,7 @@ describe('RecordingHandlers — pure logic', () => {
                 { id: 'mid', timestamp: 5000 }
             ];
             const sorted = sortRecordings(recordings);
-            expect(sorted.map((r: any) => r.id)).toEqual(['new', 'mid', 'old']);
+            expect(sorted.map((r: RecordingEntry) => r.id)).toEqual(['new', 'mid', 'old']);
         });
 
         it('does not mutate the original array', () => {

@@ -7,6 +7,7 @@ import mainLogger from '../../../utils/mainLogger';
 import { DATA_FORMAT_VERSION, isVersionCompatible as checkVersionCompatible } from '../../../config/version';
 import { errorMessage } from '../../../types/common';
 import type { EnvironmentConfigData, EnvironmentSchema, EnvironmentSchemaEntry, EnvironmentVariable } from '../../../types/environment';
+import type { AppSettings } from '../../../types/settings';
 import windowsFocusHelper from '../utils/windowsFocus';
 
 const { app, BrowserWindow } = electron;
@@ -519,7 +520,7 @@ class ProtocolHandler {
             const settingsPath = path.join(app.getPath('userData'), 'settings.json');
             if (fs.existsSync(settingsPath)) {
                 const settingsData = fs.readFileSync(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData) as Record<string, unknown>;
+                const settings = JSON.parse(settingsData) as Partial<AppSettings>;
                 // Default to true if setting doesn't exist
                 return settings.showDockIcon !== false;
             }

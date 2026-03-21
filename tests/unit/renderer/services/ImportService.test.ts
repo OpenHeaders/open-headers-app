@@ -9,11 +9,12 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 
 import { ImportService } from '../../../../src/renderer/services/export-import/core/ImportService';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     activeWorkspaceId: 'ws-1',
     environments: {},

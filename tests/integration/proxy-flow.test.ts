@@ -29,7 +29,7 @@ function startEchoServer(): Promise<void> {
             });
         });
         echoServer.listen(0, '127.0.0.1', () => {
-            echoPort = (echoServer.address() as any).port;
+            echoPort = (echoServer.address() as { port: number }).port;
             resolve();
         });
     });
@@ -73,7 +73,7 @@ function proxyRequest(
 
 // ── Test suite ──────────────────────────────────────────────────────
 
-let proxyService: any;
+let proxyService: InstanceType<typeof import('../../src/services/proxy/ProxyService').ProxyService>;
 let proxyPort: number;
 
 beforeAll(async () => {
@@ -90,7 +90,7 @@ beforeAll(async () => {
     // Start on a random port
     const result = await proxyService.start(0);
     expect(result.success).toBe(true);
-    proxyPort = (proxyService.server!.address() as any).port;
+    proxyPort = (proxyService.server!.address() as { port: number }).port;
     // Keep port in sync so redirect Location headers use the right value
     proxyService.port = proxyPort;
 });

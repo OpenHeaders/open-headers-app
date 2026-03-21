@@ -113,7 +113,7 @@ describe('jwtUtils', () => {
     });
 
     it('throws on circular reference', () => {
-      const circular: any = {};
+      const circular: Record<string, unknown> = {};
       circular.self = circular;
       expect(() => encodeJWT(circular, {})).toThrow('Failed to encode JWT');
     });

@@ -5,6 +5,7 @@
 import React from 'react';
 import { showMessage } from '../../../../utils';
 import { createLogger } from '../../../../utils/error-handling/logger';
+import type { JsonObject } from '../../../../../types/common';
 
 const log = createLogger('WorkflowUtils');
 
@@ -77,7 +78,7 @@ export const applyWorkflowRecordingHighlight = (applyHighlight: (target: string,
  * @param {Function} onSuccess - Success callback
  * @param {Function} onError - Error callback
  */
-export const handleWorkflowImport = async (file: File, onSuccess: ((data: Record<string, unknown>) => void) | null, onError: ((error: Error) => void) | null) => {
+export const handleWorkflowImport = async (file: File, onSuccess: ((data: JsonObject) => void) | null, onError: ((error: Error) => void) | null) => {
   try {
     if (!file || !(file instanceof File)) {
       const error = new Error('Invalid file provided for import');

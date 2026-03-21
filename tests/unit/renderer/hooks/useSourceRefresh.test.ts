@@ -43,23 +43,36 @@ vi.mock('../../../../src/renderer/hooks/useHttp', () => ({
 
 import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSourceRefresh';
 import { showMessage } from '../../../../src/renderer/utils';
+import type { Source } from '../../../../src/types/source';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface UseSourceRefreshDeps {
+  sources: Source[];
+  updateSource: (sourceId: string, updates: Partial<Source>) => void;
+  refreshSource: (sourceId: string) => Promise<boolean>;
+  manualRefresh: (sourceId: string) => Promise<boolean>;
+  addSource: (sourceData: Source) => Promise<Source | null>;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<UseSourceRefreshDeps> = {}): UseSourceRefreshDeps {
   return {
-    sources: [] as any[],
+    sources: [],
     updateSource: vi.fn(),
     refreshSource: vi.fn(async () => true),
     manualRefresh: vi.fn(async () => true),
-    addSource: vi.fn(async (data: any) => ({ ...data, sourceId: 'new-src-1' })),
+    addSource: vi.fn(async (data: Source) => ({ ...data, sourceId: 'new-src-1' })),
     ...overrides,
   };
 }
 
-function makeHttpSource(id: string, overrides: Record<string, any> = {}) {
+function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {
     sourceId: id,
     sourceType: 'http',
@@ -68,7 +81,7 @@ function makeHttpSource(id: string, overrides: Record<string, any> = {}) {
     requestOptions: {},
     jsonFilter: { enabled: false },
     ...overrides,
-  };
+  } as Source;
 }
 
 // ---------------------------------------------------------------------------

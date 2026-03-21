@@ -39,19 +39,19 @@ describe('GitErrorHandler', () => {
         });
 
         it('classifies timeout errors by code', () => {
-            const err: any = new Error('something happened');
+            const err = new Error('something happened') as Error & { code: string };
             err.code = 'ETIMEDOUT';
             expect(handler.classifyError(err)).toBe(ERROR_TYPES.TIMEOUT_ERROR);
         });
 
         it('classifies killed processes as timeout', () => {
-            const err: any = new Error('process killed');
+            const err = new Error('process killed') as Error & { killed: boolean };
             err.killed = true;
             expect(handler.classifyError(err)).toBe(ERROR_TYPES.TIMEOUT_ERROR);
         });
 
         it('classifies git not found by code', () => {
-            const err: any = new Error('git something failed');
+            const err = new Error('git something failed') as Error & { code: string };
             err.code = 'ENOENT';
             expect(handler.classifyError(err)).toBe(ERROR_TYPES.GIT_NOT_FOUND);
         });

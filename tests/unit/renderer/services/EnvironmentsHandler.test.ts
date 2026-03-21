@@ -9,13 +9,14 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 
 import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
 import { IMPORT_MODES, DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Build a minimal dependency bag, overridable per test. */
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     activeWorkspaceId: 'ws-1',
     environments: {},

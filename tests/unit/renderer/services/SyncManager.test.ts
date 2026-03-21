@@ -16,7 +16,7 @@ const SyncManager = (
 
 describe('SyncManager', () => {
   let manager: InstanceType<typeof SyncManager>;
-  let mockElectronAPI: any;
+  let mockElectronAPI: { onWorkspaceSyncCompleted: ReturnType<typeof vi.fn>; loadFromStorage: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockElectronAPI = {

@@ -1,27 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ProxyRulesHandler } from '../../../../src/renderer/services/export-import/handlers/ProxyRulesHandler';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import type { ProxyRule } from '../../../../src/types/proxy';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     ...overrides,
-  };
+  } as ExportImportDependencies;
 }
 
-function validStaticProxyRule(overrides: Record<string, any> = {}) {
+function validStaticProxyRule(overrides: Partial<ProxyRule> = {}): ProxyRule {
   return {
     id: 'pr-1',
     isDynamic: false,
     domains: ['example.com'],
     headerName: 'X-Custom',
     headerValue: 'val',
-    pattern: 'example.com',
-    headers: [{ name: 'X-Custom', isDynamic: false, value: 'val' }],
     ...overrides,
-  };
+  } as ProxyRule;
 }
 
 function validDynamicProxyRule(overrides: Record<string, string | boolean | string[]> = {}) {

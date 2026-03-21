@@ -26,7 +26,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-import { useNavigation } from '../../../../src/renderer/hooks/app/useNavigation';
+import { useNavigation, type NavigationIntent, type SettingsAction } from '../../../../src/renderer/hooks/app/useNavigation';
 
 // ---------------------------------------------------------------------------
 // Test constants (mirror the real app constants)
@@ -52,29 +52,59 @@ const TARGETS = {
 };
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface NavigationRequest {
+  tab?: string;
+  subTab?: string;
+  itemId?: string;
+  action?: string;
+  settingsTab?: string;
+  value?: string | boolean;
+}
+
+interface UseNavigationDeps {
+  setActiveTab: (tab: string) => void;
+  navigate: (intent: NavigationIntent) => void;
+  ACTIONS: Record<string, string>;
+  TARGETS: Record<string, string>;
+  setSettingsInitialTab: (tab: string | null) => void;
+  setSettingsVisible: (visible: boolean) => void;
+  setSettingsAction: (action: SettingsAction) => void;
+}
+
+interface MockElectronAPI {
+  onNavigateTo: ReturnType<typeof vi.fn>;
+  showMainWindow: ReturnType<typeof vi.fn>;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Captures the callback registered via onNavigateTo */
-let navigationCallback: ((nav: any) => void) | null = null;
+let navigationCallback: ((nav: NavigationRequest) => void) | null = null;
 let unsubscribeFn: ReturnType<typeof vi.fn>;
 
 function setupElectronAPI() {
   unsubscribeFn = vi.fn();
 
-  vi.stubGlobal('electronAPI', {
-    onNavigateTo: vi.fn((cb: (nav: any) => void) => {
+  const api: MockElectronAPI = {
+    onNavigateTo: vi.fn((cb: (nav: NavigationRequest) => void) => {
       navigationCallback = cb;
       return unsubscribeFn;
     }),
     showMainWindow: vi.fn(),
-  });
+  };
 
-  // Also set on window directly for the (window as any).electronAPI pattern
-  (window as any).electronAPI = (globalThis as any).electronAPI;
+  vi.stubGlobal('electronAPI', api);
+
+  // Also set on window directly for the window.electronAPI pattern
+  (window as unknown as { electronAPI: MockElectronAPI }).electronAPI = api;
 }
 
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<UseNavigationDeps> = {}): UseNavigationDeps {
   return {
     setActiveTab: vi.fn(),
     navigate: vi.fn(),
@@ -87,7 +117,7 @@ function makeDeps(overrides: Record<string, any> = {}) {
   };
 }
 
-function triggerNavigation(nav: any) {
+function triggerNavigation(nav: NavigationRequest) {
   if (!navigationCallback) throw new Error('No navigation callback registered');
   act(() => navigationCallback!(nav));
 }
@@ -114,7 +144,7 @@ describe('useNavigation', () => {
     const deps = makeDeps();
     renderHook(() => useNavigation(deps));
 
-    expect((window as any).electronAPI.onNavigateTo).toHaveBeenCalledTimes(1);
+    expect((window as unknown as { electronAPI: MockElectronAPI }).electronAPI.onNavigateTo).toHaveBeenCalledTimes(1);
     expect(navigationCallback).toBeInstanceOf(Function);
   });
 
@@ -131,7 +161,7 @@ describe('useNavigation', () => {
     renderHook(() => useNavigation(deps));
 
     triggerNavigation({ tab: 'sources' });
-    expect((window as any).electronAPI.showMainWindow).toHaveBeenCalled();
+    expect((window as unknown as { electronAPI: MockElectronAPI }).electronAPI.showMainWindow).toHaveBeenCalled();
   });
 
   // ---- Basic tab switching ----

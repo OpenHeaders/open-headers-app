@@ -13,10 +13,10 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 const AutoSaveManagerModule = await import(
   '../../../../src/renderer/services/workspace/AutoSaveManager'
 );
-const AutoSaveManager = (AutoSaveManagerModule as any).default || AutoSaveManagerModule;
+const AutoSaveManager = (AutoSaveManagerModule as { default?: typeof AutoSaveManagerModule }).default || AutoSaveManagerModule;
 
 describe('AutoSaveManager', () => {
-  let manager: any;
+  let manager: InstanceType<typeof AutoSaveManager>;
 
   beforeEach(() => {
     vi.useFakeTimers();

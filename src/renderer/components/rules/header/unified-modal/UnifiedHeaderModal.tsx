@@ -38,7 +38,17 @@ interface HeaderRuleValues extends Partial<import('../../../../../types/rules').
     maxAge?: number;
     expires?: string;
 }
-interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: Partial<HeaderRule> & Record<string, unknown>) => void; initialValues: HeaderRuleValues | null; }
+interface HeaderRuleFormValues extends Partial<HeaderRule> {
+    cookieValue?: string;
+    cookiePath?: string;
+    sameSite?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    expirationMode?: string;
+    maxAge?: number;
+    expires?: string;
+}
+interface UnifiedHeaderModalProps { visible: boolean; onCancel: () => void; onSave: (values: HeaderRuleFormValues) => void; initialValues: HeaderRuleValues | null; }
 const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: UnifiedHeaderModalProps) => {
     const [form] = Form.useForm();
     const envContext = useEnvironments();

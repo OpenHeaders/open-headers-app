@@ -20,10 +20,11 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 
 // Mock BaseStateManager (required by EnvironmentStateManager)
 vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
+  type StateListener = (state: Record<string, unknown>, changedKeys: string[]) => void;
   return { default: class {
-    listeners: Set<any>;
-    state: any;
-    log: any;
+    listeners: Set<StateListener>;
+    state: Record<string, unknown>;
+    log: { debug: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
     serviceName: string;
     constructor(name?: string) {
       this.serviceName = name || '';
@@ -31,17 +32,17 @@ vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
       this.state = {};
       this.log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     }
-    subscribe(listener: any) {
+    subscribe(listener: StateListener) {
       this.listeners.add(listener);
       listener(this.getState(), []);
       return () => this.listeners.delete(listener);
     }
     notifyListeners(changedKeys: string[] = []) {
       const state = this.getState();
-      this.listeners.forEach((l: any) => { try { l(state, changedKeys); } catch {} });
+      this.listeners.forEach((l: StateListener) => { try { l(state, changedKeys); } catch {} });
     }
     getState() { return JSON.parse(JSON.stringify(this.state)); }
-    setState(updates: any, changedKeys: string[] = []) {
+    setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
       this.state = { ...this.state, ...updates };
       this.notifyListeners(changedKeys);
     }
@@ -53,18 +54,18 @@ vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
 const EnvironmentVariableManagerModule = await import(
   '../../../../src/renderer/services/environment/EnvironmentVariableManager'
 );
-const EnvironmentVariableManager = (EnvironmentVariableManagerModule as any).default || EnvironmentVariableManagerModule;
+const EnvironmentVariableManager = (EnvironmentVariableManagerModule as { default?: typeof EnvironmentVariableManagerModule }).default || EnvironmentVariableManagerModule;
 
 const EnvironmentStateManagerModule = await import(
   '../../../../src/renderer/services/environment/EnvironmentStateManager'
 );
-const EnvironmentStateManager = (EnvironmentStateManagerModule as any).default || EnvironmentStateManagerModule;
+const EnvironmentStateManager = (EnvironmentStateManagerModule as { default?: typeof EnvironmentStateManagerModule }).default || EnvironmentStateManagerModule;
 
 // ======================================================================
 // EnvironmentVariableManager
 // ======================================================================
 describe('EnvironmentVariableManager', () => {
-  let vm: any;
+  let vm: InstanceType<typeof EnvironmentVariableManager>;
 
   beforeEach(() => {
     vm = new EnvironmentVariableManager();
@@ -289,7 +290,7 @@ describe('EnvironmentVariableManager', () => {
 // EnvironmentStateManager
 // ======================================================================
 describe('EnvironmentStateManager', () => {
-  let esm: any;
+  let esm: InstanceType<typeof EnvironmentStateManager>;
 
   beforeEach(() => {
     esm = new EnvironmentStateManager();
@@ -439,7 +440,7 @@ describe('CES state management patterns', () => {
       const updatedEnvs = { ...state.environments };
       delete updatedEnvs.Staging;
 
-      const updates: any = { environments: updatedEnvs };
+      const updates: { environments: Record<string, Record<string, { value: string; isSecret: boolean }>>; activeEnvironment?: string } = { environments: updatedEnvs };
       if (wasActive) {
         updates.activeEnvironment = 'Default';
       }

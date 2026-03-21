@@ -7,7 +7,7 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
     writeJson: () => Promise.resolve(),
 }));
 
-let proxyService: any;
+let proxyService: InstanceType<typeof import('../../../src/services/proxy/ProxyService').ProxyService>;
 
 beforeAll(async () => {
     const mod = await import('../../../src/services/proxy/ProxyService');
@@ -186,7 +186,7 @@ describe('ProxyService', () => {
         });
 
         it('returns empty string for undefined values', () => {
-            expect(proxyService.resolveHeaderValue(undefined, {} as Record<string, unknown>)).toBe('');
+            expect(proxyService.resolveHeaderValue(undefined, {})).toBe('');
         });
     });
 
@@ -306,7 +306,7 @@ describe('ProxyService', () => {
             proxyService.addCertificateException('example.com', 'fp-2');
 
             const info = proxyService.getCertificateInfo();
-            const entry = info.certificateExceptions.find((e: any) => e.domain === 'example.com');
+            const entry = info.certificateExceptions.find((e: { domain: string; fingerprints?: string[] }) => e.domain === 'example.com');
             expect(entry.fingerprints).toContain('fp-1');
             expect(entry.fingerprints).toContain('fp-2');
 

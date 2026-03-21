@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WSSourceHandler } from '../../../src/services/websocket/ws-source-handler';
+import type { Source } from '../../../src/types/source';
 
-function createMockService(sources: any[] = []) {
+function createMockService(sources: Source[] = []) {
     return {
         rules: {},
         sources,

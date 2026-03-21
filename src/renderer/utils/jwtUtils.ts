@@ -3,6 +3,8 @@
  * Provides encoding and decoding functionality for JWT tokens
  */
 
+import type { JsonObject } from '../../types/common';
+
 /**
  * Decodes a JWT token without verification
  * @param {string} token - JWT token string
@@ -40,7 +42,7 @@ export function decodeJWT(token: string) {
  * @param {string} signature - Original signature (we can't re-sign without secret)
  * @returns {string} Encoded JWT token
  */
-export function encodeJWT(header: Record<string, unknown>, payload: Record<string, unknown>, signature = '') {
+export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '') {
   try {
     // Base64URL encode header and payload
     const encodedHeader = btoa(JSON.stringify(header))
@@ -68,7 +70,7 @@ export function encodeJWT(header: Record<string, unknown>, payload: Record<strin
  * @param {string} algorithm - Algorithm to use (default: HS256)
  * @returns {Promise<string>} Signed JWT token
  */
-export async function signJWT(header: Record<string, unknown>, payload: Record<string, unknown>, secret: string, algorithm = 'HS256') {
+export async function signJWT(header: JsonObject, payload: JsonObject, secret: string, algorithm = 'HS256') {
   try {
     // Ensure algorithm in header matches
     const finalHeader = { ...header, alg: algorithm, typ: 'JWT' };
@@ -196,7 +198,7 @@ export function isJWT(value: string) {
  * @param {Object} obj - Object to format
  * @returns {string} Formatted JSON string
  */
-export function formatJSON(obj: Record<string, unknown>) {
+export function formatJSON(obj: JsonObject) {
   return JSON.stringify(obj, null, 2);
 }
 
@@ -218,7 +220,7 @@ export function validateJSON(jsonString: string) {
  * @param {Object} payload - JWT payload
  * @returns {Object} Expiration info
  */
-export function getJWTExpiration(payload: Record<string, unknown>) {
+export function getJWTExpiration(payload: JsonObject) {
   if (!payload || !payload.exp) {
     return { hasExpiration: false };
   }

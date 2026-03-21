@@ -9,11 +9,12 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 
 import { ExportService } from '../../../../src/renderer/services/export-import/core/ExportService';
 import { FILE_FORMATS, DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function makeDeps(overrides: Record<string, any> = {}) {
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
     activeWorkspaceId: 'ws-1',
     environments: {},
@@ -192,7 +193,7 @@ describe('ExportService._calculateExportSize', () => {
   it('returns "unknown size" on error', () => {
     const service = new ExportService(makeDeps());
     // Circular reference causes JSON.stringify to throw
-    const circular: any = {};
+    const circular: Record<string, unknown> = {};
     circular.self = circular;
     const size = (service as any)._calculateExportSize(circular);
     expect(size).toBe('unknown size');

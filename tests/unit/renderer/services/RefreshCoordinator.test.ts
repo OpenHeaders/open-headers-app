@@ -25,7 +25,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/ConcurrencyControl', () =
   class ConcurrentMap {
     private map = new Map();
     async get(key: string) { return this.map.get(key); }
-    async set(key: string, value: any) { this.map.set(key, value); }
+    async set(key: string, value: unknown) { this.map.set(key, value); }
     async delete(key: string) { this.map.delete(key); }
     async has(key: string) { return this.map.has(key); }
     async entries() { return Array.from(this.map.entries()); }
@@ -33,7 +33,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/ConcurrencyControl', () =
     async clear() { this.map.clear(); }
   }
   class Mutex {
-    async withLock(fn: () => Promise<any>) { return fn(); }
+    async withLock<T>(fn: () => Promise<T>) { return fn(); }
   }
   return { ConcurrentMap, Mutex };
 });
@@ -103,7 +103,7 @@ describe('RefreshCoordinator', () => {
 
     it('queues when skipIfActive is false and source is active', async () => {
       // Start a long-running refresh for s1
-      let resolveFirst!: (value: any) => void;
+      let resolveFirst!: (value: unknown) => void;
       const firstPromise = new Promise(resolve => { resolveFirst = resolve; });
       const firstFn = vi.fn().mockReturnValue(firstPromise);
       const secondFn = vi.fn().mockResolvedValue({ data: 'second' });

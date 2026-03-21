@@ -40,7 +40,7 @@ describe('GitExecutor', () => {
         });
 
         it('preserves error code and signal', () => {
-            const original: any = new Error('killed');
+            const original = new Error('killed') as Error & { code: number; killed: boolean; signal: string };
             original.code = 128;
             original.killed = true;
             original.signal = 'SIGTERM';
