@@ -54,12 +54,14 @@ import {
   type NetworkService,
 } from '../../../src/services/workspace/WorkspaceSyncScheduler';
 
-/** Expose private fields for test assertions. */
-type TestableScheduler = WorkspaceSyncScheduler & {
-  syncInProgress: Map<string, boolean>;
-  activeWorkspaceId: string | null;
-  activeWorkspace: Workspace | null;
-};
+/** Helper to access private fields for test assertions. */
+function testable(s: WorkspaceSyncScheduler) {
+  return s as unknown as {
+    syncInProgress: Map<string, boolean>;
+    activeWorkspaceId: string | null;
+    activeWorkspace: Workspace | null;
+  };
+}
 
 /** Create a minimal valid Workspace for tests. */
 function testWorkspace(overrides: Partial<Workspace> = {}): Workspace {
@@ -72,7 +74,7 @@ function testWorkspace(overrides: Partial<Workspace> = {}): Workspace {
 }
 
 // Helper to create mock services
-function createMockGitSyncService(): GitSyncService {
+function createMockGitSyncService() {
   return {
     getGitStatus: vi.fn().mockResolvedValue({ isInstalled: true }),
     syncWorkspace: vi.fn().mockResolvedValue({ success: true, data: null }),
@@ -80,7 +82,7 @@ function createMockGitSyncService(): GitSyncService {
   };
 }
 
-function createMockWorkspaceSettingsService(): WorkspaceSettingsServiceInterface {
+function createMockWorkspaceSettingsService() {
   return {
     getWorkspaces: vi.fn().mockResolvedValue([]),
     updateWorkspace: vi.fn().mockResolvedValue(undefined),
@@ -121,10 +123,10 @@ describe('WorkspaceSyncScheduler', () => {
     networkService = createMockNetworkService(true);
     broadcaster = vi.fn();
     scheduler = new WorkspaceSyncScheduler(
-      gitSync,
-      settingsService,
-      networkService,
-      { broadcaster }
+      gitSync as unknown as GitSyncService,
+      settingsService as unknown as WorkspaceSettingsServiceInterface,
+      networkService as unknown as NetworkService,
+      { broadcaster } as ConstructorParameters<typeof WorkspaceSyncScheduler>[3]
     );
   });
 
@@ -172,7 +174,7 @@ describe('WorkspaceSyncScheduler', () => {
   describe('performSync()', () => {
     it('skips when sync already in progress', async () => {
       // Manually set sync in progress
-      (scheduler as TestableScheduler).syncInProgress.set('ws-1', true);
+      testable(scheduler).syncInProgress.set('ws-1', true);
       await scheduler.performSync('ws-1', testWorkspace());
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
     });
@@ -239,20 +241,20 @@ describe('WorkspaceSyncScheduler', () => {
     it('clears syncInProgress flag after completion', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'url' }));
-      expect((scheduler as TestableScheduler).syncInProgress.get('ws-1')).toBe(false);
+      expect(testable(scheduler).syncInProgress.get('ws-1')).toBe(false);
     });
 
     it('clears syncInProgress flag even on error', async () => {
       gitSync.syncWorkspace.mockRejectedValue(new Error('network error'));
       await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'url' }));
-      expect((scheduler as TestableScheduler).syncInProgress.get('ws-1')).toBe(false);
+      expect(testable(scheduler).syncInProgress.get('ws-1')).toBe(false);
     });
   });
 
   describe('onWorkspaceSwitch()', () => {
     it('stops sync for previous workspace', async () => {
       const stopSyncSpy = vi.spyOn(scheduler, 'stopSync');
-      (scheduler as TestableScheduler).activeWorkspaceId = 'old-ws';
+      testable(scheduler).activeWorkspaceId = 'old-ws';
 
       settingsService.getWorkspaces.mockResolvedValue([
         testWorkspace({ id: 'new-ws', name: 'New', type: 'personal' })
@@ -296,8 +298,8 @@ describe('WorkspaceSyncScheduler', () => {
   describe('onWorkspaceUpdated()', () => {
     it('restarts sync when autoSync is toggled on', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      (scheduler as TestableScheduler).activeWorkspaceId = 'ws-1';
-      (scheduler as TestableScheduler).activeWorkspace = testWorkspace();
+      testable(scheduler).activeWorkspaceId = 'ws-1';
+      testable(scheduler).activeWorkspace = testWorkspace();
 
       await scheduler.onWorkspaceUpdated('ws-1', testWorkspace({ autoSync: true }));
       expect(startSyncSpy).toHaveBeenCalledWith('ws-1', expect.objectContaining({ autoSync: true }));
@@ -305,7 +307,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('does not restart sync for non-active workspace', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      (scheduler as TestableScheduler).activeWorkspaceId = 'other-ws';
+      testable(scheduler).activeWorkspaceId = 'other-ws';
 
       await scheduler.onWorkspaceUpdated('ws-1', testWorkspace({ autoSync: true }));
       expect(startSyncSpy).not.toHaveBeenCalled();

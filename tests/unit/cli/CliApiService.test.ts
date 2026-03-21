@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CliApiService } from '../../../src/services/cli/CliApiService';
 import type http from 'http';
+import type { JsonObject } from '../../../src/types/common';
+
+type RequestLogEntry = CliApiService['requestLogs'][number];
 
 describe('CliApiService', () => {
     let svc: CliApiService;
@@ -40,14 +43,14 @@ describe('CliApiService', () => {
         });
 
         it('returns a copy of logs', () => {
-            svc.requestLogs = [{ a: 1 }];
+            svc.requestLogs = [{ a: 1 } as unknown as RequestLogEntry];
             const logs = svc.getLogs();
-            logs.push({ b: 2 });
+            logs.push({} as RequestLogEntry);
             expect(svc.requestLogs).toHaveLength(1);
         });
 
         it('clearLogs empties the array', () => {
-            svc.requestLogs = [{ a: 1 }, { b: 2 }];
+            svc.requestLogs = [{} as RequestLogEntry, {} as RequestLogEntry];
             svc.clearLogs();
             expect(svc.requestLogs).toEqual([]);
         });
@@ -107,7 +110,7 @@ describe('CliApiService', () => {
                 token: 'secret-val',
                 password: 'my-pass',
                 username: 'visible',
-            });
+            }) as JsonObject;
             expect(result.token).toBe('***');
             expect(result.password).toBe('***');
             expect(result.username).toBe('visible');
@@ -116,19 +119,19 @@ describe('CliApiService', () => {
         it('handles nested objects', () => {
             const result = svc._redactDeep({
                 config: { secret: 'hidden', name: 'visible' }
-            });
-            expect(result.config.secret).toBe('***');
-            expect(result.config.name).toBe('visible');
+            }) as JsonObject;
+            expect((result.config as JsonObject).secret).toBe('***');
+            expect((result.config as JsonObject).name).toBe('visible');
         });
 
         it('handles arrays', () => {
-            const result = svc._redactDeep([{ token: 'x' }, { name: 'y' }]);
+            const result = svc._redactDeep([{ token: 'x' }, { name: 'y' }]) as JsonObject[];
             expect(result[0].token).toBe('***');
             expect(result[1].name).toBe('y');
         });
 
         it('preserves non-string sensitive values', () => {
-            const result = svc._redactDeep({ token: 12345, enabled: true });
+            const result = svc._redactDeep({ token: 12345, enabled: true }) as JsonObject;
             expect(result.token).toBe(12345);
             expect(result.enabled).toBe(true);
         });
@@ -148,7 +151,7 @@ describe('CliApiService', () => {
             const result = svc._summarizeBody('/cli/workspace/join', {
                 workspaceName: 'My Team',
                 authData: 'secret-value',
-            });
+            }) as JsonObject;
             expect(result.workspaceName).toBe('My Team');
             expect(result.authData).toBe('***');
         });
@@ -164,8 +167,8 @@ describe('CliApiService', () => {
         });
 
         it('newest entry is first', () => {
-            svc._addLog({ method: 'GET', path: '/first' });
-            svc._addLog({ method: 'POST', path: '/second' });
+            svc._addLog({ method: 'GET', path: '/first', statusCode: 200 });
+            svc._addLog({ method: 'POST', path: '/second', statusCode: 201 });
 
             expect(svc.requestLogs[0].path).toBe('/second');
             expect(svc.requestLogs[1].path).toBe('/first');
@@ -174,17 +177,17 @@ describe('CliApiService', () => {
 
     describe('setMainWindow / setSetupHandler', () => {
         it('sets main window', () => {
-            const win = { id: 1 };
+            const win = { id: 1 } as unknown as Parameters<typeof svc.setMainWindow>[0];
             svc.setMainWindow(win);
             expect(svc.mainWindow).toBe(win);
         });
 
         it('passes window to setup handler', () => {
-            let receivedWindow: { id: number } | null = null;
-            const handler = { setMainWindow: (w: { id: number }) => { receivedWindow = w; } };
-            svc.setSetupHandler(handler);
+            let receivedWindow: unknown = null;
+            const handler = { setMainWindow: (w: unknown) => { receivedWindow = w; } };
+            svc.setSetupHandler(handler as unknown as Parameters<typeof svc.setSetupHandler>[0]);
 
-            const win = { id: 1 };
+            const win = { id: 1 } as unknown as Parameters<typeof svc.setMainWindow>[0];
             svc.setMainWindow(win);
             expect(receivedWindow).toBe(win);
         });
