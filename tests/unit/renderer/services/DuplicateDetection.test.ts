@@ -1,4 +1,12 @@
 import { describe, it, expect } from 'vitest';
+import type { Source } from '../../../../src/types/source';
+
+type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
+
+function makeImportSource(overrides: Partial<ImportSource> & { sourceType: Source['sourceType'] }): ImportSource {
+  return { sourcePath: '', ...overrides };
+}
+
 import {
   isSourceDuplicate,
   isProxyRuleDuplicate,
@@ -22,49 +30,50 @@ describe('isSourceDuplicate', () => {
   });
 
   it('detects file source duplicate by sourcePath', () => {
-    const source = { sourceType: 'file', sourcePath: '/tmp/a.json' };
-    const existing = [{ sourceType: 'file', sourcePath: '/tmp/a.json' }];
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' });
+    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' })];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('does not flag different file sources', () => {
-    const source = { sourceType: 'file', sourcePath: '/tmp/b.json' };
-    const existing = [{ sourceType: 'file', sourcePath: '/tmp/a.json' }];
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/b.json' });
+    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' })];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
   it('does not match sources with different types', () => {
-    const source = { sourceType: 'file', sourcePath: '/tmp/a.json' };
-    const existing = [{ sourceType: 'env', sourcePath: '/tmp/a.json' }];
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' });
+    const existing = [makeImportSource({ sourceType: 'env', sourcePath: '/tmp/a.json' })];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
   it('detects env source duplicate by sourcePath', () => {
-    const source = { sourceType: 'env', sourcePath: 'MY_VAR' };
-    const existing = [{ sourceType: 'env', sourcePath: 'MY_VAR' }];
+    const source = makeImportSource({ sourceType: 'env', sourcePath: 'MY_VAR' });
+    const existing = [makeImportSource({ sourceType: 'env', sourcePath: 'MY_VAR' })];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('detects http source duplicate by url and sourcePath', () => {
-    const source = { sourceType: 'http', url: 'https://a.com', sourcePath: 'https://a.com' };
-    const existing = [{ sourceType: 'http', url: 'https://a.com', sourcePath: 'https://a.com' }];
+    const source = makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' });
+    const existing = [makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' })];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('http source with different url is not duplicate', () => {
-    const source = { sourceType: 'http', url: 'https://b.com', sourcePath: 'https://b.com' };
-    const existing = [{ sourceType: 'http', url: 'https://a.com', sourcePath: 'https://a.com' }];
+    const source = makeImportSource({ sourceType: 'http', sourcePath: 'https://b.com' });
+    const existing = [makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' })];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
   it('handles unknown source type by comparing sourcePath', () => {
-    const source = { sourceType: 'custom', sourcePath: '/x' };
-    const existing = [{ sourceType: 'custom', sourcePath: '/x' }];
+    // Intentionally using non-standard sourceType to test fallback
+    const source = { sourceType: 'custom' as Source['sourceType'], sourcePath: '/x' };
+    const existing = [{ sourceType: 'custom' as Source['sourceType'], sourcePath: '/x' }];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('returns false for empty existing list', () => {
-    const source = { sourceType: 'file', sourcePath: '/a' };
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/a' });
     expect(isSourceDuplicate(source, [])).toBe(false);
   });
 });
@@ -351,25 +360,25 @@ describe('generateUniqueName', () => {
 describe('createDuplicateDetector', () => {
   it('creates detector for sources', () => {
     const detect = createDuplicateDetector('sources');
-    const source = { sourceType: 'file', sourcePath: '/a' };
-    expect(detect(source, [{ sourceType: 'file', sourcePath: '/a' }])).toBe(true);
-    expect(detect(source, [])).toBe(false);
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/a' });
+    expect(detect(source as never, [makeImportSource({ sourceType: 'file', sourcePath: '/a' })] as never)).toBe(true);
+    expect(detect(source as never, [] as never)).toBe(false);
   });
 
   it('creates detector for proxyRules', () => {
     const detect = createDuplicateDetector('proxyRules');
     const rule = { pattern: '*.com', headers: null };
-    expect(detect(rule, [{ pattern: '*.com', headers: null }])).toBe(true);
+    expect(detect(rule as never, [{ pattern: '*.com', headers: null }] as never)).toBe(true);
   });
 
   it('creates detector for rules', () => {
     const detect = createDuplicateDetector('rules');
-    expect(detect({ id: 'r1' }, [{ id: 'r1' }])).toBe(true);
+    expect(detect({ id: 'r1' } as never, [{ id: 'r1' }] as never)).toBe(true);
   });
 
   it('returns a no-op detector for unknown types', () => {
     const detect = createDuplicateDetector('unknown');
-    expect(detect({ id: 'r1' }, [{ id: 'r1' }])).toBe(false);
+    expect(detect({ id: 'r1' } as never, [{ id: 'r1' }] as never)).toBe(false);
   });
 });
 
@@ -379,10 +388,10 @@ describe('createDuplicateDetector', () => {
 describe('batchDuplicateDetection', () => {
   it('returns results for each item', async () => {
     const items = [
-      { sourceType: 'file', sourcePath: '/a' },
-      { sourceType: 'file', sourcePath: '/b' },
+      makeImportSource({ sourceType: 'file', sourcePath: '/a' }),
+      makeImportSource({ sourceType: 'file', sourcePath: '/b' }),
     ];
-    const existing = [{ sourceType: 'file', sourcePath: '/a' }];
+    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/a' })];
     const detector = createDuplicateDetector('sources');
 
     const results = await batchDuplicateDetection(items, existing, detector);
@@ -397,11 +406,11 @@ describe('batchDuplicateDetection', () => {
   });
 
   it('processes in batches without error', async () => {
-    const items = Array.from({ length: 120 }, (_, i) => ({
+    const items = Array.from({ length: 120 }, (_, i) => makeImportSource({
       sourceType: 'file',
       sourcePath: `/file-${i}`,
     }));
-    const existing = [{ sourceType: 'file', sourcePath: '/file-0' }];
+    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/file-0' })];
     const detector = createDuplicateDetector('sources');
 
     const results = await batchDuplicateDetection(items, existing, detector, 25);
