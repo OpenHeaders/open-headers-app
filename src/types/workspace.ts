@@ -23,7 +23,6 @@ export interface WorkspaceAuthData {
   publicKey?: string;
   passphrase?: string;
   sshPassphrase?: string;
-  [key: string]: string | undefined;
 }
 
 export interface WorkspaceMetadata {

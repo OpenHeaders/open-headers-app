@@ -8,7 +8,8 @@ interface RequestOptions {
   headers?: Array<{ key: string; value: string }> | Record<string, string>;
   queryParams?: Array<{ key: string; value: string }> | Record<string, string>;
   body?: string;
-  [key: string]: unknown;
+  totpSecret?: string;
+  contentType?: string;
 }
 
 interface TotpContextValue {

@@ -7,14 +7,15 @@ import mainLogger from '../../../../utils/mainLogger';
 import TokenAuthStrategy from './TokenAuthStrategy';
 import SSHAuthStrategy from './SSHAuthStrategy';
 import BasicAuthStrategy from './BasicAuthStrategy';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
 
 const { createLogger } = mainLogger;
 
 const log = createLogger('GitAuthenticator');
 
 interface AuthStrategy {
-  setup: (url: string, authData: Record<string, string | undefined>) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
-  validate?: (authData: Record<string, string | undefined>) => { valid: boolean; error?: string };
+  setup: (url: string, authData: WorkspaceAuthData) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
+  validate?: (authData: WorkspaceAuthData) => { valid: boolean; error?: string };
   cleanup?: (authResult: { cleanup?: () => Promise<void> } | null) => Promise<void>;
 }
 
@@ -41,7 +42,7 @@ class GitAuthenticator {
   /**
    * Setup authentication for Git operation
    */
-  async setupAuth(url: string, authType = 'none', authData: Record<string, string | undefined> = {}): Promise<SetupAuthResult> {
+  async setupAuth(url: string, authType = 'none', authData: WorkspaceAuthData = {}): Promise<SetupAuthResult> {
     log.debug(`Setting up ${authType} authentication`);
 
     if (authType === 'none' || !authType) {
@@ -86,7 +87,7 @@ class GitAuthenticator {
   /**
    * Validate authentication data
    */
-  validateAuthData(authType: string, authData: Record<string, string | undefined>): { valid: boolean; error?: string } {
+  validateAuthData(authType: string, authData: WorkspaceAuthData): { valid: boolean; error?: string } {
     if (authType === 'none' || !authType) {
       return { valid: true };
     }

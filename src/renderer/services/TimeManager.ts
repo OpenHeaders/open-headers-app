@@ -1,5 +1,19 @@
 import { createLogger } from '../utils/error-handling/logger';
+
 const log = createLogger('TimeManager');
+
+/** Time event emitted by the renderer TimeManager */
+interface RendererTimeEvent {
+  type: string;
+  delta?: number;
+  previousTimezone?: string;
+  newTimezone?: string;
+  previousOffset?: number;
+  newOffset?: number;
+  sleepDuration?: number;
+  drift?: number;
+  source?: string;
+}
 
 /**
  * TimeManager - Centralized service for robust time handling
@@ -13,7 +27,7 @@ const log = createLogger('TimeManager');
  * - Wall-clock aligned scheduling
  */
 class TimeManager {
-  listeners: Set<(events: Array<{ type: string; [key: string]: unknown }>) => void>;
+  listeners: Set<(events: RendererTimeEvent[]) => void>;
   checkInterval: ReturnType<typeof setInterval> | null;
   isDestroyed: boolean;
   lastWallTime: number;
@@ -321,7 +335,7 @@ class TimeManager {
   /**
    * Notify all listeners of time events
    */
-  notifyListeners(events: { type: string; [key: string]: unknown }[]) {
+  notifyListeners(events: RendererTimeEvent[]) {
     for (const event of events) {
       log.info(`Time event detected: ${event.type}`, event);
     }

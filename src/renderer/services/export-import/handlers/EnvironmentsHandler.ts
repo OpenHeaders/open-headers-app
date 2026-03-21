@@ -452,7 +452,7 @@ export class EnvironmentsHandler {
    * @param {Object} variables - Updated variables
    * @private
    */
-  _emitEnvironmentVariablesChangedEvent(envName: string, variables: Record<string, unknown>) {
+  _emitEnvironmentVariablesChangedEvent(envName: string, variables: Record<string, { value: string; isSecret: boolean }>) {
     try {
       window.dispatchEvent(new CustomEvent(EVENTS.ENVIRONMENT_VARIABLES_CHANGED, {
         detail: { 

@@ -3,12 +3,13 @@ import { useTotpState, useEnvironments } from '../contexts';
 import { createLogger } from '../utils/error-handling/logger';
 import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../types/source';
 import type { HttpRequestOptions, HttpResult, HttpProgressCallback } from '../../types/http';
+import type { JsonObject } from '../../types/common';
 const log = createLogger('useHttp');
 
 interface RequestOptions {
   headers?: SourceHeader[] | Record<string, string>;
   queryParams?: SourceQueryParam[] | Record<string, string>;
-  body?: string | Record<string, unknown>;
+  body?: string | JsonObject;
   contentType?: string;
   totpSecret?: string;
 }
@@ -16,7 +17,7 @@ interface RequestOptions {
 interface FormattedRequestOptions {
   headers: Record<string, string>;
   queryParams: Record<string, string>;
-  body?: string | Record<string, unknown>;
+  body?: string | JsonObject;
   contentType: string;
   totpSecret?: string;
   enableRetries?: boolean;
@@ -61,7 +62,7 @@ interface UseHttpReturn {
     sourceId?: string | null,
     progressCallback?: HttpProgressCallback | null
   ) => Promise<string>;
-  applyJsonFilter: (body: string | Record<string, unknown>, jsonFilter: JsonFilter) => string | Record<string, unknown>;
+  applyJsonFilter: (body: string | JsonObject, jsonFilter: JsonFilter) => string | JsonObject;
 }
 
 /**
@@ -94,7 +95,7 @@ export function useHttp(): UseHttpReturn {
     /**
      * Apply JSON filter to a response body with improved error handling
      */
-    const applyJsonFilter = useCallback((body: string | Record<string, unknown>, jsonFilter: JsonFilter): string | Record<string, unknown> => {
+    const applyJsonFilter = useCallback((body: string | JsonObject, jsonFilter: JsonFilter): string | JsonObject => {
         // Always normalize the filter object to ensure consistent behavior
         const normalizedFilter = {
             enabled: jsonFilter?.enabled === true,
@@ -110,13 +111,13 @@ export function useHttp(): UseHttpReturn {
 
         try {
             // Ensure we're working with a parsed object
-            let jsonObj: Record<string, unknown>;
+            let jsonObj: JsonObject;
             if (typeof body === 'string') {
                 const parsed = parseJSON(body);
                 if (!parsed) {
                     return body;
                 }
-                jsonObj = parsed as unknown as Record<string, unknown>;
+                jsonObj = parsed as JsonObject;
             } else {
                 jsonObj = body;
             }
@@ -152,7 +153,7 @@ export function useHttp(): UseHttpReturn {
 
                 if (arrayMatch) {
                     const [_, propName, index] = arrayMatch;
-                    const currentObj = current as Record<string, unknown>;
+                    const currentObj = current as JsonObject;
 
                     if (currentObj[propName] === undefined) {
                         return `The field "${path}" was not found in the response.`;
@@ -169,7 +170,7 @@ export function useHttp(): UseHttpReturn {
 
                     current = (currentObj[propName] as unknown[])[idx];
                 } else {
-                    const currentObj = current as Record<string, unknown>;
+                    const currentObj = current as JsonObject;
                     if (currentObj[part] === undefined) {
                         return `The field "${part}" was not found in the response.`;
                     }
@@ -372,7 +373,7 @@ export function useHttp(): UseHttpReturn {
                     formattedOptions.body = bodyContent;
                 } else if (typeof bodyContent === 'object') {
                     // Resolve environment variables in object bodies (JSON)
-                    bodyContent = resolveObjectTemplate(bodyContent) as Record<string, unknown>;
+                    bodyContent = resolveObjectTemplate(bodyContent) as JsonObject;
 
                     // Then apply local variables and TOTP
                     const bodyStr = JSON.stringify(bodyContent);

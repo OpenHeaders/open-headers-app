@@ -55,7 +55,12 @@ interface QueryParam {
 }
 
 interface HttpFormValues {
-    [key: string]: unknown;
+    sourcePath?: string;
+    body?: string;
+    contentType?: string;
+    totpSecret?: string;
+    headers?: Array<{ key: string; value: string }>;
+    queryParams?: Array<{ key: string; value: string }>;
 }
 
 /**

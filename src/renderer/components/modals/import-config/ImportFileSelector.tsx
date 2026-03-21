@@ -6,7 +6,6 @@ const { Paragraph } = Typography;
 
 interface FileDataItem {
     file: { name: string };
-    [key: string]: unknown;
 }
 
 interface ImportFileSelectorProps {

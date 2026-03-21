@@ -19,6 +19,7 @@ import type { Recording } from '../../../types/recording';
 import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
 import type { InitialAction } from '../modals/settings/SettingsModal';
 import type { NewSourceData } from '../sources/source-form';
+import type { ExportOptions, ImportOptions } from '../../services/export-import/core/types';
 
 interface AppLayoutProps {
   appVersion: string;
@@ -55,8 +56,8 @@ interface AppLayoutProps {
   onSettingsSave: (values: Partial<AppSettings>) => Promise<void>;
   onExportModalCancel: () => void;
   onImportModalCancel: () => void;
-  onHandleExport: (config: Record<string, unknown>) => void;
-  onHandleImport: (data: Record<string, unknown>) => Promise<void>;
+  onHandleExport: (config: ExportOptions) => void;
+  onHandleImport: (data: ImportOptions) => Promise<void>;
   preloadedEnvData: Partial<EnvironmentConfigData> | null;
   updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
 }

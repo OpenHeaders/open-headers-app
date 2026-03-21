@@ -7,7 +7,40 @@
 
 import { createLogger } from '../error-handling/logger';
 import type { Source, SourceType } from '../../../types/source';
+import type { ProxyRule } from '../../../types/proxy';
+import type { EnvironmentMap, EnvironmentSchema } from '../../../types/environment';
+import type { Workspace } from '../../../types/workspace';
+
 const log = createLogger('ConfigValidator');
+
+interface ConfigData {
+  version?: string;
+  sources?: Source[];
+  rules?: Record<string, Array<{ id: string; name?: string }>>;
+  proxyRules?: ProxyRule[];
+  environments?: EnvironmentMap;
+  environmentSchema?: EnvironmentSchema & { variableDefinitions?: Record<string, { description: string; isSecret: boolean }> };
+  workspace?: Partial<Workspace>;
+}
+
+interface ConfigAnalysisResult {
+  valid: true;
+  version: string;
+  hasRules: boolean;
+  hasSources: boolean;
+  hasProxyRules: boolean;
+  hasEnvironmentSchema: boolean;
+  hasEnvironments: boolean;
+  hasWorkspace: boolean;
+  ruleCount: number;
+  sourceCount: number;
+  proxyRuleCount: number;
+  environmentCount: number;
+  variableCount: number;
+  ruleBreakdown: Record<string, number>;
+  workspaceInfo: Partial<Workspace> | null;
+  rawData: ConfigData;
+}
 
 /**
  * Analyze and validate Open Headers configuration file content
@@ -16,9 +49,9 @@ const log = createLogger('ConfigValidator');
  * @param {boolean} isSeparateMode - Whether we're in separate files mode (affects validation strictness)
  * @returns {Object} Validation result with file info or error
  */
-async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateMode = false) {
+async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateMode = false): Promise<ConfigAnalysisResult | { valid: true; hasEnvironmentSchema: boolean; hasEnvironments: boolean; environmentCount: number; variableCount: number; rawData: ConfigData }> {
   try {
-    const data = JSON.parse(content);
+    const data = JSON.parse(content) as ConfigData;
     
     if (isEnvFile) {
       // Environment file should only contain environment data
@@ -47,8 +80,8 @@ async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateM
       throw new Error('This appears to be an environment-only file. Please use the environment file upload area for environment files.');
     }
     
-    const info = {
-      valid: true,
+    const info: ConfigAnalysisResult = {
+      valid: true as const,
       version: data.version || 'Unknown',
       hasRules: !!data.rules,
       hasSources: !!data.sources,
@@ -102,7 +135,7 @@ async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateM
  * @param {Object} data - Parsed configuration object
  * @throws {Error} If structure is invalid
  */
-function validateConfigStructure(data: Record<string, unknown>) {
+function validateConfigStructure(data: ConfigData) {
   // Validate sources
   if (data.sources) {
     if (!Array.isArray(data.sources)) {
@@ -141,15 +174,15 @@ function validateConfigStructure(data: Record<string, unknown>) {
       throw new Error('Invalid configuration: proxyRules must be an array');
     }
     
-    (data.proxyRules as Array<Record<string, unknown>>).forEach((rule: Record<string, unknown>, index: number) => {
+    data.proxyRules.forEach((rule, index: number) => {
       // Validate based on rule type
       const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
       const isStaticRule = rule.isDynamic === false || (Array.isArray(rule.domains) && rule.domains.length > 0);
-      
+
       if (!isDynamicRule && !isStaticRule) {
         throw new Error(`Invalid proxy rule at index ${index}: must have either domains (for static rules) or headerRuleId (for dynamic rules)`);
       }
-      
+
       // Validate static rules
       if (isStaticRule && !isDynamicRule) {
         if (!rule.domains || !Array.isArray(rule.domains) || rule.domains.length === 0) {
@@ -159,8 +192,8 @@ function validateConfigStructure(data: Record<string, unknown>) {
           throw new Error(`Invalid proxy rule at index ${index}: static rule must have a valid header name`);
         }
       }
-      
-      // Validate dynamic rules  
+
+      // Validate dynamic rules
       if (isDynamicRule) {
         if (!rule.headerRuleId || typeof rule.headerRuleId !== 'string') {
           throw new Error(`Invalid proxy rule at index ${index}: dynamic rule must have a valid header rule ID`);
@@ -175,9 +208,8 @@ function validateConfigStructure(data: Record<string, unknown>) {
       throw new Error('Invalid configuration: environmentSchema must be an object');
     }
     
-    const envSchema = data.environmentSchema as Record<string, unknown>;
-    if (envSchema.variableDefinitions &&
-        typeof envSchema.variableDefinitions !== 'object') {
+    if (data.environmentSchema.variableDefinitions &&
+        typeof data.environmentSchema.variableDefinitions !== 'object') {
       throw new Error('Invalid configuration: environmentSchema.variableDefinitions must be an object');
     }
   }
@@ -202,12 +234,11 @@ function validateConfigStructure(data: Record<string, unknown>) {
     }
     
     // Required fields for Git workspace
-    const workspace = data.workspace as Record<string, unknown>;
-    if (workspace.type === 'git') {
-      if (!workspace.gitUrl) {
+    if (data.workspace.type === 'git') {
+      if (!data.workspace.gitUrl) {
         throw new Error('Invalid workspace configuration: gitUrl is required for Git workspaces');
       }
-      if (!workspace.name) {
+      if (!data.workspace.name) {
         throw new Error('Invalid workspace configuration: name is required');
       }
     }
@@ -224,14 +255,14 @@ function validateConfigStructure(data: Record<string, unknown>) {
 async function validateGitWorkspaceConfig(content: string, filePath: string) {
   try {
     // First, use the standard config validation
-    const validationResult = await analyzeConfigFile(content, false, false) as Record<string, unknown>;
+    const validationResult = await analyzeConfigFile(content, false, false) as ConfigAnalysisResult;
 
     // Check if config has any data (workspace alone is not enough)
-    const hasData = (validationResult.sourceCount as number) > 0 ||
-                    (validationResult.ruleCount as number) > 0 ||
-                    (validationResult.proxyRuleCount as number) > 0 ||
-                    (validationResult.environmentCount as number) > 0 ||
-                    (validationResult.variableCount as number) > 0;
+    const hasData = validationResult.sourceCount > 0 ||
+                    validationResult.ruleCount > 0 ||
+                    validationResult.proxyRuleCount > 0 ||
+                    validationResult.environmentCount > 0 ||
+                    validationResult.variableCount > 0;
     
     if (!hasData) {
       return {
@@ -273,8 +304,8 @@ async function validateGitWorkspaceConfig(content: string, filePath: string) {
  * @returns {Object} Combined configuration object
  */
 async function readAndValidateMultiFileConfig(readFile: (path: string, options?: { list: boolean }) => Promise<string[] & string>, basePath: string) {
-  let config: Record<string, unknown> = {};
-  let validationResults: { mainFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null; envFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null } = {
+  let config: ConfigData = {};
+  const validationResults: { mainFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null; envFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null } = {
     mainFile: null,
     envFile: null
   };

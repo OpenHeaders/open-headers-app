@@ -2,6 +2,8 @@
  * EnvironmentStorageManager - Handles loading and saving environment data
  */
 import { createLogger } from '../../utils/error-handling/logger';
+import type { EnvironmentMap } from '../../../types/environment';
+
 const log = createLogger('EnvironmentStorageManager');
 
 interface StorageAPI {
@@ -84,7 +86,7 @@ class EnvironmentStorageManager {
   /**
    * Save environments for a workspace
    */
-  async saveEnvironments(workspaceId: string, environments: Record<string, unknown>, activeEnvironment: string) {
+  async saveEnvironments(workspaceId: string, environments: EnvironmentMap, activeEnvironment: string) {
     try {
       const data = {
         environments,

@@ -1,7 +1,9 @@
 import { useCallback, useRef } from 'react';
 
 interface SaveFileOptions {
-  [key: string]: unknown;
+  defaultPath?: string;
+  filters?: Array<{ name: string; extensions: string[] }>;
+  title?: string;
 }
 
 interface UseFileSystemReturn {

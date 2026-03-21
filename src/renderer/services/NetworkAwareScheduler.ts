@@ -37,7 +37,9 @@ type RefreshSource = Pick<Source, 'sourceId' | 'sourceType' | 'refreshOptions'>;
 
 interface TimeEvent {
     type: string;
-    [key: string]: unknown;
+    delta?: number;
+    sleepDuration?: number;
+    drift?: number;
 }
 
 /**
@@ -80,7 +82,7 @@ class NetworkAwareScheduler {
   /**
    * Initialize the scheduler with a callback for refresh execution
    */
-  async initialize(refreshCallback: (sourceId: string, options?: Record<string, unknown>) => Promise<unknown>, scheduleUpdateCallback: ((sourceId: string, schedule: ScheduleEntry) => void) | null = null) {
+  async initialize(refreshCallback: (sourceId: string, options?: { reason?: string; priority?: string; skipIfActive?: boolean }) => Promise<unknown>, scheduleUpdateCallback: ((sourceId: string, schedule: ScheduleEntry) => void) | null = null) {
     this.refreshCallback = refreshCallback;
     this.scheduleUpdateCallback = scheduleUpdateCallback;
     

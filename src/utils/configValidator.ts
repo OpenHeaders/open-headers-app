@@ -43,16 +43,24 @@ const log: LoggerLike = {
   error: (...args: unknown[]) => getLog().error(...args),
 };
 
+import type { EnvironmentMap } from '../types/environment';
+import type { EnvironmentSchema } from '../types/environment';
+import type { Source } from '../types/source';
+import type { ProxyRule } from '../types/proxy';
+
 interface ConfigData {
-  environments?: Record<string, unknown>;
-  environmentSchema?: {
-    environments?: Record<string, unknown>;
-    variableDefinitions?: Record<string, unknown>;
-  };
-  rules?: unknown[];
-  sources?: unknown[];
-  proxyRules?: unknown[];
-  [key: string]: unknown;
+  version?: string;
+  environments?: EnvironmentMap;
+  environmentSchema?: EnvironmentSchema & { variableDefinitions?: Record<string, { description: string; isSecret: boolean; usedIn: string[]; example?: string }> };
+  rules?: Array<{ id: string; name?: string }> | Record<string, Array<{ id: string; name?: string }>>;
+  sources?: Source[];
+  proxyRules?: ProxyRule[];
+  workspace?: { name?: string; type?: string; gitUrl?: string };
+  // Legacy/workspace-specific fields used by ConfigFileDetector
+  workspaceId?: string;
+  workspaceName?: string;
+  headers?: Array<{ name: string; value: string }>;
+  proxy?: { port?: number; rules?: ProxyRule[] };
 }
 
 interface EnvAnalysisResult {
@@ -164,7 +172,7 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
       hasRules: !!data.rules,
       hasSources: !!data.sources,
       hasProxyRules: !!data.proxyRules,
-      ruleCount: data.rules ? data.rules.length : 0,
+      ruleCount: data.rules ? (Array.isArray(data.rules) ? data.rules.length : Object.values(data.rules).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0)) : 0,
       sourceCount: data.sources ? data.sources.length : 0,
       proxyRuleCount: data.proxyRules ? data.proxyRules.length : 0,
       environmentCount: calculateEnvironmentCount(data),

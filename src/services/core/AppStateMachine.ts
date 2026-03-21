@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from './TimeManager';
 import type { AppSettings } from '../../types/settings';
+import type { ProxyStatus } from '../../types/proxy';
 
 const { createLogger } = mainLogger;
 
@@ -63,9 +64,8 @@ export const StateTransitions: Record<string, Record<string, string>> = {
 
 interface StateTransitionData {
     settings?: Partial<AppSettings>;
-    services?: Record<string, unknown>;
-    servers?: Record<string, unknown>;
-    workspace?: Record<string, unknown>;
+    servers?: { proxy?: ProxyStatus; websocket?: Record<string, unknown> };
+    workspace?: { id?: string; name?: string };
     error?: string | unknown;
     reason?: string;
     state?: string;
@@ -189,8 +189,8 @@ class AppStateMachineImpl extends EventEmitter {
         return this.transition('SERVICES_READY');
     }
 
-    serversReady(servers: Record<string, unknown> = {}): boolean { return this.transition('SERVERS_READY', { servers }); }
-    workspaceChange(workspace: Record<string, unknown> = {}): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
+    serversReady(servers: StateTransitionData['servers'] = {}): boolean { return this.transition('SERVERS_READY', { servers }); }
+    workspaceChange(workspace: StateTransitionData['workspace'] = {}): boolean { return this.transition('WORKSPACE_CHANGE', { workspace }); }
     workspaceReady(): boolean { return this.transition('WORKSPACE_READY'); }
     networkLost(): boolean { return this.transition('NETWORK_LOST'); }
     networkRestored(): boolean { return this.transition('NETWORK_RESTORED'); }

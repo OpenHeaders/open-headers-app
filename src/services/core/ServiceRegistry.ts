@@ -2,6 +2,11 @@ import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
+/** Checks whether an object has a method with the given name */
+function hasMethod(obj: unknown, name: string): obj is Record<string, (...args: never[]) => unknown> {
+  return typeof obj === 'object' && obj !== null && typeof (obj as Record<string, unknown>)[name] === 'function';
+}
+
 interface ServiceInfo {
   name: string;
   service: unknown;
@@ -97,14 +102,13 @@ class ServiceRegistry {
 
   private async doInitialize(serviceInfo: ServiceInfo): Promise<void> {
     const { service, initMethod } = serviceInfo;
-    const svc = service as Record<string, unknown>;
 
-    if (typeof svc[initMethod] !== 'function') {
+    if (!hasMethod(service, initMethod)) {
       this.log.warn(`Service ${serviceInfo.name} does not have ${initMethod} method`);
       return;
     }
 
-    await (svc[initMethod] as () => Promise<void>)();
+    await service[initMethod]();
   }
 
   private buildInitializationOrder(): void {
@@ -150,12 +154,11 @@ class ServiceRegistry {
       const serviceInfo = this.services.get(serviceName);
       if (serviceInfo && serviceInfo.initialized) {
         try {
-          const svc = serviceInfo.service as Record<string, unknown>;
           const shutdownMethods = ['shutdown', 'destroy', 'close', 'stop'];
-          const shutdownMethod = shutdownMethods.find(method => typeof svc[method] === 'function');
+          const shutdownMethod = shutdownMethods.find(method => hasMethod(serviceInfo.service, method));
 
-          if (shutdownMethod) {
-            await (svc[shutdownMethod] as () => Promise<void>)();
+          if (shutdownMethod && hasMethod(serviceInfo.service, shutdownMethod)) {
+            await serviceInfo.service[shutdownMethod]();
           }
 
           serviceInfo.initialized = false;

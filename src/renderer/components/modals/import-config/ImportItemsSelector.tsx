@@ -15,7 +15,7 @@ const { Text, Title } = Typography;
  * @param {string} importMode - Current import mode ('merge' or 'replace')
  */
 interface ImportItemsSelectorProps {
-    fileInfo: Record<string, number | boolean>;
+    fileInfo: { sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; hasSources?: boolean; hasRules?: boolean; hasProxyRules?: boolean } | null;
     combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number };
     selectedItems: Record<string, boolean>;
     onItemChange: (item: string) => void;

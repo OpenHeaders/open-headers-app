@@ -4,6 +4,13 @@
  * Persisted in settings.json at the userData path.
  */
 
+/** Screen recording permission state (macOS) */
+export interface ScreenRecordingPermission {
+  hasPermission: boolean | null;
+  platform: string;
+  canRequest?: boolean;
+}
+
 export interface AppSettings {
   launchAtLogin: boolean;
   hideOnLaunch: boolean;

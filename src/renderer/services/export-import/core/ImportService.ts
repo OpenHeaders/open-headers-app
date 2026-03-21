@@ -33,9 +33,8 @@ interface ImportStats {
   rulesSkipped: { total: number; [key: string]: number };
   environmentsImported: number;
   variablesCreated: number;
-  errors: Array<{ error: string; [key: string]: unknown }>;
-  createdWorkspace?: Record<string, unknown> | null;
-  [key: string]: unknown;
+  errors: Array<{ error: string; context?: string }>;
+  createdWorkspace?: { name?: string; type?: string; id?: string } | null;
 }
 
 /**
@@ -115,7 +114,7 @@ export class ImportService {
    */
   async _parseImportFiles(importOptions: ImportOptions) {
     // Parse main file content
-    const mainFileResult = validateAndParseFileContent(importOptions.fileContent) as { success: boolean; data?: Record<string, unknown>; error?: string };
+    const mainFileResult = validateAndParseFileContent(importOptions.fileContent);
     if (!mainFileResult.success) {
       throw new Error(`Main file parsing failed: ${mainFileResult.error}`);
     }
@@ -124,15 +123,15 @@ export class ImportService {
       throw new Error('Main file parsing returned no data');
     }
     const importData = mainFileResult.data as ImportData;
-    let envData: Record<string, unknown> | null = null;
+    let envData: ImportData | null = null;
 
     // Parse environment file if provided
     if (importOptions.envFileContent) {
-      const envFileResult = validateAndParseFileContent(importOptions.envFileContent) as { success: boolean; data?: Record<string, unknown>; error?: string };
+      const envFileResult = validateAndParseFileContent(importOptions.envFileContent);
       if (!envFileResult.success) {
         throw new Error(`Environment file parsing failed: ${envFileResult.error}`);
       }
-      envData = envFileResult.data ?? null;
+      envData = (envFileResult.data as ImportData) ?? null;
     }
 
     // Merge environment data if from separate file
@@ -212,7 +211,7 @@ export class ImportService {
     // Import rules
     if (selectedItems.rules && (importData.rules || importData.rulesMetadata)) {
       const rulesData = {
-        rules: importData.rules as Record<string, Array<{ id: string; [key: string]: unknown }>>,
+        rules: importData.rules,
         metadata: importData.rulesMetadata
       };
       const rulesStats = await this.rulesHandler.importRules(rulesData, importOptions);
@@ -366,12 +365,18 @@ export class ImportService {
    * @param {Object} importStats - Import statistics to analyze
    * @returns {Object} - Comprehensive import statistics
    */
-  getImportStatistics(importStats: Record<string, any>) {  // eslint-disable-line -- handler stats have heterogeneous shapes
-    const stats: Record<string, any> = {  // eslint-disable-line -- complex nested stats object
+  getImportStatistics(importStats: ImportStats) {
+    const stats = {
       totalImported: 0,
       totalSkipped: 0,
       totalErrors: importStats.errors ? importStats.errors.length : 0,
-      dataTypes: {} as Record<string, any>  // eslint-disable-line
+      dataTypes: {} as {
+        sources?: { imported: number; skipped: number };
+        proxyRules?: { imported: number; skipped: number };
+        rules?: { imported: number; skipped: number; byType: Record<string, number> };
+        environments?: { environmentsImported: number; variablesCreated: number };
+        workspace?: { created: boolean; name: string; type: string };
+      }
     };
 
     // Sources statistics
@@ -401,9 +406,9 @@ export class ImportService {
         skipped: importStats.rulesSkipped ? importStats.rulesSkipped.total : 0,
         byType: { ...importStats.rulesImported }
       };
-      delete stats.dataTypes.rules.byType.total;
-      stats.totalImported += stats.dataTypes.rules.imported;
-      stats.totalSkipped += stats.dataTypes.rules.skipped;
+      delete stats.dataTypes.rules.byType?.total;
+      stats.totalImported += stats.dataTypes.rules.imported ?? 0;
+      stats.totalSkipped += stats.dataTypes.rules.skipped ?? 0;
     }
 
     // Environment statistics
@@ -418,8 +423,8 @@ export class ImportService {
     if (importStats.createdWorkspace) {
       stats.dataTypes.workspace = {
         created: true,
-        name: importStats.createdWorkspace.name,
-        type: importStats.createdWorkspace.type
+        name: importStats.createdWorkspace.name ?? '',
+        type: importStats.createdWorkspace.type ?? ''
       };
     }
 

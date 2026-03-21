@@ -99,7 +99,7 @@ class TemplateResolver {
       return obj.map(item => this.resolveObject(item, variables, options));
     }
 
-    const resolved: Record<string, unknown> = {};
+    const resolved: Record<string, string | unknown> = {};
     const allMissingVars: string[] = [];
 
     Object.entries(obj).forEach(([key, value]) => {

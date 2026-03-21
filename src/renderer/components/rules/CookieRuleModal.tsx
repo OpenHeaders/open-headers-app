@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import type { HeaderRule } from '../../../types/rules';
 import {
     Modal,
     Form,
@@ -74,7 +75,7 @@ interface CookieRuleInitialValues {
 interface CookieRuleModalProps {
     visible: boolean;
     onCancel: () => void;
-    onSave: (ruleData: Record<string, unknown>) => void;
+    onSave: (ruleData: Partial<HeaderRule>) => void;
     initialValues: CookieRuleInitialValues | null;
 }
 
@@ -209,7 +210,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
     };
 
     // Build cookie value string
-    const buildCookieValue = (values: Record<string, unknown>, isDynamic = false) => {
+    const buildCookieValue = (values: { cookieName?: string; cookieValue?: string; domain?: string; path?: string; cookiePath?: string; secure?: boolean; httpOnly?: boolean; sameSite?: string; expirationMode?: string; maxAge?: number; expires?: string; sourceId?: string; prefix?: string; suffix?: string; headerType?: string }, isDynamic = false) => {
         let cookieString;
         
         // Build name=value part

@@ -11,7 +11,7 @@ interface EnvironmentVariablesCardProps {
     onEnvironmentOptionChange: (value: string) => void;
     fileFormat: string;
     onFileFormatChange: (value: string) => void;
-    environments: Record<string, Record<string, unknown>>;
+    environments: Record<string, Record<string, { value: string; isSecret: boolean }>>;
     environmentsReady: boolean;
     selectedEnvironments: Record<string, boolean>;
     onEnvironmentSelectionChange: (envName: string, checked: boolean) => void;

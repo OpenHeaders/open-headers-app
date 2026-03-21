@@ -15,15 +15,26 @@ import React from 'react';
 import { Modal, Space, Tag, Typography, Button, theme } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { formatRelativeTimeWithSmallMs, format24HTimeWithMs } from '../../../utils';
+import type { MessageInstance } from 'antd/es/message/interface';
 
 const { Text } = Typography;
 
+/** Console log entry as displayed in the table (transformed from ConsoleRecord) */
+interface DisplayedConsoleLog {
+    timestamp: number;
+    level: string;
+    message: string;
+    args?: unknown[];
+    stack?: string;
+    key?: string;
+}
+
 interface ConsoleLogModalProps {
     visible: boolean;
-    selectedLog: Record<string, any> | null;
-    record: Record<string, any> | null;
+    selectedLog: DisplayedConsoleLog | null;
+    record: { startTime?: number; metadata?: { startTime?: number } } | null;
     onClose: () => void;
-    messageApi: Record<string, any>;
+    messageApi: MessageInstance;
 }
 
 const ConsoleLogModal = ({
@@ -51,7 +62,7 @@ const ConsoleLogModal = ({
     const formatTimestamp = () => {
         const ts = selectedLog.timestamp;
         const timeParts = formatRelativeTimeWithSmallMs(ts);
-        const absoluteTime = new Date(record?.metadata?.startTime + ts);
+        const absoluteTime = new Date((record?.metadata?.startTime ?? 0) + ts);
         const formattedAbsoluteTime = format24HTimeWithMs(absoluteTime);
         
         return (

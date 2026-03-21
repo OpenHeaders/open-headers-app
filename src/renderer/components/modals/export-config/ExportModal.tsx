@@ -14,7 +14,9 @@ import ExportWarnings from './ExportWarnings';
  * Provides comprehensive interface for selecting export options including
  * purpose, items, environment variables, workspace config, and file format
  */
-interface ExportModalProps { visible: boolean; onCancel: () => void; onExport: (config: Record<string, unknown>) => void; }
+import type { ExportOptions } from '../../../services/export-import/core/types';
+
+interface ExportModalProps { visible: boolean; onCancel: () => void; onExport: (config: ExportOptions) => void; }
 const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     const { token } = theme.useToken();
     const { environments, environmentsReady } = useEnvironments();
@@ -76,7 +78,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
             environmentOption,
             // Force single file format when no environment variables
             fileFormat: environmentOption === 'none' ? 'single' : fileFormat,
-            selectedEnvironments: (environmentOption === 'schema' || environmentOption === 'full') ? selectedEnvNames : null,
+            selectedEnvironments: (environmentOption === 'schema' || environmentOption === 'full') ? selectedEnvNames : undefined,
             includeWorkspace: isGitWorkspace ? includeWorkspace : false,
             includeCredentials: includeWorkspace ? includeCredentials : false,
             currentWorkspace: includeWorkspace ? currentWorkspace : null
@@ -89,7 +91,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
     const handleItemChange = (item: string) => {
         setSelectedItems(prev => ({
             ...prev,
-            [item]: !(prev as Record<string, boolean>)[item]
+            [item]: !prev[item as keyof typeof prev]
         }));
     };
 

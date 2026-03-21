@@ -15,9 +15,8 @@ class VideoRecordingManager {
         quality: string;
         resolution: string;
         captureType: string;
-        [key: string]: unknown;
     }>;
-    settings: Record<string, unknown> | null;
+    settings: { videoRecording?: boolean; videoQuality?: string } | null;
 
     constructor() {
         this.activeRecordings = new Map();

@@ -12,7 +12,7 @@ const { Text } = Typography;
  * @param {Object} selectedItems - Selected items to import
  * @param {Object} combinedEnvInfo - Combined environment information
  */
-interface ImportWarningsProps { importMode: string; selectedItems: Record<string, boolean>; combinedEnvInfo: Record<string, unknown>; }
+interface ImportWarningsProps { importMode: string; selectedItems: Record<string, boolean>; combinedEnvInfo: { hasEnvironmentSchema: boolean; hasEnvironments: boolean; variableCount: number; environmentCount: number }; }
 const ImportWarnings = ({
     importMode,
     selectedItems,

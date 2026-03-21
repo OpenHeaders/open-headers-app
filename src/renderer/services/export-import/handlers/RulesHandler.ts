@@ -8,7 +8,7 @@
 import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 import type { ExportImportDependencies } from '../core/types';
-import type { RulesStorage as SharedRulesStorage } from '../../../../types/rules';
+import type { RulesStorage as SharedRulesStorage, RulesCollection } from '../../../../types/rules';
 
 /** Import/export rules storage — uses dynamic keys for iterating over rule types */
 interface RulesStorage extends SharedRulesStorage {
@@ -21,14 +21,12 @@ const log = createLogger('RulesHandler');
 /** Export options for rules */
 interface ExportOptions {
   selectedItems: Record<string, boolean>;
-  [key: string]: unknown;
 }
 
 /** Import options for rules */
 interface ImportOptions {
   importMode?: string;
   selectedItems: Record<string, boolean>;
-  [key: string]: unknown;
 }
 
 /** Individual rule entry */
@@ -36,13 +34,12 @@ interface RuleEntry {
   id: string;
   name?: string;
   enabled?: boolean;
-  [key: string]: unknown;
 }
 
 /** Rules to import structure */
 interface RulesToImport {
   rules?: Record<string, RuleEntry[]>;
-  metadata?: Record<string, unknown>;
+  metadata?: { totalRules?: number; lastUpdated?: string };
 }
 
 
@@ -62,9 +59,9 @@ interface ImportStats {
 
 /** Rules data for validation/statistics */
 interface RulesData {
-  rules?: Record<string, RuleEntry[]>;
-  rulesMetadata?: Record<string, unknown>;
-  metadata?: Record<string, unknown>;
+  rules?: Record<string, RuleEntry[]> | RulesCollection;
+  rulesMetadata?: { totalRules?: number; lastUpdated?: string };
+  metadata?: { totalRules?: number; lastUpdated?: string };
 }
 
 /**
@@ -340,7 +337,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to validate
    * @returns {Object} - Validation result
    */
-  validateRulesForExport(rulesDataInput: RulesData | Record<string, unknown>) {
+  validateRulesForExport(rulesDataInput: RulesData) {
     const rulesData = rulesDataInput as RulesData;
     if (!rulesData || typeof rulesData !== 'object') {
       return {
@@ -385,7 +382,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data object
    * @returns {Object} - Statistics object
    */
-  getRulesStatistics(rulesDataInput: RulesData | Record<string, unknown>) {
+  getRulesStatistics(rulesDataInput: RulesData) {
     const rulesData = rulesDataInput as RulesData;
     if (!rulesData || !rulesData.rules) {
       return {
@@ -395,7 +392,7 @@ export class RulesHandler {
       };
     }
 
-    const stats: { total: number; byType: Record<string, number>; metadata: Record<string, unknown> | undefined } = {
+    const stats: { total: number; byType: Record<string, number>; metadata: RulesData['rulesMetadata'] } = {
       total: 0,
       byType: {},
       metadata: rulesData.rulesMetadata || rulesData.metadata
@@ -416,7 +413,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeRules(rulesDataInput: RulesData | Record<string, unknown>) {
+  analyzeRules(rulesDataInput: RulesData) {
     const rulesData = rulesDataInput as RulesData;
     const warnings: string[] = [];
     const suggestions: string[] = [];

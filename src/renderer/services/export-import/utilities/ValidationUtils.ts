@@ -24,13 +24,13 @@ interface ValidationResult {
   error?: string;
   warning?: string;
   warnings?: string[];
-  data?: Record<string, unknown>;
+  data?: ImportPayload;
 }
 
 /** Import payload structure — accepts parsed but unvalidated input */
 interface ImportPayload {
   version?: string;
-  workspace?: Record<string, unknown>;
+  workspace?: Partial<{ name: string; type: string; gitUrl?: string }>;
   sources?: Partial<Source>[];
   proxyRules?: Partial<ProxyRule>[];
   rules?: Record<string, unknown[]>;
@@ -120,10 +120,10 @@ export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResu
     };
   }
 
-  const workspace = workspaceInput as Record<string, unknown>;
+  const workspace = workspaceInput as Partial<{ name: string; type: string }>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.WORKSPACE;
   for (const field of requiredFields) {
-    if (!workspace[field]) {
+    if (!workspace[field as keyof typeof workspace]) {
       return {
         success: false,
         error: `Workspace configuration missing required field: ${field}`
@@ -154,7 +154,7 @@ export function validateEnvironmentVariable(variableInput: unknown): ValidationR
     };
   }
 
-  const variable = variableInput as Record<string, unknown>;
+  const variable = variableInput as { name?: string };
 
   if (!variable.name || typeof variable.name !== 'string') {
     return {
@@ -163,7 +163,7 @@ export function validateEnvironmentVariable(variableInput: unknown): ValidationR
     };
   }
 
-  const varName = variable.name as string;
+  const varName = variable.name;
   if (varName.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
     return {
       success: false,
@@ -187,7 +187,7 @@ export function validateProxyRule(ruleInput: unknown): ValidationResult {
     };
   }
 
-  const rule = ruleInput as Record<string, unknown>;
+  const rule = ruleInput as Partial<ProxyRule>;
 
   // Proxy rules can be either static (with domains) or dynamic (with headerRuleId)
   const isDynamicRule = rule.isDynamic === true || !!rule.headerRuleId;
@@ -338,7 +338,7 @@ export function validateEnvironmentSchema(schemaInput: unknown): ValidationResul
     };
   }
 
-  const schema = schemaInput as Record<string, unknown>;
+  const schema = schemaInput as Partial<EnvironmentSchema>;
 
   if (schema.environments && typeof schema.environments !== 'object') {
     return {

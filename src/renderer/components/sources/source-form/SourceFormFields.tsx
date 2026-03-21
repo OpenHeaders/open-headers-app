@@ -45,7 +45,7 @@ import type { SourceType } from '../../../../types/source';
  *   onBrowse={handleBrowse}
  * />
  */
-export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: SourceType; filePath: string; onBrowse: () => void; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; [key: string]: unknown }) => {
+export const SourcePathField = ({ sourceType, filePath, onBrowse, value, onChange, ...props }: { sourceType: SourceType; filePath: string; onBrowse: () => void; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement>; disabled?: boolean; placeholder?: string }) => {
     switch (sourceType) {
         case 'file':
             return (

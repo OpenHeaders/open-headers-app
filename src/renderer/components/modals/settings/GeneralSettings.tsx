@@ -1,6 +1,7 @@
 import React from 'react';
 import SettingItem from './SettingItem';
 import { getSettingsConfig, settingsStyles } from './SettingsConfig';
+import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
 
 /**
  * GeneralSettings component for displaying general application settings
@@ -23,7 +24,7 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * @param {Object} screenRecordingPermission - Screen recording permission state
  * @param {function} onChange - Callback function for handling setting changes
  */
-interface GeneralSettingsProps { formValues: Record<string, unknown>; screenRecordingPermission: Record<string, unknown>; onChange: (key: string, value: unknown) => void; }
+interface GeneralSettingsProps { formValues: Partial<AppSettings>; screenRecordingPermission: ScreenRecordingPermission | null; onChange: (key: string, value: unknown) => void; }
 const GeneralSettings = ({ formValues, screenRecordingPermission, onChange }: GeneralSettingsProps) => {
     // Get settings configuration for general section
     const settingsConfig = getSettingsConfig(formValues, screenRecordingPermission);
@@ -33,7 +34,7 @@ const GeneralSettings = ({ formValues, screenRecordingPermission, onChange }: Ge
      * @param {Array} items - Array of setting configuration objects
      * @returns {React.ReactNode} Rendered setting items
      */
-    const renderSettingItems = (items: { fieldName: string; title: string; [key: string]: unknown }[]) => (
+    const renderSettingItems = (items: ReturnType<typeof getSettingsConfig>['general']) => (
         <>
             {items.map((setting, index: number) => (
                 <SettingItem

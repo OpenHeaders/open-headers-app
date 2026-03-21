@@ -60,7 +60,6 @@ type SourceEntry = Pick<Source, 'sourceId' | 'sourceName'>;
 
 interface RulesMap {
     header?: HeaderRuleEntry[];
-    [key: string]: unknown;
 }
 
 interface JwtModalData {

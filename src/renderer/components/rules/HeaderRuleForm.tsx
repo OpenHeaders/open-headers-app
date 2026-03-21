@@ -101,10 +101,25 @@ interface HeaderRuleInitialValues {
     isEnabled?: boolean;
 }
 
+interface HeaderRuleFormData {
+    headerName: string;
+    headerValue: string;
+    tag: string;
+    domains: string[];
+    isDynamic: boolean;
+    sourceId: string;
+    prefix: string;
+    suffix: string;
+    isResponse: boolean;
+    isEnabled: boolean;
+    hasEnvVars: boolean;
+    envVars: string[];
+}
+
 interface HeaderRuleFormProps {
     visible: boolean;
     onCancel: () => void;
-    onSave: (ruleData: Record<string, unknown>) => void;
+    onSave: (ruleData: HeaderRuleFormData) => void;
     initialValues: HeaderRuleInitialValues | null;
 }
 
