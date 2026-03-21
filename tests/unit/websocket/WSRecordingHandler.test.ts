@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import type WebSocket from 'ws';
 import { WSRecordingHandler } from '../../../src/services/websocket/ws-recording-handler';
+import type { RecordingMetadata } from '../../../src/types/recording';
 
 // Mock atomicFileWriter
 vi.mock('../../../src/utils/atomicFileWriter', () => ({
@@ -8,7 +10,13 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
     }
 }));
 
-function createMockWSService(): ConstructorParameters<typeof WSRecordingHandler>[0] {
+interface MockWSService {
+    appDataPath: string;
+    _broadcastToAll: Mock<(message: string) => number>;
+    _handleFocusApp: Mock;
+}
+
+function createMockWSService(): MockWSService {
     return {
         appDataPath: '/tmp/test-app-data',
         _broadcastToAll: vi.fn().mockReturnValue(3),
@@ -19,13 +27,17 @@ function createMockWSService(): ConstructorParameters<typeof WSRecordingHandler>
 // WebSocket.OPEN constant
 const WS_OPEN = 1;
 
+function createMockWs(readyState = WS_OPEN) {
+    return { readyState, send: vi.fn() } as unknown as WebSocket & { send: Mock };
+}
+
 describe('WSRecordingHandler', () => {
     let handler: WSRecordingHandler;
-    let mockService: ReturnType<typeof createMockWSService>;
+    let mockService: MockWSService;
 
     beforeEach(() => {
         mockService = createMockWSService();
-        handler = new WSRecordingHandler(mockService);
+        handler = new WSRecordingHandler(mockService as ConstructorParameters<typeof WSRecordingHandler>[0]);
     });
 
     // ------- constructor -------
@@ -97,10 +109,10 @@ describe('WSRecordingHandler', () => {
     // ------- _sendVideoRecordingStatus -------
     describe('_sendVideoRecordingStatus', () => {
         it('sends status to open websocket', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             handler._sendVideoRecordingStatus(mockWs, 'rec-123', 'started');
             expect(mockWs.send).toHaveBeenCalledTimes(1);
-            const message = JSON.parse(mockWs.send.mock.calls[0][0]);
+            const message = JSON.parse(mockWs.send.mock.calls[0][0] as string);
             expect(message.type).toBe('videoRecordingStatus');
             expect(message.data.recordingId).toBe('rec-123');
             expect(message.data.status).toBe('started');
@@ -108,27 +120,27 @@ describe('WSRecordingHandler', () => {
         });
 
         it('sends status with error message', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             handler._sendVideoRecordingStatus(mockWs, 'rec-456', 'error', 'Something went wrong');
-            const message = JSON.parse(mockWs.send.mock.calls[0][0]);
+            const message = JSON.parse(mockWs.send.mock.calls[0][0] as string);
             expect(message.data.status).toBe('error');
             expect(message.data.error).toBe('Something went wrong');
         });
 
         it('does not send when ws is null', () => {
-            expect(() => handler._sendVideoRecordingStatus(null, 'rec-1', 'started')).not.toThrow();
+            expect(() => handler._sendVideoRecordingStatus(null as unknown as WebSocket, 'rec-1', 'started')).not.toThrow();
         });
 
         it('does not send when ws readyState is not OPEN', () => {
-            const mockWs = { readyState: 3, send: vi.fn() }; // CLOSED
+            const mockWs = createMockWs(3); // CLOSED
             handler._sendVideoRecordingStatus(mockWs, 'rec-1', 'started');
             expect(mockWs.send).not.toHaveBeenCalled();
         });
 
         it('uses null for error when not provided', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             handler._sendVideoRecordingStatus(mockWs, 'rec-1', 'stopped');
-            const message = JSON.parse(mockWs.send.mock.calls[0][0]);
+            const message = JSON.parse(mockWs.send.mock.calls[0][0] as string);
             expect(message.data.error).toBeNull();
         });
     });
@@ -137,7 +149,7 @@ describe('WSRecordingHandler', () => {
     describe('handleRecordingStateSync', () => {
         it('does nothing when videoCaptureService is null', async () => {
             handler.videoCaptureService = null;
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             await handler.handleRecordingStateSync(mockWs, { recordingId: 'r1', state: 'paused' });
             // Should not throw
         });
@@ -149,8 +161,8 @@ describe('WSRecordingHandler', () => {
                 stopRecording: vi.fn(),
                 updateRecordingState: vi.fn().mockResolvedValue(undefined)
             };
-            handler.videoCaptureService = mockCapture;
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            handler.videoCaptureService = mockCapture as typeof handler.videoCaptureService;
+            const mockWs = createMockWs();
             await handler.handleRecordingStateSync(mockWs, { recordingId: 'r1', state: 'paused' });
             expect(mockCapture.updateRecordingState).toHaveBeenCalledWith('r1', 'paused');
         });
@@ -162,8 +174,8 @@ describe('WSRecordingHandler', () => {
                 stopRecording: vi.fn(),
                 updateRecordingState: vi.fn().mockRejectedValue(new Error('fail'))
             };
-            handler.videoCaptureService = mockCapture;
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            handler.videoCaptureService = mockCapture as typeof handler.videoCaptureService;
+            const mockWs = createMockWs();
             await expect(
                 handler.handleRecordingStateSync(mockWs, { recordingId: 'r1', state: 'error' })
             ).resolves.not.toThrow();
@@ -173,36 +185,35 @@ describe('WSRecordingHandler', () => {
     // ------- handleSaveRecordingMessage -------
     describe('handleSaveRecordingMessage', () => {
         it('generates record ID when metadata has no recordId', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
+            const metadata: RecordingMetadata = { startTime: Date.now(), url: 'https://example.com', timestamp: 1000 };
             const data = {
                 type: 'saveRecording',
                 recording: {
                     record: {
-                        metadata: { url: 'https://example.com', timestamp: 1000 },
-                        events: [{ type: 'click' }]
+                        metadata,
+                        events: [{ type: 'click', timestamp: 0 }]
                     }
                 }
             };
 
-            // handleSaveRecording is async and will fail due to missing electron require,
-            // but the ID generation is synchronous
             handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId: 'test-id' });
             handler.notifyRecordingProcessing = vi.fn();
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
-            // Should have generated a recordId
-            expect(data.recording.record.metadata.recordId).toBeDefined();
-            expect(data.recording.record.metadata.recordId).toMatch(/^record-/);
+            expect(metadata.recordId).toBeDefined();
+            expect(metadata.recordId).toMatch(/^record-/);
         });
 
         it('uses existing recordId when present', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
+            const metadata: RecordingMetadata = { startTime: Date.now(), recordId: 'existing-id', url: 'https://example.com' };
             const data = {
                 type: 'saveRecording',
                 recording: {
                     record: {
-                        metadata: { recordId: 'existing-id', url: 'https://example.com' },
+                        metadata,
                         events: []
                     }
                 }
@@ -213,16 +224,16 @@ describe('WSRecordingHandler', () => {
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
-            expect(data.recording.record.metadata.recordId).toBe('existing-id');
+            expect(metadata.recordId).toBe('existing-id');
         });
 
         it('focuses app with record-viewer tab', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             const data = {
                 type: 'saveRecording',
                 recording: {
                     record: {
-                        metadata: { recordId: 'rec-1', url: 'https://example.com' },
+                        metadata: { startTime: Date.now(), recordId: 'rec-1', url: 'https://example.com' } satisfies RecordingMetadata,
                         events: []
                     }
                 }
@@ -241,13 +252,13 @@ describe('WSRecordingHandler', () => {
         });
 
         it('calls notifyRecordingProcessing with metadata', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             const data = {
                 type: 'saveRecording',
                 recording: {
                     record: {
-                        metadata: { recordId: 'rec-2', url: 'https://test.com', timestamp: 12345 },
-                        events: [{ type: 'a' }, { type: 'b' }]
+                        metadata: { startTime: Date.now(), recordId: 'rec-2', url: 'https://test.com', timestamp: 12345 } satisfies RecordingMetadata,
+                        events: [{ type: 'a', timestamp: 0 }, { type: 'b', timestamp: 1 }]
                     }
                 }
             };
@@ -265,11 +276,11 @@ describe('WSRecordingHandler', () => {
         });
 
         it('creates record and metadata objects when missing', () => {
-            const mockWs = { readyState: WS_OPEN, send: vi.fn() };
+            const mockWs = createMockWs();
             const data = {
                 type: 'saveRecording',
                 recording: {
-                    record: { events: [] }
+                    record: { events: [] as { type: string; timestamp: number }[] }
                 }
             };
 
@@ -278,8 +289,8 @@ describe('WSRecordingHandler', () => {
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
-            expect(data.recording.record.metadata).toBeDefined();
-            expect(data.recording.record.metadata.recordId).toMatch(/^record-/);
+            expect(data.recording.record).toHaveProperty('metadata');
+            expect((data.recording.record as { metadata?: RecordingMetadata }).metadata?.recordId).toMatch(/^record-/);
         });
     });
 });
