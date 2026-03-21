@@ -47,7 +47,9 @@ import type { ExportImportDependencies } from '../../../../src/renderer/services
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
+import type { ExportOptions, ImportOptions } from '../../../../src/renderer/services/export-import/core/types';
+
+function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
     appVersion: '1.0.0',
     sources: [],
@@ -62,7 +64,15 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
     setVariable: vi.fn(async () => true),
     generateEnvironmentSchema: vi.fn(() => ({})),
     ...overrides,
-  };
+  } as unknown as ExportImportDependencies;
+}
+
+function makeExportOptions(overrides: Record<string, unknown> = {}): ExportOptions {
+  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+}
+
+function makeImportOptions(overrides: Record<string, unknown> = {}): ImportOptions {
+  return { fileContent: '{}', selectedItems: {}, importMode: 'merge', ...overrides } as ImportOptions;
 }
 
 // ---------------------------------------------------------------------------
@@ -214,7 +224,7 @@ describe('useExportImport', () => {
 
     let exportPromise!: Promise<void>;
     act(() => {
-      exportPromise = result.current.handleExport({ format: 'json' });
+      exportPromise = result.current.handleExport(makeExportOptions({ fileFormat: 'json' }));
     });
 
     // While in-flight, loading.export should be true
@@ -236,7 +246,7 @@ describe('useExportImport', () => {
     expect(result.current.exportModalVisible).toBe(true);
 
     await act(async () => {
-      await result.current.handleExport({ format: 'json' });
+      await result.current.handleExport(makeExportOptions({ fileFormat: 'json' }));
     });
 
     expect(result.current.exportModalVisible).toBe(false);
@@ -249,7 +259,7 @@ describe('useExportImport', () => {
 
     await expect(
       act(async () => {
-        await result.current.handleExport({ format: 'json' });
+        await result.current.handleExport(makeExportOptions({ fileFormat: 'json' }));
       }),
     ).rejects.toThrow('export failed');
 
@@ -266,7 +276,7 @@ describe('useExportImport', () => {
 
     await expect(
       act(async () => {
-        await result.current.handleExport({});
+        await result.current.handleExport(makeExportOptions());
       }),
     ).rejects.toThrow('Export service is not available');
   });
@@ -275,7 +285,7 @@ describe('useExportImport', () => {
     const { result } = renderHook(() => useExportImport(makeDeps()));
 
     await act(async () => {
-      await result.current.handleExport({ format: 'json' });
+      await result.current.handleExport(makeExportOptions({ fileFormat: 'json' }));
     });
 
     expect(result.current.loading.import).toBe(false);
@@ -291,7 +301,7 @@ describe('useExportImport', () => {
 
     let importPromise!: Promise<void>;
     act(() => {
-      importPromise = result.current.handleImport({ importMode: 'merge' });
+      importPromise = result.current.handleImport(makeImportOptions());
     });
 
     expect(result.current.loading.import).toBe(true);
@@ -312,7 +322,7 @@ describe('useExportImport', () => {
     expect(result.current.importModalVisible).toBe(true);
 
     await act(async () => {
-      await result.current.handleImport({ importMode: 'merge', isGitSync: false });
+      await result.current.handleImport(makeImportOptions({ isGitSync: false }));
     });
 
     expect(result.current.importModalVisible).toBe(false);
@@ -324,7 +334,7 @@ describe('useExportImport', () => {
     act(() => result.current.showImportModal());
 
     await act(async () => {
-      await result.current.handleImport({ importMode: 'merge', isGitSync: true });
+      await result.current.handleImport(makeImportOptions({ isGitSync: true }));
     });
 
     expect(result.current.importModalVisible).toBe(true);
@@ -337,7 +347,7 @@ describe('useExportImport', () => {
 
     await expect(
       act(async () => {
-        await result.current.handleImport({ importMode: 'merge' });
+        await result.current.handleImport(makeImportOptions());
       }),
     ).rejects.toThrow('import failed');
 
@@ -354,7 +364,7 @@ describe('useExportImport', () => {
 
     await expect(
       act(async () => {
-        await result.current.handleImport({});
+        await result.current.handleImport(makeImportOptions());
       }),
     ).rejects.toThrow('Import service is not available');
   });
@@ -363,7 +373,7 @@ describe('useExportImport', () => {
     const { result } = renderHook(() => useExportImport(makeDeps()));
 
     await act(async () => {
-      await result.current.handleImport({ importMode: 'merge' });
+      await result.current.handleImport(makeImportOptions());
     });
 
     expect(result.current.loading.export).toBe(false);
@@ -383,8 +393,8 @@ describe('useExportImport', () => {
     let importPromise!: Promise<void>;
 
     act(() => {
-      exportPromise = result.current.handleExport({ format: 'json' });
-      importPromise = result.current.handleImport({ importMode: 'merge' });
+      exportPromise = result.current.handleExport(makeExportOptions({ fileFormat: 'json' }));
+      importPromise = result.current.handleImport(makeImportOptions());
     });
 
     expect(result.current.loading.export).toBe(true);
