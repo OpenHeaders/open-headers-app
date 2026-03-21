@@ -7,6 +7,19 @@ import {
   RULE_MESSAGE_TYPES,
   validateRule,
 } from '../../../../src/renderer/utils/data-structures/rulesStructure';
+import type { HeaderRule, PayloadRule, UrlRule } from '../../../../src/types/rules';
+
+function createHeaderRule(overrides: Record<string, unknown> = {}): HeaderRule {
+  return createRule(RULE_TYPES.HEADER, overrides) as HeaderRule;
+}
+
+function createPayloadRule(overrides: Record<string, unknown> = {}): PayloadRule {
+  return createRule(RULE_TYPES.PAYLOAD, overrides) as PayloadRule;
+}
+
+function createUrlRule(overrides: Record<string, unknown> = {}): UrlRule {
+  return createRule(RULE_TYPES.URL, overrides) as UrlRule;
+}
 
 // ======================================================================
 // RULE_TYPES
@@ -25,38 +38,38 @@ describe('RULE_TYPES', () => {
 describe('createRule', () => {
   describe('common base fields', () => {
     it('generates id from Date.now if not provided', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.id).toBeTruthy();
     });
 
     it('uses provided id', () => {
-      const rule = createRule(RULE_TYPES.HEADER, { id: 'custom-id' });
+      const rule = createHeaderRule({ id: 'custom-id' });
       expect(rule.id).toBe('custom-id');
     });
 
     it('defaults isEnabled to true', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.isEnabled).toBe(true);
     });
 
     it('allows setting isEnabled to false', () => {
-      const rule = createRule(RULE_TYPES.HEADER, { isEnabled: false });
+      const rule = createHeaderRule({ isEnabled: false });
       expect(rule.isEnabled).toBe(false);
     });
 
     it('defaults name and description to empty strings', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.name).toBe('');
       expect(rule.description).toBe('');
     });
 
     it('defaults domains to empty array', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.domains).toEqual([]);
     });
 
     it('sets createdAt and updatedAt', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.createdAt).toBeTruthy();
       expect(rule.updatedAt).toBeTruthy();
     });
@@ -64,7 +77,7 @@ describe('createRule', () => {
 
   describe('HEADER type', () => {
     it('includes header-specific fields', () => {
-      const rule = createRule(RULE_TYPES.HEADER, {
+      const rule = createHeaderRule({
         headerName: 'Authorization',
         headerValue: 'Bearer token',
         tag: 'auth',
@@ -76,7 +89,7 @@ describe('createRule', () => {
     });
 
     it('defaults header fields', () => {
-      const rule = createRule(RULE_TYPES.HEADER);
+      const rule = createHeaderRule();
       expect(rule.headerName).toBe('');
       expect(rule.headerValue).toBe('');
       expect(rule.isResponse).toBe(false);
@@ -91,7 +104,7 @@ describe('createRule', () => {
 
   describe('PAYLOAD type', () => {
     it('includes payload-specific fields', () => {
-      const rule = createRule(RULE_TYPES.PAYLOAD, {
+      const rule = createPayloadRule({
         matchPattern: 'old-value',
         replaceWith: 'new-value',
       });
@@ -101,7 +114,7 @@ describe('createRule', () => {
     });
 
     it('defaults payload fields', () => {
-      const rule = createRule(RULE_TYPES.PAYLOAD);
+      const rule = createPayloadRule();
       expect(rule.matchType).toBe('contains');
       expect(rule.isRequest).toBe(true);
       expect(rule.isResponse).toBe(true);
@@ -111,7 +124,7 @@ describe('createRule', () => {
 
   describe('URL type', () => {
     it('includes URL-specific fields', () => {
-      const rule = createRule(RULE_TYPES.URL, {
+      const rule = createUrlRule({
         matchPattern: '/api/v1',
         redirectTo: '/api/v2',
         action: 'redirect',
@@ -123,7 +136,7 @@ describe('createRule', () => {
     });
 
     it('defaults URL fields', () => {
-      const rule = createRule(RULE_TYPES.URL);
+      const rule = createUrlRule();
       expect(rule.matchType).toBe('contains');
       expect(rule.replacePattern).toBe('');
       expect(rule.modifyParams).toEqual([]);
