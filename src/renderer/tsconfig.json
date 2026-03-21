@@ -1,19 +1,7 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "allowJs": false,
-    "checkJs": false,
-    "strict": true,
-    "target": "ES2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "baseUrl": "../..",
-    "outDir": "../../dist-webpack",
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "baseUrl": "../.."
   },
   "include": [
     "**/*.ts",

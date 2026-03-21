@@ -6,8 +6,17 @@ export default defineConfig({
         environment: 'node',
         setupFiles: ['./tests/setup.js'],
         include: ['tests/**/*.test.{js,ts,tsx}'],
+        typecheck: {
+            enabled: false, // TODO: enable once test type errors are fixed (2575 errors across 77 files)
+            tsconfig: './tsconfig.test.json',
+            include: ['tests/**/*.test.{ts,tsx}'],
+        },
         deps: {
-            inline: [/src\//, 'electron', 'electron-log'],
+            optimizer: {
+                ssr: {
+                    include: ['electron', 'electron-log'],
+                },
+            },
         },
         testTimeout: 10000,
         coverage: {
