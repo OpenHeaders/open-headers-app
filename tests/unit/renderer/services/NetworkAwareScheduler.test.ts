@@ -99,6 +99,28 @@ vi.stubGlobal('window', {
   },
 });
 
+import type { Source } from '../../../../src/types/source';
+
+type ScheduleEntry = {
+  sourceId: string; intervalMs: number; lastRefresh: number | null; nextRefresh: number | null;
+  retryCount: number; maxRetries: number; backoffFactor: number; failureCount: number;
+  maxConsecutiveFailures: number; alignToMinute: boolean; alignToHour: boolean; alignToDay: boolean;
+  isTemporary?: boolean;
+};
+
+function makeScheduleEntry(overrides: Partial<ScheduleEntry> = {}): ScheduleEntry {
+  return {
+    sourceId: 's1', intervalMs: 60000, lastRefresh: null, nextRefresh: null,
+    retryCount: 0, maxRetries: 3, backoffFactor: 2, failureCount: 0,
+    maxConsecutiveFailures: 5, alignToMinute: false, alignToHour: false, alignToDay: false,
+    ...overrides,
+  };
+}
+
+function makeRefreshSource(overrides: Partial<Source> & { sourceType: Source['sourceType'] }): Source {
+  return { sourceId: 'test', refreshOptions: { enabled: true, interval: 60000 }, ...overrides };
+}
+
 const NetworkAwareScheduler = (await import('../../../../src/renderer/services/NetworkAwareScheduler')).default;
 const timeManager = (await import('../../../../src/renderer/services/TimeManager')).default as typeof TimeManagerDefault & { _setNow: (v: number) => void };
 
@@ -188,21 +210,22 @@ describe('NetworkAwareScheduler', () => {
   describe('scheduleSource', () => {
     it('ignores null source', async () => {
       await scheduler.initialize(vi.fn());
-      await scheduler.scheduleSource(null);
+      // Intentionally null to test runtime guard
+      await scheduler.scheduleSource(null as unknown as Source);
       const entries = await scheduler.schedules.entries();
       expect(entries).toHaveLength(0);
     });
 
     it('ignores non-http source', async () => {
       await scheduler.initialize(vi.fn());
-      await scheduler.scheduleSource({ sourceId: '1', sourceType: 'file' });
+      await scheduler.scheduleSource(makeRefreshSource({ sourceId: '1', sourceType: 'file' }));
       const entries = await scheduler.schedules.entries();
       expect(entries).toHaveLength(0);
     });
 
     it('ignores source without sourceId', async () => {
       await scheduler.initialize(vi.fn());
-      await scheduler.scheduleSource({ sourceType: 'http' });
+      await scheduler.scheduleSource(makeRefreshSource({ sourceType: 'http', sourceId: '' }));
       const entries = await scheduler.schedules.entries();
       expect(entries).toHaveLength(0);
     });
@@ -212,11 +235,11 @@ describe('NetworkAwareScheduler', () => {
       await scheduler.scheduleSource({
         sourceId: 's1',
         sourceType: 'http',
-        refreshOptions: { interval: 5 },
+        refreshOptions: { enabled: true, interval: 5 },
       });
       const schedule = await scheduler.schedules.get('s1');
       expect(schedule).toBeDefined();
-      expect(schedule.intervalMs).toBe(300000);
+      expect(schedule!.intervalMs).toBe(300000);
     });
 
     it('unschedules source with no interval', async () => {
@@ -225,16 +248,16 @@ describe('NetworkAwareScheduler', () => {
       await scheduler.scheduleSource({
         sourceId: 's1',
         sourceType: 'http',
-        refreshOptions: { interval: 5 },
+        refreshOptions: { enabled: true, interval: 5 },
       });
       expect(await scheduler.schedules.get('s1')).toBeDefined();
 
-      // Now schedule with no interval
+      // Now schedule with no interval — intentionally invalid to test runtime handling
       await scheduler.scheduleSource({
         sourceId: 's1',
         sourceType: 'http',
-        refreshOptions: { interval: 'never' },
-      });
+        refreshOptions: { enabled: true, interval: 'never' as unknown as number },
+      } as Parameters<typeof scheduler.scheduleSource>[0]);
       expect(await scheduler.schedules.get('s1')).toBeUndefined();
     });
   });
@@ -245,7 +268,7 @@ describe('NetworkAwareScheduler', () => {
       await scheduler.scheduleSource({
         sourceId: 's1',
         sourceType: 'http',
-        refreshOptions: { interval: 5 },
+        refreshOptions: { enabled: true, interval: 5 },
       });
       await scheduler.unscheduleSource('s1');
       expect(await scheduler.schedules.get('s1')).toBeUndefined();
@@ -262,12 +285,12 @@ describe('NetworkAwareScheduler', () => {
   // -----------------------------------------------------------------------
   describe('calculateAlignedTime', () => {
     it('returns targetTime when no alignment flags set', () => {
-      const schedule = { alignToMinute: false, alignToHour: false, alignToDay: false };
+      const schedule = makeScheduleEntry({ alignToMinute: false, alignToHour: false, alignToDay: false });
       expect(scheduler.calculateAlignedTime(5000, schedule)).toBe(5000);
     });
 
     it('calls timeManager.getNextAlignedTime when alignment flag is set', () => {
-      const schedule = { alignToMinute: true, alignToHour: false, alignToDay: false, intervalMs: 60000 };
+      const schedule = makeScheduleEntry({ alignToMinute: true, alignToHour: false, alignToDay: false, intervalMs: 60000 });
       // When alignment is enabled, the result should be a number (from TimeManager)
       const result = scheduler.calculateAlignedTime(5000, schedule);
       expect(typeof result).toBe('number');
@@ -325,7 +348,7 @@ describe('NetworkAwareScheduler', () => {
       const callback = vi.fn().mockResolvedValue({ success: true });
       await scheduler.initialize(callback);
       await scheduler.activeRefreshes.add('s1');
-      await scheduler.schedules.set('s1', { sourceId: 's1', intervalMs: 60000 });
+      await scheduler.schedules.set('s1', makeScheduleEntry({ sourceId: 's1', intervalMs: 60000 }));
       await scheduler.triggerRefresh('s1');
       expect(callback).not.toHaveBeenCalled();
     });
@@ -336,14 +359,14 @@ describe('NetworkAwareScheduler', () => {
   // -----------------------------------------------------------------------
   describe('updateScheduleOnSuccess', () => {
     it('resets failure and retry counts', async () => {
-      await scheduler.schedules.set('s1', {
+      await scheduler.schedules.set('s1', makeScheduleEntry({
         sourceId: 's1',
         retryCount: 2,
         failureCount: 5,
         lastRefresh: 0,
-      });
+      }));
       await scheduler.updateScheduleOnSuccess('s1');
-      const schedule = await scheduler.schedules.get('s1');
+      const schedule = (await scheduler.schedules.get('s1'))!;
       expect(schedule.retryCount).toBe(0);
       expect(schedule.failureCount).toBe(0);
       expect(schedule.lastRefresh).toBeGreaterThan(0);
@@ -356,27 +379,27 @@ describe('NetworkAwareScheduler', () => {
 
   describe('updateScheduleOnFailure', () => {
     it('increments failure and retry counts', async () => {
-      await scheduler.schedules.set('s1', {
+      await scheduler.schedules.set('s1', makeScheduleEntry({
         sourceId: 's1',
         retryCount: 0,
         failureCount: 0,
         maxRetries: 3,
-      });
+      }));
       await scheduler.updateScheduleOnFailure('s1');
-      const schedule = await scheduler.schedules.get('s1');
+      const schedule = (await scheduler.schedules.get('s1'))!;
       expect(schedule.failureCount).toBe(1);
       expect(schedule.retryCount).toBe(1);
     });
 
     it('caps retryCount at maxRetries', async () => {
-      await scheduler.schedules.set('s1', {
+      await scheduler.schedules.set('s1', makeScheduleEntry({
         sourceId: 's1',
         retryCount: 3,
         failureCount: 5,
         maxRetries: 3,
-      });
+      }));
       await scheduler.updateScheduleOnFailure('s1');
-      const schedule = await scheduler.schedules.get('s1');
+      const schedule = (await scheduler.schedules.get('s1'))!;
       expect(schedule.retryCount).toBe(3);
       expect(schedule.failureCount).toBe(6);
     });
@@ -397,7 +420,7 @@ describe('NetworkAwareScheduler', () => {
     it('reschedules all when going from offline to online', async () => {
       await scheduler.initialize(vi.fn());
       scheduler.lastNetworkState = { isOnline: false };
-      await scheduler.schedules.set('s1', { sourceId: 's1', intervalMs: 60000 });
+      await scheduler.schedules.set('s1', makeScheduleEntry({ sourceId: 's1', intervalMs: 60000 }));
 
       const spy = vi.spyOn(scheduler, 'calculateAndScheduleNextRefresh').mockResolvedValue(undefined);
       await scheduler.handleNetworkChange({ isOnline: true });
@@ -471,7 +494,7 @@ describe('NetworkAwareScheduler', () => {
       await scheduler.scheduleSource({
         sourceId: 's1',
         sourceType: 'http',
-        refreshOptions: { interval: 5 },
+        refreshOptions: { enabled: true, interval: 5 },
       });
 
       await scheduler.destroy();
