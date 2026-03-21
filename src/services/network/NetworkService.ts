@@ -777,7 +777,7 @@ class NetworkService extends EventEmitter {
         try {
             return await this.executeNslookup(host);
         } catch (error) {
-            this.log.debug(`nslookup failed for ${host}: ${(error as Error).message}`);
+            this.log.debug(`nslookup failed for ${host}: ${errorMessage(error)}`);
             // Final fallback to Node.js DNS resolver
             return await dnsPromises.resolve4(host);
         }

@@ -128,7 +128,7 @@ class ErrorRecovery {
     this.log.info(`Handling ${errorType} error:`, error.message);
 
     try {
-      const result = await strategy.call(this, error as Error & { retryAfter?: number; code?: string }, context, retryFn);
+      const result = await strategy.call(this, error, context, retryFn);
       this.resetRetryCount(context.operationId);
       return result;
     } catch (recoveryError: unknown) {

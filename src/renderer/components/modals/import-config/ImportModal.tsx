@@ -15,6 +15,7 @@ import { useWorkspaces } from '../../../contexts';
 import type { ImportOptions, WorkspaceData } from '../../../services/export-import/core/types';
 import type { Workspace } from '../../../../types/workspace';
 import type { EnvironmentConfigData, EnvironmentMap } from '../../../../types/environment';
+import { errorMessage } from '../../../../types/common';
 
 const { Title } = Typography;
 
@@ -294,7 +295,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
             }
         } catch (error) {
             console.error('File analysis failed:', error);
-            message.error(`Failed to analyze file: ${(error as Error).message}`);
+            message.error(`Failed to analyze file: ${errorMessage(error)}`);
         }
         
         // Prevent default upload behavior
@@ -488,7 +489,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         } catch (error) {
             console.error('Import failed:', error);
             // Only show error here — ImportService already shows success/info
-            message.error(`Failed to import configuration: ${(error as Error).message}`);
+            message.error(`Failed to import configuration: ${errorMessage(error)}`);
         } finally {
             setImporting(false);
         }

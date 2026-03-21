@@ -28,7 +28,7 @@ import type { DomainValidation } from '../../../features/domain-tags/DomainTagDi
 import EnvVarInfo from './EnvVarInfo';
 import { buildHeaderValue, parseHeaderValue } from './utils';
 
-interface HeaderRuleValues extends Partial<import('../../../../../types/rules').HeaderRule> {
+interface HeaderRuleValues extends Partial<HeaderRule> {
     cookieValue?: string;
     cookiePath?: string;
     sameSite?: string;

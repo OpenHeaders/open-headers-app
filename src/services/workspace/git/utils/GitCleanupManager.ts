@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
 import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage } from '../../../../types/common';
 
 const fsPromises = fs.promises;
 const { exec } = child_process;
@@ -113,7 +114,7 @@ class GitCleanupManager {
     } catch (error) {
       log.error('Cleanup operation failed:', error);
       results.success = false;
-      results.errors.push((error as Error).message);
+      results.errors.push(errorMessage(error));
     }
 
     log.info('Cleanup completed:', results);
@@ -159,13 +160,13 @@ class GitCleanupManager {
           }
         } catch (error) {
           log.error(`Failed to clean ${file}:`, error);
-          result.errors.push(`${file}: ${(error as Error).message}`);
+          result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
 
     } catch (error) {
       log.error('Failed to read temp directory:', error);
-      result.errors.push((error as Error).message);
+      result.errors.push(errorMessage(error));
     }
 
     return result;
@@ -212,13 +213,13 @@ class GitCleanupManager {
           }
         } catch (error) {
           log.error(`Failed to clean repository ${file}:`, error);
-          result.errors.push(`${file}: ${(error as Error).message}`);
+          result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
 
     } catch (error) {
       log.error('Failed to cleanup repositories:', error);
-      result.errors.push((error as Error).message);
+      result.errors.push(errorMessage(error));
     }
 
     return result;
@@ -267,13 +268,13 @@ class GitCleanupManager {
           }
         } catch (error) {
           log.error(`Failed to clean SSH key ${file}:`, error);
-          result.errors.push(`${file}: ${(error as Error).message}`);
+          result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
 
     } catch (error) {
       log.error('Failed to cleanup SSH keys:', error);
-      result.errors.push((error as Error).message);
+      result.errors.push(errorMessage(error));
     }
 
     return result;

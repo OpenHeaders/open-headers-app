@@ -1,6 +1,7 @@
 import { App } from 'antd';
 import { TIMING } from '../../constants';
 
+import { errorMessage } from '../../../../../../types/common';
 import { createLogger } from '../../../../../utils/error-handling/logger';
 const log = createLogger('SyncOperations');
 
@@ -55,7 +56,7 @@ export const useSyncOperations = (workspaceContext: { syncWorkspace: (id: string
                         if (data.success) {
                             log.info(`[Workspaces] Switching to newly synced Git workspace: ${workspaceId}`);
                             switchWorkspace(workspaceId).catch((error: unknown) => {
-                                log.error(`[Workspaces] Failed to switch to Git workspace: ${(error as Error).message}`);
+                                log.error(`[Workspaces] Failed to switch to Git workspace: ${errorMessage(error)}`);
                                 void message.error('Failed to switch to new workspace');
                             });
                         } else {

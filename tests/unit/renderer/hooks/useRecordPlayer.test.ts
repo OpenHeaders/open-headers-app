@@ -13,6 +13,7 @@ import { renderHook, act } from '@testing-library/react';
 vi.stubGlobal('rrwebPlayer', undefined);
 
 import { useRecordPlayer } from '../../../../src/renderer/hooks/useRecordPlayer';
+import type { RecordData } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
 
 describe('useRecordPlayer', () => {
   beforeEach(() => {
@@ -32,7 +33,7 @@ describe('useRecordPlayer', () => {
       const { result } = renderHook(() => useRecordPlayer());
       const record = { events: [{ data: { href: 'https://example.com/page' } }] };
 
-      let processed: Record<string, unknown> = {};
+      let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
@@ -47,7 +48,7 @@ describe('useRecordPlayer', () => {
       const { result } = renderHook(() => useRecordPlayer());
       const record = { url: 'https://example.com/style.css' };
 
-      let processed: Record<string, unknown> = {};
+      let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
@@ -62,7 +63,7 @@ describe('useRecordPlayer', () => {
       const { result } = renderHook(() => useRecordPlayer());
       const record = { url: 'http://localhost:59212/https://example.com/page' };
 
-      let processed: Record<string, unknown> = {};
+      let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
@@ -78,7 +79,7 @@ describe('useRecordPlayer', () => {
       const { result } = renderHook(() => useRecordPlayer());
       const record = { src: '//cdn.example.com/lib.js' };
 
-      let processed: Record<string, unknown> = {};
+      let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,
@@ -98,7 +99,7 @@ describe('useRecordPlayer', () => {
         ],
       };
 
-      let processed: Record<string, unknown> = {};
+      let processed!: RecordData;
       await act(async () => {
         processed = await result.current.processRecordForProxy(
           record,

@@ -4,7 +4,7 @@ import crypto from 'crypto';
 import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
-import { errorMessage } from '../../types/common';
+import { errorMessage, toErrno } from '../../types/common';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -185,7 +185,7 @@ class ProxyCache {
       this.metadata.delete(key);
       await this.saveMetadata();
     } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (toErrno(error).code !== 'ENOENT') {
         this.log.error('Error removing cache entry:', error);
       }
     }

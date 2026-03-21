@@ -20,6 +20,7 @@ import { showMessage } from '../../../utils/ui/messageUtil';
 import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
 
+import { errorMessage } from '../../../../types/common';
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ImportService');
 
@@ -101,7 +102,7 @@ export class ImportService {
 
     } catch (error) {
       log.error('Import process failed:', error);
-      showMessage('error', `Import failed: ${(error as Error).message}`);
+      showMessage('error', `Import failed: ${errorMessage(error)}`);
       throw error;
     }
   }

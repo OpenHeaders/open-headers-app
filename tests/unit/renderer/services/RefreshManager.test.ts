@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
+import type { RefreshManager as RefreshManagerType } from '../../../../src/renderer/services/RefreshManager';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -103,8 +104,8 @@ vi.stubGlobal('window', {
   },
 });
 
-let refreshManager: InstanceType<typeof import('../../../../src/renderer/services/RefreshManager').default>;
-let RefreshManager: typeof import('../../../../src/renderer/services/RefreshManager').RefreshManager;
+let refreshManager: RefreshManagerType;
+let RefreshManager: typeof RefreshManagerType;
 
 beforeAll(async () => {
   const mod = await import('../../../../src/renderer/services/RefreshManager');

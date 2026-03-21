@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from '../core/GitExecutor';
+import { errorMessage } from '../../../../types/common';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -246,7 +247,7 @@ class CommitManager {
       };
 
     } catch (error) {
-      if ((error as Error).message.includes('nothing to commit')) {
+      if (errorMessage(error).includes('nothing to commit')) {
         throw new Error('No changes staged for commit');
       }
       throw error;

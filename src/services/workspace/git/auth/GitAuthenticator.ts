@@ -8,6 +8,7 @@ import TokenAuthStrategy from './TokenAuthStrategy';
 import SSHAuthStrategy from './SSHAuthStrategy';
 import BasicAuthStrategy from './BasicAuthStrategy';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
+import { errorMessage } from '../../../../types/common';
 
 const { createLogger } = mainLogger;
 
@@ -66,7 +67,7 @@ class GitAuthenticator {
       };
     } catch (error) {
       log.error(`${authType} authentication setup failed:`, error);
-      throw new Error(`${authType} authentication setup failed: ${(error as Error).message}`);
+      throw new Error(`${authType} authentication setup failed: ${errorMessage(error)}`);
     }
   }
 

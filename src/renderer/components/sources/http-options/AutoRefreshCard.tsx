@@ -16,6 +16,7 @@
 
 import React from 'react';
 import { Card, Form, Switch, Radio, Select, InputNumber, Row, Col } from 'antd';
+import type { FormInstance } from 'antd';
 
 const { Option } = Select;
 
@@ -41,7 +42,7 @@ interface AutoRefreshCardProps {
     customInterval: number;
     handlePresetIntervalChange: (value: number) => void;
     handleCustomIntervalChange: (value: number | null) => void;
-    form: ReturnType<typeof import('antd').Form.useForm>[0];
+    form: FormInstance;
 }
 
 const AutoRefreshCard = ({

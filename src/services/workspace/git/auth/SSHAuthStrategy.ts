@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage } from '../../../../types/common';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -162,7 +163,7 @@ class SSHAuthStrategy {
 
       return `git@${keyHash}.git:${owner}/${repo}.git`;
     } catch (error) {
-      throw new Error(`Failed to convert URL to SSH format: ${(error as Error).message}`);
+      throw new Error(`Failed to convert URL to SSH format: ${errorMessage(error)}`);
     }
   }
 
