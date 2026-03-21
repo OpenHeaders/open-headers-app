@@ -1,5 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 
+interface ConnectedClient {
+    id: string;
+    browser: string;
+    browserVersion: string;
+    platform?: string;
+    connectionType?: string;
+    connectedAt?: string | number;
+    lastActivity?: number;
+    extensionVersion?: string;
+}
+
+interface ConnectionStatus {
+    totalConnections: number;
+    browserCounts: Record<string, number>;
+    clients: ConnectedClient[];
+    wsServerRunning: boolean;
+    wssServerRunning: boolean;
+    wsPort: number;
+    wssPort: number;
+    certificateFingerprint?: string;
+}
+
 /**
  * Connections Server Hook
  *
@@ -11,15 +33,14 @@ import { useState, useEffect, useCallback } from 'react';
  * @returns {Object} Connection status and client data
  */
 export const useConnectionsServer = ({ active = false } = {}) => {
-    const [status, setStatus] = useState({
+    const [status, setStatus] = useState<ConnectionStatus>({
         totalConnections: 0,
-        browserCounts: {} as Record<string, number>,
-        clients: [] as Array<{ id: string; browser: string; browserVersion: string; platform?: string; connectionType?: string; connectedAt?: string | number; lastActivity?: number; extensionVersion?: string }>,
+        browserCounts: {},
+        clients: [],
         wsServerRunning: false,
         wssServerRunning: false,
         wsPort: 59210,
         wssPort: 59211,
-        certificateFingerprint: undefined as string | undefined
     });
 
     /**

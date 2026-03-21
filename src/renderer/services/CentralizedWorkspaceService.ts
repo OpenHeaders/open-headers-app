@@ -53,10 +53,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   eventCleanup: Array<() => void>;
 
   constructor() {
-    super('CentralizedWorkspaceService');
-
-    // Initialize state
-    this.state = {
+    super('CentralizedWorkspaceService', {
       // Core state
       initialized: false,
       loading: false,
@@ -75,7 +72,7 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
 
       // Metadata
       lastSaved: {}
-    };
+    });
 
     // Initialize managers — ElectronAPI structurally satisfies all narrow manager interfaces
     const api = window.electronAPI;

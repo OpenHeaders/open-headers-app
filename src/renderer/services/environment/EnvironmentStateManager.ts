@@ -21,17 +21,14 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
   hasLoadedInitialData: boolean;
 
   constructor() {
-    super('EnvironmentStateManager');
-
-    // Initialize environment-specific state
-    this.state = {
+    super('EnvironmentStateManager', {
       currentWorkspaceId: 'default-personal',
       environments: { Default: {} },
       activeEnvironment: 'Default',
       isLoading: false,
       isReady: false,
       error: null
-    };
+    });
 
     this.initPromise = null;
     this.loadPromises = new Map(); // Track load promises per workspace

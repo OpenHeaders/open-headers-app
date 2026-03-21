@@ -26,10 +26,10 @@ vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
     state: Record<string, unknown>;
     log: { debug: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
     serviceName: string;
-    constructor(name?: string) {
+    constructor(name?: string, initialState?: Record<string, unknown>) {
       this.serviceName = name || '';
       this.listeners = new Set();
-      this.state = {};
+      this.state = initialState || {};
       this.log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     }
     subscribe(listener: StateListener) {

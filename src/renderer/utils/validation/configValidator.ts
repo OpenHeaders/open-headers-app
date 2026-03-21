@@ -42,6 +42,15 @@ interface ConfigAnalysisResult {
   rawData: ConfigData;
 }
 
+interface EnvAnalysisResult {
+  valid: true;
+  hasEnvironmentSchema: boolean;
+  hasEnvironments: boolean;
+  environmentCount: number;
+  variableCount: number;
+  rawData: ConfigData;
+}
+
 /**
  * Analyze and validate Open Headers configuration file content
  * @param {string} content - Raw file content to validate
@@ -49,7 +58,9 @@ interface ConfigAnalysisResult {
  * @param {boolean} isSeparateMode - Whether we're in separate files mode (affects validation strictness)
  * @returns {Object} Validation result with file info or error
  */
-async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateMode = false): Promise<ConfigAnalysisResult | { valid: true; hasEnvironmentSchema: boolean; hasEnvironments: boolean; environmentCount: number; variableCount: number; rawData: ConfigData }> {
+async function analyzeConfigFile(content: string, isEnvFile: true, isSeparateMode?: boolean): Promise<EnvAnalysisResult>;
+async function analyzeConfigFile(content: string, isEnvFile?: false, isSeparateMode?: boolean): Promise<ConfigAnalysisResult>;
+async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateMode = false): Promise<ConfigAnalysisResult | EnvAnalysisResult> {
   try {
     const data = JSON.parse(content) as ConfigData;
     
@@ -99,7 +110,7 @@ async function analyzeConfigFile(content: string, isEnvFile = false, isSeparateM
       variableCount: data.environmentSchema ? Object.keys(data.environmentSchema.variableDefinitions || {}).length : 0,
       
       // Rule breakdown
-      ruleBreakdown: {} as Record<string, number>,
+      ruleBreakdown: {},
       
       // Workspace info if present
       workspaceInfo: data.workspace || null,
@@ -255,7 +266,7 @@ function validateConfigStructure(data: ConfigData) {
 async function validateGitWorkspaceConfig(content: string, filePath: string) {
   try {
     // First, use the standard config validation
-    const validationResult = await analyzeConfigFile(content, false, false) as ConfigAnalysisResult;
+    const validationResult = await analyzeConfigFile(content, false, false);
 
     // Check if config has any data (workspace alone is not enough)
     const hasData = validationResult.sourceCount > 0 ||
@@ -305,7 +316,7 @@ async function validateGitWorkspaceConfig(content: string, filePath: string) {
  */
 async function readAndValidateMultiFileConfig(readFile: (path: string, options?: { list: boolean }) => Promise<string[] & string>, basePath: string) {
   let config: ConfigData = {};
-  const validationResults: { mainFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null; envFile: Awaited<ReturnType<typeof analyzeConfigFile>> | null } = {
+  const validationResults: { mainFile: ConfigAnalysisResult | null; envFile: EnvAnalysisResult | null } = {
     mainFile: null,
     envFile: null
   };

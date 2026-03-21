@@ -5,11 +5,18 @@ import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
+import type { InferOutput } from 'valibot';
 import { errorMessage } from '../../types/common';
-import type { EnvironmentsFile, EnvironmentMap } from '../../types/environment';
+import type { EnvironmentsFile } from '../../types/environment';
 import type { HeaderRule } from '../../types/rules';
-import type { WorkspaceAuthData, AuthType } from '../../types/workspace';
+import type { AuthType } from '../../types/workspace';
+
+const VALID_AUTH_TYPES = new Set<string>(['none', 'token', 'ssh', 'ssh-key', 'basic']);
+function toAuthType(value: string | undefined): AuthType {
+    return VALID_AUTH_TYPES.has(value || '') ? (value as AuthType) : 'none';
+}
 import type { Source } from '../../types/source';
+import type { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -24,21 +31,8 @@ const getLazyDeps = async () => ({
 
 const log = createLogger('CliSetup');
 
-export interface JoinWorkspaceData {
-    workspaceName?: string;
-    repoUrl: string;
-    branch?: string;
-    configPath?: string;
-    authType?: string;
-    authData?: WorkspaceAuthData;
-    inviterName?: string;
-    inviteId?: string;
-}
-
-
-interface EnvironmentImportData {
-    environments: EnvironmentMap;
-}
+export type JoinWorkspaceData = InferOutput<typeof JoinWorkspaceDataSchema>;
+type EnvironmentImportData = InferOutput<typeof EnvironmentImportDataSchema>;
 
 class CliSetupHandler {
     mainWindow: BrowserWindowType | null = null;
@@ -63,7 +57,7 @@ class CliSetupHandler {
         }
 
         try {
-            const normalizedAuthType = (authType || 'none') as AuthType;
+            const normalizedAuthType = toAuthType(authType);
             const normalizedAuthData = this._normalizeAuthData(normalizedAuthType, authData);
 
             log.info(`Testing connection to ${repoUrl} (branch: ${branch || 'main'})`);
@@ -226,7 +220,7 @@ class CliSetupHandler {
         return name;
     }
 
-    _normalizeAuthData(authType: string, authData?: WorkspaceAuthData): WorkspaceAuthData {
+    _normalizeAuthData(authType: string, authData?: JoinWorkspaceData['authData']): NonNullable<JoinWorkspaceData['authData']> {
         if (!authType || authType === 'none') return {};
         if (!authData) return {};
 

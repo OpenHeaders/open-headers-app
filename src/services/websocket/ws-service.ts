@@ -15,27 +15,10 @@ import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSClientHandler } from './ws-client-handler';
 import type { Source } from '../../types/source';
 import type { RulesCollection } from '../../types/rules';
+import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
-
-interface ExtendedWebSocket extends WS {
-    clientId?: string;
-    isAlive?: boolean;
-    isInitialized?: boolean;
-}
-
-interface ClientInfo {
-    id: string;
-    connectionType: string;
-    browser: string;
-    browserVersion: string;
-    platform: string;
-    userAgent: string;
-    connectedAt: Date;
-    lastActivity: Date;
-    extensionVersion?: string;
-}
 
 interface InitLock {
     status: 'initializing' | 'initialized';
@@ -87,7 +70,7 @@ class WebSocketService {
     rules: Rules;
     sourceService: SourceServiceLike | null;
     appDataPath: string | null;
-    connectedClients: Map<string, ClientInfo>;
+    connectedClients: Map<string, WSClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
     rulesBroadcastTimer: ReturnType<typeof setTimeout> | null;
     lastRulesBroadcast: number;

@@ -65,7 +65,7 @@ describe('BaseStateManager', () => {
   let manager: InstanceType<typeof BaseStateManager>;
 
   beforeEach(() => {
-    manager = new BaseStateManager('TestManager');
+    manager = new BaseStateManager('TestManager', {});
   });
 
   afterEach(() => {
@@ -275,9 +275,7 @@ describe('CWS state management patterns', () => {
   let manager: InstanceType<typeof BaseStateManager>;
 
   beforeEach(() => {
-    manager = new BaseStateManager('CWSLike');
-    // Set up CWS-like initial state
-    manager.state = {
+    manager = new BaseStateManager('CWSLike', {
       initialized: false,
       loading: false,
       error: null,
@@ -289,7 +287,7 @@ describe('CWS state management patterns', () => {
       rules: { header: [], request: [], response: [] },
       proxyRules: [],
       lastSaved: {},
-    };
+    });
   });
 
   afterEach(() => {

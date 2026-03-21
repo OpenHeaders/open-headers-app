@@ -64,6 +64,7 @@ interface ConfigData {
 }
 
 interface EnvAnalysisResult {
+  kind: 'env';
   valid: true;
   hasEnvironmentSchema: boolean;
   hasEnvironments: boolean;
@@ -73,6 +74,7 @@ interface EnvAnalysisResult {
 }
 
 interface MainAnalysisResult {
+  kind: 'main';
   valid: true;
   hasEnvironmentSchema: boolean;
   hasEnvironments: boolean;
@@ -93,6 +95,7 @@ interface AnalysisError {
 }
 
 type AnalysisResult = EnvAnalysisResult | MainAnalysisResult | AnalysisError;
+
 
 interface ValidationSummary {
   sources: number;
@@ -144,6 +147,7 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
       }
 
       return {
+        kind: 'env',
         valid: true,
         hasEnvironmentSchema: !!data.environmentSchema,
         hasEnvironments: !!data.environments,
@@ -166,6 +170,7 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
     }
 
     return {
+      kind: 'main',
       valid: true,
       hasEnvironmentSchema: !!data.environmentSchema,
       hasEnvironments: !!data.environments,
@@ -204,7 +209,7 @@ async function validateGitWorkspaceConfig(configPath: string, envPath?: string):
     if (!configResult.valid) {
       return {
         valid: false,
-        error: `Main config file validation failed: ${(configResult as AnalysisError).error}`
+        error: `Main config file validation failed: ${configResult.error}`
       };
     }
 
@@ -217,18 +222,18 @@ async function validateGitWorkspaceConfig(configPath: string, envPath?: string):
       if (!envResult.valid) {
         return {
           valid: false,
-          error: `Environment file validation failed: ${(envResult as AnalysisError).error}`
+          error: `Environment file validation failed: ${envResult.error}`
         };
       }
     }
 
-    // Combine results
-    const mainResult = configResult as MainAnalysisResult;
-    const totalSources = mainResult.sourceCount + 0;
-    const totalRules = mainResult.ruleCount + 0;
-    const totalProxyRules = mainResult.proxyRuleCount + 0;
-    const totalEnvironments = Math.max(mainResult.environmentCount, envResult && envResult.valid ? (envResult as EnvAnalysisResult).environmentCount : 0);
-    const totalVariables = Math.max(mainResult.variableCount, envResult && envResult.valid ? (envResult as EnvAnalysisResult).variableCount : 0);
+    // Narrow via discriminant: configResult.valid is true (checked above), kind is 'main' (isEnvFile=false)
+    if (configResult.kind !== 'main') return { valid: false, error: 'Unexpected analysis result type' };
+    const totalSources = configResult.sourceCount;
+    const totalRules = configResult.ruleCount;
+    const totalProxyRules = configResult.proxyRuleCount;
+    const totalEnvironments = Math.max(configResult.environmentCount, envResult?.valid ? envResult.environmentCount : 0);
+    const totalVariables = Math.max(configResult.variableCount, envResult?.valid ? envResult.variableCount : 0);
 
     return {
       valid: true,

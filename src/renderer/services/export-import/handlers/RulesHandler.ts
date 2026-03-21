@@ -120,10 +120,14 @@ export class RulesHandler {
    * @returns {Promise<Object>} - Import statistics
    */
   async importRules(rulesToImport: RulesToImport, options: ImportOptions) {
-    const stats = {
-      imported: { total: 0 } as Record<string, number>,
-      skipped: { total: 0 } as Record<string, number>,
-      errors: [] as Array<{ ruleType: string; ruleId: string; error: string }>
+    const stats: {
+      imported: Record<string, number>;
+      skipped: Record<string, number>;
+      errors: Array<{ ruleType: string; ruleId: string; error: string }>;
+    } = {
+      imported: { total: 0 },
+      skipped: { total: 0 },
+      errors: []
     };
 
     // Initialize counters for each rule type
@@ -382,8 +386,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data object
    * @returns {Object} - Statistics object
    */
-  getRulesStatistics(rulesDataInput: RulesData) {
-    const rulesData = rulesDataInput as RulesData;
+  getRulesStatistics(rulesData: RulesData) {
     if (!rulesData || !rulesData.rules) {
       return {
         total: 0,
@@ -413,8 +416,7 @@ export class RulesHandler {
    * @param {Object} rulesData - Rules data to analyze
    * @returns {Object} - Analysis result with warnings and suggestions
    */
-  analyzeRules(rulesDataInput: RulesData) {
-    const rulesData = rulesDataInput as RulesData;
+  analyzeRules(rulesData: RulesData) {
     const warnings: string[] = [];
     const suggestions: string[] = [];
 
