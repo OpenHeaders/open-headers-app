@@ -146,7 +146,7 @@ describe('WSNetworkStateHandler', () => {
                     { readyState: 3, send: () => {} }, // closed - should not receive
                 ])
             };
-            handler.wsService.wss = mockWss as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
+            handler.wsService.wss = mockWss as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
             handler.broadcastNetworkState();
             expect(messages).toHaveLength(1);
             const parsed = JSON.parse(messages[0]);
