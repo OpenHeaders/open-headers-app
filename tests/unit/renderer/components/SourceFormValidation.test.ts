@@ -19,7 +19,7 @@ const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) => ({
   environmentsReady: ready,
   activeEnvironment: activeEnv,
   getAllVariables: () => vars,
-});
+}) as Parameters<typeof validateUrlField>[2];
 
 interface FormFields {
   requestOptions?: {
@@ -40,7 +40,7 @@ const makeForm = (fields: FormFields = {}) => ({
     }
     return val;
   },
-});
+}) as unknown as import('antd').FormInstance;
 
 // ======================================================================
 // validateUrlField (SourceFormValidation)
