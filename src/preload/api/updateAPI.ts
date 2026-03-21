@@ -21,7 +21,7 @@ const updateAPI = {
 
     onUpdateAlreadyDownloaded: (callback: (data: UpdateInfoEvent) => void): (() => void) => {
         const subscription = (_event: IpcRendererEvent, data: UpdateInfoEvent) => {
-            callback(data ?? ({} as UpdateInfoEvent));
+            callback(data);
         };
         ipcRenderer.on('update-already-downloaded', subscription);
         return () => ipcRenderer.removeListener('update-already-downloaded', subscription);

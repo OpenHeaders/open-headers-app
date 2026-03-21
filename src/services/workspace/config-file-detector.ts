@@ -26,7 +26,7 @@ interface SearchPatterns {
 }
 
 function isMainAnalysis(result: AnalysisResult): result is MainAnalysisResult {
-  return result.valid === true && 'sourceCount' in result;
+  return result.valid && result.kind === 'main';
 }
 
 /**

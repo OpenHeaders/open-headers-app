@@ -8,32 +8,15 @@ import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
+import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSClientHandler');
-
-interface ExtendedWebSocket extends WebSocket {
-    clientId?: string;
-    isAlive?: boolean;
-    isInitialized?: boolean;
-}
 
 interface BrowserInfo {
     browser: string;
     version: string;
     platform: string;
-}
-
-interface ClientInfo {
-    id: string;
-    connectionType: string;
-    browser: string;
-    browserVersion: string;
-    platform: string;
-    userAgent: string;
-    connectedAt: Date;
-    lastActivity: Date;
-    extensionVersion?: string;
 }
 
 interface ClientStatusEntry {
@@ -67,7 +50,7 @@ interface InitLock {
 }
 
 interface WSServiceLike {
-    connectedClients: Map<string, ClientInfo>;
+    connectedClients: Map<string, WSClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
     wss: WebSocket.Server | null;
     secureWss: WebSocket.Server | null;
@@ -279,7 +262,7 @@ class WSClientHandler {
      */
     _cleanupStaleClients(): void {
         const now = Date.now();
-        const staleClients: Array<{ clientId: string; clientInfo: ClientInfo; inactiveTime: number }> = [];
+        const staleClients: Array<{ clientId: string; clientInfo: WSClientInfo; inactiveTime: number }> = [];
 
         for (const [clientId, clientInfo] of this.wsService.connectedClients) {
             const lastActivity = clientInfo.lastActivity?.getTime() || clientInfo.connectedAt.getTime();

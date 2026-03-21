@@ -120,10 +120,10 @@ export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResu
     };
   }
 
-  const workspace = workspaceInput as Partial<{ name: string; type: string }>;
+  const workspace = workspaceInput as Record<string, unknown>;
   const requiredFields = VALIDATION_RULES.REQUIRED_FIELDS.WORKSPACE;
   for (const field of requiredFields) {
-    if (!workspace[field as keyof typeof workspace]) {
+    if (!workspace[field]) {
       return {
         success: false,
         error: `Workspace configuration missing required field: ${field}`
@@ -131,7 +131,8 @@ export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResu
     }
   }
 
-  if (workspace.name && typeof workspace.name === 'string' && workspace.name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
+  const name = workspace['name'];
+  if (typeof name === 'string' && name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
     return {
       success: false,
       error: `Workspace name exceeds maximum length of ${VALIDATION_RULES.MAX_NAME_LENGTH} characters`

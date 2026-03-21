@@ -7,9 +7,11 @@ import { execFileSync } from 'child_process';
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
+import * as v from 'valibot';
 import { errorMessage } from '../../types/common';
 import type { JsonObject, JsonValue } from '../../types/common';
-import type { CliSetupHandler, JoinWorkspaceData, EnvironmentImportData } from './CliSetupHandler';
+import type { CliSetupHandler } from './CliSetupHandler';
+import { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -519,12 +521,13 @@ class CliApiService {
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        const parsed = v.safeParse(JoinWorkspaceDataSchema, body);
+        if (!parsed.success) {
             res.writeHead(400);
-            res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
+            res.end(JSON.stringify({ success: false, error: `Invalid request body: ${parsed.issues[0].message}` }));
             return;
         }
-        const result = await this.setupHandler.joinWorkspace(body as unknown as JoinWorkspaceData);
+        const result = await this.setupHandler.joinWorkspace(parsed.output);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }
@@ -535,12 +538,13 @@ class CliApiService {
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        const parsed = v.safeParse(EnvironmentImportDataSchema, body);
+        if (!parsed.success) {
             res.writeHead(400);
-            res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
+            res.end(JSON.stringify({ success: false, error: `Invalid request body: ${parsed.issues[0].message}` }));
             return;
         }
-        const result = await this.setupHandler.importEnvironment(body as unknown as EnvironmentImportData);
+        const result = await this.setupHandler.importEnvironment(parsed.output);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }

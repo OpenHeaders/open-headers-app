@@ -3,27 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Badge, Card, Space, Typography, Progress, Tag } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
 import { adaptiveCircuitBreakerManager } from '../../utils/error-handling';
+import type { BreakerStatusMap } from '../../utils/error-handling/AdaptiveCircuitBreaker';
 
 const { Text } = Typography;
 
-interface BreakerMetrics {
-    totalRequests: number;
-    totalSuccesses: number;
-}
-
-interface BreakerInfo {
-    state: string;
-    metrics: BreakerMetrics;
-    nextAttemptTime?: number;
-    backoff?: {
-        consecutiveOpenings: number;
-        currentTimeout: number;
-    };
-}
-
 export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean }) {
     const { settings } = useSettings();
-    const [breakers, setBreakers] = useState<Record<string, BreakerInfo>>({});
+    const [breakers, setBreakers] = useState<BreakerStatusMap>({});
     const [isExpanded, setIsExpanded] = useState(false);
     
     useEffect(() => {
@@ -31,7 +17,7 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
         const updateStatus = () => {
             try {
                 const status = adaptiveCircuitBreakerManager.getAllStatus();
-                setBreakers((status || {}) as Record<string, BreakerInfo>);
+                setBreakers(status);
             } catch (error) {
                 console.error('Error getting circuit breaker status:', error);
             }

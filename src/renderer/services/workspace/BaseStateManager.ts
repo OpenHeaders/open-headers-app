@@ -9,11 +9,11 @@ class BaseStateManager<TState extends object = Record<string, unknown>> {
   listeners: Set<(state: TState, changedKeys: string[]) => void>;
   state: TState;
 
-  constructor(serviceName: string) {
+  constructor(serviceName: string, initialState: TState) {
     this.serviceName = serviceName;
     this.log = createLogger(serviceName);
     this.listeners = new Set();
-    this.state = {} as TState;
+    this.state = initialState;
   }
 
   /**

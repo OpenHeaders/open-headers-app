@@ -434,9 +434,13 @@ class AdaptiveCircuitBreakerManager {
 
 const adaptiveCircuitBreakerManager = new AdaptiveCircuitBreakerManager();
 
+type BreakerStatus = ReturnType<AdaptiveCircuitBreaker['getStatus']>;
+type BreakerStatusMap = ReturnType<AdaptiveCircuitBreakerManager['getAllStatus']>;
+
 export {
   AdaptiveCircuitBreaker,
   AdaptiveCircuitBreakerManager,
   adaptiveCircuitBreakerManager,
   CircuitState
 };
+export type { BreakerStatus, BreakerStatusMap };

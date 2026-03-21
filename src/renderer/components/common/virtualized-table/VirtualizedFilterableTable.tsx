@@ -87,6 +87,8 @@ interface VirtualizedFilterableTableProps {
 
 // Accept extra props from antd Table spreading;
 // internal destructuring uses VirtualizedFilterableTableProps for type safety.
+// The `as unknown as` cast is required: forwardRef wraps allProps as
+// `Omit<Props & Record<string, unknown>, "ref">` which TS can't narrow back.
 const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTableProps & Record<string, unknown>>((allProps, ref) => {
   const {
     columns,

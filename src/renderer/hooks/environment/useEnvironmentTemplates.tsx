@@ -25,8 +25,8 @@ export function useEnvironmentTemplates(): UseEnvironmentTemplatesReturn {
       return obj.map((item: unknown) => resolveObjectTemplate(item));
     }
 
-    const resolved: Record<string, string | unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, string | unknown>)) {
+    const resolved: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
       if (typeof value === 'string') {
         resolved[key] = resolveTemplate(value);
       } else if (typeof value === 'object') {
