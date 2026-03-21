@@ -36,6 +36,31 @@ interface ClientInfo {
     extensionVersion?: string;
 }
 
+interface ClientStatusEntry {
+    id: string;
+    browser: string;
+    browserVersion: string;
+    platform: string;
+    connectionType: string;
+    connectedAt: Date;
+    lastActivity: Date;
+    extensionVersion?: string;
+}
+
+export interface WebSocketConnectionStatus {
+    totalConnections: number;
+    browserCounts: Record<string, number>;
+    clients: ClientStatusEntry[];
+    wsServerRunning: boolean;
+    wssServerRunning: boolean;
+    wsPort: number;
+    wssPort: number;
+    certificateFingerprint: string | null;
+    certificatePath: string | null;
+    certificateExpiry: string | null;
+    certificateSubject: string | null;
+}
+
 interface InitLock {
     status: 'initializing' | 'initialized';
     promise: Promise<boolean> | null;
@@ -173,7 +198,7 @@ class WSClientHandler {
     /**
      * Get current connection status and connected clients
      */
-    getConnectionStatus(): Record<string, unknown> {
+    getConnectionStatus(): WebSocketConnectionStatus {
         const clients = Array.from(this.wsService.connectedClients.values());
 
         const browserCounts: Record<string, number> = {};

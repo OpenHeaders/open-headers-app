@@ -14,7 +14,7 @@ import ImportWarnings from './ImportWarnings';
 import { useWorkspaces } from '../../../contexts';
 import type { ImportOptions, WorkspaceData } from '../../../services/export-import/core/types';
 import type { Workspace } from '../../../../types/workspace';
-import type { EnvironmentConfigData } from '../../../../types/environment';
+import type { EnvironmentConfigData, EnvironmentMap } from '../../../../types/environment';
 
 const { Title } = Typography;
 
@@ -47,7 +47,7 @@ interface ConfigData {
     sources?: unknown[];
     rules?: unknown;
     proxyRules?: unknown[];
-    environments?: Record<string, Record<string, unknown>>;
+    environments?: EnvironmentMap;
     environmentSchema?: unknown;
     workspace?: WorkspaceData;
 }
@@ -380,7 +380,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                         filteredEnvData.environmentSchema = envData.environmentSchema;
                     }
                     if (envData.environments) {
-                        const filteredEnvs: Record<string, Record<string, unknown>> = {};
+                        const filteredEnvs: EnvironmentMap = {};
                         selectedEnvNames.forEach(envName => {
                             if (envData.environments![envName]) {
                                 filteredEnvs[envName] = envData.environments![envName];
@@ -445,7 +445,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                     filteredMainData.environmentSchema = mainData.environmentSchema;
                 }
                 if (mainData.environments) {
-                    const filteredMainEnvs: Record<string, Record<string, unknown>> = {};
+                    const filteredMainEnvs: EnvironmentMap = {};
                     selectedEnvNames.forEach(envName => {
                         if (mainData.environments![envName]) {
                             filteredMainEnvs[envName] = mainData.environments![envName];
@@ -460,7 +460,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
                         filteredEnvData.environmentSchema = envData.environmentSchema;
                     }
                     if (envData.environments) {
-                        const filteredEnvEnvs: Record<string, Record<string, unknown>> = {};
+                        const filteredEnvEnvs: EnvironmentMap = {};
                         selectedEnvNames.forEach(envName => {
                             if (envData.environments![envName]) {
                                 filteredEnvEnvs[envName] = envData.environments![envName];

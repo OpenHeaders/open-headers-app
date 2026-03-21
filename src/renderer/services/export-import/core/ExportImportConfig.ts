@@ -10,6 +10,7 @@ import {
   DATA_FORMAT_VERSION,
   SUPPORTED_DATA_VERSIONS
 } from '../../../../config/version.esm';
+import type { WorkspaceType, AuthType } from '../../../../types/workspace';
 
 /**
  * Export file format options
@@ -45,10 +46,10 @@ export const DEFAULTS: {
   APP_VERSION: string;
   DATA_FORMAT_VERSION: string;
   ENVIRONMENT_NAME: string;
-  WORKSPACE_TYPE: import('../../../../types/workspace').WorkspaceType;
+  WORKSPACE_TYPE: WorkspaceType;
   WORKSPACE_BRANCH: string;
   WORKSPACE_PATH: string;
-  AUTH_TYPE: import('../../../../types/workspace').AuthType;
+  AUTH_TYPE: AuthType;
   AUTO_SYNC: boolean;
 } = {
   APP_VERSION: APP_VERSION,

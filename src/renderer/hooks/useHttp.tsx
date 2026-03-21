@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useTotpState, useEnvironments } from '../contexts';
 import { createLogger } from '../utils/error-handling/logger';
 import type { JsonFilter, SourceHeader, SourceQueryParam } from '../../types/source';
-import type { HttpRequestOptions, HttpResult, HttpProgressCallback } from '../../types/http';
+import type { HttpRequestOptions, HttpResult, HttpProgressCallback, HttpConnectionOptions } from '../../types/http';
 import type { JsonObject, JsonArray, JsonValue } from '../../types/common';
 const log = createLogger('useHttp');
 
@@ -21,7 +21,7 @@ interface FormattedRequestOptions {
   contentType: string;
   totpSecret?: string;
   enableRetries?: boolean;
-  connectionOptions?: import('../../types/http').HttpConnectionOptions;
+  connectionOptions?: HttpConnectionOptions;
 }
 
 interface HttpErrorWithResponse extends Error {

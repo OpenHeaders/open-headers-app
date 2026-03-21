@@ -1,5 +1,6 @@
 import http from 'http';
 import https from 'https';
+import net from 'net';
 import url from 'url';
 import { EventEmitter } from 'events';
 import tls from 'tls';
@@ -122,7 +123,7 @@ class ProxyService extends EventEmitter {
                 this.handleRequest(req, res);
             });
 
-            this.server.on('connection', (socket: import('net').Socket) => {
+            this.server.on('connection', (socket: net.Socket) => {
                 this._connections.add(socket);
                 socket.once('close', () => this._connections.delete(socket));
             });

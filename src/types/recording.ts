@@ -319,6 +319,10 @@ export interface PreprocessProgressDetails {
   totalResources?: number;
   prefetched?: number;
   failed?: number;
+  completed?: number;
+  total?: number;
+  currentResource?: string;
+  currentType?: string;
 }
 
 // ── Player types ──────────────────────────────────────────────────

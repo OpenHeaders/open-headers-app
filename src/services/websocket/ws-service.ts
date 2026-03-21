@@ -455,7 +455,7 @@ class WebSocketService {
 
     isConnected(): boolean { return this.connectedClients.size > 0; }
 
-    sendToBrowserExtension(message: Record<string, unknown>): boolean {
+    sendToBrowserExtension(message: { type: string }): boolean {
         if (this.connectedClients.size === 0) {
             log.warn('No connected browser extensions to send message to');
             return false;

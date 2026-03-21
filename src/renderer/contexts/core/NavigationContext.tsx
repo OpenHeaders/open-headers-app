@@ -1,7 +1,11 @@
 import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
 import { theme } from 'antd';
 import { createLogger } from '../../utils/error-handling/logger';
+import type { JsonValue } from '../../../types/common';
 const log = createLogger('NavigationContext');
+
+/** Arbitrary key/value metadata passed to navigation action handlers. */
+type NavigationActionData = Record<string, JsonValue>;
 
 interface NavigationIntent {
   tab?: string;
@@ -9,7 +13,7 @@ interface NavigationIntent {
   target?: string;
   action?: string;
   itemId?: string;
-  data?: Record<string, unknown>;
+  data?: NavigationActionData;
   timestamp?: number;
 }
 
@@ -22,7 +26,7 @@ interface PendingAction {
   target: string;
   action: string;
   itemId: string;
-  data: Record<string, unknown>;
+  data: NavigationActionData;
   timestamp: number;
 }
 
@@ -30,8 +34,8 @@ interface NavigationContextValue {
   navigationIntent: NavigationIntent | null;
   navigate: (intent: NavigationIntent) => void;
   clearNavigationIntent: () => void;
-  registerActionHandler: (target: string, action: string, handler: (itemId: string, data: Record<string, unknown>) => void) => () => void;
-  executeAction: (target: string, action: string, itemId: string, data?: Record<string, unknown>) => void;
+  registerActionHandler: (target: string, action: string, handler: (itemId: string, data: NavigationActionData) => void) => () => void;
+  executeAction: (target: string, action: string, itemId: string, data?: NavigationActionData) => void;
   highlights: Record<string, HighlightInfo>;
   clearHighlight: (target: string) => void;
   clearAllHighlights: () => void;
@@ -81,7 +85,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [highlights, setHighlights] = useState<Record<string, HighlightInfo>>({});
 
     // State to track action handlers
-    const [actionHandlers, setActionHandlers] = useState<Record<string, (itemId: string, data: Record<string, unknown>) => void>>({});
+    const [actionHandlers, setActionHandlers] = useState<Record<string, (itemId: string, data: NavigationActionData) => void>>({});
 
     // Ref to store pending actions
     const pendingActionsRef = useRef<PendingAction[]>([]);
@@ -141,7 +145,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     /**
      * Register an action handler for a specific target
      */
-    const registerActionHandler = useCallback((target: string, action: string, handler: (itemId: string, data: Record<string, unknown>) => void): (() => void) => {
+    const registerActionHandler = useCallback((target: string, action: string, handler: (itemId: string, data: NavigationActionData) => void): (() => void) => {
         const key = `${target}.${action}`;
 
         setActionHandlers(prev => ({
@@ -181,7 +185,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     /**
      * Execute an action for a target
      */
-    const executeAction = useCallback((target: string, action: string, itemId: string, data: Record<string, unknown> = {}) => {
+    const executeAction = useCallback((target: string, action: string, itemId: string, data: NavigationActionData = {}) => {
         const key = `${target}.${action}`;
         const handler = actionHandlers[key];
 

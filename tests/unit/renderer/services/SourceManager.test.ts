@@ -356,14 +356,14 @@ describe('SourceManager', () => {
         ...globalThis.window,
         dispatchEvent: vi.fn(),
       });
-      (globalThis as unknown as { CustomEvent: unknown }).CustomEvent = class CustomEvent {
+      vi.stubGlobal('CustomEvent', class CustomEvent {
         type: string;
         detail: unknown;
         constructor(type: string, opts?: { detail?: unknown }) {
           this.type = type;
           this.detail = opts?.detail;
         }
-      };
+      });
     });
 
     it('activates sources when dependencies are resolved', async () => {

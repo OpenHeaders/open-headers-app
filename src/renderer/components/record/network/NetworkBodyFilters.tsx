@@ -11,6 +11,7 @@
  */
 import React, { useMemo } from 'react';
 import { Dropdown, Button, Tooltip, Checkbox } from 'antd';
+import type { MenuProps } from 'antd';
 import { FilterOutlined } from '@ant-design/icons';
 import type { GlobalToken } from './types';
 
@@ -21,7 +22,7 @@ const NetworkBodyFilters = ({ bodyFilters, onBodyFiltersChange, token }: Network
     const isBodyFilterActive = bodyFilters.hasRequestBody || bodyFilters.hasResponseBody;
 
     // Memoize the body filter menu to prevent recreating it on every render
-    const bodyFilterMenu = useMemo((): Record<string, unknown> => ({
+    const bodyFilterMenu = useMemo((): MenuProps => ({
         items: [
             {
                 key: 'filters',

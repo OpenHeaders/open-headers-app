@@ -34,39 +34,58 @@ import './VirtualizedTables.css';
  * @component
  * @since 3.0.0
  */
-/** Column definition - uses object type to accept antd ColumnType<T> shapes.
- *  Properties are accessed via typed casts inside the component body.
- *  Note: We use `object` rather than `Record<string, unknown>` because
- *  antd's ColumnType lacks an index signature and is not assignable to Record. */
+/** Row data accessed by dynamic string keys from antd column definitions. */
+type TableRow = Record<string, unknown>;
+
+/** Column definition — uses object type to accept antd ColumnType<T> shapes.
+ *  antd's ColumnType lacks an index signature and is not assignable to Record,
+ *  so properties are accessed via typed casts inside the component body. */
 type ColumnDef = object;
+
+/** Column properties accessed via typed cast from ColumnDef. */
+interface ColumnProps {
+  key?: React.Key;
+  dataIndex?: string;
+  title?: React.ReactNode;
+  width?: number;
+  align?: 'left' | 'right' | 'center';
+  render?: (value: unknown, record: TableRow, index: number) => React.ReactNode;
+  onFilter?: (value: unknown, record: TableRow) => boolean;
+  filteredValue?: unknown[];
+}
 
 interface RowSelectionConfig {
   type?: 'radio' | 'checkbox';
   selectedRowKeys?: React.Key[];
-  onChange?: (selectedRowKeys: React.Key[], selectedRows: Record<string, unknown>[]) => void;
-  onSelect?: (record: Record<string, unknown>, selected: boolean, selectedRows: Record<string, unknown>[], nativeEvent: { stopPropagation?: () => void }) => void;
+  onChange?: (selectedRowKeys: React.Key[], selectedRows: TableRow[]) => void;
+  onSelect?: (record: TableRow, selected: boolean, selectedRows: TableRow[], nativeEvent: { stopPropagation?: () => void }) => void;
   hideSelectAll?: boolean;
   columnWidth?: number;
   columnTitle?: string;
-  [key: string]: unknown;
+}
+
+interface RowEventHandlers {
+  className?: string;
+  onClick?: React.MouseEventHandler;
+  onDoubleClick?: React.MouseEventHandler;
 }
 
 interface VirtualizedFilterableTableProps {
   columns: ColumnDef[];
-  dataSource: Record<string, unknown>[];
+  dataSource: TableRow[];
   rowHeight?: number;
   height?: number;
-  onRow?: (record: Record<string, unknown>, index: number) => { className?: string; onClick?: React.MouseEventHandler; onDoubleClick?: React.MouseEventHandler; [key: string]: unknown };
-  rowKey?: string | ((record: Record<string, unknown>) => React.Key);
+  onRow?: (record: TableRow, index: number) => RowEventHandlers;
+  rowKey?: string | ((record: TableRow) => React.Key);
   rowSelection?: RowSelectionConfig;
-  rowClassName?: string | ((record: Record<string, unknown>, index: number) => string);
+  rowClassName?: string | ((record: TableRow, index: number) => string);
   onChange?: (...args: unknown[]) => void;
   filteredValue?: unknown[];
   scroll?: { x?: number; y?: number };
   selectedRowKeys?: React.Key[];
 }
 
-// Accept extra props from antd Table spreading via Record<string, unknown>;
+// Accept extra props from antd Table spreading;
 // internal destructuring uses VirtualizedFilterableTableProps for type safety.
 const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTableProps & Record<string, unknown>>((allProps, ref) => {
   const {
@@ -103,12 +122,10 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
 
     // Apply column filters
     columns.forEach((colObj: ColumnDef) => {
-      const column = colObj as Record<string, unknown>;
-      const onFilter = column.onFilter as ((value: unknown, record: Record<string, unknown>) => boolean) | undefined;
-      const filteredValue = column.filteredValue as unknown[] | undefined;
-      if (onFilter && (filteredValue?.length ?? 0) > 0) {
-        filtered = filtered.filter((record: Record<string, unknown>) => {
-          return filteredValue!.some((value: unknown) => onFilter(value, record));
+      const column = colObj as ColumnProps;
+      if (column.onFilter && (column.filteredValue?.length ?? 0) > 0) {
+        filtered = filtered.filter((record: TableRow) => {
+          return column.filteredValue!.some((value: unknown) => column.onFilter!(value, record));
         });
       }
     });
@@ -124,7 +141,7 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
     const key: React.Key = typeof rowKey === 'function' ? rowKey(record) : rowKey ? record[rowKey] as React.Key : index;
 
     // Get row props if onRow is provided
-    const rowProps = onRow ? onRow(record, index) : { className: undefined as string | undefined, onClick: undefined as React.MouseEventHandler | undefined, onDoubleClick: undefined as React.MouseEventHandler | undefined };
+    const rowProps: RowEventHandlers = onRow ? onRow(record, index) : {};
     
     // Check if row is selected
     const isSelected = selectedRowKeys?.includes(index);
@@ -178,25 +195,23 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
         
         {/* Render cells */}
         {columns.map((colObj: ColumnDef, colIndex: number) => {
-          const column = colObj as Record<string, unknown>;
-          const colDataIndex = column.dataIndex as string | undefined;
-          const colRender = column.render as ((value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode) | undefined;
+          const column = colObj as ColumnProps;
           let value: unknown;
-          if (colDataIndex) {
-            value = record[colDataIndex];
+          if (column.dataIndex) {
+            value = record[column.dataIndex];
           }
 
-          const cellContent = colRender
-            ? colRender(value, record, index)
+          const cellContent = column.render
+            ? column.render(value, record, index)
             : value as React.ReactNode;
 
           return (
             <div
-              key={(column.key as React.Key | undefined) ?? (colDataIndex as React.Key | undefined) ?? colIndex}
+              key={column.key ?? column.dataIndex ?? colIndex}
               className="virtual-table-cell"
               style={{
-                width: (column.width as number) || 150,
-                textAlign: (column.align as 'left' | 'right' | 'center') || 'left',
+                width: column.width || 150,
+                textAlign: column.align || 'left',
                 padding: '8px 16px',
                 overflow: 'hidden',
               }}
@@ -244,23 +259,22 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
         </div>
       )}
       {columns.map((colObj: ColumnDef, index: number) => {
-        const column = colObj as Record<string, unknown>;
-        const colAlign = column.align as 'left' | 'right' | 'center' | undefined;
+        const column = colObj as ColumnProps;
         return (
           <div
-            key={(column.key as React.Key | undefined) ?? (column.dataIndex as React.Key | undefined) ?? index}
+            key={column.key ?? column.dataIndex ?? index}
             className="virtual-table-header-cell"
             style={{
-              width: (column.width as number) || 150,
-              textAlign: colAlign || 'left',
+              width: column.width || 150,
+              textAlign: column.align || 'left',
               padding: '8px 16px',
               fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: colAlign === 'right' ? 'flex-end' : 'flex-start',
+              justifyContent: column.align === 'right' ? 'flex-end' : 'flex-start',
             }}
           >
-            {column.title as React.ReactNode}
+            {column.title}
           </div>
         );
       })}

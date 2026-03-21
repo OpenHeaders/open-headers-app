@@ -3,8 +3,13 @@ import mainLogger from '../../utils/mainLogger';
 import timeManager from './TimeManager';
 import type { AppSettings } from '../../types/settings';
 import type { ProxyStatus } from '../../types/proxy';
+import type { WebSocketConnectionStatus } from '../websocket/ws-client-handler';
 
 const { createLogger } = mainLogger;
+
+/** Opaque service instance — the registry stores heterogeneous service objects. */
+type ServiceInstance = object;
+type ServiceMap = Record<string, ServiceInstance>;
 
 export const AppStates = {
     INITIALIZING: 'INITIALIZING',
@@ -64,7 +69,7 @@ export const StateTransitions: Record<string, Record<string, string>> = {
 
 interface StateTransitionData {
     settings?: Partial<AppSettings>;
-    servers?: { proxy?: ProxyStatus; websocket?: Record<string, unknown> };
+    servers?: { proxy?: ProxyStatus; websocket?: WebSocketConnectionStatus };
     workspace?: { id?: string; name?: string };
     error?: string | unknown;
     reason?: string;
@@ -83,7 +88,7 @@ interface AppContext {
     startTime: number;
     errors: Array<{ error: unknown; timestamp: number; state: string }>;
     retryCount: number;
-    services: Map<string, unknown>;
+    services: Map<string, ServiceInstance>;
     settings: Partial<AppSettings> | null;
 }
 
@@ -184,7 +189,7 @@ class AppStateMachineImpl extends EventEmitter {
 
     settingsReady(): boolean { return this.transition('SETTINGS_READY'); }
 
-    servicesReady(services: Record<string, unknown> | Map<string, unknown>): boolean {
+    servicesReady(services: ServiceMap | Map<string, ServiceInstance>): boolean {
         this.context.services = services instanceof Map ? services : new Map(Object.entries(services));
         return this.transition('SERVICES_READY');
     }

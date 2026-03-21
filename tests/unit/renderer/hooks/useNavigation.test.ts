@@ -99,9 +99,7 @@ function setupElectronAPI() {
   };
 
   vi.stubGlobal('electronAPI', api);
-
-  // Also set on window directly for the window.electronAPI pattern
-  (window as unknown as { electronAPI: MockElectronAPI }).electronAPI = api;
+  window.electronAPI = api as unknown as ElectronAPI;
 }
 
 function makeDeps(overrides: Partial<UseNavigationDeps> = {}): UseNavigationDeps {
@@ -144,7 +142,7 @@ describe('useNavigation', () => {
     const deps = makeDeps();
     renderHook(() => useNavigation(deps));
 
-    expect((window as unknown as { electronAPI: MockElectronAPI }).electronAPI.onNavigateTo).toHaveBeenCalledTimes(1);
+    expect(window.electronAPI.onNavigateTo).toHaveBeenCalledTimes(1);
     expect(navigationCallback).toBeInstanceOf(Function);
   });
 
@@ -161,7 +159,7 @@ describe('useNavigation', () => {
     renderHook(() => useNavigation(deps));
 
     triggerNavigation({ tab: 'sources' });
-    expect((window as unknown as { electronAPI: MockElectronAPI }).electronAPI.showMainWindow).toHaveBeenCalled();
+    expect(window.electronAPI.showMainWindow).toHaveBeenCalled();
   });
 
   // ---- Basic tab switching ----
