@@ -16,7 +16,10 @@ const EnvironmentStorageManager = (
 
 describe('EnvironmentStorageManager', () => {
   let manager: InstanceType<typeof EnvironmentStorageManager>;
-  let mockStorageAPI: { loadFromStorage: ReturnType<typeof vi.fn>; saveToStorage: ReturnType<typeof vi.fn> };
+  let mockStorageAPI: {
+    loadFromStorage: ReturnType<typeof vi.fn<(filename: string) => Promise<string | null>>>;
+    saveToStorage: ReturnType<typeof vi.fn<(filename: string, content: string) => Promise<void>>>;
+  };
 
   beforeEach(() => {
     mockStorageAPI = {
@@ -137,7 +140,7 @@ describe('EnvironmentStorageManager', () => {
   // ========================================================================
   describe('saveEnvironments', () => {
     it('saves environments to correct path', async () => {
-      const environments = { Default: { KEY: { value: 'val' } } };
+      const environments = { Default: { KEY: { value: 'val', isSecret: false } } };
       await manager.saveEnvironments('ws-1', environments, 'Default');
 
       expect(mockStorageAPI.saveToStorage).toHaveBeenCalledWith(

@@ -56,7 +56,8 @@ describe('WSCertificateHandler', () => {
     describe('createHttpsRequestHandler', () => {
         interface MockReq { url: string; headers: Record<string, string> }
         interface MockRes { writeHead: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
-        let requestHandler: (req: MockReq, res: MockRes) => void;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let requestHandler: (...args: unknown[]) => void;
         let mockRes: MockRes;
 
         beforeEach(() => {
@@ -120,20 +121,20 @@ describe('WSCertificateHandler', () => {
         it('broadcasts trusted=true to all clients', () => {
             handler._broadcastCertificateTrustChanged(true);
             expect(mockService._broadcastToAll).toHaveBeenCalledTimes(1);
-            const message = JSON.parse(mockService._broadcastToAll.mock.calls[0][0]);
+            const message = JSON.parse(vi.mocked(mockService._broadcastToAll).mock.calls[0][0]);
             expect(message.type).toBe('certificateTrustChanged');
             expect(message.trusted).toBe(true);
         });
 
         it('broadcasts trusted=false to all clients', () => {
             handler._broadcastCertificateTrustChanged(false);
-            const message = JSON.parse(mockService._broadcastToAll.mock.calls[0][0]);
+            const message = JSON.parse(vi.mocked(mockService._broadcastToAll).mock.calls[0][0]);
             expect(message.type).toBe('certificateTrustChanged');
             expect(message.trusted).toBe(false);
         });
 
         it('does not throw when broadcastToAll throws', () => {
-            mockService._broadcastToAll.mockImplementation(() => { throw new Error('broadcast error'); });
+            vi.mocked(mockService._broadcastToAll).mockImplementation(() => { throw new Error('broadcast error'); });
             expect(() => handler._broadcastCertificateTrustChanged(true)).not.toThrow();
         });
     });

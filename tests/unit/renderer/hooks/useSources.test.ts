@@ -8,6 +8,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -33,7 +34,7 @@ const mockGetState = vi.fn();
 const mockReadFile = vi.fn();
 const mockGetEnvVariable = vi.fn();
 
-const mockSources = [
+const mockSources: Source[] = [
   { sourceId: 'src-1', sourceType: 'file', sourcePath: '/data/config.json', sourceContent: '{}' },
   { sourceId: 'src-2', sourceType: 'http', sourcePath: 'https://api.example.com/data', sourceMethod: 'GET' },
   { sourceId: 'src-3', sourceType: 'env', sourcePath: 'MY_VAR' },
@@ -93,11 +94,11 @@ describe('useSources', () => {
 
       let added: unknown = null;
       await act(async () => {
-        added = await result.current.addSource({ sourceType: 'file', sourcePath: '/new.json' });
+        added = await result.current.addSource({ sourceId: 'new-1', sourceType: 'file', sourcePath: '/new.json' });
       });
 
       expect(added).toEqual({ sourceId: 'new-1', sourceType: 'file' });
-      expect(mockAddSource).toHaveBeenCalledWith({ sourceType: 'file', sourcePath: '/new.json' });
+      expect(mockAddSource).toHaveBeenCalledWith({ sourceId: 'new-1', sourceType: 'file', sourcePath: '/new.json' });
     });
 
     it('returns null and shows error on failure', async () => {
@@ -107,7 +108,7 @@ describe('useSources', () => {
 
       let added: unknown = 'not-null';
       await act(async () => {
-        added = await result.current.addSource({ sourceType: 'file' });
+        added = await result.current.addSource({ sourceId: 'bad-1', sourceType: 'file' });
       });
 
       expect(added).toBeNull();

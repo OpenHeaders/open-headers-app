@@ -337,8 +337,8 @@ describe('readAndValidateMultiFileConfig', () => {
 
     const result = await readAndValidateMultiFileConfig(readFile, '/base');
     expect(result.success).toBe(true);
-    expect(result.config.sources).toHaveLength(1);
-    expect(result.config.environmentSchema).toBeTruthy();
-    expect(result.config.environments).toBeTruthy();
+    expect(result.config!.sources).toHaveLength(1);
+    expect(result.config!.environmentSchema).toBeTruthy();
+    expect(result.config!.environments).toBeTruthy();
   });
 });

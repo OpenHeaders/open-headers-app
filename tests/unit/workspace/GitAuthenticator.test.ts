@@ -26,11 +26,11 @@ describe('GitAuthenticator', () => {
 
     describe('cleanup()', () => {
         it('does nothing for auth type "none"', async () => {
-            await expect(auth.cleanup('none', {})).resolves.toBeUndefined();
+            await expect(auth.cleanup('none', {} as Parameters<typeof auth.cleanup>[1])).resolves.toBeUndefined();
         });
 
         it('does nothing for empty auth type', async () => {
-            await expect(auth.cleanup('', {})).resolves.toBeUndefined();
+            await expect(auth.cleanup('', {} as Parameters<typeof auth.cleanup>[1])).resolves.toBeUndefined();
         });
     });
 });

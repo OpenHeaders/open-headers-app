@@ -4,7 +4,7 @@ import { WSEnvironmentHandler } from '../../../src/services/websocket/ws-environ
 function createMockService(): ConstructorParameters<typeof WSEnvironmentHandler>[0] {
     return {
         appDataPath: '/tmp/test-app-data',
-        rules: {},
+        rules: { header: [], request: [], response: [] },
         sources: [],
         ruleHandler: { broadcastRules: () => {} }
     };

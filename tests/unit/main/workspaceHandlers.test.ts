@@ -50,7 +50,7 @@ function buildInviteData(
 }
 
 // ---------- buildInviteLinks ----------
-function buildInviteLinks(payload: TeamWorkspaceInvite): { appLink: string; webLink: string } {
+function buildInviteLinks(payload: TeamWorkspaceInvite | Record<string, unknown>): { appLink: string; webLink: string } {
     const payloadJson = JSON.stringify(payload);
     const compressed = zlib.gzipSync(payloadJson, { level: 9 });
     const payloadParam = compressed.toString('base64url');

@@ -103,7 +103,7 @@ describe('formatConsoleArg', () => {
   });
 
   it('formats plain objects as JSON', () => {
-    const result = formatConsoleArg({ key: 'value' });
+    const result = formatConsoleArg({ key: 'value' } as unknown as Parameters<typeof formatConsoleArg>[0]);
     expect(JSON.parse(result)).toEqual({ key: 'value' });
   });
 

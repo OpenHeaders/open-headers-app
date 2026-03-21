@@ -54,11 +54,11 @@ describe('useProxyRules', () => {
 
       let added = false;
       await act(async () => {
-        added = await result.current.addRule({ headerName: 'X-New', headerValue: 'val' });
+        added = await result.current.addRule({ id: 'new-1', headerName: 'X-New', headerValue: 'val' });
       });
 
       expect(added).toBe(true);
-      expect(mockAddProxyRule).toHaveBeenCalledWith({ headerName: 'X-New', headerValue: 'val' });
+      expect(mockAddProxyRule).toHaveBeenCalledWith({ id: 'new-1', headerName: 'X-New', headerValue: 'val' });
       expect(mockShowMessage).toHaveBeenCalledWith('success', 'Proxy rule added');
     });
 
@@ -69,7 +69,7 @@ describe('useProxyRules', () => {
 
       let added = true;
       await act(async () => {
-        added = await result.current.addRule({ headerName: '' });
+        added = await result.current.addRule({ id: 'bad-1', headerName: '' });
       });
 
       expect(added).toBe(false);

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import type WebSocket from 'ws';
 import { WSNetworkStateHandler } from '../../../src/services/websocket/ws-network-state';
 
 function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler>[0] {
@@ -111,7 +112,7 @@ describe('WSNetworkStateHandler', () => {
                 readyState: 1,
                 send: (msg: string) => { sentMessage = msg; }
             };
-            handler.sendInitialState(ws);
+            handler.sendInitialState(ws as unknown as WebSocket);
             expect(sentMessage).not.toBeNull();
             const parsed = JSON.parse(sentMessage!);
             expect(parsed.type).toBe('network-state-initial');
@@ -124,13 +125,13 @@ describe('WSNetworkStateHandler', () => {
                 readyState: 3, // CLOSED
                 send: (msg: string) => { sentMessage = msg; }
             };
-            handler.sendInitialState(ws);
+            handler.sendInitialState(ws as unknown as WebSocket);
             expect(sentMessage).toBeNull();
         });
 
         it('does not send to null ws', () => {
             // Should not throw
-            handler.sendInitialState(null);
+            handler.sendInitialState(null as unknown as WebSocket);
         });
     });
 

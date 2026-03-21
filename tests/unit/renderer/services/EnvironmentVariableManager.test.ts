@@ -44,7 +44,7 @@ describe('EnvironmentVariableManager', () => {
     it('returns empty string for variables without value', () => {
       const environments = {
         Default: { KEY: { isSecret: false } },
-      };
+      } as Parameters<typeof manager.getAllVariables>[0];
       const result = manager.getAllVariables(environments, 'Default');
       expect(result).toEqual({ KEY: '' });
     });
@@ -185,7 +185,7 @@ describe('EnvironmentVariableManager', () => {
   describe('getVariableCount', () => {
     it('returns count of variables', () => {
       const environments = {
-        Default: { A: { value: '1' }, B: { value: '2' } },
+        Default: { A: { value: '1', isSecret: false }, B: { value: '2', isSecret: false } },
       };
       expect(manager.getVariableCount(environments, 'Default')).toBe(2);
     });

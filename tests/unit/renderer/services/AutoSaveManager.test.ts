@@ -13,7 +13,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 const AutoSaveManagerModule = await import(
   '../../../../src/renderer/services/workspace/AutoSaveManager'
 );
-const AutoSaveManager = (AutoSaveManagerModule as { default?: typeof AutoSaveManagerModule }).default || AutoSaveManagerModule;
+const AutoSaveManager = AutoSaveManagerModule.default;
 
 describe('AutoSaveManager', () => {
   let manager: InstanceType<typeof AutoSaveManager>;

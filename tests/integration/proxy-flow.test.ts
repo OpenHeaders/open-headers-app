@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import http from 'http';
 import type { ProxyService } from '../../src/services/proxy/ProxyService';
+import type { HeaderRule } from '../../src/types/rules';
 
 // Mock atomicFileWriter to avoid filesystem I/O
 vi.mock('../../src/utils/atomicFileWriter', () => ({
@@ -195,7 +196,7 @@ describe('Proxy integration – full request flow', () => {
 
         it('injects header from a header rule referenced by a proxy rule', async () => {
             proxyService.headerRules = [
-                { id: 'hr-1', isEnabled: true, headerName: 'Authorization', headerValue: 'Bearer abc123', domains: [] },
+                { id: 'hr-1', isEnabled: true, headerName: 'Authorization', headerValue: 'Bearer abc123', domains: [] } as HeaderRule,
             ];
             proxyService.ruleStore.rules = [
                 { id: 'pr-1', enabled: true, headerRuleId: 'hr-1' },
@@ -460,7 +461,7 @@ describe('Proxy integration – full request flow', () => {
     describe('multiple rules interacting', () => {
         it('applies both proxy rules and header rules simultaneously', async () => {
             proxyService.headerRules = [
-                { id: 'hr-1', isEnabled: true, headerName: 'X-From-Header-Rule', headerValue: 'hr-value', domains: [] },
+                { id: 'hr-1', isEnabled: true, headerName: 'X-From-Header-Rule', headerValue: 'hr-value', domains: [] } as HeaderRule,
             ];
             proxyService.ruleStore.rules = [
                 { id: 'pr-1', enabled: true, headerRuleId: 'hr-1' },

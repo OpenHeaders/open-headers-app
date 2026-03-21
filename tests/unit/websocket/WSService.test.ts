@@ -7,6 +7,7 @@ vi.mock('../../../src/utils/mainLogger', () => ({
 }));
 
 import { WebSocketService } from '../../../src/services/websocket/ws-service';
+import type { WSClientInfo } from '../../../src/types/websocket';
 
 describe('WebSocketService', () => {
     let service: WebSocketService;
@@ -60,7 +61,7 @@ describe('WebSocketService', () => {
         });
 
         it('returns true when clients are connected', () => {
-            service.connectedClients.set('test', { id: 'test' });
+            service.connectedClients.set('test', { id: 'test' } as WSClientInfo);
             expect(service.isConnected()).toBe(true);
         });
     });

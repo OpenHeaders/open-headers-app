@@ -108,7 +108,7 @@ describe('useWorkspaces', () => {
 
       let created: Workspace | null = null;
       await act(async () => {
-        created = await result.current.createWorkspace({ name: 'New WS' });
+        created = await result.current.createWorkspace({ id: 'ws-1', name: 'New WS', type: 'personal' });
       });
 
       expect(created).toEqual(newWs);
@@ -120,7 +120,7 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {
-        await result.current.createWorkspace({ name: 'No ID' });
+        await result.current.createWorkspace({ id: 'ws-2', name: 'No ID', type: 'personal' });
       });
 
       expect(mockCreateWorkspace).toHaveBeenCalledWith(
@@ -135,7 +135,7 @@ describe('useWorkspaces', () => {
 
       let created: Workspace | null = null;
       await act(async () => {
-        created = await result.current.createWorkspace({ name: 'Bad' });
+        created = await result.current.createWorkspace({ id: 'ws-3', name: 'Bad', type: 'personal' });
       });
 
       expect(created).toBeNull();

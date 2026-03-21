@@ -40,12 +40,12 @@ describe('GitExecutor', () => {
         });
 
         it('preserves error code and signal', () => {
-            const original = new Error('killed') as Error & { code: number; killed: boolean; signal: string };
-            original.code = 128;
+            const original = new Error('killed') as Error & { code: string; killed: boolean; signal: string };
+            original.code = '128';
             original.killed = true;
             original.signal = 'SIGTERM';
             const enhanced = executor.enhanceError(original, 'git clone');
-            expect(enhanced.code).toBe(128);
+            expect(enhanced.code).toBe('128');
             expect(enhanced.killed).toBe(true);
             expect(enhanced.signal).toBe('SIGTERM');
         });

@@ -114,10 +114,11 @@ describe('GitErrorHandler', () => {
 
     describe('createError()', () => {
         it('creates enhanced error with type and details', () => {
-            const err = handler.createError('test msg', ERROR_TYPES.AUTH_ERROR, { foo: 1 });
+            const details = { original: 'orig', recovery: ['retry'], context: { operation: 'push', repoDir: '/tmp' } };
+            const err = handler.createError('test msg', ERROR_TYPES.AUTH_ERROR, details);
             expect(err.message).toBe('test msg');
             expect(err.type).toBe(ERROR_TYPES.AUTH_ERROR);
-            expect(err.details).toEqual({ foo: 1 });
+            expect(err.details).toEqual(details);
             expect(err.timestamp).toBeDefined();
         });
     });

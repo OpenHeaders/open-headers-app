@@ -262,16 +262,18 @@ describe('ConfigFileValidator', () => {
       const base = { version: '1.0.0', environments: [{ name: 'prod' }, { name: 'dev' }] };
       const override = { version: '1.0.0', environments: [{ name: 'prod', url: 'new' }] };
       const result = validator.mergeConfigs(base, override, 'environments');
-      expect(result.environments).toHaveLength(2);
-      expect(result.environments!.find(e => e.name === 'prod')).toHaveProperty('url', 'new');
+      const envs = result.environments as Array<Record<string, unknown>>;
+      expect(envs).toHaveLength(2);
+      expect(envs.find(e => e.name === 'prod')).toHaveProperty('url', 'new');
     });
 
     it('replaces proxy rules entirely', () => {
       const base = { version: '1.0.0', rules: [{ pattern: 'a', target: 'b' }] };
       const override = { version: '1.0.0', rules: [{ pattern: 'c', target: 'd' }] };
       const result = validator.mergeConfigs(base, override, 'proxy');
-      expect(result.rules).toHaveLength(1);
-      expect(result.rules![0].pattern).toBe('c');
+      const rules = result.rules as Array<Record<string, unknown>>;
+      expect(rules).toHaveLength(1);
+      expect(rules[0].pattern).toBe('c');
     });
 
     it('deep merges metadata configPaths', () => {
