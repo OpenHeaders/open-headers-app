@@ -16,6 +16,12 @@ const TemplateResolver = (
   )
 ).default;
 
+type ResolveResult = { resolved: string; missingVars: string[]; hasAllVars: boolean };
+
+function asResult(val: unknown): ResolveResult {
+  return val as ResolveResult;
+}
+
 describe('TemplateResolver', () => {
   let resolver: InstanceType<typeof TemplateResolver>;
 
@@ -31,9 +37,9 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveTemplate('Hello {{name}}', {
         name: 'World',
       });
-      expect(result.resolved).toBe('Hello World');
-      expect(result.hasAllVars).toBe(true);
-      expect(result.missingVars).toEqual([]);
+      expect(asResult(result).resolved).toBe('Hello World');
+      expect(asResult(result).hasAllVars).toBe(true);
+      expect(asResult(result).missingVars).toEqual([]);
     });
 
     it('resolves multiple variables', () => {
@@ -41,21 +47,21 @@ describe('TemplateResolver', () => {
         a: 'X',
         b: 'Y',
       });
-      expect(result.resolved).toBe('X and Y');
+      expect(asResult(result).resolved).toBe('X and Y');
     });
 
     it('uses default value for missing vars', () => {
       const result = resolver.resolveTemplate('{{missing}}', {});
-      expect(result.resolved).toBe('');
-      expect(result.missingVars).toEqual(['missing']);
-      expect(result.hasAllVars).toBe(false);
+      expect(asResult(result).resolved).toBe('');
+      expect(asResult(result).missingVars).toEqual(['missing']);
+      expect(asResult(result).hasAllVars).toBe(false);
     });
 
     it('uses custom default value', () => {
       const result = resolver.resolveTemplate('{{x}}', {}, {
         defaultValue: 'N/A',
       });
-      expect(result.resolved).toBe('N/A');
+      expect(asResult(result).resolved).toBe('N/A');
     });
 
     it('throws on missing when throwOnMissing is true', () => {
@@ -75,8 +81,8 @@ describe('TemplateResolver', () => {
 
     it('handles template with no variables', () => {
       const result = resolver.resolveTemplate('no vars here', { a: '1' });
-      expect(result.resolved).toBe('no vars here');
-      expect(result.hasAllVars).toBe(true);
+      expect(asResult(result).resolved).toBe('no vars here');
+      expect(asResult(result).hasAllVars).toBe(true);
     });
 
     it('respects logMissing option', () => {
@@ -84,7 +90,7 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveTemplate('{{x}}', {}, {
         logMissing: false,
       });
-      expect(result.missingVars).toEqual(['x']);
+      expect(asResult(result).missingVars).toEqual(['x']);
     });
   });
 
@@ -106,7 +112,8 @@ describe('TemplateResolver', () => {
 
     it('returns empty array for non-string', () => {
       expect(resolver.extractVariables(null)).toEqual([]);
-      expect(resolver.extractVariables(undefined)).toEqual([]);
+      // Intentionally invalid to test runtime guard
+      expect(resolver.extractVariables(undefined as unknown as string)).toEqual([]);
     });
 
     it('returns empty array for no variables', () => {
@@ -140,7 +147,7 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveObject(
         { greeting: 'Hello {{name}}', count: 5 },
         { name: 'World' }
-      );
+      ) as Record<string, unknown>;
       expect(result.greeting).toBe('Hello World');
       expect(result.count).toBe(5);
     });
@@ -149,7 +156,7 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveObject(
         { outer: { inner: '{{val}}' } },
         { val: 'resolved' }
-      );
+      ) as Record<string, Record<string, string>>;
       expect(result.outer.inner).toBe('resolved');
     });
 
@@ -157,14 +164,14 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveObject(
         ['{{a}}', '{{b}}'],
         { a: 'X', b: 'Y' }
-      );
+      ) as Record<string, unknown>[];
       // Array items are resolved as objects
-      expect(result[0].resolved || result[0]).toBeDefined();
+      expect((result[0] as Record<string, unknown>).resolved || result[0]).toBeDefined();
     });
 
     it('returns non-object input through resolveTemplate', () => {
       const result = resolver.resolveObject('{{x}}', { x: 'val' });
-      expect(result.resolved).toBe('val');
+      expect(asResult(result).resolved).toBe('val');
     });
 
     it('handles null input', () => {
@@ -176,7 +183,7 @@ describe('TemplateResolver', () => {
       const result = resolver.resolveObject(
         { num: 42, bool: true, str: '{{x}}' },
         { x: 'ok' }
-      );
+      ) as Record<string, unknown>;
       expect(result.num).toBe(42);
       expect(result.bool).toBe(true);
       expect(result.str).toBe('ok');
@@ -217,7 +224,7 @@ describe('TemplateResolver', () => {
     it('returns a function that resolves templates', () => {
       const resolve = resolver.createResolver({ name: 'Test' });
       const result = resolve('Hello {{name}}');
-      expect(result.resolved).toBe('Hello Test');
+      expect(asResult(result).resolved).toBe('Hello Test');
     });
 
     it('pre-bound resolver uses provided options', () => {
@@ -226,7 +233,7 @@ describe('TemplateResolver', () => {
         { defaultValue: 'MISSING' }
       );
       const result = resolve('{{name}} and {{other}}');
-      expect(result.resolved).toBe('Test and MISSING');
+      expect(asResult(result).resolved).toBe('Test and MISSING');
     });
   });
 });
