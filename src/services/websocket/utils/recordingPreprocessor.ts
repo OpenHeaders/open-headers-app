@@ -947,7 +947,7 @@ function getBatchSize(resourceType: string): number {
 /**
  * Prefetch resources through the proxy to populate the cache
  */
-async function prefetchResources(staticResources: StaticResources, proxyPort: number, onProgress?: (stage: string, progress: number, details?: Record<string, unknown>) => void): Promise<void> {
+async function prefetchResources(staticResources: StaticResources, proxyPort: number, onProgress?: (stage: string, progress: number, details?: PreprocessProgressDetails) => void): Promise<void> {
     const allResources: PrefetchResource[] = [];
 
     staticResources.stylesheets.forEach(url => allResources.push({ url, type: 'stylesheet', priority: 1 }));

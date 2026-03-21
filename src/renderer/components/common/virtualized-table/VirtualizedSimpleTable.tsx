@@ -52,7 +52,7 @@ interface RowEventHandlers {
   onDoubleClick?: React.MouseEventHandler<HTMLDivElement>;
 }
 
-interface VirtualizedSimpleTableProps<T = Record<string, unknown>> {
+interface VirtualizedSimpleTableProps<T extends object = Record<string, unknown>> {
   columns: SimpleColumnDef<T>[];
   dataSource: T[];
   rowHeight?: number;
@@ -60,14 +60,14 @@ interface VirtualizedSimpleTableProps<T = Record<string, unknown>> {
   onRow?: (record: T, index: number) => RowEventHandlers;
   rowKey: string | ((record: T) => React.Key);
   rowSelection?: SimpleRowSelectionConfig<T>;
-  expandable?: Record<string, unknown>;
+  expandable?: { expandedRowRender?: (record: T) => React.ReactNode; rowExpandable?: (record: T) => boolean };
   scroll?: { x?: number; y?: number };
 }
 
-const getField = <T,>(record: T, key: string): unknown =>
+const getField = (record: object, key: string): unknown =>
   (record as Record<string, unknown>)[key];
 
-function VirtualizedSimpleTable<T>(props: VirtualizedSimpleTableProps<T>) {
+function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableProps<T>) {
   const {
     columns,
     dataSource,

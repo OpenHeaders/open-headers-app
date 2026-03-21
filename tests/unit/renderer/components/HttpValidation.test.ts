@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { JsonObject } from '../../../../src/types/common';
 import {
   validateVariableExists,
   resolveAllVariables,
@@ -35,7 +36,7 @@ const makeForm = (opts: FormFields = {}) => ({
     if (typeof key === 'string') return opts[key as keyof FormFields];
     let val: unknown = opts;
     for (const k of key) {
-      val = (val as Record<string, unknown>)?.[k];
+      val = (val as JsonObject)?.[k];
     }
     return val;
   },

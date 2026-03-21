@@ -14,6 +14,19 @@ const { app, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('ProtocolHandler');
 
+/** Minified variable data in protocol payloads. */
+interface MinifiedVarData { val?: string; s?: number }
+
+/** Minified data from protocol URLs before expansion. */
+interface ProtocolMinifiedData {
+    /** Minified environments: short env name -> var name -> minified var data */
+    e?: Record<string, Record<string, MinifiedVarData>>;
+    /** Minified environment schema */
+    es?: { e?: Record<string, { v?: Array<{ n: string; s?: number }> }> };
+    /** Minified invite/env fields (wn, ru, b, cp, at, in, desc, etc.) */
+    [key: string]: unknown;
+}
+
 /** Decoded protocol payload after decompression and expansion. */
 interface ProtocolPayload {
     action: string;
@@ -24,7 +37,7 @@ interface ProtocolPayload {
     /** Minified version (before expansion). */
     v?: string;
     /** Minified data (before expansion). */
-    d?: Record<string, unknown>;
+    d?: ProtocolMinifiedData;
 }
 
 /** Team invite data as received from protocol URL (subset of TeamWorkspaceInvite). */
@@ -313,13 +326,13 @@ class ProtocolHandler {
 
         // Expand data from minified 'd' field
         if (payload.d) {
-            const data = payload.d as Record<string, unknown>;
+            const data = payload.d;
             delete payload.d;
 
-            const expanded: Record<string, unknown> = { ...data };
+            const expanded: ProtocolMinifiedData = { ...data };
 
             // Expand environment names
-            const minifiedEnvs = data.e as Record<string, Record<string, { val?: string; s?: number }>> | undefined;
+            const minifiedEnvs = data.e;
             if (minifiedEnvs) {
                 const environments: Record<string, Record<string, Partial<EnvironmentVariable>>> = {};
                 Object.entries(minifiedEnvs).forEach(([shortName, vars]) => {
@@ -349,7 +362,7 @@ class ProtocolHandler {
             }
 
             // Expand environment schema
-            const minifiedSchema = data.es as { e?: Record<string, { v?: Array<{ n: string; s?: number }> }> } | undefined;
+            const minifiedSchema = data.es;
             if (minifiedSchema?.e) {
                 const environmentSchema: EnvironmentSchema = {
                     environments: {}

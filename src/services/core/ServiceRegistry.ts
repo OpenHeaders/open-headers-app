@@ -2,14 +2,20 @@ import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
+/** Opaque service instance — the registry stores heterogeneous service objects. */
+type ServiceInstance = object;
+type Callable = (...args: never[]) => unknown;
+type ServiceWithMethod = Record<string, Callable>;
+
 /** Checks whether an object has a method with the given name */
-function hasMethod(obj: unknown, name: string): obj is Record<string, (...args: never[]) => unknown> {
-  return typeof obj === 'object' && obj !== null && typeof (obj as Record<string, unknown>)[name] === 'function';
+function hasMethod(obj: unknown, name: string): obj is ServiceWithMethod {
+  if (typeof obj !== 'object' || obj === null) return false;
+  return typeof (obj as ServiceWithMethod)[name] === 'function';
 }
 
 interface ServiceInfo {
   name: string;
-  service: unknown;
+  service: ServiceInstance;
   dependencies: string[];
   initMethod: string;
   initialized: boolean;
@@ -23,7 +29,7 @@ class ServiceRegistry {
   private initialized = false;
   private log = createLogger('ServiceRegistry');
 
-  register(name: string, service: unknown, dependencies: string[] = [], initMethod = 'initialize'): void {
+  register(name: string, service: ServiceInstance, dependencies: string[] = [], initMethod = 'initialize'): void {
     if (this.services.has(name)) {
       throw new Error(`Service ${name} is already registered`);
     }
@@ -39,7 +45,7 @@ class ServiceRegistry {
     });
   }
 
-  get(name: string): unknown {
+  get(name: string): ServiceInstance {
     const serviceInfo = this.services.get(name);
     if (!serviceInfo) {
       throw new Error(`Service ${name} not found in registry`);
@@ -62,7 +68,7 @@ class ServiceRegistry {
     this.initialized = true;
   }
 
-  async initializeService(name: string): Promise<unknown> {
+  async initializeService(name: string): Promise<ServiceInstance> {
     const serviceInfo = this.services.get(name);
     if (!serviceInfo) {
       throw new Error(`Service ${name} not found`);
@@ -139,8 +145,8 @@ class ServiceRegistry {
     this.initializationOrder = order;
   }
 
-  getAllServices(): Record<string, unknown> {
-    const services: Record<string, unknown> = {};
+  getAllServices(): Record<string, ServiceInstance> {
+    const services: Record<string, ServiceInstance> = {};
     for (const [name, serviceInfo] of this.services) {
       services[name] = serviceInfo.service;
     }

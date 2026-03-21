@@ -52,6 +52,7 @@ export interface ExportImportDependencies {
   activeWorkspaceId: string;
   // bivariant method shorthands: concrete functions may have narrower param types
   exportSources(): Source[];
+  addSource(sourceData: Source): Promise<Source | null>;
   removeSource(sourceId: string): Promise<boolean>;
   workspaces: WorkspaceData[];
   createWorkspace(workspace: WorkspaceData): Promise<WorkspaceData | null>;

@@ -283,6 +283,7 @@ const WorkspaceModal = ({
                     sources: sources ?? [],
                     activeWorkspaceId: workspaceContext.activeWorkspaceId,
                     exportSources: exportSources,
+                    addSource: async () => null, // Not needed for export
                     removeSource: async () => true, // Not needed for export
                     workspaces: workspaceContext.workspaces,
                     createWorkspace: workspaceContext.createWorkspace,

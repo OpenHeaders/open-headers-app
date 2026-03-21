@@ -158,15 +158,10 @@ export class SourcesHandler {
    * @private
    */
   async _addSource(source: Source) {
-    // Dynamic import to avoid circular dependencies
-    const mod = await import('../../../hooks/workspace/useSources');
-    const addSource = (mod as unknown as { addSource?: (s: Source) => Promise<boolean> }).addSource;
-    const success = await addSource?.(source);
-    
-    if (!success) {
+    const result = await this.dependencies.addSource(source);
+    if (!result) {
       throw new Error('Add source operation returned false');
     }
-    
     return true;
   }
 

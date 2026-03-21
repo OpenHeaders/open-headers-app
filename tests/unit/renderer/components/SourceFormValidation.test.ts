@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { JsonObject } from '../../../../src/types/common';
 import {
   validateUrlField,
   validateEnvironmentVariables,
@@ -35,7 +36,7 @@ const makeForm = (fields: FormFields = {}) => ({
     if (typeof key === 'string') return fields[key as keyof FormFields];
     let val: unknown = fields;
     for (const k of key) {
-      val = (val as Record<string, unknown>)?.[k];
+      val = (val as JsonObject)?.[k];
     }
     return val;
   },

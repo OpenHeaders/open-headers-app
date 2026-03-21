@@ -1,5 +1,6 @@
 import electron from 'electron';
 import type { IpcRendererEvent } from 'electron';
+import type { NetworkInterfaceInfo } from 'os';
 
 const { ipcRenderer } = electron;
 
@@ -7,7 +8,7 @@ interface NetworkState {
     isOnline: boolean;
     networkQuality: string;
     vpnActive: boolean;
-    interfaces: [string, { name: string; addresses: import('os').NetworkInterfaceInfo[]; type: string }][];
+    interfaces: [string, { name: string; addresses: NetworkInterfaceInfo[]; type: string }][];
     primaryInterface: string | null;
     connectionType: string;
     diagnostics: { dnsResolvable: boolean; internetReachable: boolean; captivePortal: boolean; latency: number };

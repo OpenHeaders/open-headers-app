@@ -9,6 +9,7 @@ import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
 import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
 import type { Source } from '../../../../types/source';
+import type { ProxyRule } from '../../../../types/proxy';
 import type { AppSettings } from '../../../../types/settings';
 
 const { app } = electron;
@@ -116,7 +117,7 @@ class ProxyHandlers {
         }
     }
 
-    async handleProxySaveRule(_: IpcInvokeEvent, rule: import('../../../../services/proxy/ProxyRuleStore').ProxyRule): Promise<OperationResult> {
+    async handleProxySaveRule(_: IpcInvokeEvent, rule: ProxyRule): Promise<OperationResult> {
         try {
             return await proxyService.saveRule(rule);
         } catch (error: unknown) {

@@ -118,6 +118,7 @@ const AppComponent: React.FC = () => {
         sources,
         activeWorkspaceId,
         exportSources,
+        addSource,
         removeSource,
         workspaces,
         createWorkspace,

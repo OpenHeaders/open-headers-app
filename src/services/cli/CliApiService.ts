@@ -8,6 +8,7 @@ import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
+import type { JsonObject, JsonValue } from '../../types/common';
 import type { CliSetupHandler, JoinWorkspaceData, EnvironmentImportData } from './CliSetupHandler';
 
 const { app } = electron;
@@ -351,7 +352,7 @@ class CliApiService {
         return null;
     }
 
-    _summarizeBody(_pathname: string, body: unknown): unknown {
+    _summarizeBody(_pathname: string, body: JsonValue | undefined): JsonValue | null {
         if (!body || typeof body !== 'object') return null;
         try {
             return this._redactDeep(body);
@@ -360,13 +361,13 @@ class CliApiService {
         }
     }
 
-    _redactDeep(obj: unknown): unknown {
+    _redactDeep(obj: JsonValue): JsonValue {
         if (Array.isArray(obj)) return obj.map(item => this._redactDeep(item));
         if (obj === null || typeof obj !== 'object') {
             if (typeof obj === 'string') return this._redactString(obj);
             return obj;
         }
-        const result: Record<string, unknown> = {};
+        const result: JsonObject = {};
         const sensitiveKeys = ['token', 'password', 'secret', 'authData', 'sshKey', 'sshPassphrase', 'value'];
         for (const [key, val] of Object.entries(obj)) {
             if (sensitiveKeys.includes(key) && typeof val === 'string') {
@@ -398,7 +399,7 @@ class CliApiService {
         } catch { /* Ignore */ }
     }
 
-    _handleWithBody(req: http.IncomingMessage, res: http.ServerResponse, handler: (body: unknown) => Promise<void>): void {
+    _handleWithBody(req: http.IncomingMessage, res: http.ServerResponse, handler: (body: JsonValue) => Promise<void>): void {
         let body = '';
         let responseSent = false;
         req.on('data', (chunk) => {
@@ -413,7 +414,7 @@ class CliApiService {
         req.on('end', async () => {
             if (responseSent) return;
             try {
-                const parsed: unknown = JSON.parse(body);
+                const parsed = JSON.parse(body) as JsonValue;
                 await handler(parsed);
             } catch (err: unknown) {
                 if (err instanceof SyntaxError) {
@@ -512,34 +513,34 @@ class CliApiService {
         res.end(JSON.stringify({ status: 'ok', version: app.getVersion() }));
     }
 
-    async _handleWorkspaceJoin(body: unknown, res: http.ServerResponse): Promise<void> {
+    async _handleWorkspaceJoin(body: JsonValue, res: http.ServerResponse): Promise<void> {
         if (!this.setupHandler) {
             res.writeHead(503);
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        if (!body || typeof body !== 'object') {
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
             res.writeHead(400);
             res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
             return;
         }
-        const result = await this.setupHandler.joinWorkspace(body as JoinWorkspaceData);
+        const result = await this.setupHandler.joinWorkspace(body as unknown as JoinWorkspaceData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }
 
-    async _handleEnvironmentImport(body: unknown, res: http.ServerResponse): Promise<void> {
+    async _handleEnvironmentImport(body: JsonValue, res: http.ServerResponse): Promise<void> {
         if (!this.setupHandler) {
             res.writeHead(503);
             res.end(JSON.stringify({ success: false, error: 'Setup handler not ready' }));
             return;
         }
-        if (!body || typeof body !== 'object') {
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
             res.writeHead(400);
             res.end(JSON.stringify({ success: false, error: 'Invalid request body' }));
             return;
         }
-        const result = await this.setupHandler.importEnvironment(body as EnvironmentImportData);
+        const result = await this.setupHandler.importEnvironment(body as unknown as EnvironmentImportData);
         res.writeHead(result.success ? 200 : 400);
         res.end(JSON.stringify(result));
     }
