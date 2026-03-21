@@ -10,7 +10,7 @@ import { errorMessage } from '../../../../types/common';
 import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
 import type { Source } from '../../../../types/source';
 import type { ProxyRule } from '../../../../types/proxy';
-import type { AppSettings } from '../../../../types/settings';
+
 
 const { app } = electron;
 const fsPromises = fs.promises;
@@ -25,7 +25,7 @@ class ProxyHandlers {
             if (result.success) {
                 // Restore cache configuration from user settings
                 try {
-                    const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
+                    const settings = await settingsHandlers.handleGetSettings();
                     if (settings.proxyCacheEnabled !== undefined) {
                         proxyService.setCacheEnabled(settings.proxyCacheEnabled);
                     }
@@ -259,12 +259,12 @@ class ProxyHandlers {
 
     async autoStartProxy() {
         try {
-            const settings = await settingsHandlers.handleGetSettings() as Partial<AppSettings>;
+            const settings = await settingsHandlers.handleGetSettings();
             if (settings.autoStartProxy) {
                 log.info('Auto-starting proxy server based on settings');
                 const result = await this.handleProxyStart(null, null);
-                if (result.success) {
-                    log.info('Proxy server auto-started successfully on port', (result as { port?: number }).port);
+                if (result.success && 'port' in result) {
+                    log.info('Proxy server auto-started successfully on port', result.port);
                 }
             }
 

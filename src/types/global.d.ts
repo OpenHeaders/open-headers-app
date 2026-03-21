@@ -198,14 +198,15 @@ declare global {
   /** CLI API log entry */
   interface CliApiLogEntry {
     timestamp: number;
-    method?: string;
-    path?: string;
-    statusCode?: number;
+    method: string;
+    path: string;
+    statusCode: number;
     userAgent?: string | null;
     remoteAddress?: string;
     duration?: number;
     errorMessage?: string | null;
     clientProcess?: string | null;
+    bodySummary?: Record<string, unknown> | unknown[] | null;
   }
 
   interface ElectronAPI {

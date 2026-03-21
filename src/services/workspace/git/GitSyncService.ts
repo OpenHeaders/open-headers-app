@@ -526,7 +526,7 @@ class GitSyncService {
 
           for (const [filename, content] of Object.entries(options.files)) {
             const filePath = path.join(basePath, filename);
-            files[filePath] = content as string;
+            files[filePath] = content;
           }
 
           // Commit using the unified API
@@ -568,7 +568,10 @@ class GitSyncService {
       }
 
       // Handle backend format (already has repoDir)
-      return await this.commitManager!.commitConfiguration(options as CommitOptions);
+      if (!options.repoDir) {
+        throw new Error('repoDir is required for backend commit format');
+      }
+      return await this.commitManager!.commitConfiguration({ ...options, repoDir: options.repoDir });
 
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {

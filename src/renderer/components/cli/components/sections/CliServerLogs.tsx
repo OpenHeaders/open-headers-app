@@ -4,18 +4,6 @@ import { DeleteOutlined, ReloadOutlined, DownloadOutlined, FilterOutlined, InfoC
 
 const { Title, Text } = Typography;
 
-interface LogEntry {
-    timestamp: number;
-    method: string;
-    path: string;
-    userAgent?: string;
-    clientProcess?: string;
-    duration?: number;
-    statusCode: number;
-    errorMessage?: string;
-    bodySummary?: { type?: string; size?: number };
-}
-
 interface FilterUpdate {
     method?: string | null;
     endpoint?: string;
@@ -23,8 +11,8 @@ interface FilterUpdate {
 }
 
 interface CliServerLogsProps {
-    logs: LogEntry[];
-    allLogs: LogEntry[];
+    logs: CliApiLogEntry[];
+    allLogs: CliApiLogEntry[];
     filterMethod: string | null;
     filterEndpoint: string;
     filterStatus: string | null;
@@ -60,7 +48,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
             key: 'timestamp',
             width: 150,
             defaultSortOrder: 'descend' as const,
-            sorter: (a: LogEntry, b: LogEntry) => a.timestamp - b.timestamp,
+            sorter: (a: CliApiLogEntry, b: CliApiLogEntry) => a.timestamp - b.timestamp,
             render: (ts: number) => {
                 const date = new Date(ts);
                 return <Text type="secondary" style={{ fontSize: 12 }}>{date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</Text>;
@@ -154,7 +142,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
         }
     ];
 
-    const getRowKey = (record: LogEntry, index: number | undefined) => `${record.timestamp}-${index}`;
+    const getRowKey = (record: CliApiLogEntry, index: number | undefined) => `${record.timestamp}-${index}`;
 
     const toggleRowExpand = (key: string) => {
         setExpandedRowKeys(prev =>
@@ -165,7 +153,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
     const expandable = {
         expandedRowKeys,
         onExpandedRowsChange: (keys: readonly React.Key[]) => setExpandedRowKeys(keys as React.Key[]),
-        expandedRowRender: (record: LogEntry) => {
+        expandedRowRender: (record: CliApiLogEntry) => {
             const details = [];
             if (record.errorMessage) {
                 details.push(
@@ -203,7 +191,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
             }
             return <Space direction="vertical" size={4}>{details}</Space>;
         },
-        rowExpandable: (record: LogEntry) => !!(record.errorMessage || record.bodySummary || record.clientProcess)
+        rowExpandable: (record: CliApiLogEntry) => !!(record.errorMessage || record.bodySummary || record.clientProcess)
     };
 
     return (
@@ -301,7 +289,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
                         size: 'small'
                     }}
                     expandable={expandable}
-                    onRow={(record: LogEntry, index: number | undefined) => {
+                    onRow={(record: CliApiLogEntry, index: number | undefined) => {
                         const expandable = !!(record.errorMessage || record.bodySummary || record.clientProcess);
                         return {
                             onClick: () => expandable && toggleRowExpand(getRowKey(record, index)),

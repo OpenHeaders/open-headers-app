@@ -255,7 +255,9 @@ class NetworkMonitor extends EventEmitter {
             log.debug('Network interface changes detected:', changes);
 
             // Update state
-            this.state.networkInterfaces = new Map(Object.entries(currentInterfaces) as [string, os.NetworkInterfaceInfo[]][]);
+            this.state.networkInterfaces = new Map(
+                Object.entries(currentInterfaces).filter((entry): entry is [string, os.NetworkInterfaceInfo[]] => entry[1] !== undefined)
+            );
 
             // Analyze changes
             const analysis = this.analyzeInterfaceChanges(changes, currentInterfaces);
@@ -270,7 +272,9 @@ class NetworkMonitor extends EventEmitter {
             }
         }
 
-        this.lastInterfaces = new Map(Object.entries(currentInterfaces) as [string, os.NetworkInterfaceInfo[]][]);
+        this.lastInterfaces = new Map(
+            Object.entries(currentInterfaces).filter((entry): entry is [string, os.NetworkInterfaceInfo[]] => entry[1] !== undefined)
+        );
     }
 
     detectInterfaceChanges(currentInterfaces: NodeJS.Dict<os.NetworkInterfaceInfo[]>): InterfaceChange[] {
@@ -540,8 +544,8 @@ class NetworkMonitor extends EventEmitter {
             success: successful > 0,
             successRate: successful / checks.length,
             workingCombinations: results
-                .filter(r => r.status === 'fulfilled' && r.value.success)
-                .map(r => (r as PromiseFulfilledResult<{ success: boolean; server: string; domain: string }>).value)
+                .filter((r): r is PromiseFulfilledResult<{ success: boolean; server: string; domain: string }> => r.status === 'fulfilled' && r.value.success)
+                .map(r => r.value)
         };
     }
 
@@ -593,8 +597,10 @@ class NetworkMonitor extends EventEmitter {
                 }
             } else {
                 failedEndpoints++;
-                log.debug(`Endpoint check failed for ${endpoint.url}:`,
-                    result.status === 'rejected' ? result.reason : (result as PromiseFulfilledResult<EndpointCheckResult>).value?.error || 'Unknown error');
+                const errorDetail = result.status === 'rejected'
+                    ? result.reason
+                    : result.value.error || 'Unknown error';
+                log.debug(`Endpoint check failed for ${endpoint.url}:`, errorDetail);
             }
         });
 
@@ -615,8 +621,9 @@ class NetworkMonitor extends EventEmitter {
             successfulEndpoints,
             totalEndpoints: endpoints.length,
             responsive: results
-                .map((r, i) => ({ ...r, endpoint: endpoints[i] }))
-                .filter(r => r.status === 'fulfilled' && (r as PromiseFulfilledResult<EndpointCheckResult>).value?.success)
+                .map((r, i) => ({ result: r, endpoint: endpoints[i] }))
+                .filter((r): r is { result: PromiseFulfilledResult<EndpointCheckResult>; endpoint: EndpointConfig } =>
+                    r.result.status === 'fulfilled' && r.result.value.success)
                 .map(r => r.endpoint.url)
         };
     }

@@ -63,9 +63,9 @@ export const useProxyServer = () => {
             const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
             const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
             if (rulesData) {
-                const parsed = JSON.parse(rulesData);
-                const headerRules = (parsed.rules?.header || []) as HeaderRule[];
-                setHeaderRules(headerRules);
+                const parsed: { rules?: { header?: HeaderRule[] } } = JSON.parse(rulesData);
+                const loadedHeaderRules = parsed.rules?.header ?? [];
+                setHeaderRules(loadedHeaderRules);
                 // NOTE: Don't re-send to proxy here — BroadcastManager already
                 // sends header rules during workspace load / switch.
             }

@@ -10,9 +10,9 @@ const { createLogger } = mainLogger;
 
 const execAsync = promisify(exec);
 
-// Utility to execute commands with proper type handling
-const runCommand = (command: string, options: { timeout?: number; env?: NodeJS.ProcessEnv; cwd?: string } = {}): Promise<{ stdout: string; stderr: string }> => {
-  return execAsync(command, options) as Promise<{ stdout: string; stderr: string }>;
+// Utility to execute commands
+const runCommand = (command: string, options: { timeout?: number; env?: NodeJS.ProcessEnv; cwd?: string } = {}) => {
+  return execAsync(command, { ...options, encoding: 'utf8' });
 };
 
 // Type definitions

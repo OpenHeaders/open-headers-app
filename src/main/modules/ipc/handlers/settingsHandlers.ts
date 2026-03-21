@@ -63,7 +63,7 @@ class SettingsHandlers {
                 // Update enabled state if it changed
                 if ('recordingHotkeyEnabled' in mutableSettings) {
                     await globalShortcuts.updateHotkeyEnabled(
-                        mutableSettings.recordingHotkeyEnabled as boolean,
+                        !!mutableSettings.recordingHotkeyEnabled,
                         mutableSettings.recordingHotkey || 'CommandOrControl+Shift+E'
                     );
                 }

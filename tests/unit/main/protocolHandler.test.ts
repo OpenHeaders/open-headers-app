@@ -130,7 +130,7 @@ describe('ProtocolHandler', () => {
             expect(vars[0].name).toBe('API_KEY');
             expect(vars[0].isSecret).toBe(true);
             expect(vars[1].name).toBe('HOST');
-            expect(vars[1].isSecret).toBeUndefined();
+            expect(vars[1].isSecret).toBe(false);
         });
 
         it('expands team invite fields', () => {

@@ -14,6 +14,11 @@ log.transports.file.format = '[{iso}] [{level}] {text}';
 
 type LogLevelName = 'error' | 'warn' | 'info' | 'debug';
 
+const VALID_LOG_LEVELS: ReadonlySet<string> = new Set<LogLevelName>(['error', 'warn', 'info', 'debug']);
+function isLogLevelName(level: string): level is LogLevelName {
+  return VALID_LOG_LEVELS.has(level);
+}
+
 interface LogLevels {
   error: 0;
   warn: 1;
@@ -72,13 +77,13 @@ function rotateLogFile(): void {
  * When the level actually changes, the current log file is archived and a fresh one starts.
  */
 function setGlobalLogLevel(level: string, skipRotation?: boolean): void {
-  if (LOG_LEVELS[level] !== undefined) {
+  if (isLogLevelName(level)) {
     if (!skipRotation && currentLevel !== LOG_LEVELS[level]) {
       rotateLogFile();
     }
     currentLevel = LOG_LEVELS[level];
-    log.transports.file.level = level as LogLevelName;
-    log.transports.console.level = level as LogLevelName;
+    log.transports.file.level = level;
+    log.transports.console.level = level;
   }
 }
 

@@ -28,14 +28,14 @@ const PROCESS_NAMES: Record<string, string> = {
 
 interface RequestLogEntry {
     timestamp: number;
-    method?: string;
-    path?: string;
-    statusCode?: number;
+    method: string;
+    path: string;
+    statusCode: number;
     userAgent?: string | null;
     remoteAddress?: string;
     duration?: number;
     errorMessage?: string | null;
-    bodySummary?: unknown;
+    bodySummary?: JsonValue | null;
     clientProcess?: string | null;
 }
 
@@ -457,7 +457,7 @@ class CliApiService {
         const url = new URL(req.url || '/', `http://${CLI_HOST}:${this.port}`);
         const pathname = url.pathname;
         const skipLog = !pathname.startsWith('/cli/');
-        const logContext: { bodySummary: unknown } = { bodySummary: null };
+        const logContext: { bodySummary: JsonValue | null } = { bodySummary: null };
 
         const userAgent = req.headers['user-agent'] || null;
         const remoteAddress = `${req.socket.remoteAddress}:${req.socket.remotePort}`;
@@ -466,7 +466,7 @@ class CliApiService {
         res.on('finish', () => {
             if (skipLog) return;
             this._addLog({
-                method: req.method,
+                method: req.method ?? 'UNKNOWN',
                 path: pathname,
                 statusCode: loggedStatusCode,
                 userAgent,

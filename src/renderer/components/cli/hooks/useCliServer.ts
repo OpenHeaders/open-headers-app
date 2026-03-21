@@ -23,7 +23,7 @@ export const useCliServer = ({ active = false } = {}) => {
         running: false, port: 59213, discoveryPath: '',
         token: '', startedAt: null, totalRequests: 0
     });
-    const [logs, setLogs] = useState<{ timestamp: number; method: string; path: string; statusCode: number; duration?: number; bodySummary?: { type?: string; size?: number } }[]>([]);
+    const [logs, setLogs] = useState<CliApiLogEntry[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Log filters
@@ -64,7 +64,7 @@ export const useCliServer = ({ active = false } = {}) => {
     const loadLogs = useCallback(async () => {
         try {
             const result = await window.electronAPI.cliApiGetLogs();
-            setLogs((result || []) as typeof logs);
+            setLogs(result);
         } catch (error) {
             console.error('Failed to load CLI API logs:', error);
         }

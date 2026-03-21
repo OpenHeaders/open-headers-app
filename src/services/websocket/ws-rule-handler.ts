@@ -312,7 +312,7 @@ class WSRuleHandler {
             windows.forEach((window: BrowserWindowType) => {
                 if (window && !window.isDestroyed()) {
                     const rulesData = {
-                        rules: { header: this.wsService.rules.header || [] },
+                        rules: { header: this.wsService.rules.header },
                         metadata: {
                             totalRules: this.wsService.rules.header.length,
                             lastUpdated: new Date().toISOString()

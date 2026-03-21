@@ -10,13 +10,13 @@ import { errorMessage } from '../../types/common';
 import type { EnvironmentsFile } from '../../types/environment';
 import type { HeaderRule } from '../../types/rules';
 import type { AuthType } from '../../types/workspace';
+import type { Source } from '../../types/source';
+import type { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
 const VALID_AUTH_TYPES = new Set<string>(['none', 'token', 'ssh', 'ssh-key', 'basic']);
 function toAuthType(value: string | undefined): AuthType {
     return VALID_AUTH_TYPES.has(value || '') ? (value as AuthType) : 'none';
 }
-import type { Source } from '../../types/source';
-import type { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

@@ -378,9 +378,9 @@ class ProtocolHandler {
                         environmentSchema.environments[fullName] = {
                             variables: envData.v.map((v) => ({
                                 name: v.n,
-                                ...(v.s === 1 && { isSecret: true })
+                                isSecret: v.s === 1
                             }))
-                        } as EnvironmentSchemaEntry;
+                        };
                     }
                 });
                 expanded.environmentSchema = environmentSchema;
