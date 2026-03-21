@@ -17,7 +17,12 @@ import type { Recording, RRWebEvent } from '../../../../src/types/recording';
 import type { RecordData, ProxyStatus } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
 
 function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
-    return { running: false, port: 59212, rulesCount: 0, sourcesCount: 0, cacheEnabled: false, ...overrides };
+    return {
+        running: false, port: 59212, rulesCount: 0, sourcesCount: 0,
+        cacheEnabled: false, cacheSize: 0, strictSSL: true, trustedCertificates: 0, certificateExceptions: 0,
+        stats: { requestsProcessed: 0, cacheHits: 0, cacheMisses: 0, errors: 0 },
+        ...overrides,
+    };
 }
 
 function makeRecording(overrides: Record<string, unknown> = {}): Recording {

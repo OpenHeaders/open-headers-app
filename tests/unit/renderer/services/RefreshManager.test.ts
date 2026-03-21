@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest';
 import type { RefreshManager as RefreshManagerType } from '../../../../src/renderer/services/RefreshManager';
+import type { Source } from '../../../../src/types/source';
+
+type ScheduleEntry = Parameters<RefreshManagerType['_cachedSchedules']['set']>[1];
+
+function makeScheduleEntry(overrides: Partial<ScheduleEntry> = {}): ScheduleEntry {
+    return {
+        sourceId: 's1', intervalMs: 60000, lastRefresh: null, nextRefresh: null,
+        retryCount: 0, maxRetries: 3, backoffFactor: 2, failureCount: 0,
+        ...overrides,
+    };
+}
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -212,16 +223,16 @@ describe('RefreshManager', () => {
     });
 
     it('returns positive time from cached schedule', () => {
-      refreshManager._cachedSchedules.set('s1', {
+      refreshManager._cachedSchedules.set('s1', makeScheduleEntry({
         nextRefresh: _now + 30000,
-      });
+      }));
       const result = refreshManager.getTimeUntilRefresh('s1');
       expect(result).toBeGreaterThan(29000);
       expect(result).toBeLessThanOrEqual(30000);
     });
 
     it('returns 0 when source data has refresh disabled', () => {
-      const sourceData = { refreshOptions: { enabled: false } };
+      const sourceData = { refreshOptions: { enabled: false } } as unknown as Source;
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);
       expect(result).toBe(0);
     });
@@ -232,7 +243,7 @@ describe('RefreshManager', () => {
           enabled: true,
           nextRefresh: _now + 20000,
         },
-      };
+      } as unknown as Source;
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);
       expect(result).toBeGreaterThan(19000);
       expect(result).toBeLessThanOrEqual(20000);
@@ -244,7 +255,7 @@ describe('RefreshManager', () => {
           enabled: true,
           nextRefresh: _now - 100,
         },
-      };
+      } as unknown as Source;
       const result = refreshManager.getTimeUntilRefresh('s1', sourceData);
       expect(result).toBe(0);
     });
@@ -288,8 +299,8 @@ describe('RefreshManager', () => {
     it('calls onUpdateCallback when set', () => {
       const callback = vi.fn();
       refreshManager.onUpdateCallback = callback;
-      refreshManager.notifyUI('s1', 'content', { extra: true });
-      expect(callback).toHaveBeenCalledWith('s1', 'content', { extra: true });
+      refreshManager.notifyUI('s1', 'content', { originalResponse: 'resp' });
+      expect(callback).toHaveBeenCalledWith('s1', 'content', { originalResponse: 'resp' });
     });
 
     it('does nothing when no callback', () => {
@@ -303,9 +314,11 @@ describe('RefreshManager', () => {
   // -----------------------------------------------------------------------
   describe('handleNetworkStateSync', () => {
     it('ignores invalid events', async () => {
-      await refreshManager.handleNetworkStateSync(null);
-      await refreshManager.handleNetworkStateSync({});
-      await refreshManager.handleNetworkStateSync({ state: {} });
+      // Intentionally invalid events to test runtime guard
+      type NetworkEvent = Parameters<typeof refreshManager.handleNetworkStateSync>[0];
+      await refreshManager.handleNetworkStateSync(null as unknown as NetworkEvent);
+      await refreshManager.handleNetworkStateSync({} as unknown as NetworkEvent);
+      await refreshManager.handleNetworkStateSync({ state: {} } as unknown as NetworkEvent);
     });
   });
 
@@ -353,7 +366,7 @@ describe('RefreshManager', () => {
     it('removes an existing source', async () => {
       refreshManager.isInitialized = true;
       await refreshManager.sources.set('s1', { sourceId: 's1', sourceType: 'http' });
-      refreshManager._cachedSchedules.set('s1', {});
+      refreshManager._cachedSchedules.set('s1', makeScheduleEntry());
       refreshManager._statusCache.set('s1', {});
 
       await refreshManager.removeSource('s1');

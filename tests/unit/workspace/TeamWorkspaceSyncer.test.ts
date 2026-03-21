@@ -33,7 +33,7 @@ describe('TeamWorkspaceSyncer', () => {
 
     beforeEach(() => {
         deps = createMockDependencies();
-        syncer = new TeamWorkspaceSyncer(deps as ConstructorParameters<typeof TeamWorkspaceSyncer>[0]);
+        syncer = new TeamWorkspaceSyncer(deps as unknown as ConstructorParameters<typeof TeamWorkspaceSyncer>[0]);
     });
 
     // ------- SYNC_STATUS constants -------
