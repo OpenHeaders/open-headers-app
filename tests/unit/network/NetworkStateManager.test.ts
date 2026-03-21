@@ -1,5 +1,21 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { NetworkStateManager } from '../../../src/services/network/NetworkStateManager';
+import type { NetworkManagerState } from '../../../src/services/network/NetworkStateManager';
+
+function makeNetworkState(overrides: Partial<NetworkManagerState> = {}): NetworkManagerState {
+    return {
+        isOnline: false,
+        networkQuality: 'unknown',
+        vpnActive: false,
+        interfaces: [],
+        primaryInterface: null,
+        connectionType: '',
+        lastCheck: 0,
+        lastStateChange: 0,
+        diagnostics: { dnsResolvable: false, internetReachable: false, captivePortal: false, latency: 0 },
+        ...overrides,
+    };
+}
 
 describe('NetworkStateManager', () => {
     let mgr: NetworkStateManager;
@@ -11,7 +27,7 @@ describe('NetworkStateManager', () => {
     // ------- mergeStateChanges -------
     describe('mergeStateChanges', () => {
         it('shallow merges primitive values', () => {
-            const current = { isOnline: false, networkQuality: 'offline' };
+            const current = makeNetworkState({ isOnline: false, networkQuality: 'offline' });
             const changes = { isOnline: true };
             const result = mgr.mergeStateChanges(current, changes);
             expect(result.isOnline).toBe(true);
@@ -19,14 +35,14 @@ describe('NetworkStateManager', () => {
         });
 
         it('deep merges nested objects', () => {
-            const current = {
+            const current = makeNetworkState({
                 diagnostics: {
                     dnsResolvable: false,
                     internetReachable: false,
                     captivePortal: false,
                     latency: 0
                 }
-            };
+            });
             const changes = {
                 diagnostics: {
                     dnsResolvable: true,
@@ -41,21 +57,21 @@ describe('NetworkStateManager', () => {
         });
 
         it('replaces arrays directly (no deep merge)', () => {
-            const current = { interfaces: ['a', 'b'] };
+            const current = makeNetworkState({ interfaces: ['a', 'b'] });
             const changes = { interfaces: ['c'] };
             const result = mgr.mergeStateChanges(current, changes);
             expect(result.interfaces).toEqual(['c']);
         });
 
         it('handles null values correctly', () => {
-            const current = { primaryInterface: 'eth0' };
+            const current = makeNetworkState({ primaryInterface: 'eth0' });
             const changes = { primaryInterface: null };
             const result = mgr.mergeStateChanges(current, changes);
             expect(result.primaryInterface).toBeNull();
         });
 
         it('produces a new object (does not mutate input)', () => {
-            const current = { isOnline: false };
+            const current = makeNetworkState({ isOnline: false });
             const changes = { isOnline: true };
             const result = mgr.mergeStateChanges(current, changes);
             expect(current.isOnline).toBe(false);

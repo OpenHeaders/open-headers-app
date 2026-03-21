@@ -3,6 +3,30 @@ import http from 'http';
 import type { ProxyService } from '../../src/services/proxy/ProxyService';
 import type { HeaderRule } from '../../src/types/rules';
 
+function makeHeaderRule(overrides: Partial<HeaderRule> = {}): HeaderRule {
+    return {
+        id: 'hr-0',
+        type: 'header',
+        name: '',
+        description: '',
+        isEnabled: true,
+        domains: [],
+        createdAt: '',
+        updatedAt: '',
+        headerName: '',
+        headerValue: '',
+        tag: '',
+        isResponse: false,
+        isDynamic: false,
+        sourceId: null,
+        prefix: '',
+        suffix: '',
+        hasEnvVars: false,
+        envVars: [],
+        ...overrides,
+    };
+}
+
 // Mock atomicFileWriter to avoid filesystem I/O
 vi.mock('../../src/utils/atomicFileWriter', () => ({
     default: { readJson: () => Promise.resolve(null), writeJson: () => Promise.resolve() },
@@ -196,7 +220,7 @@ describe('Proxy integration – full request flow', () => {
 
         it('injects header from a header rule referenced by a proxy rule', async () => {
             proxyService.headerRules = [
-                { id: 'hr-1', isEnabled: true, headerName: 'Authorization', headerValue: 'Bearer abc123', domains: [] } as HeaderRule,
+                makeHeaderRule({ id: 'hr-1', headerName: 'Authorization', headerValue: 'Bearer abc123' }),
             ];
             proxyService.ruleStore.rules = [
                 { id: 'pr-1', enabled: true, headerRuleId: 'hr-1' },
@@ -461,7 +485,7 @@ describe('Proxy integration – full request flow', () => {
     describe('multiple rules interacting', () => {
         it('applies both proxy rules and header rules simultaneously', async () => {
             proxyService.headerRules = [
-                { id: 'hr-1', isEnabled: true, headerName: 'X-From-Header-Rule', headerValue: 'hr-value', domains: [] } as HeaderRule,
+                makeHeaderRule({ id: 'hr-1', headerName: 'X-From-Header-Rule', headerValue: 'hr-value' }),
             ];
             proxyService.ruleStore.rules = [
                 { id: 'pr-1', enabled: true, headerRuleId: 'hr-1' },

@@ -3,7 +3,7 @@
  * Manages network state broadcasting to WebSocket clients
  */
 
-import WS from 'ws';
+import WS, { WebSocketServer } from 'ws';
 import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
@@ -27,8 +27,8 @@ interface NetworkServiceLike {
 }
 
 interface WSServiceLike {
-    wss: WS.Server | null;
-    secureWss: WS.Server | null;
+    wss: WebSocketServer | null;
+    secureWss: WebSocketServer | null;
 }
 
 class WSNetworkStateHandler {

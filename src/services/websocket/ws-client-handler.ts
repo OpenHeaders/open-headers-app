@@ -3,7 +3,7 @@
  * Manages client initialization, heartbeat, cleanup, and connection status
  */
 
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
@@ -52,8 +52,8 @@ interface InitLock {
 interface WSServiceLike {
     connectedClients: Map<string, WSClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
-    wss: WebSocket.Server | null;
-    secureWss: WebSocket.Server | null;
+    wss: WebSocketServer | null;
+    secureWss: WebSocketServer | null;
     wsPort: number;
     wssPort: number;
     sourceHandler: { sendSourcesToClient(ws: WebSocket): Promise<void> };
@@ -280,7 +280,7 @@ class WSClientHandler {
         staleClients.forEach(({ clientId, inactiveTime }) => {
             log.info(`Cleaning up stale client ${clientId} (inactive for ${Math.round(inactiveTime / 1000)}s)`);
 
-            const closeClient = (server: WebSocket.Server | null): boolean => {
+            const closeClient = (server: WebSocketServer | null): boolean => {
                 if (!server) return false;
                 for (const client of server.clients as Set<ExtendedWebSocket>) {
                     if (client.clientId === clientId && client.readyState === WebSocket.OPEN) {
@@ -306,7 +306,7 @@ class WSClientHandler {
      * Perform heartbeat check on all clients
      */
     performHeartbeat(): void {
-        const pingClients = (server: WebSocket.Server | null) => {
+        const pingClients = (server: WebSocketServer | null) => {
             if (!server) return;
 
             (server.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
@@ -321,7 +321,7 @@ class WSClientHandler {
         pingClients(this.wsService.secureWss);
 
         setTimeout(() => {
-            const terminateDeadClients = (server: WebSocket.Server | null) => {
+            const terminateDeadClients = (server: WebSocketServer | null) => {
                 if (!server) return;
                 (server.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
                     if (!client.isAlive && client.readyState === WebSocket.OPEN) {
