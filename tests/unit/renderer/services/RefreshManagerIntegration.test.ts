@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
+function s(overrides: Record<string, unknown> = {}): Source {
+  return { sourceId: 'test', sourceType: 'http', ...overrides } as Source;
+}
+
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before the import under test
 // ---------------------------------------------------------------------------
@@ -89,7 +93,7 @@ const { default: refreshManagerIntegration } = await import(
 // Tests
 // ---------------------------------------------------------------------------
 describe('RefreshManagerIntegration', () => {
-  const mockHttpService = { fetch: vi.fn() };
+  const mockHttpService = { fetch: vi.fn() } as unknown as Parameters<typeof refreshManagerIntegration.initialize>[0];
   const mockUpdateCallback = vi.fn();
 
   beforeEach(() => {
@@ -202,16 +206,16 @@ describe('RefreshManagerIntegration', () => {
         sourceId: 's1',
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
-        requestOptions: null,
-        jsonFilter: null,
+        requestOptions: undefined,
+        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
       };
       refreshManagerIntegration.trackSourceData(source);
       expect(refreshManagerIntegration.lastSeenSources.has('s1')).toBe(true);
       const tracked = refreshManagerIntegration.lastSeenSources.get('s1');
-      expect(tracked.sourcePath).toBe('https://api.com');
-      expect(tracked.sourceMethod).toBe('GET');
+      expect(tracked!.sourcePath).toBe('https://api.com');
+      expect(tracked!.sourceMethod).toBe('GET');
     });
   });
 
@@ -254,7 +258,7 @@ describe('RefreshManagerIntegration', () => {
 
     it('handles null requestOptions', () => {
       mockEnvService.resolveTemplate.mockImplementation((s: string) => s);
-      const source = { sourcePath: 'https://api.com', requestOptions: null };
+      const source = { sourcePath: 'https://api.com', requestOptions: undefined };
       const result = refreshManagerIntegration.resolveSourceData(source);
       expect(result.requestOptions).toEqual({});
     });
@@ -477,7 +481,7 @@ describe('RefreshManagerIntegration', () => {
   describe('_performSourceSync()', () => {
     it('adds new HTTP sources to refreshManager', async () => {
       refreshManagerIntegration.initialized = true;
-      const sources = [
+      const sources: Source[] = [
         { sourceId: 's1', sourceType: 'http', sourcePath: 'https://api.com' },
       ];
       await refreshManagerIntegration._performSourceSync(sources);
@@ -496,7 +500,7 @@ describe('RefreshManagerIntegration', () => {
 
     it('skips non-HTTP sources', async () => {
       refreshManagerIntegration.initialized = true;
-      const sources = [
+      const sources: Source[] = [
         { sourceId: 's1', sourceType: 'file', sourcePath: '/path/to/file' },
       ];
       await refreshManagerIntegration._performSourceSync(sources);
@@ -508,13 +512,13 @@ describe('RefreshManagerIntegration', () => {
       refreshManagerIntegration.lastSeenSources.set('s1', {
         sourcePath: 'https://old.com',
         sourceMethod: 'GET',
-        requestOptions: null,
-        jsonFilter: null,
-        refreshOptions: null,
+        requestOptions: undefined,
+        jsonFilter: undefined,
+        refreshOptions: undefined,
         activationState: 'active',
       });
 
-      const sources = [
+      const sources: Source[] = [
         { sourceId: 's1', sourceType: 'http', sourcePath: 'https://new.com', sourceMethod: 'GET' },
       ];
       await refreshManagerIntegration._performSourceSync(sources);
@@ -526,20 +530,20 @@ describe('RefreshManagerIntegration', () => {
       refreshManagerIntegration.lastSeenSources.set('s1', {
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
-        requestOptions: null,
-        jsonFilter: null,
+        requestOptions: undefined,
+        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
       });
 
-      const sources = [
+      const sources: Source[] = [
         {
           sourceId: 's1',
           sourceType: 'http',
           sourcePath: 'https://api.com',
           sourceMethod: 'GET',
-          requestOptions: null,
-          jsonFilter: null,
+          requestOptions: undefined,
+          jsonFilter: undefined,
           refreshOptions: { enabled: true, interval: 10000 },
           activationState: 'active',
         },
@@ -553,22 +557,22 @@ describe('RefreshManagerIntegration', () => {
       const sourceData = {
         sourcePath: 'https://api.com',
         sourceMethod: 'GET',
-        requestOptions: null,
-        jsonFilter: null,
+        requestOptions: undefined,
+        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
         resolvedData: { sourcePath: 'https://api.com', requestOptions: {} },
       };
       refreshManagerIntegration.lastSeenSources.set('s1', sourceData);
 
-      const sources = [
+      const sources: Source[] = [
         {
           sourceId: 's1',
           sourceType: 'http',
           sourcePath: 'https://api.com',
           sourceMethod: 'GET',
-          requestOptions: null,
-          jsonFilter: null,
+          requestOptions: undefined,
+          jsonFilter: undefined,
           refreshOptions: { enabled: true, interval: 5000 },
           activationState: 'active',
         },
@@ -582,8 +586,8 @@ describe('RefreshManagerIntegration', () => {
       refreshManagerIntegration.lastSeenSources.set('s1', {
         sourcePath: 'https://{{HOST}}/api',
         sourceMethod: 'GET',
-        requestOptions: null,
-        jsonFilter: null,
+        requestOptions: undefined,
+        jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5000 },
         activationState: 'active',
         resolvedData: { sourcePath: 'https://old-host.com/api', requestOptions: {} },
@@ -594,14 +598,14 @@ describe('RefreshManagerIntegration', () => {
         s === 'https://{{HOST}}/api' ? 'https://new-host.com/api' : s
       );
 
-      const sources = [
+      const sources: Source[] = [
         {
           sourceId: 's1',
           sourceType: 'http',
           sourcePath: 'https://{{HOST}}/api',
           sourceMethod: 'GET',
-          requestOptions: null,
-          jsonFilter: null,
+          requestOptions: undefined,
+          jsonFilter: undefined,
           refreshOptions: { enabled: true, interval: 5000 },
           activationState: 'active',
         },
