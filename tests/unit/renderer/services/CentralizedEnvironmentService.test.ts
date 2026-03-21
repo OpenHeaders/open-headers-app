@@ -54,12 +54,12 @@ vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
 const EnvironmentVariableManagerModule = await import(
   '../../../../src/renderer/services/environment/EnvironmentVariableManager'
 );
-const EnvironmentVariableManager = (EnvironmentVariableManagerModule as { default?: typeof EnvironmentVariableManagerModule }).default || EnvironmentVariableManagerModule;
+const EnvironmentVariableManager = EnvironmentVariableManagerModule.default;
 
 const EnvironmentStateManagerModule = await import(
   '../../../../src/renderer/services/environment/EnvironmentStateManager'
 );
-const EnvironmentStateManager = (EnvironmentStateManagerModule as { default?: typeof EnvironmentStateManagerModule }).default || EnvironmentStateManagerModule;
+const EnvironmentStateManager = EnvironmentStateManagerModule.default;
 
 // ======================================================================
 // EnvironmentVariableManager
@@ -141,7 +141,7 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('does not mutate the original environments object', () => {
-      const envs = { Default: { EXISTING: { value: 'keep' } } };
+      const envs: Record<string, Record<string, { value: string }>> = { Default: { EXISTING: { value: 'keep' } } };
       const result = vm.setVariable(envs, 'Default', 'NEW', 'added');
       expect(envs.Default.NEW).toBeUndefined();
       expect(result.Default.NEW.value).toBe('added');
@@ -432,7 +432,7 @@ describe('CES state management patterns', () => {
   describe('deleteEnvironment pattern', () => {
     it('switches to Default when deleting active environment', () => {
       const state = {
-        environments: { Default: {}, Staging: {} },
+        environments: { Default: {}, Staging: {} } as Record<string, Record<string, { value: string; isSecret: boolean }>>,
         activeEnvironment: 'Staging',
       };
 
@@ -482,7 +482,7 @@ describe('CES state management patterns', () => {
 
   describe('resolveTemplate pattern', () => {
     it('returns string result directly', () => {
-      const result: string | { resolved: string; missing: string[] } = 'resolved-value';
+      const result: string | { resolved: string; missing: string[] } = 'resolved-value' as string;
       const output = typeof result === 'string' ? result : result.resolved;
       expect(output).toBe('resolved-value');
     });

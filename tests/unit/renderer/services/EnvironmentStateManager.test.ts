@@ -129,27 +129,27 @@ describe('EnvironmentStateManager', () => {
   // ========================================================================
   describe('promise tracking', () => {
     it('tracks init promise', () => {
-      const promise = Promise.resolve();
+      const promise = Promise.resolve(true);
       manager.setInitPromise(promise);
       expect(manager.getInitPromise()).toBe(promise);
     });
 
     it('tracks load promise per workspace', () => {
-      const promise = Promise.resolve();
+      const promise = Promise.resolve(true);
       manager.setLoadPromise('ws-1', promise);
       expect(manager.getLoadPromise('ws-1')).toBe(promise);
       expect(manager.getLoadPromise('ws-2')).toBeUndefined();
     });
 
     it('clears load promise', () => {
-      manager.setLoadPromise('ws-1', Promise.resolve());
+      manager.setLoadPromise('ws-1', Promise.resolve(true));
       manager.clearLoadPromise('ws-1');
       expect(manager.getLoadPromise('ws-1')).toBeUndefined();
     });
 
     it('checks if workspace is loading', () => {
       expect(manager.isLoadingWorkspace('ws-1')).toBe(false);
-      manager.setLoadPromise('ws-1', Promise.resolve());
+      manager.setLoadPromise('ws-1', Promise.resolve(true));
       expect(manager.isLoadingWorkspace('ws-1')).toBe(true);
     });
   });

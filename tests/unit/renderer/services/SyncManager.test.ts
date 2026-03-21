@@ -16,14 +16,17 @@ const SyncManager = (
 
 describe('SyncManager', () => {
   let manager: InstanceType<typeof SyncManager>;
-  let mockElectronAPI: { onWorkspaceSyncCompleted: ReturnType<typeof vi.fn>; loadFromStorage: ReturnType<typeof vi.fn> };
+  let mockElectronAPI: {
+    onWorkspaceSyncCompleted: ReturnType<typeof vi.fn> | undefined;
+    loadFromStorage: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     mockElectronAPI = {
-      onWorkspaceSyncCompleted: vi.fn(),
+      onWorkspaceSyncCompleted: vi.fn().mockReturnValue(() => {}),
       loadFromStorage: vi.fn(),
     };
-    manager = new SyncManager(mockElectronAPI);
+    manager = new SyncManager(mockElectronAPI as ConstructorParameters<typeof SyncManager>[0]);
   });
 
   // ========================================================================
@@ -99,14 +102,16 @@ describe('SyncManager', () => {
     });
 
     it('returns noop when electronAPI is null', () => {
-      const mgr = new SyncManager(null);
+      // Intentionally null to test defensive guard
+      const mgr = new SyncManager(null as unknown as ConstructorParameters<typeof SyncManager>[0]);
       const cleanup = mgr.setupSyncListener(vi.fn());
       expect(typeof cleanup).toBe('function');
       cleanup(); // should not throw
     });
 
     it('returns noop when onWorkspaceSyncCompleted is not available', () => {
-      const mgr = new SyncManager({});
+      // Intentionally empty to test missing callback
+      const mgr = new SyncManager({} as ConstructorParameters<typeof SyncManager>[0]);
       const cleanup = mgr.setupSyncListener(vi.fn());
       expect(typeof cleanup).toBe('function');
     });

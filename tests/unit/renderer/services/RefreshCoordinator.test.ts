@@ -38,7 +38,9 @@ vi.mock('../../../../src/renderer/utils/error-handling/ConcurrencyControl', () =
   return { ConcurrentMap, Mutex };
 });
 
-const RefreshCoordinator = (await import('../../../../src/renderer/services/RefreshCoordinator')).default;
+const RefreshCoordinatorModule = await import('../../../../src/renderer/services/RefreshCoordinator');
+const RefreshCoordinator = RefreshCoordinatorModule.default;
+type RefreshResult = import('../../../../src/renderer/services/RefreshCoordinator').RefreshResult;
 
 describe('RefreshCoordinator', () => {
   let coordinator: InstanceType<typeof RefreshCoordinator>;
@@ -85,8 +87,8 @@ describe('RefreshCoordinator', () => {
       const result = await coordinator.executeRefresh('s1', refreshFn);
 
       expect(result.success).toBe(true);
-      expect(result.result).toEqual({ data: 'ok' });
-      expect(result.duration).toBeGreaterThanOrEqual(0);
+      expect((result as RefreshResult).result).toEqual({ data: 'ok' });
+      expect((result as RefreshResult).duration).toBeGreaterThanOrEqual(0);
       expect(coordinator.metrics.successfulRefreshes).toBe(1);
       expect(coordinator.metrics.totalRefreshes).toBe(1);
     });
@@ -95,8 +97,8 @@ describe('RefreshCoordinator', () => {
       await coordinator.activeRefreshes.set('s1', { startTime: _now, reason: 'manual', priority: 'normal' });
       const refreshFn = vi.fn();
       const result = await coordinator.executeRefresh('s1', refreshFn);
-      expect(result.skipped).toBe(true);
-      expect(result.reason).toBe('already_active');
+      expect('skipped' in result && result.skipped).toBe(true);
+      expect('reason' in result && result.reason).toBe('already_active');
       expect(refreshFn).not.toHaveBeenCalled();
       expect(coordinator.metrics.skippedRefreshes).toBe(1);
     });
@@ -130,7 +132,7 @@ describe('RefreshCoordinator', () => {
 
       // createRefreshOperation catches errors and returns success: false
       expect(result.success).toBe(false);
-      expect(result.error).toBe('Network error');
+      expect((result as RefreshResult).error).toBe('Network error');
       // The catch in createRefreshOperation means executeRefresh won't throw
       // but it still counts as failed
     });
@@ -196,12 +198,12 @@ describe('RefreshCoordinator', () => {
     });
 
     it('returns true when actively refreshing', async () => {
-      await coordinator.activeRefreshes.set('s1', { startTime: _now });
+      await coordinator.activeRefreshes.set('s1', { startTime: _now, reason: 'manual', priority: 'normal' });
       expect(await coordinator.isRefreshing('s1')).toBe(true);
     });
 
     it('normalizes sourceId', async () => {
-      await coordinator.activeRefreshes.set('42', { startTime: _now });
+      await coordinator.activeRefreshes.set('42', { startTime: _now, reason: 'manual', priority: 'normal' });
       expect(await coordinator.isRefreshing(42)).toBe(true);
     });
   });
@@ -211,7 +213,7 @@ describe('RefreshCoordinator', () => {
   // -----------------------------------------------------------------------
   describe('cancelRefresh', () => {
     it('returns false when source is actively refreshing', async () => {
-      await coordinator.activeRefreshes.set('s1', { startTime: _now });
+      await coordinator.activeRefreshes.set('s1', { startTime: _now, reason: 'manual', priority: 'normal' });
       const result = await coordinator.cancelRefresh('s1');
       expect(result).toBe(false);
     });
@@ -228,7 +230,7 @@ describe('RefreshCoordinator', () => {
   describe('cancelAll', () => {
     it('clears all queues', async () => {
       await coordinator.refreshQueue.set('s1', [
-        { resolve: vi.fn(), reject: vi.fn(), refreshFn: vi.fn(), options: {} },
+        { resolve: vi.fn(), reject: vi.fn(), refreshFn: vi.fn(), options: {}, timestamp: _now },
       ]);
       await coordinator.cancelAll();
       const entries = await coordinator.refreshQueue.entries();

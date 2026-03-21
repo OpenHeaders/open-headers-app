@@ -46,6 +46,8 @@ describe('NetworkStateManager', () => {
             const changes = {
                 diagnostics: {
                     dnsResolvable: true,
+                    internetReachable: false,
+                    captivePortal: false,
                     latency: 50
                 }
             };

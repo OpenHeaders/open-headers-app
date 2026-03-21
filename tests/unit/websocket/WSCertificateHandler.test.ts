@@ -56,12 +56,11 @@ describe('WSCertificateHandler', () => {
     describe('createHttpsRequestHandler', () => {
         interface MockReq { url: string; headers: Record<string, string> }
         interface MockRes { writeHead: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let requestHandler: (...args: unknown[]) => void;
+        let requestHandler: (req: MockReq, res: MockRes) => void;
         let mockRes: MockRes;
 
         beforeEach(() => {
-            requestHandler = handler.createHttpsRequestHandler();
+            requestHandler = handler.createHttpsRequestHandler() as unknown as (req: MockReq, res: MockRes) => void;
             mockRes = {
                 writeHead: vi.fn(),
                 end: vi.fn()
