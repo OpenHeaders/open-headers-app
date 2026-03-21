@@ -22,13 +22,20 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 
 import { ConnectionTester } from '../../../src/services/workspace/git/operations/ConnectionTester';
 
-describe('ConnectionTester', () => {
-    const tester = new ConnectionTester({
+type TesterDeps = ConstructorParameters<typeof ConnectionTester>[0];
+
+function makeTesterDeps(overrides: Record<string, unknown> = {}): TesterDeps {
+    return {
         executor: {},
         authManager: {},
         configDetector: {},
-        branchManager: {}
-    });
+        branchManager: {},
+        ...overrides,
+    } as unknown as TesterDeps;
+}
+
+describe('ConnectionTester', () => {
+    const tester = new ConnectionTester(makeTesterDeps());
 
     describe('parseLsRemoteOutput()', () => {
         it('parses standard ls-remote output', () => {
@@ -172,9 +179,9 @@ describe('ConnectionTester', () => {
     describe('collectWarnings()', () => {
         it('adds warning when branch does not exist', () => {
             const warnings = tester.collectWarnings(
-                { isPrivate: true },
+                { accessible: true, isPrivate: true },
                 { exists: false, alternatives: ['main'] },
-                { requiresClone: false }
+                { hasConfig: null, requiresClone: false }
             );
             expect(warnings.some(w => w.includes('does not exist'))).toBe(true);
             expect(warnings.some(w => w.includes('main'))).toBe(true);
@@ -182,27 +189,27 @@ describe('ConnectionTester', () => {
 
         it('adds warning for public repository', () => {
             const warnings = tester.collectWarnings(
-                { isPrivate: false },
+                { accessible: true, isPrivate: false },
                 { exists: true, alternatives: [] },
-                { requiresClone: false }
+                { hasConfig: null, requiresClone: false }
             );
             expect(warnings.some(w => w.includes('public'))).toBe(true);
         });
 
         it('adds warning when clone required', () => {
             const warnings = tester.collectWarnings(
-                { isPrivate: true },
+                { accessible: true, isPrivate: true },
                 { exists: true, alternatives: [] },
-                { requiresClone: true }
+                { hasConfig: null, requiresClone: true }
             );
             expect(warnings.some(w => w.includes('cloning'))).toBe(true);
         });
 
         it('returns empty for no issues', () => {
             const warnings = tester.collectWarnings(
-                { isPrivate: true },
+                { accessible: true, isPrivate: true },
                 { exists: true, alternatives: [] },
-                { requiresClone: false }
+                { hasConfig: null, requiresClone: false }
             );
             expect(warnings).toEqual([]);
         });

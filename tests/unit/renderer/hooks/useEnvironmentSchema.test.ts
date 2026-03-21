@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -32,7 +33,7 @@ import { useEnvironmentSchema } from '../../../../src/renderer/hooks/environment
 // Test data
 // ---------------------------------------------------------------------------
 
-const httpSource = {
+const httpSource: Source = {
   sourceId: 'src-1',
   sourceType: 'http',
   sourcePath: '{{BASE_URL}}/users',
@@ -45,7 +46,7 @@ const httpSource = {
   jsonFilter: { enabled: true, path: '{{JSON_PATH}}' },
 };
 
-const fileSource = {
+const fileSource: Source = {
   sourceId: 'src-2',
   sourceType: 'file',
   sourcePath: '/tmp/data.json',
@@ -79,7 +80,7 @@ describe('useEnvironmentSchema', () => {
     it('aggregates usage across multiple sources', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
 
-      const secondHttp = {
+      const secondHttp: Source = {
         sourceId: 'src-3',
         sourceType: 'http',
         sourcePath: '{{BASE_URL}}/items',
@@ -127,7 +128,7 @@ describe('useEnvironmentSchema', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
 
       // Create a source that uses a variable named with URL in the name
-      const urlSource = {
+      const urlSource: Source = {
         sourceId: 'src-url',
         sourceType: 'http',
         sourcePath: '{{API_URL}}/test',

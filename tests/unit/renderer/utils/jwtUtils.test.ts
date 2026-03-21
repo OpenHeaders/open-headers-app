@@ -8,6 +8,7 @@ import {
   getJWTExpiration,
   JWT_CLAIM_DESCRIPTIONS,
 } from '../../../../src/renderer/utils/jwtUtils';
+import type { JsonObject } from '../../../../src/types/common';
 
 // Helper: build a minimal valid JWT from header + payload objects
 function buildJWT(header: object, payload: object, sig = 'fakesig'): string {
@@ -45,11 +46,13 @@ describe('jwtUtils', () => {
     });
 
     it('throws for null input', () => {
-      expect(() => decodeJWT(null)).toThrow('Failed to decode JWT');
+      // Intentionally invalid input to test runtime guard
+      expect(() => decodeJWT(null as unknown as string)).toThrow('Failed to decode JWT');
     });
 
     it('throws for undefined input', () => {
-      expect(() => decodeJWT(undefined)).toThrow('Failed to decode JWT');
+      // Intentionally invalid input to test runtime guard
+      expect(() => decodeJWT(undefined as unknown as string)).toThrow('Failed to decode JWT');
     });
 
     it('throws for empty string', () => {
@@ -111,7 +114,7 @@ describe('jwtUtils', () => {
     it('throws on circular reference', () => {
       const circular: Record<string, unknown> = {};
       circular.self = circular;
-      expect(() => encodeJWT(circular, {})).toThrow('Failed to encode JWT');
+      expect(() => encodeJWT(circular as JsonObject, {})).toThrow('Failed to encode JWT');
     });
   });
 
@@ -130,11 +133,13 @@ describe('jwtUtils', () => {
     });
 
     it('returns false for null', () => {
-      expect(isJWT(null)).toBe(false);
+      // Intentionally invalid input to test runtime guard
+      expect(isJWT(null as unknown as string)).toBe(false);
     });
 
     it('returns false for undefined', () => {
-      expect(isJWT(undefined)).toBe(false);
+      // Intentionally invalid input to test runtime guard
+      expect(isJWT(undefined as unknown as string)).toBe(false);
     });
 
     it('returns false for empty string', () => {
@@ -170,7 +175,8 @@ describe('jwtUtils', () => {
     });
 
     it('handles arrays', () => {
-      const result = formatJSON([1, 2, 3]);
+      // Intentionally passing array to test runtime behavior
+      const result = formatJSON([1, 2, 3] as unknown as JsonObject);
       expect(result).toBe('[\n  1,\n  2,\n  3\n]');
     });
   });
@@ -201,7 +207,8 @@ describe('jwtUtils', () => {
   // ------------------------------------------------------------------
   describe('getJWTExpiration', () => {
     it('returns hasExpiration:false when payload is null', () => {
-      expect(getJWTExpiration(null)).toEqual({ hasExpiration: false });
+      // Intentionally invalid input to test runtime guard
+      expect(getJWTExpiration(null as unknown as JsonObject)).toEqual({ hasExpiration: false });
     });
 
     it('returns hasExpiration:false when payload has no exp', () => {
