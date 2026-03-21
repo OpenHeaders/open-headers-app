@@ -19,7 +19,7 @@ const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) => ({
   environmentsReady: ready,
   activeEnvironment: activeEnv,
   getAllVariables: () => vars,
-}) as Parameters<typeof validateUrlField>[2];
+}) as Parameters<typeof validateUrlField>[3];
 
 interface FormFields {
   requestOptions?: {
