@@ -8,6 +8,7 @@ import {
     CopyOutlined,
     QuestionCircleOutlined
 } from '@ant-design/icons';
+import { copyToClipboard } from '../../utils/ui/copyToClipboard';
 
 /**
  * EnvironmentShareModal - A reusable modal for sharing environment configurations
@@ -89,7 +90,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
     };
     
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(appLink);
+        copyToClipboard(appLink);
         message.success('Link copied to clipboard');
     };
     

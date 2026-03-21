@@ -98,11 +98,9 @@ class CliSetupHandler {
             });
 
             log.info(`Syncing workspace ${workspaceId}...`);
-            const repoDir = path.join(app.getPath('userData'), 'git-repos', workspaceId);
             const syncResult = await gitSyncService.syncWorkspace({
                 workspaceId,
                 workspaceName: uniqueName,
-                repoDir,
                 url: repoUrl,
                 branch: branch || 'main',
                 path: configPath || 'config/open-headers.json',

@@ -50,7 +50,7 @@ interface SyncProgressInfo {
 interface SyncOptions {
   workspaceId: string;
   workspaceName?: string;
-  repoDir: string;
+  repoDir?: string;
   branch: string;
   authType?: string;
   authData?: WorkspaceAuthData;
@@ -161,7 +161,7 @@ class TeamWorkspaceSyncer {
   /**
    * Sync workspace with remote repository
    */
-  async syncWorkspace(options: SyncOptions): Promise<SyncResult> {
+  async syncWorkspace(options: SyncOptions & { repoDir: string }): Promise<SyncResult> {
     const {
       workspaceId,
       workspaceName,
@@ -250,7 +250,7 @@ class TeamWorkspaceSyncer {
   /**
    * Perform auto-sync for workspace
    */
-  async autoSync(options: SyncOptions & { commitChanges?: boolean }): Promise<SyncResult> {
+  async autoSync(options: SyncOptions & { repoDir: string; commitChanges?: boolean }): Promise<SyncResult> {
     const {
       workspaceId,
       repoDir,

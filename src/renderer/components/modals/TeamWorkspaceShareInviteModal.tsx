@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Modal, Space, Button, Input, Typography, Alert, Checkbox, Segmented, Tooltip, App, theme } from 'antd';
-import { 
-    TeamOutlined, 
+import {
+    TeamOutlined,
     CopyOutlined,
     QuestionCircleOutlined
 } from '@ant-design/icons';
+import { copyToClipboard } from '../../utils/ui/copyToClipboard';
 
 /**
  * TeamWorkspaceShareInviteModal - A reusable modal for sharing team workspace invites
@@ -104,7 +105,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
     };
     
     const handleCopyLink = () => {
-        navigator.clipboard.writeText(getLinkValue());
+        copyToClipboard(getLinkValue());
         message.success('Link copied to clipboard');
     };
     

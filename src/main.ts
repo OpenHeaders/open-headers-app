@@ -410,7 +410,7 @@ if (!gotTheLock) {
                     { role: 'selectAll' }
                 ]
             },
-            // View menu (no Reload, Force Reload, or DevTools)
+            // View menu
             {
                 label: 'View',
                 submenu: [
@@ -418,7 +418,13 @@ if (!gotTheLock) {
                     { role: 'zoomIn' },
                     { role: 'zoomOut' },
                     { type: 'separator' },
-                    { role: 'togglefullscreen' }
+                    { role: 'togglefullscreen' },
+                    ...(!app.isPackaged ? [
+                        { type: 'separator' as const },
+                        { role: 'toggleDevTools' as const },
+                        { role: 'reload' as const },
+                        { role: 'forceReload' as const }
+                    ] : [])
                 ]
             },
             // Window menu (standard)

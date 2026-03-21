@@ -22,15 +22,8 @@ function getTimeManager() {
 
 const LOG_LEVELS: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 3 };
 
-// Initialize log level
+// Initialize log level — defaults to info until settings override via setGlobalLogLevel
 let currentLevel = LOG_LEVELS.info;
-try {
-  if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.isDevelopment) {
-    currentLevel = LOG_LEVELS.debug;
-  }
-} catch (e) {
-  // electronAPI not available yet
-}
 
 /**
  * Set the global log level for all renderer loggers

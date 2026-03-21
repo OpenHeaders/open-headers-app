@@ -187,6 +187,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         };
     };
 
+    // Sync body background with current theme so overlays/modals don't flash white
+    useEffect(() => {
+        document.body.style.backgroundColor = currentTheme === 'dark' ? '#141414' : '#f5f5f5';
+    }, [currentTheme]);
+
     // Context value
     const value: ThemeContextValue = {
         themeMode: settings.theme || THEME_MODES.AUTO,
