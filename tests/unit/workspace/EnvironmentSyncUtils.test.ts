@@ -38,32 +38,40 @@ describe('EnvironmentSyncUtils', () => {
             expect(countNonEmptyEnvValues({})).toBe(0);
         });
 
-        it('counts non-empty values', () => {
+        it('counts non-empty values in single environment', () => {
             expect(countNonEmptyEnvValues({
-                production: {
-                    API_KEY: { value: 'abc123', isSecret: false },
-                    SECRET: { value: 'def456', isSecret: true }
+                'Production': {
+                    'API_GATEWAY_TOKEN': { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig', isSecret: true },
+                    'OAUTH2_CLIENT_SECRET': { value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc', isSecret: true }
                 }
             })).toBe(2);
         });
 
         it('counts non-empty and skips empty values', () => {
             expect(countNonEmptyEnvValues({
-                staging: {
-                    API_KEY: { value: 'abc123', isSecret: false },
-                    EMPTY_VAR: { value: '', isSecret: false }
+                'Staging': {
+                    'API_KEY': { value: 'staging-key-abc123', isSecret: false },
+                    'PENDING_SECRET': { value: '', isSecret: true }
                 }
             })).toBe(1);
         });
 
-        it('handles multiple environments', () => {
+        it('handles multiple environments (enterprise setup)', () => {
             expect(countNonEmptyEnvValues({
-                dev: { KEY: { value: 'val1', isSecret: false } },
-                prod: {
-                    KEY: { value: 'val2', isSecret: false },
-                    EMPTY: { value: '', isSecret: false }
+                'Development': {
+                    'API_URL': { value: 'https://api.dev.openheaders.io', isSecret: false },
+                    'DB_PASSWORD': { value: 'dev-pass-123', isSecret: true },
+                },
+                'Staging': {
+                    'API_URL': { value: 'https://api.staging.openheaders.io', isSecret: false },
+                    'DB_PASSWORD': { value: '', isSecret: true },
+                },
+                'Production': {
+                    'API_URL': { value: 'https://api.openheaders.io', isSecret: false },
+                    'DB_PASSWORD': { value: 'prod-secure-pass', isSecret: true },
+                    'EMPTY_PLACEHOLDER': { value: '', isSecret: false },
                 }
-            })).toBe(2);
+            })).toBe(5); // 2 dev + 1 staging + 2 prod (3 empties skipped)
         });
     });
 
@@ -110,6 +118,33 @@ describe('EnvironmentSyncUtils', () => {
             const result = validateEnvironmentWrite(5, 5);
             expect(result.safe).toBe(true);
             expect(result.lossPercentage).toBe(0);
+        });
+    });
+
+    describe('validateEnvironmentWrite() — boundary cases', () => {
+        it('allows write at exactly 50% loss boundary', () => {
+            const result = validateEnvironmentWrite(10, 5);
+            // 50% loss = exactly at boundary, lossPercentage rounds to 50
+            expect(result.lossPercentage).toBe(50);
+        });
+
+        it('allows write with 1 value gain', () => {
+            const result = validateEnvironmentWrite(10, 11);
+            expect(result.safe).toBe(true);
+            expect(result.lossPercentage).toBe(0);
+        });
+
+        it('handles large environment sets (50+ variables)', () => {
+            const result = validateEnvironmentWrite(50, 48);
+            expect(result.safe).toBe(true);
+            expect(result.lossPercentage).toBe(4);
+        });
+
+        it('blocks total wipeout of large environment', () => {
+            const result = validateEnvironmentWrite(100, 0);
+            expect(result.safe).toBe(false);
+            expect(result.lossPercentage).toBe(100);
+            expect(result.shouldBlock).toBe(true);
         });
     });
 

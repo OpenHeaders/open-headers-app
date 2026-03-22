@@ -382,8 +382,8 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockResolvedValueOnce({ stdout: 'same-hash\n' });
 
             const result = await syncer.syncWorkspace({
-                workspaceId: 'ws-1',
-                workspaceName: 'Test WS',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                workspaceName: 'OpenHeaders Staging Environment',
                 repoDir: '/repo',
                 branch: 'main'
             });
@@ -397,7 +397,7 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockRejectedValue(new Error('fatal error'));
 
             const result = await syncer.syncWorkspace({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main'
             });
@@ -417,7 +417,7 @@ describe('TeamWorkspaceSyncer', () => {
 
             const progressCallback = vi.fn();
             await syncer.syncWorkspace({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main',
                 progressCallback
@@ -442,7 +442,7 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockResolvedValueOnce({ stdout: 'hash\n' });
 
             const result = await syncer.autoSync({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main'
             });
@@ -463,7 +463,7 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockResolvedValueOnce({ stdout: 'hash\n' });
 
             const result = await syncer.autoSync({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main'
             });
@@ -483,7 +483,7 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockResolvedValueOnce({ stdout: 'hash\n' });
 
             const result = await syncer.autoSync({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main',
                 commitChanges: false
@@ -497,7 +497,7 @@ describe('TeamWorkspaceSyncer', () => {
             deps.executor.execute.mockRejectedValue(new Error('auto-sync error'));
 
             const result = await syncer.autoSync({
-                workspaceId: 'ws-1',
+                workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
                 repoDir: '/repo',
                 branch: 'main'
             });
