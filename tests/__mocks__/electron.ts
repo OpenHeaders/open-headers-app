@@ -1,8 +1,7 @@
 // Mock electron module for testing outside Electron runtime
-// ESM version — supports both `import { app }` and `require('electron')`
 
 export const app = {
-    getPath: (name) => `/tmp/open-headers-test/${name}`,
+    getPath: (_name: string) => `/tmp/open-headers-test/${_name}`,
     getName: () => 'OpenHeaders',
     getVersion: () => '0.0.0-test',
     setName: () => {},

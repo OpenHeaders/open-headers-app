@@ -5,9 +5,9 @@ export default defineConfig({
     test: {
         environment: 'node',
         setupFiles: ['./tests/setup.ts'],
-        include: ['tests/**/*.test.{js,ts,tsx}'],
+        include: ['tests/**/*.test.{ts,tsx}'],
         typecheck: {
-            enabled: false, // typecheck available via: npx tsc -p tsconfig.test.json --noEmit
+            enabled: true,
             tsconfig: './tsconfig.test.json',
             include: ['tests/**/*.test.{ts,tsx}'],
         },
@@ -30,10 +30,7 @@ export default defineConfig({
 
     resolve: {
         alias: {
-            'electron': path.resolve(__dirname, 'tests/__mocks__/electron.mjs'),
-            '@services': path.resolve(__dirname, 'src/services'),
-            '@utils': path.resolve(__dirname, 'src/utils'),
+            'electron': path.resolve(__dirname, 'tests/__mocks__/electron.ts'),
         },
-        extensions: ['.ts', '.tsx'],
     },
 });
