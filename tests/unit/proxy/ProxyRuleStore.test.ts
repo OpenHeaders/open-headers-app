@@ -18,7 +18,7 @@ function makeProxyRule(overrides: Partial<ProxyRule> = {}): ProxyRule {
         enabled: true,
         headerName: 'Authorization',
         headerValue: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGFjbWUuY29tIn0.sig',
-        domains: ['*.acme-corp.com', 'api.partner-service.io'],
+        domains: ['*.openheaders.io', 'api.partners.openheaders.io'],
         isDynamic: false,
         sourceId: undefined,
         prefix: '',
@@ -79,7 +79,7 @@ describe('ProxyRuleStore', () => {
                     headerName: 'X-Request-ID',
                     headerValue: '{{REQUEST_ID}}',
                     hasEnvVars: true,
-                    domains: ['*.acme-corp.com'],
+                    domains: ['*.openheaders.io'],
                 }),
                 makeProxyRule({
                     id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
@@ -87,7 +87,7 @@ describe('ProxyRuleStore', () => {
                     enabled: false,
                     headerName: 'X-Api-Key',
                     headerValue: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
-                    domains: ['api.staging.acme-corp.com'],
+                    domains: ['api.staging.openheaders.io'],
                 }),
             ];
             vi.mocked(atomicWriter.readJson).mockResolvedValueOnce(mockRules);
@@ -151,7 +151,7 @@ describe('ProxyRuleStore', () => {
                 name: 'Production OAuth2 Bearer Token',
                 headerName: 'Authorization',
                 headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZXJ2aWNlLWFjY291bnRAYWNtZS5jb20ifQ.sig',
-                domains: ['*.acme-corp.com', 'api.partner-service.io:8443'],
+                domains: ['*.openheaders.io', 'api.partners.openheaders.io:8443'],
             });
             await store.saveRule(rule);
 
@@ -210,11 +210,11 @@ describe('ProxyRuleStore', () => {
         it('handles rule with regex pattern in domains', async () => {
             const rule = makeProxyRule({
                 id: 'regex-domain',
-                domains: ['*://api.acme-corp.com/v[0-9]/*'],
+                domains: ['*://api.openheaders.io/v[0-9]/*'],
             });
             await store.saveRule(rule);
 
-            expect(store.rules[0].domains).toEqual(['*://api.acme-corp.com/v[0-9]/*']);
+            expect(store.rules[0].domains).toEqual(['*://api.openheaders.io/v[0-9]/*']);
         });
     });
 
@@ -281,7 +281,7 @@ describe('ProxyRuleStore', () => {
                 enabled: true,
                 headerName: 'Authorization',
                 headerValue: 'Bearer token',
-                domains: ['*.acme-corp.com'],
+                domains: ['*.openheaders.io'],
                 isDynamic: true,
                 sourceId: 'src-42',
                 prefix: 'Bearer ',

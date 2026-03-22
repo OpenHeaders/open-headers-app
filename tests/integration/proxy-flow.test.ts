@@ -174,7 +174,7 @@ describe('Proxy integration – full request flow', () => {
         it('forwards a POST request with JSON body', async () => {
             const targetUrl = `http://127.0.0.1:${echoPort}/api/v2/resources`;
             const requestBody = JSON.stringify({
-                name: 'Acme Corp — Staging Environment',
+                name: 'Open Headers — Staging Environment',
                 config: { apiKey: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc', region: 'us-east-1' },
             });
             const res = await proxyRequest(proxyPort, targetUrl, {
@@ -332,7 +332,7 @@ describe('Proxy integration – full request flow', () => {
                 id: 'r-other',
                 headerName: 'X-Scoped',
                 headerValue: 'yes',
-                domains: ['api.acme-corp.com'],
+                domains: ['api.openheaders.io'],
             })];
 
             const targetUrl = `http://127.0.0.1:${echoPort}/other`;
@@ -621,7 +621,7 @@ describe('Proxy integration – full request flow', () => {
         });
 
         it('returns 400 for ftp:// scheme', async () => {
-            const res = await proxyRequest(proxyPort, 'ftp://files.acme-corp.com/data');
+            const res = await proxyRequest(proxyPort, 'ftp://files.openheaders.io/data');
             expect(res.statusCode).toBe(400);
             expect(res.body).toContain('Invalid proxy request');
         });

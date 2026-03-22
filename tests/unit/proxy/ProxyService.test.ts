@@ -85,7 +85,7 @@ function makeSource(overrides: Partial<Source> = {}): Source {
     return {
         sourceId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
         sourceType: 'http',
-        sourcePath: 'https://auth.acme-corp.internal:8443/oauth2/token',
+        sourcePath: 'https://auth.internal.openheaders.io:8443/oauth2/token',
         sourceMethod: 'POST',
         sourceName: 'Production API Gateway Token',
         sourceTag: 'production',
@@ -125,11 +125,11 @@ describe('ProxyService', () => {
 
         it('replaces multiple variables in one string', () => {
             proxyService.environmentVariables = {
-                AUTH_HOST: 'auth.acme-corp.internal',
+                AUTH_HOST: 'auth.internal.openheaders.io',
                 AUTH_PORT: '8443',
             };
             expect(proxyService.resolveEnvironmentVariables('https://{{AUTH_HOST}}:{{AUTH_PORT}}/oauth2/token'))
-                .toBe('https://auth.acme-corp.internal:8443/oauth2/token');
+                .toBe('https://auth.internal.openheaders.io:8443/oauth2/token');
         });
 
         it('keeps placeholder when variable is not defined', () => {
@@ -158,9 +158,9 @@ describe('ProxyService', () => {
         });
 
         it('handles variable names with underscores and numbers', () => {
-            proxyService.environmentVariables = { API_KEY_V2: 'key-v2', DB_HOST_1: 'db1.acme.com' };
+            proxyService.environmentVariables = { API_KEY_V2: 'key-v2', DB_HOST_1: 'db1.openheaders.io' };
             expect(proxyService.resolveEnvironmentVariables('{{API_KEY_V2}} @ {{DB_HOST_1}}'))
-                .toBe('key-v2 @ db1.acme.com');
+                .toBe('key-v2 @ db1.openheaders.io');
         });
 
         it('resolves only matching variables, keeps unresolved ones', () => {
@@ -175,11 +175,11 @@ describe('ProxyService', () => {
         it('extracts values from {value: ...} objects', () => {
             proxyService.updateEnvironmentVariables({
                 API_KEY: { value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' },
-                AUTH_HOST: { value: 'auth.acme-corp.internal:8443' },
+                AUTH_HOST: { value: 'auth.internal.openheaders.io:8443' },
             });
             expect(proxyService.environmentVariables).toEqual({
                 API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
-                AUTH_HOST: 'auth.acme-corp.internal:8443',
+                AUTH_HOST: 'auth.internal.openheaders.io:8443',
             });
         });
 
@@ -333,14 +333,14 @@ describe('ProxyService', () => {
 
     describe('getApplicableRules()', () => {
         it('returns empty array when no rules exist', () => {
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v2/resource')).toEqual([]);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v2/resource')).toEqual([]);
         });
 
         it('matches header rule via proxy rule reference (no domain filter)', () => {
             proxyService.headerRules = [makeHeaderRule({ id: 'hr-prod', isEnabled: true, domains: [] })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-prod' })];
 
-            const result = proxyService.getApplicableRules('https://api.acme-corp.com/v2/resource');
+            const result = proxyService.getApplicableRules('https://api.openheaders.io/v2/resource');
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('hr-prod');
         });
@@ -348,42 +348,42 @@ describe('ProxyService', () => {
         it('skips disabled proxy rules', () => {
             proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: true, domains: [] })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: false, headerRuleId: 'hr-1' })];
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com')).toEqual([]);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io')).toEqual([]);
         });
 
         it('skips disabled header rules', () => {
             proxyService.headerRules = [makeHeaderRule({ id: 'hr-1', isEnabled: false, domains: [] })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-1' })];
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com')).toEqual([]);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io')).toEqual([]);
         });
 
         it('filters by domain when header rule has domains', () => {
             proxyService.headerRules = [makeHeaderRule({
                 id: 'hr-scoped',
                 isEnabled: true,
-                domains: ['api.acme-corp.com'],
+                domains: ['api.openheaders.io'],
             })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-scoped' })];
 
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v2/users')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://api.partner-service.io/v1')).toHaveLength(0);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v2/users')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://api.partners.openheaders.io/v1')).toHaveLength(0);
         });
 
         it('matches wildcard domain patterns in header rules', () => {
             proxyService.headerRules = [makeHeaderRule({
                 id: 'hr-wildcard',
                 isEnabled: true,
-                domains: ['*.acme-corp.com'],
+                domains: ['*.openheaders.io'],
             })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-wildcard' })];
 
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v1')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://staging.api.acme-corp.com/v1')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://evil.example.com/')).toHaveLength(0);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v1')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://staging.api.openheaders.io/v1')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://evil.notrelated.com/')).toHaveLength(0);
         });
 
         it('resolves environment variables in domain patterns', () => {
-            proxyService.environmentVariables = { API_DOMAIN: 'api.acme-corp.com' };
+            proxyService.environmentVariables = { API_DOMAIN: 'api.openheaders.io' };
             proxyService.headerRules = [makeHeaderRule({
                 id: 'hr-env',
                 isEnabled: true,
@@ -391,12 +391,12 @@ describe('ProxyService', () => {
             })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-env' })];
 
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v1')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v1')).toHaveLength(1);
         });
 
         it('handles comma-separated domains from env variable', () => {
             proxyService.environmentVariables = {
-                ALLOWED_DOMAINS: 'api.acme-corp.com,cdn.acme-corp.com,auth.acme-corp.internal',
+                ALLOWED_DOMAINS: 'api.openheaders.io,cdn.openheaders.io,auth.internal.openheaders.io',
             };
             proxyService.headerRules = [makeHeaderRule({
                 id: 'hr-multi',
@@ -405,10 +405,10 @@ describe('ProxyService', () => {
             })];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'hr-multi' })];
 
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v1')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://cdn.acme-corp.com/assets')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://auth.acme-corp.internal/token')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://other.example.com/')).toHaveLength(0);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v1')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://cdn.openheaders.io/assets')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://auth.internal.openheaders.io/token')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://other.notmatched.com/')).toHaveLength(0);
         });
 
         it('matches custom proxy rules (no headerRuleId)', () => {
@@ -426,10 +426,10 @@ describe('ProxyService', () => {
                 enabled: true,
                 headerName: 'X-Api-Key',
                 headerValue: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
-                domains: ['api.acme-corp.com'],
+                domains: ['api.openheaders.io'],
             })];
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com/v2')).toHaveLength(1);
-            expect(proxyService.getApplicableRules('https://other.example.com/')).toHaveLength(0);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io/v2')).toHaveLength(1);
+            expect(proxyService.getApplicableRules('https://other.notmatched.com/')).toHaveLength(0);
         });
 
         it('returns multiple matching rules for the same URL', () => {
@@ -442,7 +442,7 @@ describe('ProxyService', () => {
                 makeProxyRule({ id: 'pr-2', enabled: true, headerRuleId: 'hr-custom' }),
             ];
 
-            const result = proxyService.getApplicableRules('https://api.acme-corp.com/v2');
+            const result = proxyService.getApplicableRules('https://api.openheaders.io/v2');
             expect(result).toHaveLength(2);
             expect(result.map(r => r.id)).toEqual(['hr-auth', 'hr-custom']);
         });
@@ -450,7 +450,7 @@ describe('ProxyService', () => {
         it('skips proxy rule referencing non-existent header rule', () => {
             proxyService.headerRules = [];
             proxyService.ruleStore.rules = [makeProxyRule({ enabled: true, headerRuleId: 'non-existent' })];
-            expect(proxyService.getApplicableRules('https://api.acme-corp.com')).toEqual([]);
+            expect(proxyService.getApplicableRules('https://api.openheaders.io')).toEqual([]);
         });
     });
 
@@ -466,7 +466,7 @@ describe('ProxyService', () => {
             proxyService.sources.set('src-2', 'token-b');
             proxyService.environmentVariables = {
                 API_KEY: 'ohk_live_key',
-                AUTH_HOST: 'auth.acme.com',
+                AUTH_HOST: 'auth.openheaders.io',
             };
 
             proxyService.clearRules();
@@ -491,7 +491,7 @@ describe('ProxyService', () => {
             proxyService.cacheEnabled = true;
             proxyService.strictSSL = false;
             proxyService.trustedCertificates = new Set(['fp-1']);
-            proxyService.certificateExceptions = new Map([['example.com', new Set(['fp-2'])]]);
+            proxyService.certificateExceptions = new Map([['proxy.openheaders.io', new Set(['fp-2'])]]);
             proxyService.stats = { requestsProcessed: 42, cacheHits: 10, cacheMisses: 32, errors: 3 };
 
             const status: ProxyStatus = proxyService.getStatus();
@@ -530,32 +530,32 @@ describe('ProxyService', () => {
         });
 
         it('addCertificateException accumulates fingerprints per domain', () => {
-            proxyService.addCertificateException('api.acme-corp.com', 'fp-sha256-aaa');
-            proxyService.addCertificateException('api.acme-corp.com', 'fp-sha256-bbb');
-            proxyService.addCertificateException('cdn.acme-corp.com', 'fp-sha256-ccc');
+            proxyService.addCertificateException('api.openheaders.io', 'fp-sha256-aaa');
+            proxyService.addCertificateException('api.openheaders.io', 'fp-sha256-bbb');
+            proxyService.addCertificateException('cdn.openheaders.io', 'fp-sha256-ccc');
 
             const info = proxyService.getCertificateInfo();
             expect(info.strictSSL).toBe(false);
             expect(info.trustedCertificates).toEqual([]);
 
-            const acmeEntry = info.certificateExceptions.find(
-                (e: { domain: string; fingerprints: string[] }) => e.domain === 'api.acme-corp.com'
+            const apiEntry = info.certificateExceptions.find(
+                (e: { domain: string; fingerprints: string[] }) => e.domain === 'api.openheaders.io'
             );
-            expect(acmeEntry!.fingerprints).toContain('fp-sha256-aaa');
-            expect(acmeEntry!.fingerprints).toContain('fp-sha256-bbb');
-            expect(acmeEntry!.fingerprints).toHaveLength(2);
+            expect(apiEntry!.fingerprints).toContain('fp-sha256-aaa');
+            expect(apiEntry!.fingerprints).toContain('fp-sha256-bbb');
+            expect(apiEntry!.fingerprints).toHaveLength(2);
 
             const cdnEntry = info.certificateExceptions.find(
-                (e: { domain: string; fingerprints: string[] }) => e.domain === 'cdn.acme-corp.com'
+                (e: { domain: string; fingerprints: string[] }) => e.domain === 'cdn.openheaders.io'
             );
             expect(cdnEntry!.fingerprints).toEqual(['fp-sha256-ccc']);
         });
 
         it('removeCertificateException removes all fingerprints for a domain', () => {
-            proxyService.addCertificateException('api.acme-corp.com', 'fp-1');
-            proxyService.addCertificateException('api.acme-corp.com', 'fp-2');
+            proxyService.addCertificateException('api.openheaders.io', 'fp-1');
+            proxyService.addCertificateException('api.openheaders.io', 'fp-2');
 
-            proxyService.removeCertificateException('api.acme-corp.com');
+            proxyService.removeCertificateException('api.openheaders.io');
             expect(proxyService.getCertificateInfo().certificateExceptions).toHaveLength(0);
         });
 
@@ -575,13 +575,13 @@ describe('ProxyService', () => {
             proxyService.strictSSL = true;
             proxyService.addTrustedCertificate('global-fp-1');
             proxyService.addTrustedCertificate('global-fp-2');
-            proxyService.addCertificateException('api.acme-corp.com', 'domain-fp-1');
+            proxyService.addCertificateException('api.openheaders.io', 'domain-fp-1');
 
             const info = proxyService.getCertificateInfo();
             expect(info.strictSSL).toBe(true);
             expect(info.trustedCertificates).toEqual(['global-fp-1', 'global-fp-2']);
             expect(info.certificateExceptions).toHaveLength(1);
-            expect(info.certificateExceptions[0].domain).toBe('api.acme-corp.com');
+            expect(info.certificateExceptions[0].domain).toBe('api.openheaders.io');
             expect(info.certificateExceptions[0].fingerprints).toEqual(['domain-fp-1']);
         });
     });
@@ -634,10 +634,10 @@ describe('ProxyService', () => {
 
             const res = createMockResponse();
             await proxyService.handleRequest(
-                { method: 'GET', url: '/https://api.acme-corp.com/v2', headers: {}, on: vi.fn() } as unknown as Parameters<typeof proxyService.handleRequest>[0],
+                { method: 'GET', url: '/https://api.openheaders.io/v2', headers: {}, on: vi.fn() } as unknown as Parameters<typeof proxyService.handleRequest>[0],
                 res as unknown as Parameters<typeof proxyService.handleRequest>[1],
             );
-            expect(capturedUrl).toBe('https://api.acme-corp.com/v2');
+            expect(capturedUrl).toBe('https://api.openheaders.io/v2');
 
             proxyService.doProxy = originalDoProxy;
         });
@@ -676,7 +676,7 @@ describe('ProxyService', () => {
 
             const res = createMockResponse();
             await proxyService.handleRequest(
-                { method: 'GET', url: 'https://api.acme-corp.com/v2', headers: {}, on: vi.fn() } as unknown as Parameters<typeof proxyService.handleRequest>[0],
+                { method: 'GET', url: 'https://api.openheaders.io/v2', headers: {}, on: vi.fn() } as unknown as Parameters<typeof proxyService.handleRequest>[0],
                 res as unknown as Parameters<typeof proxyService.handleRequest>[1],
             );
             expect(proxyService.stats.requestsProcessed).toBe(1);
