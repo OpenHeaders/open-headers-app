@@ -1,4 +1,5 @@
 // Mock electron-log for testing outside Electron runtime
+
 const noop = () => {};
 const transport = { format: '', level: 'info', getFile: () => ({ path: '/tmp/test.log' }) };
 
@@ -10,4 +11,4 @@ const logger = {
     transports: { console: transport, file: transport },
 };
 
-module.exports = logger;
+export default logger;
