@@ -38,22 +38,26 @@ describe('WorkspaceManager', () => {
   // ========================================================================
   describe('createWorkspace', () => {
     const baseWorkspace = {
-      id: 'test-ws',
-      name: 'Test Workspace',
+      id: 'ws-a1b2c3d4-e5f6-7890',
+      name: 'OpenHeaders — Staging Environment',
       type: 'personal' as const,
     };
 
     it('creates a workspace with proper defaults', () => {
       const result = manager.createWorkspace([], baseWorkspace);
-      expect(result.id).toBe('test-ws');
-      expect(result.name).toBe('Test Workspace');
+      expect(result.id).toBe('ws-a1b2c3d4-e5f6-7890');
+      expect(result.name).toBe('OpenHeaders — Staging Environment');
       expect(result.isPersonal).toBe(true);
       expect(result.isTeam).toBe(false);
       expect(result.isDefault).toBe(false);
-      expect(result.metadata!.version).toBe('3.0.0');
-      expect(result.metadata!.sourceCount).toBe(0);
-      expect(result.metadata!.ruleCount).toBe(0);
+      expect(result.metadata).toEqual({
+        version: '3.0.0',
+        sourceCount: 0,
+        ruleCount: 0,
+        proxyRuleCount: 0,
+      });
       expect(result.updatedAt).toBeDefined();
+      expect(result.createdAt).toBeDefined();
     });
 
     it('sets isDefault true only for default-personal', () => {
@@ -80,7 +84,7 @@ describe('WorkspaceManager', () => {
     });
 
     it('throws on duplicate ID', () => {
-      const existing = [{ id: 'test-ws', name: 'Test', type: 'personal' as const }];
+      const existing = [{ id: 'ws-a1b2c3d4-e5f6-7890', name: 'Existing WS', type: 'personal' as const }];
       expect(() =>
         manager.createWorkspace(existing, baseWorkspace)
       ).toThrow('already exists');
@@ -149,34 +153,35 @@ describe('WorkspaceManager', () => {
       ).toThrow('Invalid git URL format');
     });
 
-    it('accepts valid https git URL', () => {
+    it('accepts valid https git URL (GitLab enterprise)', () => {
       const result = manager.createWorkspace([], {
-        id: 'x',
-        name: 'Y',
+        id: 'ws-gitlab-staging',
+        name: 'GitLab Staging',
         type: 'git',
-        gitUrl: 'https://github.com/org/repo',
+        gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
       });
-      expect(result.id).toBe('x');
+      expect(result.id).toBe('ws-gitlab-staging');
+      expect(result.isTeam).toBe(true);
     });
 
     it('accepts valid ssh git URL', () => {
       const result = manager.createWorkspace([], {
-        id: 'x',
-        name: 'Y',
+        id: 'ws-ssh-prod',
+        name: 'SSH Prod',
         type: 'git',
-        gitUrl: 'git@github.com:org/repo.git',
+        gitUrl: 'git@gitlab.openheaders.io:platform/shared-headers.git',
       });
-      expect(result.id).toBe('x');
+      expect(result.id).toBe('ws-ssh-prod');
     });
 
     it('accepts ssh:// git URL', () => {
       const result = manager.createWorkspace([], {
-        id: 'x',
-        name: 'Y',
+        id: 'ws-ssh-protocol',
+        name: 'SSH Protocol',
         type: 'git',
-        gitUrl: 'ssh://git@github.com/org/repo.git',
+        gitUrl: 'ssh://git@gitlab.openheaders.io/platform/shared-headers.git',
       });
-      expect(result.id).toBe('x');
+      expect(result.id).toBe('ws-ssh-protocol');
     });
 
     it('preserves provided createdAt', () => {
@@ -329,9 +334,52 @@ describe('WorkspaceManager', () => {
         if (callCount === 1) throw new Error('not found');
         return Promise.resolve('{}');
       });
-      await manager.copyWorkspaceData('src-ws', 'dst-ws');
+      await manager.copyWorkspaceData('ws-src-a1b2c3d4', 'ws-dst-b2c3d4e5');
       // Should still have saved the files that loaded successfully
       expect(mockStorageAPI.saveToStorage).toHaveBeenCalled();
+    });
+
+    it('copies all 4 data files with correct paths', async () => {
+      mockStorageAPI.loadFromStorage.mockResolvedValue('{"data":true}');
+      await manager.copyWorkspaceData('ws-a1b2c3d4-e5f6-7890', 'ws-b2c3d4e5-f6a7-8901');
+
+      const expectedFiles = ['sources.json', 'rules.json', 'proxy-rules.json', 'environments.json'];
+      expectedFiles.forEach(file => {
+        expect(mockStorageAPI.loadFromStorage).toHaveBeenCalledWith(`workspaces/ws-a1b2c3d4-e5f6-7890/${file}`);
+        expect(mockStorageAPI.saveToStorage).toHaveBeenCalledWith(
+          `workspaces/ws-b2c3d4e5-f6a7-8901/${file}`,
+          '{"data":true}'
+        );
+      });
+    });
+  });
+
+  // ========================================================================
+  // Edge cases
+  // ========================================================================
+  describe('edge cases', () => {
+    it('createWorkspace preserves existing metadata fields', () => {
+      const result = manager.createWorkspace([], {
+        id: 'ws-with-metadata',
+        name: 'Workspace With Metadata',
+        type: 'personal',
+        metadata: { customField: 'preserved' } as Record<string, unknown>,
+      } as Parameters<typeof manager.createWorkspace>[1]);
+      expect(result.metadata!.version).toBe('3.0.0');
+      expect(result.metadata!.sourceCount).toBe(0);
+      expect((result.metadata as Record<string, unknown>).customField).toBe('preserved');
+    });
+
+    it('createWorkspace auto-generates createdAt when not provided', () => {
+      const before = new Date().toISOString();
+      const result = manager.createWorkspace([], {
+        id: 'ws-no-created',
+        name: 'No CreatedAt',
+        type: 'personal',
+      });
+      const after = new Date().toISOString();
+      expect(result.createdAt! >= before).toBe(true);
+      expect(result.createdAt! <= after).toBe(true);
     });
   });
 });

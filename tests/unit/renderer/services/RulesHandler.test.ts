@@ -9,8 +9,8 @@ import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../../..
 // ---------------------------------------------------------------------------
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
-    appVersion: '3.0.0',
-    activeWorkspaceId: 'ws-1',
+    appVersion: '3.2.0',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     environments: {},
     sources: [],
     workspaces: [],
@@ -27,6 +27,19 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
     createEnvironment: vi.fn(),
     ...overrides,
   } as ExportImportDependencies;
+}
+
+function makeEnterpriseRule(overrides: Partial<RuleEntry> = {}): RuleEntry {
+  return {
+    id: 'rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    name: 'Add OAuth2 Bearer Token (prod)',
+    enabled: true,
+    pattern: '*.openheaders.io',
+    matchType: 'wildcard',
+    ruleType: 'header',
+    headers: [{ name: 'Authorization', value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig', operation: 'set' }],
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -205,10 +218,13 @@ describe('RulesHandler.analyzeRules', () => {
   it('warns about large rule sets (>100)', () => {
     const handler = new RulesHandler(makeDeps());
     const manyRules = Array.from({ length: 101 }, (_, i) => ({
-      id: `r${i}`, name: `Rule ${i}`, enabled: true,
+      id: `rule-${String(i).padStart(8, '0')}-a1b2-c3d4-e5f6-789012345678`,
+      name: `Add OAuth2 Bearer Token (${i})`,
+      enabled: true,
     }));
     const analysis = handler.analyzeRules({ rules: { header: manyRules } });
     expect(analysis.warnings.some(w => w.includes('Large number'))).toBe(true);
+    expect(analysis.suggestions.some(s => s.includes('organizing rules'))).toBe(true);
   });
 
   it('warns about disabled rules', () => {
@@ -251,26 +267,35 @@ describe('RulesHandler._importRulesOfType', () => {
     expect(stats.imported).toBe(0);
   });
 
-  it('replaces all rules in replace mode', async () => {
+  it('replaces all rules in replace mode with enterprise data', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [{ id: 'old' }] } } as unknown as RulesStorage;
-    const incoming: RuleEntry[] = [{ id: 'new1' }, { id: 'new2' }];
+    const existing = { rules: { header: [makeEnterpriseRule({ id: 'old-rule-id' })] } } as unknown as RulesStorage;
+    const incoming: RuleEntry[] = [
+      makeEnterpriseRule({ id: 'rule-new1-0000-0000-0000-000000000001' }),
+      makeEnterpriseRule({ id: 'rule-new2-0000-0000-0000-000000000002', name: 'Add X-API-Key (staging)' }),
+    ];
 
     const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE, selectedItems: {} });
-    expect(stats.imported).toBe(2);
-    expect(stats.skipped).toBe(0);
+    expect(stats).toEqual({ imported: 2, skipped: 0, errors: [] });
     expect(existing.rules.header).toHaveLength(2);
+    expect(existing.rules.header[0].id).toBe('rule-new1-0000-0000-0000-000000000001');
+    expect(existing.rules.header[1].name).toBe('Add X-API-Key (staging)');
   });
 
   it('merges and skips duplicates by ID', async () => {
     const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [{ id: 'r1' }] } } as unknown as RulesStorage;
-    const incoming: RuleEntry[] = [{ id: 'r1' }, { id: 'r2' }];
+    const existingRule = makeEnterpriseRule();
+    const existing = { rules: { header: [existingRule] } } as unknown as RulesStorage;
+    const incoming: RuleEntry[] = [
+      makeEnterpriseRule(), // duplicate — same ID
+      makeEnterpriseRule({ id: 'rule-new1-0000-0000-0000-000000000001', name: 'New Rule' }),
+    ];
 
     const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.imported).toBe(1);
     expect(stats.skipped).toBe(1);
     expect(existing.rules.header).toHaveLength(2);
+    expect(existing.rules.header[1].name).toBe('New Rule');
   });
 
   it('initializes rule type array if missing in existing storage', async () => {

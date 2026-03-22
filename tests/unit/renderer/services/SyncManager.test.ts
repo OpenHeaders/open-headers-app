@@ -82,10 +82,20 @@ describe('SyncManager', () => {
 
     it('loads from correct workspace path', async () => {
       mockElectronAPI.loadFromStorage.mockResolvedValue(null);
-      await manager.needsInitialSync('my-workspace');
+      await manager.needsInitialSync('ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       expect(mockElectronAPI.loadFromStorage).toHaveBeenCalledWith(
-        'workspaces/my-workspace/sources.json'
+        'workspaces/ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890/sources.json'
       );
+    });
+
+    it('returns false when data has enterprise sources array', async () => {
+      mockElectronAPI.loadFromStorage.mockResolvedValue(
+        JSON.stringify([
+          { sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourceType: 'http', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token' },
+          { sourceId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' },
+        ])
+      );
+      expect(await manager.needsInitialSync('ws-prod')).toBe(false);
     });
   });
 

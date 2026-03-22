@@ -208,10 +208,29 @@ describe('RulesManager', () => {
 
     it('loads from correct workspace path', async () => {
       mockStorageAPI.loadFromStorage.mockResolvedValue(null);
-      await manager.loadRules('my-workspace');
+      await manager.loadRules('ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       expect(mockStorageAPI.loadFromStorage).toHaveBeenCalledWith(
-        'workspaces/my-workspace/rules.json'
+        'workspaces/ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890/rules.json'
       );
+    });
+
+    it('parses enterprise rules with all types populated', async () => {
+      const stored = {
+        rules: {
+          header: [
+            { id: 'rule-a1b2', name: 'Add OAuth2 Bearer Token (prod)', headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.sig' },
+            { id: 'rule-b2c3', name: 'Add X-API-Key (staging)', headerValue: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' },
+          ],
+          request: [{ id: 'rule-c3d4', name: 'Modify Request Body' }],
+          response: [{ id: 'rule-d4e5', name: 'Strip Server Header' }],
+        },
+      };
+      mockStorageAPI.loadFromStorage.mockResolvedValue(JSON.stringify(stored));
+      const result = await manager.loadRules('ws-prod');
+      expect(result.header).toHaveLength(2);
+      expect(result.request).toHaveLength(1);
+      expect(result.response).toHaveLength(1);
+      expect(result.header[0].name).toBe('Add OAuth2 Bearer Token (prod)');
     });
   });
 

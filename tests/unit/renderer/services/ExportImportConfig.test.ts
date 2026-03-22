@@ -41,19 +41,24 @@ describe('ExportImportConfig constants', () => {
       expect(DEFAULTS.ENVIRONMENT_NAME).toBe('Default');
       expect(DEFAULTS.WORKSPACE_TYPE).toBe('git');
       expect(DEFAULTS.WORKSPACE_BRANCH).toBe('main');
+      expect(DEFAULTS.WORKSPACE_PATH).toBe('config/open-headers.json');
       expect(DEFAULTS.AUTH_TYPE).toBe('none');
       expect(DEFAULTS.AUTO_SYNC).toBe(true);
       expect(typeof DEFAULTS.APP_VERSION).toBe('string');
+      expect(DEFAULTS.APP_VERSION.length).toBeGreaterThan(0);
       expect(typeof DEFAULTS.DATA_FORMAT_VERSION).toBe('string');
+      expect(DEFAULTS.DATA_FORMAT_VERSION.length).toBeGreaterThan(0);
     });
   });
 
   describe('EVENTS', () => {
-    it('has all expected event names', () => {
-      expect(EVENTS.WORKSPACE_DATA_REFRESH).toBeDefined();
-      expect(EVENTS.PROXY_RULES_UPDATED).toBeDefined();
-      expect(EVENTS.RULES_UPDATED).toBeDefined();
-      expect(EVENTS.ENVIRONMENT_VARIABLES_CHANGED).toBeDefined();
+    it('has all expected event names with correct values', () => {
+      expect(EVENTS).toEqual({
+        WORKSPACE_DATA_REFRESH: 'workspace-data-refresh-needed',
+        PROXY_RULES_UPDATED: 'proxy-rules-updated',
+        RULES_UPDATED: 'rules-updated',
+        ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed',
+      });
     });
 
     it('event names are non-empty strings', () => {

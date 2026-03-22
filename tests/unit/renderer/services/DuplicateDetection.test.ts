@@ -7,6 +7,14 @@ function makeImportSource(overrides: Partial<ImportSource> & { sourceType: Sourc
   return { sourcePath: '', ...overrides };
 }
 
+function makeEnterpriseHttpSource(): ImportSource {
+  return { sourceType: 'http', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token' };
+}
+
+function makeEnterpriseFileSource(): ImportSource {
+  return { sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' };
+}
+
 import {
   isSourceDuplicate,
   isProxyRuleDuplicate,
@@ -30,38 +38,38 @@ describe('isSourceDuplicate', () => {
   });
 
   it('detects file source duplicate by sourcePath', () => {
-    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' });
-    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' })];
+    const source = makeEnterpriseFileSource();
+    const existing = [makeEnterpriseFileSource()];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('does not flag different file sources', () => {
-    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/b.json' });
-    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' })];
+    const source = makeImportSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/production.json' });
+    const existing = [makeEnterpriseFileSource()];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
   it('does not match sources with different types', () => {
-    const source = makeImportSource({ sourceType: 'file', sourcePath: '/tmp/a.json' });
-    const existing = [makeImportSource({ sourceType: 'env', sourcePath: '/tmp/a.json' })];
+    const source = makeEnterpriseFileSource();
+    const existing = [makeImportSource({ sourceType: 'env', sourcePath: source.sourcePath })];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
   it('detects env source duplicate by sourcePath', () => {
-    const source = makeImportSource({ sourceType: 'env', sourcePath: 'MY_VAR' });
-    const existing = [makeImportSource({ sourceType: 'env', sourcePath: 'MY_VAR' })];
+    const source = makeImportSource({ sourceType: 'env', sourcePath: 'OAUTH2_ACCESS_TOKEN' });
+    const existing = [makeImportSource({ sourceType: 'env', sourcePath: 'OAUTH2_ACCESS_TOKEN' })];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('detects http source duplicate by url and sourcePath', () => {
-    const source = makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' });
-    const existing = [makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' })];
+    const source = makeEnterpriseHttpSource();
+    const existing = [makeEnterpriseHttpSource()];
     expect(isSourceDuplicate(source, existing)).toBe(true);
   });
 
   it('http source with different url is not duplicate', () => {
-    const source = makeImportSource({ sourceType: 'http', sourcePath: 'https://b.com' });
-    const existing = [makeImportSource({ sourceType: 'http', sourcePath: 'https://a.com' })];
+    const source = makeImportSource({ sourceType: 'http', sourcePath: 'https://api.openheaders.io:8443/v2/config' });
+    const existing = [makeEnterpriseHttpSource()];
     expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 
@@ -73,8 +81,25 @@ describe('isSourceDuplicate', () => {
   });
 
   it('returns false for empty existing list', () => {
-    const source = makeImportSource({ sourceType: 'file', sourcePath: '/a' });
+    const source = makeEnterpriseHttpSource();
     expect(isSourceDuplicate(source, [])).toBe(false);
+  });
+
+  it('detects duplicate among multiple enterprise sources', () => {
+    const source = makeEnterpriseHttpSource();
+    const existing = [
+      makeEnterpriseFileSource(),
+      makeImportSource({ sourceType: 'env', sourcePath: 'OAUTH2_ACCESS_TOKEN' }),
+      makeEnterpriseHttpSource(), // duplicate
+    ];
+    expect(isSourceDuplicate(source, existing)).toBe(true);
+  });
+
+  it('does not consider sources with same path but different types as duplicates', () => {
+    const url = 'https://auth.openheaders.internal:8443/oauth2/token';
+    const source = makeImportSource({ sourceType: 'http', sourcePath: url });
+    const existing = [makeImportSource({ sourceType: 'file', sourcePath: url })];
+    expect(isSourceDuplicate(source, existing)).toBe(false);
   });
 });
 
@@ -138,14 +163,14 @@ describe('isProxyRuleDuplicate', () => {
   });
 
   it('detects duplicate by ID', () => {
-    const rule = { id: 'rule-1', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] };
-    const existing = [{ id: 'rule-1', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] }];
+    const rule = { id: 'pr-a1b2c3d4', headerName: 'Authorization', headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.sig', domains: ['*.openheaders.io'] };
+    const existing = [{ id: 'pr-a1b2c3d4', headerName: 'Authorization', headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.sig', domains: ['*.openheaders.io'] }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 
   it('detects duplicate by header name, value, and domains', () => {
-    const rule = { id: 'rule-new', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] };
-    const existing = [{ id: 'rule-old', headerName: 'X-Key', headerValue: 'v1', domains: ['*.example.com'] }];
+    const rule = { id: 'pr-new-id', headerName: 'Authorization', headerValue: 'Bearer token123', domains: ['*.openheaders.io', 'api.partner-service.io:8443'] };
+    const existing = [{ id: 'pr-old-id', headerName: 'Authorization', headerValue: 'Bearer token123', domains: ['api.partner-service.io:8443', '*.openheaders.io'] }];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 
@@ -303,12 +328,22 @@ describe('isEnvironmentVariableDuplicate', () => {
     expect(isEnvironmentVariableDuplicate('VAR', 'dev', { dev: { VAR: 'hello' } })).toBe(true);
   });
 
-  it('handles object-form variables', () => {
-    expect(isEnvironmentVariableDuplicate('VAR', 'dev', { dev: { VAR: { value: 'x' } } })).toBe(true);
+  it('handles object-form variables with enterprise JWT value', () => {
+    expect(isEnvironmentVariableDuplicate('BEARER_TOKEN', 'Production', {
+      Production: { BEARER_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig' } },
+    })).toBe(true);
   });
 
-  it('returns false for object-form variable with empty value', () => {
-    expect(isEnvironmentVariableDuplicate('VAR', 'dev', { dev: { VAR: { value: '' } } })).toBe(false);
+  it('returns false for object-form variable with empty value (schema placeholder)', () => {
+    expect(isEnvironmentVariableDuplicate('OAUTH2_CLIENT_SECRET', 'Production', {
+      Production: { OAUTH2_CLIENT_SECRET: { value: '' } },
+    })).toBe(false);
+  });
+
+  it('returns false for object-form variable with null value', () => {
+    expect(isEnvironmentVariableDuplicate('API_KEY', 'Staging', {
+      Staging: { API_KEY: { value: null } },
+    })).toBe(false);
   });
 });
 

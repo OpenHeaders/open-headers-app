@@ -9,18 +9,52 @@ import type { Source } from '../../../../src/types/source';
 // ---------------------------------------------------------------------------
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
+    appVersion: '3.2.0',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     sources: [],
+    environments: {},
+    workspaces: [],
     exportSources: vi.fn(() => []),
+    addSource: vi.fn(),
     removeSource: vi.fn(),
+    createWorkspace: vi.fn(),
+    switchWorkspace: vi.fn(),
+    setVariable: vi.fn(),
+    generateEnvironmentSchema: vi.fn(() => ({ environments: {}, variableDefinitions: {} })),
+    createEnvironment: vi.fn(),
     ...overrides,
   } as ExportImportDependencies;
 }
 
 function validSource(overrides: Partial<Source> = {}): Source {
   return {
-    sourceId: 's1',
+    sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    sourceType: 'http',
+    sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
+    sourceName: 'Production API Gateway Token',
+    sourceContent: null,
+    ...overrides,
+  } as Source;
+}
+
+function makeFileSource(overrides: Partial<Source> = {}): Source {
+  return {
+    sourceId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
     sourceType: 'file',
-    sourcePath: '/tmp/data.json',
+    sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json',
+    sourceName: 'Staging Token File',
+    sourceContent: null,
+    ...overrides,
+  } as Source;
+}
+
+function makeEnvSource(overrides: Partial<Source> = {}): Source {
+  return {
+    sourceId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    sourceType: 'env',
+    sourcePath: 'OAUTH2_ACCESS_TOKEN',
+    sourceName: 'OAuth2 Access Token (env)',
+    sourceContent: null,
     ...overrides,
   } as Source;
 }
@@ -43,7 +77,6 @@ describe('SourcesHandler.validateSourcesForExport', () => {
 
   it('rejects invalid sources within array', () => {
     const handler = new SourcesHandler(makeDeps());
-    // Intentionally invalid source to test validation
     const r = handler.validateSourcesForExport([{ sourceType: 'file' } as Source]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Source 1');
@@ -55,9 +88,18 @@ describe('SourcesHandler.validateSourcesForExport', () => {
     expect(r.success).toBe(true);
   });
 
+  it('accepts mixed enterprise source types', () => {
+    const handler = new SourcesHandler(makeDeps());
+    const r = handler.validateSourcesForExport([
+      validSource(),
+      makeFileSource(),
+      makeEnvSource(),
+    ]);
+    expect(r.success).toBe(true);
+  });
+
   it('aggregates multiple source errors', () => {
     const handler = new SourcesHandler(makeDeps());
-    // Intentionally invalid sources to test validation
     const r = handler.validateSourcesForExport([{} as Source, {} as Source]);
     expect(r.success).toBe(false);
     expect(r.error).toContain('Source 1');
@@ -82,21 +124,22 @@ describe('SourcesHandler.getSourcesStatistics', () => {
     expect(stats.total).toBe(0);
   });
 
-  it('counts sources by type', () => {
+  it('counts enterprise sources by type', () => {
     const handler = new SourcesHandler(makeDeps());
     const stats = handler.getSourcesStatistics([
-      validSource({ sourceType: 'file' }),
-      validSource({ sourceType: 'http', sourceId: 's2', sourcePath: 'https://x.com' }),
-      validSource({ sourceType: 'file', sourceId: 's3' }),
+      validSource(),
+      makeFileSource(),
+      makeEnvSource(),
+      validSource({ sourceId: 'd4e5f6a7-b890-1234-abcd-567890123456', sourcePath: 'https://api.openheaders.io:8443/v2/config' }),
     ]);
-    expect(stats.total).toBe(3);
-    expect(stats.byType.file).toBe(2);
-    expect(stats.byType.http).toBe(1);
+    expect(stats).toEqual({
+      total: 4,
+      byType: { http: 2, file: 1, env: 1 },
+    });
   });
 
   it('counts unknown type as "unknown"', () => {
     const handler = new SourcesHandler(makeDeps());
-    // Intentionally missing sourceType to test unknown type handling
     const stats = handler.getSourcesStatistics([{ sourceId: 'x' } as Source]);
     expect(stats.byType.unknown).toBe(1);
   });
@@ -114,12 +157,13 @@ describe('SourcesHandler.exportSources', () => {
 
   it('returns valid sources, filtering invalid ones', async () => {
     const handler = new SourcesHandler(
-      // Intentionally invalid source to test filtering
       makeDeps({ sources: [validSource(), { bad: true } as unknown as Source] })
     );
     const result = await handler.exportSources({ selectedItems: { sources: true } });
     expect(result).toHaveLength(1);
-    expect(result![0].sourceId).toBe('s1');
+    expect(result![0].sourceId).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    expect(result![0].sourceType).toBe('http');
+    expect(result![0].sourcePath).toBe('https://auth.openheaders.internal:8443/oauth2/token');
   });
 
   it('returns empty array when no sources exist', async () => {
@@ -185,11 +229,38 @@ describe('SourcesHandler.importSources', () => {
       .mockResolvedValueOnce({ imported: true });
 
     const stats = await handler.importSources(
-      [validSource(), validSource({ sourceId: 's2' }), validSource({ sourceId: 's3' })],
+      [
+        validSource(),
+        makeFileSource(),
+        makeEnvSource(),
+      ],
       { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
     );
-    expect(stats.imported).toBe(2);
-    expect(stats.skipped).toBe(1);
+    expect(stats).toEqual({
+      imported: 2,
+      skipped: 1,
+      errors: [],
+    });
+  });
+
+  it('imports enterprise sources in replace mode clearing existing first', async () => {
+    const existingSources = [validSource(), makeFileSource()];
+    const removeSource = vi.fn().mockResolvedValue(true);
+    const handler = new SourcesHandler(makeDeps({
+      exportSources: () => existingSources,
+      removeSource,
+    }));
+    vi.spyOn(handler, '_importSingleSource').mockResolvedValue({ imported: true });
+
+    const stats = await handler.importSources(
+      [makeEnvSource()],
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+    );
+
+    expect(removeSource).toHaveBeenCalledTimes(2);
+    expect(removeSource).toHaveBeenCalledWith('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    expect(removeSource).toHaveBeenCalledWith('b2c3d4e5-f6a7-8901-bcde-f12345678901');
+    expect(stats.imported).toBe(1);
   });
 });
 

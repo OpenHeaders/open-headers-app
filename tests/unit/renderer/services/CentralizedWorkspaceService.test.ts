@@ -329,13 +329,13 @@ describe('CWS state management patterns', () => {
   describe('source operations', () => {
     it('updateSource merges refreshOptions', () => {
       const initialSources: TestSource[] = [
-        { sourceId: '1', sourceType: 'http', refreshOptions: { enabled: true, interval: 5000 } },
+        { sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourceType: 'http', refreshOptions: { enabled: true, interval: 5000 } },
       ];
       manager.state.sources = initialSources;
 
       const updates: Partial<TestSource> = { refreshOptions: { interval: 10000 } };
       const sources = initialSources.map((source) => {
-        if (source.sourceId === '1') {
+        if (source.sourceId === 'a1b2c3d4-e5f6-7890-abcd-ef1234567890') {
           const mergedUpdates = { ...updates };
           if (updates.refreshOptions && source.refreshOptions) {
             mergedUpdates.refreshOptions = {
@@ -353,21 +353,28 @@ describe('CWS state management patterns', () => {
     });
 
     it('removeSource filters by id', () => {
-      const initialSources: TestSource[] = [{ sourceId: '1' }, { sourceId: '2' }, { sourceId: '3' }];
+      const initialSources: TestSource[] = [
+        { sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
+        { sourceId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901' },
+        { sourceId: 'c3d4e5f6-a7b8-9012-cdef-123456789012' },
+      ];
       manager.state.sources = initialSources;
-      const sources = initialSources.filter((s) => s.sourceId !== '2');
+      const sources = initialSources.filter((s) => s.sourceId !== 'b2c3d4e5-f6a7-8901-bcde-f12345678901');
       expect(sources).toHaveLength(2);
-      expect(sources.map((s) => s.sourceId)).toEqual(['1', '3']);
+      expect(sources.map((s) => s.sourceId)).toEqual([
+        'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        'c3d4e5f6-a7b8-9012-cdef-123456789012',
+      ]);
     });
 
     it('updateSourceActivation activates and clears dependencies', () => {
       const initialSources: TestSource[] = [
-        { sourceId: '1', activationState: 'waiting_for_deps', missingDependencies: ['KEY'] },
+        { sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', activationState: 'waiting_for_deps', missingDependencies: ['OAUTH2_CLIENT_SECRET'] },
       ];
       manager.state.sources = initialSources;
 
       const sources = initialSources.map((source) => {
-        if (source.sourceId === '1') {
+        if (source.sourceId === 'a1b2c3d4-e5f6-7890-abcd-ef1234567890') {
           return {
             ...source,
             activationState: 'active',
@@ -404,13 +411,13 @@ describe('CWS state management patterns', () => {
   describe('workspace metadata update', () => {
     it('updates metadata for matching workspace', () => {
       const initialWorkspaces: TestWorkspace[] = [
-        { id: 'ws1', name: 'Test', metadata: { sourceCount: 0 } },
-        { id: 'ws2', name: 'Other', metadata: { sourceCount: 3 } },
+        { id: 'ws-a1b2c3d4-e5f6-7890', name: 'OpenHeaders — Staging', metadata: { sourceCount: 0 } },
+        { id: 'ws-b2c3d4e5-f6a7-8901', name: 'OpenHeaders — Production', metadata: { sourceCount: 3 } },
       ];
       manager.state.workspaces = initialWorkspaces;
 
       const workspaces = initialWorkspaces.map((w) =>
-        w.id === 'ws1'
+        w.id === 'ws-a1b2c3d4-e5f6-7890'
           ? { ...w, metadata: { ...w.metadata, sourceCount: 5 }, updatedAt: new Date().toISOString() }
           : w
       );
@@ -508,7 +515,15 @@ describe('CWS state management patterns', () => {
 
   describe('rule count calculation', () => {
     it('calculates total rules across all types', () => {
-      const rules: TestRules = { header: [{ id: '1' }, { id: '2' }, { id: '3' }], request: [{ id: '4' }], response: [{ id: '5' }, { id: '6' }] };
+      const rules: TestRules = {
+        header: [
+          { id: 'rule-a1b2c3d4' },
+          { id: 'rule-b2c3d4e5' },
+          { id: 'rule-c3d4e5f6' },
+        ],
+        request: [{ id: 'rule-d4e5f6a7' }],
+        response: [{ id: 'rule-e5f6a7b8' }, { id: 'rule-f6a7b890' }],
+      };
       const totalRules = Object.values(rules).reduce(
         (sum: number, ruleArray: { id: string }[]) => sum + ruleArray.length,
         0
