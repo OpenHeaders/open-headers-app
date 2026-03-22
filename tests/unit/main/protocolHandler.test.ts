@@ -9,17 +9,56 @@ function makePayload(overrides: Record<string, unknown>): ProtocolPayload {
     return overrides as unknown as ProtocolPayload;
 }
 
-function makeCompressedPayloadUrl(payload: Record<string, unknown>, compression: 'gzip' | 'deflate' = 'gzip'): string {
+function makeCompressedUrl(payload: Record<string, unknown>, compression: 'gzip' | 'deflate' = 'gzip'): string {
     const json = JSON.stringify(payload);
-    let compressed: Buffer;
-    if (compression === 'deflate') {
-        compressed = zlib.deflateSync(json);
-    } else {
-        compressed = zlib.gzipSync(json, { level: 9 });
-    }
+    const compressed = compression === 'deflate'
+        ? zlib.deflateSync(json)
+        : zlib.gzipSync(json, { level: 9 });
     const param = compressed.toString('base64url');
     return `openheaders://open?payload=${param}`;
 }
+
+// Enterprise-realistic invite payload
+const ENTERPRISE_INVITE = {
+    action: 'team-invite',
+    version: DATA_FORMAT_VERSION,
+    data: {
+        workspaceName: 'OpenHeaders — Production Configuration',
+        repoUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
+        branch: 'workspace/production-env',
+        configPath: 'config/open-headers.json',
+        authType: 'token',
+        inviterName: 'admin@openheaders.io',
+        description: 'Production header config for the platform engineering team'
+    }
+};
+
+// Enterprise-realistic environment import payload
+const ENTERPRISE_ENV_IMPORT = {
+    action: 'environment-import',
+    version: DATA_FORMAT_VERSION,
+    data: {
+        environmentSchema: {
+            environments: {
+                production: {
+                    variables: [
+                        { name: 'OAUTH_CLIENT_ID', isSecret: false },
+                        { name: 'OAUTH_CLIENT_SECRET', isSecret: true },
+                        { name: 'DATABASE_URL', isSecret: true },
+                        { name: 'API_GATEWAY_URL', isSecret: false },
+                        { name: 'REDIS_CONNECTION_STRING', isSecret: true }
+                    ]
+                },
+                staging: {
+                    variables: [
+                        { name: 'OAUTH_CLIENT_ID', isSecret: false },
+                        { name: 'OAUTH_CLIENT_SECRET', isSecret: true }
+                    ]
+                }
+            }
+        }
+    }
+};
 
 describe('ProtocolHandler', () => {
     let handler: ProtocolHandler;
@@ -30,7 +69,7 @@ describe('ProtocolHandler', () => {
 
     describe('validateProtocolUrl', () => {
         describe('valid URLs', () => {
-            it('accepts valid URL with payload parameter', () => {
+            it('accepts valid URL with payload parameter and returns full shape', () => {
                 const result = handler.validateProtocolUrl('openheaders://open?payload=abc123def456');
                 expect(result).toEqual({
                     valid: true,
@@ -38,6 +77,7 @@ describe('ProtocolHandler', () => {
                     host: 'open'
                 });
                 expect(result.urlObj!.protocol).toBe('openheaders:');
+                expect(result.urlObj!.hostname).toBe('open');
             });
 
             it('accepts URL with g parameter (gzip)', () => {
@@ -49,17 +89,25 @@ describe('ProtocolHandler', () => {
             it('accepts URL with d parameter (deflate)', () => {
                 const result = handler.validateProtocolUrl('openheaders://open?d=eJzLSM3JyQcABJgB8Q');
                 expect(result.valid).toBe(true);
+                expect(result.host).toBe('open');
             });
 
             it('accepts URL with b85 parameter (base85)', () => {
-                const result = handler.validateProtocolUrl('openheaders://open?b85=0123456789');
+                const result = handler.validateProtocolUrl('openheaders://open?b85=0123456789ABCDEFabcdef');
                 expect(result.valid).toBe(true);
             });
 
-            it('accepts URL with very long payload (enterprise-sized)', () => {
-                const longPayload = 'A'.repeat(10000);
+            it('accepts URL with enterprise-sized payload (10KB+)', () => {
+                const longPayload = 'A'.repeat(15000);
                 const result = handler.validateProtocolUrl(`openheaders://open?payload=${longPayload}`);
                 expect(result.valid).toBe(true);
+            });
+
+            it('accepts real compressed enterprise invite URL', () => {
+                const url = makeCompressedUrl(ENTERPRISE_INVITE);
+                const result = handler.validateProtocolUrl(url);
+                expect(result.valid).toBe(true);
+                expect(result.host).toBe('open');
             });
         });
 
@@ -99,6 +147,12 @@ describe('ProtocolHandler', () => {
 
             it('rejects legacy join host', () => {
                 const result = handler.validateProtocolUrl('openheaders://join?payload=abc');
+                expect(result.valid).toBe(false);
+                expect(result.error).toContain('Expected: openheaders://open?payload=...');
+            });
+
+            it('rejects legacy env-config host', () => {
+                const result = handler.validateProtocolUrl('openheaders://env-config?payload=abc');
                 expect(result.valid).toBe(false);
                 expect(result.error).toContain('Expected: openheaders://open?payload=...');
             });
@@ -161,10 +215,8 @@ describe('ProtocolHandler', () => {
                 expect(envData.environments.production).toBeDefined();
                 expect(envData.environments.staging).toBeDefined();
 
-                expect(envData.environments.development.API_KEY.value).toBe('ohk_test_Q3W4E5R6T7Y8U9I0');
-                expect(envData.environments.development.API_KEY.isSecret).toBe(true);
-                expect(envData.environments.development.BASE_URL.value).toBe('https://api.dev.openheaders.io');
-                expect(envData.environments.development.BASE_URL.isSecret).toBeUndefined();
+                expect(envData.environments.development.API_KEY).toEqual({ value: 'ohk_test_Q3W4E5R6T7Y8U9I0', isSecret: true });
+                expect(envData.environments.development.BASE_URL).toEqual({ value: 'https://api.dev.openheaders.io' });
 
                 expect(envData.environments.production.API_KEY.value).toBe('ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
                 expect(envData.environments.staging.API_KEY.value).toBe('sk_stg_M1N2O3P4Q5R6S7T8');
@@ -174,20 +226,35 @@ describe('ProtocolHandler', () => {
                 const result = handler.expandOptimizedPayload(makePayload({
                     d: {
                         e: {
-                            qa: { API_KEY: { val: 'qa-key' } },
-                            'pre-production': { API_KEY: { val: 'preprod-key' } }
+                            qa: { API_KEY: { val: 'qa-key-openheaders-io' } },
+                            'pre-production': { API_KEY: { val: 'preprod-key-openheaders-io' } }
                         }
                     }
                 }));
 
                 const envData = result.data as { environments: Record<string, Record<string, { value: string }>> };
-                expect(envData.environments.qa).toBeDefined();
-                expect(envData.environments['pre-production']).toBeDefined();
+                expect(envData.environments.qa.API_KEY.value).toBe('qa-key-openheaders-io');
+                expect(envData.environments['pre-production'].API_KEY.value).toBe('preprod-key-openheaders-io');
+            });
+
+            it('handles variable without secret flag as non-secret', () => {
+                const result = handler.expandOptimizedPayload(makePayload({
+                    d: {
+                        e: {
+                            dev: {
+                                PUBLIC_URL: { val: 'https://app.openheaders.io' }
+                            }
+                        }
+                    }
+                }));
+
+                const envData = result.data as { environments: Record<string, Record<string, { value: string; isSecret?: boolean }>> };
+                expect(envData.environments.development.PUBLIC_URL.isSecret).toBeUndefined();
             });
         });
 
         describe('environment schema expansion', () => {
-            it('expands minified schema to full format', () => {
+            it('expands minified schema to full format with all env names', () => {
                 const result = handler.expandOptimizedPayload(makePayload({
                     d: {
                         es: {
@@ -212,18 +279,22 @@ describe('ProtocolHandler', () => {
 
                 const schemaData = result.data as { environmentSchema: { environments: Record<string, { variables: Array<{ name: string; isSecret: boolean }> }> } };
                 const devVars = schemaData.environmentSchema.environments.development.variables;
-                expect(devVars).toHaveLength(3);
-                expect(devVars[0]).toEqual({ name: 'OAUTH_CLIENT_ID', isSecret: false });
-                expect(devVars[1]).toEqual({ name: 'OAUTH_CLIENT_SECRET', isSecret: true });
-                expect(devVars[2]).toEqual({ name: 'DATABASE_URL', isSecret: true });
+                expect(devVars).toEqual([
+                    { name: 'OAUTH_CLIENT_ID', isSecret: false },
+                    { name: 'OAUTH_CLIENT_SECRET', isSecret: true },
+                    { name: 'DATABASE_URL', isSecret: true }
+                ]);
 
                 const prodVars = schemaData.environmentSchema.environments.production.variables;
-                expect(prodVars).toHaveLength(2);
+                expect(prodVars).toEqual([
+                    { name: 'OAUTH_CLIENT_ID', isSecret: false },
+                    { name: 'OAUTH_CLIENT_SECRET', isSecret: true }
+                ]);
             });
         });
 
         describe('team invite field expansion', () => {
-            it('expands all minified team invite fields', () => {
+            it('expands all minified team invite fields to full names', () => {
                 const result = handler.expandOptimizedPayload(makePayload({
                     d: {
                         wn: 'OpenHeaders — Platform Team Config',
@@ -237,13 +308,15 @@ describe('ProtocolHandler', () => {
                 }));
 
                 const inviteData = result.data as Record<string, string>;
-                expect(inviteData.workspaceName).toBe('OpenHeaders — Platform Team Config');
-                expect(inviteData.repoUrl).toBe('https://gitlab.openheaders.io/platform/shared-headers.git');
-                expect(inviteData.branch).toBe('workspace/production-env');
-                expect(inviteData.configPath).toBe('config/open-headers.json');
-                expect(inviteData.authType).toBe('token');
-                expect(inviteData.inviterName).toBe('admin@openheaders.io');
-                expect(inviteData.description).toBe('Production header configuration for the platform team');
+                expect(inviteData).toEqual(expect.objectContaining({
+                    workspaceName: 'OpenHeaders — Platform Team Config',
+                    repoUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
+                    branch: 'workspace/production-env',
+                    configPath: 'config/open-headers.json',
+                    authType: 'token',
+                    inviterName: 'admin@openheaders.io',
+                    description: 'Production header configuration for the platform team'
+                }));
             });
         });
 
@@ -271,6 +344,16 @@ describe('ProtocolHandler', () => {
                 expect(result.a).toBeUndefined();
                 expect(result.v).toBeUndefined();
                 expect(result.d).toBeUndefined();
+
+                const data = result.data as {
+                    environments: Record<string, Record<string, { value: string; isSecret: boolean }>>;
+                    environmentSchema: { environments: Record<string, { variables: Array<{ name: string; isSecret: boolean }> }> }
+                };
+                expect(data.environments.production.AUTH_TOKEN.value).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.xxx.yyy');
+                expect(data.environments.production.AUTH_TOKEN.isSecret).toBe(true);
+                expect(data.environmentSchema.environments.production.variables).toEqual([
+                    { name: 'AUTH_TOKEN', isSecret: true }
+                ]);
             });
         });
     });
@@ -286,13 +369,31 @@ describe('ProtocolHandler', () => {
             expect(result.length).toBeGreaterThan(0);
         });
 
-        it('handles longer input strings', () => {
+        it('handles longer input strings (multiple of 5)', () => {
             const result = handler.base85Decode('0123456789ABCDE');
             expect(result.length).toBeGreaterThan(0);
         });
 
         it('handles partial chunks (not multiple of 5)', () => {
             const result = handler.base85Decode('0123');
+            expect(Buffer.isBuffer(result)).toBe(true);
+            expect(result.length).toBeGreaterThan(0);
+        });
+
+        it('handles empty string', () => {
+            const result = handler.base85Decode('');
+            expect(Buffer.isBuffer(result)).toBe(true);
+            expect(result.length).toBe(0);
+        });
+
+        it('handles single character', () => {
+            const result = handler.base85Decode('A');
+            expect(Buffer.isBuffer(result)).toBe(true);
+        });
+
+        it('handles alphabet boundary characters', () => {
+            // First and last chars of the base85 alphabet
+            const result = handler.base85Decode('0~');
             expect(Buffer.isBuffer(result)).toBe(true);
         });
     });
@@ -326,15 +427,9 @@ describe('ProtocolHandler', () => {
     });
 
     describe('constructor and state', () => {
-        it('initializes with null mainWindow', () => {
+        it('initializes with all fields in expected default state', () => {
             expect(handler.mainWindow).toBeNull();
-        });
-
-        it('initializes with rendererReady = false', () => {
             expect(handler.rendererReady).toBe(false);
-        });
-
-        it('initializes with no pending invites', () => {
             expect(handler.pendingInvite).toBeNull();
             expect(handler.pendingEnvironmentImport).toBeNull();
         });
@@ -344,6 +439,14 @@ describe('ProtocolHandler', () => {
         it('marks renderer as ready', () => {
             handler.setRendererReady();
             expect(handler.rendererReady).toBe(true);
+        });
+    });
+
+    describe('setMainWindow', () => {
+        it('stores window reference', () => {
+            const win = { webContents: { send: () => {}, isLoading: () => false } } as unknown as Parameters<typeof handler.setMainWindow>[0];
+            handler.setMainWindow(win);
+            expect(handler.mainWindow).toBe(win);
         });
     });
 
@@ -366,23 +469,49 @@ describe('ProtocolHandler', () => {
             });
         });
 
-        it('calls handleProtocolError for invalid invite data (missing workspaceName)', () => {
-            // This should not store a pending invite
+        it('rejects invite with empty workspaceName', () => {
             handler.processTeamWorkspaceInvite({
                 workspaceName: '',
                 repoUrl: 'https://gitlab.openheaders.io/repo.git'
             });
-
             expect(handler.pendingInvite).toBeNull();
         });
 
-        it('calls handleProtocolError for invalid invite data (missing repoUrl)', () => {
+        it('rejects invite with empty repoUrl', () => {
             handler.processTeamWorkspaceInvite({
-                workspaceName: 'Test Workspace',
+                workspaceName: 'OpenHeaders — Test Workspace',
                 repoUrl: ''
             });
-
             expect(handler.pendingInvite).toBeNull();
+        });
+
+        it('stores as pending when renderer is not ready', () => {
+            const sentMessages: Array<{ channel: string; data: unknown }> = [];
+            const win = {
+                webContents: {
+                    send: (channel: string, data: unknown) => { sentMessages.push({ channel, data }); },
+                    isLoading: () => false,
+                },
+                show: () => {},
+                focus: () => {},
+                isMinimized: () => false,
+                isDestroyed: () => false,
+                restore: () => {},
+            } as unknown as Parameters<typeof handler.setMainWindow>[0];
+            handler.setMainWindow(win);
+            // rendererReady is still false
+
+            handler.processTeamWorkspaceInvite({
+                workspaceName: 'OpenHeaders — QA Config',
+                repoUrl: 'https://github.com/openheaders/qa-headers.git',
+                inviterName: 'qa-lead@openheaders.io'
+            });
+
+            expect(handler.pendingInvite).toEqual({
+                workspaceName: 'OpenHeaders — QA Config',
+                repoUrl: 'https://github.com/openheaders/qa-headers.git',
+                inviterName: 'qa-lead@openheaders.io'
+            });
         });
     });
 
@@ -393,8 +522,14 @@ describe('ProtocolHandler', () => {
                     environments: {
                         production: {
                             variables: [
-                                { name: 'API_KEY', isSecret: true },
-                                { name: 'BASE_URL', isSecret: false }
+                                { name: 'OAUTH_CLIENT_ID', isSecret: false },
+                                { name: 'OAUTH_CLIENT_SECRET', isSecret: true },
+                                { name: 'DATABASE_URL', isSecret: true }
+                            ]
+                        },
+                        staging: {
+                            variables: [
+                                { name: 'OAUTH_CLIENT_ID', isSecret: false }
                             ]
                         }
                     }
@@ -405,79 +540,113 @@ describe('ProtocolHandler', () => {
             expect(handler.pendingEnvironmentImport).toEqual(envData);
         });
 
-        it('calls handleProtocolError for invalid data (no schema or environments)', () => {
+        it('accepts import with environments values (no schema)', () => {
+            const envData = {
+                environments: {
+                    production: {
+                        API_KEY: { value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc', isSecret: true }
+                    }
+                }
+            };
+            handler.processEnvironmentConfigImport(envData);
+            expect(handler.pendingEnvironmentImport).toEqual(envData);
+        });
+
+        it('rejects invalid data with neither schema nor environments', () => {
             handler.processEnvironmentConfigImport({});
             expect(handler.pendingEnvironmentImport).toBeNull();
         });
     });
 
-    describe('handleUnifiedProtocol — round-trip with real payloads', () => {
-        it('processes a gzip-compressed team invite payload', () => {
-            const payload = {
-                action: 'team-invite',
-                version: DATA_FORMAT_VERSION,
-                data: {
-                    workspaceName: 'OpenHeaders — Production Configuration',
-                    repoUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
-                    branch: 'workspace/production-env',
-                    configPath: 'config/open-headers.json',
-                    authType: 'token',
-                    inviterName: 'admin@openheaders.io',
-                    description: 'Production header config'
-                }
+    describe('processPendingInvite', () => {
+        it('sends pending invite to window and clears it', () => {
+            const sentMessages: Array<{ channel: string; data: unknown }> = [];
+            const win = {
+                webContents: {
+                    send: (channel: string, data: unknown) => { sentMessages.push({ channel, data }); },
+                    isLoading: () => false,
+                },
+            } as unknown as Parameters<typeof handler.processPendingInvite>[0];
+
+            handler.pendingInvite = {
+                workspaceName: 'OpenHeaders — Staging',
+                repoUrl: 'https://gitlab.openheaders.io/platform/headers.git',
+                inviterName: 'admin@openheaders.io'
             };
 
-            const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
+            handler.processPendingInvite(win);
 
-            handler.handleUnifiedProtocol(payloadParam, 'gzip');
-
-            expect(handler.pendingInvite).toEqual({
-                workspaceName: 'OpenHeaders — Production Configuration',
-                repoUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
-                branch: 'workspace/production-env',
-                configPath: 'config/open-headers.json',
-                authType: 'token',
-                inviterName: 'admin@openheaders.io',
-                description: 'Production header config'
+            expect(sentMessages).toContainEqual({
+                channel: 'process-team-workspace-invite',
+                data: {
+                    workspaceName: 'OpenHeaders — Staging',
+                    repoUrl: 'https://gitlab.openheaders.io/platform/headers.git',
+                    inviterName: 'admin@openheaders.io'
+                }
             });
+            expect(handler.pendingInvite).toBeNull();
         });
 
-        it('processes a gzip-compressed environment import payload', () => {
-            const payload = {
-                action: 'environment-import',
-                version: DATA_FORMAT_VERSION,
-                data: {
-                    environmentSchema: {
-                        environments: {
-                            staging: {
-                                variables: [
-                                    { name: 'AUTH_TOKEN', isSecret: true },
-                                    { name: 'API_URL', isSecret: false }
-                                ]
-                            }
+        it('sends pending environment import to window and clears it', () => {
+            const sentMessages: Array<{ channel: string; data: unknown }> = [];
+            const win = {
+                webContents: {
+                    send: (channel: string, data: unknown) => { sentMessages.push({ channel, data }); },
+                    isLoading: () => false,
+                },
+            } as unknown as Parameters<typeof handler.processPendingInvite>[0];
+
+            const envData = {
+                environmentSchema: {
+                    environments: {
+                        production: {
+                            variables: [{ name: 'API_KEY', isSecret: true }]
                         }
                     }
                 }
             };
+            handler.pendingEnvironmentImport = envData;
 
-            const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
+            handler.processPendingInvite(win);
+
+            expect(sentMessages).toContainEqual({
+                channel: 'process-environment-config-import',
+                data: envData
+            });
+            expect(handler.pendingEnvironmentImport).toBeNull();
+        });
+
+        it('does nothing when no pending data exists', () => {
+            const sentMessages: Array<{ channel: string; data: unknown }> = [];
+            const win = {
+                webContents: {
+                    send: (channel: string, data: unknown) => { sentMessages.push({ channel, data }); },
+                    isLoading: () => false,
+                },
+            } as unknown as Parameters<typeof handler.processPendingInvite>[0];
+
+            handler.processPendingInvite(win);
+            expect(sentMessages).toHaveLength(0);
+        });
+    });
+
+    describe('handleUnifiedProtocol — round-trip with real payloads', () => {
+        it('processes a gzip-compressed enterprise team invite payload', () => {
+            const compressed = zlib.gzipSync(JSON.stringify(ENTERPRISE_INVITE), { level: 9 });
             const payloadParam = compressed.toString('base64url');
 
             handler.handleUnifiedProtocol(payloadParam, 'gzip');
 
-            expect(handler.pendingEnvironmentImport).toEqual({
-                environmentSchema: {
-                    environments: {
-                        staging: {
-                            variables: [
-                                { name: 'AUTH_TOKEN', isSecret: true },
-                                { name: 'API_URL', isSecret: false }
-                            ]
-                        }
-                    }
-                }
-            });
+            expect(handler.pendingInvite).toEqual(ENTERPRISE_INVITE.data);
+        });
+
+        it('processes a gzip-compressed enterprise environment import payload', () => {
+            const compressed = zlib.gzipSync(JSON.stringify(ENTERPRISE_ENV_IMPORT), { level: 9 });
+            const payloadParam = compressed.toString('base64url');
+
+            handler.handleUnifiedProtocol(payloadParam, 'gzip');
+
+            expect(handler.pendingEnvironmentImport).toEqual(ENTERPRISE_ENV_IMPORT.data);
         });
 
         it('processes a deflate-compressed payload', () => {
@@ -485,9 +654,9 @@ describe('ProtocolHandler', () => {
                 action: 'team-invite',
                 version: DATA_FORMAT_VERSION,
                 data: {
-                    workspaceName: 'Deflate Test Workspace',
-                    repoUrl: 'https://github.com/openheaders/test.git',
-                    inviterName: 'test-user'
+                    workspaceName: 'OpenHeaders — Deflate Test Workspace',
+                    repoUrl: 'https://github.com/openheaders/deflate-test.git',
+                    inviterName: 'test-user@openheaders.io'
                 }
             };
 
@@ -497,9 +666,9 @@ describe('ProtocolHandler', () => {
             handler.handleUnifiedProtocol(payloadParam, 'deflate');
 
             expect(handler.pendingInvite).toEqual({
-                workspaceName: 'Deflate Test Workspace',
-                repoUrl: 'https://github.com/openheaders/test.git',
-                inviterName: 'test-user'
+                workspaceName: 'OpenHeaders — Deflate Test Workspace',
+                repoUrl: 'https://github.com/openheaders/deflate-test.git',
+                inviterName: 'test-user@openheaders.io'
             });
         });
 
@@ -508,39 +677,34 @@ describe('ProtocolHandler', () => {
                 action: 'team-invite',
                 version: DATA_FORMAT_VERSION,
                 data: {
-                    workspaceName: 'Legacy Format Workspace',
+                    workspaceName: 'OpenHeaders Legacy Format Workspace',
                     repoUrl: 'https://github.com/openheaders/legacy.git',
-                    inviterName: 'legacy-user'
+                    inviterName: 'legacy-user@openheaders.io'
                 }
             };
 
-            const payloadParam = btoa(JSON.stringify(payload));
-
+            // btoa only handles ASCII, so use Buffer for the encoding
+            const payloadParam = Buffer.from(JSON.stringify(payload)).toString('base64');
             handler.handleUnifiedProtocol(payloadParam, 'gzip');
 
             expect(handler.pendingInvite).toEqual({
-                workspaceName: 'Legacy Format Workspace',
+                workspaceName: 'OpenHeaders Legacy Format Workspace',
                 repoUrl: 'https://github.com/openheaders/legacy.git',
-                inviterName: 'legacy-user'
+                inviterName: 'legacy-user@openheaders.io'
             });
         });
 
         it('rejects payload missing action field', () => {
             const payload = { version: DATA_FORMAT_VERSION, data: { test: true } };
             const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
-
-            // Should not throw, but should not set pending invite
-            handler.handleUnifiedProtocol(payloadParam, 'gzip');
+            handler.handleUnifiedProtocol(compressed.toString('base64url'), 'gzip');
             expect(handler.pendingInvite).toBeNull();
         });
 
         it('rejects payload missing data field', () => {
             const payload = { action: 'team-invite', version: DATA_FORMAT_VERSION };
             const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
-
-            handler.handleUnifiedProtocol(payloadParam, 'gzip');
+            handler.handleUnifiedProtocol(compressed.toString('base64url'), 'gzip');
             expect(handler.pendingInvite).toBeNull();
         });
 
@@ -551,15 +715,12 @@ describe('ProtocolHandler', () => {
                 data: { foo: 'bar' }
             };
             const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
-
-            handler.handleUnifiedProtocol(payloadParam, 'gzip');
+            handler.handleUnifiedProtocol(compressed.toString('base64url'), 'gzip');
             expect(handler.pendingInvite).toBeNull();
             expect(handler.pendingEnvironmentImport).toBeNull();
         });
 
         it('handles empty payload parameter gracefully', () => {
-            // Should not throw
             handler.handleUnifiedProtocol('', 'gzip');
             expect(handler.pendingInvite).toBeNull();
         });
@@ -569,7 +730,7 @@ describe('ProtocolHandler', () => {
             expect(handler.pendingInvite).toBeNull();
         });
 
-        it('processes ultra-optimized payload with expansion', () => {
+        it('processes ultra-optimized payload with full expansion', () => {
             const minified = {
                 a: 'ti',
                 v: '3',
@@ -577,23 +738,65 @@ describe('ProtocolHandler', () => {
                     wn: 'OpenHeaders — QA Environment',
                     ru: 'https://gitlab.openheaders.io/qa/headers.git',
                     b: 'workspace/qa',
+                    cp: 'config/open-headers.json',
                     at: 'token',
-                    in: 'qa-admin@openheaders.io'
+                    in: 'qa-admin@openheaders.io',
+                    desc: 'QA environment header configuration'
                 }
             };
 
             const compressed = zlib.gzipSync(JSON.stringify(minified), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
-
-            handler.handleUnifiedProtocol(payloadParam, 'gzip');
+            handler.handleUnifiedProtocol(compressed.toString('base64url'), 'gzip');
 
             expect(handler.pendingInvite).toEqual({
                 workspaceName: 'OpenHeaders — QA Environment',
                 repoUrl: 'https://gitlab.openheaders.io/qa/headers.git',
                 branch: 'workspace/qa',
+                configPath: 'config/open-headers.json',
                 authType: 'token',
-                inviterName: 'qa-admin@openheaders.io'
+                inviterName: 'qa-admin@openheaders.io',
+                description: 'QA environment header configuration'
             });
+        });
+
+        it('processes minified environment import with variables and schema', () => {
+            const minified = {
+                a: 'ei',
+                v: '3',
+                d: {
+                    e: {
+                        prod: {
+                            GATEWAY_URL: { val: 'https://api.openheaders.io:8443/v2' },
+                            AUTH_SECRET: { val: 'ohk_live_enterprise_key_here', s: 1 }
+                        }
+                    },
+                    es: {
+                        e: {
+                            prod: {
+                                v: [
+                                    { n: 'GATEWAY_URL', s: 0 },
+                                    { n: 'AUTH_SECRET', s: 1 }
+                                ]
+                            }
+                        }
+                    }
+                }
+            };
+
+            const compressed = zlib.gzipSync(JSON.stringify(minified), { level: 9 });
+            handler.handleUnifiedProtocol(compressed.toString('base64url'), 'gzip');
+
+            expect(handler.pendingEnvironmentImport).toBeDefined();
+            const envImport = handler.pendingEnvironmentImport as {
+                environments: Record<string, Record<string, { value: string; isSecret?: boolean }>>;
+                environmentSchema: { environments: Record<string, { variables: Array<{ name: string; isSecret: boolean }> }> }
+            };
+            expect(envImport.environments.production.GATEWAY_URL.value).toBe('https://api.openheaders.io:8443/v2');
+            expect(envImport.environments.production.AUTH_SECRET.isSecret).toBe(true);
+            expect(envImport.environmentSchema.environments.production.variables).toEqual([
+                { name: 'GATEWAY_URL', isSecret: false },
+                { name: 'AUTH_SECRET', isSecret: true }
+            ]);
         });
     });
 
@@ -604,27 +807,42 @@ describe('ProtocolHandler', () => {
         });
 
         it('processes valid openheaders:// URL end-to-end', () => {
+            const url = makeCompressedUrl(ENTERPRISE_INVITE);
+            handler.handleProtocolUrl(url);
+            expect(handler.pendingInvite).toEqual(ENTERPRISE_INVITE.data);
+        });
+
+        it('processes URL with g parameter for gzip compression', () => {
+            const compressed = zlib.gzipSync(JSON.stringify(ENTERPRISE_INVITE), { level: 9 });
+            const param = compressed.toString('base64url');
+            const url = `openheaders://open?g=${param}`;
+
+            handler.handleProtocolUrl(url);
+            expect(handler.pendingInvite).toEqual(ENTERPRISE_INVITE.data);
+        });
+
+        it('processes URL with d parameter for deflate compression', () => {
+            const compressed = zlib.deflateSync(JSON.stringify(ENTERPRISE_INVITE));
+            const param = compressed.toString('base64url');
+            const url = `openheaders://open?d=${param}`;
+
+            handler.handleProtocolUrl(url);
+            expect(handler.pendingInvite).toEqual(ENTERPRISE_INVITE.data);
+        });
+
+        it('handles URL with unicode in payload data', () => {
             const payload = {
                 action: 'team-invite',
                 version: DATA_FORMAT_VERSION,
                 data: {
-                    workspaceName: 'E2E Test Workspace',
-                    repoUrl: 'https://github.com/openheaders/e2e-test.git',
-                    inviterName: 'e2e-tester'
+                    workspaceName: 'ÖpenHeaders — München Büro Konfiguration',
+                    repoUrl: 'https://gitlab.openheaders.io/de/münchen-config.git',
+                    inviterName: 'müller@openheaders.io'
                 }
             };
-
-            const compressed = zlib.gzipSync(JSON.stringify(payload), { level: 9 });
-            const payloadParam = compressed.toString('base64url');
-            const url = `openheaders://open?payload=${payloadParam}`;
-
+            const url = makeCompressedUrl(payload);
             handler.handleProtocolUrl(url);
-
-            expect(handler.pendingInvite).toEqual({
-                workspaceName: 'E2E Test Workspace',
-                repoUrl: 'https://github.com/openheaders/e2e-test.git',
-                inviterName: 'e2e-tester'
-            });
+            expect(handler.pendingInvite!.workspaceName).toBe('ÖpenHeaders — München Büro Konfiguration');
         });
     });
 });
