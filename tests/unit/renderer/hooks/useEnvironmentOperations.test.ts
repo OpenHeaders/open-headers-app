@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Tests for useEnvironmentOperations hook
- *
- * Validates environment CRUD, switch, clone, and waitForEnvironments.
+ * Tests for useEnvironmentOperations hook — validates CRUD, switch, clone, and waitForEnvironments.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -25,11 +23,20 @@ const mockWaitForReady = vi.fn();
 
 const mockEnvironments: Record<string, Record<string, { value: string; isSecret: boolean }>> = {
   Default: {
-    API_KEY: { value: 'abc123', isSecret: true },
-    BASE_URL: { value: 'https://api.example.com', isSecret: false },
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890', isSecret: false },
+    API_GATEWAY_URL: { value: 'https://gateway.openheaders.io:8443/v2', isSecret: false },
   },
-  Staging: {
-    API_KEY: { value: 'stg456', isSecret: true },
+  'Staging — EU Region': {
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901', isSecret: false },
+    OAUTH2_CLIENT_SECRET: { value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg', isSecret: true },
+    API_GATEWAY_URL: { value: 'https://staging-eu.openheaders.io:8443/v2', isSecret: false },
+  },
+  Production: {
+    OAUTH2_CLIENT_SECRET: { value: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi', isSecret: true },
+    DATABASE_CONNECTION_STRING: {
+      value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production',
+      isSecret: true,
+    },
   },
 };
 
@@ -67,21 +74,21 @@ describe('useEnvironmentOperations', () => {
   });
 
   describe('createEnvironment', () => {
-    it('creates environment and shows success', async () => {
+    it('creates enterprise environment and shows success', async () => {
       const { result } = renderHook(() => useEnvironmentOperations());
 
       let created = false;
       await act(async () => {
-        created = await result.current.createEnvironment('Production');
+        created = await result.current.createEnvironment('DR — Disaster Recovery');
       });
 
       expect(created).toBe(true);
-      expect(mockCreateEnvironment).toHaveBeenCalledWith('Production');
-      expect(mockShowMessage).toHaveBeenCalledWith('success', "Environment 'Production' created");
+      expect(mockCreateEnvironment).toHaveBeenCalledWith('DR — Disaster Recovery');
+      expect(mockShowMessage).toHaveBeenCalledWith('success', "Environment 'DR — Disaster Recovery' created");
     });
 
-    it('returns false on error', async () => {
-      mockCreateEnvironment.mockRejectedValue(new Error('Already exists'));
+    it('returns false on error with descriptive message', async () => {
+      mockCreateEnvironment.mockRejectedValue(new Error("Environment 'Default' already exists"));
 
       const { result } = renderHook(() => useEnvironmentOperations());
 
@@ -91,7 +98,7 @@ describe('useEnvironmentOperations', () => {
       });
 
       expect(created).toBe(false);
-      expect(mockShowMessage).toHaveBeenCalledWith('error', 'Already exists');
+      expect(mockShowMessage).toHaveBeenCalledWith('error', "Environment 'Default' already exists");
     });
   });
 
@@ -101,46 +108,74 @@ describe('useEnvironmentOperations', () => {
 
       let deleted = false;
       await act(async () => {
-        deleted = await result.current.deleteEnvironment('Staging');
+        deleted = await result.current.deleteEnvironment('Staging — EU Region');
       });
 
       expect(deleted).toBe(true);
-      expect(mockDeleteEnvironment).toHaveBeenCalledWith('Staging');
-      expect(mockShowMessage).toHaveBeenCalledWith('success', "Environment 'Staging' deleted");
+      expect(mockDeleteEnvironment).toHaveBeenCalledWith('Staging — EU Region');
+      expect(mockShowMessage).toHaveBeenCalledWith('success', "Environment 'Staging — EU Region' deleted");
+    });
+
+    it('returns false when deletion fails', async () => {
+      mockDeleteEnvironment.mockRejectedValue(new Error('Cannot delete Default environment'));
+
+      const { result } = renderHook(() => useEnvironmentOperations());
+
+      let deleted = true;
+      await act(async () => {
+        deleted = await result.current.deleteEnvironment('Default');
+      });
+
+      expect(deleted).toBe(false);
+      expect(mockShowMessage).toHaveBeenCalledWith('error', 'Cannot delete Default environment');
     });
   });
 
   describe('switchEnvironment', () => {
-    it('switches and shows success', async () => {
+    it('switches to enterprise environment and shows success', async () => {
       const { result } = renderHook(() => useEnvironmentOperations());
 
       let switched = false;
       await act(async () => {
-        switched = await result.current.switchEnvironment('Staging');
+        switched = await result.current.switchEnvironment('Production');
       });
 
       expect(switched).toBe(true);
-      expect(mockSwitchEnvironment).toHaveBeenCalledWith('Staging');
-      expect(mockShowMessage).toHaveBeenCalledWith('success', "Switched to 'Staging' environment");
+      expect(mockSwitchEnvironment).toHaveBeenCalledWith('Production');
+      expect(mockShowMessage).toHaveBeenCalledWith('success', "Switched to 'Production' environment");
+    });
+
+    it('handles environment names with special characters', async () => {
+      const { result } = renderHook(() => useEnvironmentOperations());
+
+      await act(async () => {
+        await result.current.switchEnvironment('Staging — EU Region');
+      });
+
+      expect(mockSwitchEnvironment).toHaveBeenCalledWith('Staging — EU Region');
     });
   });
 
   describe('cloneEnvironment', () => {
-    it('clones environment with all variables', async () => {
+    it('clones Staging environment with all 3 variables', async () => {
       const { result } = renderHook(() => useEnvironmentOperations());
 
       let cloned = false;
       await act(async () => {
-        cloned = await result.current.cloneEnvironment('Default', 'Default-Copy');
+        cloned = await result.current.cloneEnvironment('Staging — EU Region', 'Staging — EU Region-Copy');
       });
 
       expect(cloned).toBe(true);
-      expect(mockCreateEnvironment).toHaveBeenCalledWith('Default-Copy');
-      expect(mockBatchSetVariables).toHaveBeenCalledWith('Default-Copy', [
-        { name: 'API_KEY', value: 'abc123', isSecret: true },
-        { name: 'BASE_URL', value: 'https://api.example.com', isSecret: false },
+      expect(mockCreateEnvironment).toHaveBeenCalledWith('Staging — EU Region-Copy');
+      expect(mockBatchSetVariables).toHaveBeenCalledWith('Staging — EU Region-Copy', [
+        { name: 'OAUTH2_CLIENT_ID', value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901', isSecret: false },
+        { name: 'OAUTH2_CLIENT_SECRET', value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg', isSecret: true },
+        { name: 'API_GATEWAY_URL', value: 'https://staging-eu.openheaders.io:8443/v2', isSecret: false },
       ]);
-      expect(mockShowMessage).toHaveBeenCalledWith('success', "Environment 'Default' cloned to 'Default-Copy'");
+      expect(mockShowMessage).toHaveBeenCalledWith(
+        'success',
+        "Environment 'Staging — EU Region' cloned to 'Staging — EU Region-Copy'"
+      );
     });
 
     it('fails if source environment does not exist', async () => {
@@ -153,6 +188,23 @@ describe('useEnvironmentOperations', () => {
 
       expect(cloned).toBe(false);
       expect(mockShowMessage).toHaveBeenCalledWith('error', expect.stringContaining('does not exist'));
+    });
+
+    it('clones Production with secret connection string', async () => {
+      const { result } = renderHook(() => useEnvironmentOperations());
+
+      await act(async () => {
+        await result.current.cloneEnvironment('Production', 'Production-DR');
+      });
+
+      expect(mockBatchSetVariables).toHaveBeenCalledWith('Production-DR', [
+        { name: 'OAUTH2_CLIENT_SECRET', value: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi', isSecret: true },
+        {
+          name: 'DATABASE_CONNECTION_STRING',
+          value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production',
+          isSecret: true,
+        },
+      ]);
     });
   });
 
@@ -176,11 +228,11 @@ describe('useEnvironmentOperations', () => {
 
       let ready = true;
       await act(async () => {
-        ready = await result.current.waitForEnvironments(1000);
+        ready = await result.current.waitForEnvironments(2000);
       });
 
       expect(ready).toBe(false);
-      expect(mockWaitForReady).toHaveBeenCalledWith(1000);
+      expect(mockWaitForReady).toHaveBeenCalledWith(2000);
     });
   });
 });

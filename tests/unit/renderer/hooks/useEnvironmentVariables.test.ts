@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Tests for useEnvironmentVariables hook
- *
- * Validates variable CRUD, environment targeting, and metadata filtering.
+ * Tests for useEnvironmentVariables hook — validates variable CRUD, environment targeting, and metadata.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -29,12 +27,18 @@ const mockGetAllVariables = vi.fn().mockReturnValue({});
 
 const mockEnvironments: Record<string, Record<string, { value: string; isSecret?: boolean }>> = {
   Default: {
-    API_KEY: { value: 'abc123', isSecret: true },
-    BASE_URL: { value: 'https://api.test.com' },
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890', isSecret: false },
+    API_GATEWAY_URL: { value: 'https://gateway.openheaders.io:8443/v2', isSecret: false },
   },
-  Staging: {
-    API_KEY: { value: 'staging-key', isSecret: true },
-    BASE_URL: { value: 'https://staging.test.com' },
+  'Staging — EU Region': {
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901', isSecret: false },
+    OAUTH2_CLIENT_SECRET: { value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg', isSecret: true },
+  },
+  Production: {
+    DATABASE_CONNECTION_STRING: {
+      value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full',
+      isSecret: true,
+    },
   },
 };
 
@@ -68,56 +72,77 @@ describe('useEnvironmentVariables', () => {
   describe('getVariable', () => {
     it('returns variable from active environment', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
-
-      expect(result.current.getVariable('API_KEY')).toBe('abc123');
+      expect(result.current.getVariable('OAUTH2_CLIENT_ID')).toBe('oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
     });
 
-    it('returns variable from specified environment', () => {
+    it('returns variable from specified enterprise environment', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
+      expect(result.current.getVariable('OAUTH2_CLIENT_SECRET', 'Staging — EU Region')).toBe('ohk_test_7fD48IqMzkXEbskuU2aer8fg');
+    });
 
-      expect(result.current.getVariable('BASE_URL', 'Staging')).toBe('https://staging.test.com');
+    it('returns connection string with special characters', () => {
+      const { result } = renderHook(() => useEnvironmentVariables());
+      expect(result.current.getVariable('DATABASE_CONNECTION_STRING', 'Production')).toBe(
+        'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full'
+      );
     });
 
     it('returns empty string for missing variable', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
+      expect(result.current.getVariable('NONEXISTENT_VAR')).toBe('');
+    });
 
-      expect(result.current.getVariable('MISSING')).toBe('');
+    it('returns empty string for variable in non-existent environment', () => {
+      const { result } = renderHook(() => useEnvironmentVariables());
+      expect(result.current.getVariable('OAUTH2_CLIENT_ID', 'NonExistent')).toBe('');
     });
   });
 
   // ── getAllVariables ──────────────────────────────────────────────
 
   describe('getAllVariables', () => {
-    it('returns all variables as string map', () => {
+    it('returns all variables as string map for active environment', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
-
       const vars = result.current.getAllVariables();
-
       expect(vars).toEqual({
-        API_KEY: 'abc123',
-        BASE_URL: 'https://api.test.com',
+        OAUTH2_CLIENT_ID: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        API_GATEWAY_URL: 'https://gateway.openheaders.io:8443/v2',
       });
     });
 
-    it('returns variables from specified environment', () => {
+    it('returns variables from specified enterprise environment', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
-
-      const vars = result.current.getAllVariables('Staging');
-
-      expect(vars.BASE_URL).toBe('https://staging.test.com');
+      const vars = result.current.getAllVariables('Staging — EU Region');
+      expect(vars).toEqual({
+        OAUTH2_CLIENT_ID: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        OAUTH2_CLIENT_SECRET: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg',
+      });
     });
   });
 
   // ── getAllVariablesWithMetadata ───────────────────────────────────
 
   describe('getAllVariablesWithMetadata', () => {
-    it('returns variables with metadata', () => {
+    it('returns variables with metadata including isSecret', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
-
       const vars = result.current.getAllVariablesWithMetadata();
+      expect(vars.OAUTH2_CLIENT_ID).toEqual({
+        value: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        isSecret: false,
+      });
+      expect(vars.API_GATEWAY_URL).toEqual({
+        value: 'https://gateway.openheaders.io:8443/v2',
+        isSecret: false,
+      });
+    });
 
-      expect(vars.API_KEY).toEqual({ value: 'abc123', isSecret: true });
-      expect(vars.BASE_URL).toEqual({ value: 'https://api.test.com' });
+    it('returns metadata from specific environment', () => {
+      const { result } = renderHook(() => useEnvironmentVariables());
+      const vars = result.current.getAllVariablesWithMetadata('Staging — EU Region');
+      expect(vars.OAUTH2_CLIENT_SECRET).toEqual({
+        value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg',
+        isSecret: true,
+      });
     });
   });
 
@@ -129,36 +154,46 @@ describe('useEnvironmentVariables', () => {
 
       let success: boolean | undefined;
       await act(async () => {
-        success = await result.current.setVariable('NEW_VAR', 'value');
+        success = await result.current.setVariable('REDIS_URL', 'rediss://redis.openheaders.io:6380/0');
       });
 
       expect(success).toBe(true);
-      expect(mockSetVariable).toHaveBeenCalledWith('NEW_VAR', 'value', false);
+      expect(mockSetVariable).toHaveBeenCalledWith('REDIS_URL', 'rediss://redis.openheaders.io:6380/0', false);
     });
 
-    it('sets variable in specific environment', async () => {
+    it('sets secret variable in specific environment', async () => {
       const { result } = renderHook(() => useEnvironmentVariables());
 
       await act(async () => {
-        await result.current.setVariable('KEY', 'val', 'Staging', true);
+        await result.current.setVariable(
+          'STRIPE_WEBHOOK_SECRET',
+          'whsec_a1b2c3d4e5f6g7h8i9j0',
+          'Production',
+          true
+        );
       });
 
-      expect(mockSetVariableInEnvironment).toHaveBeenCalledWith('KEY', 'val', 'Staging', true);
+      expect(mockSetVariableInEnvironment).toHaveBeenCalledWith(
+        'STRIPE_WEBHOOK_SECRET',
+        'whsec_a1b2c3d4e5f6g7h8i9j0',
+        'Production',
+        true
+      );
       expect(mockSetVariable).not.toHaveBeenCalled();
     });
 
     it('shows error on failure', async () => {
-      mockSetVariable.mockRejectedValueOnce(new Error('Save failed'));
+      mockSetVariable.mockRejectedValueOnce(new Error('Storage write failed: disk full'));
 
       const { result } = renderHook(() => useEnvironmentVariables());
 
       let success: boolean | undefined;
       await act(async () => {
-        success = await result.current.setVariable('X', 'y');
+        success = await result.current.setVariable('KEY', 'value');
       });
 
       expect(success).toBe(false);
-      expect(mockShowMessage).toHaveBeenCalledWith('error', 'Save failed');
+      expect(mockShowMessage).toHaveBeenCalledWith('error', 'Storage write failed: disk full');
     });
   });
 
@@ -169,10 +204,20 @@ describe('useEnvironmentVariables', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
 
       await act(async () => {
-        await result.current.deleteVariable('API_KEY');
+        await result.current.deleteVariable('OAUTH2_CLIENT_ID');
       });
 
-      expect(mockSetVariable).toHaveBeenCalledWith('API_KEY', null, false);
+      expect(mockSetVariable).toHaveBeenCalledWith('OAUTH2_CLIENT_ID', null, false);
+    });
+
+    it('deletes secret variable', async () => {
+      const { result } = renderHook(() => useEnvironmentVariables());
+
+      await act(async () => {
+        await result.current.deleteVariable('DATABASE_CONNECTION_STRING');
+      });
+
+      expect(mockSetVariable).toHaveBeenCalledWith('DATABASE_CONNECTION_STRING', null, false);
     });
   });
 });

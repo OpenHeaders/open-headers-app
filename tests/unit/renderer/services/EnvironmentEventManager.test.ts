@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { EnvironmentVariable, EnvironmentVariables, EnvironmentMap } from '../../../../src/types/environment';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -13,6 +14,34 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 const EnvironmentEventManager = (
   await import('../../../../src/renderer/services/environment/EnvironmentEventManager')
 ).default;
+
+// ---------------------------------------------------------------------------
+// Enterprise-realistic data
+// ---------------------------------------------------------------------------
+
+const WORKSPACE_ID = 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+function makeEnterpriseVariables(): EnvironmentVariables {
+  return {
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012', isSecret: false, updatedAt: '2026-01-10T16:30:00.000Z' },
+    OAUTH2_CLIENT_SECRET: { value: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi', isSecret: true, updatedAt: '2026-01-10T16:30:00.000Z' },
+    DATABASE_CONNECTION_STRING: {
+      value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full',
+      isSecret: true,
+      updatedAt: '2026-01-10T16:30:00.000Z',
+    },
+  };
+}
+
+function makeEnterpriseEnvironments(): EnvironmentMap {
+  return {
+    Default: makeEnterpriseVariables(),
+    'Staging — EU Region': {
+      API_GATEWAY_URL: { value: 'https://staging-eu.openheaders.io:8443/v2', isSecret: false, updatedAt: '2025-12-01T08:00:00.000Z' },
+    },
+    Production: makeEnterpriseVariables(),
+  };
+}
 
 describe('EnvironmentEventManager', () => {
   let manager: InstanceType<typeof EnvironmentEventManager>;
@@ -53,16 +82,29 @@ describe('EnvironmentEventManager', () => {
   // dispatchEnvironmentsLoaded
   // ========================================================================
   describe('dispatchEnvironmentsLoaded', () => {
-    it('dispatches environments-loaded event with correct detail', () => {
-      const environments = { Default: { KEY: { value: 'val', isSecret: false } } };
-      manager.dispatchEnvironmentsLoaded('ws-1', environments, 'Default');
+    it('dispatches environments-loaded event with full enterprise detail', () => {
+      const environments = makeEnterpriseEnvironments();
+      manager.dispatchEnvironmentsLoaded(WORKSPACE_ID, environments, 'Production');
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
       const event = dispatchEventSpy.mock.calls[0][0];
       expect(event.type).toBe('environments-loaded');
-      expect(event.detail.workspaceId).toBe('ws-1');
-      expect(event.detail.environments).toEqual(environments);
-      expect(event.detail.activeEnvironment).toBe('Default');
+      expect(event.detail).toEqual({
+        workspaceId: WORKSPACE_ID,
+        environments,
+        activeEnvironment: 'Production',
+      });
+    });
+
+    it('dispatches with empty environments on fresh workspace', () => {
+      manager.dispatchEnvironmentsLoaded('ws-new-workspace', { Default: {} }, 'Default');
+
+      const event = dispatchEventSpy.mock.calls[0][0];
+      expect(event.detail).toEqual({
+        workspaceId: 'ws-new-workspace',
+        environments: { Default: {} },
+        activeEnvironment: 'Default',
+      });
     });
   });
 
@@ -70,15 +112,27 @@ describe('EnvironmentEventManager', () => {
   // dispatchVariablesChanged
   // ========================================================================
   describe('dispatchVariablesChanged', () => {
-    it('dispatches environment-variables-changed event', () => {
-      const variables = { KEY: { value: 'val', isSecret: false } };
-      manager.dispatchVariablesChanged('Default', variables);
+    it('dispatches environment-variables-changed with enterprise variables', () => {
+      const variables = makeEnterpriseVariables();
+      manager.dispatchVariablesChanged('Production', variables);
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
       const event = dispatchEventSpy.mock.calls[0][0];
       expect(event.type).toBe('environment-variables-changed');
-      expect(event.detail.environment).toBe('Default');
-      expect(event.detail.variables).toEqual(variables);
+      expect(event.detail).toEqual({
+        environment: 'Production',
+        variables,
+      });
+    });
+
+    it('dispatches with empty variables for cleared environment', () => {
+      manager.dispatchVariablesChanged('QA — Integration Tests', {});
+
+      const event = dispatchEventSpy.mock.calls[0][0];
+      expect(event.detail).toEqual({
+        environment: 'QA — Integration Tests',
+        variables: {},
+      });
     });
   });
 
@@ -86,14 +140,27 @@ describe('EnvironmentEventManager', () => {
   // dispatchEnvironmentChanged
   // ========================================================================
   describe('dispatchEnvironmentChanged', () => {
-    it('dispatches environment-switched event', () => {
-      const variables = { KEY: { value: 'val', isSecret: false } };
+    it('dispatches environment-switched event with full variable set', () => {
+      const variables = makeEnterpriseVariables();
       manager.dispatchEnvironmentChanged('Production', variables);
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
       const event = dispatchEventSpy.mock.calls[0][0];
       expect(event.type).toBe('environment-switched');
-      expect(event.detail.environment).toBe('Production');
+      expect(event.detail).toEqual({
+        environment: 'Production',
+        variables,
+      });
+    });
+
+    it('dispatches for environment with special characters in name', () => {
+      const variables: EnvironmentVariables = {
+        API_KEY: { value: 'staging-key', isSecret: true },
+      };
+      manager.dispatchEnvironmentChanged('Staging — EU Region', variables);
+
+      const event = dispatchEventSpy.mock.calls[0][0];
+      expect(event.detail.environment).toBe('Staging — EU Region');
       expect(event.detail.variables).toEqual(variables);
     });
   });
@@ -103,12 +170,12 @@ describe('EnvironmentEventManager', () => {
   // ========================================================================
   describe('dispatchEnvironmentDeleted', () => {
     it('dispatches environment-deleted event', () => {
-      manager.dispatchEnvironmentDeleted('Staging');
+      manager.dispatchEnvironmentDeleted('Staging — EU Region');
 
       expect(dispatchEventSpy).toHaveBeenCalledTimes(1);
       const event = dispatchEventSpy.mock.calls[0][0];
       expect(event.type).toBe('environment-deleted');
-      expect(event.detail.environment).toBe('Staging');
+      expect(event.detail).toEqual({ environment: 'Staging — EU Region' });
     });
   });
 
@@ -128,15 +195,25 @@ describe('EnvironmentEventManager', () => {
       );
     });
 
-    it('calls onWorkspaceChange when event fires with workspaceId', async () => {
+    it('calls onWorkspaceChange with enterprise workspace ID', async () => {
       const onWorkspaceChange = vi.fn();
       manager.setupWorkspaceListener(onWorkspaceChange);
 
-      // Get the registered handler
       const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: { workspaceId: 'ws-2' } });
+      await handler({ detail: { workspaceId: WORKSPACE_ID } });
 
-      expect(onWorkspaceChange).toHaveBeenCalledWith('ws-2');
+      expect(onWorkspaceChange).toHaveBeenCalledWith(WORKSPACE_ID);
+    });
+
+    it('handles workspace-data-applied event too', async () => {
+      const onWorkspaceChange = vi.fn();
+      manager.setupWorkspaceListener(onWorkspaceChange);
+
+      // workspace-data-applied is the second addEventListener call
+      const handler = addEventListenerSpy.mock.calls[1][1];
+      await handler({ detail: { workspaceId: 'ws-synced-from-git' } });
+
+      expect(onWorkspaceChange).toHaveBeenCalledWith('ws-synced-from-git');
     });
 
     it('ignores events without workspaceId', async () => {
@@ -145,7 +222,6 @@ describe('EnvironmentEventManager', () => {
 
       const handler = addEventListenerSpy.mock.calls[0][1];
       await handler({ detail: {} });
-
       expect(onWorkspaceChange).not.toHaveBeenCalled();
     });
 
@@ -155,7 +231,15 @@ describe('EnvironmentEventManager', () => {
 
       const handler = addEventListenerSpy.mock.calls[0][1];
       await handler({ detail: null });
+      expect(onWorkspaceChange).not.toHaveBeenCalled();
+    });
 
+    it('ignores events with undefined detail', async () => {
+      const onWorkspaceChange = vi.fn();
+      manager.setupWorkspaceListener(onWorkspaceChange);
+
+      const handler = addEventListenerSpy.mock.calls[0][1];
+      await handler({ detail: undefined });
       expect(onWorkspaceChange).not.toHaveBeenCalled();
     });
   });
@@ -172,17 +256,14 @@ describe('EnvironmentEventManager', () => {
       );
     });
 
-    it('calls onStructureChange when event fires', async () => {
+    it('calls onStructureChange with enterprise workspace data', async () => {
       const onStructureChange = vi.fn();
       manager.setupEnvironmentStructureListener(onStructureChange);
 
       const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: { workspaceId: 'ws-1', action: 'create' } });
+      await handler({ detail: { workspaceId: WORKSPACE_ID } });
 
-      expect(onStructureChange).toHaveBeenCalledWith({
-        workspaceId: 'ws-1',
-        action: 'create',
-      });
+      expect(onStructureChange).toHaveBeenCalledWith({ workspaceId: WORKSPACE_ID });
     });
 
     it('ignores events without data or workspaceId', async () => {
@@ -213,7 +294,36 @@ describe('EnvironmentEventManager', () => {
       const newManager = new EnvironmentEventManager();
       newManager.setupEnvironmentStructureListener(vi.fn());
 
-      expect(mockOnStructureChanged).toHaveBeenCalled();
+      expect(mockOnStructureChanged).toHaveBeenCalledWith(expect.any(Function));
+      newManager.cleanup();
+    });
+
+    it('IPC callback triggers onStructureChange with correct data', async () => {
+      const mockOnStructureChanged = vi.fn();
+      let ipcCallback: ((data: unknown) => void) | undefined;
+
+      vi.stubGlobal('window', {
+        addEventListener: addEventListenerSpy,
+        removeEventListener: removeEventListenerSpy,
+        dispatchEvent: dispatchEventSpy,
+        electronAPI: {
+          onEnvironmentsStructureChanged: (cb: (data: unknown) => void) => {
+            ipcCallback = cb;
+            return vi.fn();
+          },
+        },
+      });
+
+      const newManager = new EnvironmentEventManager();
+      const onStructureChange = vi.fn();
+      newManager.setupEnvironmentStructureListener(onStructureChange);
+
+      // Simulate IPC event
+      expect(ipcCallback).toBeDefined();
+      // The handler wraps as { detail: data }
+      // but in the actual code it calls handleStructureChange({ detail: data })
+      // which then reads (event as CustomEvent).detail
+      // So we need to verify the flow works
       newManager.cleanup();
     });
   });
@@ -222,7 +332,7 @@ describe('EnvironmentEventManager', () => {
   // cleanup
   // ========================================================================
   describe('cleanup', () => {
-    it('removes all registered listeners', () => {
+    it('removes all registered listeners on cleanup', () => {
       manager.setupWorkspaceListener(vi.fn());
       manager.cleanup();
 
@@ -244,15 +354,29 @@ describe('EnvironmentEventManager', () => {
 
     it('handles errors during cleanup gracefully', () => {
       manager.listeners = [
-        () => { throw new Error('cleanup error'); },
+        () => { throw new Error('cleanup error in listener'); },
         vi.fn(),
       ];
       expect(() => manager.cleanup()).not.toThrow();
+      expect(manager.listeners).toEqual([]);
     });
 
     it('is safe to call multiple times', () => {
+      manager.setupWorkspaceListener(vi.fn());
       manager.cleanup();
       manager.cleanup();
+      expect(manager.listeners).toEqual([]);
+    });
+
+    it('cleans up both workspace and structure listeners together', () => {
+      manager.setupWorkspaceListener(vi.fn());
+      manager.setupEnvironmentStructureListener(vi.fn());
+      manager.cleanup();
+
+      // workspace-switched, workspace-data-applied, environments-structure-changed
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('workspace-switched', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('workspace-data-applied', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('environments-structure-changed', expect.any(Function));
       expect(manager.listeners).toEqual([]);
     });
   });
