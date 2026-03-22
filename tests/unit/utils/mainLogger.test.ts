@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createLogger, setGlobalLogLevel, getLogDirectory, MainLogger } from '../../../src/utils/mainLogger';
 
 describe('mainLogger', () => {
@@ -9,15 +9,15 @@ describe('mainLogger', () => {
         });
 
         it('stores the component name', () => {
-            const logger = createLogger('MyService');
-            expect(logger.component).toBe('MyService');
+            const logger = createLogger('WorkspaceSyncScheduler');
+            expect(logger.component).toBe('WorkspaceSyncScheduler');
         });
     });
 
     describe('MainLogger.formatMessage()', () => {
         it('wraps message with component name in brackets', () => {
             const logger = createLogger('ProxyService');
-            expect(logger.formatMessage('starting up')).toBe('[ProxyService] starting up');
+            expect(logger.formatMessage('starting proxy on port 8443')).toBe('[ProxyService] starting proxy on port 8443');
         });
 
         it('handles empty message', () => {
@@ -25,9 +25,22 @@ describe('mainLogger', () => {
             expect(logger.formatMessage('')).toBe('[App] ');
         });
 
-        it('handles message with special characters', () => {
-            const logger = createLogger('Net');
-            expect(logger.formatMessage('url=https://example.com?a=1&b=2')).toBe('[Net] url=https://example.com?a=1&b=2');
+        it('handles message with enterprise URLs', () => {
+            const logger = createLogger('NetworkService');
+            const msg = 'DNS check for auth.openheaders.internal:8443/oauth2/token';
+            expect(logger.formatMessage(msg)).toBe(`[NetworkService] ${msg}`);
+        });
+
+        it('handles message with UUIDs', () => {
+            const logger = createLogger('SourceManager');
+            const msg = 'Refreshing source a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+            expect(logger.formatMessage(msg)).toBe(`[SourceManager] ${msg}`);
+        });
+
+        it('handles message with JWT-like tokens', () => {
+            const logger = createLogger('AuthService');
+            const msg = 'Token refresh: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig';
+            expect(logger.formatMessage(msg)).toBe(`[AuthService] ${msg}`);
         });
     });
 
@@ -35,44 +48,34 @@ describe('mainLogger', () => {
         let logger: MainLogger;
 
         beforeEach(() => {
-            logger = createLogger('Test');
+            logger = createLogger('OpenHeaders-Test');
         });
 
-        it('has debug method', () => {
+        it('has all four log level methods', () => {
             expect(typeof logger.debug).toBe('function');
-        });
-
-        it('has info method', () => {
             expect(typeof logger.info).toBe('function');
-        });
-
-        it('has warn method', () => {
             expect(typeof logger.warn).toBe('function');
-        });
-
-        it('has error method', () => {
             expect(typeof logger.error).toBe('function');
         });
 
         it('debug accepts message and optional data', () => {
-            // Should not throw
-            logger.debug('test message');
-            logger.debug('test message', { key: 'value' });
+            logger.debug('Checking DNS for *.openheaders.io');
+            logger.debug('DNS result', { host: 'auth.openheaders.io', ips: ['34.120.55.100'] });
         });
 
         it('info accepts message and optional data', () => {
-            logger.info('test message');
-            logger.info('test message', { key: 'value' });
+            logger.info('Workspace sync started for Production — Staging Environment');
+            logger.info('Sync complete', { sourceCount: 50, ruleCount: 30 });
         });
 
         it('warn accepts message and optional data', () => {
-            logger.warn('test message');
-            logger.warn('test message', { key: 'value' });
+            logger.warn('VPN state changed — network check may be unreliable');
+            logger.warn('Rate limit approaching', { remaining: 10, resetAt: '2026-01-20T14:45:12.345Z' });
         });
 
         it('error accepts message and optional data', () => {
-            logger.error('test message');
-            logger.error('test message', { key: 'value' });
+            logger.error('Failed to sync workspace a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+            logger.error('Git clone failed', { url: 'https://gitlab.openheaders.io/platform/shared-headers.git', code: 128 });
         });
     });
 
@@ -99,6 +102,8 @@ describe('mainLogger', () => {
 
         it('ignores invalid log levels', () => {
             expect(() => setGlobalLogLevel('invalid_level')).not.toThrow();
+            expect(() => setGlobalLogLevel('verbose')).not.toThrow();
+            expect(() => setGlobalLogLevel('')).not.toThrow();
         });
 
         it('accepts skipRotation parameter', () => {
@@ -108,22 +113,17 @@ describe('mainLogger', () => {
     });
 
     describe('getLogDirectory()', () => {
-        it('returns a string', () => {
+        it('returns a non-empty string', () => {
             const dir = getLogDirectory();
             expect(typeof dir).toBe('string');
+            expect(dir.length).toBeGreaterThan(0);
         });
     });
 
     describe('module exports', () => {
-        it('exports createLogger function', () => {
+        it('exports all expected functions', () => {
             expect(typeof createLogger).toBe('function');
-        });
-
-        it('exports setGlobalLogLevel function', () => {
             expect(typeof setGlobalLogLevel).toBe('function');
-        });
-
-        it('exports getLogDirectory function', () => {
             expect(typeof getLogDirectory).toBe('function');
         });
 
@@ -132,6 +132,12 @@ describe('mainLogger', () => {
             expect(typeof mod.default.createLogger).toBe('function');
             expect(typeof mod.default.setGlobalLogLevel).toBe('function');
             expect(typeof mod.default.getLogDirectory).toBe('function');
+        });
+
+        it('exports MainLogger class', () => {
+            expect(MainLogger).toBeDefined();
+            const instance = new MainLogger('TestExport');
+            expect(instance.component).toBe('TestExport');
         });
     });
 });

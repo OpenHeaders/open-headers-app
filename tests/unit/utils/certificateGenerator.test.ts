@@ -3,7 +3,6 @@ import { CertificateGenerator } from '../../../src/utils/certificateGenerator';
 import path from 'path';
 import fs from 'fs';
 
-// Create a mock logger
 function createMockLogger() {
     return {
         info: vi.fn(),
@@ -30,67 +29,64 @@ describe('CertificateGenerator', () => {
 
     describe('generateCertificates()', () => {
         it('creates the certificate directory', async () => {
-            const certDir = path.join('/tmp', `cert-test-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
             try {
                 await generator.generateCertificates(certDir);
             } catch (e) {
-                // node-forge may not be available, that's fine
+                // node-forge may not be available
             }
 
-            // Directory should exist regardless of cert generation method
-            const dirExists = fs.existsSync(certDir);
-            expect(dirExists).toBe(true);
+            expect(fs.existsSync(certDir)).toBe(true);
 
-            // Cleanup
             try {
                 fs.rmSync(certDir, { recursive: true, force: true });
-            } catch (e) {
-                // ignore cleanup errors
-            }
+            } catch (e) { /* ignore */ }
         });
 
         it('generates key and cert files at expected paths', async () => {
-            const certDir = path.join('/tmp', `cert-test-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
             try {
                 const result = await generator.generateCertificates(certDir);
-                expect(result.keyPath).toBe(path.join(certDir, 'server.key'));
-                expect(result.certPath).toBe(path.join(certDir, 'server.crt'));
+                expect(result).toEqual({
+                    keyPath: path.join(certDir, 'server.key'),
+                    certPath: path.join(certDir, 'server.crt')
+                });
 
-                // Files should exist
                 expect(fs.existsSync(result.keyPath)).toBe(true);
                 expect(fs.existsSync(result.certPath)).toBe(true);
             } finally {
-                // Cleanup
-                try {
-                    fs.rmSync(certDir, { recursive: true, force: true });
-                } catch (e) {
-                    // ignore
-                }
+                try { fs.rmSync(certDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
             }
         });
 
         it('logs messages during generation', async () => {
-            const certDir = path.join('/tmp', `cert-test-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
             try {
                 await generator.generateCertificates(certDir);
-                // Should have logged at least one info message
                 expect(mockLogger.info.mock.calls.length).toBeGreaterThan(0);
             } finally {
-                try {
-                    fs.rmSync(certDir, { recursive: true, force: true });
-                } catch (e) {
-                    // ignore
-                }
+                try { fs.rmSync(certDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+            }
+        });
+
+        it('creates nested directory structure', async () => {
+            const certDir = path.join('/tmp', `cert-nested-${Date.now()}`, 'certs', 'proxy');
+
+            try {
+                await generator.generateCertificates(certDir);
+                expect(fs.existsSync(certDir)).toBe(true);
+            } finally {
+                try { fs.rmSync(path.join('/tmp', `cert-nested-${Date.now()}`), { recursive: true, force: true }); } catch (e) { /* ignore */ }
             }
         });
     });
 
     describe('generateWithNodeCrypto()', () => {
         it('generates a valid PEM private key', async () => {
-            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}-${Math.random().toString(36).slice(2)}`);
             const keyPath = path.join(certDir, 'server.key');
             const certPath = path.join(certDir, 'server.crt');
 
@@ -98,23 +94,19 @@ describe('CertificateGenerator', () => {
                 fs.mkdirSync(certDir, { recursive: true });
                 const result = await generator.generateWithNodeCrypto(keyPath, certPath);
 
-                expect(result.keyPath).toBe(keyPath);
-                expect(result.certPath).toBe(certPath);
+                expect(result).toEqual({ keyPath, certPath });
 
                 const keyContent = fs.readFileSync(keyPath, 'utf8');
                 expect(keyContent).toContain('-----BEGIN PRIVATE KEY-----');
                 expect(keyContent).toContain('-----END PRIVATE KEY-----');
+                expect(keyContent.length).toBeGreaterThan(500);
             } finally {
-                try {
-                    fs.rmSync(certDir, { recursive: true, force: true });
-                } catch (e) {
-                    // ignore
-                }
+                try { fs.rmSync(certDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
             }
         });
 
         it('writes a fallback certificate in PEM format', async () => {
-            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}-${Math.random().toString(36).slice(2)}`);
             const keyPath = path.join(certDir, 'server.key');
             const certPath = path.join(certDir, 'server.crt');
 
@@ -126,16 +118,12 @@ describe('CertificateGenerator', () => {
                 expect(certContent).toContain('-----BEGIN CERTIFICATE-----');
                 expect(certContent).toContain('-----END CERTIFICATE-----');
             } finally {
-                try {
-                    fs.rmSync(certDir, { recursive: true, force: true });
-                } catch (e) {
-                    // ignore
-                }
+                try { fs.rmSync(certDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
             }
         });
 
         it('logs a warning about fallback certificate', async () => {
-            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}`);
+            const certDir = path.join('/tmp', `cert-crypto-${Date.now()}-${Math.random().toString(36).slice(2)}`);
             const keyPath = path.join(certDir, 'server.key');
             const certPath = path.join(certDir, 'server.crt');
 
@@ -146,12 +134,11 @@ describe('CertificateGenerator', () => {
                 expect(mockLogger.warn).toHaveBeenCalledWith(
                     expect.stringContaining('fallback certificate')
                 );
+                expect(mockLogger.info).toHaveBeenCalledWith(
+                    expect.stringContaining('Node.js crypto')
+                );
             } finally {
-                try {
-                    fs.rmSync(certDir, { recursive: true, force: true });
-                } catch (e) {
-                    // ignore
-                }
+                try { fs.rmSync(certDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
             }
         });
     });
@@ -162,10 +149,11 @@ describe('CertificateGenerator', () => {
             expect(mod.default).toBe(CertificateGenerator);
         });
 
-        it('CertificateGenerator is constructable', () => {
+        it('CertificateGenerator is constructable with a logger', () => {
             const logger = createMockLogger();
             const gen = new CertificateGenerator(logger);
             expect(gen).toBeInstanceOf(CertificateGenerator);
+            expect(gen.logger).toBe(logger);
         });
     });
 });
