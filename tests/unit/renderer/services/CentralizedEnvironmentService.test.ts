@@ -7,6 +7,7 @@
  * state-management patterns that mirror CES behaviour.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { EnvironmentVariable } from '../../../../src/types/environment';
 
 // Mock logger for all sub-module imports
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -61,6 +62,91 @@ const EnvironmentStateManagerModule = await import(
 );
 const EnvironmentStateManager = EnvironmentStateManagerModule.default;
 
+// ---------------------------------------------------------------------------
+// Enterprise-realistic factory helpers
+// ---------------------------------------------------------------------------
+
+function makeEnterpriseEnvironments() {
+  return {
+    Default: {
+      OAUTH2_CLIENT_ID: {
+        value: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        isSecret: false,
+        updatedAt: '2025-11-15T09:30:00.000Z',
+      },
+      OAUTH2_CLIENT_SECRET: {
+        value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
+        isSecret: true,
+        updatedAt: '2025-11-15T09:30:00.000Z',
+      },
+      API_GATEWAY_URL: {
+        value: 'https://gateway.openheaders.io:8443/v2',
+        isSecret: false,
+        updatedAt: '2025-11-15T09:30:00.000Z',
+      },
+      DATABASE_CONNECTION_STRING: {
+        value: 'postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/production?sslmode=require',
+        isSecret: true,
+        updatedAt: '2026-01-20T14:45:12.345Z',
+      },
+    },
+    'Staging — EU Region': {
+      OAUTH2_CLIENT_ID: {
+        value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        isSecret: false,
+        updatedAt: '2025-12-01T08:00:00.000Z',
+      },
+      OAUTH2_CLIENT_SECRET: {
+        value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg',
+        isSecret: true,
+        updatedAt: '2025-12-01T08:00:00.000Z',
+      },
+      API_GATEWAY_URL: {
+        value: 'https://staging-eu.openheaders.io:8443/v2',
+        isSecret: false,
+        updatedAt: '2025-12-01T08:00:00.000Z',
+      },
+    },
+    'QA — Integration Tests': {},
+    'Pre-production': {
+      BEARER_TOKEN: {
+        value: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIiwiaWF0IjoxNzE2MDAwMDAwfQ.signature',
+        isSecret: true,
+        updatedAt: '2026-02-15T12:00:00.000Z',
+      },
+    },
+    Production: {
+      OAUTH2_CLIENT_ID: {
+        value: 'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
+        isSecret: false,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      },
+      OAUTH2_CLIENT_SECRET: {
+        value: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi',
+        isSecret: true,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      },
+      API_GATEWAY_URL: {
+        value: 'https://api.openheaders.io/v2',
+        isSecret: false,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      },
+      DATABASE_CONNECTION_STRING: {
+        value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
+        isSecret: true,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      },
+      REDIS_URL: {
+        value: 'rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0',
+        isSecret: true,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      },
+    },
+  };
+}
+
+const ENTERPRISE_WORKSPACE_ID = 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
 // ======================================================================
 // EnvironmentVariableManager
 // ======================================================================
@@ -77,24 +163,21 @@ describe('EnvironmentVariableManager', () => {
       expect(result).toEqual({});
     });
 
-    it('extracts values from variable objects', () => {
-      const environments = {
-        Default: {
-          API_KEY: { value: 'abc123', isSecret: false },
-          DB_URL: { value: 'postgres://localhost', isSecret: true },
-        },
-      };
-      const result = vm.getAllVariables(environments, 'Default');
+    it('extracts values from enterprise variable objects', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.getAllVariables(envs, 'Production');
       expect(result).toEqual({
-        API_KEY: 'abc123',
-        DB_URL: 'postgres://localhost',
+        OAUTH2_CLIENT_ID: 'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
+        OAUTH2_CLIENT_SECRET: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi',
+        API_GATEWAY_URL: 'https://api.openheaders.io/v2',
+        DATABASE_CONNECTION_STRING: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
+        REDIS_URL: 'rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0',
       });
     });
 
     it('returns empty string for variables without value', () => {
       const environments = {
         Default: {
-          // Intentionally omitting value to test ?? '' fallback
           EMPTY: { isSecret: false },
         },
       } as unknown as Parameters<typeof vm.getAllVariables>[0];
@@ -106,33 +189,65 @@ describe('EnvironmentVariableManager', () => {
       const result = vm.getAllVariables({ Default: {} }, 'NonExistent');
       expect(result).toEqual({});
     });
+
+    it('handles environment with special characters in name', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.getAllVariables(envs, 'Staging — EU Region');
+      expect(result).toEqual({
+        OAUTH2_CLIENT_ID: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        OAUTH2_CLIENT_SECRET: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg',
+        API_GATEWAY_URL: 'https://staging-eu.openheaders.io:8443/v2',
+      });
+    });
+
+    it('handles empty QA environment', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.getAllVariables(envs, 'QA — Integration Tests');
+      expect(result).toEqual({});
+    });
   });
 
   describe('setVariable()', () => {
-    it('adds a new variable', () => {
+    it('adds a new enterprise variable with full shape', () => {
       const envs = { Default: {} };
-      const result = vm.setVariable(envs, 'Default', 'MY_VAR', 'hello');
-      expect(result.Default.MY_VAR.value).toBe('hello');
-      expect(result.Default.MY_VAR.isSecret).toBe(false);
-      expect(result.Default.MY_VAR.updatedAt).toBeDefined();
+      const result = vm.setVariable(
+        envs,
+        'Default',
+        'STRIPE_WEBHOOK_SECRET',
+        'whsec_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'
+      );
+      expect(result.Default.STRIPE_WEBHOOK_SECRET).toEqual({
+        value: 'whsec_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
+        isSecret: false,
+        updatedAt: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
+      });
     });
 
     it('marks variable as secret', () => {
       const envs = { Default: {} };
-      const result = vm.setVariable(envs, 'Default', 'SECRET', 'shhh', true);
-      expect(result.Default.SECRET.isSecret).toBe(true);
+      const result = vm.setVariable(envs, 'Default', 'JWT_SIGNING_KEY', 'rsa-private-key-data', true);
+      expect(result.Default.JWT_SIGNING_KEY.isSecret).toBe(true);
+      expect(result.Default.JWT_SIGNING_KEY.value).toBe('rsa-private-key-data');
     });
 
     it('deletes variable when value is null', () => {
-      const envs = { Default: { TO_DELETE: { value: 'old', isSecret: false } } };
-      const result = vm.setVariable(envs, 'Default', 'TO_DELETE', null);
-      expect(result.Default.TO_DELETE).toBeUndefined();
+      const envs = {
+        Default: {
+          DEPRECATED_TOKEN: { value: 'old-value', isSecret: true, updatedAt: '2025-01-01T00:00:00.000Z' },
+        },
+      };
+      const result = vm.setVariable(envs, 'Default', 'DEPRECATED_TOKEN', null);
+      expect(result.Default.DEPRECATED_TOKEN).toBeUndefined();
     });
 
     it('deletes variable when value is empty string', () => {
-      const envs = { Default: { TO_DELETE: { value: 'old', isSecret: false } } };
-      const result = vm.setVariable(envs, 'Default', 'TO_DELETE', '');
-      expect(result.Default.TO_DELETE).toBeUndefined();
+      const envs = {
+        Default: {
+          TO_CLEAR: { value: 'had-a-value', isSecret: false, updatedAt: '2025-01-01T00:00:00.000Z' },
+        },
+      };
+      const result = vm.setVariable(envs, 'Default', 'TO_CLEAR', '');
+      expect(result.Default.TO_CLEAR).toBeUndefined();
     });
 
     it('throws when environment does not exist', () => {
@@ -142,51 +257,82 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('does not mutate the original environments object', () => {
-      const envs: Record<string, Record<string, { value: string; isSecret: boolean }>> = { Default: { EXISTING: { value: 'keep', isSecret: false } } };
-      const result = vm.setVariable(envs, 'Default', 'NEW', 'added');
-      expect(envs.Default.NEW).toBeUndefined();
-      expect(result.Default.NEW.value).toBe('added');
+      const envs = makeEnterpriseEnvironments();
+      const originalProdSecret = envs.Production.OAUTH2_CLIENT_SECRET.value;
+      const result = vm.setVariable(envs, 'Production', 'NEW_VAR', 'new-value');
+      expect(envs.Production.NEW_VAR).toBeUndefined();
+      expect(envs.Production.OAUTH2_CLIENT_SECRET.value).toBe(originalProdSecret);
+      expect(result.Production.NEW_VAR.value).toBe('new-value');
+    });
+
+    it('handles values with special characters (connection strings, JWTs)', () => {
+      const envs = { Default: {} };
+      const connStr = 'postgresql://user:P@ss=w0rd&special!@host:5432/db?ssl=true&timeout=30';
+      const result = vm.setVariable(envs, 'Default', 'DB_CONN', connStr);
+      expect(result.Default.DB_CONN.value).toBe(connStr);
+    });
+
+    it('updates existing variable preserving environment integrity', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.setVariable(envs, 'Production', 'API_GATEWAY_URL', 'https://api-v3.openheaders.io/v3');
+      expect(result.Production.API_GATEWAY_URL.value).toBe('https://api-v3.openheaders.io/v3');
+      // Other variables remain intact
+      expect(result.Production.OAUTH2_CLIENT_ID.value).toBe('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012');
+      expect(result.Production.REDIS_URL.value).toBe('rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0');
     });
   });
 
   describe('createEnvironment()', () => {
-    it('creates a new empty environment', () => {
-      const envs = { Default: {} };
-      const result = vm.createEnvironment(envs, 'Staging');
-      expect(result.Staging).toEqual({});
-      expect(result.Default).toEqual({});
+    it('creates a new empty environment with enterprise name', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.createEnvironment(envs, 'DR — Disaster Recovery');
+      expect(result['DR — Disaster Recovery']).toEqual({});
+      // All existing environments preserved
+      expect(Object.keys(result)).toEqual([
+        'Default',
+        'Staging — EU Region',
+        'QA — Integration Tests',
+        'Pre-production',
+        'Production',
+        'DR — Disaster Recovery',
+      ]);
     });
 
     it('throws when environment already exists', () => {
-      const envs = { Default: {}, Staging: {} };
-      expect(() => vm.createEnvironment(envs, 'Staging'))
-        .toThrow("Environment 'Staging' already exists");
+      const envs = makeEnterpriseEnvironments();
+      expect(() => vm.createEnvironment(envs, 'Production'))
+        .toThrow("Environment 'Production' already exists");
     });
   });
 
   describe('deleteEnvironment()', () => {
-    it('deletes the specified environment', () => {
-      const envs = { Default: {}, Staging: {} };
-      const result = vm.deleteEnvironment(envs, 'Staging');
-      expect(result.Staging).toBeUndefined();
-      expect(result.Default).toEqual({});
+    it('deletes the specified environment while preserving others', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.deleteEnvironment(envs, 'QA — Integration Tests');
+      expect(result['QA — Integration Tests']).toBeUndefined();
+      expect(Object.keys(result)).toEqual([
+        'Default',
+        'Staging — EU Region',
+        'Pre-production',
+        'Production',
+      ]);
     });
 
     it('throws when trying to delete Default', () => {
-      const envs = { Default: {} };
+      const envs = makeEnterpriseEnvironments();
       expect(() => vm.deleteEnvironment(envs, 'Default'))
         .toThrow('Cannot delete Default environment');
     });
   });
 
   describe('validateEnvironmentExists()', () => {
-    it('does not throw for existing environment', () => {
-      const envs = { Default: {}, Production: {} };
-      expect(() => vm.validateEnvironmentExists(envs, 'Production')).not.toThrow();
+    it('does not throw for existing environment with special chars', () => {
+      const envs = makeEnterpriseEnvironments();
+      expect(() => vm.validateEnvironmentExists(envs, 'Staging — EU Region')).not.toThrow();
     });
 
     it('throws for non-existent environment', () => {
-      const envs = { Default: {} };
+      const envs = makeEnterpriseEnvironments();
       expect(() => vm.validateEnvironmentExists(envs, 'Missing'))
         .toThrow("Environment 'Missing' does not exist");
     });
@@ -194,88 +340,121 @@ describe('EnvironmentVariableManager', () => {
 
   describe('getVariableCount()', () => {
     it('returns 0 for empty environment', () => {
-      expect(vm.getVariableCount({ Default: {} }, 'Default')).toBe(0);
+      const envs = makeEnterpriseEnvironments();
+      expect(vm.getVariableCount(envs, 'QA — Integration Tests')).toBe(0);
     });
 
-    it('returns correct count', () => {
-      const envs = { Default: { A: { value: '1', isSecret: false }, B: { value: '2', isSecret: false } } };
-      expect(vm.getVariableCount(envs, 'Default')).toBe(2);
+    it('returns correct count for production environment', () => {
+      const envs = makeEnterpriseEnvironments();
+      expect(vm.getVariableCount(envs, 'Production')).toBe(5);
     });
 
     it('returns 0 for non-existent environment', () => {
-      expect(vm.getVariableCount({ Default: {} }, 'Missing')).toBe(0);
+      const envs = makeEnterpriseEnvironments();
+      expect(vm.getVariableCount(envs, 'Missing')).toBe(0);
     });
   });
 
   describe('exportEnvironment()', () => {
-    const envs = {
-      Default: {
-        API_KEY: { value: 'abc', isSecret: false },
-        DB_URL: { value: 'postgres://localhost', isSecret: true },
-      },
-    };
-
-    it('exports as JSON', () => {
-      const result = vm.exportEnvironment(envs, 'Default', 'json');
+    it('exports production as JSON with all variable details', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.exportEnvironment(envs, 'Production', 'json');
       const parsed = JSON.parse(result);
-      expect(parsed.API_KEY.value).toBe('abc');
+      expect(parsed.OAUTH2_CLIENT_ID).toEqual({
+        value: 'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
+        isSecret: false,
+        updatedAt: '2026-01-10T16:30:00.000Z',
+      });
+      expect(parsed.DATABASE_CONNECTION_STRING.isSecret).toBe(true);
+      expect(Object.keys(parsed)).toHaveLength(5);
     });
 
-    it('exports as .env format', () => {
+    it('exports as .env format preserving special chars in values', () => {
+      const envs = makeEnterpriseEnvironments();
       const result = vm.exportEnvironment(envs, 'Default', 'env');
-      expect(result).toContain('API_KEY=abc');
-      expect(result).toContain('DB_URL=postgres://localhost');
+      expect(result).toContain('OAUTH2_CLIENT_ID=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+      expect(result).toContain('DATABASE_CONNECTION_STRING=postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/production?sslmode=require');
+      expect(result).toContain('API_GATEWAY_URL=https://gateway.openheaders.io:8443/v2');
     });
 
-    it('exports as shell format', () => {
+    it('exports as shell format with quoted values', () => {
+      const envs = makeEnterpriseEnvironments();
       const result = vm.exportEnvironment(envs, 'Default', 'shell');
-      expect(result).toContain('export API_KEY="abc"');
-      expect(result).toContain('export DB_URL="postgres://localhost"');
+      expect(result).toContain('export OAUTH2_CLIENT_ID="oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890"');
+      expect(result).toContain('export API_GATEWAY_URL="https://gateway.openheaders.io:8443/v2"');
     });
 
     it('throws for unsupported format', () => {
+      const envs = makeEnterpriseEnvironments();
       expect(() => vm.exportEnvironment(envs, 'Default', 'yaml'))
         .toThrow('Unsupported export format: yaml');
     });
 
     it('throws for non-existent environment', () => {
+      const envs = makeEnterpriseEnvironments();
       expect(() => vm.exportEnvironment(envs, 'Missing', 'json'))
         .toThrow("Environment 'Missing' does not exist");
+    });
+
+    it('exports empty environment as empty string in env format', () => {
+      const envs = makeEnterpriseEnvironments();
+      const result = vm.exportEnvironment(envs, 'QA — Integration Tests', 'env');
+      expect(result).toBe('');
     });
   });
 
   describe('importEnvironment()', () => {
-    it('imports JSON format with variable objects', () => {
+    it('imports JSON format with full variable objects', () => {
       const data = JSON.stringify({
-        VAR1: { value: 'val1', isSecret: false },
+        OAUTH2_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature', isSecret: true, updatedAt: '2026-01-15T10:00:00.000Z' },
+        ENDPOINT_URL: { value: 'https://api.openheaders.io/v2/resources', isSecret: false },
       });
       const result = vm.importEnvironment(data, 'json');
-      expect(result.VAR1.value).toBe('val1');
-      expect(result.VAR1.isSecret).toBe(false);
+      expect(result.OAUTH2_TOKEN).toEqual({
+        value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature',
+        isSecret: true,
+        updatedAt: '2026-01-15T10:00:00.000Z',
+      });
+      expect(result.ENDPOINT_URL.value).toBe('https://api.openheaders.io/v2/resources');
+      expect(result.ENDPOINT_URL.isSecret).toBe(false);
     });
 
-    it('imports JSON format with simple key-value pairs', () => {
-      const data = JSON.stringify({ SIMPLE: 'just-a-value' });
+    it('imports JSON format with simple key-value pairs (legacy)', () => {
+      const data = JSON.stringify({
+        API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
+        REGION: 'eu-west-1',
+      });
       const result = vm.importEnvironment(data, 'json');
-      expect(result.SIMPLE.value).toBe('just-a-value');
-      expect(result.SIMPLE.isSecret).toBe(false);
+      expect(result.API_KEY.value).toBe('ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
+      expect(result.API_KEY.isSecret).toBe(false);
+      expect(result.API_KEY.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect(result.REGION.value).toBe('eu-west-1');
     });
 
-    it('imports .env format', () => {
-      const data = 'API_KEY=abc123\nDB_URL=postgres://localhost\n# comment\n';
+    it('imports .env format with special characters in values', () => {
+      const data = [
+        '# Production environment variables',
+        'DATABASE_URL=postgresql://admin:P@ss=w0rd&special@db.openheaders.io:5432/prod',
+        'REDIS_URL=rediss://default:r3d!s@redis.openheaders.io:6380/0',
+        '',
+        '# API keys',
+        'STRIPE_KEY=ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
+      ].join('\n');
       const result = vm.importEnvironment(data, 'env');
-      expect(result.API_KEY.value).toBe('abc123');
-      expect(result.DB_URL.value).toBe('postgres://localhost');
+      expect(result.DATABASE_URL.value).toBe('postgresql://admin:P@ss=w0rd&special@db.openheaders.io:5432/prod');
+      expect(result.REDIS_URL.value).toBe('rediss://default:r3d!s@redis.openheaders.io:6380/0');
+      expect(result.STRIPE_KEY.value).toBe('ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
+      expect(Object.keys(result)).toHaveLength(3);
     });
 
     it('handles .env with = in values', () => {
-      const data = 'QUERY=a=b&c=d';
+      const data = 'QUERY=filter=active&sort=name&limit=100';
       const result = vm.importEnvironment(data, 'env');
-      expect(result.QUERY.value).toBe('a=b&c=d');
+      expect(result.QUERY.value).toBe('filter=active&sort=name&limit=100');
     });
 
     it('skips comments and blank lines in .env format', () => {
-      const data = '# comment\n\nKEY=val\n';
+      const data = '# comment\n\n  \nKEY=val\n  # another comment\n';
       const result = vm.importEnvironment(data, 'env');
       expect(Object.keys(result)).toEqual(['KEY']);
     });
@@ -283,6 +462,10 @@ describe('EnvironmentVariableManager', () => {
     it('throws for unsupported format', () => {
       expect(() => vm.importEnvironment('data', 'xml'))
         .toThrow('Unsupported import format: xml');
+    });
+
+    it('throws for invalid JSON', () => {
+      expect(() => vm.importEnvironment('not valid json {{{', 'json')).toThrow();
     });
   });
 });
@@ -302,28 +485,71 @@ describe('EnvironmentStateManager', () => {
   });
 
   describe('initial state', () => {
-    it('has correct defaults', () => {
-      expect(esm.state.currentWorkspaceId).toBe('default-personal');
-      expect(esm.state.environments).toEqual({ Default: {} });
-      expect(esm.state.activeEnvironment).toBe('Default');
-      expect(esm.state.isLoading).toBe(false);
-      expect(esm.state.isReady).toBe(false);
-      expect(esm.state.error).toBeNull();
+    it('has correct defaults with full shape assertion', () => {
+      const state = esm.getState();
+      expect(state).toEqual({
+        currentWorkspaceId: 'default-personal',
+        environments: { Default: {} },
+        activeEnvironment: 'Default',
+        isLoading: false,
+        isReady: false,
+        error: null,
+      });
+    });
+
+    it('has no initial data loaded', () => {
+      expect(esm.hasInitialData()).toBe(false);
+    });
+
+    it('has no init promise', () => {
+      expect(esm.getInitPromise()).toBeNull();
     });
   });
 
   describe('setState()', () => {
-    it('merges updates into state', () => {
-      esm.setState({ isLoading: true });
-      expect(esm.state.isLoading).toBe(true);
+    it('merges enterprise workspace state updates', () => {
+      esm.setState({
+        currentWorkspaceId: ENTERPRISE_WORKSPACE_ID,
+        environments: makeEnterpriseEnvironments(),
+        activeEnvironment: 'Production',
+        isLoading: false,
+        isReady: true,
+      });
+      const state = esm.getState();
+      expect(state.currentWorkspaceId).toBe(ENTERPRISE_WORKSPACE_ID);
+      expect(state.activeEnvironment).toBe('Production');
+      expect(state.isReady).toBe(true);
+      expect(Object.keys(state.environments)).toEqual([
+        'Default',
+        'Staging — EU Region',
+        'QA — Integration Tests',
+        'Pre-production',
+        'Production',
+      ]);
+    });
+
+    it('notifies listeners on state change', () => {
+      const listener = vi.fn();
+      esm.subscribe(listener);
+      listener.mockClear();
+
+      esm.setState({ isReady: true, currentWorkspaceId: ENTERPRISE_WORKSPACE_ID });
+      expect(listener).toHaveBeenCalledTimes(1);
+      const [state] = listener.mock.calls[0];
+      expect(state.isReady).toBe(true);
+      expect(state.currentWorkspaceId).toBe(ENTERPRISE_WORKSPACE_ID);
     });
   });
 
   describe('getState()', () => {
-    it('returns a copy of state with environments spread', () => {
-      esm.state.environments = { Default: { key: { value: 'val', isSecret: false } } };
+    it('returns an immutable copy — mutations do not affect internal state', () => {
+      esm.setState({ environments: makeEnterpriseEnvironments() });
       const state = esm.getState();
-      expect(state.environments.Default).toEqual({ key: { value: 'val', isSecret: false } });
+      state.environments['Hacked'] = {};
+      state.currentWorkspaceId = 'hacked-workspace';
+      const fresh = esm.getState();
+      expect(fresh.environments['Hacked']).toBeUndefined();
+      expect(fresh.currentWorkspaceId).toBe('default-personal');
     });
   });
 
@@ -332,7 +558,7 @@ describe('EnvironmentStateManager', () => {
       expect(esm.isReady()).toBe(false);
     });
 
-    it('returns false when loading', () => {
+    it('returns false when loading even if isReady flag is true', () => {
       esm.state.isReady = true;
       esm.state.isLoading = true;
       expect(esm.isReady()).toBe(false);
@@ -354,24 +580,73 @@ describe('EnvironmentStateManager', () => {
   });
 
   describe('load promise management', () => {
-    it('setLoadPromise / getLoadPromise / clearLoadPromise round-trip', () => {
-      const promise = Promise.resolve(true);
-      esm.setLoadPromise('ws1', promise);
-      expect(esm.getLoadPromise('ws1')).toBe(promise);
-      expect(esm.isLoadingWorkspace('ws1')).toBe(true);
-      esm.clearLoadPromise('ws1');
-      expect(esm.isLoadingWorkspace('ws1')).toBe(false);
+    it('manages promises per workspace ID', () => {
+      const promiseA = Promise.resolve(true);
+      const promiseB = Promise.resolve(true);
+      esm.setLoadPromise(ENTERPRISE_WORKSPACE_ID, promiseA);
+      esm.setLoadPromise('ws-other-workspace', promiseB);
+
+      expect(esm.getLoadPromise(ENTERPRISE_WORKSPACE_ID)).toBe(promiseA);
+      expect(esm.getLoadPromise('ws-other-workspace')).toBe(promiseB);
+      expect(esm.isLoadingWorkspace(ENTERPRISE_WORKSPACE_ID)).toBe(true);
+
+      esm.clearLoadPromise(ENTERPRISE_WORKSPACE_ID);
+      expect(esm.isLoadingWorkspace(ENTERPRISE_WORKSPACE_ID)).toBe(false);
+      expect(esm.isLoadingWorkspace('ws-other-workspace')).toBe(true);
+    });
+
+    it('returns undefined for unknown workspace', () => {
+      expect(esm.getLoadPromise('ws-unknown')).toBeUndefined();
     });
   });
 
   describe('initial data tracking', () => {
-    it('starts without initial data', () => {
+    it('starts without initial data and marks it loaded', () => {
       expect(esm.hasInitialData()).toBe(false);
-    });
-
-    it('marks initial data as loaded', () => {
       esm.markInitialDataLoaded();
       expect(esm.hasInitialData()).toBe(true);
+    });
+  });
+
+  describe('subscribe', () => {
+    it('calls listener immediately with current state including defaults', () => {
+      const listener = vi.fn();
+      esm.subscribe(listener);
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({
+          currentWorkspaceId: 'default-personal',
+          environments: { Default: {} },
+          activeEnvironment: 'Default',
+          isLoading: false,
+          isReady: false,
+          error: null,
+        }),
+        []
+      );
+    });
+
+    it('returns an unsubscribe function that prevents future notifications', () => {
+      const listener = vi.fn();
+      const unsub = esm.subscribe(listener);
+      listener.mockClear();
+
+      unsub();
+      esm.setState({ isReady: true });
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('supports multiple concurrent listeners', () => {
+      const listenerA = vi.fn();
+      const listenerB = vi.fn();
+      esm.subscribe(listenerA);
+      esm.subscribe(listenerB);
+      listenerA.mockClear();
+      listenerB.mockClear();
+
+      esm.setState({ activeEnvironment: 'Production' });
+      expect(listenerA).toHaveBeenCalledTimes(1);
+      expect(listenerB).toHaveBeenCalledTimes(1);
     });
   });
 });
@@ -381,118 +656,150 @@ describe('EnvironmentStateManager', () => {
 // ======================================================================
 describe('CES state management patterns', () => {
   describe('batchSetVariables pattern', () => {
-    it('sets multiple variables in a single pass', () => {
-      const environments = { Default: { existing: { value: 'keep' } } };
+    it('sets multiple enterprise variables in a single pass', () => {
+      const environments = makeEnterpriseEnvironments();
       const updatedEnvironments = JSON.parse(JSON.stringify(environments));
-      const variables = [
-        { name: 'VAR1', value: 'val1', isSecret: false },
-        { name: 'VAR2', value: 'val2', isSecret: true },
+      const variables: Array<{ name: string; value: string | null; isSecret: boolean }> = [
+        { name: 'NEW_API_TOKEN', value: 'Bearer eyJhbGciOiJSUzI1NiJ9.new-payload.sig', isSecret: true },
+        { name: 'MONITORING_URL', value: 'https://grafana.openheaders.io/d/api-latency', isSecret: false },
+        { name: 'SENTRY_DSN', value: 'https://abc123@sentry.openheaders.io/42', isSecret: false },
       ];
 
       for (const { name, value, isSecret } of variables) {
-        updatedEnvironments.Default[name] = {
-          value,
-          isSecret: isSecret || false,
-          updatedAt: new Date().toISOString(),
-        };
-      }
-
-      expect(updatedEnvironments.Default.existing.value).toBe('keep');
-      expect(updatedEnvironments.Default.VAR1.value).toBe('val1');
-      expect(updatedEnvironments.Default.VAR2.isSecret).toBe(true);
-    });
-
-    it('deletes variables with null or empty values', () => {
-      const environments = {
-        Default: {
-          TO_DELETE: { value: 'old' },
-          KEEP: { value: 'keep' },
-        },
-      };
-      const updatedEnvironments = JSON.parse(JSON.stringify(environments));
-      const variables = [{ name: 'TO_DELETE', value: null, isSecret: false }];
-
-      for (const { name, value } of variables) {
         if (value === null || value === '') {
-          delete updatedEnvironments.Default[name];
+          delete updatedEnvironments.Production[name];
+        } else {
+          updatedEnvironments.Production[name] = {
+            value,
+            isSecret: isSecret || false,
+            updatedAt: new Date().toISOString(),
+          };
         }
       }
 
-      expect(updatedEnvironments.Default.TO_DELETE).toBeUndefined();
-      expect(updatedEnvironments.Default.KEEP.value).toBe('keep');
+      // Original variables preserved
+      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012');
+      expect(updatedEnvironments.Production.REDIS_URL.value).toBe('rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0');
+      // New variables added
+      expect(updatedEnvironments.Production.NEW_API_TOKEN.value).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.new-payload.sig');
+      expect(updatedEnvironments.Production.NEW_API_TOKEN.isSecret).toBe(true);
+      expect(updatedEnvironments.Production.MONITORING_URL.value).toBe('https://grafana.openheaders.io/d/api-latency');
+      expect(updatedEnvironments.Production.SENTRY_DSN.value).toBe('https://abc123@sentry.openheaders.io/42');
+      // Total count
+      expect(Object.keys(updatedEnvironments.Production)).toHaveLength(8);
+    });
+
+    it('deletes variables with null or empty values', () => {
+      const environments = makeEnterpriseEnvironments();
+      const updatedEnvironments = JSON.parse(JSON.stringify(environments));
+      const variables: Array<{ name: string; value: string | null }> = [
+        { name: 'REDIS_URL', value: null },
+        { name: 'DATABASE_CONNECTION_STRING', value: '' },
+      ];
+
+      for (const { name, value } of variables) {
+        if (value === null || value === '') {
+          delete updatedEnvironments.Production[name];
+        }
+      }
+
+      expect(updatedEnvironments.Production.REDIS_URL).toBeUndefined();
+      expect(updatedEnvironments.Production.DATABASE_CONNECTION_STRING).toBeUndefined();
+      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012');
+      expect(Object.keys(updatedEnvironments.Production)).toHaveLength(3);
     });
 
     it('throws for non-existent environment', () => {
-      const environments = { Default: {} };
-      const envName = 'NonExistent';
+      const environments = makeEnterpriseEnvironments();
       const updatedEnvironments = JSON.parse(JSON.stringify(environments));
-      expect(updatedEnvironments[envName]).toBeUndefined();
+      expect(updatedEnvironments['NonExistent']).toBeUndefined();
     });
   });
 
   describe('deleteEnvironment pattern', () => {
     it('switches to Default when deleting active environment', () => {
       const state = {
-        environments: { Default: {}, Staging: {} } as Record<string, Record<string, { value: string; isSecret: boolean }>>,
-        activeEnvironment: 'Staging',
+        environments: makeEnterpriseEnvironments(),
+        activeEnvironment: 'Staging — EU Region',
       };
 
-      const wasActive = state.activeEnvironment === 'Staging';
+      const wasActive = state.activeEnvironment === 'Staging — EU Region';
       const updatedEnvs = { ...state.environments };
-      delete updatedEnvs.Staging;
+      delete updatedEnvs['Staging — EU Region'];
 
-      const updates: { environments: Record<string, Record<string, { value: string; isSecret: boolean }>>; activeEnvironment?: string } = { environments: updatedEnvs };
+      const updates: { environments: typeof updatedEnvs; activeEnvironment?: string } = { environments: updatedEnvs };
       if (wasActive) {
         updates.activeEnvironment = 'Default';
       }
 
       expect(updates.activeEnvironment).toBe('Default');
-      expect(updates.environments.Staging).toBeUndefined();
+      expect(updates.environments['Staging — EU Region']).toBeUndefined();
+      expect(Object.keys(updates.environments)).toHaveLength(4);
     });
 
     it('does not change active environment when deleting non-active', () => {
       const state = {
-        environments: { Default: {}, Staging: {} },
-        activeEnvironment: 'Default',
+        environments: makeEnterpriseEnvironments(),
+        activeEnvironment: 'Production',
       };
 
-      const wasActive = state.activeEnvironment === 'Staging';
+      const wasActive = state.activeEnvironment === 'QA — Integration Tests';
       expect(wasActive).toBe(false);
     });
   });
 
   describe('handleWorkspaceChange pattern', () => {
     it('skips when already in target workspace and ready', () => {
-      const state = { currentWorkspaceId: 'ws1', isReady: true };
-      const shouldChange = !(state.currentWorkspaceId === 'ws1' && state.isReady);
+      const state = { currentWorkspaceId: ENTERPRISE_WORKSPACE_ID, isReady: true };
+      const shouldChange = !(state.currentWorkspaceId === ENTERPRISE_WORKSPACE_ID && state.isReady);
       expect(shouldChange).toBe(false);
     });
 
     it('proceeds when workspace is different', () => {
-      const state = { currentWorkspaceId: 'ws1', isReady: true };
-      const shouldChange = !(state.currentWorkspaceId === 'ws2' && state.isReady);
+      const state = { currentWorkspaceId: ENTERPRISE_WORKSPACE_ID, isReady: true };
+      const shouldChange = !(state.currentWorkspaceId === 'ws-different-workspace' && state.isReady);
       expect(shouldChange).toBe(true);
     });
 
     it('proceeds when not ready even if same workspace', () => {
-      const state = { currentWorkspaceId: 'ws1', isReady: false };
-      const shouldChange = !(state.currentWorkspaceId === 'ws1' && state.isReady);
+      const state = { currentWorkspaceId: ENTERPRISE_WORKSPACE_ID, isReady: false };
+      const shouldChange = !(state.currentWorkspaceId === ENTERPRISE_WORKSPACE_ID && state.isReady);
       expect(shouldChange).toBe(true);
     });
   });
 
   describe('resolveTemplate pattern', () => {
     it('returns string result directly', () => {
-      const getResult = (): string | { resolved: string; missing: string[] } => 'resolved-value';
+      const getResult = (): string | { resolved: string; missing: string[] } => 'https://api.openheaders.io/v2/resources';
       const result = getResult();
       const output = typeof result === 'string' ? result : result.resolved;
-      expect(output).toBe('resolved-value');
+      expect(output).toBe('https://api.openheaders.io/v2/resources');
     });
 
     it('extracts resolved from object result', () => {
-      const result: string | { resolved: string; missing: string[] } = { resolved: 'from-object', missing: ['VAR1'] };
+      const result: string | { resolved: string; missing: string[] } = {
+        resolved: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature',
+        missing: ['REFRESH_TOKEN'],
+      };
       const output = typeof result === 'string' ? result : result.resolved;
-      expect(output).toBe('from-object');
+      expect(output).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature');
+    });
+  });
+
+  describe('waitForReady pattern', () => {
+    it('resolves immediately when already ready', async () => {
+      const esm = new EnvironmentStateManager();
+      esm.setState({ isReady: true });
+      const result = await esm.waitForReady(100);
+      expect(result).toBe(true);
+      esm.cleanup();
+    });
+
+    it('throws on timeout when not ready', async () => {
+      vi.useRealTimers();
+      const esm = new EnvironmentStateManager();
+      await expect(esm.waitForReady(100)).rejects.toThrow('Timeout waiting for environment service to be ready');
+      esm.cleanup();
     });
   });
 });

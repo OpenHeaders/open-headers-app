@@ -1,8 +1,6 @@
 // @vitest-environment jsdom
 /**
- * Tests for useEnvironmentSchema hook
- *
- * Validates variable usage analysis and schema generation.
+ * Tests for useEnvironmentSchema hook — validates variable usage analysis and schema generation.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -15,9 +13,13 @@ import type { Source } from '../../../../src/types/source';
 
 const mockEnvironments = {
   Default: {
-    API_KEY: { value: 'key', isSecret: true },
-    BASE_URL: { value: 'https://api.test.com' },
-    UNUSED: { value: 'x' },
+    OAUTH2_CLIENT_ID: { value: 'oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890', isSecret: false },
+    OAUTH2_CLIENT_SECRET: { value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc', isSecret: true },
+    API_GATEWAY_URL: { value: 'https://gateway.openheaders.io:8443/v2' },
+    UNUSED_LEGACY_VAR: { value: 'deprecated-value' },
+  },
+  Production: {
+    REDIS_URL: { value: 'rediss://redis.openheaders.io:6380/0', isSecret: true },
   },
 };
 
@@ -30,26 +32,35 @@ vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => (
 import { useEnvironmentSchema } from '../../../../src/renderer/hooks/environment/useEnvironmentSchema';
 
 // ---------------------------------------------------------------------------
-// Test data
+// Enterprise test data
 // ---------------------------------------------------------------------------
 
-const httpSource: Source = {
-  sourceId: 'src-1',
+const oauthSource: Source = {
+  sourceId: 'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   sourceType: 'http',
-  sourcePath: '{{BASE_URL}}/users',
+  sourcePath: '{{API_GATEWAY_URL}}/oauth2/token',
   requestOptions: {
-    headers: [{ key: 'Authorization', value: 'Bearer {{API_KEY}}' }],
-    queryParams: [{ key: 'token', value: '{{API_KEY}}' }],
-    body: '{"secret": "{{API_KEY}}"}',
+    headers: [
+      { key: 'Authorization', value: 'Basic {{OAUTH2_CLIENT_ID}}:{{OAUTH2_CLIENT_SECRET}}' },
+      { key: 'Content-Type', value: 'application/x-www-form-urlencoded' },
+    ],
+    queryParams: [{ key: 'scope', value: '{{OAUTH_SCOPE}}' }],
+    body: '{"grant_type": "client_credentials", "client_id": "{{OAUTH2_CLIENT_ID}}"}',
     totpSecret: '{{TOTP_SECRET}}',
   },
-  jsonFilter: { enabled: true, path: '{{JSON_PATH}}' },
+  jsonFilter: { enabled: true, path: '{{JSON_FILTER_PATH}}' },
 };
 
 const fileSource: Source = {
-  sourceId: 'src-2',
+  sourceId: 'src-file-b2c3d4e5-f6a7-8901-bcde-f12345678901',
   sourceType: 'file',
-  sourcePath: '/tmp/data.json',
+  sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json',
+};
+
+const apiKeySource: Source = {
+  sourceId: 'src-apikey-c3d4e5f6-a7b8-9012-cdef-123456789012',
+  sourceType: 'http',
+  sourcePath: '{{API_GATEWAY_URL}}/v2/resources',
 };
 
 // ---------------------------------------------------------------------------
@@ -58,85 +69,99 @@ const fileSource: Source = {
 
 describe('useEnvironmentSchema', () => {
   describe('findVariableUsage', () => {
-    it('finds variables in URL, headers, query params, body, totp, and jsonFilter', () => {
+    it('finds all variables across URL, headers, query params, body, totp, and jsonFilter', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
+      const usage = result.current.findVariableUsage([oauthSource]);
 
-      const usage = result.current.findVariableUsage([httpSource]);
-
-      expect(usage.BASE_URL).toEqual(['src-1']);
-      expect(usage.API_KEY).toEqual(['src-1']); // deduplicated
-      expect(usage.TOTP_SECRET).toEqual(['src-1']);
-      expect(usage.JSON_PATH).toEqual(['src-1']);
+      expect(usage.API_GATEWAY_URL).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
+      expect(usage.OAUTH2_CLIENT_ID).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']); // deduplicated
+      expect(usage.OAUTH2_CLIENT_SECRET).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
+      expect(usage.OAUTH_SCOPE).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
+      expect(usage.TOTP_SECRET).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
+      expect(usage.JSON_FILTER_PATH).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
     });
 
     it('ignores non-http sources', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
-
       const usage = result.current.findVariableUsage([fileSource]);
-
       expect(Object.keys(usage)).toHaveLength(0);
     });
 
-    it('aggregates usage across multiple sources', () => {
+    it('aggregates usage across multiple enterprise sources', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
+      const usage = result.current.findVariableUsage([oauthSource, apiKeySource]);
 
-      const secondHttp: Source = {
-        sourceId: 'src-3',
+      expect(usage.API_GATEWAY_URL).toEqual([
+        'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        'src-apikey-c3d4e5f6-a7b8-9012-cdef-123456789012',
+      ]);
+    });
+
+    it('handles source with no variables', () => {
+      const staticSource: Source = {
+        sourceId: 'src-static',
         sourceType: 'http',
-        sourcePath: '{{BASE_URL}}/items',
+        sourcePath: 'https://api.openheaders.io/health',
       };
-
-      const usage = result.current.findVariableUsage([httpSource, secondHttp]);
-
-      expect(usage.BASE_URL).toEqual(['src-1', 'src-3']);
+      const { result } = renderHook(() => useEnvironmentSchema());
+      const usage = result.current.findVariableUsage([staticSource]);
+      expect(Object.keys(usage)).toHaveLength(0);
     });
   });
 
   describe('generateEnvironmentSchema', () => {
-    it('builds schema with environment structure', () => {
+    it('builds schema with enterprise environment structure', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
-
-      const schema = result.current.generateEnvironmentSchema([httpSource]);
+      const schema = result.current.generateEnvironmentSchema([oauthSource]);
 
       expect(schema.environments.Default.variables).toEqual(
         expect.arrayContaining([
-          { name: 'API_KEY', isSecret: true },
-          { name: 'BASE_URL', isSecret: false },
-          { name: 'UNUSED', isSecret: false },
+          { name: 'OAUTH2_CLIENT_ID', isSecret: false },
+          { name: 'OAUTH2_CLIENT_SECRET', isSecret: true },
+          { name: 'API_GATEWAY_URL', isSecret: false },
+          { name: 'UNUSED_LEGACY_VAR', isSecret: false },
         ])
       );
     });
 
-    it('marks sensitive variables in definitions', () => {
+    it('marks sensitive variables correctly in definitions', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
+      const schema = result.current.generateEnvironmentSchema([oauthSource]);
 
-      const schema = result.current.generateEnvironmentSchema([httpSource]);
-
-      expect(schema.variableDefinitions.API_KEY.isSecret).toBe(true);
-      expect(schema.variableDefinitions.BASE_URL.isSecret).toBe(false);
+      expect(schema.variableDefinitions.OAUTH2_CLIENT_SECRET.isSecret).toBe(true);
+      expect(schema.variableDefinitions.API_GATEWAY_URL.isSecret).toBe(false);
+      expect(schema.variableDefinitions.OAUTH2_CLIENT_ID.isSecret).toBe(false);
     });
 
     it('tracks which sources use each variable', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
+      const schema = result.current.generateEnvironmentSchema([oauthSource, apiKeySource]);
 
-      const schema = result.current.generateEnvironmentSchema([httpSource]);
-
-      expect(schema.variableDefinitions.API_KEY.usedIn).toEqual(['src-1']);
+      expect(schema.variableDefinitions.API_GATEWAY_URL.usedIn).toEqual([
+        'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        'src-apikey-c3d4e5f6-a7b8-9012-cdef-123456789012',
+      ]);
+      expect(schema.variableDefinitions.OAUTH2_CLIENT_ID.usedIn).toEqual([
+        'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      ]);
     });
 
     it('adds example for URL-like variable names', () => {
       const { result } = renderHook(() => useEnvironmentSchema());
-
-      // Create a source that uses a variable named with URL in the name
       const urlSource: Source = {
         sourceId: 'src-url',
         sourceType: 'http',
-        sourcePath: '{{API_URL}}/test',
+        sourcePath: '{{WEBHOOK_URL}}/callback',
       };
-
       const schema = result.current.generateEnvironmentSchema([urlSource]);
+      expect(schema.variableDefinitions.WEBHOOK_URL.example).toBe('https://api.example.com');
+    });
 
-      expect(schema.variableDefinitions.API_URL.example).toBe('https://api.example.com');
+    it('includes all environments from mock (Default and Production)', () => {
+      const { result } = renderHook(() => useEnvironmentSchema());
+      const schema = result.current.generateEnvironmentSchema([]);
+      expect(Object.keys(schema.environments)).toContain('Default');
+      expect(Object.keys(schema.environments)).toContain('Production');
     });
   });
 });
