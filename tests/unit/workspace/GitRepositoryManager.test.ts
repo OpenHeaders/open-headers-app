@@ -304,7 +304,7 @@ describe('GitRepositoryManager', () => {
 
         it('throws when directory is not empty', async () => {
             const fs = await import('fs');
-            vi.spyOn(fs.promises, 'stat').mockResolvedValue({ isDirectory: () => true } as ReturnType<typeof fs.statSync>);
+            vi.spyOn(fs.promises, 'stat').mockResolvedValue({ isDirectory: () => true } as Awaited<ReturnType<typeof fs.promises.stat>>);
             vi.spyOn(fs.promises, 'readdir').mockResolvedValue(
                 ['file.txt'] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>
             );

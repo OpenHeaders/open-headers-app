@@ -528,7 +528,7 @@ describe('RefreshManagerIntegration', () => {
         jsonFilter: undefined,
         refreshOptions: undefined,
         activationState: 'active',
-      }) as Source & { resolvedData?: unknown });
+      }));
 
       const sources: Source[] = [
         makeSource({
@@ -551,7 +551,7 @@ describe('RefreshManagerIntegration', () => {
         jsonFilter: undefined,
         refreshOptions: { enabled: true, interval: 5 },
         activationState: 'active',
-      }) as Source & { resolvedData?: unknown });
+      }));
 
       const sources: Source[] = [
         makeSource({
@@ -637,7 +637,7 @@ describe('RefreshManagerIntegration', () => {
         jsonFilter: undefined,
         refreshOptions: undefined,
         activationState: 'waiting_for_deps',
-      }) as Source & { resolvedData?: unknown });
+      }));
 
       const sources: Source[] = [
         makeSource({

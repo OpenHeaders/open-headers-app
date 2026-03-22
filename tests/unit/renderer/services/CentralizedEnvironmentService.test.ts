@@ -260,7 +260,7 @@ describe('EnvironmentVariableManager', () => {
       const envs = makeEnterpriseEnvironments();
       const originalProdSecret = envs.Production.OAUTH2_CLIENT_SECRET.value;
       const result = vm.setVariable(envs, 'Production', 'NEW_VAR', 'new-value');
-      expect(envs.Production.NEW_VAR).toBeUndefined();
+      expect((envs.Production as Record<string, unknown>).NEW_VAR).toBeUndefined();
       expect(envs.Production.OAUTH2_CLIENT_SECRET.value).toBe(originalProdSecret);
       expect(result.Production.NEW_VAR.value).toBe('new-value');
     });
@@ -724,7 +724,7 @@ describe('CES state management patterns', () => {
       };
 
       const wasActive = state.activeEnvironment === 'Staging — EU Region';
-      const updatedEnvs = { ...state.environments };
+      const updatedEnvs: Record<string, (typeof state.environments)[keyof typeof state.environments]> = { ...state.environments };
       delete updatedEnvs['Staging — EU Region'];
 
       const updates: { environments: typeof updatedEnvs; activeEnvironment?: string } = { environments: updatedEnvs };

@@ -501,7 +501,7 @@ describe('validateImportPayload', () => {
       ],
       environmentSchema: {
         environments: { Production: { variables: [{ name: 'API_KEY', isSecret: true }] } },
-        variableDefinitions: { API_KEY: { description: 'Production API key', isSecret: true } },
+        variableDefinitions: { API_KEY: { description: 'Production API key', isSecret: true, usedIn: ['Production'] } },
       },
     });
     expect(r.success).toBe(true);
