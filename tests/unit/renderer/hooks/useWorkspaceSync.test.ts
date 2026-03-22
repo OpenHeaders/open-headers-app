@@ -57,14 +57,16 @@ describe('useWorkspaceSync', () => {
     vi.restoreAllMocks();
   });
 
+  const enterpriseWorkspaceId = 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
   it('subscribes to workspace data updates on mount', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
     expect(capturedCallback).not.toBeNull();
   });
 
   it('unsubscribes on unmount', () => {
-    const { unmount } = renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    const { unmount } = renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
     unmount();
 
@@ -72,27 +74,27 @@ describe('useWorkspaceSync', () => {
   });
 
   it('dispatches workspace-data-refresh-needed event for active workspace', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
     const handler = vi.fn();
     window.addEventListener('workspace-data-refresh-needed', handler);
 
-    capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
+    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
 
     expect(handler).toHaveBeenCalledTimes(1);
     const event: CustomEvent = handler.mock.calls[0][0];
-    expect(event.detail.workspaceId).toBe('ws-1');
+    expect(event.detail.workspaceId).toBe(enterpriseWorkspaceId);
 
     window.removeEventListener('workspace-data-refresh-needed', handler);
   });
 
   it('ignores updates for non-active workspace', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
     const handler = vi.fn();
     window.addEventListener('workspace-data-refresh-needed', handler);
 
-    capturedCallback!({ workspaceId: 'ws-other', timestamp: Date.now() });
+    capturedCallback!({ workspaceId: 'ws-b2c3d4e5-f6a7-8901-bcde-other', timestamp: Date.now() });
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -100,9 +102,9 @@ describe('useWorkspaceSync', () => {
   });
 
   it('shows success notification after coalesce delay', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
-    capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
+    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
 
     // Not shown immediately
     expect(mockShowMessage).not.toHaveBeenCalled();
@@ -114,14 +116,14 @@ describe('useWorkspaceSync', () => {
   });
 
   it('coalesces rapid-fire events into single notification', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: 'ws-1' }));
+    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
-    // Fire 3 events rapidly
-    capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
+    // Fire 3 events rapidly (simulating multiple git syncs)
+    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
     vi.advanceTimersByTime(200);
-    capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
+    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
     vi.advanceTimersByTime(200);
-    capturedCallback!({ workspaceId: 'ws-1', timestamp: Date.now() });
+    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
 
     // After 1000ms from last event
     vi.advanceTimersByTime(1000);

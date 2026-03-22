@@ -245,4 +245,45 @@ describe('AutoSaveManager', () => {
       expect(manager.isSaving).toBe(false);
     });
   });
+
+  // ========================================================================
+  // Edge cases
+  // ========================================================================
+  describe('edge cases', () => {
+    it('startAutoSave replaces existing interval', () => {
+      const callback1 = vi.fn().mockResolvedValue(undefined);
+      const callback2 = vi.fn().mockResolvedValue(undefined);
+      manager.startAutoSave(callback1, 1000);
+      const firstInterval = manager.autoSaveInterval;
+      manager.startAutoSave(callback2, 2000);
+      expect(manager.autoSaveInterval).not.toBe(firstInterval);
+    });
+
+    it('stopAutoSave is idempotent', () => {
+      manager.stopAutoSave();
+      manager.stopAutoSave();
+      expect(manager.autoSaveInterval).toBeNull();
+    });
+
+    it('markDirty then resetDirtyState then markDirty tracks correctly', () => {
+      manager.markDirty('sources');
+      manager.resetDirtyState();
+      expect(manager.hasDirtyData()).toBe(false);
+      manager.markDirty('proxyRules');
+      expect(manager.getDirtyState()).toEqual({
+        sources: false,
+        rules: false,
+        proxyRules: true,
+      });
+    });
+
+    it('scheduleAutoSave cancels timer when workspace switching starts during delay', async () => {
+      const saveFn = vi.fn().mockResolvedValue(undefined);
+      manager.scheduleAutoSave(saveFn);
+      vi.advanceTimersByTime(500);
+      manager.setWorkspaceSwitching(true);
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(saveFn).not.toHaveBeenCalled();
+    });
+  });
 });

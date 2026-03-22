@@ -92,6 +92,22 @@ describe('FileOperations', () => {
       const result = generateCompanionFilePath('/home/user/', 'env.json');
       expect(result).toBe('/home/user/env.json');
     });
+
+    it('handles enterprise path with spaces', () => {
+      const result = generateCompanionFilePath(
+        '/Users/jane.doe/Documents/OpenHeaders Configs/export.json',
+        'open-headers-env.json'
+      );
+      expect(result).toBe('/Users/jane.doe/Documents/OpenHeaders Configs/open-headers-env.json');
+    });
+
+    it('handles deeply nested enterprise path', () => {
+      const result = generateCompanionFilePath(
+        '/opt/openheaders/data/exports/2026/03/config.json',
+        'env.json'
+      );
+      expect(result).toBe('/opt/openheaders/data/exports/2026/03/env.json');
+    });
   });
 
   // ========================================================================
@@ -137,6 +153,22 @@ describe('FileOperations', () => {
     it('accepts paths that happen to contain "dev" not at /dev/', () => {
       const result = validateFilePath('/home/developer/config.json');
       expect(result.success).toBe(true);
+    });
+
+    it('accepts enterprise paths with spaces and unicode', () => {
+      const result = validateFilePath('/Users/jane.doe/Documents/OpenHeaders — Configs/export.json');
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects null path', () => {
+      const result = validateFilePath(null as unknown as string);
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('non-empty string');
+    });
+
+    it('rejects non-string path', () => {
+      const result = validateFilePath(123 as unknown as string);
+      expect(result.success).toBe(false);
     });
   });
 

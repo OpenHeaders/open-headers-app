@@ -16,8 +16,8 @@ import type { ExportImportDependencies, ExportOptions, ExportData, WorkspaceData
 // ---------------------------------------------------------------------------
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
-    appVersion: '3.0.0',
-    activeWorkspaceId: 'ws-1',
+    appVersion: '3.2.0',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     environments: {},
     sources: [],
     workspaces: [],
@@ -261,20 +261,24 @@ describe('ExportService._sanitizeOptionsForLogging', () => {
 describe('ExportService.getExportStatistics', () => {
   it('returns version and totalItems', () => {
     const service = new ExportService(makeDeps());
-    const stats = service.getExportStatistics({ version: '3.0.0' } as ExportData);
-    expect(stats.version).toBe('3.0.0');
-    expect(stats.totalItems).toBe(0);
-    expect(stats.dataTypes).toEqual({});
+    const stats = service.getExportStatistics({ version: '3.2.0' } as ExportData);
+    expect(stats).toEqual({
+      version: '3.2.0',
+      totalItems: 0,
+      estimatedSize: expect.any(String),
+      dataTypes: {},
+    });
   });
 
   it('includes sources statistics when present', () => {
     const service = new ExportService(makeDeps());
     const stats = service.getExportStatistics({
-      version: '3.0.0',
-      sources: [{ sourceType: 'file', sourceId: 's1', sourcePath: '/a' }],
+      version: '3.2.0',
+      sources: [{ sourceType: 'http', sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token' }],
     } as unknown as ExportData);
     expect(stats.dataTypes.sources).toBeDefined();
     expect(stats.dataTypes.sources!.total).toBe(1);
+    expect(stats.dataTypes.sources!.byType).toEqual({ http: 1 });
   });
 
   it('includes proxy rules statistics', () => {

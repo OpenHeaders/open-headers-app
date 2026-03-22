@@ -30,13 +30,13 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
 
 function validWorkspace(overrides: Partial<WorkspaceData> = {}): WorkspaceData {
   return {
-    name: 'My Workspace',
-    description: 'Test workspace',
+    name: 'OpenHeaders — Staging Environment',
+    description: 'Shared staging workspace for the platform team',
     type: 'git',
-    gitUrl: 'https://github.com/org/repo',
+    gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
     gitBranch: 'main',
     gitPath: 'config/open-headers.json',
-    authType: 'none',
+    authType: 'token',
     autoSync: true,
     ...overrides,
   };
@@ -56,23 +56,35 @@ describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
     expect(handler._sanitizeWorkspaceAuthData('str' as never)).toEqual({});
   });
 
-  it('copies only known auth fields', () => {
+  it('copies only known auth fields from enterprise auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
     const input = {
-      token: 'ghp_123',
-      tokenType: 'auto',
-      username: 'user',
-      password: 'pass',
-      sshKeyPath: '/path/to/key',
+      token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
+      tokenType: 'gitlab',
+      username: 'platform-bot@openheaders.io',
+      password: 'P@ss=w0rd&special!chars',
+      sshKeyPath: '/Users/jane.doe/.ssh/openheaders_ed25519',
+      sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpenHeaders',
+      privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl...',
+      publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpenHeaders',
+      passphrase: 'my-key-passphrase!',
       unknownField: 'should-be-excluded',
+      _internal: 'also-excluded',
     } as Parameters<typeof handler._sanitizeWorkspaceAuthData>[0];
     const result = handler._sanitizeWorkspaceAuthData(input);
-    expect(result.token).toBe('ghp_123');
-    expect(result.tokenType).toBe('auto');
-    expect(result.username).toBe('user');
-    expect(result.password).toBe('pass');
-    expect(result.sshKeyPath).toBe('/path/to/key');
+    expect(result).toEqual({
+      token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
+      tokenType: 'gitlab',
+      username: 'platform-bot@openheaders.io',
+      password: 'P@ss=w0rd&special!chars',
+      sshKeyPath: '/Users/jane.doe/.ssh/openheaders_ed25519',
+      sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpenHeaders',
+      privateKey: '-----BEGIN OPENSSH PRIVATE KEY-----\nb3Bl...',
+      publicKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOpenHeaders',
+      passphrase: 'my-key-passphrase!',
+    });
     expect((result as Record<string, unknown>).unknownField).toBeUndefined();
+    expect((result as Record<string, unknown>)._internal).toBeUndefined();
   });
 });
 
@@ -95,21 +107,37 @@ describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
   it('accepts valid token auth data', () => {
     const handler = new WorkspaceHandler(makeDeps());
     const result = handler._validateAndSanitizeWorkspaceAuthData({
-      token: 'ghp_123',
-      tokenType: 'auto',
+      token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
+      tokenType: 'gitlab',
     });
-    expect(result.token).toBe('ghp_123');
-    expect(result.tokenType).toBe('auto');
+    expect(result).toEqual({
+      token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
+      tokenType: 'gitlab',
+    });
   });
 
-  it('accepts valid basic auth data', () => {
+  it('accepts valid basic auth data with special characters', () => {
     const handler = new WorkspaceHandler(makeDeps());
     const result = handler._validateAndSanitizeWorkspaceAuthData({
-      username: 'user',
-      password: 'pass',
+      username: 'platform-bot@openheaders.io',
+      password: 'P@ss=w0rd&special!chars',
     });
-    expect(result.username).toBe('user');
-    expect(result.password).toBe('pass');
+    expect(result).toEqual({
+      username: 'platform-bot@openheaders.io',
+      password: 'P@ss=w0rd&special!chars',
+    });
+  });
+
+  it('accepts SSH auth data', () => {
+    const handler = new WorkspaceHandler(makeDeps());
+    const result = handler._validateAndSanitizeWorkspaceAuthData({
+      sshKeyPath: '/Users/jane.doe/.ssh/openheaders_ed25519',
+      passphrase: 'my-key-passphrase!',
+    });
+    expect(result).toEqual({
+      sshKeyPath: '/Users/jane.doe/.ssh/openheaders_ed25519',
+      passphrase: 'my-key-passphrase!',
+    });
   });
 });
 
@@ -174,13 +202,15 @@ describe('WorkspaceHandler.getWorkspaceStatistics', () => {
   it('returns detailed stats for valid workspace', () => {
     const handler = new WorkspaceHandler(makeDeps());
     const stats = handler.getWorkspaceStatistics(validWorkspace());
-    expect(stats.hasWorkspace).toBe(true);
-    expect(stats.name).toBe('My Workspace');
-    expect(stats.type).toBe('git');
-    expect(stats.hasGitUrl).toBe(true);
-    expect(stats.hasAuthData).toBe(false);
-    expect(stats.authType).toBe('none');
-    expect(stats.autoSync).toBe(true);
+    expect(stats).toEqual({
+      hasWorkspace: true,
+      name: 'OpenHeaders — Staging Environment',
+      type: 'git',
+      hasGitUrl: true,
+      hasAuthData: false,
+      authType: 'token',
+      autoSync: true,
+    });
   });
 
   it('detects when authData is present', () => {
@@ -253,20 +283,19 @@ describe('WorkspaceHandler.exportWorkspace', () => {
     const result = await handler.exportWorkspace(makeExportOpts({
       includeWorkspace: true,
       includeCredentials: false,
-      currentWorkspace: validWorkspace({
-        name: 'Test WS',
-        description: 'Desc',
-        gitUrl: 'https://github.com/test',
-      }),
+      currentWorkspace: validWorkspace(),
     }));
 
-    expect(result!.name).toBe('Test WS');
-    expect(result!.type).toBe('git');
-    expect(result!.gitBranch).toBe(DEFAULTS.WORKSPACE_BRANCH);
-    expect(result!.gitPath).toBe(DEFAULTS.WORKSPACE_PATH);
-    expect(result!.authType).toBe(DEFAULTS.AUTH_TYPE);
-    expect(result!.autoSync).toBe(true);
-    expect(result!.authData).toBeUndefined();
+    expect(result).toEqual({
+      name: 'OpenHeaders — Staging Environment',
+      description: 'Shared staging workspace for the platform team',
+      type: 'git',
+      gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
+      gitBranch: 'main',
+      gitPath: 'config/open-headers.json',
+      authType: 'token',
+      autoSync: true,
+    });
   });
 
   it('includes credentials when requested', async () => {
@@ -275,12 +304,14 @@ describe('WorkspaceHandler.exportWorkspace', () => {
       includeWorkspace: true,
       includeCredentials: true,
       currentWorkspace: validWorkspace({
-        authData: { token: 'ghp_123', tokenType: 'auto' },
+        authData: { token: 'glpat-a1b2c3d4e5f6g7h8i9j0', tokenType: 'gitlab' },
       }),
     }));
 
-    expect(result!.authData).toBeDefined();
-    expect(result!.authData!.token).toBe('ghp_123');
+    expect(result!.authData).toEqual({
+      token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
+      tokenType: 'gitlab',
+    });
   });
 
   it('omits credentials when not requested even if present', async () => {
@@ -289,7 +320,7 @@ describe('WorkspaceHandler.exportWorkspace', () => {
       includeWorkspace: true,
       includeCredentials: false,
       currentWorkspace: validWorkspace({
-        authData: { token: 'at' },
+        authData: { token: 'glpat-secret-token' },
       }),
     }));
 

@@ -9,29 +9,42 @@ import type { ProxyRule } from '../../../../src/types/proxy';
 // ---------------------------------------------------------------------------
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
   return {
+    appVersion: '3.2.0',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    sources: [],
+    environments: {},
+    workspaces: [],
+    exportSources: vi.fn(() => []),
+    addSource: vi.fn(),
+    removeSource: vi.fn(),
+    createWorkspace: vi.fn(),
+    switchWorkspace: vi.fn(),
+    setVariable: vi.fn(),
+    generateEnvironmentSchema: vi.fn(() => ({ environments: {}, variableDefinitions: {} })),
+    createEnvironment: vi.fn(),
     ...overrides,
   } as ExportImportDependencies;
 }
 
 function validStaticProxyRule(overrides: Partial<ProxyRule> = {}): ProxyRule {
   return {
-    id: 'pr-1',
+    id: 'pr-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     isDynamic: false,
-    domains: ['example.com'],
-    headerName: 'X-Custom',
-    headerValue: 'val',
+    domains: ['*.openheaders.io', 'api.partner-service.io:8443'],
+    headerName: 'Authorization',
+    headerValue: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
     ...overrides,
   } as ProxyRule;
 }
 
 function validDynamicProxyRule(overrides: Record<string, string | boolean | string[]> = {}) {
   return {
-    id: 'pr-2',
+    id: 'pr-b2c3d4e5-f6a7-8901-bcde-f12345678901',
     isDynamic: true,
-    headerRuleId: 'rule-1',
-    headerName: 'Auth',
-    domains: ['*.api.com'],
-    sourceId: 'src-1',
+    headerRuleId: 'rule-c3d4e5f6-a7b8-9012-cdef-123456789012',
+    headerName: 'X-API-Key',
+    domains: ['*.openheaders.io'],
+    sourceId: 'src-d4e5f6a7-b890-1234-abcd-567890123456',
     ...overrides,
   };
 }
@@ -108,7 +121,10 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
       validDynamicProxyRule(),
     ]);
     expect(stats.total).toBe(2);
-    expect(stats.patterns).toEqual(['example.com', '*.api.com']);
+    expect(stats.patterns).toEqual([
+      '*.openheaders.io, api.partner-service.io:8443',
+      '*.openheaders.io',
+    ]);
     expect(stats.withHeaders).toBe(2);
     expect(stats.totalHeaders).toBe(2);
     expect(stats.averageHeadersPerRule).toBe(1);
@@ -222,7 +238,27 @@ describe('ProxyRulesHandler.exportProxyRules', () => {
     const handler = new ProxyRulesHandler(makeDeps());
     const result = await handler.exportProxyRules({ selectedItems: { proxyRules: true } });
     expect(result).toHaveLength(1);
-    expect(result![0].id).toBe('pr-1');
+    expect(result![0].id).toBe('pr-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    expect(result![0].headerName).toBe('Authorization');
+    expect(result![0].domains).toEqual(['*.openheaders.io', 'api.partner-service.io:8443']);
+
+    vi.unstubAllGlobals();
+  });
+
+  it('exports all valid enterprise rules when multiple exist', async () => {
+    vi.stubGlobal('window', {
+      electronAPI: {
+        proxyGetRules: vi.fn().mockResolvedValue([
+          validStaticProxyRule(),
+          validDynamicProxyRule(),
+        ]),
+      },
+      dispatchEvent: vi.fn(),
+    });
+
+    const handler = new ProxyRulesHandler(makeDeps());
+    const result = await handler.exportProxyRules({ selectedItems: { proxyRules: true } });
+    expect(result).toHaveLength(2);
 
     vi.unstubAllGlobals();
   });

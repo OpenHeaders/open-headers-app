@@ -51,9 +51,9 @@ import type { ExportOptions, ImportOptions } from '../../../../src/renderer/serv
 
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
-    appVersion: '1.0.0',
+    appVersion: '3.2.0',
     sources: [],
-    activeWorkspaceId: 'ws-1',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     exportSources: vi.fn(() => []),
     removeSource: vi.fn(async () => true),
     workspaces: [],

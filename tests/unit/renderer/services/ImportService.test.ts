@@ -16,8 +16,8 @@ import type { ExportImportDependencies, ImportOptions } from '../../../../src/re
 // ---------------------------------------------------------------------------
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {
-    appVersion: '3.0.0',
-    activeWorkspaceId: 'ws-1',
+    appVersion: '3.2.0',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     environments: {},
     sources: [],
     workspaces: [],

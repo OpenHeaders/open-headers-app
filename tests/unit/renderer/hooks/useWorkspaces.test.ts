@@ -38,8 +38,8 @@ const mockSyncGitWorkspace = vi.fn();
 
 const mockState = {
   workspaces: [
-    { id: 'ws-1', name: 'Personal', type: 'personal' },
-    { id: 'ws-2', name: 'Team', type: 'git', gitUrl: 'https://github.com/org/repo' },
+    { id: 'ws-a1b2c3d4-e5f6-7890', name: 'OpenHeaders — Development', type: 'personal' },
+    { id: 'ws-b2c3d4e5-f6a7-8901', name: 'OpenHeaders — Staging (GitLab)', type: 'git', gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git' },
     { id: 'default-personal', name: 'Default', type: 'personal' },
   ],
   syncStatus: {},
@@ -48,7 +48,7 @@ const mockState = {
 vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
   useCentralizedWorkspace: () => ({
     workspaces: mockState.workspaces,
-    activeWorkspaceId: 'ws-1',
+    activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890',
     syncStatus: mockState.syncStatus,
     loading: false,
     service: {
@@ -95,6 +95,7 @@ describe('useWorkspaces', () => {
     mockCopyWorkspaceData.mockResolvedValue(undefined);
     mockSyncGitWorkspace.mockResolvedValue({ success: true });
     mockShowMessage.mockClear();
+    mockSetState.mockClear();
   });
 
   // ── createWorkspace ────────────────────────────────────────────
@@ -108,7 +109,7 @@ describe('useWorkspaces', () => {
 
       let created: Workspace | null = null;
       await act(async () => {
-        created = await result.current.createWorkspace({ id: 'ws-1', name: 'New WS', type: 'personal' });
+        created = await result.current.createWorkspace({ id: 'ws-new-c3d4e5f6', name: 'New WS', type: 'personal' });
       });
 
       expect(created).toEqual(newWs);
@@ -120,7 +121,7 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {
-        await result.current.createWorkspace({ id: 'ws-2', name: 'No ID', type: 'personal' });
+        await result.current.createWorkspace({ id: 'ws-gen-d4e5f6a7', name: 'No ID', type: 'personal' });
       });
 
       expect(mockCreateWorkspace).toHaveBeenCalledWith(
@@ -166,7 +167,7 @@ describe('useWorkspaces', () => {
 
       let deleted = false;
       await act(async () => {
-        deleted = await result.current.deleteWorkspace('ws-1');
+        deleted = await result.current.deleteWorkspace('ws-a1b2c3d4-e5f6-7890');
       });
 
       expect(deleted).toBe(true);
@@ -184,11 +185,11 @@ describe('useWorkspaces', () => {
 
       let switched = false;
       await act(async () => {
-        switched = await result.current.switchWorkspace('ws-2');
+        switched = await result.current.switchWorkspace('ws-b2c3d4e5-f6a7-8901');
       });
 
       expect(switched).toBe(true);
-      expect(mockSwitchWorkspace).toHaveBeenCalledWith('ws-2');
+      expect(mockSwitchWorkspace).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901');
     });
 
     it('returns false and shows error on failure', async () => {
@@ -198,7 +199,7 @@ describe('useWorkspaces', () => {
 
       let switched = true;
       await act(async () => {
-        switched = await result.current.switchWorkspace('ws-2');
+        switched = await result.current.switchWorkspace('ws-b2c3d4e5-f6a7-8901');
       });
 
       expect(switched).toBe(false);
@@ -216,14 +217,14 @@ describe('useWorkspaces', () => {
 
       let synced = false;
       await act(async () => {
-        synced = await result.current.syncWorkspace('ws-2');
+        synced = await result.current.syncWorkspace('ws-b2c3d4e5-f6a7-8901');
       });
 
       expect(synced).toBe(true);
       expect(mockSetState).toHaveBeenCalledWith(
         expect.objectContaining({
           syncStatus: expect.objectContaining({
-            'ws-2': expect.objectContaining({ syncing: false, error: null })
+            'ws-b2c3d4e5-f6a7-8901': expect.objectContaining({ syncing: false, error: null })
           })
         }),
         ['syncStatus']
@@ -235,7 +236,7 @@ describe('useWorkspaces', () => {
 
       let synced = true;
       await act(async () => {
-        synced = await result.current.syncWorkspace('ws-1'); // personal workspace
+        synced = await result.current.syncWorkspace('ws-a1b2c3d4-e5f6-7890'); // personal workspace
       });
 
       expect(synced).toBe(false);
@@ -259,7 +260,7 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {
-        await result.current.syncWorkspace('ws-2', { silent: true });
+        await result.current.syncWorkspace('ws-b2c3d4e5-f6a7-8901', { silent: true });
       });
 
       expect(mockShowMessage).not.toHaveBeenCalledWith('success', expect.anything());
@@ -270,13 +271,13 @@ describe('useWorkspaces', () => {
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {
-        await result.current.syncWorkspace('ws-2');
+        await result.current.syncWorkspace('ws-b2c3d4e5-f6a7-8901');
       });
 
       expect(mockSetState).toHaveBeenCalledWith(
         expect.objectContaining({
           syncStatus: expect.objectContaining({
-            'ws-2': expect.objectContaining({ syncing: false, error: 'Auth failed' })
+            'ws-b2c3d4e5-f6a7-8901': expect.objectContaining({ syncing: false, error: 'Auth failed' })
           })
         }),
         ['syncStatus']
@@ -294,7 +295,7 @@ describe('useWorkspaces', () => {
 
       let updated = false;
       await act(async () => {
-        updated = await result.current.updateWorkspace('ws-1', { name: 'Renamed' });
+        updated = await result.current.updateWorkspace('ws-a1b2c3d4-e5f6-7890', { name: 'Renamed' });
       });
 
       expect(updated).toBe(true);
@@ -312,15 +313,15 @@ describe('useWorkspaces', () => {
 
       let cloned: Workspace | null = null;
       await act(async () => {
-        cloned = await result.current.cloneWorkspaceToPersonal('ws-2');
+        cloned = await result.current.cloneWorkspaceToPersonal('ws-b2c3d4e5-f6a7-8901');
       });
 
       expect(cloned).not.toBeNull();
       expect(cloned!.type).toBe('personal');
-      expect(cloned!.name).toBe('Team (Personal Copy)');
-      expect(cloned!.clonedFrom).toBe('ws-2');
+      expect(cloned!.name).toBe('OpenHeaders — Staging (GitLab) (Personal Copy)');
+      expect(cloned!.clonedFrom).toBe('ws-b2c3d4e5-f6a7-8901');
       expect(mockInitializeWorkspaceData).toHaveBeenCalled();
-      expect(mockCopyWorkspaceData).toHaveBeenCalledWith('ws-2', expect.stringContaining('personal-'));
+      expect(mockCopyWorkspaceData).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901', expect.stringContaining('personal-'));
       expect(mockSwitchWorkspace).toHaveBeenCalledWith(expect.stringContaining('personal-'));
       expect(mockShowMessage).toHaveBeenCalledWith('success', expect.stringContaining('personal copy'));
     });

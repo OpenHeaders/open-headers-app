@@ -161,11 +161,11 @@ describe('validateProxyRule', () => {
     expect(r.error).toContain('header name');
   });
 
-  it('accepts valid static rule', () => {
+  it('accepts valid static rule with enterprise domains', () => {
     const r = validateProxyRule({
       isDynamic: false,
-      domains: ['example.com'],
-      headerName: 'X-Auth',
+      domains: ['*.openheaders.io', 'api.partner-service.io:8443'],
+      headerName: 'Authorization',
     });
     expect(r.success).toBe(true);
   });
@@ -207,29 +207,29 @@ describe('validateSource', () => {
     expect(r.error).toContain('valid URL');
   });
 
-  it('accepts valid http source', () => {
+  it('accepts valid http source with enterprise URL', () => {
     const r = validateSource({
-      sourceId: 's1',
+      sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
       sourceType: 'http',
-      sourcePath: 'https://example.com/api',
+      sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
     });
     expect(r.success).toBe(true);
   });
 
-  it('accepts valid file source', () => {
+  it('accepts valid file source with enterprise path', () => {
     const r = validateSource({
-      sourceId: 's1',
+      sourceId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
       sourceType: 'file',
-      sourcePath: '/tmp/data.json',
+      sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json',
     });
     expect(r.success).toBe(true);
   });
 
   it('accepts valid env source', () => {
     const r = validateSource({
-      sourceId: 's1',
+      sourceId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
       sourceType: 'env',
-      sourcePath: 'MY_VAR',
+      sourcePath: 'OAUTH2_ACCESS_TOKEN',
     });
     expect(r.success).toBe(true);
   });
@@ -359,8 +359,32 @@ describe('validateImportPayload', () => {
   it('passes with valid full payload', () => {
     const r = validateImportPayload({
       version: '3.0.0',
-      workspace: { name: 'Test', type: 'git' },
-      sources: [{ sourceId: 's1', sourceType: 'file', sourcePath: '/a' }],
+      workspace: { name: 'OpenHeaders — Staging', type: 'git' },
+      sources: [{
+        sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        sourceType: 'http',
+        sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
+      }],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('passes with enterprise payload including all data types', () => {
+    const r = validateImportPayload({
+      version: '3.0.0',
+      workspace: { name: 'OpenHeaders — Production', type: 'git' },
+      sources: [
+        { sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourceType: 'http', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token' },
+        { sourceId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' },
+      ],
+      proxyRules: [
+        { isDynamic: false, domains: ['*.openheaders.io'], headerName: 'Authorization' },
+        { isDynamic: true, headerRuleId: 'rule-c3d4e5f6' },
+      ],
+      environmentSchema: {
+        environments: { Production: { variables: [{ name: 'API_KEY', isSecret: true }] } },
+        variableDefinitions: { API_KEY: { description: 'Production API key', isSecret: true, usedIn: ['src-gateway'] } },
+      },
     });
     expect(r.success).toBe(true);
   });
