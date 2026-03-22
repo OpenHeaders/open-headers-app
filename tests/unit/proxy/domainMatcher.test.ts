@@ -5,59 +5,59 @@ describe('DomainMatcher', () => {
     describe('matches()', () => {
         describe('exact domain', () => {
             it('matches exact enterprise domain', () => {
-                expect(DomainMatcher.matches('https://api.acme-corp.com/v2/tokens', 'api.acme-corp.com')).toBe(true);
+                expect(DomainMatcher.matches('https://api.openheaders.io/v2/tokens', 'api.openheaders.io')).toBe(true);
             });
 
             it('is case-insensitive on both URL and pattern', () => {
-                expect(DomainMatcher.matches('https://API.Acme-Corp.COM/path', 'api.acme-corp.com')).toBe(true);
-                expect(DomainMatcher.matches('https://api.acme-corp.com/path', 'API.Acme-Corp.COM')).toBe(true);
+                expect(DomainMatcher.matches('https://API.OpenHeaders.IO/path', 'api.openheaders.io')).toBe(true);
+                expect(DomainMatcher.matches('https://api.openheaders.io/path', 'API.OpenHeaders.IO')).toBe(true);
             });
 
             it('does not match different domain', () => {
-                expect(DomainMatcher.matches('https://api.partner-service.io/v1', 'api.acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches('https://api.partners.openheaders.io/v1', 'api.openheaders.io')).toBe(false);
             });
 
             it('does not match subdomain against bare domain', () => {
-                expect(DomainMatcher.matches('https://staging.api.acme-corp.com/v1', 'api.acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches('https://staging.api.openheaders.io/v1', 'api.openheaders.io')).toBe(false);
             });
 
             it('does not match domain that contains the pattern as substring', () => {
-                expect(DomainMatcher.matches('https://notacme-corp.com/path', 'acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches('https://notopenheaders.io/path', 'openheaders.io')).toBe(false);
             });
 
             it('matches domain with long subpath and query string', () => {
                 expect(DomainMatcher.matches(
-                    'https://auth.acme-corp.internal/oauth2/token?grant_type=client_credentials&scope=api.read',
-                    'auth.acme-corp.internal'
+                    'https://auth.internal.openheaders.io/oauth2/token?grant_type=client_credentials&scope=api.read',
+                    'auth.internal.openheaders.io'
                 )).toBe(true);
             });
         });
 
-        describe('wildcard subdomain (*.example.com)', () => {
+        describe('wildcard subdomain (*.openheaders.io)', () => {
             it('matches single subdomain', () => {
-                expect(DomainMatcher.matches('https://api.acme-corp.com/v1/resources', '*.acme-corp.com')).toBe(true);
+                expect(DomainMatcher.matches('https://api.openheaders.io/v1/resources', '*.openheaders.io')).toBe(true);
             });
 
             it('matches deeply nested subdomain', () => {
-                expect(DomainMatcher.matches('https://us-east-1.staging.api.acme-corp.com/', '*.acme-corp.com')).toBe(true);
+                expect(DomainMatcher.matches('https://us-east-1.staging.api.openheaders.io/', '*.openheaders.io')).toBe(true);
             });
 
             it('matches the base domain itself (wildcard includes base)', () => {
-                expect(DomainMatcher.matches('https://acme-corp.com/', '*.acme-corp.com')).toBe(true);
+                expect(DomainMatcher.matches('https://openheaders.io/', '*.openheaders.io')).toBe(true);
             });
 
             it('does not match unrelated domain', () => {
-                expect(DomainMatcher.matches('https://evil-acme-corp.com/', '*.acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches('https://evil-openheaders.io/', '*.openheaders.io')).toBe(false);
             });
 
             it('is case-insensitive for wildcard patterns', () => {
-                expect(DomainMatcher.matches('https://API.ACME-CORP.COM/path', '*.acme-corp.com')).toBe(true);
+                expect(DomainMatcher.matches('https://API.OPENHEADERS.IO/path', '*.openheaders.io')).toBe(true);
             });
 
             it('matches wildcard with enterprise internal domain', () => {
                 expect(DomainMatcher.matches(
-                    'https://gitlab.acme-corp.internal:8443/api/v4/projects',
-                    '*.acme-corp.internal'
+                    'https://gitlab.internal.openheaders.io:8443/api/v4/projects',
+                    '*.internal.openheaders.io'
                 )).toBe(true);
             });
         });
@@ -76,7 +76,7 @@ describe('DomainMatcher', () => {
             });
 
             it('does not match localhost pattern against non-localhost URL', () => {
-                expect(DomainMatcher.matches('https://api.acme-corp.com/api', 'localhost')).toBe(false);
+                expect(DomainMatcher.matches('https://api.openheaders.io/api', 'localhost')).toBe(false);
             });
 
             it('matches localhost with high port number', () => {
@@ -113,63 +113,63 @@ describe('DomainMatcher', () => {
         describe('full URL patterns (*://...)', () => {
             it('matches full URL pattern with wildcards', () => {
                 expect(DomainMatcher.matches(
-                    'https://api.acme-corp.com/v2/oauth/token',
-                    '*://api.acme-corp.com/*'
+                    'https://api.openheaders.io/v2/oauth/token',
+                    '*://api.openheaders.io/*'
                 )).toBe(true);
             });
 
             it('matches http protocol variant', () => {
                 expect(DomainMatcher.matches(
-                    'http://api.acme-corp.com/legacy/endpoint',
-                    '*://api.acme-corp.com/*'
+                    'http://api.openheaders.io/legacy/endpoint',
+                    '*://api.openheaders.io/*'
                 )).toBe(true);
             });
 
             it('does not match different domain in full URL pattern', () => {
                 expect(DomainMatcher.matches(
-                    'https://api.partner-service.io/v1',
-                    '*://api.acme-corp.com/*'
+                    'https://api.partners.openheaders.io/v1',
+                    '*://api.openheaders.io/*'
                 )).toBe(false);
             });
 
             it('matches URL pattern with specific path prefix', () => {
                 expect(DomainMatcher.matches(
-                    'https://api.acme-corp.com/v2/tokens/refresh',
-                    '*://api.acme-corp.com/v2/*'
+                    'https://api.openheaders.io/v2/tokens/refresh',
+                    '*://api.openheaders.io/v2/*'
                 )).toBe(true);
             });
 
             it('does not match URL pattern with non-matching path', () => {
                 expect(DomainMatcher.matches(
-                    'https://api.acme-corp.com/v1/tokens',
-                    '*://api.acme-corp.com/v2/*'
+                    'https://api.openheaders.io/v1/tokens',
+                    '*://api.openheaders.io/v2/*'
                 )).toBe(false);
             });
         });
 
         describe('edge cases', () => {
             it('returns false for null URL', () => {
-                expect(DomainMatcher.matches(null, 'acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches(null, 'openheaders.io')).toBe(false);
             });
 
             it('returns false for undefined URL', () => {
-                expect(DomainMatcher.matches(undefined, 'acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches(undefined, 'openheaders.io')).toBe(false);
             });
 
             it('returns false for null pattern', () => {
-                expect(DomainMatcher.matches('https://acme-corp.com', null)).toBe(false);
+                expect(DomainMatcher.matches('https://openheaders.io', null)).toBe(false);
             });
 
             it('returns false for undefined pattern', () => {
-                expect(DomainMatcher.matches('https://acme-corp.com', undefined)).toBe(false);
+                expect(DomainMatcher.matches('https://openheaders.io', undefined)).toBe(false);
             });
 
             it('returns false for empty URL string', () => {
-                expect(DomainMatcher.matches('', 'acme-corp.com')).toBe(false);
+                expect(DomainMatcher.matches('', 'openheaders.io')).toBe(false);
             });
 
             it('returns false for empty pattern string', () => {
-                expect(DomainMatcher.matches('https://acme-corp.com', '')).toBe(false);
+                expect(DomainMatcher.matches('https://openheaders.io', '')).toBe(false);
             });
 
             it('returns false for both null', () => {
@@ -178,37 +178,37 @@ describe('DomainMatcher', () => {
 
             it('handles URL with encoded characters', () => {
                 expect(DomainMatcher.matches(
-                    'https://api.acme-corp.com/path%20with%20spaces?q=hello%20world',
-                    'api.acme-corp.com'
+                    'https://api.openheaders.io/path%20with%20spaces?q=hello%20world',
+                    'api.openheaders.io'
                 )).toBe(true);
             });
 
             it('handles URL with fragment', () => {
                 expect(DomainMatcher.matches(
-                    'https://docs.acme-corp.com/page#section-3',
-                    'docs.acme-corp.com'
+                    'https://docs.openheaders.io/page#section-3',
+                    'docs.openheaders.io'
                 )).toBe(true);
             });
 
             it('handles URL with authentication credentials', () => {
                 expect(DomainMatcher.matches(
-                    'https://user:pass@api.acme-corp.com/endpoint',
-                    'api.acme-corp.com'
+                    'https://user:pass@api.openheaders.io/endpoint',
+                    'api.openheaders.io'
                 )).toBe(true);
             });
 
             it('handles domain with hyphen in subdomain', () => {
                 expect(DomainMatcher.matches(
-                    'https://us-east-1.api.acme-corp.com/v1',
-                    '*.acme-corp.com'
+                    'https://us-east-1.api.openheaders.io/v1',
+                    '*.openheaders.io'
                 )).toBe(true);
             });
 
             it('handles very long URL', () => {
                 const longPath = '/segment'.repeat(100);
                 expect(DomainMatcher.matches(
-                    `https://api.acme-corp.com${longPath}`,
-                    'api.acme-corp.com'
+                    `https://api.openheaders.io${longPath}`,
+                    'api.openheaders.io'
                 )).toBe(true);
             });
         });
@@ -216,53 +216,53 @@ describe('DomainMatcher', () => {
 
     describe('matchesAny()', () => {
         it('returns true when domains array is empty (match all)', () => {
-            expect(DomainMatcher.matchesAny('https://anything.acme-corp.com/api', [])).toBe(true);
+            expect(DomainMatcher.matchesAny('https://anything.openheaders.io/api', [])).toBe(true);
         });
 
         it('returns true when domains is null (match all)', () => {
-            expect(DomainMatcher.matchesAny('https://anything.acme-corp.com/api', null)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://anything.openheaders.io/api', null)).toBe(true);
         });
 
         it('returns true when domains is undefined (match all)', () => {
-            expect(DomainMatcher.matchesAny('https://anything.acme-corp.com/api', undefined)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://anything.openheaders.io/api', undefined)).toBe(true);
         });
 
         it('returns true when URL matches one of multiple domains', () => {
             const domains = [
-                'api.acme-corp.com',
-                'auth.acme-corp.internal',
-                '*.partner-service.io',
+                'api.openheaders.io',
+                'auth.internal.openheaders.io',
+                '*.partners.openheaders.io',
             ];
-            expect(DomainMatcher.matchesAny('https://auth.acme-corp.internal/oauth2/token', domains)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://auth.internal.openheaders.io/oauth2/token', domains)).toBe(true);
         });
 
         it('returns false when URL matches none of the domains', () => {
             const domains = [
-                'api.acme-corp.com',
-                'auth.acme-corp.internal:8443',
-                '*.partner-service.io',
+                'api.openheaders.io',
+                'auth.internal.openheaders.io:8443',
+                '*.partners.openheaders.io',
             ];
-            expect(DomainMatcher.matchesAny('https://evil.example.com/phishing', domains)).toBe(false);
+            expect(DomainMatcher.matchesAny('https://evil.notrelated.com/phishing', domains)).toBe(false);
         });
 
         it('handles large domain list', () => {
-            const domains = Array.from({ length: 100 }, (_, i) => `service-${i}.acme-corp.com`);
-            expect(DomainMatcher.matchesAny('https://service-99.acme-corp.com/api', domains)).toBe(true);
-            expect(DomainMatcher.matchesAny('https://service-100.acme-corp.com/api', domains)).toBe(false);
+            const domains = Array.from({ length: 100 }, (_, i) => `service-${i}.openheaders.io`);
+            expect(DomainMatcher.matchesAny('https://service-99.openheaders.io/api', domains)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://service-100.openheaders.io/api', domains)).toBe(false);
         });
 
         it('matches with mixed domain pattern types', () => {
             const domains = [
-                '*.acme-corp.com',
+                '*.openheaders.io',
                 'localhost:3000',
                 '192.168.1.1:8080',
-                '*://partner.io/*',
+                '*://partners.openheaders.io/*',
             ];
-            expect(DomainMatcher.matchesAny('https://api.acme-corp.com/v1', domains)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://api.openheaders.io/v1', domains)).toBe(true);
             expect(DomainMatcher.matchesAny('http://localhost:3000/dev', domains)).toBe(true);
             expect(DomainMatcher.matchesAny('http://192.168.1.1:8080/internal', domains)).toBe(true);
-            expect(DomainMatcher.matchesAny('https://partner.io/callback', domains)).toBe(true);
-            expect(DomainMatcher.matchesAny('https://unrelated.example.org/', domains)).toBe(false);
+            expect(DomainMatcher.matchesAny('https://partners.openheaders.io/callback', domains)).toBe(true);
+            expect(DomainMatcher.matchesAny('https://unrelated.notmatched.com/', domains)).toBe(false);
         });
     });
 });

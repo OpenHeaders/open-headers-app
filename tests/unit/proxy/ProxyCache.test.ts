@@ -40,7 +40,7 @@ vi.mock('fs', async (importOriginal) => {
 /** Create a realistic CacheMetadata entry */
 function makeCacheMetadata(overrides: Partial<CacheMetadata> = {}): CacheMetadata {
     return {
-        url: 'https://cdn.acme-corp.com/assets/main.bundle.js',
+        url: 'https://cdn.openheaders.io/assets/main.bundle.js',
         timestamp: Date.now(),
         lastAccessed: Date.now(),
         size: 245_760,
@@ -67,40 +67,40 @@ describe('ProxyCache', () => {
 
     describe('getCacheKey()', () => {
         it('returns a sha256 hex string (64 characters)', () => {
-            const key = cache.getCacheKey('https://api.acme-corp.com/v2/oauth/token');
+            const key = cache.getCacheKey('https://api.openheaders.io/v2/oauth/token');
             expect(key).toMatch(/^[a-f0-9]{64}$/);
         });
 
         it('returns same key for same URL (deterministic)', () => {
-            const url = 'https://auth.acme-corp.internal:8443/oauth2/token?grant_type=client_credentials';
+            const url = 'https://auth.internal.openheaders.io:8443/oauth2/token?grant_type=client_credentials';
             const a = cache.getCacheKey(url);
             const b = cache.getCacheKey(url);
             expect(a).toBe(b);
         });
 
         it('is case-insensitive on URL', () => {
-            const a = cache.getCacheKey('https://CDN.Acme-Corp.COM/Assets/Main.JS');
-            const b = cache.getCacheKey('https://cdn.acme-corp.com/assets/main.js');
+            const a = cache.getCacheKey('https://CDN.OpenHeaders.IO/Assets/Main.JS');
+            const b = cache.getCacheKey('https://cdn.openheaders.io/assets/main.js');
             expect(a).toBe(b);
         });
 
         it('returns different keys for different URLs', () => {
-            const a = cache.getCacheKey('https://api.acme-corp.com/v1/users');
-            const b = cache.getCacheKey('https://api.acme-corp.com/v2/users');
+            const a = cache.getCacheKey('https://api.openheaders.io/v1/users');
+            const b = cache.getCacheKey('https://api.openheaders.io/v2/users');
             expect(a).not.toBe(b);
         });
 
         it('includes authorization header for non-static API endpoints', () => {
-            const noAuth = cache.getCacheKey('https://api.acme-corp.com/v2/data');
-            const withAuth = cache.getCacheKey('https://api.acme-corp.com/v2/data', {
+            const noAuth = cache.getCacheKey('https://api.openheaders.io/v2/data');
+            const withAuth = cache.getCacheKey('https://api.openheaders.io/v2/data', {
                 authorization: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig',
             });
             expect(noAuth).not.toBe(withAuth);
         });
 
         it('ignores authorization header for static font files', () => {
-            const noAuth = cache.getCacheKey('https://cdn.acme-corp.com/fonts/Inter-Regular.woff2');
-            const withAuth = cache.getCacheKey('https://cdn.acme-corp.com/fonts/Inter-Regular.woff2', {
+            const noAuth = cache.getCacheKey('https://cdn.openheaders.io/fonts/Inter-Regular.woff2');
+            const withAuth = cache.getCacheKey('https://cdn.openheaders.io/fonts/Inter-Regular.woff2', {
                 authorization: 'Bearer token',
             });
             expect(noAuth).toBe(withAuth);
@@ -109,8 +109,8 @@ describe('ProxyCache', () => {
         it('ignores auth for all static file extensions', () => {
             const extensions = ['.css', '.js', '.mjs', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.eot'];
             for (const ext of extensions) {
-                const a = cache.getCacheKey(`https://cdn.acme-corp.com/static/asset${ext}`);
-                const b = cache.getCacheKey(`https://cdn.acme-corp.com/static/asset${ext}`, {
+                const a = cache.getCacheKey(`https://cdn.openheaders.io/static/asset${ext}`);
+                const b = cache.getCacheKey(`https://cdn.openheaders.io/static/asset${ext}`, {
                     authorization: 'Bearer ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
                 });
                 expect(a).toBe(b);
@@ -118,18 +118,18 @@ describe('ProxyCache', () => {
         });
 
         it('ignores auth for static files with query strings (cache busting)', () => {
-            const a = cache.getCacheKey('https://cdn.acme-corp.com/app.js?v=a1b2c3d4');
-            const b = cache.getCacheKey('https://cdn.acme-corp.com/app.js?v=a1b2c3d4', {
+            const a = cache.getCacheKey('https://cdn.openheaders.io/app.js?v=a1b2c3d4');
+            const b = cache.getCacheKey('https://cdn.openheaders.io/app.js?v=a1b2c3d4', {
                 authorization: 'Bearer token',
             });
             expect(a).toBe(b);
         });
 
         it('differentiates by auth for JSON API responses', () => {
-            const userA = cache.getCacheKey('https://api.acme-corp.com/me', {
+            const userA = cache.getCacheKey('https://api.openheaders.io/me', {
                 authorization: 'Bearer user-a-token',
             });
-            const userB = cache.getCacheKey('https://api.acme-corp.com/me', {
+            const userB = cache.getCacheKey('https://api.openheaders.io/me', {
                 authorization: 'Bearer user-b-token',
             });
             expect(userA).not.toBe(userB);
@@ -205,12 +205,12 @@ describe('ProxyCache', () => {
 
     describe('get()', () => {
         it('returns null when key not in metadata', async () => {
-            const result = await cache.get('https://api.acme-corp.com/v2/missing-resource');
+            const result = await cache.get('https://api.openheaders.io/v2/missing-resource');
             expect(result).toBeNull();
         });
 
         it('returns null and removes entry when expired (beyond maxAge)', async () => {
-            const url = 'https://cdn.acme-corp.com/old-asset.css';
+            const url = 'https://cdn.openheaders.io/old-asset.css';
             const key = cache.getCacheKey(url);
             cache.metadata.set(key, makeCacheMetadata({
                 url,
@@ -224,7 +224,7 @@ describe('ProxyCache', () => {
         });
 
         it('returns cached entry with all fields when valid', async () => {
-            const url = 'https://cdn.acme-corp.com/app.bundle.js';
+            const url = 'https://cdn.openheaders.io/app.bundle.js';
             const key = cache.getCacheKey(url);
             const metadata = makeCacheMetadata({
                 url,
@@ -243,7 +243,7 @@ describe('ProxyCache', () => {
         });
 
         it('updates lastAccessed timestamp on cache hit', async () => {
-            const url = 'https://cdn.acme-corp.com/styles.css';
+            const url = 'https://cdn.openheaders.io/styles.css';
             const key = cache.getCacheKey(url);
             const oldAccessTime = Date.now() - 60_000;
             cache.metadata.set(key, makeCacheMetadata({
@@ -261,7 +261,7 @@ describe('ProxyCache', () => {
             const fs = await import('fs');
             vi.mocked(fs.default.promises.readFile).mockRejectedValueOnce(new Error('ENOENT'));
 
-            const url = 'https://cdn.acme-corp.com/missing-on-disk.js';
+            const url = 'https://cdn.openheaders.io/missing-on-disk.js';
             const key = cache.getCacheKey(url);
             cache.metadata.set(key, makeCacheMetadata({ url }));
 
@@ -275,7 +275,7 @@ describe('ProxyCache', () => {
 
     describe('set()', () => {
         it('stores entry with correct metadata', async () => {
-            const url = 'https://cdn.acme-corp.com/images/logo.png';
+            const url = 'https://cdn.openheaders.io/images/logo.png';
             const data = Buffer.from('PNG-binary-data-here');
             const headers = { 'content-type': 'image/png', 'cache-control': 'max-age=86400' };
 
@@ -298,7 +298,7 @@ describe('ProxyCache', () => {
 
         it('writes file to disk in correct subdirectory', async () => {
             const fs = await import('fs');
-            const url = 'https://cdn.acme-corp.com/font.woff2';
+            const url = 'https://cdn.openheaders.io/font.woff2';
             const data = Buffer.from('woff2-binary');
 
             await cache.set(url, data, { contentType: 'font/woff2' });
@@ -308,7 +308,7 @@ describe('ProxyCache', () => {
         });
 
         it('handles large buffer (simulated 10MB)', async () => {
-            const url = 'https://cdn.acme-corp.com/large-bundle.js';
+            const url = 'https://cdn.openheaders.io/large-bundle.js';
             const data = Buffer.alloc(10 * 1024 * 1024, 'a');
 
             await cache.set(url, data, { contentType: 'application/javascript' });
@@ -319,7 +319,7 @@ describe('ProxyCache', () => {
         });
 
         it('uses default values when options are omitted', async () => {
-            const url = 'https://cdn.acme-corp.com/misc.bin';
+            const url = 'https://cdn.openheaders.io/misc.bin';
             const data = Buffer.from('binary');
 
             await cache.set(url, data);
@@ -367,21 +367,21 @@ describe('ProxyCache', () => {
         it('returns entries sorted by lastAccessed descending (most recent first)', async () => {
             const now = Date.now();
             cache.metadata.set('oldest', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/old.css',
+                url: 'https://cdn.openheaders.io/old.css',
                 lastAccessed: now - 3600_000,
                 size: 1024,
                 contentType: 'text/css',
                 timestamp: now - 86400_000,
             }));
             cache.metadata.set('middle', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/mid.js',
+                url: 'https://cdn.openheaders.io/mid.js',
                 lastAccessed: now - 1800_000,
                 size: 2048,
                 contentType: 'application/javascript',
                 timestamp: now - 43200_000,
             }));
             cache.metadata.set('newest', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/new.png',
+                url: 'https://cdn.openheaders.io/new.png',
                 lastAccessed: now,
                 size: 4096,
                 contentType: 'image/png',
@@ -392,7 +392,7 @@ describe('ProxyCache', () => {
             expect(entries).toHaveLength(3);
             expect(entries[0]).toEqual({
                 key: 'newest',
-                url: 'https://cdn.acme-corp.com/new.png',
+                url: 'https://cdn.openheaders.io/new.png',
                 size: 4096,
                 timestamp: entries[0].timestamp,
                 lastAccessed: now,
@@ -408,12 +408,12 @@ describe('ProxyCache', () => {
     describe('cleanup()', () => {
         it('removes expired entries beyond maxAge', async () => {
             cache.metadata.set('expired', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/expired.js',
+                url: 'https://cdn.openheaders.io/expired.js',
                 timestamp: Date.now() - cache.maxAge - 1000,
                 lastAccessed: 1,
             }));
             cache.metadata.set('fresh', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/fresh.js',
+                url: 'https://cdn.openheaders.io/fresh.js',
                 timestamp: Date.now(),
                 lastAccessed: Date.now(),
             }));
@@ -428,13 +428,13 @@ describe('ProxyCache', () => {
             cache.maxCacheSize = 150;
 
             cache.metadata.set('lru-old', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/old.css',
+                url: 'https://cdn.openheaders.io/old.css',
                 timestamp: Date.now(),
                 lastAccessed: 1,
                 size: 100,
             }));
             cache.metadata.set('lru-new', makeCacheMetadata({
-                url: 'https://cdn.acme-corp.com/new.js',
+                url: 'https://cdn.openheaders.io/new.js',
                 timestamp: Date.now(),
                 lastAccessed: 2,
                 size: 100,
