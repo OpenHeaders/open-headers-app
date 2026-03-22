@@ -90,9 +90,19 @@ describe('FFmpegManager', () => {
     describe('findFilesRecursive()', () => {
         it('returns an array', async () => {
             const mgr = new FFmpegManager();
-            // Use a known small directory
-            const files = await mgr.findFilesRecursive('/tmp');
-            expect(Array.isArray(files)).toBe(true);
+            const fs = await import('fs');
+            const os = await import('os');
+            const path = await import('path');
+            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ffmpeg-test-'));
+            fs.writeFileSync(path.join(tmpDir, 'test.txt'), 'hello');
+            try {
+                const files = await mgr.findFilesRecursive(tmpDir);
+                expect(Array.isArray(files)).toBe(true);
+                expect(files.length).toBe(1);
+                expect(files[0]).toContain('test.txt');
+            } finally {
+                fs.rmSync(tmpDir, { recursive: true });
+            }
         });
     });
 
