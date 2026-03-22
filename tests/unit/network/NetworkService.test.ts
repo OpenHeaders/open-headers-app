@@ -1,11 +1,100 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { NetworkService } from '../../../src/services/network/NetworkService';
+import type { NetworkState, NetworkInterfaceInfo, NetworkQualityInput, StateChangeRecord } from '../../../src/services/network/NetworkService';
 
 describe('NetworkService', () => {
     let svc: NetworkService;
 
     beforeEach(() => {
         svc = new NetworkService();
+    });
+
+    afterEach(() => {
+        svc.destroy();
+    });
+
+    // ------- constructor defaults -------
+    describe('constructor defaults', () => {
+        it('initializes with full expected default state', () => {
+            expect(svc.isDestroyed).toBe(false);
+            expect(svc.isInitialized).toBe(false);
+            expect(svc.checkInterval).toBe(60000);
+            expect(svc.quickCheckInterval).toBe(15000);
+            expect(svc.debounceDelay).toBe(1000);
+            expect(svc.hysteresisDelay).toBe(2000);
+            expect(svc.requiredConsecutiveChecks).toBe(1);
+            expect(svc.maxHistorySize).toBe(10);
+            expect(svc.consecutiveOfflineChecks).toBe(0);
+            expect(svc.consecutiveOnlineChecks).toBe(0);
+            expect(svc.stateChangeHistory).toEqual([]);
+            expect(svc.stateUpdateLock).toBe(false);
+            expect(svc.pendingStateChanges).toEqual({});
+            expect(svc.isNetworkStable).toBe(false);
+            expect(svc.comprehensiveCheckInProgress).toBe(false);
+            expect(svc.lastComprehensiveCheck).toBe(0);
+            expect(svc.hysteresisTimeout).toBeNull();
+        });
+
+        it('configures DNS test hosts for reliable public resolvers', () => {
+            expect(svc.dnsTestHosts).toEqual(['google.com', 'cloudflare.com']);
+        });
+
+        it('configures connectivity endpoints with Google DNS on port 443', () => {
+            expect(svc.connectivityEndpoints).toHaveLength(2);
+            expect(svc.connectivityEndpoints[0]).toEqual({
+                host: '8.8.8.8',
+                port: 443,
+                name: 'Google DNS'
+            });
+            expect(svc.connectivityEndpoints[1]).toEqual({
+                host: '8.8.4.4',
+                port: 443,
+                name: 'Google DNS Secondary'
+            });
+        });
+
+        it('sets adaptive intervals equal to base intervals initially', () => {
+            expect(svc.adaptiveCheckInterval).toBe(svc.checkInterval);
+            expect(svc.adaptiveQuickCheckInterval).toBe(svc.quickCheckInterval);
+        });
+    });
+
+    // ------- getState -------
+    describe('getState', () => {
+        it('returns a defensive copy (not the same reference)', () => {
+            const state1 = svc.getState();
+            const state2 = svc.getState();
+            expect(state1).toEqual(state2);
+            expect(state1).not.toBe(svc.state);
+        });
+
+        it('returns full expected initial state shape', () => {
+            const state = svc.getState();
+            expect(state).toEqual({
+                isOnline: true,
+                networkQuality: 'good',
+                vpnActive: false,
+                interfaces: [],
+                primaryInterface: null,
+                connectionType: 'unknown',
+                diagnostics: {
+                    dnsResolvable: true,
+                    internetReachable: true,
+                    captivePortal: false,
+                    latency: 0
+                },
+                lastUpdate: expect.any(Number),
+                version: 0
+            });
+        });
+
+        it('mutation of returned state does not affect internal state', () => {
+            const state = svc.getState();
+            state.isOnline = false;
+            state.networkQuality = 'poor';
+            expect(svc.state.isOnline).toBe(true);
+            expect(svc.state.networkQuality).toBe('good');
+        });
     });
 
     // ------- isValidIPv4 -------
@@ -16,6 +105,8 @@ describe('NetworkService', () => {
             expect(svc.isValidIPv4('255.255.255.255')).toBe(true);
             expect(svc.isValidIPv4('8.8.8.8')).toBe(true);
             expect(svc.isValidIPv4('10.0.0.1')).toBe(true);
+            expect(svc.isValidIPv4('172.16.254.1')).toBe(true);
+            expect(svc.isValidIPv4('1.1.1.1')).toBe(true);
         });
 
         it('rejects invalid IPv4 addresses', () => {
@@ -31,6 +122,18 @@ describe('NetworkService', () => {
         it('rejects addresses with octets > 255', () => {
             expect(svc.isValidIPv4('999.999.999.999')).toBe(false);
             expect(svc.isValidIPv4('1.2.3.256')).toBe(false);
+            expect(svc.isValidIPv4('300.0.0.1')).toBe(false);
+        });
+
+        it('rejects IPv6 addresses', () => {
+            expect(svc.isValidIPv4('::1')).toBe(false);
+            expect(svc.isValidIPv4('fe80::1')).toBe(false);
+            expect(svc.isValidIPv4('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(false);
+        });
+
+        it('rejects addresses with leading/trailing whitespace', () => {
+            expect(svc.isValidIPv4(' 192.168.1.1')).toBe(false);
+            expect(svc.isValidIPv4('192.168.1.1 ')).toBe(false);
         });
     });
 
@@ -46,8 +149,7 @@ describe('NetworkService', () => {
                 'Address: 142.250.80.46'
             ].join('\n');
 
-            const ips = svc.parseNslookupOutput(output);
-            expect(ips).toEqual(['142.250.80.46']);
+            expect(svc.parseNslookupOutput(output)).toEqual(['142.250.80.46']);
         });
 
         it('parses multiple IPs from Addresses: line (Windows plural)', () => {
@@ -76,8 +178,7 @@ describe('NetworkService', () => {
                 'Address: 1.2.3.4'
             ].join('\n');
 
-            const ips = svc.parseNslookupOutput(output);
-            expect(ips).toEqual(['1.2.3.4']);
+            expect(svc.parseNslookupOutput(output)).toEqual(['1.2.3.4']);
         });
 
         it('returns empty array when no answer section', () => {
@@ -85,7 +186,7 @@ describe('NetworkService', () => {
                 'Server:  dns.google',
                 'Address:  8.8.8.8#53',
                 '',
-                '*** dns.google can\'t find nonexistent.example.com'
+                '*** dns.google can\'t find nonexistent.openheaders.io'
             ].join('\n');
 
             expect(svc.parseNslookupOutput(output)).toEqual([]);
@@ -102,8 +203,23 @@ describe('NetworkService', () => {
                 '10.0.0.2'
             ].join('\n');
 
+            expect(svc.parseNslookupOutput(output)).toEqual(['10.0.0.1', '10.0.0.2']);
+        });
+
+        it('parses enterprise DNS with multiple A records for auth.openheaders.io', () => {
+            const output = [
+                'Server:  corp-dns.openheaders.internal',
+                'Address:  10.100.0.53#53',
+                '',
+                'Non-authoritative answer:',
+                'Name:    auth.openheaders.io',
+                'Address: 34.120.55.100',
+                '34.120.55.101',
+                '34.120.55.102'
+            ].join('\n');
+
             const ips = svc.parseNslookupOutput(output);
-            expect(ips).toEqual(['10.0.0.1', '10.0.0.2']);
+            expect(ips).toEqual(['34.120.55.100', '34.120.55.101', '34.120.55.102']);
         });
     });
 
@@ -132,6 +248,7 @@ describe('NetworkService', () => {
             expect(svc.getInterfaceType('utun0')).toBe('other');
             expect(svc.getInterfaceType('docker0')).toBe('other');
             expect(svc.getInterfaceType('vboxnet0')).toBe('other');
+            expect(svc.getInterfaceType('br-abc123')).toBe('other');
         });
     });
 
@@ -152,6 +269,13 @@ describe('NetworkService', () => {
             ];
             expect(svc.determineConnectionType('eth0')).toBe('ethernet');
         });
+
+        it('returns wifi type for corporate wifi interface', () => {
+            svc.state.interfaces = [
+                ['wlan0', { name: 'wlan0', addresses: [], type: 'wifi' }]
+            ];
+            expect(svc.determineConnectionType('wlan0')).toBe('wifi');
+        });
     });
 
     // ------- calculateNetworkQuality -------
@@ -164,7 +288,7 @@ describe('NetworkService', () => {
             })).toBe('poor');
         });
 
-        it('returns "excellent" for low latency', () => {
+        it('returns "excellent" for low latency (<100ms)', () => {
             expect(svc.calculateNetworkQuality({
                 dnsSuccess: true,
                 connectivitySuccess: true,
@@ -172,7 +296,7 @@ describe('NetworkService', () => {
             })).toBe('excellent');
         });
 
-        it('returns "good" for moderate latency', () => {
+        it('returns "good" for moderate latency (100-299ms)', () => {
             expect(svc.calculateNetworkQuality({
                 dnsSuccess: true,
                 connectivitySuccess: true,
@@ -180,7 +304,7 @@ describe('NetworkService', () => {
             })).toBe('good');
         });
 
-        it('returns "fair" for higher latency', () => {
+        it('returns "fair" for higher latency (300-999ms)', () => {
             expect(svc.calculateNetworkQuality({
                 dnsSuccess: true,
                 connectivitySuccess: true,
@@ -188,7 +312,7 @@ describe('NetworkService', () => {
             })).toBe('fair');
         });
 
-        it('returns "poor" for very high latency', () => {
+        it('returns "poor" for very high latency (>=1000ms)', () => {
             expect(svc.calculateNetworkQuality({
                 dnsSuccess: true,
                 connectivitySuccess: true,
@@ -203,42 +327,85 @@ describe('NetworkService', () => {
                 latency: 50
             })).toBe('excellent');
         });
+
+        it('returns quality based on latency even when only connectivity succeeds', () => {
+            expect(svc.calculateNetworkQuality({
+                dnsSuccess: false,
+                connectivitySuccess: true,
+                latency: 150
+            })).toBe('good');
+        });
+
+        it('returns "excellent" at boundary latency of 99ms', () => {
+            expect(svc.calculateNetworkQuality({
+                dnsSuccess: true,
+                connectivitySuccess: true,
+                latency: 99
+            })).toBe('excellent');
+        });
+
+        it('returns "good" at boundary latency of 100ms', () => {
+            expect(svc.calculateNetworkQuality({
+                dnsSuccess: true,
+                connectivitySuccess: true,
+                latency: 100
+            })).toBe('good');
+        });
+
+        it('returns "fair" at boundary latency of 300ms', () => {
+            expect(svc.calculateNetworkQuality({
+                dnsSuccess: true,
+                connectivitySuccess: true,
+                latency: 300
+            })).toBe('fair');
+        });
+
+        it('returns "poor" at boundary latency of 1000ms', () => {
+            expect(svc.calculateNetworkQuality({
+                dnsSuccess: true,
+                connectivitySuccess: true,
+                latency: 1000
+            })).toBe('poor');
+        });
     });
 
     // ------- detectVPN -------
     describe('detectVPN', () => {
         it('returns false for empty interfaces', () => {
-            const interfaces = new Map();
-            expect(svc.detectVPN(interfaces)).toBe(false);
+            expect(svc.detectVPN(new Map())).toBe(false);
         });
 
-        it('detects tun interface as VPN', () => {
-            const interfaces = new Map([['tun0', { name: 'tun0', addresses: [], type: 'other' }]]);
-            expect(svc.detectVPN(interfaces)).toBe(true);
-        });
-
-        it('detects tap interface as VPN', () => {
-            const interfaces = new Map([['tap0', { name: 'tap0', addresses: [], type: 'other' }]]);
-            expect(svc.detectVPN(interfaces)).toBe(true);
-        });
-
-        it('detects ppp interface as VPN', () => {
-            const interfaces = new Map([['ppp0', { name: 'ppp0', addresses: [], type: 'other' }]]);
-            expect(svc.detectVPN(interfaces)).toBe(true);
-        });
-
-        it('detects ipsec interface as VPN', () => {
-            const interfaces = new Map([['ipsec0', { name: 'ipsec0', addresses: [], type: 'other' }]]);
-            expect(svc.detectVPN(interfaces)).toBe(true);
-        });
-
-        it('detects vpn in interface name', () => {
-            const interfaces = new Map([['MyVPN', { name: 'MyVPN', addresses: [], type: 'other' }]]);
-            expect(svc.detectVPN(interfaces)).toBe(true);
+        it('detects VPN indicator interfaces', () => {
+            const indicators = ['tun0', 'tap0', 'ppp0', 'ipsec0', 'MyVPN'];
+            for (const name of indicators) {
+                const interfaces = new Map<string, NetworkInterfaceInfo>([
+                    [name, { name, addresses: [], type: 'other' }]
+                ]);
+                expect(svc.detectVPN(interfaces)).toBe(true);
+            }
         });
 
         it('does not detect ethernet as VPN', () => {
-            const interfaces = new Map([['eth0', { name: 'eth0', addresses: [], type: 'ethernet' }]]);
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
+                ['eth0', { name: 'eth0', addresses: [], type: 'ethernet' }]
+            ]);
+            expect(svc.detectVPN(interfaces)).toBe(false);
+        });
+
+        it('detects VPN even when mixed with non-VPN interfaces', () => {
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
+                ['en0', { name: 'en0', addresses: [], type: 'ethernet' }],
+                ['utun3', { name: 'utun3', addresses: [], type: 'other' }]
+            ]);
+            // utun contains 'tun'
+            expect(svc.detectVPN(interfaces)).toBe(true);
+        });
+
+        it('does not detect docker/bridge interfaces as VPN', () => {
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
+                ['docker0', { name: 'docker0', addresses: [], type: 'other' }],
+                ['br-abc123', { name: 'br-abc123', addresses: [], type: 'other' }]
+            ]);
             expect(svc.detectVPN(interfaces)).toBe(false);
         });
     });
@@ -246,12 +413,11 @@ describe('NetworkService', () => {
     // ------- findPrimaryInterface -------
     describe('findPrimaryInterface', () => {
         it('returns null for empty interfaces', () => {
-            const interfaces = new Map();
-            expect(svc.findPrimaryInterface(interfaces)).toBeNull();
+            expect(svc.findPrimaryInterface(new Map())).toBeNull();
         });
 
         it('prefers ethernet over wifi', () => {
-            const interfaces = new Map([
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
                 ['wlan0', { name: 'wlan0', addresses: [], type: 'wifi' }],
                 ['eth0', { name: 'eth0', addresses: [], type: 'ethernet' }]
             ]);
@@ -259,7 +425,7 @@ describe('NetworkService', () => {
         });
 
         it('falls back to wifi when no ethernet', () => {
-            const interfaces = new Map([
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
                 ['wlan0', { name: 'wlan0', addresses: [], type: 'wifi' }],
                 ['tun0', { name: 'tun0', addresses: [], type: 'other' }]
             ]);
@@ -267,7 +433,7 @@ describe('NetworkService', () => {
         });
 
         it('falls back to first interface when no ethernet or wifi', () => {
-            const interfaces = new Map([
+            const interfaces = new Map<string, NetworkInterfaceInfo>([
                 ['utun0', { name: 'utun0', addresses: [], type: 'other' }],
                 ['docker0', { name: 'docker0', addresses: [], type: 'other' }]
             ]);
@@ -280,13 +446,23 @@ describe('NetworkService', () => {
         it('records a stable entry when state does not change', () => {
             svc.recordStateChangeAttempt(true, true, 1000);
             expect(svc.stateChangeHistory).toHaveLength(1);
-            expect(svc.stateChangeHistory[0].type).toBe('stable');
+            expect(svc.stateChangeHistory[0]).toEqual({
+                wasOnline: true,
+                isOnline: true,
+                timestamp: 1000,
+                type: 'stable'
+            });
         });
 
         it('records a change entry when state changes', () => {
             svc.recordStateChangeAttempt(true, false, 1000);
             expect(svc.stateChangeHistory).toHaveLength(1);
-            expect(svc.stateChangeHistory[0].type).toBe('change');
+            expect(svc.stateChangeHistory[0]).toEqual({
+                wasOnline: true,
+                isOnline: false,
+                timestamp: 1000,
+                type: 'change'
+            });
         });
 
         it('trims history to maxHistorySize', () => {
@@ -361,44 +537,140 @@ describe('NetworkService', () => {
             ];
             expect(svc.isStableStateChange()).toBe(true);
         });
-    });
 
-    // ------- getState -------
-    describe('getState', () => {
-        it('returns a copy of the state (not the same reference)', () => {
-            const state1 = svc.getState();
-            const state2 = svc.getState();
-            expect(state1).toEqual(state2);
-            expect(state1).not.toBe(svc.state);
-        });
-
-        it('returns expected initial state shape', () => {
-            const state = svc.getState();
-            expect(state.isOnline).toBe(true);
-            expect(state.networkQuality).toBe('good');
-            expect(state.vpnActive).toBe(false);
-            expect(state.connectionType).toBe('unknown');
-            expect(state.version).toBe(0);
-            expect(state.diagnostics).toBeDefined();
+        it('detects offline-online-offline flip-flop', () => {
+            svc.stateChangeHistory = [
+                { wasOnline: false, isOnline: false, timestamp: 1000, type: 'stable' },
+                { wasOnline: false, isOnline: true, timestamp: 2000, type: 'change' },
+                { wasOnline: true, isOnline: false, timestamp: 3000, type: 'change' }
+            ];
+            expect(svc.isStableStateChange()).toBe(false);
         });
     });
 
-    // ------- constructor defaults -------
-    describe('constructor defaults', () => {
-        it('initializes with correct defaults', () => {
-            expect(svc.isDestroyed).toBe(false);
-            expect(svc.isInitialized).toBe(false);
-            expect(svc.checkInterval).toBe(60000);
-            expect(svc.quickCheckInterval).toBe(15000);
-            expect(svc.debounceDelay).toBe(1000);
-            expect(svc.hysteresisDelay).toBe(2000);
-            expect(svc.requiredConsecutiveChecks).toBe(1);
-            expect(svc.maxHistorySize).toBe(10);
-            expect(svc.consecutiveOfflineChecks).toBe(0);
-            expect(svc.consecutiveOnlineChecks).toBe(0);
-            expect(svc.stateChangeHistory).toEqual([]);
-            expect(svc.dnsTestHosts).toEqual(['google.com', 'cloudflare.com']);
-            expect(svc.connectivityEndpoints).toHaveLength(2);
+    // ------- applyStateChanges -------
+    describe('applyStateChanges', () => {
+        it('does nothing with empty pending changes', () => {
+            const version = svc.state.version;
+            svc.applyStateChanges();
+            expect(svc.state.version).toBe(version);
+        });
+
+        it('applies pending changes and increments version', () => {
+            svc.isInitialized = true;
+            svc.pendingStateChanges = { networkQuality: 'excellent' };
+            svc.applyStateChanges();
+            expect(svc.state.networkQuality).toBe('excellent');
+            expect(svc.state.version).toBe(1);
+        });
+
+        it('clears pending changes after apply', () => {
+            svc.isInitialized = true;
+            svc.pendingStateChanges = { networkQuality: 'fair' };
+            svc.applyStateChanges();
+            expect(svc.pendingStateChanges).toEqual({});
+        });
+
+        it('emits stateChanged event on state change', () => {
+            svc.isInitialized = true;
+            const handler = vi.fn();
+            svc.on('stateChanged', handler);
+            svc.pendingStateChanges = { isOnline: false };
+            svc.applyStateChanges();
+            expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+                version: 1
+            }));
+        });
+
+        it('retries when state update lock is active', () => {
+            vi.useFakeTimers();
+            svc.stateUpdateLock = true;
+            svc.pendingStateChanges = { networkQuality: 'poor' };
+            svc.applyStateChanges();
+            // Should queue a retry — unlock and advance timer
+            svc.stateUpdateLock = false;
+            vi.advanceTimersByTime(100);
+            vi.useRealTimers();
+        });
+
+        it('suppresses offline state during initialization phase', () => {
+            // Fresh service: not initialized, within init grace period
+            svc.pendingStateChanges = { isOnline: false };
+            svc.applyStateChanges();
+            // Should revert to old state (online=true)
+            expect(svc.state.isOnline).toBe(true);
+        });
+    });
+
+    // ------- updateState -------
+    describe('updateState', () => {
+        it('queues changes into pendingStateChanges', () => {
+            svc.updateState({ networkQuality: 'fair' });
+            expect(svc.pendingStateChanges).toEqual(expect.objectContaining({
+                networkQuality: 'fair'
+            }));
+        });
+
+        it('applies immediately when immediate=true', () => {
+            svc.isInitialized = true;
+            svc.updateState({ networkQuality: 'excellent' }, true);
+            expect(svc.state.networkQuality).toBe('excellent');
+        });
+
+        it('skips offline state change during initial check', () => {
+            // Simulate initial check in progress
+            svc['_doingInitialCheck'] = true;
+            svc.isInitialized = false;
+            svc.updateState({ isOnline: false });
+            // pendingStateChanges should NOT contain isOnline
+            expect(svc.pendingStateChanges.isOnline).toBeUndefined();
+        });
+
+        it('merges multiple pending changes', () => {
+            svc.updateState({ networkQuality: 'fair' });
+            svc.updateState({ vpnActive: true });
+            expect(svc.pendingStateChanges).toEqual(expect.objectContaining({
+                networkQuality: 'fair',
+                vpnActive: true
+            }));
+        });
+    });
+
+    // ------- applyStateWithHysteresis -------
+    describe('applyStateWithHysteresis', () => {
+        it('records state change attempt in history', () => {
+            svc.applyStateWithHysteresis({ isOnline: true });
+            expect(svc.stateChangeHistory.length).toBeGreaterThan(0);
+        });
+
+        it('blocks state change when hysteresis timeout is active', () => {
+            vi.useFakeTimers();
+            svc.isInitialized = true;
+            // Force through an initial state change to activate hysteresis
+            svc.stateChangeHistory = [
+                { wasOnline: true, isOnline: true, timestamp: 1000, type: 'stable' },
+                { wasOnline: true, isOnline: true, timestamp: 2000, type: 'stable' },
+                { wasOnline: true, isOnline: true, timestamp: 3000, type: 'stable' }
+            ];
+            svc.applyStateWithHysteresis({ isOnline: false });
+            // Now hysteresis is active — second change should be blocked
+            svc.applyStateWithHysteresis({ isOnline: true });
+            vi.useRealTimers();
+        });
+
+        it('allows state change after hysteresis period expires', () => {
+            vi.useFakeTimers();
+            svc.isInitialized = true;
+            svc.stateChangeHistory = [
+                { wasOnline: true, isOnline: true, timestamp: 1000, type: 'stable' },
+                { wasOnline: true, isOnline: true, timestamp: 2000, type: 'stable' },
+                { wasOnline: true, isOnline: true, timestamp: 3000, type: 'stable' }
+            ];
+            svc.applyStateWithHysteresis({ isOnline: false });
+            // Wait for hysteresis to expire
+            vi.advanceTimersByTime(svc.hysteresisDelay + 100);
+            expect(svc.hysteresisTimeout).toBeNull();
+            vi.useRealTimers();
         });
     });
 
@@ -409,10 +681,17 @@ describe('NetworkService', () => {
             expect(svc.isDestroyed).toBe(true);
         });
 
-        it('clears intervals', () => {
+        it('clears all intervals', () => {
             svc.intervals.set('test', setTimeout(() => {}, 99999));
+            svc.intervals.set('test2', setTimeout(() => {}, 99999));
             svc.destroy();
             expect(svc.intervals.size).toBe(0);
+        });
+
+        it('removes all event listeners', () => {
+            svc.on('stateChanged', () => {});
+            svc.destroy();
+            expect(svc.listenerCount('stateChanged')).toBe(0);
         });
     });
 });

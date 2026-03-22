@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NetworkStateManager } from '../../../src/services/network/NetworkStateManager';
 import type { NetworkManagerState } from '../../../src/services/network/NetworkStateManager';
 
@@ -24,6 +24,60 @@ describe('NetworkStateManager', () => {
         mgr = new NetworkStateManager();
     });
 
+    // ------- constructor defaults -------
+    describe('constructor defaults', () => {
+        it('initializes with full expected default state', () => {
+            expect(mgr.stateUpdateLock).toBe(false);
+            expect(mgr.stateVersion).toBe(0);
+            expect(mgr.pendingStateChanges).toEqual({});
+            expect(mgr.state).toEqual({
+                isOnline: false,
+                networkQuality: 'offline',
+                vpnActive: false,
+                interfaces: [],
+                primaryInterface: null,
+                connectionType: 'unknown',
+                lastCheck: expect.any(Number),
+                lastStateChange: expect.any(Number),
+                diagnostics: {
+                    dnsResolvable: false,
+                    internetReachable: false,
+                    captivePortal: false,
+                    latency: 0
+                }
+            });
+        });
+    });
+
+    // ------- getState -------
+    describe('getState', () => {
+        it('returns deep clone (not same reference)', () => {
+            const s1 = mgr.getState();
+            const s2 = mgr.getState();
+            expect(s1).toEqual(s2);
+            expect(s1).not.toBe(s2);
+            expect(s1.diagnostics).not.toBe(s2.diagnostics);
+        });
+
+        it('initial state starts offline with expected quality', () => {
+            const state = mgr.getState();
+            expect(state.isOnline).toBe(false);
+            expect(state.networkQuality).toBe('offline');
+            expect(state.diagnostics.dnsResolvable).toBe(false);
+            expect(state.diagnostics.internetReachable).toBe(false);
+            expect(state.diagnostics.captivePortal).toBe(false);
+            expect(state.diagnostics.latency).toBe(0);
+        });
+
+        it('mutation of returned state does not affect internal state', () => {
+            const state = mgr.getState();
+            state.isOnline = true;
+            state.diagnostics.latency = 999;
+            expect(mgr.state.isOnline).toBe(false);
+            expect(mgr.state.diagnostics.latency).toBe(0);
+        });
+    });
+
     // ------- mergeStateChanges -------
     describe('mergeStateChanges', () => {
         it('shallow merges primitive values', () => {
@@ -34,7 +88,7 @@ describe('NetworkStateManager', () => {
             expect(result.networkQuality).toBe('offline');
         });
 
-        it('deep merges nested objects', () => {
+        it('deep merges diagnostics object', () => {
             const current = makeNetworkState({
                 diagnostics: {
                     dnsResolvable: false,
@@ -52,17 +106,19 @@ describe('NetworkStateManager', () => {
                 }
             };
             const result = mgr.mergeStateChanges(current, changes);
-            expect(result.diagnostics.dnsResolvable).toBe(true);
-            expect(result.diagnostics.latency).toBe(50);
-            expect(result.diagnostics.internetReachable).toBe(false);
-            expect(result.diagnostics.captivePortal).toBe(false);
+            expect(result.diagnostics).toEqual({
+                dnsResolvable: true,
+                internetReachable: false,
+                captivePortal: false,
+                latency: 50
+            });
         });
 
         it('replaces arrays directly (no deep merge)', () => {
-            const current = makeNetworkState({ interfaces: ['a', 'b'] });
-            const changes = { interfaces: ['c'] };
+            const current = makeNetworkState({ interfaces: ['en0', 'wlan0'] });
+            const changes = { interfaces: ['eth0'] };
             const result = mgr.mergeStateChanges(current, changes);
-            expect(result.interfaces).toEqual(['c']);
+            expect(result.interfaces).toEqual(['eth0']);
         });
 
         it('handles null values correctly', () => {
@@ -79,6 +135,23 @@ describe('NetworkStateManager', () => {
             expect(current.isOnline).toBe(false);
             expect(result.isOnline).toBe(true);
         });
+
+        it('merges enterprise VPN state with diagnostics', () => {
+            const current = makeNetworkState({
+                vpnActive: false,
+                connectionType: 'wifi',
+                diagnostics: { dnsResolvable: true, internetReachable: true, captivePortal: false, latency: 25 }
+            });
+            const changes = {
+                vpnActive: true,
+                connectionType: 'ethernet',
+                diagnostics: { dnsResolvable: true, internetReachable: true, captivePortal: false, latency: 120 }
+            };
+            const result = mgr.mergeStateChanges(current, changes);
+            expect(result.vpnActive).toBe(true);
+            expect(result.connectionType).toBe('ethernet');
+            expect(result.diagnostics.latency).toBe(120);
+        });
     });
 
     // ------- hasStateChanged -------
@@ -94,7 +167,7 @@ describe('NetworkStateManager', () => {
             expect(mgr.hasStateChanged(s1, s2)).toBe(true);
         });
 
-        it('detects change in nested field', () => {
+        it('detects change in nested diagnostics field', () => {
             const s1 = mgr.getState();
             const s2 = JSON.parse(JSON.stringify(s1));
             s2.diagnostics.latency = 999;
@@ -106,6 +179,13 @@ describe('NetworkStateManager', () => {
             const s2 = JSON.parse(JSON.stringify(s1));
             expect(mgr.hasStateChanged(s1, s2)).toBe(false);
         });
+
+        it('detects change in networkQuality string', () => {
+            const s1 = mgr.getState();
+            const s2 = JSON.parse(JSON.stringify(s1));
+            s2.networkQuality = 'excellent';
+            expect(mgr.hasStateChanged(s1, s2)).toBe(true);
+        });
     });
 
     // ------- analyzeNetworkChange -------
@@ -113,60 +193,27 @@ describe('NetworkStateManager', () => {
         it('returns correct analysis when offline', () => {
             mgr.state.isOnline = false;
             const analysis = mgr.analyzeNetworkChange();
-            expect(analysis.wasOffline).toBe(true);
-            expect(analysis.isNowOnline).toBe(false);
-            expect(analysis.significantChange).toBe(false);
+            expect(analysis).toEqual({
+                wasOffline: true,
+                isNowOnline: false,
+                networkQualityImproved: false,
+                vpnStateChanged: false,
+                likelyRecovery: false,
+                significantChange: false
+            });
         });
 
         it('returns correct analysis when online', () => {
             mgr.state.isOnline = true;
             const analysis = mgr.analyzeNetworkChange();
-            expect(analysis.wasOffline).toBe(false);
-            expect(analysis.isNowOnline).toBe(true);
-            expect(analysis.significantChange).toBe(false);
-        });
-
-        it('returns all expected fields', () => {
-            const analysis = mgr.analyzeNetworkChange();
-            expect(analysis).toHaveProperty('wasOffline');
-            expect(analysis).toHaveProperty('isNowOnline');
-            expect(analysis).toHaveProperty('networkQualityImproved');
-            expect(analysis).toHaveProperty('vpnStateChanged');
-            expect(analysis).toHaveProperty('likelyRecovery');
-            expect(analysis).toHaveProperty('significantChange');
-        });
-    });
-
-    // ------- getState -------
-    describe('getState', () => {
-        it('returns deep clone (not same reference)', () => {
-            const s1 = mgr.getState();
-            const s2 = mgr.getState();
-            expect(s1).toEqual(s2);
-            expect(s1).not.toBe(s2);
-            // Nested object should also be different reference
-            expect(s1.diagnostics).not.toBe(s2.diagnostics);
-        });
-
-        it('initial state starts offline', () => {
-            const state = mgr.getState();
-            expect(state.isOnline).toBe(false);
-            expect(state.networkQuality).toBe('offline');
-            expect(state.diagnostics.dnsResolvable).toBe(false);
-            expect(state.diagnostics.internetReachable).toBe(false);
-        });
-    });
-
-    // ------- constructor defaults -------
-    describe('constructor defaults', () => {
-        it('initializes with correct defaults', () => {
-            expect(mgr.stateUpdateLock).toBe(false);
-            expect(mgr.stateVersion).toBe(0);
-            expect(mgr.pendingStateChanges).toEqual({});
-            expect(mgr.state.vpnActive).toBe(false);
-            expect(mgr.state.connectionType).toBe('unknown');
-            expect(mgr.state.primaryInterface).toBeNull();
-            expect(mgr.state.interfaces).toEqual([]);
+            expect(analysis).toEqual({
+                wasOffline: false,
+                isNowOnline: true,
+                networkQualityImproved: false,
+                vpnStateChanged: false,
+                likelyRecovery: false,
+                significantChange: false
+            });
         });
     });
 
@@ -177,16 +224,6 @@ describe('NetworkStateManager', () => {
             mgr.applyStateChanges();
             expect(mgr.stateVersion).toBe(1);
             expect(mgr.state.isOnline).toBe(true);
-        });
-
-        it('does not increment version when pending change matches current state', () => {
-            // isOnline is already false, so setting it to false again should not change state
-            mgr.pendingStateChanges = { isOnline: false };
-            mgr.applyStateChanges();
-            // hasStateChanged compares JSON serializations - lastCheck update is the only
-            // difference, but since timeManager.now() returns the same value within
-            // this synchronous context, it may or may not detect a change
-            expect(mgr.stateVersion).toBeLessThanOrEqual(1);
         });
 
         it('clears pending changes after apply', () => {
@@ -206,6 +243,60 @@ describe('NetworkStateManager', () => {
             const versionBefore = mgr.stateVersion;
             mgr.applyStateChanges();
             expect(mgr.stateVersion).toBe(versionBefore);
+        });
+
+        it('emits state-changed event with change details', () => {
+            const handler = vi.fn();
+            mgr.on('state-changed', handler);
+            mgr.pendingStateChanges = { isOnline: true, networkQuality: 'excellent' };
+            mgr.applyStateChanges();
+            expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+                version: 1,
+                state: expect.objectContaining({ isOnline: true }),
+                previousState: expect.objectContaining({ isOnline: false })
+            }));
+        });
+
+        it('updates lastStateChange timestamp on actual change', () => {
+            const before = mgr.state.lastStateChange;
+            mgr.pendingStateChanges = { isOnline: true };
+            mgr.applyStateChanges();
+            expect(mgr.state.lastStateChange).toBeGreaterThanOrEqual(before);
+        });
+
+        it('retries with exponential backoff when locked', () => {
+            vi.useFakeTimers();
+            mgr.stateUpdateLock = true;
+            mgr.pendingStateChanges = { isOnline: true };
+            mgr.applyStateChanges(0); // first attempt
+            // Unlock so the retry succeeds
+            mgr.stateUpdateLock = false;
+            vi.advanceTimersByTime(100);
+            expect(mgr.state.isOnline).toBe(true);
+            vi.useRealTimers();
+        });
+    });
+
+    // ------- updateState -------
+    describe('updateState', () => {
+        it('merges changes into pendingStateChanges', () => {
+            mgr.updateState({ isOnline: true });
+            expect(mgr.pendingStateChanges).toEqual(expect.objectContaining({ isOnline: true }));
+        });
+
+        it('applies immediately when immediate=true', () => {
+            mgr.updateState({ isOnline: true, networkQuality: 'good' }, true);
+            expect(mgr.state.isOnline).toBe(true);
+            expect(mgr.state.networkQuality).toBe('good');
+        });
+
+        it('accumulates multiple non-immediate updates', () => {
+            mgr.updateState({ isOnline: true });
+            mgr.updateState({ vpnActive: true });
+            expect(mgr.pendingStateChanges).toEqual(expect.objectContaining({
+                isOnline: true,
+                vpnActive: true
+            }));
         });
     });
 });

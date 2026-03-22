@@ -23,7 +23,7 @@ describe('AtomicFileWriter', () => {
     describe('queueWrite()', () => {
         it('creates a queue for a new file path', async () => {
             const op = vi.fn().mockResolvedValue(undefined);
-            await writer.queueWrite('/tmp/test-queue.json', op);
+            await writer.queueWrite('/tmp/openheaders-queue-test.json', op);
             expect(op).toHaveBeenCalledOnce();
         });
 
@@ -37,8 +37,8 @@ describe('AtomicFileWriter', () => {
                 order.push(2);
             };
 
-            const p1 = writer.queueWrite('/tmp/serial.json', op1);
-            const p2 = writer.queueWrite('/tmp/serial.json', op2);
+            const p1 = writer.queueWrite('/tmp/openheaders-serial.json', op1);
+            const p2 = writer.queueWrite('/tmp/openheaders-serial.json', op2);
 
             await Promise.all([p1, p2]);
             expect(order).toEqual([1, 2]);
@@ -48,30 +48,43 @@ describe('AtomicFileWriter', () => {
             const order: string[] = [];
             const op1 = async () => {
                 await new Promise(r => setTimeout(r, 10));
-                order.push('a');
+                order.push('sources');
             };
             const op2 = async () => {
-                order.push('b');
+                order.push('rules');
             };
 
-            const p1 = writer.queueWrite('/tmp/file-a.json', op1);
-            const p2 = writer.queueWrite('/tmp/file-b.json', op2);
+            const p1 = writer.queueWrite('/tmp/openheaders-sources.json', op1);
+            const p2 = writer.queueWrite('/tmp/openheaders-rules.json', op2);
 
             await Promise.all([p1, p2]);
-            // b should finish before a since it has no delay
-            expect(order).toEqual(['b', 'a']);
+            expect(order).toEqual(['rules', 'sources']);
         });
 
         it('propagates errors from the write operation', async () => {
-            const op = vi.fn().mockRejectedValue(new Error('disk full'));
-            await expect(writer.queueWrite('/tmp/fail.json', op)).rejects.toThrow('disk full');
+            const op = vi.fn().mockRejectedValue(new Error('ENOSPC: no space left on device'));
+            await expect(writer.queueWrite('/tmp/openheaders-fail.json', op)).rejects.toThrow('ENOSPC');
         });
 
         it('cleans up queue after completion', async () => {
             const op = vi.fn().mockResolvedValue(undefined);
-            await writer.queueWrite('/tmp/cleanup.json', op);
-            // Queue should be cleaned up after the last operation
-            expect(writer.writeQueues.has('/tmp/cleanup.json')).toBe(false);
+            await writer.queueWrite('/tmp/openheaders-cleanup.json', op);
+            expect(writer.writeQueues.has('/tmp/openheaders-cleanup.json')).toBe(false);
+        });
+
+        it('serializes three sequential writes to same file', async () => {
+            const order: number[] = [];
+            const ops = [1, 2, 3].map(n => async () => {
+                await new Promise(r => setTimeout(r, 5));
+                order.push(n);
+            });
+
+            const promises = ops.map((op, i) =>
+                writer.queueWrite('/tmp/openheaders-triple.json', op)
+            );
+
+            await Promise.all(promises);
+            expect(order).toEqual([1, 2, 3]);
         });
     });
 
@@ -88,16 +101,20 @@ describe('AtomicFileWriter', () => {
             ).rejects.toThrow('Invalid JSON content');
         });
 
+        it('rejects truncated JSON', async () => {
+            await expect(
+                writer.writeFile('/tmp/test.json', '{"sources": [{"id": "a1b2c3d4', { validateJson: true })
+            ).rejects.toThrow('Invalid JSON content');
+        });
+
         it('accepts valid JSON when validateJson is true', async () => {
-            // This will go through to performAtomicWrite which will interact with fs
-            // We just want to verify JSON validation passes
-            const validJson = '{"key": "value"}';
-            // The write itself may fail (no actual disk ops in test), but JSON validation passes
+            const validJson = JSON.stringify({
+                sources: [{ id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', name: 'Production API Gateway Token' }],
+                rules: []
+            });
             try {
                 await writer.writeFile('/tmp/test.json', validJson, { validateJson: true, maxRetries: 1 });
             } catch (e) {
-                // Expected - fs operations will fail in test environment
-                // But the error should NOT be about JSON validation
                 expect((e as Error).message).not.toContain('Invalid JSON');
             }
         });
@@ -105,21 +122,24 @@ describe('AtomicFileWriter', () => {
 
     describe('writeJson()', () => {
         it('serializes data as pretty JSON by default', async () => {
-            const data = { key: 'value', nested: { a: 1 } };
-            // Mock writeFile to capture content
+            const data = {
+                sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                sourceName: 'Production API Gateway Token',
+                headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig'
+            };
             const writeSpy = vi.spyOn(writer, 'writeFile').mockResolvedValue(undefined);
 
-            await writer.writeJson('/tmp/test.json', data);
+            await writer.writeJson('/tmp/openheaders-source.json', data);
 
             expect(writeSpy).toHaveBeenCalledWith(
-                '/tmp/test.json',
+                '/tmp/openheaders-source.json',
                 JSON.stringify(data, null, 2),
                 { validateJson: true }
             );
         });
 
         it('serializes compact JSON when pretty is false', async () => {
-            const data = { key: 'value' };
+            const data = { id: 'a1b2c3d4', name: 'Test Rule' };
             const writeSpy = vi.spyOn(writer, 'writeFile').mockResolvedValue(undefined);
 
             await writer.writeJson('/tmp/test.json', data, { pretty: false });
@@ -128,6 +148,19 @@ describe('AtomicFileWriter', () => {
                 '/tmp/test.json',
                 JSON.stringify(data),
                 { validateJson: true }
+            );
+        });
+
+        it('passes through maxRetries option', async () => {
+            const data = { key: 'value' };
+            const writeSpy = vi.spyOn(writer, 'writeFile').mockResolvedValue(undefined);
+
+            await writer.writeJson('/tmp/test.json', data, { maxRetries: 5 });
+
+            expect(writeSpy).toHaveBeenCalledWith(
+                '/tmp/test.json',
+                JSON.stringify(data, null, 2),
+                { maxRetries: 5, validateJson: true }
             );
         });
     });
@@ -140,35 +173,59 @@ describe('AtomicFileWriter', () => {
         });
 
         it('parses valid JSON content', async () => {
-            const data = { key: 'value', count: 42 };
+            const data = {
+                sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+                sourceName: 'Production API Gateway Token',
+                domains: ['*.openheaders.io', 'api.partner-service.io:8443']
+            };
             vi.spyOn(writer, 'readFile').mockResolvedValue(JSON.stringify(data));
             const result = await writer.readJson('/tmp/valid.json');
             expect(result).toEqual(data);
         });
 
-        it('throws on invalid JSON content', async () => {
-            vi.spyOn(writer, 'readFile').mockResolvedValue('not valid json');
-            await expect(writer.readJson('/tmp/invalid.json')).rejects.toThrow('Invalid JSON in /tmp/invalid.json');
+        it('throws on invalid JSON content with file path in message', async () => {
+            vi.spyOn(writer, 'readFile').mockResolvedValue('not valid json {corrupted}');
+            await expect(writer.readJson('/tmp/openheaders-corrupted.json')).rejects.toThrow(
+                'Invalid JSON in /tmp/openheaders-corrupted.json'
+            );
+        });
+
+        it('parses deeply nested enterprise config', async () => {
+            const config = {
+                environments: {
+                    production: { variables: { API_URL: 'https://api.openheaders.io' } },
+                    staging: { variables: { API_URL: 'https://staging-api.openheaders.io' } }
+                },
+                sources: Array.from({ length: 20 }, (_, i) => ({
+                    id: `src-${i}`,
+                    name: `Source ${i}`
+                }))
+            };
+            vi.spyOn(writer, 'readFile').mockResolvedValue(JSON.stringify(config));
+            const result = await writer.readJson('/tmp/enterprise-config.json');
+            expect(result).toEqual(config);
         });
     });
 
     describe('lock management', () => {
         it('releaseLock is a no-op if lock was never acquired', async () => {
-            // Should not throw
             await writer.releaseLock('/tmp/nonexistent.lock');
         });
 
         it('cleanup releases all tracked locks', async () => {
-            // Manually add some lock entries
-            writer.lockFiles.set('/tmp/a.lock', true);
-            writer.lockFiles.set('/tmp/b.lock', true);
+            writer.lockFiles.set('/tmp/openheaders-sources.json.lock', true);
+            writer.lockFiles.set('/tmp/openheaders-rules.json.lock', true);
 
             const releaseSpy = vi.spyOn(writer, 'releaseLock').mockResolvedValue(undefined);
             await writer.cleanup();
 
             expect(releaseSpy).toHaveBeenCalledTimes(2);
-            expect(releaseSpy).toHaveBeenCalledWith('/tmp/a.lock');
-            expect(releaseSpy).toHaveBeenCalledWith('/tmp/b.lock');
+            expect(releaseSpy).toHaveBeenCalledWith('/tmp/openheaders-sources.json.lock');
+            expect(releaseSpy).toHaveBeenCalledWith('/tmp/openheaders-rules.json.lock');
+        });
+
+        it('cleanup handles empty lock set', async () => {
+            await expect(writer.cleanup()).resolves.toBeUndefined();
         });
     });
 
@@ -178,29 +235,14 @@ describe('AtomicFileWriter', () => {
             expect(mod.default).toBeInstanceOf(AtomicFileWriter);
         });
 
-        it('default export has writeFile method', async () => {
+        it('default export has all required methods', async () => {
             const mod = await import('../../../src/utils/atomicFileWriter');
             expect(typeof mod.default.writeFile).toBe('function');
-        });
-
-        it('default export has readFile method', async () => {
-            const mod = await import('../../../src/utils/atomicFileWriter');
             expect(typeof mod.default.readFile).toBe('function');
-        });
-
-        it('default export has writeJson method', async () => {
-            const mod = await import('../../../src/utils/atomicFileWriter');
             expect(typeof mod.default.writeJson).toBe('function');
-        });
-
-        it('default export has readJson method', async () => {
-            const mod = await import('../../../src/utils/atomicFileWriter');
             expect(typeof mod.default.readJson).toBe('function');
-        });
-
-        it('default export has cleanup method', async () => {
-            const mod = await import('../../../src/utils/atomicFileWriter');
             expect(typeof mod.default.cleanup).toBe('function');
+            expect(typeof mod.default.queueWrite).toBe('function');
         });
     });
 });

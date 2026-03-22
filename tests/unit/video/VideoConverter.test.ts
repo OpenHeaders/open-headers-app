@@ -31,6 +31,14 @@ describe('VideoConverter', () => {
             expect(parseDuration('02', '05', '09')).toBe(2 * 3600 + 5 * 60 + 9);
         });
 
+        it('converts enterprise-length recording 03:45:12', () => {
+            expect(parseDuration('03', '45', '12')).toBe(3 * 3600 + 45 * 60 + 12);
+        });
+
+        it('converts max typical recording 23:59:59', () => {
+            expect(parseDuration('23', '59', '59')).toBe(23 * 3600 + 59 * 60 + 59);
+        });
+
         it('is also accessible as a static method on the class', () => {
             expect(VideoConverter.parseDuration('00', '10', '00')).toBe(600);
         });
@@ -53,7 +61,6 @@ describe('VideoConverter', () => {
         it('scales linearly with file size', () => {
             const bitrate10 = calculateBitrate(10, 60);
             const bitrate20 = calculateBitrate(20, 60);
-            // 20MB should be ~2x the bitrate of 10MB
             expect(bitrate20).toBe(bitrate10 * 2);
         });
 
@@ -68,6 +75,19 @@ describe('VideoConverter', () => {
             expect(Number.isInteger(bitrate)).toBe(true);
         });
 
+        it('calculates bitrate for enterprise 25MB Slack limit, 5min recording', () => {
+            const bitrate = calculateBitrate(25, 300);
+            // 25 * 1024 * 1024 * 8 / 300 * 0.95 ≈ 665,272 bps
+            expect(bitrate).toBeGreaterThan(600000);
+            expect(bitrate).toBeLessThan(700000);
+        });
+
+        it('calculates bitrate for large 100MB recording, 1hr duration', () => {
+            const bitrate = calculateBitrate(100, 3600);
+            expect(bitrate).toBeGreaterThan(200000);
+            expect(bitrate).toBeLessThan(250000);
+        });
+
         it('is also accessible as a static method on the class', () => {
             expect(VideoConverter.calculateBitrate(10, 60)).toBe(calculateBitrate(10, 60));
         });
@@ -75,8 +95,18 @@ describe('VideoConverter', () => {
 
     describe('constructor', () => {
         it('stores the ffmpeg path', () => {
-            const converter = new VideoConverter('/usr/bin/ffmpeg');
-            expect(converter.ffmpegPath).toBe('/usr/bin/ffmpeg');
+            const converter = new VideoConverter('/usr/local/bin/ffmpeg');
+            expect(converter.ffmpegPath).toBe('/usr/local/bin/ffmpeg');
+        });
+
+        it('stores homebrew ffmpeg path', () => {
+            const converter = new VideoConverter('/opt/homebrew/bin/ffmpeg');
+            expect(converter.ffmpegPath).toBe('/opt/homebrew/bin/ffmpeg');
+        });
+
+        it('stores path with spaces', () => {
+            const converter = new VideoConverter('/Users/Jane Doe/Applications/ffmpeg');
+            expect(converter.ffmpegPath).toBe('/Users/Jane Doe/Applications/ffmpeg');
         });
     });
 });
