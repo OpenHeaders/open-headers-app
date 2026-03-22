@@ -25,9 +25,11 @@ let app: ElectronApplication;
 let page: Page;
 
 test.beforeAll(async () => {
+    const isCI = !!process.env.CI;
     app = await electron.launch({
         args: [
             path.join(__dirname, '..', '..'),
+            ...(isCI ? ['--no-sandbox', '--disable-gpu'] : []),
         ],
         env: {
             ...process.env,
