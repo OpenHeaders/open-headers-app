@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { IPC_INVOKE, IPC_SEND, IPC_PUSH } from '../../src/types/ipc-channels';
 
 const ROOT = path.resolve(__dirname, '../../');
 
@@ -174,6 +175,66 @@ describe('IPC Contract', () => {
         it('has expected number of send channels', () => {
             expect(mainOnChannels.size).toBeGreaterThan(10);
             expect(mainOnChannels.size).toBeLessThan(30);
+        });
+    });
+
+    describe('ipc-channels.ts constants match actual registrations', () => {
+        const invokeConstantValues = new Set(Object.values(IPC_INVOKE));
+        const sendConstantValues = new Set(Object.values(IPC_SEND));
+        const pushConstantValues = new Set(Object.values(IPC_PUSH));
+
+        it('every IPC_INVOKE constant is registered as a main handle()', () => {
+            const unregistered = [...invokeConstantValues].filter(ch => !mainHandleChannels.has(ch));
+            expect(unregistered, `IPC_INVOKE constants with no main handler: ${unregistered.join(', ')}`).toEqual([]);
+        });
+
+        it('every main handle() has an IPC_INVOKE constant', () => {
+            // Some channels are registered dynamically by services (e.g., VideoExportManager)
+            const dynamicChannels = ['export-video'];
+            const undeclared = [...mainHandleChannels].filter(
+                ch => !invokeConstantValues.has(ch) && !dynamicChannels.includes(ch)
+            );
+            expect(undeclared, `Main handlers with no IPC_INVOKE constant: ${undeclared.join(', ')}`).toEqual([]);
+        });
+
+        it('every IPC_SEND constant is registered as a main on()', () => {
+            const unregistered = [...sendConstantValues].filter(ch => !mainOnChannels.has(ch));
+            expect(unregistered, `IPC_SEND constants with no main listener: ${unregistered.join(', ')}`).toEqual([]);
+        });
+
+        it('every main on() has an IPC_SEND constant', () => {
+            const undeclared = [...mainOnChannels].filter(ch => !sendConstantValues.has(ch));
+            expect(undeclared, `Main listeners with no IPC_SEND constant: ${undeclared.join(', ')}`).toEqual([]);
+        });
+
+        it('IPC_INVOKE has no duplicate values', () => {
+            const values = Object.values(IPC_INVOKE);
+            const unique = new Set(values);
+            expect(values.length).toBe(unique.size);
+        });
+
+        it('IPC_SEND has no duplicate values', () => {
+            const values = Object.values(IPC_SEND);
+            const unique = new Set(values);
+            expect(values.length).toBe(unique.size);
+        });
+
+        it('IPC_PUSH has no duplicate values', () => {
+            const values = Object.values(IPC_PUSH);
+            const unique = new Set(values);
+            expect(values.length).toBe(unique.size);
+        });
+
+        it('no channel name appears in both IPC_INVOKE and IPC_SEND', () => {
+            const overlap = [...invokeConstantValues].filter(ch => sendConstantValues.has(ch));
+            expect(overlap, `Channels in both INVOKE and SEND: ${overlap.join(', ')}`).toEqual([]);
+        });
+
+        it('IPC_PUSH channels are used in webContents.send calls', () => {
+            const unusedPush = [...pushConstantValues].filter(ch => !mainPushChannels.has(ch));
+            // Some push channels may be sent conditionally or via helper functions
+            // so we just verify most are used
+            expect(unusedPush.length).toBeLessThan(pushConstantValues.size / 2);
         });
     });
 });
