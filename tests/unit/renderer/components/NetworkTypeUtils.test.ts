@@ -8,7 +8,14 @@ import {
 import type { NetworkRecord } from '../../../../src/types/recording';
 
 function makeNetRecord(overrides: Partial<NetworkRecord> = {}): NetworkRecord {
-  return { id: 'r1', url: '', method: 'GET', status: 200, timestamp: 0, ...overrides };
+  return {
+    id: 'rec-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    url: 'https://api.openheaders.io/v2/config',
+    method: 'GET',
+    status: 200,
+    timestamp: 1700000000000,
+    ...overrides,
+  };
 }
 
 // ======================================================================
@@ -166,5 +173,17 @@ describe('getUniqueMethods', () => {
       makeNetRecord(),
     ];
     expect(getUniqueMethods(records)).toEqual(['GET', 'POST']);
+  });
+
+  it('includes all HTTP methods from enterprise API', () => {
+    const records = [
+      makeNetRecord({ method: 'GET', url: 'https://api.openheaders.io/v2/sources' }),
+      makeNetRecord({ method: 'POST', url: 'https://api.openheaders.io/v2/sources' }),
+      makeNetRecord({ method: 'PUT', url: 'https://api.openheaders.io/v2/sources/a1b2c3d4' }),
+      makeNetRecord({ method: 'DELETE', url: 'https://api.openheaders.io/v2/sources/a1b2c3d4' }),
+      makeNetRecord({ method: 'PATCH', url: 'https://api.openheaders.io/v2/sources/a1b2c3d4' }),
+      makeNetRecord({ method: 'OPTIONS', url: 'https://api.openheaders.io/v2/sources' }),
+    ];
+    expect(getUniqueMethods(records)).toEqual(['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']);
   });
 });

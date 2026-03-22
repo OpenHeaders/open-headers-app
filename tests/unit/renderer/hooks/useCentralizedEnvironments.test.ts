@@ -9,15 +9,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
 // ---------------------------------------------------------------------------
-// Mocks for all sub-hooks
+// Enterprise-like mock data
 // ---------------------------------------------------------------------------
 
 const mockCore = {
-  environments: { Default: { FOO: { value: 'bar' } } },
-  activeEnvironment: 'Default',
+  environments: {
+    Production: {
+      API_KEY: { value: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc', isSecret: true },
+      API_URL: { value: 'https://api.openheaders.io' },
+      BEARER_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig', isSecret: true },
+    },
+    Staging: {
+      API_KEY: { value: 'ohk_test_abc123', isSecret: true },
+      API_URL: { value: 'https://api.staging.openheaders.io' },
+    },
+    Development: {
+      API_KEY: { value: 'dev-key-123' },
+      API_URL: { value: 'http://localhost:3000' },
+    },
+  },
+  activeEnvironment: 'Production',
   isLoading: false,
   isReady: true,
-  service: { id: 'mock-service' },
+  service: { id: 'env-service-a1b2c3d4' },
 };
 
 const mockOperations = {
@@ -31,19 +45,31 @@ const mockOperations = {
 const mockVariables = {
   setVariable: vi.fn(),
   deleteVariable: vi.fn(),
-  getVariable: vi.fn().mockReturnValue('bar'),
-  getAllVariables: vi.fn().mockReturnValue({ FOO: 'bar' }),
-  getAllVariablesWithMetadata: vi.fn().mockReturnValue({ FOO: { value: 'bar' } }),
+  getVariable: vi.fn().mockReturnValue('ohk_live_4eC39HqLyjWDarjtT1zdp7dc'),
+  getAllVariables: vi.fn().mockReturnValue({
+    API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc',
+    API_URL: 'https://api.openheaders.io',
+  }),
+  getAllVariablesWithMetadata: vi.fn().mockReturnValue(mockCore.environments.Production),
 };
 
 const mockTemplates = {
-  resolveTemplate: vi.fn().mockReturnValue('resolved'),
-  resolveObjectTemplate: vi.fn().mockReturnValue({ key: 'resolved' }),
+  resolveTemplate: vi.fn().mockReturnValue('https://api.openheaders.io/v2/config'),
+  resolveObjectTemplate: vi.fn().mockReturnValue({ url: 'https://api.openheaders.io' }),
 };
 
 const mockSchema = {
-  findVariableUsage: vi.fn().mockReturnValue({}),
-  generateEnvironmentSchema: vi.fn().mockReturnValue({ environments: {}, variableDefinitions: {} }),
+  findVariableUsage: vi.fn().mockReturnValue({
+    API_KEY: ['source-gateway', 'source-auth'],
+    API_URL: ['source-gateway'],
+  }),
+  generateEnvironmentSchema: vi.fn().mockReturnValue({
+    environments: { Production: {}, Staging: {}, Development: {} },
+    variableDefinitions: {
+      API_KEY: { description: 'API key', isSecret: true },
+      API_URL: { description: 'API base URL' },
+    },
+  }),
 };
 
 vi.mock('../../../../src/renderer/hooks/environment', () => ({
@@ -65,16 +91,16 @@ describe('useCentralizedEnvironments', () => {
     vi.clearAllMocks();
   });
 
-  it('exposes core state fields', () => {
+  it('exposes core state fields with enterprise environment data', () => {
     const { result } = renderHook(() => useCentralizedEnvironments());
 
-    expect(result.current.environments).toEqual({ Default: { FOO: { value: 'bar' } } });
-    expect(result.current.activeEnvironment).toBe('Default');
+    expect(result.current.environments).toBe(mockCore.environments);
+    expect(result.current.activeEnvironment).toBe('Production');
     expect(result.current.loading).toBe(false);
     expect(result.current.environmentsReady).toBe(true);
   });
 
-  it('exposes operation functions', () => {
+  it('exposes all operation functions', () => {
     const { result } = renderHook(() => useCentralizedEnvironments());
 
     expect(result.current.waitForEnvironments).toBe(mockOperations.waitForEnvironments);
@@ -84,7 +110,7 @@ describe('useCentralizedEnvironments', () => {
     expect(result.current.cloneEnvironment).toBe(mockOperations.cloneEnvironment);
   });
 
-  it('exposes variable functions', () => {
+  it('exposes all variable functions', () => {
     const { result } = renderHook(() => useCentralizedEnvironments());
 
     expect(result.current.setVariable).toBe(mockVariables.setVariable);
@@ -112,6 +138,18 @@ describe('useCentralizedEnvironments', () => {
     const { result } = renderHook(() => useCentralizedEnvironments());
 
     expect(result.current.service).toBe(mockCore.service);
+  });
+
+  it('returns stable references across renders', () => {
+    const { result, rerender } = renderHook(() => useCentralizedEnvironments());
+
+    const firstRender = result.current;
+    rerender();
+    const secondRender = result.current;
+
+    // Functions from mock modules should be the same reference
+    expect(secondRender.setVariable).toBe(firstRender.setVariable);
+    expect(secondRender.createEnvironment).toBe(firstRender.createEnvironment);
   });
 });
 

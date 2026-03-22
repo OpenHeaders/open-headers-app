@@ -9,7 +9,7 @@ import type { WorkspaceFormValues } from '../../../../src/renderer/components/fe
 import { PROVIDER_ICONS } from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
 function makeFormValues(overrides: Partial<WorkspaceFormValues> = {}): WorkspaceFormValues {
-  return { name: 'ws', authType: 'none', ...overrides };
+  return { name: 'OpenHeaders — Production', authType: 'none', ...overrides };
 }
 
 // ======================================================================
@@ -25,15 +25,19 @@ describe('extractRepoName', () => {
   });
 
   it('extracts repo name from HTTPS URL', () => {
-    expect(extractRepoName('https://github.com/user/my-repo.git')).toBe('my-repo');
+    expect(extractRepoName('https://github.com/openheaders/shared-headers.git')).toBe('shared-headers');
   });
 
   it('extracts repo name from SSH URL', () => {
-    expect(extractRepoName('git@github.com:user/my-repo.git')).toBe('my-repo');
+    expect(extractRepoName('git@github.com:openheaders/shared-headers.git')).toBe('shared-headers');
   });
 
   it('handles URL without .git suffix', () => {
-    expect(extractRepoName('https://github.com/user/my-repo')).toBe('my-repo');
+    expect(extractRepoName('https://github.com/openheaders/shared-headers')).toBe('shared-headers');
+  });
+
+  it('extracts repo name from enterprise GitLab URL', () => {
+    expect(extractRepoName('https://gitlab.openheaders.io/platform/shared-headers.git')).toBe('shared-headers');
   });
 });
 
@@ -71,11 +75,11 @@ describe('getProviderIcon', () => {
 // ======================================================================
 describe('prepareWorkspaceData', () => {
   it('creates workspace object with authData for git URL', () => {
-    const values = makeFormValues({ gitUrl: 'https://github.com/u/r' });
-    const result = prepareWorkspaceData(values, null, { token: 'abc' });
-    expect(result.name).toBe('ws');
+    const values = makeFormValues({ gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git' });
+    const result = prepareWorkspaceData(values, null, { token: 'glpat-xxxxxxxxxxxxxxxxxxxx' });
+    expect(result.name).toBe('OpenHeaders — Production');
     expect(result.type).toBe('git');
-    expect(result.authData).toEqual({ token: 'abc' });
+    expect(result.authData).toEqual({ token: 'glpat-xxxxxxxxxxxxxxxxxxxx' });
   });
 
   it('creates personal workspace without authData', () => {
@@ -100,7 +104,7 @@ describe('prepareWorkspaceData', () => {
 
   it('removes sensitive auth fields', () => {
     const values = makeFormValues({
-      gitUrl: 'https://github.com/u/r',
+      gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
       authType: 'token',
       gitToken: 'secret-token',
       sshKey: 'ssh-key',
@@ -126,12 +130,13 @@ describe('prepareWorkspaceData', () => {
 // ======================================================================
 describe('formatValidationDetails', () => {
   it('returns items for each non-zero count', () => {
-    const details = { sourceCount: 3, ruleCount: 2, proxyRuleCount: 1, variableCount: 5 };
+    const details = { sourceCount: 15, ruleCount: 8, proxyRuleCount: 4, variableCount: 25 };
     const items = formatValidationDetails(details);
-    expect(items).toContain('3 sources');
-    expect(items).toContain('2 rules');
-    expect(items).toContain('1 proxy rules');
-    expect(items).toContain('5 environment variables');
+    expect(items).toContain('15 sources');
+    expect(items).toContain('8 rules');
+    expect(items).toContain('4 proxy rules');
+    expect(items).toContain('25 environment variables');
+    expect(items).toHaveLength(4);
   });
 
   it('skips zero counts', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   decodeJWT,
   encodeJWT,
@@ -20,6 +20,21 @@ function buildJWT(header: object, payload: object, sig = 'fakesig'): string {
   return `${encode(header)}.${encode(payload)}.${sig}`;
 }
 
+// Enterprise-like JWT token for realistic testing
+const ENTERPRISE_HEADER = { alg: 'RS256', typ: 'JWT', kid: 'openheaders-signing-key-2025' };
+const ENTERPRISE_PAYLOAD = {
+  iss: 'https://auth.openheaders.io',
+  sub: 'user@openheaders.io',
+  aud: 'https://api.openheaders.io',
+  exp: Math.floor(Date.now() / 1000) + 3600,
+  iat: Math.floor(Date.now() / 1000),
+  nbf: Math.floor(Date.now() / 1000),
+  jti: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+  scope: 'openid profile email',
+  roles: ['admin', 'developer'],
+  org_id: 'org-openheaders-prod',
+};
+
 describe('jwtUtils', () => {
   // ------------------------------------------------------------------
   // decodeJWT
@@ -31,27 +46,51 @@ describe('jwtUtils', () => {
       const token = buildJWT(header, payload, 'testsig');
 
       const decoded = decodeJWT(token);
-      expect(decoded.header).toEqual(header);
-      expect(decoded.payload).toEqual(payload);
-      expect(decoded.signature).toBe('testsig');
+      expect(decoded).toEqual({
+        header,
+        payload,
+        signature: 'testsig',
+      });
+    });
+
+    it('decodes enterprise JWT with all standard claims', () => {
+      const token = buildJWT(ENTERPRISE_HEADER, ENTERPRISE_PAYLOAD, 'enterprise-sig');
+      const decoded = decodeJWT(token);
+
+      expect(decoded.header).toEqual(ENTERPRISE_HEADER);
+      expect(decoded.payload.iss).toBe('https://auth.openheaders.io');
+      expect(decoded.payload.sub).toBe('user@openheaders.io');
+      expect(decoded.payload.aud).toBe('https://api.openheaders.io');
+      expect(decoded.payload.jti).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+      expect(decoded.payload.scope).toBe('openid profile email');
+      expect(decoded.payload.roles).toEqual(['admin', 'developer']);
+      expect(decoded.signature).toBe('enterprise-sig');
     });
 
     it('handles base64url characters (- and _)', () => {
-      // Payload with data that produces + and / in regular base64
       const header = { alg: 'HS256' };
-      const payload = { data: '>>>???' }; // tends to produce non-url-safe chars
+      const payload = { data: '>>>???' };
       const token = buildJWT(header, payload);
       const decoded = decodeJWT(token);
       expect(decoded.payload.data).toBe('>>>???');
     });
 
+    it('decodes JWT with nested object claims', () => {
+      const payload = {
+        sub: 'user@openheaders.io',
+        permissions: { proxy: ['read', 'write'], workspace: ['admin'] },
+        metadata: { team: 'platform', region: 'eu-west-1' },
+      };
+      const token = buildJWT({ alg: 'RS256' }, payload);
+      const decoded = decodeJWT(token);
+      expect(decoded.payload.permissions).toEqual({ proxy: ['read', 'write'], workspace: ['admin'] });
+    });
+
     it('throws for null input', () => {
-      // Intentionally invalid input to test runtime guard
       expect(() => decodeJWT(null as unknown as string)).toThrow('Failed to decode JWT');
     });
 
     it('throws for undefined input', () => {
-      // Intentionally invalid input to test runtime guard
       expect(() => decodeJWT(undefined as unknown as string)).toThrow('Failed to decode JWT');
     });
 
@@ -59,11 +98,11 @@ describe('jwtUtils', () => {
       expect(() => decodeJWT('')).toThrow('Failed to decode JWT');
     });
 
-    it('throws for token with wrong number of parts (2 parts)', () => {
+    it('throws for token with 2 parts', () => {
       expect(() => decodeJWT('abc.def')).toThrow('Failed to decode JWT');
     });
 
-    it('throws for token with wrong number of parts (4 parts)', () => {
+    it('throws for token with 4 parts', () => {
       expect(() => decodeJWT('a.b.c.d')).toThrow('Failed to decode JWT');
     });
 
@@ -74,9 +113,11 @@ describe('jwtUtils', () => {
     it('throws for token whose header is valid base64 but not JSON', () => {
       const notJson = btoa('not json');
       const validPayload = btoa(JSON.stringify({ a: 1 }));
-      expect(() => decodeJWT(`${notJson}.${validPayload}.sig`)).toThrow(
-        'Failed to decode JWT'
-      );
+      expect(() => decodeJWT(`${notJson}.${validPayload}.sig`)).toThrow('Failed to decode JWT');
+    });
+
+    it('throws for single-segment string', () => {
+      expect(() => decodeJWT('just-a-string')).toThrow('Failed to decode JWT');
     });
   });
 
@@ -86,7 +127,7 @@ describe('jwtUtils', () => {
   describe('encodeJWT', () => {
     it('round-trips with decodeJWT', () => {
       const header = { alg: 'HS256', typ: 'JWT' };
-      const payload = { sub: 'user123', roles: ['admin'] };
+      const payload = { sub: 'user@openheaders.io', roles: ['admin'] };
 
       const token = encodeJWT(header, payload, 'mysig');
       const decoded = decodeJWT(token);
@@ -96,15 +137,25 @@ describe('jwtUtils', () => {
       expect(decoded.signature).toBe('mysig');
     });
 
+    it('round-trips enterprise JWT', () => {
+      const token = encodeJWT(ENTERPRISE_HEADER, ENTERPRISE_PAYLOAD, 'sig');
+      const decoded = decodeJWT(token);
+      expect(decoded.header).toEqual(ENTERPRISE_HEADER);
+      expect(decoded.payload).toEqual(ENTERPRISE_PAYLOAD);
+    });
+
     it('uses empty string as default signature', () => {
       const token = encodeJWT({ alg: 'none' }, { data: 1 });
       expect(token.endsWith('.')).toBe(true);
+      const parts = token.split('.');
+      expect(parts).toHaveLength(3);
+      expect(parts[2]).toBe('');
     });
 
     it('produces base64url output (no +, /, or =)', () => {
       const token = encodeJWT(
         { alg: 'HS256' },
-        { longvalue: 'a'.repeat(200) }
+        { longvalue: 'a'.repeat(200) },
       );
       const parts = token.split('.');
       expect(parts[0]).not.toMatch(/[+/=]/);
@@ -116,6 +167,13 @@ describe('jwtUtils', () => {
       circular.self = circular;
       expect(() => encodeJWT(circular as JsonObject, {})).toThrow('Failed to encode JWT');
     });
+
+    it('encodes JWT with special ASCII characters', () => {
+      const payload = { url: 'https://auth.openheaders.io/oauth2/token?scope=read+write&client_id=abc' };
+      const token = encodeJWT({ alg: 'HS256' }, payload, 'sig');
+      const decoded = decodeJWT(token);
+      expect(decoded.payload.url).toBe('https://auth.openheaders.io/oauth2/token?scope=read+write&client_id=abc');
+    });
   });
 
   // ------------------------------------------------------------------
@@ -123,7 +181,12 @@ describe('jwtUtils', () => {
   // ------------------------------------------------------------------
   describe('isJWT', () => {
     it('returns truthy for a valid JWT with alg in header', () => {
-      const token = buildJWT({ alg: 'HS256' }, { sub: '1' });
+      const token = buildJWT({ alg: 'HS256' }, { sub: 'user@openheaders.io' });
+      expect(isJWT(token)).toBeTruthy();
+    });
+
+    it('returns truthy for RS256 JWT', () => {
+      const token = buildJWT({ alg: 'RS256', typ: 'JWT' }, { iss: 'https://auth.openheaders.io' });
       expect(isJWT(token)).toBeTruthy();
     });
 
@@ -132,13 +195,16 @@ describe('jwtUtils', () => {
       expect(isJWT(token)).toBeTruthy();
     });
 
+    it('returns truthy for enterprise JWT', () => {
+      const token = buildJWT(ENTERPRISE_HEADER, ENTERPRISE_PAYLOAD);
+      expect(isJWT(token)).toBeTruthy();
+    });
+
     it('returns false for null', () => {
-      // Intentionally invalid input to test runtime guard
       expect(isJWT(null as unknown as string)).toBe(false);
     });
 
     it('returns false for undefined', () => {
-      // Intentionally invalid input to test runtime guard
       expect(isJWT(undefined as unknown as string)).toBe(false);
     });
 
@@ -158,6 +224,14 @@ describe('jwtUtils', () => {
       const token = buildJWT({ foo: 'bar' }, { x: 1 });
       expect(isJWT(token)).toBe(false);
     });
+
+    it('returns false for random bearer token that looks JWT-ish', () => {
+      expect(isJWT('eyJra.eyJra.invalid')).toBe(false);
+    });
+
+    it('returns false for non-string number', () => {
+      expect(isJWT(12345 as unknown as string)).toBe(false);
+    });
   });
 
   // ------------------------------------------------------------------
@@ -175,9 +249,18 @@ describe('jwtUtils', () => {
     });
 
     it('handles arrays', () => {
-      // Intentionally passing array to test runtime behavior
       const result = formatJSON([1, 2, 3] as unknown as JsonObject);
       expect(result).toBe('[\n  1,\n  2,\n  3\n]');
+    });
+
+    it('formats enterprise JWT payload', () => {
+      const result = formatJSON({
+        iss: 'https://auth.openheaders.io',
+        sub: 'user@openheaders.io',
+        roles: ['admin'],
+      });
+      expect(result).toContain('"iss": "https://auth.openheaders.io"');
+      expect(result).toContain('"roles"');
     });
   });
 
@@ -200,6 +283,20 @@ describe('jwtUtils', () => {
     it('throws for empty string', () => {
       expect(() => validateJSON('')).toThrow('Invalid JSON');
     });
+
+    it('throws for truncated JSON', () => {
+      expect(() => validateJSON('{"key": "val')).toThrow('Invalid JSON');
+    });
+
+    it('parses enterprise config JSON', () => {
+      const config = JSON.stringify({
+        sources: [{ sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourceType: 'http' }],
+        environments: { Production: { API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' } },
+      });
+      const parsed = validateJSON(config);
+      expect(parsed.sources).toHaveLength(1);
+      expect(parsed.environments.Production.API_KEY).toBe('ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
+    });
   });
 
   // ------------------------------------------------------------------
@@ -207,31 +304,39 @@ describe('jwtUtils', () => {
   // ------------------------------------------------------------------
   describe('getJWTExpiration', () => {
     it('returns hasExpiration:false when payload is null', () => {
-      // Intentionally invalid input to test runtime guard
       expect(getJWTExpiration(null as unknown as JsonObject)).toEqual({ hasExpiration: false });
     });
 
     it('returns hasExpiration:false when payload has no exp', () => {
-      expect(getJWTExpiration({ sub: '1' })).toEqual({ hasExpiration: false });
+      expect(getJWTExpiration({ sub: 'user@openheaders.io' })).toEqual({ hasExpiration: false });
     });
 
     it('detects expired token', () => {
       const pastExp = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
       const result = getJWTExpiration({ exp: pastExp });
 
-      expect(result.hasExpiration).toBe(true);
+      expect(result).toEqual({
+        hasExpiration: true,
+        isExpired: true,
+        expiresAt: expect.any(Date),
+        expiresIn: expect.any(Number),
+      });
       expect(result.isExpired).toBe(true);
-      expect(result.expiresAt).toBeInstanceOf(Date);
-      expect(result.expiresIn).toBeLessThan(0);
+      expect(result.expiresIn!).toBeLessThan(0);
     });
 
     it('detects non-expired token', () => {
       const futureExp = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
       const result = getJWTExpiration({ exp: futureExp });
 
-      expect(result.hasExpiration).toBe(true);
+      expect(result).toEqual({
+        hasExpiration: true,
+        isExpired: false,
+        expiresAt: expect.any(Date),
+        expiresIn: expect.any(Number),
+      });
       expect(result.isExpired).toBe(false);
-      expect(result.expiresIn).toBeGreaterThan(0);
+      expect(result.expiresIn!).toBeGreaterThan(0);
     });
 
     it('converts exp from seconds to milliseconds correctly', () => {
@@ -239,26 +344,56 @@ describe('jwtUtils', () => {
       const result = getJWTExpiration({ exp: expSeconds });
       expect(result.expiresAt!.getTime()).toBe(expSeconds * 1000);
     });
+
+    it('handles enterprise JWT expiry (24h token)', () => {
+      const now = Math.floor(Date.now() / 1000);
+      const result = getJWTExpiration({ exp: now + 86400 }); // 24 hours
+      expect(result.hasExpiration).toBe(true);
+      expect(result.isExpired).toBe(false);
+      // expiresIn should be close to 86400000ms (24h in ms)
+      expect(result.expiresIn!).toBeGreaterThan(86300000);
+      expect(result.expiresIn!).toBeLessThanOrEqual(86400000);
+    });
+
+    it('handles token that just expired (exp = now - 1)', () => {
+      const justPast = Math.floor(Date.now() / 1000) - 1;
+      const result = getJWTExpiration({ exp: justPast });
+      expect(result.isExpired).toBe(true);
+    });
+
+    it('returns hasExpiration:false for empty payload', () => {
+      expect(getJWTExpiration({})).toEqual({ hasExpiration: false });
+    });
   });
 
   // ------------------------------------------------------------------
   // JWT_CLAIM_DESCRIPTIONS
   // ------------------------------------------------------------------
   describe('JWT_CLAIM_DESCRIPTIONS', () => {
-    it('has standard claims', () => {
-      expect(JWT_CLAIM_DESCRIPTIONS.iss).toBe('Issuer');
-      expect(JWT_CLAIM_DESCRIPTIONS.sub).toBe('Subject');
-      expect(JWT_CLAIM_DESCRIPTIONS.aud).toBe('Audience');
-      expect(JWT_CLAIM_DESCRIPTIONS.exp).toBe('Expiration Time');
-      expect(JWT_CLAIM_DESCRIPTIONS.nbf).toBe('Not Before');
-      expect(JWT_CLAIM_DESCRIPTIONS.iat).toBe('Issued At');
-      expect(JWT_CLAIM_DESCRIPTIONS.jti).toBe('JWT ID');
+    it('has all standard RFC 7519 claims', () => {
+      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(expect.objectContaining({
+        iss: 'Issuer',
+        sub: 'Subject',
+        aud: 'Audience',
+        exp: 'Expiration Time',
+        nbf: 'Not Before',
+        iat: 'Issued At',
+        jti: 'JWT ID',
+      }));
     });
 
     it('has common custom claims', () => {
-      expect(JWT_CLAIM_DESCRIPTIONS.email).toBe('Email');
-      expect(JWT_CLAIM_DESCRIPTIONS.name).toBe('Name');
-      expect(JWT_CLAIM_DESCRIPTIONS.role).toBe('Role');
+      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(expect.objectContaining({
+        email: 'Email',
+        name: 'Name',
+        role: 'Role',
+        scope: 'Scope',
+        permissions: 'Permissions',
+      }));
+    });
+
+    it('contains exactly the expected number of claims', () => {
+      expect(Object.keys(JWT_CLAIM_DESCRIPTIONS)).toHaveLength(12);
     });
   });
 });
