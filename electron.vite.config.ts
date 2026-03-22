@@ -83,7 +83,9 @@ export default defineConfig({
                     manualChunks: process.env.NODE_ENV === 'production'
                         ? (id: string) => {
                             if (id.includes('node_modules')) {
-                                if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+                                // Match only actual react/react-dom/scheduler packages,
+                                // not paths that contain "react" (e.g. rc-util/es/React/)
+                                if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) {
                                     return 'react';
                                 }
                                 if (id.includes('antd') || id.includes('@ant-design') || id.match(/rc-[^/]+/)) {

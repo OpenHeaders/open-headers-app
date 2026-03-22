@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
     test: {
         environment: 'node',
-        setupFiles: ['./tests/setup.js'],
+        setupFiles: ['./tests/setup.ts'],
         include: ['tests/**/*.test.{js,ts,tsx}'],
         typecheck: {
             enabled: false, // TODO: enable once test type errors are fixed (2575 errors across 77 files)

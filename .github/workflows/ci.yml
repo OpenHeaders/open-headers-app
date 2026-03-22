@@ -31,5 +31,11 @@ jobs:
       - name: TypeScript typecheck (renderer)
         run: npx tsc -p src/renderer/tsconfig.json --noEmit
 
-      - name: Run tests
+      - name: Run unit tests
         run: npx vitest run
+
+      - name: Build app (for e2e)
+        run: npm run build
+
+      - name: Run e2e tests
+        run: xvfb-run --auto-servernum npx playwright test
