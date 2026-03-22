@@ -10,7 +10,7 @@ const mockFsMkdir = vi.fn().mockResolvedValue(undefined);
 const mockFsRm = vi.fn().mockResolvedValue(undefined);
 const mockFsUnlink = vi.fn().mockResolvedValue(undefined);
 const mockFsAccess = vi.fn();
-const mockFsExistsSync = vi.fn(() => true);
+const mockFsExistsSync = vi.fn((_path: string) => true);
 const mockFsCopyFile = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('electron', () => ({
@@ -73,7 +73,7 @@ vi.mock('electron', () => ({
 
 vi.mock('fs', () => ({
     default: {
-        existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+        existsSync: (p: string) => mockFsExistsSync(p),
         readFileSync: vi.fn(),
         promises: {
             readdir: (...args: unknown[]) => mockFsReaddir(...args),
@@ -85,7 +85,7 @@ vi.mock('fs', () => ({
             copyFile: (...args: unknown[]) => mockFsCopyFile(...args)
         }
     },
-    existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+    existsSync: (p: string) => mockFsExistsSync(p),
     readFileSync: vi.fn(),
     promises: {
         readdir: (...args: unknown[]) => mockFsReaddir(...args),

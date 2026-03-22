@@ -90,13 +90,13 @@ describe('AppStateMachine', () => {
             const handler = vi.fn();
             sm.on('stateChanged', handler);
 
-            sm.transition('SETTINGS_LOADED', { settings: { proxyPort: 8443 } });
+            sm.transition('SETTINGS_LOADED', { settings: { autoStartProxy: true } });
 
             expect(handler).toHaveBeenCalledWith({
                 newState: AppStates.LOADING_SETTINGS,
                 previousState: AppStates.INITIALIZING,
                 event: 'SETTINGS_LOADED',
-                data: { settings: { proxyPort: 8443 } }
+                data: { settings: { autoStartProxy: true } }
             });
         });
 

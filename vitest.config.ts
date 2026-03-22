@@ -7,7 +7,7 @@ export default defineConfig({
         setupFiles: ['./tests/setup.ts'],
         include: ['tests/**/*.test.{js,ts,tsx}'],
         typecheck: {
-            enabled: false, // TODO: enable once test type errors are fixed (2575 errors across 77 files)
+            enabled: false, // typecheck available via: npx tsc -p tsconfig.test.json --noEmit
             tsconfig: './tsconfig.test.json',
             include: ['tests/**/*.test.{ts,tsx}'],
         },

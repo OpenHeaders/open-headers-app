@@ -7,7 +7,7 @@ const mockFsReadFile = vi.fn();
 const mockFsWriteFile = vi.fn().mockResolvedValue(undefined);
 const mockDialogShowOpenDialog = vi.fn().mockResolvedValue({ canceled: true, filePaths: [] });
 const mockDialogShowSaveDialog = vi.fn().mockResolvedValue({ canceled: true });
-const mockFsExistsSync = vi.fn(() => false);
+const mockFsExistsSync = vi.fn((_path: string) => false);
 
 vi.mock('electron', () => ({
     default: {
@@ -67,22 +67,22 @@ vi.mock('electron', () => ({
 
 vi.mock('fs', () => ({
     default: {
-        existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+        existsSync: (p: string) => mockFsExistsSync(p),
         readFileSync: vi.fn(),
         promises: {
-            readFile: (...args: unknown[]) => mockFsReadFile(...args),
-            writeFile: (...args: unknown[]) => mockFsWriteFile(...args),
+            readFile: (...a: [string, ...unknown[]]) => mockFsReadFile(...a),
+            writeFile: (...a: [string, ...unknown[]]) => mockFsWriteFile(...a),
             access: vi.fn().mockResolvedValue(undefined),
             mkdir: vi.fn().mockResolvedValue(undefined),
             rm: vi.fn().mockResolvedValue(undefined),
             unlink: vi.fn().mockResolvedValue(undefined)
         }
     },
-    existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+    existsSync: (p: string) => mockFsExistsSync(p),
     readFileSync: vi.fn(),
     promises: {
-        readFile: (...args: unknown[]) => mockFsReadFile(...args),
-        writeFile: (...args: unknown[]) => mockFsWriteFile(...args),
+        readFile: (...a: [string, ...unknown[]]) => mockFsReadFile(...a),
+        writeFile: (...a: [string, ...unknown[]]) => mockFsWriteFile(...a),
         access: vi.fn().mockResolvedValue(undefined),
         mkdir: vi.fn().mockResolvedValue(undefined),
         rm: vi.fn().mockResolvedValue(undefined),
@@ -406,7 +406,7 @@ describe('FileHandlers', () => {
     describe('handleGetResourcePath', () => {
         beforeEach(() => {
             // process.resourcesPath is undefined outside Electron runtime
-            (process as Record<string, unknown>).resourcesPath = '/tmp/test-resources';
+            (process as unknown as Record<string, unknown>).resourcesPath = '/tmp/test-resources';
         });
 
         it('returns production resource path when it exists', async () => {

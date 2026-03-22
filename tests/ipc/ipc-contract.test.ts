@@ -179,9 +179,9 @@ describe('IPC Contract', () => {
     });
 
     describe('ipc-channels.ts constants match actual registrations', () => {
-        const invokeConstantValues = new Set(Object.values(IPC_INVOKE));
-        const sendConstantValues = new Set(Object.values(IPC_SEND));
-        const pushConstantValues = new Set(Object.values(IPC_PUSH));
+        const invokeConstantValues: Set<string> = new Set(Object.values(IPC_INVOKE));
+        const sendConstantValues: Set<string> = new Set(Object.values(IPC_SEND));
+        const pushConstantValues: Set<string> = new Set(Object.values(IPC_PUSH));
 
         it('every IPC_INVOKE constant is registered as a main handle()', () => {
             const unregistered = [...invokeConstantValues].filter(ch => !mainHandleChannels.has(ch));
@@ -192,7 +192,7 @@ describe('IPC Contract', () => {
             // Some channels are registered dynamically by services (e.g., VideoExportManager)
             const dynamicChannels = ['export-video'];
             const undeclared = [...mainHandleChannels].filter(
-                ch => !invokeConstantValues.has(ch) && !dynamicChannels.includes(ch)
+                (ch: string) => !invokeConstantValues.has(ch) && !dynamicChannels.includes(ch)
             );
             expect(undeclared, `Main handlers with no IPC_INVOKE constant: ${undeclared.join(', ')}`).toEqual([]);
         });
@@ -203,7 +203,7 @@ describe('IPC Contract', () => {
         });
 
         it('every main on() has an IPC_SEND constant', () => {
-            const undeclared = [...mainOnChannels].filter(ch => !sendConstantValues.has(ch));
+            const undeclared = [...mainOnChannels].filter((ch: string) => !sendConstantValues.has(ch));
             expect(undeclared, `Main listeners with no IPC_SEND constant: ${undeclared.join(', ')}`).toEqual([]);
         });
 
@@ -226,7 +226,7 @@ describe('IPC Contract', () => {
         });
 
         it('no channel name appears in both IPC_INVOKE and IPC_SEND', () => {
-            const overlap = [...invokeConstantValues].filter(ch => sendConstantValues.has(ch));
+            const overlap = [...invokeConstantValues].filter((ch: string) => sendConstantValues.has(ch));
             expect(overlap, `Channels in both INVOKE and SEND: ${overlap.join(', ')}`).toEqual([]);
         });
 

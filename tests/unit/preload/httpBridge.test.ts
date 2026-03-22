@@ -61,7 +61,7 @@ describe('HttpBridge', () => {
             expect(connOpts.keepAlive).toBe(true);
             expect(connOpts.timeout).toBe(30000);
             expect(typeof connOpts.requestId).toBe('string');
-            expect(connOpts.requestId.length).toBeGreaterThan(0);
+            expect(connOpts.requestId!.length).toBeGreaterThan(0);
         });
 
         it('does not overwrite existing connectionOptions', async () => {

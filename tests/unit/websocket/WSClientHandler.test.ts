@@ -229,7 +229,7 @@ describe('WSClientHandler', () => {
         });
 
         it('returns null certificate fields when handler is missing', () => {
-            (mockService as Record<string, unknown>).certificateHandler = undefined;
+            (mockService as unknown as Record<string, unknown>).certificateHandler = undefined;
             const status = handler.getConnectionStatus();
             expect(status.certificateFingerprint).toBeNull();
             expect(status.certificatePath).toBeNull();
@@ -396,7 +396,7 @@ describe('WSClientHandler', () => {
                 connectedAt: staleTime,
             });
             // Simulate missing lastActivity by casting
-            (clientInfo as Record<string, unknown>).lastActivity = undefined;
+            (clientInfo as unknown as Record<string, unknown>).lastActivity = undefined;
             mockService.connectedClients.set('stale-no-activity', clientInfo);
 
             handler._cleanupStaleClients();
