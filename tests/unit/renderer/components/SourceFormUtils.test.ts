@@ -35,7 +35,7 @@ describe('SourceFormUtils.getFormInitialValues', () => {
 // ======================================================================
 describe('getFieldsWithTemplateVariables', () => {
   it('returns empty array when no template variables', () => {
-    expect(getFieldsWithTemplateVariables({ sourcePath: 'https://example.com' })).toEqual([]);
+    expect(getFieldsWithTemplateVariables({ sourcePath: 'https://auth.openheaders.io/oauth2/token' })).toEqual([]);
   });
 
   it('detects env var pattern in sourcePath', () => {

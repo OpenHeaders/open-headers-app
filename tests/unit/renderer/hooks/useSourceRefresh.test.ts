@@ -46,11 +46,11 @@ import { showMessage } from '../../../../src/renderer/utils';
 import type { Source, NewSourceData } from '../../../../src/types/source';
 
 function makeSource(overrides: Partial<Source> & { sourceId: string; sourceType: Source['sourceType'] }): Source {
-  return { sourcePath: '', ...overrides };
+  return { sourcePath: '', sourceName: 'Test Source', ...overrides };
 }
 
 function makeNewSource(overrides: Partial<NewSourceData> & { sourceType: Source['sourceType']; sourcePath: string }): NewSourceData {
-  return { sourceTag: '', ...overrides };
+  return { sourceTag: 'oauth', ...overrides };
 }
 
 // ---------------------------------------------------------------------------
@@ -84,9 +84,14 @@ function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {
     sourceId: id,
     sourceType: 'http',
-    sourcePath: 'https://api.example.com/data',
+    sourceName: 'Production API Gateway Token',
+    sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
     sourceMethod: 'GET',
-    requestOptions: {},
+    sourceTag: 'oauth',
+    requestOptions: {
+      contentType: 'application/json',
+      headers: [{ key: 'Accept', value: 'application/json' }],
+    },
     jsonFilter: { enabled: false },
     ...overrides,
   } as Source;
@@ -100,7 +105,7 @@ describe('useSourceRefresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockHttpRequest.mockResolvedValue({
-      content: '{"status":"ok"}',
+      content: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
       isFiltered: false,
       originalResponse: null,
     });
@@ -130,14 +135,14 @@ describe('useSourceRefresh', () => {
         source.jsonFilter,
       );
       expect(deps.updateSource).toHaveBeenCalledWith('src-1', expect.objectContaining({
-        sourceContent: '{"status":"ok"}',
+        sourceContent: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
       }));
       expect(showMessage).toHaveBeenCalledWith('success', 'Source refreshed');
     });
 
     it('uses the provided updatedSource instead of searching sources array', async () => {
       const deps = makeDeps({ sources: [] }); // empty array – would fail lookup
-      const custom = makeHttpSource('src-2', { sourcePath: 'https://custom.example.com' });
+      const custom = makeHttpSource('src-2', { sourcePath: 'https://auth-staging.openheaders.io/oauth2/token' });
 
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -149,7 +154,7 @@ describe('useSourceRefresh', () => {
       expect(ok).toBe(true);
       expect(mockHttpRequest).toHaveBeenCalledWith(
         'src-2',
-        'https://custom.example.com',
+        'https://auth-staging.openheaders.io/oauth2/token',
         'GET',
         expect.any(Object),
         expect.any(Object),
@@ -169,7 +174,7 @@ describe('useSourceRefresh', () => {
     });
 
     it('returns false when source is not type http', async () => {
-      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/tmp/f' });
+      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' });
       const deps = makeDeps({ sources: [fileSource] });
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -332,7 +337,7 @@ describe('useSourceRefresh', () => {
 
       const sourceData = makeNewSource({
         sourceType: 'http',
-        sourcePath: 'https://api.example.com',
+        sourcePath: 'https://auth.openheaders.io/oauth2/token',
         sourceMethod: 'POST',
         requestOptions: { body: '{}' },
         jsonFilter: { enabled: false },
@@ -347,7 +352,7 @@ describe('useSourceRefresh', () => {
       expect(mockHttpRequest).toHaveBeenCalled();
       // The source data should have been enriched with content
       expect(deps.addSource).toHaveBeenCalledWith(expect.objectContaining({
-        sourceContent: '{"status":"ok"}',
+        sourceContent: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
         needsInitialFetch: false,
       }));
       expect(showMessage).toHaveBeenCalledWith('success', 'Source added successfully');
@@ -366,7 +371,7 @@ describe('useSourceRefresh', () => {
 
       const sourceData = makeNewSource({
         sourceType: 'http',
-        sourcePath: 'https://api.example.com',
+        sourcePath: 'https://auth.openheaders.io/oauth2/token',
         jsonFilter: { enabled: true, path: 'key' },
       });
 
@@ -387,7 +392,7 @@ describe('useSourceRefresh', () => {
 
       const sourceData = makeNewSource({
         sourceType: 'http',
-        sourcePath: 'https://api.example.com',
+        sourcePath: 'https://auth.openheaders.io/oauth2/token',
         refreshOptions: { enabled: true, interval: 60 },
       });
 
@@ -410,7 +415,7 @@ describe('useSourceRefresh', () => {
 
       const sourceData = makeNewSource({
         sourceType: 'http',
-        sourcePath: 'https://api.example.com',
+        sourcePath: 'https://auth.openheaders.io/oauth2/token',
       });
 
       await act(async () => {
@@ -432,7 +437,7 @@ describe('useSourceRefresh', () => {
       await act(async () => {
         ok = await result.current.handleAddSource(makeNewSource({
           sourceType: 'http',
-          sourcePath: 'https://api.example.com',
+          sourcePath: 'https://auth.openheaders.io/oauth2/token',
         }));
       });
 
@@ -447,7 +452,7 @@ describe('useSourceRefresh', () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = makeNewSource({ sourceType: 'file', sourcePath: '/tmp/data.json' });
+      const sourceData = makeNewSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/prod.json' });
 
       let ok!: boolean;
       await act(async () => {
@@ -491,7 +496,7 @@ describe('useSourceRefresh', () => {
 
       let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource(makeNewSource({ sourceType: 'file', sourcePath: '/tmp/f' }));
+        ok = await result.current.handleAddSource(makeNewSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json' }));
       });
 
       expect(ok).toBe(false);

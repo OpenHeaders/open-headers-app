@@ -61,12 +61,12 @@ describe('SourceFormValidation.validateUrlField', () => {
 
   it('resolves for valid URL without vars', async () => {
     await expect(
-      validateUrlField({}, 'https://example.com/api', 'http', makeEnvContext(), makeForm())
+      validateUrlField({}, 'https://auth.openheaders.io/api', 'http', makeEnvContext(), makeForm())
     ).resolves.toBeUndefined();
   });
 
   it('resolves for URL with existing env var', async () => {
-    const ctx = makeEnvContext({ HOST: 'example.com' });
+    const ctx = makeEnvContext({ HOST: 'auth.openheaders.io' });
     await expect(
       validateUrlField({}, 'https://{{HOST}}/api', 'http', ctx, makeForm())
     ).resolves.toBeUndefined();
@@ -83,7 +83,7 @@ describe('SourceFormValidation.validateUrlField', () => {
     const ctx = makeEnvContext({});
     const form = makeForm({ requestOptions: { totpSecret: '' } });
     await expect(
-      validateUrlField({}, 'https://api.test/[[TOTP_CODE]]', 'http', ctx, form)
+      validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form)
     ).rejects.toThrow('TOTP');
   });
 
@@ -91,7 +91,7 @@ describe('SourceFormValidation.validateUrlField', () => {
     const ctx = makeEnvContext({});
     const form = makeForm({ requestOptions: { totpSecret: 'JBSWY3DPEHPK3PXP' } });
     await expect(
-      validateUrlField({}, 'https://api.test/[[TOTP_CODE]]', 'http', ctx, form)
+      validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form)
     ).resolves.toBeUndefined();
   });
 
