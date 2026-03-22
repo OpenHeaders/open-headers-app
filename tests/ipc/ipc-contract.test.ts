@@ -137,8 +137,9 @@ describe('IPC Contract', () => {
     describe('push channels (main → renderer)', () => {
         it('every main push has a preload listener or renderer handler', () => {
             // Main→renderer channels should have ipcRenderer.on listeners in preload
-            // Some are handled dynamically in renderer, so we just verify they exist
-            expect(mainPushChannels.size).toBeGreaterThan(0);
+            // Some are handled dynamically in renderer, so we allow a reasonable number of unmatched
+            const unmatched = [...mainPushChannels].filter(ch => !preloadListenChannels.has(ch));
+            expect(unmatched.length).toBeLessThan(mainPushChannels.size / 2);
         });
 
         it('lists all known push channels', () => {
