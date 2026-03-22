@@ -61,29 +61,29 @@ describe('ConfigFileDetector', () => {
 
   describe('detectFileType()', () => {
     it('detects workspace-metadata type', () => {
-      const data = { workspaceId: 'ws1', workspaceName: 'Test' };
+      const data = { workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890', workspaceName: 'OpenHeaders Staging Environment' };
       expect(detector.detectFileType(data, 'metadata.json')).toBe('workspace-metadata');
     });
 
     it('detects headers type', () => {
-      const data = { headers: [{ name: 'X-Test', value: 'val' }] };
+      const data = { headers: [{ name: 'Authorization', value: 'Bearer eyJhbGciOiJSUzI1NiJ9' }] };
       expect(detector.detectFileType(data, 'config.json')).toBe('headers');
     });
 
     it('detects environments type', () => {
-      expect(detector.detectFileType(makeConfigData({ environments: [{ name: 'prod' }] }), 'envs.json')).toBe('environments');
+      expect(detector.detectFileType(makeConfigData({ environments: [{ name: 'Production' }] }), 'envs.json')).toBe('environments');
     });
 
     it('detects proxy type when path contains "proxy"', () => {
-      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.com' }] }), 'proxy/rules.json')).toBe('proxy');
+      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'proxy/rules.json')).toBe('proxy');
     });
 
     it('detects rules type for rules array without "proxy" in path', () => {
-      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.com' }] }), 'config/rules.json')).toBe('rules');
+      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'config/rules.json')).toBe('rules');
     });
 
     it('detects combined type', () => {
-      expect(detector.detectFileType(makeConfigData({ sources: [{ url: 'http://example.com' }] }), 'config.json')).toBe('combined');
+      expect(detector.detectFileType(makeConfigData({ sources: [{ url: 'https://auth.openheaders.io/oauth2/token' }] }), 'config.json')).toBe('combined');
     });
 
     it('detects combined type with proxy field', () => {
@@ -96,7 +96,7 @@ describe('ConfigFileDetector', () => {
     });
 
     it('prioritizes workspace-metadata over other types', () => {
-      const data = { workspaceId: 'ws1', workspaceName: 'Test', headers: [] };
+      const data = { workspaceId: 'ws-staging', workspaceName: 'OpenHeaders Staging', headers: [] };
       expect(detector.detectFileType(data, 'config.json')).toBe('workspace-metadata');
     });
   });

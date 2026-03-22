@@ -1,377 +1,318 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { GitRepositoryManager } from '../../../src/services/workspace/git/repository/GitRepositoryManager';
+import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
+import { GitAuthenticator } from '../../../src/services/workspace/git/auth/GitAuthenticator';
 
-/**
- * Tests for pure logic in GitRepositoryManager.
- *
- * The main testable pure method is parseStatusOutput(), which transforms
- * `git status --porcelain` output into a structured StatusChanges object.
- * We also test push command construction and clone command building logic.
- */
+const SSH_DIR = '/Users/jane.doe/.openheaders/ssh-keys';
+const REPO_DIR = '/Users/jane.doe/.openheaders/workspace-sync/ws-a1b2c3d4';
+const REPO_URL = 'https://github.com/OpenHeaders/open-headers-app.git';
 
-// ---------- StatusChanges type ----------
-interface StatusChanges {
-    modified: string[];
-    added: string[];
-    deleted: string[];
-    renamed: string[];
-    untracked: string[];
+function createMocks() {
+    const executor = new GitExecutor();
+    const authManager = new GitAuthenticator(SSH_DIR);
+
+    const executeSpy = vi.spyOn(executor, 'execute').mockResolvedValue({ stdout: '', stderr: '' });
+    const setupAuthSpy = vi.spyOn(authManager, 'setupAuth').mockResolvedValue({
+        effectiveUrl: REPO_URL,
+        env: process.env,
+        type: 'none',
+    });
+    const cleanupSpy = vi.spyOn(authManager, 'cleanup').mockResolvedValue(undefined);
+
+    return { executor, authManager, executeSpy, setupAuthSpy, cleanupSpy };
 }
 
-// ---------- parseStatusOutput ----------
-// Exact copy from GitRepositoryManager.parseStatusOutput()
-function parseStatusOutput(status: string): StatusChanges {
-    const changes: StatusChanges = {
-        modified: [],
-        added: [],
-        deleted: [],
-        renamed: [],
-        untracked: []
-    };
+describe('GitRepositoryManager', () => {
+    let manager: GitRepositoryManager;
+    let executeSpy: ReturnType<typeof createMocks>['executeSpy'];
+    let setupAuthSpy: ReturnType<typeof createMocks>['setupAuthSpy'];
+    let cleanupSpy: ReturnType<typeof createMocks>['cleanupSpy'];
 
-    const lines = status.trim().split('\n').filter(line => line);
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        const mocks = createMocks();
+        manager = new GitRepositoryManager(mocks.executor, mocks.authManager);
+        executeSpy = mocks.executeSpy;
+        setupAuthSpy = mocks.setupAuthSpy;
+        cleanupSpy = mocks.cleanupSpy;
+    });
 
-    for (const line of lines) {
-        const statusCode = line.substring(0, 2);
-        const file = line.substring(3);
-
-        if (statusCode.includes('M')) changes.modified.push(file);
-        else if (statusCode.includes('A')) changes.added.push(file);
-        else if (statusCode.includes('D')) changes.deleted.push(file);
-        else if (statusCode.includes('R')) changes.renamed.push(file);
-        else if (statusCode === '??') changes.untracked.push(file);
-    }
-
-    return changes;
-}
-
-// ---------- hasChanges detection ----------
-// Mirrors the hasChanges check in getStatus()
-function hasChanges(statusOutput: string): boolean {
-    return statusOutput.trim().length > 0;
-}
-
-// ---------- clone command construction ----------
-// Mirrors the clone command building in cloneRepository()
-function buildCloneCommand(options: {
-    depth?: number;
-    sparse?: boolean;
-    branch?: string;
-    effectiveUrl: string;
-    targetDir: string;
-}): string {
-    let cloneCommand = 'clone --progress';
-
-    if (options.depth && options.depth > 0) {
-        cloneCommand += ` --depth ${options.depth}`;
-    }
-
-    if (options.sparse) {
-        cloneCommand += ' --no-checkout --filter=blob:none';
-    }
-
-    if (options.branch) {
-        cloneCommand += ` --branch ${options.branch}`;
-    }
-
-    cloneCommand += ` "${options.effectiveUrl}" "${options.targetDir}"`;
-    return cloneCommand;
-}
-
-// ---------- push command construction ----------
-// Mirrors the push command building in pushRepository()
-function buildPushCommand(options: {
-    force?: boolean;
-    setUpstream?: boolean;
-    branch: string;
-}): string {
-    let pushCommand = 'push origin';
-
-    if (options.force) {
-        pushCommand += ' --force';
-    }
-
-    if (options.setUpstream) {
-        pushCommand += ' --set-upstream';
-    }
-
-    pushCommand += ` ${options.branch}`;
-    return pushCommand;
-}
-
-// ---------- last commit parsing ----------
-// Mirrors the commit log parsing in getStatus()
-function parseLastCommit(logOutput: string): {
-    hash: string;
-    author: string;
-    email: string;
-    date: Date;
-    message: string;
-} {
-    const [hash, author, email, timestamp, message] = logOutput.split('|');
-    return {
-        hash,
-        author,
-        email,
-        date: new Date(parseInt(timestamp) * 1000),
-        message
-    };
-}
-
-// ---------- default branch detection ----------
-// Mirrors symbolic-ref output parsing in getDefaultBranch()
-function parseSymbolicRef(stdout: string): string {
-    return stdout.trim().replace('refs/remotes/origin/', '');
-}
-
-// Mirrors branch detection fallback
-function detectDefaultBranchFromLsRemote(branches: string): string {
-    if (branches.includes('refs/heads/main')) return 'main';
-    if (branches.includes('refs/heads/master')) return 'master';
-    throw new Error('Could not determine default branch');
-}
-
-// ==================== Tests ====================
-
-describe('GitRepositoryManager — pure logic', () => {
     describe('parseStatusOutput()', () => {
         it('parses staged modified files', () => {
-            const status = 'M  src/index.ts\nM  README.md';
-            const result = parseStatusOutput(status);
-            expect(result.modified).toEqual(['src/index.ts', 'README.md']);
-            expect(result.added).toEqual([]);
-            expect(result.deleted).toEqual([]);
-        });
-
-        it('parses unstaged modified files (note: trim() affects first line leading space)', () => {
-            // When the first line has a leading space (unstaged ' M'), trim() removes it.
-            // This is the actual code behavior — we test to document it.
-            const status = 'M  package.json';
-            const result = parseStatusOutput(status);
-            expect(result.modified).toEqual(['package.json']);
+            const result = manager.parseStatusOutput('M  src/index.ts\nM  README.md');
+            expect(result).toEqual({
+                modified: ['src/index.ts', 'README.md'],
+                added: [],
+                deleted: [],
+                renamed: [],
+                untracked: [],
+            });
         });
 
         it('parses added files', () => {
-            const status = 'A  new-file.ts\nA  another.ts';
-            const result = parseStatusOutput(status);
-            expect(result.added).toEqual(['new-file.ts', 'another.ts']);
+            const result = manager.parseStatusOutput('A  config/open-headers.json\nA  config/environments.json');
+            expect(result).toEqual({
+                modified: [],
+                added: ['config/open-headers.json', 'config/environments.json'],
+                deleted: [],
+                renamed: [],
+                untracked: [],
+            });
         });
 
         it('parses deleted files', () => {
-            const status = 'D  old-file.ts';
-            const result = parseStatusOutput(status);
-            expect(result.deleted).toEqual(['old-file.ts']);
+            const result = manager.parseStatusOutput('D  old-config.json');
+            expect(result.deleted).toEqual(['old-config.json']);
         });
 
         it('parses renamed files', () => {
-            const status = 'R  old.ts -> new.ts';
-            const result = parseStatusOutput(status);
-            expect(result.renamed).toEqual(['old.ts -> new.ts']);
+            const result = manager.parseStatusOutput('R  old-name.ts -> new-name.ts');
+            expect(result.renamed).toEqual(['old-name.ts -> new-name.ts']);
         });
 
         it('parses untracked files', () => {
-            const status = '?? temp.log\n?? dist/bundle.js';
-            const result = parseStatusOutput(status);
+            const result = manager.parseStatusOutput('?? temp.log\n?? dist/bundle.js');
             expect(result.untracked).toEqual(['temp.log', 'dist/bundle.js']);
         });
 
-        it('handles mixed status output', () => {
+        it('handles mixed status with enterprise file paths', () => {
             const status = [
-                'M  modified.ts',
-                'A  added.ts',
-                'D  deleted.ts',
-                'R  renamed.ts -> new-name.ts',
-                '?? untracked.txt'
+                'M  .openheaders/workspaces/ws-prod/sources.json',
+                'A  .openheaders/workspaces/ws-prod/environments.json',
+                'D  .openheaders/workspaces/ws-prod/old-rules.json',
+                'R  config/old.json -> config/new.json',
+                '?? .openheaders/workspaces/ws-prod/temp-sync.lock'
             ].join('\n');
-            const result = parseStatusOutput(status);
-            expect(result.modified).toEqual(['modified.ts']);
-            expect(result.added).toEqual(['added.ts']);
-            expect(result.deleted).toEqual(['deleted.ts']);
-            expect(result.renamed).toEqual(['renamed.ts -> new-name.ts']);
-            expect(result.untracked).toEqual(['untracked.txt']);
+            const result = manager.parseStatusOutput(status);
+            expect(result.modified).toEqual(['.openheaders/workspaces/ws-prod/sources.json']);
+            expect(result.added).toEqual(['.openheaders/workspaces/ws-prod/environments.json']);
+            expect(result.deleted).toEqual(['.openheaders/workspaces/ws-prod/old-rules.json']);
+            expect(result.renamed).toEqual(['config/old.json -> config/new.json']);
+            expect(result.untracked).toEqual(['.openheaders/workspaces/ws-prod/temp-sync.lock']);
         });
 
         it('returns empty arrays for clean working directory', () => {
-            const result = parseStatusOutput('');
-            expect(result.modified).toEqual([]);
-            expect(result.added).toEqual([]);
-            expect(result.deleted).toEqual([]);
-            expect(result.renamed).toEqual([]);
-            expect(result.untracked).toEqual([]);
+            const result = manager.parseStatusOutput('');
+            expect(result).toEqual({
+                modified: [],
+                added: [],
+                deleted: [],
+                renamed: [],
+                untracked: [],
+            });
         });
 
         it('handles whitespace-only input', () => {
-            const result = parseStatusOutput('   \n  \n');
+            const result = manager.parseStatusOutput('   \n  \n');
             expect(result.modified).toEqual([]);
             expect(result.untracked).toEqual([]);
         });
 
         it('handles files with spaces in names', () => {
-            const status = 'M  my file with spaces.ts';
-            const result = parseStatusOutput(status);
-            expect(result.modified).toEqual(['my file with spaces.ts']);
+            const result = manager.parseStatusOutput('M  Acme Corp Headers/staging tokens.json');
+            expect(result.modified).toEqual(['Acme Corp Headers/staging tokens.json']);
         });
 
         it('handles both staged and unstaged modification (MM)', () => {
-            const status = 'MM src/both.ts';
-            const result = parseStatusOutput(status);
+            const result = manager.parseStatusOutput('MM src/both.ts');
             expect(result.modified).toContain('src/both.ts');
         });
-
-        it('handles staged add with unstaged modification (AM)', () => {
-            // AM — A in index, M in workdir: the 'M' check hits first
-            const status = 'AM src/new-and-modified.ts';
-            const result = parseStatusOutput(status);
-            // The first match in the if-else chain is M
-            expect(result.modified).toContain('src/new-and-modified.ts');
-        });
     });
 
-    describe('hasChanges()', () => {
-        it('returns false for empty status', () => {
-            expect(hasChanges('')).toBe(false);
-        });
-
-        it('returns false for whitespace-only status', () => {
-            expect(hasChanges('   \n  ')).toBe(false);
-        });
-
-        it('returns true for any content', () => {
-            expect(hasChanges('M  file.ts')).toBe(true);
-        });
-    });
-
-    describe('buildCloneCommand()', () => {
-        it('builds basic clone command', () => {
-            const cmd = buildCloneCommand({
-                effectiveUrl: 'https://github.com/org/repo.git',
-                targetDir: '/tmp/repo'
+    describe('getStatus()', () => {
+        it('returns full repository status with enterprise data', async () => {
+            // branch
+            executeSpy.mockResolvedValueOnce({ stdout: 'workspace/staging-env\n', stderr: '' });
+            // status
+            executeSpy.mockResolvedValueOnce({ stdout: 'M  config/open-headers.json\n?? temp.lock\n', stderr: '' });
+            // log
+            executeSpy.mockResolvedValueOnce({
+                stdout: 'f7a3b2c1d4e5f6a7b8c9|Jane Doe|jane.doe@openheaders.io|1706104800|feat: Add staging source',
+                stderr: ''
             });
-            expect(cmd).toBe('clone --progress "https://github.com/org/repo.git" "/tmp/repo"');
-        });
 
-        it('adds depth flag', () => {
-            const cmd = buildCloneCommand({
-                depth: 1,
-                effectiveUrl: 'url',
-                targetDir: 'dir'
+            const status = await manager.getStatus(REPO_DIR);
+            expect(status).toEqual({
+                branch: 'workspace/staging-env',
+                hasChanges: true,
+                changes: {
+                    modified: ['config/open-headers.json'],
+                    added: [],
+                    deleted: [],
+                    renamed: [],
+                    untracked: ['temp.lock'],
+                },
+                lastCommit: {
+                    hash: 'f7a3b2c1d4e5f6a7b8c9',
+                    author: 'Jane Doe',
+                    email: 'jane.doe@openheaders.io',
+                    date: new Date(1706104800 * 1000),
+                    message: 'feat: Add staging source',
+                },
             });
-            expect(cmd).toContain('--depth 1');
         });
 
-        it('adds sparse checkout flags', () => {
-            const cmd = buildCloneCommand({
-                sparse: true,
-                effectiveUrl: 'url',
-                targetDir: 'dir'
+        it('returns hasChanges=false for clean repo', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: 'main\n', stderr: '' });
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+            executeSpy.mockResolvedValueOnce({
+                stdout: 'abc123|User|user@openheaders.io|1706100000|initial commit',
+                stderr: ''
             });
-            expect(cmd).toContain('--no-checkout');
-            expect(cmd).toContain('--filter=blob:none');
-        });
 
-        it('adds branch flag', () => {
-            const cmd = buildCloneCommand({
-                branch: 'develop',
-                effectiveUrl: 'url',
-                targetDir: 'dir'
-            });
-            expect(cmd).toContain('--branch develop');
-        });
-
-        it('combines all flags', () => {
-            const cmd = buildCloneCommand({
-                depth: 5,
-                sparse: true,
-                branch: 'feature',
-                effectiveUrl: 'https://github.com/org/repo.git',
-                targetDir: '/tmp/repo'
-            });
-            expect(cmd).toContain('--depth 5');
-            expect(cmd).toContain('--no-checkout');
-            expect(cmd).toContain('--branch feature');
-            expect(cmd).toContain('"https://github.com/org/repo.git"');
-        });
-
-        it('does not add depth for zero or undefined depth', () => {
-            const cmd1 = buildCloneCommand({ depth: 0, effectiveUrl: 'u', targetDir: 'd' });
-            expect(cmd1).not.toContain('--depth');
-            const cmd2 = buildCloneCommand({ effectiveUrl: 'u', targetDir: 'd' });
-            expect(cmd2).not.toContain('--depth');
+            const status = await manager.getStatus(REPO_DIR);
+            expect(status.hasChanges).toBe(false);
+            expect(status.changes.modified).toEqual([]);
         });
     });
 
-    describe('buildPushCommand()', () => {
-        it('builds basic push command', () => {
-            const cmd = buildPushCommand({ branch: 'main' });
-            expect(cmd).toBe('push origin main');
+    describe('pullRepository()', () => {
+        it('returns success with changes when commits are pulled', async () => {
+            // getRepositoryUrl
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            // ls-remote (branch exists check)
+            executeSpy.mockResolvedValueOnce({ stdout: 'abc123\trefs/heads/main\n', stderr: '' });
+            // fetch
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+            // rev-list count
+            executeSpy.mockResolvedValueOnce({ stdout: '3\n', stderr: '' });
+            // pull
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+            const result = await manager.pullRepository({ repoDir: REPO_DIR, branch: 'main' });
+            expect(result.success).toBe(true);
+            expect(result.changes).toBe(true);
+            expect(result.message).toContain('3');
         });
 
-        it('adds --force flag', () => {
-            const cmd = buildPushCommand({ force: true, branch: 'main' });
-            expect(cmd).toBe('push origin --force main');
+        it('returns no changes when already up to date', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            executeSpy.mockResolvedValueOnce({ stdout: 'abc\trefs/heads/main\n', stderr: '' });
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+            executeSpy.mockResolvedValueOnce({ stdout: '0\n', stderr: '' });
+
+            const result = await manager.pullRepository({ repoDir: REPO_DIR, branch: 'main' });
+            expect(result.success).toBe(true);
+            expect(result.changes).toBe(false);
+            expect(result.message).toContain('up to date');
         });
 
-        it('adds --set-upstream flag', () => {
-            const cmd = buildPushCommand({ setUpstream: true, branch: 'feature' });
-            expect(cmd).toBe('push origin --set-upstream feature');
+        it('creates new branch when branch does not exist on remote (non-empty repo)', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            // ls-remote returns other branches but not the one we want
+            executeSpy.mockResolvedValueOnce({ stdout: 'abc\trefs/heads/main\n', stderr: '' });
+            // symbolic-ref for default branch
+            executeSpy.mockResolvedValueOnce({ stdout: 'refs/remotes/origin/main\n', stderr: '' });
+            // fetch default branch
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+            // checkout -b new-branch from origin/main
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+            const result = await manager.pullRepository({
+                repoDir: REPO_DIR,
+                branch: 'workspace/new-env',
+            });
+            expect(result.success).toBe(true);
+            expect(result.message).toContain('Created branch');
         });
 
-        it('combines force and set-upstream', () => {
-            const cmd = buildPushCommand({ force: true, setUpstream: true, branch: 'dev' });
-            expect(cmd).toBe('push origin --force --set-upstream dev');
+        it('always cleans up auth resources', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            executeSpy.mockRejectedValueOnce(new Error('network error'));
+
+            await expect(
+                manager.pullRepository({ repoDir: REPO_DIR, branch: 'main' })
+            ).rejects.toThrow('network error');
+
+            expect(cleanupSpy).toHaveBeenCalledOnce();
         });
     });
 
-    describe('parseLastCommit()', () => {
-        it('parses pipe-delimited commit log', () => {
-            const log = 'abc123|Alice|alice@test.com|1700000000|Fix bug in parser';
-            const result = parseLastCommit(log);
-            expect(result.hash).toBe('abc123');
-            expect(result.author).toBe('Alice');
-            expect(result.email).toBe('alice@test.com');
-            expect(result.date).toEqual(new Date(1700000000 * 1000));
-            expect(result.message).toBe('Fix bug in parser');
+    describe('pushRepository()', () => {
+        it('pushes commits and returns count', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            // unpushed count
+            executeSpy.mockResolvedValueOnce({ stdout: '2\n', stderr: '' });
+            // push
+            executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
+
+            const result = await manager.pushRepository({
+                repoDir: REPO_DIR,
+                branch: 'workspace/staging-env',
+            });
+            expect(result.success).toBe(true);
+            expect(result.pushed).toBe(true);
+            expect(result.commits).toBe(2);
         });
 
-        it('converts unix timestamp to Date', () => {
-            const log = 'h|a|e|0|m';
-            const result = parseLastCommit(log);
-            expect(result.date).toEqual(new Date(0));
+        it('returns pushed=false when no changes to push', async () => {
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            executeSpy.mockResolvedValueOnce({ stdout: '0\n', stderr: '' });
+
+            const result = await manager.pushRepository({
+                repoDir: REPO_DIR,
+                branch: 'main',
+            });
+            expect(result.success).toBe(true);
+            expect(result.pushed).toBe(false);
+        });
+
+        it('always cleans up auth resources even on push failure', async () => {
+            // getRepositoryUrl
+            executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+            // unpushed count
+            executeSpy.mockResolvedValueOnce({ stdout: '1\n', stderr: '' });
+            // push itself fails
+            executeSpy.mockRejectedValueOnce(new Error('push rejected: permission denied'));
+
+            await expect(
+                manager.pushRepository({ repoDir: REPO_DIR, branch: 'main' })
+            ).rejects.toThrow('push rejected');
+
+            expect(cleanupSpy).toHaveBeenCalledOnce();
         });
     });
 
-    describe('parseSymbolicRef()', () => {
-        it('strips refs/remotes/origin/ prefix', () => {
-            expect(parseSymbolicRef('refs/remotes/origin/main')).toBe('main');
+    describe('getRepositoryUrl()', () => {
+        it('returns trimmed remote URL', async () => {
+            executeSpy.mockResolvedValue({
+                stdout: 'https://github.com/OpenHeaders/open-headers-app.git\n',
+                stderr: ''
+            });
+            const url = await manager.getRepositoryUrl(REPO_DIR);
+            expect(url).toBe('https://github.com/OpenHeaders/open-headers-app.git');
         });
 
-        it('handles develop branch', () => {
-            expect(parseSymbolicRef('refs/remotes/origin/develop\n')).toBe('develop');
-        });
-
-        it('trims whitespace', () => {
-            expect(parseSymbolicRef('  refs/remotes/origin/master  ')).toBe('master');
+        it('returns null when config fails', async () => {
+            executeSpy.mockRejectedValue(new Error('not a git repo'));
+            const url = await manager.getRepositoryUrl('/nonexistent');
+            expect(url).toBeNull();
         });
     });
 
-    describe('detectDefaultBranchFromLsRemote()', () => {
-        it('returns "main" when refs/heads/main is present', () => {
-            const output = 'abc123\trefs/heads/main\ndef456\trefs/heads/develop';
-            expect(detectDefaultBranchFromLsRemote(output)).toBe('main');
+    describe('ensureCleanDirectory()', () => {
+        it('creates directory when it does not exist', async () => {
+            const fs = await import('fs');
+            vi.spyOn(fs.promises, 'stat').mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
+            const mkdirSpy = vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
+
+            await manager.ensureCleanDirectory('/new/directory');
+            expect(mkdirSpy).toHaveBeenCalledWith('/new/directory', { recursive: true });
+
+            vi.restoreAllMocks();
         });
 
-        it('returns "master" when only refs/heads/master is present', () => {
-            const output = 'abc123\trefs/heads/master\ndef456\trefs/heads/feature';
-            expect(detectDefaultBranchFromLsRemote(output)).toBe('master');
-        });
+        it('throws when directory is not empty', async () => {
+            const fs = await import('fs');
+            vi.spyOn(fs.promises, 'stat').mockResolvedValue({ isDirectory: () => true } as ReturnType<typeof fs.statSync>);
+            vi.spyOn(fs.promises, 'readdir').mockResolvedValue(
+                ['file.txt'] as unknown as Awaited<ReturnType<typeof fs.promises.readdir>>
+            );
 
-        it('prefers "main" over "master" when both exist', () => {
-            const output = 'abc123\trefs/heads/main\ndef456\trefs/heads/master';
-            expect(detectDefaultBranchFromLsRemote(output)).toBe('main');
-        });
+            await expect(manager.ensureCleanDirectory('/existing/dir'))
+                .rejects.toThrow('is not empty');
 
-        it('throws when neither main nor master is found', () => {
-            const output = 'abc123\trefs/heads/develop';
-            expect(() => detectDefaultBranchFromLsRemote(output)).toThrow('Could not determine default branch');
+            vi.restoreAllMocks();
         });
     });
 });

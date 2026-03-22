@@ -90,15 +90,15 @@ describe('WorkspaceSettingsService', () => {
     it('returns stored settings when file exists', async () => {
       const storedSettings = {
         version: '3.0.0',
-        activeWorkspaceId: 'custom-ws',
+        activeWorkspaceId: 'ws-staging-env',
         workspaces: [
           { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true },
-          { id: 'custom-ws', name: 'Custom', type: 'git' }
+          { id: 'ws-staging-env', name: 'OpenHeaders Staging', type: 'git', gitUrl: 'https://github.com/OpenHeaders/open-headers-app.git' }
         ]
       };
       mockReadJson.mockResolvedValueOnce(storedSettings);
       const settings = await service.getSettings();
-      expect(settings.activeWorkspaceId).toBe('custom-ws');
+      expect(settings.activeWorkspaceId).toBe('ws-staging-env');
       expect(settings.workspaces).toHaveLength(2);
     });
 
@@ -203,7 +203,7 @@ describe('WorkspaceSettingsService', () => {
       mockReadJson.mockResolvedValueOnce({
         version: '3.0.0',
         activeWorkspaceId: 'ws-1',
-        workspaces: [{ id: 'ws-1', name: 'Test', type: 'git' }],
+        workspaces: [{ id: 'ws-a1b2c3d4', name: 'OpenHeaders Staging', type: 'git' }],
         syncStatus: { 'ws-1': { syncing: false } }
       });
       const data = await service.loadWorkspacesData();

@@ -326,50 +326,50 @@ describe('GitBranchManager', () => {
 
     // ------- getBranchInfo -------
     describe('getBranchInfo', () => {
-        it('parses branch info with upstream', async () => {
-            // commitInfo
+        it('parses full branch info with upstream (enterprise workspace)', async () => {
+            // commitInfo — enterprise-realistic data
             mockExecute.mockResolvedValueOnce({
-                stderr: '', stdout: 'abc123|John Doe|john@example.com|1700000000|Initial commit'
+                stderr: '', stdout: 'f7a3b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9|Jane Doe|jane.doe@openheaders.io|1706104800|feat: Add OAuth2 Bearer Token source for staging'
             });
             // upstream
-            mockExecute.mockResolvedValueOnce({ stderr: '', stdout: 'origin/main\n' });
+            mockExecute.mockResolvedValueOnce({ stderr: '', stdout: 'origin/workspace/staging-env\n' });
             // ahead/behind counts
             mockExecute.mockResolvedValueOnce({ stderr: '', stdout: '2\t3\n' });
 
-            const info = await manager.getBranchInfo('/repo', 'main');
-            expect(info.name).toBe('main');
-            expect(info.commit.hash).toBe('abc123');
-            expect(info.commit.author).toBe('John Doe');
-            expect(info.commit.email).toBe('john@example.com');
-            expect(info.commit.message).toBe('Initial commit');
-            expect(info.upstream).toBe('origin/main');
-            expect(info.ahead).toBe(2);
-            expect(info.behind).toBe(3);
+            const info = await manager.getBranchInfo('/repo', 'workspace/staging-env');
+            expect(info).toEqual({
+                name: 'workspace/staging-env',
+                commit: {
+                    hash: 'f7a3b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9',
+                    author: 'Jane Doe',
+                    email: 'jane.doe@openheaders.io',
+                    date: new Date(1706104800 * 1000),
+                    message: 'feat: Add OAuth2 Bearer Token source for staging',
+                },
+                upstream: 'origin/workspace/staging-env',
+                ahead: 2,
+                behind: 3,
+            });
         });
 
         it('handles branch without upstream', async () => {
-            // commitInfo
             mockExecute.mockResolvedValueOnce({
-                stderr: '', stdout: 'def456|Jane|jane@example.com|1700001000|Add feature'
+                stderr: '', stdout: 'def456abc123|deploy-bot|deploy-bot@openheaders.io|1706108400|chore: Auto-sync workspace'
             });
-            // upstream fails (no upstream configured)
             mockExecute.mockRejectedValueOnce(new Error('no upstream'));
 
-            const info = await manager.getBranchInfo('/repo', 'feature');
-            expect(info.name).toBe('feature');
+            const info = await manager.getBranchInfo('/repo', 'feature/new-headers');
+            expect(info.name).toBe('feature/new-headers');
             expect(info.upstream).toBeNull();
             expect(info.ahead).toBe(0);
             expect(info.behind).toBe(0);
         });
 
         it('handles commit count error gracefully', async () => {
-            // commitInfo
             mockExecute.mockResolvedValueOnce({
-                stderr: '', stdout: 'abc|Author|email@test.com|1700000000|msg'
+                stderr: '', stdout: 'abc123|deploy-bot|deploy-bot@openheaders.io|1706108400|sync'
             });
-            // upstream
             mockExecute.mockResolvedValueOnce({ stderr: '', stdout: 'origin/main\n' });
-            // ahead/behind fails
             mockExecute.mockRejectedValueOnce(new Error('rev-list error'));
 
             const info = await manager.getBranchInfo('/repo', 'main');
@@ -379,7 +379,7 @@ describe('GitBranchManager', () => {
 
         it('converts unix timestamp to Date', async () => {
             mockExecute.mockResolvedValueOnce({
-                stderr: '', stdout: 'abc|Author|email@test.com|1700000000|msg'
+                stderr: '', stdout: 'abc123|Author|user@openheaders.io|1700000000|msg'
             });
             mockExecute.mockRejectedValueOnce(new Error('no upstream'));
 

@@ -66,8 +66,8 @@ function testable(s: WorkspaceSyncScheduler) {
 /** Create a minimal valid Workspace for tests. */
 function testWorkspace(overrides: Partial<Workspace> = {}): Workspace {
   return {
-    id: 'ws-test',
-    name: 'Test',
+    id: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    name: 'OpenHeaders Staging Environment',
     type: 'git',
     ...overrides,
   };
