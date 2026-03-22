@@ -1,380 +1,485 @@
-import { describe, it, expect } from 'vitest';
-import path from 'path';
-import type { RecordingMetadata, RRWebEvent } from '../../../src/types/recording';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { RecordingMetadata, WorkflowRecordingFileMetadata } from '../../../src/types/recording';
+import type { IpcInvokeEvent } from '../../../src/types/common';
 
-/**
- * Tests for pure logic extracted from RecordingHandlers.
- *
- * We test path construction, metadata building, ID generation, and
- * sort logic directly without importing the handler (which needs
- * electron, atomicFileWriter, and filesystem access).
- */
+// --- Mocks ---
 
-interface RecordData {
-    record: {
-        metadata: Partial<RecordingMetadata>;
-        events?: RRWebEvent[];
-    };
-    source?: string;
-    tag?: string | null;
-    description?: string | null;
-}
+const mockFsReaddir = vi.fn().mockResolvedValue([]);
+const mockFsReadFile = vi.fn();
+const mockFsMkdir = vi.fn().mockResolvedValue(undefined);
+const mockFsRm = vi.fn().mockResolvedValue(undefined);
+const mockFsUnlink = vi.fn().mockResolvedValue(undefined);
+const mockFsAccess = vi.fn();
+const mockFsExistsSync = vi.fn(() => true);
+const mockFsCopyFile = vi.fn().mockResolvedValue(undefined);
 
-interface RecordingEntry {
-    id: string;
-    timestamp: string | number;
-}
+vi.mock('electron', () => ({
+    default: {
+        app: {
+            getPath: (name: string) => `/tmp/open-headers-test/${name}`,
+            getName: () => 'OpenHeaders',
+            getVersion: () => '3.2.1-test',
+            isPackaged: false,
+            on: vi.fn(),
+            setAsDefaultProtocolClient: vi.fn(),
+            dock: { show: vi.fn().mockResolvedValue(undefined) }
+        },
+        BrowserWindow: Object.assign(vi.fn(), {
+            getAllWindows: () => [],
+            getFocusedWindow: () => null,
+            fromWebContents: () => null
+        }),
+        ipcMain: { handle: vi.fn(), on: vi.fn() },
+        Tray: vi.fn(),
+        Menu: { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() },
+        nativeImage: { createFromPath: vi.fn(() => ({ resize: vi.fn() })) },
+        shell: { openExternal: vi.fn(), openPath: vi.fn(), showItemInFolder: vi.fn() },
+        screen: { getAllDisplays: () => [] },
+        dialog: {
+            showOpenDialog: vi.fn().mockResolvedValue({}),
+            showSaveDialog: vi.fn().mockResolvedValue({ canceled: true }),
+            showMessageBox: vi.fn().mockResolvedValue({ response: 0 }),
+            showErrorBox: vi.fn()
+        },
+        systemPreferences: { getMediaAccessStatus: vi.fn(() => 'granted') },
+        globalShortcut: { register: vi.fn(), unregister: vi.fn(), isRegistered: vi.fn() }
+    },
+    app: {
+        getPath: (name: string) => `/tmp/open-headers-test/${name}`,
+        getName: () => 'OpenHeaders',
+        getVersion: () => '3.2.1-test',
+        on: vi.fn(),
+        setAsDefaultProtocolClient: vi.fn(),
+        dock: { show: vi.fn().mockResolvedValue(undefined) }
+    },
+    BrowserWindow: Object.assign(vi.fn(), {
+        getAllWindows: () => [],
+        getFocusedWindow: () => null,
+        fromWebContents: () => null
+    }),
+    ipcMain: { handle: vi.fn(), on: vi.fn() },
+    Tray: vi.fn(),
+    Menu: { buildFromTemplate: vi.fn(), setApplicationMenu: vi.fn() },
+    nativeImage: { createFromPath: vi.fn(() => ({ resize: vi.fn() })) },
+    shell: { openExternal: vi.fn(), openPath: vi.fn(), showItemInFolder: vi.fn() },
+    screen: { getAllDisplays: () => [] },
+    dialog: {
+        showOpenDialog: vi.fn().mockResolvedValue({}),
+        showSaveDialog: vi.fn().mockResolvedValue({ canceled: true })
+    },
+    systemPreferences: { getMediaAccessStatus: vi.fn(() => 'granted') },
+    globalShortcut: { register: vi.fn(), unregister: vi.fn(), isRegistered: vi.fn() }
+}));
 
-interface RecordingMeta {
-    id: string;
-    timestamp: number;
-    url: string;
-    duration: number;
-    eventCount: number;
-    size: number;
-    source: string;
-    hasVideo: boolean;
-    hasProcessedVersion?: boolean;
-    tag: string | null;
-    description: string | null;
-    metadata: Partial<RecordingMetadata>;
-    lastModified?: number;
-}
+vi.mock('fs', () => ({
+    default: {
+        existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+        readFileSync: vi.fn(),
+        promises: {
+            readdir: (...args: unknown[]) => mockFsReaddir(...args),
+            readFile: (...args: unknown[]) => mockFsReadFile(...args),
+            mkdir: (...args: unknown[]) => mockFsMkdir(...args),
+            rm: (...args: unknown[]) => mockFsRm(...args),
+            unlink: (...args: unknown[]) => mockFsUnlink(...args),
+            access: (...args: unknown[]) => mockFsAccess(...args),
+            copyFile: (...args: unknown[]) => mockFsCopyFile(...args)
+        }
+    },
+    existsSync: (...args: unknown[]) => mockFsExistsSync(...args),
+    readFileSync: vi.fn(),
+    promises: {
+        readdir: (...args: unknown[]) => mockFsReaddir(...args),
+        readFile: (...args: unknown[]) => mockFsReadFile(...args),
+        mkdir: (...args: unknown[]) => mockFsMkdir(...args),
+        rm: (...args: unknown[]) => mockFsRm(...args),
+        unlink: (...args: unknown[]) => mockFsUnlink(...args),
+        access: (...args: unknown[]) => mockFsAccess(...args),
+        copyFile: (...args: unknown[]) => mockFsCopyFile(...args)
+    }
+}));
 
-// ---------- record ID generation ----------
-// Mirrors handleSaveRecording's fallback ID generation
-function generateRecordId(recordData: Partial<RecordData>): string {
-    return recordData.record?.metadata?.recordId ||
-        `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+vi.mock('../../../src/utils/mainLogger.js', () => ({
+    default: {
+        createLogger: () => ({
+            info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn()
+        }),
+        getLogDirectory: () => '/tmp/logs'
+    },
+    setGlobalLogLevel: vi.fn()
+}));
 
-// Mirrors handleSaveUploadedRecording's fallback ID generation
-function generateUploadRecordId(recordData: Partial<RecordData>): string {
-    return recordData.record?.metadata?.recordId ||
-        `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+const mockWriteJson = vi.fn().mockResolvedValue(undefined);
+vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+    default: {
+        writeJson: (...args: unknown[]) => mockWriteJson(...args),
+        readJson: vi.fn().mockResolvedValue(null),
+        readFile: vi.fn().mockResolvedValue(null),
+        writeFile: vi.fn().mockResolvedValue(undefined)
+    }
+}));
 
-// ---------- path construction ----------
-function buildRecordingsPath(userDataPath: string): string {
-    return path.join(userDataPath, 'recordings');
-}
+vi.mock('../../../src/main/modules/window/windowManager.js', () => ({
+    default: {
+        sendToWindow: vi.fn(),
+        getMainWindow: vi.fn(() => null)
+    }
+}));
 
-function buildRecordingDir(userDataPath: string, recordId: string): string {
-    return path.join(userDataPath, 'recordings', recordId);
-}
+vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+    default: { updateTray: vi.fn() }
+}));
 
-function buildProcessedPath(userDataPath: string, recordId: string): string {
-    return path.join(userDataPath, 'recordings', recordId, 'record-processed.json');
-}
+vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
+    default: {
+        getGitSyncService: () => null,
+        getWorkspaceSyncScheduler: () => null,
+        getWorkspaceSettingsService: () => null,
+        getFileWatchers: () => new Map()
+    }
+}));
 
-function buildMetaPath(userDataPath: string, recordId: string): string {
-    return path.join(userDataPath, 'recordings', `${recordId}.meta.json`);
-}
+vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+    default: {
+        broadcastVideoRecordingState: vi.fn(),
+        broadcastRecordingHotkeyChange: vi.fn(),
+        getConnectionStatus: vi.fn(() => null),
+        onWorkspaceSwitch: vi.fn()
+    }
+}));
 
-function buildVideoPath(userDataPath: string, recordId: string): string {
-    return path.join(userDataPath, 'recordings', recordId, 'video.webm');
-}
+vi.mock('../../../src/services/proxy/ProxyService.js', () => ({
+    default: {
+        getStatus: vi.fn().mockResolvedValue(null),
+        isRunning: false,
+        port: null
+    }
+}));
 
-function buildVideoMetaPath(userDataPath: string, recordId: string): string {
-    return path.join(userDataPath, 'recordings', recordId, 'video-metadata.json');
-}
+vi.mock('../../../src/services/network/NetworkService.js', () => ({
+    default: { getState: () => ({ isOnline: true }) }
+}));
 
-// ---------- metadata construction ----------
-// Mirrors the metadata object built in handleSaveRecording
-function buildRecordingMetadata(recordId: string, recordData: RecordData): RecordingMeta {
+vi.mock('../../../src/services/core/ServiceRegistry.js', () => ({
+    default: { getStatus: () => ({}) }
+}));
+
+vi.mock('../../../src/services/websocket/utils/recordingPreprocessor.js', () => ({
+    preprocessRecordingForSave: vi.fn().mockImplementation((data: unknown) => Promise.resolve(data))
+}));
+
+vi.mock('auto-launch', () => {
+    class MockAutoLaunch {
+        enable = vi.fn().mockResolvedValue(undefined);
+        disable = vi.fn().mockResolvedValue(undefined);
+    }
+    return { default: MockAutoLaunch };
+});
+
+import { RecordingHandlers } from '../../../src/main/modules/ipc/handlers/recordingHandlers';
+import windowManager from '../../../src/main/modules/window/windowManager';
+
+const mockEvent = { sender: { send: vi.fn() } } as unknown as IpcInvokeEvent;
+
+function makeRecordingMetaFile(overrides: Partial<WorkflowRecordingFileMetadata> = {}): WorkflowRecordingFileMetadata {
     return {
-        id: recordId,
-        timestamp: recordData.record.metadata.timestamp || Date.now(),
-        url: recordData.record.metadata.url || recordData.record.metadata.initialUrl || 'Unknown',
-        duration: recordData.record.metadata.duration || 0,
-        eventCount: recordData.record.events?.length || 0,
-        size: Buffer.byteLength(JSON.stringify(recordData)),
-        source: recordData.source || 'extension',
-        hasVideo: false,
-        tag: recordData.tag || null,
-        description: recordData.description || null,
-        metadata: recordData.record.metadata
-    };
-}
-
-// Mirrors the metadata object built in handleSaveUploadedRecording
-function buildUploadedRecordingMetadata(recordId: string, recordData: RecordData, processedData: RecordData): RecordingMeta {
-    return {
-        id: recordId,
-        timestamp: recordData.record?.metadata?.timestamp || Date.now(),
-        url: recordData.record?.metadata?.url || 'Unknown',
-        duration: recordData.record?.metadata?.duration || 0,
-        eventCount: recordData.record?.events?.length || 0,
-        size: Buffer.byteLength(JSON.stringify(processedData)),
-        source: 'upload',
+        id: 'rec-a1b2c3d4e5f6-20260120T144512',
+        timestamp: 1737376512345,
+        url: 'https://dashboard.openheaders.io/settings/team',
+        duration: 45200,
+        eventCount: 1247,
+        size: 2_500_000,
+        source: 'extension',
         hasVideo: false,
         hasProcessedVersion: true,
-        tag: recordData.tag || null,
-        description: recordData.description || null,
-        metadata: recordData.record?.metadata
+        tag: 'regression-test',
+        description: 'Team settings flow — verifying OAuth2 header injection works end-to-end',
+        ...overrides
     };
 }
 
-// ---------- recording sort ----------
-// Mirrors the sort in handleLoadRecordings
-function sortRecordings(recordings: RecordingEntry[]): RecordingEntry[] {
-    return [...recordings].sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-}
+describe('RecordingHandlers', () => {
+    let handlers: RecordingHandlers;
 
-// ---------- metadata update merge ----------
-// Mirrors handleUpdateRecordingMetadata merge logic
-function mergeMetadataUpdates(existingMetadata: Partial<RecordingMeta>, updates: Partial<RecordingMeta>): RecordingMeta & { lastModified: number } {
-    return {
-        ...existingMetadata,
-        ...updates,
-        lastModified: Date.now()
-    } as RecordingMeta & { lastModified: number };
-}
+    beforeEach(() => {
+        handlers = new RecordingHandlers();
+        vi.clearAllMocks();
+    });
 
-// ---------- meta file filter ----------
-// Mirrors the filter used in handleLoadRecordings
-function isMetaFile(filename: string): boolean {
-    return filename.endsWith('.meta.json');
-}
+    describe('handleLoadRecordings', () => {
+        it('returns empty array when no recordings exist', async () => {
+            mockFsReaddir.mockResolvedValueOnce([]);
 
-// ==================== Tests ====================
-
-describe('RecordingHandlers — pure logic', () => {
-    describe('record ID generation', () => {
-        it('uses recordId from metadata when present', () => {
-            const data = { record: { metadata: { recordId: 'custom-id-123' } } };
-            expect(generateRecordId(data)).toBe('custom-id-123');
+            const result = await handlers.handleLoadRecordings();
+            expect(result).toEqual([]);
+            expect(mockFsMkdir).toHaveBeenCalledWith(
+                expect.stringContaining('recordings'),
+                { recursive: true }
+            );
         });
 
-        it('generates a fallback ID starting with "record-" when metadata has no recordId', () => {
-            const data = { record: { metadata: {} } };
-            const id = generateRecordId(data);
-            expect(id).toMatch(/^record-\d+-[a-z0-9]+$/);
+        it('loads and sorts recordings by timestamp (newest first)', async () => {
+            const meta1 = makeRecordingMetaFile({
+                id: 'rec-older',
+                timestamp: 1737300000000
+            });
+            const meta2 = makeRecordingMetaFile({
+                id: 'rec-newer',
+                timestamp: 1737400000000
+            });
+
+            mockFsReaddir.mockResolvedValueOnce(['rec-older.meta.json', 'rec-newer.meta.json']);
+            mockFsReadFile
+                .mockResolvedValueOnce(JSON.stringify(meta1))
+                .mockResolvedValueOnce(JSON.stringify(meta2));
+            // Video/processed access checks
+            mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await handlers.handleLoadRecordings();
+
+            expect(result).toHaveLength(2);
+            expect(result[0].id).toBe('rec-newer');
+            expect(result[1].id).toBe('rec-older');
         });
 
-        it('generates a fallback upload ID starting with "upload-"', () => {
-            const data = { record: { metadata: {} } };
-            const id = generateUploadRecordId(data);
-            expect(id).toMatch(/^upload-\d+-[a-z0-9]+$/);
+        it('skips non-meta files', async () => {
+            mockFsReaddir.mockResolvedValueOnce([
+                'rec-1.meta.json',
+                'rec-1',
+                'other-file.json',
+                'readme.txt'
+            ]);
+            const meta = makeRecordingMetaFile({ id: 'rec-1' });
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(meta));
+            mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await handlers.handleLoadRecordings();
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('rec-1');
         });
 
-        it('handles deeply missing metadata gracefully for upload ID', () => {
-            const data = {};
-            const id = generateUploadRecordId(data);
-            expect(id).toMatch(/^upload-/);
+        it('detects hasVideo when video files exist', async () => {
+            const meta = makeRecordingMetaFile({ hasVideo: undefined });
+            mockFsReaddir.mockResolvedValueOnce([`${meta.id}.meta.json`]);
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(meta));
+            // video.webm and video-metadata.json both exist
+            mockFsAccess.mockResolvedValue(undefined);
+
+            const result = await handlers.handleLoadRecordings();
+            expect(result[0].hasVideo).toBe(true);
+        });
+
+        it('sets hasVideo false when video files do not exist', async () => {
+            const meta = makeRecordingMetaFile({ hasVideo: undefined });
+            mockFsReaddir.mockResolvedValueOnce([`${meta.id}.meta.json`]);
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(meta));
+            mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await handlers.handleLoadRecordings();
+            expect(result[0].hasVideo).toBe(false);
+        });
+
+        it('continues loading when one meta file is corrupted', async () => {
+            const goodMeta = makeRecordingMetaFile({ id: 'good-rec' });
+            mockFsReaddir.mockResolvedValueOnce(['bad.meta.json', 'good-rec.meta.json']);
+            mockFsReadFile
+                .mockResolvedValueOnce('not-valid-json{{{')
+                .mockResolvedValueOnce(JSON.stringify(goodMeta));
+            mockFsAccess.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await handlers.handleLoadRecordings();
+            expect(result).toHaveLength(1);
+            expect(result[0].id).toBe('good-rec');
         });
     });
 
-    describe('path construction', () => {
-        const userData = '/home/user/.config/app';
-
-        it('builds recordings base path', () => {
-            expect(buildRecordingsPath(userData)).toBe('/home/user/.config/app/recordings');
-        });
-
-        it('builds recording directory path', () => {
-            expect(buildRecordingDir(userData, 'rec-1')).toBe(
-                '/home/user/.config/app/recordings/rec-1'
-            );
-        });
-
-        it('builds processed record path', () => {
-            expect(buildProcessedPath(userData, 'rec-1')).toBe(
-                '/home/user/.config/app/recordings/rec-1/record-processed.json'
-            );
-        });
-
-        it('builds meta path with .meta.json extension', () => {
-            expect(buildMetaPath(userData, 'rec-1')).toBe(
-                '/home/user/.config/app/recordings/rec-1.meta.json'
-            );
-        });
-
-        it('builds video file path', () => {
-            expect(buildVideoPath(userData, 'rec-1')).toBe(
-                '/home/user/.config/app/recordings/rec-1/video.webm'
-            );
-        });
-
-        it('builds video metadata path', () => {
-            expect(buildVideoMetaPath(userData, 'rec-1')).toBe(
-                '/home/user/.config/app/recordings/rec-1/video-metadata.json'
-            );
-        });
-    });
-
-    describe('metadata construction', () => {
-        it('builds metadata with all standard fields', () => {
+    describe('handleLoadRecording', () => {
+        it('loads and parses processed recording file', async () => {
             const recordData = {
                 record: {
-                    metadata: { timestamp: 1700000000000, url: 'https://example.com', duration: 5000 },
-                    events: [{ type: 1 }, { type: 2 }]
+                    metadata: { recordId: 'rec-a1b2c3d4', url: 'https://dashboard.openheaders.io' },
+                    events: [{ type: 2, timestamp: 1737376512345 }]
+                }
+            };
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(recordData));
+
+            const result = await handlers.handleLoadRecording(mockEvent, 'rec-a1b2c3d4');
+            expect(result).toEqual(recordData);
+        });
+
+        it('throws when recording file does not exist', async () => {
+            mockFsReadFile.mockRejectedValueOnce(new Error('ENOENT: no such file'));
+
+            await expect(handlers.handleLoadRecording(mockEvent, 'nonexistent-id'))
+                .rejects.toThrow('ENOENT');
+        });
+    });
+
+    describe('handleSaveRecording', () => {
+        it('saves recording with all metadata fields', async () => {
+            const recordData = {
+                record: {
+                    metadata: {
+                        recordId: 'rec-enterprise-test-a1b2c3d4',
+                        timestamp: 1737376512345,
+                        url: 'https://dashboard.openheaders.io/settings/team',
+                        duration: 45200
+                    } as RecordingMetadata,
+                    events: [{ type: 2 }, { type: 3 }, { type: 4 }]
                 },
                 source: 'extension',
-                tag: 'regression',
-                description: 'Login flow test'
+                tag: 'regression-test',
+                description: 'Team settings flow — OAuth2 header injection'
             };
-            const meta = buildRecordingMetadata('rec-1', recordData);
 
-            expect(meta.id).toBe('rec-1');
-            expect(meta.timestamp).toBe(1700000000000);
-            expect(meta.url).toBe('https://example.com');
-            expect(meta.duration).toBe(5000);
-            expect(meta.eventCount).toBe(2);
-            expect(meta.source).toBe('extension');
-            expect(meta.hasVideo).toBe(false);
-            expect(meta.tag).toBe('regression');
-            expect(meta.description).toBe('Login flow test');
-            expect(meta.size).toBeGreaterThan(0);
+            const result = await handlers.handleSaveRecording(mockEvent, recordData);
+
+            expect(result.success).toBe(true);
+            expect(result.recordId).toBe('rec-enterprise-test-a1b2c3d4');
+            expect(result.metadata).toBeDefined();
+            expect(result.metadata.id).toBe('rec-enterprise-test-a1b2c3d4');
+            expect(result.metadata.timestamp).toBe(1737376512345);
+            expect(result.metadata.url).toBe('https://dashboard.openheaders.io/settings/team');
+            expect(result.metadata.duration).toBe(45200);
+            expect(result.metadata.eventCount).toBe(3);
+            expect(result.metadata.source).toBe('extension');
+            expect(result.metadata.hasVideo).toBe(false);
+            expect(result.metadata.tag).toBe('regression-test');
+            expect(result.metadata.description).toBe('Team settings flow — OAuth2 header injection');
+            expect(result.metadata.size).toBeGreaterThan(0);
         });
 
-        it('defaults url to initialUrl when url is missing', () => {
+        it('generates fallback recordId when not provided', async () => {
             const recordData = {
                 record: {
-                    metadata: { initialUrl: 'https://fallback.com' },
+                    metadata: {} as RecordingMetadata,
                     events: []
                 }
             };
-            const meta = buildRecordingMetadata('rec-2', recordData);
-            expect(meta.url).toBe('https://fallback.com');
+
+            const result = await handlers.handleSaveRecording(mockEvent, recordData);
+
+            expect(result.success).toBe(true);
+            expect(result.recordId).toMatch(/^record-\d+-[a-z0-9]+$/);
         });
 
-        it('defaults url to "Unknown" when both url and initialUrl are missing', () => {
+        it('defaults missing metadata fields', async () => {
             const recordData = {
-                record: { metadata: {}, events: [] }
+                record: {
+                    metadata: {} as RecordingMetadata
+                }
             };
-            const meta = buildRecordingMetadata('rec-3', recordData);
-            expect(meta.url).toBe('Unknown');
+
+            const result = await handlers.handleSaveRecording(mockEvent, recordData);
+
+            expect(result.metadata.url).toBe('Unknown');
+            expect(result.metadata.duration).toBe(0);
+            expect(result.metadata.eventCount).toBe(0);
+            expect(result.metadata.source).toBe('extension');
+            expect(result.metadata.tag).toBeNull();
+            expect(result.metadata.description).toBeNull();
         });
 
-        it('defaults source to "extension"', () => {
+        it('uses initialUrl as fallback when url is missing', async () => {
             const recordData = {
-                record: { metadata: {}, events: [] }
+                record: {
+                    metadata: { initialUrl: 'https://auth.openheaders.io/login' } as RecordingMetadata,
+                    events: []
+                }
             };
-            const meta = buildRecordingMetadata('rec-4', recordData);
-            expect(meta.source).toBe('extension');
+
+            const result = await handlers.handleSaveRecording(mockEvent, recordData);
+            expect(result.metadata.url).toBe('https://auth.openheaders.io/login');
         });
 
-        it('defaults tag and description to null', () => {
+        it('notifies renderer about new recording', async () => {
             const recordData = {
-                record: { metadata: {}, events: [] }
+                record: {
+                    metadata: { recordId: 'notify-test' } as RecordingMetadata,
+                    events: []
+                }
             };
-            const meta = buildRecordingMetadata('rec-5', recordData);
-            expect(meta.tag).toBeNull();
-            expect(meta.description).toBeNull();
-        });
 
-        it('defaults eventCount to 0 when events is missing', () => {
-            const recordData = {
-                record: { metadata: {} }
-            };
-            const meta = buildRecordingMetadata('rec-6', recordData);
-            expect(meta.eventCount).toBe(0);
+            await handlers.handleSaveRecording(mockEvent, recordData);
+
+            expect(windowManager.sendToWindow).toHaveBeenCalledWith(
+                'recording-received',
+                expect.objectContaining({ id: 'notify-test' })
+            );
         });
     });
 
-    describe('uploaded recording metadata', () => {
-        it('always sets source to "upload" and hasProcessedVersion to true', () => {
-            const recordData = {
-                record: { metadata: { timestamp: 100 }, events: [] },
-                source: 'extension' // should be overridden
-            };
-            const meta = buildUploadedRecordingMetadata('up-1', recordData, recordData);
-            expect(meta.source).toBe('upload');
-            expect(meta.hasProcessedVersion).toBe(true);
-            expect(meta.hasVideo).toBe(false);
+    describe('handleDeleteRecording', () => {
+        it('deletes recording directory and metadata file', async () => {
+            await handlers.handleDeleteRecording(mockEvent, 'rec-to-delete-a1b2c3d4');
+
+            expect(mockFsRm).toHaveBeenCalledWith(
+                expect.stringContaining('rec-to-delete-a1b2c3d4'),
+                { recursive: true, force: true }
+            );
         });
 
-        it('uses processed data for size calculation', () => {
-            const recordData = {
-                record: { metadata: {}, events: [{}, {}, {}] }
-            } as RecordData;
-            const processedData = { record: { metadata: {}, events: [{}] } } as RecordData;
-            const meta = buildUploadedRecordingMetadata('up-2', recordData, processedData);
-            // eventCount comes from original data, not processed
-            expect(meta.eventCount).toBe(3);
-            // size comes from processed data
-            expect(meta.size).toBe(Buffer.byteLength(JSON.stringify(processedData)));
+        it('returns success result', async () => {
+            const result = await handlers.handleDeleteRecording(mockEvent, 'rec-a1b2c3d4');
+            expect(result).toEqual({ success: true });
         });
     });
 
-    describe('sortRecordings()', () => {
-        it('sorts newest-first by timestamp', () => {
-            const recordings = [
-                { id: 'a', timestamp: '2024-01-01T00:00:00Z' },
-                { id: 'c', timestamp: '2024-03-01T00:00:00Z' },
-                { id: 'b', timestamp: '2024-02-01T00:00:00Z' }
-            ];
-            const sorted = sortRecordings(recordings);
-            expect(sorted.map((r: RecordingEntry) => r.id)).toEqual(['c', 'b', 'a']);
+    describe('handleUpdateRecordingMetadata', () => {
+        it('merges updates into existing metadata', async () => {
+            const existingMeta = makeRecordingMetaFile();
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(existingMeta));
+
+            const result = await handlers.handleUpdateRecordingMetadata(mockEvent, {
+                recordId: existingMeta.id,
+                updates: { tag: 'smoke-test', description: 'Updated description — smoke test pass' }
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.metadata.tag).toBe('smoke-test');
+            expect(result.metadata.description).toBe('Updated description — smoke test pass');
+            expect(result.metadata.id).toBe(existingMeta.id);
+            expect(result.metadata.lastModified).toBeTypeOf('number');
         });
 
-        it('handles numeric timestamps', () => {
-            const recordings = [
-                { id: 'old', timestamp: 1000 },
-                { id: 'new', timestamp: 9000 },
-                { id: 'mid', timestamp: 5000 }
-            ];
-            const sorted = sortRecordings(recordings);
-            expect(sorted.map((r: RecordingEntry) => r.id)).toEqual(['new', 'mid', 'old']);
+        it('throws when metadata file does not exist', async () => {
+            mockFsExistsSync.mockReturnValueOnce(false);
+
+            await expect(handlers.handleUpdateRecordingMetadata(mockEvent, {
+                recordId: 'nonexistent',
+                updates: { tag: 'test' }
+            })).rejects.toThrow('not found');
         });
 
-        it('does not mutate the original array', () => {
-            const original = [{ id: 'a', timestamp: 1 }, { id: 'b', timestamp: 2 }];
-            sortRecordings(original);
-            expect(original[0].id).toBe('a');
-        });
+        it('notifies renderer about metadata update', async () => {
+            const existingMeta = makeRecordingMetaFile();
+            mockFsReadFile.mockResolvedValueOnce(JSON.stringify(existingMeta));
 
-        it('handles single-element array', () => {
-            const recordings = [{ id: 'only', timestamp: 1000 }];
-            expect(sortRecordings(recordings)).toHaveLength(1);
-        });
+            await handlers.handleUpdateRecordingMetadata(mockEvent, {
+                recordId: existingMeta.id,
+                updates: { tag: 'updated' }
+            });
 
-        it('handles empty array', () => {
-            expect(sortRecordings([])).toEqual([]);
-        });
-    });
-
-    describe('mergeMetadataUpdates()', () => {
-        it('merges updates into existing metadata', () => {
-            const existing = { id: 'rec-1', tag: null, description: null };
-            const result = mergeMetadataUpdates(existing, { tag: 'smoke' });
-            expect(result.id).toBe('rec-1');
-            expect(result.tag).toBe('smoke');
-            expect(result.description).toBeNull();
-        });
-
-        it('adds lastModified timestamp', () => {
-            const result = mergeMetadataUpdates({}, { tag: 'test' });
-            expect(result.lastModified).toBeTypeOf('number');
-            expect(result.lastModified).toBeGreaterThan(0);
-        });
-
-        it('updates can overwrite existing fields', () => {
-            const existing = { tag: 'old', description: 'old desc' };
-            const result = mergeMetadataUpdates(existing, { tag: 'new', description: 'new desc' });
-            expect(result.tag).toBe('new');
-            expect(result.description).toBe('new desc');
+            expect(windowManager.sendToWindow).toHaveBeenCalledWith(
+                'recording-metadata-updated',
+                expect.objectContaining({
+                    recordId: existingMeta.id,
+                    metadata: expect.objectContaining({ tag: 'updated' })
+                })
+            );
         });
     });
 
-    describe('isMetaFile()', () => {
-        it('matches .meta.json files', () => {
-            expect(isMetaFile('rec-123.meta.json')).toBe(true);
+    describe('handleDownloadRecording', () => {
+        it('returns canceled when user cancels save dialog', async () => {
+            const result = await handlers.handleDownloadRecording(mockEvent, { id: 'rec-a1b2c3d4' });
+            expect(result).toEqual({ success: false, canceled: true });
         });
 
-        it('does not match regular .json files', () => {
-            expect(isMetaFile('rec-123.json')).toBe(false);
-        });
+        it('throws when recording file does not exist', async () => {
+            mockFsExistsSync.mockReturnValueOnce(false);
 
-        it('does not match partial .meta suffix', () => {
-            expect(isMetaFile('something.meta')).toBe(false);
-        });
-
-        it('does not match directories', () => {
-            expect(isMetaFile('rec-123')).toBe(false);
+            await expect(handlers.handleDownloadRecording(mockEvent, { id: 'nonexistent' }))
+                .rejects.toThrow('not found');
         });
     });
 });
