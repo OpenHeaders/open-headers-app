@@ -13,7 +13,7 @@ describe('formatBytes', () => {
     expect(formatBytes(0)).toBe('0 B');
   });
 
-  it('formats bytes', () => {
+  it('formats small bytes', () => {
     expect(formatBytes(500)).toBe('500 B');
   });
 
@@ -34,9 +34,18 @@ describe('formatBytes', () => {
   });
 
   it('limits decimal places to 2', () => {
-    // 1024 + 103 = 1127 bytes = 1.1006... KB -> 1.1 KB
     const result = formatBytes(1127);
     expect(result).toMatch(/^\d+\.?\d{0,2} KB$/);
+  });
+
+  it('formats enterprise-scale response size (10MB)', () => {
+    const result = formatBytes(10 * 1024 * 1024);
+    expect(result).toBe('10 MB');
+  });
+
+  it('formats enterprise-scale large file (2.5GB)', () => {
+    const result = formatBytes(2.5 * 1024 * 1024 * 1024);
+    expect(result).toBe('2.5 GB');
   });
 });
 
@@ -57,9 +66,16 @@ describe('truncateValue', () => {
     expect(truncateValue(str)).toBe(str);
   });
 
-  it('truncates long value with ellipsis', () => {
+  it('truncates long value with ellipsis preserving start and end', () => {
     const long = 'ABCDEFGHIJ' + 'x'.repeat(20) + '0123456789';
     expect(truncateValue(long)).toBe('ABCDEFGHIJ...0123456789');
+  });
+
+  it('truncates enterprise JWT token', () => {
+    const jwt = 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.signature';
+    const result = truncateValue(jwt);
+    expect(result.length).toBeLessThan(jwt.length);
+    expect(result).toContain('...');
   });
 });
 
@@ -72,19 +88,24 @@ describe('truncateDomain', () => {
   });
 
   it('returns short domain as-is', () => {
-    expect(truncateDomain('example.com')).toBe('example.com');
+    expect(truncateDomain('openheaders.io')).toBe('openheaders.io');
   });
 
-  it('truncates long domain', () => {
-    const long = 'very-long-subdomain.example.com';
-    expect(truncateDomain(long, 18)).toBe('very-long-subdomai...');
+  it('truncates long enterprise domain', () => {
+    const long = 'auth.internal.staging.openheaders.io';
+    expect(truncateDomain(long, 18)).toBe('auth.internal.stag...');
   });
 
   it('uses custom maxLength', () => {
-    expect(truncateDomain('example.com', 5)).toBe('examp...');
+    expect(truncateDomain('openheaders.io', 5)).toBe('openh...');
   });
 
   it('returns domain of exactly maxLength as-is', () => {
-    expect(truncateDomain('example.com', 11)).toBe('example.com');
+    expect(truncateDomain('openheaders.io', 14)).toBe('openheaders.io');
+  });
+
+  it('handles wildcard domain truncation', () => {
+    const wildcard = '*.very-long-subdomain.openheaders.io';
+    expect(truncateDomain(wildcard, 20)).toBe('*.very-long-subdomai...');
   });
 });

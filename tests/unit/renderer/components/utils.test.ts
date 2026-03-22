@@ -8,8 +8,9 @@ import {
 // buildHeaderValue - non-cookie mode
 // ======================================================================
 describe('buildHeaderValue (non-cookie)', () => {
-  it('returns headerValue for non-cookie mode', () => {
-    expect(buildHeaderValue({ headerValue: 'Bearer token123' }, 'header', 'static')).toBe('Bearer token123');
+  it('returns headerValue for non-cookie mode with enterprise JWT', () => {
+    const jwt = 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig';
+    expect(buildHeaderValue({ headerValue: jwt }, 'header', 'static')).toBe(jwt);
   });
 
   it('returns empty string when headerValue is missing', () => {
@@ -113,8 +114,9 @@ describe('buildHeaderValue (cookie)', () => {
 // parseHeaderValue - non-cookie mode
 // ======================================================================
 describe('parseHeaderValue (non-cookie)', () => {
-  it('returns value object for non-cookie mode', () => {
-    expect(parseHeaderValue('Bearer token', 'header')).toEqual({ value: 'Bearer token' });
+  it('returns value object for non-cookie mode with enterprise JWT', () => {
+    const jwt = 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig';
+    expect(parseHeaderValue(jwt, 'header')).toEqual({ value: jwt });
   });
 });
 
@@ -132,13 +134,13 @@ describe('parseHeaderValue (cookie)', () => {
     expect(result.value).toBe('abc123');
   });
 
-  it('parses cookie with attributes', () => {
+  it('parses enterprise cookie with all attributes', () => {
     const result = parseHeaderValue(
-      'token=xyz; Path=/api; SameSite=Strict; Secure; HttpOnly; Max-Age=3600',
-      'cookie'
+      'openheaders_session=eyJhbGciOiJSUzI1NiJ9; Path=/api; SameSite=Strict; Secure; HttpOnly; Max-Age=3600',
+      'cookie',
     );
-    expect(result.name).toBe('token');
-    expect(result.value).toBe('xyz');
+    expect(result.name).toBe('openheaders_session');
+    expect(result.value).toBe('eyJhbGciOiJSUzI1NiJ9');
     expect(result.path).toBe('/api');
     expect(result.sameSite).toBe('Strict');
     expect(result.secure).toBe(true);

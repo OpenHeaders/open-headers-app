@@ -22,8 +22,18 @@ const mockUpdateHeaderRule = vi.fn();
 const mockRemoveHeaderRule = vi.fn();
 
 const mockRules = [
-  { id: 'rule-1', headerName: 'Authorization', headerValue: 'Bearer token', isEnabled: true },
-  { id: 'rule-2', headerName: 'X-Custom', headerValue: 'value', isEnabled: false },
+  {
+    id: 'rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    headerName: 'Authorization',
+    headerValue: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
+    isEnabled: true,
+  },
+  {
+    id: 'rule-b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    headerName: 'X-Tenant-ID',
+    headerValue: 'org-openheaders-prod',
+    isEnabled: false,
+  },
 ];
 
 vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
@@ -58,12 +68,17 @@ describe('useHeaderRules', () => {
       const { result } = renderHook(() => useHeaderRules());
 
       let added = false;
+      const newRule = {
+        headerName: 'X-Correlation-ID',
+        headerValue: 'req-c3d4e5f6-a7b8-9012',
+      };
       await act(async () => {
-        added = await result.current.addRule({ headerName: 'X-New', headerValue: 'val' });
+        added = await result.current.addRule(newRule);
       });
 
       expect(added).toBe(true);
-      expect(mockAddHeaderRule).toHaveBeenCalledWith({ headerName: 'X-New', headerValue: 'val' });
+      expect(mockAddHeaderRule).toHaveBeenCalledOnce();
+      expect(mockAddHeaderRule).toHaveBeenCalledWith(newRule);
       expect(mockShowMessage).toHaveBeenCalledWith('success', 'Rule added successfully');
     });
 
@@ -87,12 +102,14 @@ describe('useHeaderRules', () => {
       const { result } = renderHook(() => useHeaderRules());
 
       let updated = false;
+      const ruleId = 'rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890';
       await act(async () => {
-        updated = await result.current.updateRule('rule-1', { headerValue: 'new-value' });
+        updated = await result.current.updateRule(ruleId, { headerValue: 'Bearer new-token-value' });
       });
 
       expect(updated).toBe(true);
-      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-1', { headerValue: 'new-value' });
+      expect(mockUpdateHeaderRule).toHaveBeenCalledOnce();
+      expect(mockUpdateHeaderRule).toHaveBeenCalledWith(ruleId, { headerValue: 'Bearer new-token-value' });
     });
   });
 
@@ -102,11 +119,11 @@ describe('useHeaderRules', () => {
 
       let removed = false;
       await act(async () => {
-        removed = await result.current.removeRule('rule-1');
+        removed = await result.current.removeRule('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       });
 
       expect(removed).toBe(true);
-      expect(mockRemoveHeaderRule).toHaveBeenCalledWith('rule-1');
+      expect(mockRemoveHeaderRule).toHaveBeenCalledWith('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
       expect(mockShowMessage).toHaveBeenCalledWith('success', 'Rule removed');
     });
   });
@@ -117,21 +134,21 @@ describe('useHeaderRules', () => {
 
       let toggled = false;
       await act(async () => {
-        toggled = await result.current.toggleRule('rule-2', true);
+        toggled = await result.current.toggleRule('rule-b2c3d4e5-f6a7-8901-bcde-f12345678901', true);
       });
 
       expect(toggled).toBe(true);
-      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-2', { isEnabled: true });
+      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-b2c3d4e5-f6a7-8901-bcde-f12345678901', { isEnabled: true });
     });
 
     it('disables a rule', async () => {
       const { result } = renderHook(() => useHeaderRules());
 
       await act(async () => {
-        await result.current.toggleRule('rule-1', false);
+        await result.current.toggleRule('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890', false);
       });
 
-      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-1', { isEnabled: false });
+      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890', { isEnabled: false });
     });
 
     it('returns false on error', async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   getFormInitialValues,
 } from '../../../../src/renderer/components/sources/http-options/HttpConfig';
@@ -7,48 +7,69 @@ import {
 // getFormInitialValues
 // ======================================================================
 describe('getFormInitialValues', () => {
-  it('returns correct default source method', () => {
+  it('returns full initial values shape', () => {
     const values = getFormInitialValues();
-    expect(values.sourceMethod).toBe('GET');
+
+    expect(values).toEqual({
+      sourceMethod: 'GET',
+      requestOptions: {
+        contentType: 'application/json',
+        headers: [],
+        queryParams: [],
+        body: '',
+      },
+      jsonFilter: {
+        enabled: false,
+        path: '',
+      },
+      refreshOptions: {
+        enabled: false,
+        type: 'preset',
+        interval: 15,
+      },
+    });
+  });
+
+  it('returns correct default source method', () => {
+    expect(getFormInitialValues().sourceMethod).toBe('GET');
   });
 
   it('returns requestOptions with application/json content type', () => {
-    const values = getFormInitialValues();
-    expect(values.requestOptions.contentType).toBe('application/json');
+    expect(getFormInitialValues().requestOptions.contentType).toBe('application/json');
   });
 
   it('returns empty headers array', () => {
-    const values = getFormInitialValues();
-    expect(values.requestOptions.headers).toEqual([]);
+    expect(getFormInitialValues().requestOptions.headers).toEqual([]);
   });
 
   it('returns empty queryParams array', () => {
-    const values = getFormInitialValues();
-    expect(values.requestOptions.queryParams).toEqual([]);
+    expect(getFormInitialValues().requestOptions.queryParams).toEqual([]);
   });
 
   it('returns empty body string', () => {
-    const values = getFormInitialValues();
-    expect(values.requestOptions.body).toBe('');
+    expect(getFormInitialValues().requestOptions.body).toBe('');
   });
 
   it('returns jsonFilter disabled by default', () => {
-    const values = getFormInitialValues();
-    expect(values.jsonFilter.enabled).toBe(false);
-    expect(values.jsonFilter.path).toBe('');
+    const { jsonFilter } = getFormInitialValues();
+    expect(jsonFilter).toEqual({ enabled: false, path: '' });
   });
 
-  it('returns refreshOptions disabled with preset type and 15 interval', () => {
-    const values = getFormInitialValues();
-    expect(values.refreshOptions.enabled).toBe(false);
-    expect(values.refreshOptions.type).toBe('preset');
-    expect(values.refreshOptions.interval).toBe(15);
+  it('returns refreshOptions disabled with preset type and 15s interval', () => {
+    const { refreshOptions } = getFormInitialValues();
+    expect(refreshOptions).toEqual({
+      enabled: false,
+      type: 'preset',
+      interval: 15,
+    });
   });
 
-  it('returns a fresh object each time', () => {
+  it('returns a fresh object each time (no shared references)', () => {
     const a = getFormInitialValues();
     const b = getFormInitialValues();
     expect(a).not.toBe(b);
+    expect(a.requestOptions).not.toBe(b.requestOptions);
+    expect(a.requestOptions.headers).not.toBe(b.requestOptions.headers);
     expect(a).toEqual(b);
   });
 });
