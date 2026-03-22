@@ -14,7 +14,7 @@ function makeSource(overrides: Partial<Source> = {}): Source {
 // ======================================================================
 describe('checkSourceDependencies', () => {
   it('returns empty array for source with no vars', () => {
-    expect(checkSourceDependencies(makeSource({ sourceType: 'file', sourcePath: '/path/to/file' }), {})).toEqual([]);
+    expect(checkSourceDependencies(makeSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' }), {})).toEqual([]);
   });
 
   it('detects missing environment variable', () => {
@@ -23,7 +23,7 @@ describe('checkSourceDependencies', () => {
   });
 
   it('does not flag existing environment variable', () => {
-    const result = checkSourceDependencies(makeSource({ sourcePath: 'https://{{HOST}}/api' }), { HOST: 'example.com' });
+    const result = checkSourceDependencies(makeSource({ sourcePath: 'https://{{HOST}}/api' }), { HOST: 'auth.openheaders.io' });
     expect(result).not.toContain('env:HOST');
   });
 
@@ -69,7 +69,7 @@ describe('isTemplateSource', () => {
   });
 
   it('returns false for http source without templates', () => {
-    expect(isTemplateSource(makeSource({ sourcePath: 'https://api.com' }))).toBe(false);
+    expect(isTemplateSource(makeSource({ sourcePath: 'https://api.openheaders.io' }))).toBe(false);
   });
 
   it('returns true for http source with env var', () => {
