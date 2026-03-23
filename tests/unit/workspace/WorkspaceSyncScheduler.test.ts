@@ -271,7 +271,7 @@ describe('WorkspaceSyncScheduler', () => {
       ]);
 
       await scheduler.onWorkspaceSwitch('git-ws');
-      expect(startSyncSpy).toHaveBeenCalledWith('git-ws', expect.objectContaining({ type: 'git' }));
+      expect(startSyncSpy).toHaveBeenCalledWith('git-ws', expect.objectContaining({ type: 'git' }), { skipInitialSync: undefined });
     });
 
     it('does not start sync for personal workspace', async () => {

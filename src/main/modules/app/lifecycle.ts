@@ -67,9 +67,6 @@ class AppLifecycle {
             this._workspaceSettingsService = workspaceSettingsService;
             this._workspaceSyncScheduler = workspaceSyncScheduler;
 
-            // Initialize workspace settings first (dependency)
-            await workspaceSettingsService.initialize();
-
             // Register services with proper dependency order
             serviceRegistry.register('networkService', networkService, []);
             serviceRegistry.register('proxyService', proxyService, []);
@@ -82,9 +79,6 @@ class AppLifecycle {
             log.info('All services initialized successfully');
 
             AppStateMachine.servicesReady(serviceRegistry.getAllServices());
-
-            // Initialize workspace sync scheduler after all services are ready
-            await workspaceSyncScheduler.initialize();
 
             const workspacesData = await workspaceSettingsService.loadWorkspacesData();
             const activeWorkspaceId = workspacesData.activeWorkspaceId || 'default-personal';

@@ -1,5 +1,4 @@
 import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
@@ -8,9 +7,7 @@ import atomicWriter from '../../utils/atomicFileWriter';
 import type { InferOutput } from 'valibot';
 import { errorMessage } from '../../types/common';
 import type { EnvironmentsFile } from '../../types/environment';
-import type { HeaderRule } from '../../types/rules';
 import type { AuthType } from '../../types/workspace';
-import type { Source } from '../../types/source';
 import type { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
 const VALID_AUTH_TYPES = new Set<string>(['none', 'token', 'ssh', 'ssh-key', 'basic']);
@@ -20,8 +17,6 @@ function toAuthType(value: string | undefined): AuthType {
 
 const { app } = electron;
 const { createLogger } = mainLogger;
-const fsPromises = fs.promises;
-
 // Lazy-loaded to avoid circular dependencies at startup
 const getLazyDeps = async () => ({
     appLifecycle: (await import('../../main/modules/app/lifecycle')).default,
@@ -133,14 +128,16 @@ class CliSetupHandler {
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
             if (workspaceSyncScheduler) {
                 try {
+                    // Let the scheduler run its normal initial sync (do NOT skipInitialSync).
+                    // The scheduler's background performSync will complete AFTER the CLI's
+                    // importEnvironment calls populate env values, then broadcast
+                    // workspace-data-updated so the renderer reloads with complete data.
                     await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId);
                     log.info('Sync scheduler switched to new workspace');
                 } catch (err: unknown) {
                     log.warn('Failed to switch sync scheduler:', errorMessage(err));
                 }
             }
-
-            await this._loadWorkspaceIntoServices(workspaceId);
 
             this._notifyRenderer('cli-workspace-joined', { workspaceId, timestamp: Date.now() });
 
@@ -232,42 +229,6 @@ class CliSetupHandler {
             default:
                 return authData;
         }
-    }
-
-    async _loadWorkspaceIntoServices(workspaceId: string): Promise<void> {
-        const { proxyService } = await getLazyDeps();
-        const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
-
-        try {
-            const envPath = path.join(workspacePath, 'environments.json');
-            const envData = await fsPromises.readFile(envPath, 'utf8');
-            const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
-            const activeVars = environments[activeEnvironment] || {};
-            proxyService.updateEnvironmentVariables(activeVars);
-            log.info(`Loaded ${Object.keys(activeVars).length} env vars for proxy`);
-        } catch {
-            proxyService.updateEnvironmentVariables({});
-        }
-
-        try {
-            const sourcesPath = path.join(workspacePath, 'sources.json');
-            const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-            const sources: Source[] = JSON.parse(sourcesData);
-            if (Array.isArray(sources)) {
-                proxyService.updateSources(sources);
-                log.info(`Loaded ${sources.length} sources for proxy`);
-            }
-        } catch { /* No sources yet */ }
-
-        try {
-            const rulesPath = path.join(workspacePath, 'rules.json');
-            const rulesData = await fsPromises.readFile(rulesPath, 'utf8');
-            const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
-            if (rulesStorage.rules && rulesStorage.rules.header) {
-                proxyService.updateHeaderRules(rulesStorage.rules.header);
-                log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy`);
-            }
-        } catch { /* No rules yet */ }
     }
 
     _notifyRenderer(channel: string, data: { workspaceId?: string; timestamp: number }): void {

@@ -66,7 +66,7 @@ class ProxyHandlers {
                                 log.info(`Loaded ${sources.length} sources for proxy service`);
                             }
                         } catch (error: unknown) {
-                            log.warn('Could not load sources for proxy:', errorMessage(error));
+                            log.info('No sources file found for proxy, starting with empty sources');
                         }
 
                         // Load header rules for the current workspace
@@ -79,11 +79,11 @@ class ProxyHandlers {
                                 log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
                             }
                         } catch (error: unknown) {
-                            log.warn('Could not load header rules for proxy:', errorMessage(error));
+                            log.info('No header rules file found for proxy, starting with empty rules');
                         }
                     }
                 } catch (error: unknown) {
-                    log.warn('Could not load environment variables for proxy:', errorMessage(error));
+                    log.info('No environment variables found for proxy, starting with empty variables');
                     proxyService.updateEnvironmentVariables({});
                 }
             }

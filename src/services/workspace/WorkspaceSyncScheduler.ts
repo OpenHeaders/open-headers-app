@@ -269,7 +269,7 @@ class WorkspaceSyncScheduler {
   /**
    * Handle workspace switch
    */
-  async onWorkspaceSwitch(workspaceId: string): Promise<void> {
+  async onWorkspaceSwitch(workspaceId: string, options: { skipInitialSync?: boolean } = {}): Promise<void> {
     log.info(`Workspace switched to: ${workspaceId}`);
 
     // Stop sync for previous workspace
@@ -292,7 +292,7 @@ class WorkspaceSyncScheduler {
 
       // Start sync if it's a Git workspace with autoSync enabled
       if ((workspace.type === 'git' || workspace.type === 'team') && workspace.autoSync !== false) {
-        this.startSync(workspaceId, workspace);
+        this.startSync(workspaceId, workspace, { skipInitialSync: options.skipInitialSync });
       } else {
         log.info(`Workspace ${workspaceId} is not a Git workspace or has autoSync disabled`);
       }
@@ -304,7 +304,7 @@ class WorkspaceSyncScheduler {
   /**
    * Start automatic sync for a workspace
    */
-  startSync(workspaceId: string, workspace: Workspace): void {
+  startSync(workspaceId: string, workspace: Workspace, options: { skipInitialSync?: boolean } = {}): void {
     // Check if already syncing
     if (this.syncTimers.has(workspaceId)) {
       log.debug(`Sync already scheduled for workspace ${workspaceId}`);
@@ -319,10 +319,13 @@ class WorkspaceSyncScheduler {
 
     log.info(`Starting auto-sync for workspace ${workspaceId} (${workspace.name})`);
 
-    // Perform initial sync
-    this.performSync(workspaceId, workspace).catch(error => {
-      log.error(`Initial sync failed for workspace ${workspaceId}:`, error);
-    });
+    // Perform initial sync unless the caller already did it
+    // (e.g. handleWorkspaceSwitched runs its own sync + importSyncedData)
+    if (!options.skipInitialSync) {
+      this.performSync(workspaceId, workspace).catch(error => {
+        log.error(`Initial sync failed for workspace ${workspaceId}:`, error);
+      });
+    }
 
     // Schedule periodic syncs
     const timerId = setInterval(() => {
