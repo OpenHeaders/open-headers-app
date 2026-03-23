@@ -51,15 +51,9 @@ if (!gotTheLock) {
     app.quit();
 } else {
     log.info('Got single instance lock, continuing with app startup');
-    log.info('App starting with args:', process.argv);
-    log.info('App executable path:', process.execPath);
-    log.info('Platform:', process.platform);
-    log.info('Process default app:', process.defaultApp);
-
-    // Log all arguments individually for better debugging
-    process.argv.forEach((arg, index) => {
-        log.info(`  argv[${index}]: "${arg}"`);
-    });
+    log.info(`App starting with ${process.argv.length} arg(s): ${process.argv.join(' ')}`);
+    log.info(`App executable path: ${process.execPath}`);
+    log.info(`Platform: ${process.platform}`);
 
     app.setName('OpenHeaders');
     app.commandLine.appendSwitch('use-system-ca-store');

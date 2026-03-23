@@ -109,11 +109,7 @@ class WindowManager {
     detectAutoLaunch() {
         const loginSettings = app.getLoginItemSettings();
 
-        log.info('Detecting auto-launch:', {
-            loginSettings,
-            argv: process.argv,
-            startMinimized: this.appLaunchArgs.startMinimized
-        });
+        log.info(`Detecting auto-launch: openAtLogin=${loginSettings.openAtLogin}, wasOpenedAtLogin=${loginSettings.wasOpenedAtLogin}, startMinimized=${this.appLaunchArgs.startMinimized}`);
 
         // Cross-platform auto-launch detection with OS-specific heuristics
         if (process.platform === 'darwin') {
@@ -145,12 +141,7 @@ class WindowManager {
                     const hideOnLaunch = Boolean(settings.hideOnLaunch);
                     const isAutoLaunch = this.appLaunchArgs.isAutoLaunch;
 
-                    log.info('App launch details:', {
-                        hideOnLaunch,
-                        isAutoLaunch,
-                        argv: process.argv,
-                        loginItemSettings: app.getLoginItemSettings()
-                    });
+                    log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}`);
 
                     // Hide window only for auto-launches when user has enabled the setting
                     const shouldHideWindow = hideOnLaunch && isAutoLaunch;

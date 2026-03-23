@@ -14,36 +14,6 @@ describe('mainLogger', () => {
         });
     });
 
-    describe('MainLogger.formatMessage()', () => {
-        it('wraps message with component name in brackets', () => {
-            const logger = createLogger('ProxyService');
-            expect(logger.formatMessage('starting proxy on port 8443')).toBe('[ProxyService] starting proxy on port 8443');
-        });
-
-        it('handles empty message', () => {
-            const logger = createLogger('App');
-            expect(logger.formatMessage('')).toBe('[App] ');
-        });
-
-        it('handles message with enterprise URLs', () => {
-            const logger = createLogger('NetworkService');
-            const msg = 'DNS check for auth.openheaders.internal:8443/oauth2/token';
-            expect(logger.formatMessage(msg)).toBe(`[NetworkService] ${msg}`);
-        });
-
-        it('handles message with UUIDs', () => {
-            const logger = createLogger('SourceManager');
-            const msg = 'Refreshing source a1b2c3d4-e5f6-7890-abcd-ef1234567890';
-            expect(logger.formatMessage(msg)).toBe(`[SourceManager] ${msg}`);
-        });
-
-        it('handles message with JWT-like tokens', () => {
-            const logger = createLogger('AuthService');
-            const msg = 'Token refresh: Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig';
-            expect(logger.formatMessage(msg)).toBe(`[AuthService] ${msg}`);
-        });
-    });
-
     describe('log level methods', () => {
         let logger: MainLogger;
 
@@ -106,9 +76,9 @@ describe('mainLogger', () => {
             expect(() => setGlobalLogLevel('')).not.toThrow();
         });
 
-        it('accepts skipRotation parameter', () => {
-            expect(() => setGlobalLogLevel('info', true)).not.toThrow();
-            expect(() => setGlobalLogLevel('debug', false)).not.toThrow();
+        it('can be called multiple times without error', () => {
+            expect(() => setGlobalLogLevel('debug')).not.toThrow();
+            expect(() => setGlobalLogLevel('info')).not.toThrow();
         });
     });
 

@@ -188,7 +188,7 @@ class AppLifecycle {
             const settings = JSON.parse(data);
             if (settings.logLevel) {
                 const { setGlobalLogLevel } = await import('../../../utils/mainLogger');
-                setGlobalLogLevel(settings.logLevel, true);
+                setGlobalLogLevel(settings.logLevel);
                 log.info(`Applied log level from settings: ${settings.logLevel}`);
             }
         } catch (err) {
