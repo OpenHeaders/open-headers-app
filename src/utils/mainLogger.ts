@@ -1,16 +1,21 @@
 /**
  * Standardized logger for main process
- * Format: [YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] [Component] Message
+ *
+ * Output format: YYYY-MM-DDTHH:MM:SS.mmmZ LEVEL [Component] message
+ *
+ * Log levels (each includes all levels above it):
+ * - error: Operation failures and exceptions
+ * - warn:  Anomalies, retries, and fallbacks
+ * - info:  Operational events and state changes
+ * - debug: Detailed internals for troubleshooting
  */
 
 import log from 'electron-log';
-import fs from 'fs';
 import path from 'path';
 
-// Configure electron-log format globally (only once)
-// Use UTC timestamps for consistency across timezone changes
-log.transports.console.format = '[{iso}] [{level}] {text}';
-log.transports.file.format = '[{iso}] [{level}] {text}';
+// Configure electron-log to output only our pre-formatted text
+log.transports.console.format = '{text}';
+log.transports.file.format = '{text}';
 
 type LogLevelName = 'error' | 'warn' | 'info' | 'debug';
 
@@ -29,60 +34,41 @@ interface LogLevels {
 
 const LOG_LEVELS: LogLevels = { error: 0, warn: 1, info: 2, debug: 3 };
 
+const LEVEL_LABELS: Record<LogLevelName, string> = {
+  error: 'ERROR',
+  warn: 'WARN ',
+  info: 'INFO ',
+  debug: 'DEBUG',
+};
+
+// No padding — compact format
+
 // Initialize log level — defaults to info until settings override via setGlobalLogLevel
 let currentLevel: number = LOG_LEVELS.info;
 
 /**
- * Archive the current log file and start fresh.
- * Copies the current log to {name}.{ISO-timestamp}.log and clears the active file.
- */
-function rotateLogFile(): void {
-  try {
-    const logFile = log.transports.file.getFile();
-    const logPath = logFile.path;
-
-    // Only rotate if the file has content
-    try {
-      const stats = fs.statSync(logPath);
-      if (stats.size === 0) return;
-    } catch (e) {
-      return; // File doesn't exist yet
-    }
-
-    // Build archive path: main.2026-03-16T13-30-00-000Z.log
-    const dir = path.dirname(logPath);
-    const ext = path.extname(logPath);
-    const base = path.basename(logPath, ext);
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const archivePath = path.join(dir, `${base}.${timestamp}${ext}`);
-
-    fs.copyFileSync(logPath, archivePath);
-
-    // Clear using electron-log's API if available, otherwise overwrite
-    if (typeof logFile.clear === 'function') {
-      logFile.clear();
-    } else {
-      fs.writeFileSync(logPath, '');
-    }
-  } catch (err) {
-    // Never let rotation failure break logging
-    console.error('Log rotation failed:', err);
-  }
-}
-
-/**
  * Set the global log level for all main process loggers.
- * When the level actually changes, the current log file is archived and a fresh one starts.
  */
-function setGlobalLogLevel(level: string, skipRotation?: boolean): void {
+function setGlobalLogLevel(level: string): void {
   if (isLogLevelName(level)) {
-    if (!skipRotation && currentLevel !== LOG_LEVELS[level]) {
-      rotateLogFile();
-    }
     currentLevel = LOG_LEVELS[level];
     log.transports.file.level = level;
     log.transports.console.level = level;
   }
+}
+
+function formatPrefix(level: LogLevelName, component: string): string {
+  return `${new Date().toISOString()} ${LEVEL_LABELS[level]} [${component}]`;
+}
+
+function formatData(data: unknown): string {
+  if (data === null || data === undefined) return String(data);
+  if (data instanceof Error) return `${data.name}: ${data.message}`;
+  if (typeof data === 'object') {
+    try { return JSON.stringify(data); }
+    catch { return String(data); }
+  }
+  return String(data);
 }
 
 class MainLogger {
@@ -92,47 +78,47 @@ class MainLogger {
     this.component = component;
   }
 
-  formatMessage(message: string): string {
-    return `[${this.component}] ${message}`;
-  }
-
   debug(message: string, data?: unknown): void {
     if (LOG_LEVELS.debug > currentLevel) return;
+    const prefix = formatPrefix('debug', this.component);
     if (data !== undefined) {
-      log.debug(this.formatMessage(message), data);
+      log.debug(prefix, message, formatData(data));
     } else {
-      log.debug(this.formatMessage(message));
+      log.debug(prefix, message);
     }
   }
 
   info(message: string, data?: unknown): void {
     if (LOG_LEVELS.info > currentLevel) return;
+    const prefix = formatPrefix('info', this.component);
     if (data !== undefined) {
-      log.info(this.formatMessage(message), data);
+      log.info(prefix, message, formatData(data));
     } else {
-      log.info(this.formatMessage(message));
+      log.info(prefix, message);
     }
   }
 
   warn(message: string, data?: unknown): void {
     if (LOG_LEVELS.warn > currentLevel) return;
+    const prefix = formatPrefix('warn', this.component);
     if (data !== undefined) {
-      log.warn(this.formatMessage(message), data);
+      log.warn(prefix, message, formatData(data));
     } else {
-      log.warn(this.formatMessage(message));
+      log.warn(prefix, message);
     }
   }
 
   error(message: string, data?: unknown): void {
+    const prefix = formatPrefix('error', this.component);
     if (data !== undefined) {
-      log.error(this.formatMessage(message), data);
+      log.error(prefix, message, formatData(data));
     } else {
-      log.error(this.formatMessage(message));
+      log.error(prefix, message);
     }
   }
 
   setDebugMode(enabled: boolean): void {
-    setGlobalLogLevel(enabled ? 'debug' : 'info', true);
+    setGlobalLogLevel(enabled ? 'debug' : 'info');
   }
 }
 

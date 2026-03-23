@@ -3,49 +3,77 @@ import logger from '../../../src/preload/modules/logger';
 import timeUtils from '../../../src/preload/modules/timeUtils';
 
 describe('logger', () => {
-    describe('formatTimestamp()', () => {
-        it('returns ISO-like string without T separator', () => {
-            const ts = logger.formatTimestamp();
-            // Format: "YYYY-MM-DD HH:MM:SS.mmmZ"
-            expect(ts).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-            expect(ts).not.toContain('T');
-        });
-
-        it('formats a fixed date correctly', () => {
+    describe('log prefix format', () => {
+        it('includes ISO timestamp, level, and module in prefix', () => {
             const fixedDate = new Date('2026-01-20T14:45:12.345Z');
             const spy = vi.spyOn(timeUtils, 'newDate').mockReturnValue(fixedDate);
+            const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-            expect(logger.formatTimestamp()).toBe('2026-01-20 14:45:12.345Z');
+            logger.info('test message');
+
+            const prefix = logSpy.mock.calls[0][0] as string;
+            expect(prefix).toContain('2026-01-20T14:45:12.345Z');
+            expect(prefix).toContain('INFO ');
+            expect(prefix).toContain('[Preload]');
             spy.mockRestore();
+            logSpy.mockRestore();
+        });
+
+        it('pads level labels to 5 chars for alignment', () => {
+            const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+            const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+            const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+            logger.info('test');
+            logger.warn('test');
+            logger.error('test');
+
+            expect((logSpy.mock.calls[0][0] as string)).toContain('INFO ');
+            expect((warnSpy.mock.calls[0][0] as string)).toContain('WARN ');
+            expect((errorSpy.mock.calls[0][0] as string)).toContain('ERROR');
+            logSpy.mockRestore();
+            warnSpy.mockRestore();
+            errorSpy.mockRestore();
         });
 
         it('handles midnight correctly', () => {
             const midnight = new Date('2026-03-15T00:00:00.000Z');
             const spy = vi.spyOn(timeUtils, 'newDate').mockReturnValue(midnight);
+            const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-            expect(logger.formatTimestamp()).toBe('2026-03-15 00:00:00.000Z');
+            logger.info('test');
+
+            const prefix = logSpy.mock.calls[0][0] as string;
+            expect(prefix).toContain('2026-03-15T00:00:00.000Z');
             spy.mockRestore();
+            logSpy.mockRestore();
         });
 
         it('handles end-of-day correctly', () => {
             const endOfDay = new Date('2026-12-31T23:59:59.999Z');
             const spy = vi.spyOn(timeUtils, 'newDate').mockReturnValue(endOfDay);
+            const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-            expect(logger.formatTimestamp()).toBe('2026-12-31 23:59:59.999Z');
+            logger.info('test');
+
+            const prefix = logSpy.mock.calls[0][0] as string;
+            expect(prefix).toContain('2026-12-31T23:59:59.999Z');
             spy.mockRestore();
+            logSpy.mockRestore();
         });
     });
 
     describe('info()', () => {
-        it('logs message with [INFO] and [Preload] tags', () => {
+        it('logs prefix and message as separate args', () => {
             const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
             logger.info('Source refresh completed for a1b2c3d4-e5f6-7890-abcd-ef1234567890');
 
             expect(spy).toHaveBeenCalledOnce();
-            const logLine = spy.mock.calls[0][0] as string;
-            expect(logLine).toContain('[INFO]');
-            expect(logLine).toContain('[Preload]');
-            expect(logLine).toContain('Source refresh completed for a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+            const prefix = spy.mock.calls[0][0] as string;
+            const message = spy.mock.calls[0][1] as string;
+            expect(prefix).toContain('INFO ');
+            expect(prefix).toContain('[Preload]');
+            expect(message).toBe('Source refresh completed for a1b2c3d4-e5f6-7890-abcd-ef1234567890');
             spy.mockRestore();
         });
 
@@ -59,32 +87,31 @@ describe('logger', () => {
             logger.info('Source refreshed', data);
 
             expect(spy).toHaveBeenCalledOnce();
-            expect(spy.mock.calls[0][1]).toEqual({
-                sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-                refreshInterval: 30000,
-                status: 'success'
-            });
+            const dataArg = spy.mock.calls[0][2] as string;
+            expect(dataArg).toContain('"sourceId"');
+            expect(dataArg).toContain('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
             spy.mockRestore();
         });
 
-        it('does not pass second arg when data is undefined', () => {
+        it('does not pass data arg when data is undefined', () => {
             const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
             logger.info('Proxy started');
-            expect(spy.mock.calls[0].length).toBe(1);
+            expect(spy.mock.calls[0].length).toBe(2); // prefix + message
             spy.mockRestore();
         });
     });
 
     describe('error()', () => {
-        it('logs message with [ERROR] and [Preload] tags', () => {
+        it('logs prefix and message with ERROR and [Preload] tags', () => {
             const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
             logger.error('OAuth2 token refresh failed for https://auth.openheaders.io:8443/oauth2/token');
 
             expect(spy).toHaveBeenCalledOnce();
-            const logLine = spy.mock.calls[0][0] as string;
-            expect(logLine).toContain('[ERROR]');
-            expect(logLine).toContain('[Preload]');
-            expect(logLine).toContain('OAuth2 token refresh failed');
+            const prefix = spy.mock.calls[0][0] as string;
+            const message = spy.mock.calls[0][1] as string;
+            expect(prefix).toContain('ERROR');
+            expect(prefix).toContain('[Preload]');
+            expect(message).toContain('OAuth2 token refresh failed');
             spy.mockRestore();
         });
 
@@ -94,14 +121,14 @@ describe('logger', () => {
             logger.error('HTTP request failed', err);
 
             expect(spy).toHaveBeenCalledOnce();
-            expect(spy.mock.calls[0][1]).toBe(err);
+            expect(spy.mock.calls[0][2]).toBe('Error: ECONNREFUSED: connect ECONNREFUSED 10.0.1.50:8443');
             spy.mockRestore();
         });
 
-        it('does not pass second arg when data is undefined', () => {
+        it('does not pass data arg when data is undefined', () => {
             const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
             logger.error('Connection lost');
-            expect(spy.mock.calls[0].length).toBe(1);
+            expect(spy.mock.calls[0].length).toBe(2); // prefix + message
             spy.mockRestore();
         });
     });
@@ -135,10 +162,11 @@ describe('logger', () => {
 
             logger.debug('WebSocket message dispatched to handler');
             expect(spy).toHaveBeenCalledOnce();
-            const logLine = spy.mock.calls[0][0] as string;
-            expect(logLine).toContain('[DEBUG]');
-            expect(logLine).toContain('[Preload]');
-            expect(logLine).toContain('WebSocket message dispatched');
+            const prefix = spy.mock.calls[0][0] as string;
+            const message = spy.mock.calls[0][1] as string;
+            expect(prefix).toContain('DEBUG');
+            expect(prefix).toContain('[Preload]');
+            expect(message).toContain('WebSocket message dispatched');
             spy.mockRestore();
         });
 
@@ -173,19 +201,17 @@ describe('logger', () => {
 
             logger.debug('Domain match result', data);
             expect(spy).toHaveBeenCalledOnce();
-            expect(spy.mock.calls[0][1]).toEqual({
-                ruleId: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-                domain: '*.openheaders.io',
-                matchResult: true
-            });
+            const dataArg = spy.mock.calls[0][2] as string;
+            expect(dataArg).toContain('"ruleId"');
+            expect(dataArg).toContain('b2c3d4e5-f6a7-8901-bcde-f23456789012');
             spy.mockRestore();
         });
 
-        it('does not pass second arg when data is undefined in debug mode', () => {
+        it('does not pass data arg when data is undefined in debug mode', () => {
             process.env.NODE_ENV = 'development';
             const spy = vi.spyOn(console, 'debug').mockImplementation(() => {});
             logger.debug('simple debug message');
-            expect(spy.mock.calls[0].length).toBe(1);
+            expect(spy.mock.calls[0].length).toBe(2); // prefix + message
             spy.mockRestore();
         });
     });

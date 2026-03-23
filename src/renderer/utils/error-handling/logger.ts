@@ -1,6 +1,13 @@
 /**
  * Standardized logger for renderer process
- * Format: [YYYY-MM-DD HH:MM:SS.mmm] [LEVEL] [Component] Message
+ *
+ * Output format: YYYY-MM-DDTHH:MM:SS.mmmZ LEVEL [Component] message
+ *
+ * Log levels (each includes all levels above it):
+ * - error: Operation failures and exceptions
+ * - warn:  Anomalies, retries, and fallbacks
+ * - info:  Operational events and state changes
+ * - debug: Detailed internals for troubleshooting
  */
 
 // Lazy-load timeManager to avoid circular dependencies
@@ -20,7 +27,16 @@ function getTimeManager() {
   return _timeManager;
 }
 
+type LogLevelName = 'error' | 'warn' | 'info' | 'debug';
+
 const LOG_LEVELS: Record<string, number> = { error: 0, warn: 1, info: 2, debug: 3 };
+
+const LEVEL_LABELS: Record<LogLevelName, string> = {
+  error: 'ERROR',
+  warn: 'WARN ',
+  info: 'INFO ',
+  debug: 'DEBUG',
+};
 
 // Initialize log level — defaults to info until settings override via setGlobalLogLevel
 let currentLevel = LOG_LEVELS.info;
@@ -35,6 +51,22 @@ export function setGlobalLogLevel(level: string) {
   }
 }
 
+function formatPrefix(level: LogLevelName, component: string): string {
+  const tm = getTimeManager();
+  const now = tm ? tm.getDate() : new Date();
+  return `${now.toISOString()} ${LEVEL_LABELS[level]} [${component}]`;
+}
+
+function formatData(data: unknown): string {
+  if (data === null || data === undefined) return String(data);
+  if (data instanceof Error) return `${data.name}: ${data.message}`;
+  if (typeof data === 'object') {
+    try { return JSON.stringify(data); }
+    catch { return String(data); }
+  }
+  return String(data);
+}
+
 class Logger {
   component: string;
 
@@ -42,55 +74,42 @@ class Logger {
     this.component = component;
   }
 
-  formatMessage(level: string, message: string, data?: unknown) {
-    const tm = getTimeManager();
-    const now = tm ? tm.getDate() : new Date();
-    // Use UTC ISO format for consistent timestamps across timezone changes
-    const timestamp = now.toISOString().replace('T', ' ').substring(0, 23) + 'Z';
-    const prefix = `[${timestamp}] [${level}] [${this.component}]`;
-
-    if (data !== undefined) {
-      return { prefix, message, data };
-    }
-    return { prefix, message, data: undefined };
-  }
-
-  log(level: string, message: string, data?: unknown) {
-    const formatted = this.formatMessage(level, message, data);
-
-    if (data !== undefined) {
-      console.log(formatted.prefix, formatted.message, formatted.data);
-    } else {
-      console.log(formatted.prefix, formatted.message);
-    }
-  }
-
   debug(message: string, data?: unknown) {
     if (LOG_LEVELS.debug > currentLevel) return;
-    this.log('DEBUG', message, data);
+    const prefix = formatPrefix('debug', this.component);
+    if (data !== undefined) {
+      console.log(prefix, message, formatData(data));
+    } else {
+      console.log(prefix, message);
+    }
   }
 
   info(message: string, data?: unknown) {
     if (LOG_LEVELS.info > currentLevel) return;
-    this.log('INFO', message, data);
+    const prefix = formatPrefix('info', this.component);
+    if (data !== undefined) {
+      console.log(prefix, message, formatData(data));
+    } else {
+      console.log(prefix, message);
+    }
   }
 
   warn(message: string, data?: unknown) {
     if (LOG_LEVELS.warn > currentLevel) return;
-    const formatted = this.formatMessage('WARN', message, data);
+    const prefix = formatPrefix('warn', this.component);
     if (data !== undefined) {
-      console.warn(formatted.prefix, formatted.message, formatted.data);
+      console.warn(prefix, message, formatData(data));
     } else {
-      console.warn(formatted.prefix, formatted.message);
+      console.warn(prefix, message);
     }
   }
 
   error(message: string, data?: unknown) {
-    const formatted = this.formatMessage('ERROR', message, data);
+    const prefix = formatPrefix('error', this.component);
     if (data !== undefined) {
-      console.error(formatted.prefix, formatted.message, formatted.data);
+      console.error(prefix, message, formatData(data));
     } else {
-      console.error(formatted.prefix, formatted.message);
+      console.error(prefix, message);
     }
   }
 
@@ -103,5 +122,3 @@ class Logger {
 export function createLogger(component: string) {
   return new Logger(component);
 }
-
-// ESM exports above.
