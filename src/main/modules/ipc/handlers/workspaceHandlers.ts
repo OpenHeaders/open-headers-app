@@ -283,7 +283,7 @@ class WorkspaceHandlers {
                 proxyService.updateEnvironmentVariables(activeVars);
                 log.info(`Loaded ${Object.keys(activeVars).length} environment variables for proxy service`);
             } catch (error: unknown) {
-                log.warn('Could not load environment variables for proxy:', errorMessage(error));
+                log.info('No environment variables found for proxy, starting with empty variables');
                 proxyService.updateEnvironmentVariables({});
             }
 
@@ -297,7 +297,7 @@ class WorkspaceHandlers {
                     log.info(`Loaded ${sources.length} sources for proxy service`);
                 }
             } catch (error: unknown) {
-                log.warn('Could not load sources for proxy:', errorMessage(error));
+                log.info('No sources file found for proxy, starting with empty sources');
             }
 
             // Load header rules for the workspace
@@ -310,7 +310,7 @@ class WorkspaceHandlers {
                     log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
                 }
             } catch (error: unknown) {
-                log.warn('Could not load header rules for proxy:', errorMessage(error));
+                log.info('No header rules file found for proxy, starting with empty rules');
             }
         } catch (error) {
             log.error('Error switching proxy service workspace:', error);
@@ -329,6 +329,11 @@ class WorkspaceHandlers {
         const gitSyncService = appLifecycle.getGitSyncService();
 
         // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
+        // This block owns the initial sync: it pulls from Git, imports data, and
+        // signals the renderer with isInitialSync: true so waitForInitialSync() resolves.
+        // The scheduler is then told to skip its own immediate sync to avoid a redundant
+        // second Git pull — it only sets up the periodic timer.
+        let didInitialSync = false;
         if (!skipInitialSync && workspaceSettingsService && gitSyncService) {
             const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
             const workspace = workspaces.find(w => w.id === workspaceId);
@@ -350,6 +355,7 @@ class WorkspaceHandlers {
 
                 if (needsInitialSync) {
                     log.info('New Git workspace detected, triggering immediate sync');
+                    didInitialSync = true;
 
                     try {
                         event.sender.send('workspace-sync-started', {
@@ -366,6 +372,11 @@ class WorkspaceHandlers {
                             authType: workspace.authType || 'none',
                             authData: workspace.authData ?? {}
                         });
+
+                        // Import synced data so it's on disk before the renderer loads it.
+                        if (result.success && result.data && workspaceSyncScheduler) {
+                            await workspaceSyncScheduler.importSyncedData(workspaceId, result.data);
+                        }
 
                         event.sender.send('workspace-sync-completed', {
                             workspaceId,
@@ -389,7 +400,9 @@ class WorkspaceHandlers {
         }
 
         if (workspaceSyncScheduler) {
-            await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId);
+            // If we already performed the initial sync above, tell the scheduler
+            // to only set up the periodic timer — no need for a redundant Git pull.
+            await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId, { skipInitialSync: didInitialSync });
         }
     }
 

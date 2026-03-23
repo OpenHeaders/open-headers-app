@@ -28,7 +28,7 @@ export type AppState = typeof AppStates[keyof typeof AppStates];
 
 export const StateTransitions: Record<string, Record<string, string>> = {
     [AppStates.INITIALIZING]: {
-        SETTINGS_LOADED: AppStates.LOADING_SETTINGS,
+        LOAD_SETTINGS: AppStates.LOADING_SETTINGS,
         ERROR: AppStates.ERROR
     },
     [AppStates.LOADING_SETTINGS]: {
@@ -184,7 +184,7 @@ class AppStateMachineImpl extends EventEmitter {
 
     settingsLoaded(settings: Partial<AppSettings>): boolean {
         this.context.settings = settings;
-        return this.transition('SETTINGS_LOADED', { settings });
+        return this.transition('LOAD_SETTINGS', { settings });
     }
 
     settingsReady(): boolean { return this.transition('SETTINGS_READY'); }

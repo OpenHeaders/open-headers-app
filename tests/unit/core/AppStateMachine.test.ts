@@ -44,7 +44,7 @@ describe('AppStateMachine', () => {
 
     describe('transition()', () => {
         it('transitions through full startup lifecycle', () => {
-            expect(sm.transition('SETTINGS_LOADED')).toBe(true);
+            expect(sm.transition('LOAD_SETTINGS')).toBe(true);
             expect(sm.getState()).toBe(AppStates.LOADING_SETTINGS);
 
             expect(sm.transition('SETTINGS_READY')).toBe(true);
@@ -63,7 +63,7 @@ describe('AppStateMachine', () => {
         });
 
         it('records history with previous state and data', () => {
-            sm.transition('SETTINGS_LOADED', { settings: { theme: 'dark' } });
+            sm.transition('LOAD_SETTINGS', { settings: { theme: 'dark' } });
             sm.transition('SETTINGS_READY');
 
             const history = sm.getHistory();
@@ -72,7 +72,7 @@ describe('AppStateMachine', () => {
                 state: AppStates.LOADING_SETTINGS,
                 previousState: AppStates.INITIALIZING,
                 timestamp: expect.any(Number),
-                event: 'SETTINGS_LOADED',
+                event: 'LOAD_SETTINGS',
                 data: { settings: { theme: 'dark' } }
             });
             expect(history[2].state).toBe(AppStates.INITIALIZING_SERVICES);
@@ -90,12 +90,12 @@ describe('AppStateMachine', () => {
             const handler = vi.fn();
             sm.on('stateChanged', handler);
 
-            sm.transition('SETTINGS_LOADED', { settings: { autoStartProxy: true } });
+            sm.transition('LOAD_SETTINGS', { settings: { autoStartProxy: true } });
 
             expect(handler).toHaveBeenCalledWith({
                 newState: AppStates.LOADING_SETTINGS,
                 previousState: AppStates.INITIALIZING,
-                event: 'SETTINGS_LOADED',
+                event: 'LOAD_SETTINGS',
                 data: { settings: { autoStartProxy: true } }
             });
         });
@@ -103,12 +103,12 @@ describe('AppStateMachine', () => {
         it('emits named state event', () => {
             const handler = vi.fn();
             sm.on(AppStates.LOADING_SETTINGS, handler);
-            sm.transition('SETTINGS_LOADED');
+            sm.transition('LOAD_SETTINGS');
             expect(handler).toHaveBeenCalledOnce();
         });
 
         it('sets previousState correctly', () => {
-            sm.transition('SETTINGS_LOADED');
+            sm.transition('LOAD_SETTINGS');
             expect(sm.previousState).toBe(AppStates.INITIALIZING);
 
             sm.transition('SETTINGS_READY');
@@ -118,7 +118,7 @@ describe('AppStateMachine', () => {
 
     describe('canTransition()', () => {
         it('returns true for valid events from current state', () => {
-            expect(sm.canTransition('SETTINGS_LOADED')).toBe(true);
+            expect(sm.canTransition('LOAD_SETTINGS')).toBe(true);
             expect(sm.canTransition('ERROR')).toBe(true);
         });
 
