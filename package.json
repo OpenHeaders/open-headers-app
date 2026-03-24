@@ -25,7 +25,7 @@
     "dist:linux:rpm:x64": "npm run predist && electron-builder --linux --x64 --config.linux.target=rpm --publish never",
     "dist:linux:rpm:arm64": "npm run predist && electron-builder --linux --arm64 --config.linux.target=rpm --publish never",
     "// Windows Git //": "",
-    "predist:win": "npm run download-portable-git && npm run build:minimal-git",
+    "predist:win": "npm run build && npm run download-portable-git && npm run build:minimal-git",
     "download-portable-git": "node scripts/build/download-portable-git.js",
     "build:minimal-git": "node scripts/build/build-minimal-git.js",
     "// Testing //": "",
