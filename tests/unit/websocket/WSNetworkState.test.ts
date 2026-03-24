@@ -5,7 +5,6 @@ import { WSNetworkStateHandler } from '../../../src/services/websocket/ws-networ
 function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler>[0] {
     return {
         wss: null,
-        secureWss: null
     };
 }
 
@@ -248,31 +247,24 @@ describe('WSNetworkStateHandler', () => {
             expect(parsed.data.timestamp).toBeGreaterThan(0);
         });
 
-        it('sends to both WS and WSS clients', () => {
-            const wsMessages: string[] = [];
-            const wssMessages: string[] = [];
+        it('sends to multiple WS clients', () => {
+            const messages: string[] = [];
 
             handler.wsService.wss = {
                 clients: new Set([
-                    { readyState: 1, send: (msg: string) => wsMessages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
                 ])
             } as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
-            handler.wsService.secureWss = {
-                clients: new Set([
-                    { readyState: 1, send: (msg: string) => wssMessages.push(msg) },
-                    { readyState: 1, send: (msg: string) => wssMessages.push(msg) },
-                ])
-            } as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['secureWss'];
 
             handler.broadcastNetworkState();
 
-            expect(wsMessages).toHaveLength(1);
-            expect(wssMessages).toHaveLength(2);
+            expect(messages).toHaveLength(3);
         });
 
-        it('handles null servers gracefully', () => {
+        it('handles null server gracefully', () => {
             handler.wsService.wss = null;
-            handler.wsService.secureWss = null;
             handler.broadcastNetworkState();
             // Should not throw
         });

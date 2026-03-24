@@ -20,21 +20,11 @@ function createMockService(): ConstructorParameters<typeof WSClientHandler>[0] {
         connectedClients: new Map(),
         clientInitializationLocks: new Map(),
         wss: null,
-        secureWss: null,
         wsPort: 59210,
-        wssPort: 59211,
         sourceHandler: { sendSourcesToClient: vi.fn().mockResolvedValue(undefined) },
         ruleHandler: { sendRulesToClient: vi.fn().mockResolvedValue(undefined) },
         recordingHandler: { sendVideoRecordingState: vi.fn().mockResolvedValue(undefined) },
         networkStateHandler: null,
-        certificateHandler: {
-            certificatePaths: {
-                fingerprint: 'A1:B2:C3:D4:E5:F6:78:90:AB:CD:EF:12:34:56:78:90:A1:B2:C3:D4',
-                certPath: '/Users/jane.doe/Library/Application Support/OpenHeaders/certs/server.cert',
-                validTo: '2027-03-15T12:00:00.000Z',
-                subject: 'O=OpenHeaders\nCN=OpenHeaders localhost'
-            }
-        }
     };
 }
 
@@ -138,13 +128,7 @@ describe('WSClientHandler', () => {
                 browserCounts: {},
                 clients: [],
                 wsServerRunning: false,
-                wssServerRunning: false,
                 wsPort: 59210,
-                wssPort: 59211,
-                certificateFingerprint: 'A1:B2:C3:D4:E5:F6:78:90:AB:CD:EF:12:34:56:78:90:A1:B2:C3:D4',
-                certificatePath: '/Users/jane.doe/Library/Application Support/OpenHeaders/certs/server.cert',
-                certificateExpiry: '2027-03-15T12:00:00.000Z',
-                certificateSubject: 'O=OpenHeaders\nCN=OpenHeaders localhost',
             });
         });
 
@@ -162,12 +146,11 @@ describe('WSClientHandler', () => {
                 connectedAt,
                 lastActivity,
             }));
-            mockService.connectedClients.set('WSS-1709123456790-f5g6h7i8j', makeClientInfo({
-                id: 'WSS-1709123456790-f5g6h7i8j',
+            mockService.connectedClients.set('WS-1709123456790-f5g6h7i8j', makeClientInfo({
+                id: 'WS-1709123456790-f5g6h7i8j',
                 browser: 'firefox',
                 browserVersion: '123.0',
                 platform: 'linux',
-                connectionType: 'WSS',
                 connectedAt,
                 lastActivity,
             }));
@@ -185,7 +168,7 @@ describe('WSClientHandler', () => {
             expect(chromeClient.lastActivity).toEqual(lastActivity);
 
             const firefoxClient = status.clients.find(c => c.browser === 'firefox')!;
-            expect(firefoxClient.connectionType).toBe('WSS');
+            expect(firefoxClient.connectionType).toBe('WS');
             expect(firefoxClient.extensionVersion).toBeUndefined();
         });
 
@@ -216,25 +199,10 @@ describe('WSClientHandler', () => {
             expect(status.browserCounts).toEqual({ unknown: 1 });
         });
 
-        it('reports server running status based on wss/secureWss', () => {
+        it('reports server running status based on wss', () => {
             mockService.wss = {} as typeof mockService.wss;
-            const status1 = handler.getConnectionStatus();
-            expect(status1.wsServerRunning).toBe(true);
-            expect(status1.wssServerRunning).toBe(false);
-
-            mockService.secureWss = {} as typeof mockService.secureWss;
-            const status2 = handler.getConnectionStatus();
-            expect(status2.wsServerRunning).toBe(true);
-            expect(status2.wssServerRunning).toBe(true);
-        });
-
-        it('returns null certificate fields when handler is missing', () => {
-            (mockService as unknown as Record<string, unknown>).certificateHandler = undefined;
             const status = handler.getConnectionStatus();
-            expect(status.certificateFingerprint).toBeNull();
-            expect(status.certificatePath).toBeNull();
-            expect(status.certificateExpiry).toBeNull();
-            expect(status.certificateSubject).toBeNull();
+            expect(status.wsServerRunning).toBe(true);
         });
     });
 

@@ -28,7 +28,6 @@ interface ConnectionStatus {
     browserCounts: Record<string, number>;
     clients: ClientInfo[];
     wsServerRunning: boolean;
-    wssServerRunning: boolean;
 }
 
 type BrowserKey = 'chrome' | 'firefox' | 'edge' | 'safari' | 'unknown';
@@ -39,8 +38,7 @@ const BrowserConnectionStatus = () => {
         totalConnections: 0,
         browserCounts: {},
         clients: [],
-        wsServerRunning: false,
-        wssServerRunning: false
+        wsServerRunning: false
     });
     const [proxyStatus, setProxyStatus] = useState({ running: false, port: 59212 });
     const [cliStatus, setCliStatus] = useState({ running: false, port: 59213 });
@@ -147,7 +145,7 @@ const BrowserConnectionStatus = () => {
         return null;
     }
 
-    const { totalConnections, browserCounts, clients, wsServerRunning, wssServerRunning } = connectionStatus;
+    const { totalConnections, browserCounts, clients, wsServerRunning } = connectionStatus;
 
     // Build tooltip content based on developer mode
     const tooltipContent = settings?.developerMode ? (
@@ -158,11 +156,6 @@ const BrowserConnectionStatus = () => {
                     <div>
                         <Tag color={wsServerRunning ? "green" : "red"}>
                             WS Server: {wsServerRunning ? "Running" : "Stopped"}
-                        </Tag>
-                    </div>
-                    <div>
-                        <Tag color={wssServerRunning ? "green" : "red"}>
-                            WSS Server: {wssServerRunning ? "Running" : "Stopped"}
                         </Tag>
                     </div>
                     <div>
@@ -200,7 +193,7 @@ const BrowserConnectionStatus = () => {
                                     <Space size="small">
                                         {getBrowserIcon(client.browser)}
                                         <span>{getBrowserName(client.browser)} {client.browserVersion ? `v${client.browserVersion.split('.')[0]}` : ''}</span>
-                                        <Tag color={client.connectionType === 'WSS' ? 'green' : 'blue'}>
+                                        <Tag color="blue">
                                             {client.connectionType}
                                         </Tag>
                                     </Space>
@@ -216,7 +209,7 @@ const BrowserConnectionStatus = () => {
                 </>
             )}
             
-            {totalConnections === 0 && (wsServerRunning || wssServerRunning) && (
+            {totalConnections === 0 && wsServerRunning && (
                 <div className="no-connections">
                     No browser extensions connected
                 </div>

@@ -16,10 +16,7 @@ interface ConnectionStatus {
     browserCounts: Record<string, number>;
     clients: ConnectedClient[];
     wsServerRunning: boolean;
-    wssServerRunning: boolean;
     wsPort: number;
-    wssPort: number;
-    certificateFingerprint?: string;
 }
 
 /**
@@ -38,9 +35,7 @@ export const useConnectionsServer = ({ active = false } = {}) => {
         browserCounts: {},
         clients: [],
         wsServerRunning: false,
-        wssServerRunning: false,
         wsPort: 59210,
-        wssPort: 59211,
     });
 
     /**
@@ -49,7 +44,7 @@ export const useConnectionsServer = ({ active = false } = {}) => {
     const loadStatus = useCallback(async () => {
         try {
             const result = await window.electronAPI.wsGetConnectionStatus();
-            if (result) setStatus(prev => ({ ...prev, ...result, certificateFingerprint: result.certificateFingerprint ?? undefined }));
+            if (result) setStatus(prev => ({ ...prev, ...result }));
         } catch (error) {
             console.error('Failed to load WebSocket connection status:', error);
         }

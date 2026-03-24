@@ -32,17 +32,14 @@ describe('WebSocketService', () => {
     });
 
     describe('constructor', () => {
-        it('initializes with correct default ports and host', () => {
+        it('initializes with correct default port and host', () => {
             expect(service.wsPort).toBe(59210);
-            expect(service.wssPort).toBe(59211);
             expect(service.host).toBe('127.0.0.1');
         });
 
-        it('initializes all servers to null', () => {
+        it('initializes servers to null', () => {
             expect(service.wss).toBeNull();
-            expect(service.secureWss).toBeNull();
             expect(service.httpServer).toBeNull();
-            expect(service.httpsServer).toBeNull();
         });
 
         it('initializes with empty client collections', () => {
@@ -58,8 +55,6 @@ describe('WebSocketService', () => {
         });
 
         it('creates all handler instances with correct types', () => {
-            expect(service.certificateHandler).toBeDefined();
-            expect(service.certificateHandler.constructor.name).toBe('WSCertificateHandler');
             expect(service.recordingHandler).toBeDefined();
             expect(service.recordingHandler.constructor.name).toBe('WSRecordingHandler');
             expect(service.ruleHandler).toBeDefined();
@@ -100,9 +95,8 @@ describe('WebSocketService', () => {
                 id: 'WS-1709123456789-a1b2c3d4e',
                 browser: 'chrome',
             }));
-            service.connectedClients.set('WSS-1709123456790-f5g6h7i8j', makeClientInfo({
-                id: 'WSS-1709123456790-f5g6h7i8j',
-                connectionType: 'WSS',
+            service.connectedClients.set('WS-1709123456790-f5g6h7i8j', makeClientInfo({
+                id: 'WS-1709123456790-f5g6h7i8j',
                 browser: 'firefox',
             }));
             expect(service.isConnected()).toBe(true);
@@ -139,9 +133,8 @@ describe('WebSocketService', () => {
             expect(count).toBe(0);
         });
 
-        it('returns 0 when servers exist but have no clients', () => {
+        it('returns 0 when server exists but has no clients', () => {
             service.wss = { clients: new Set() } as unknown as typeof service.wss;
-            service.secureWss = { clients: new Set() } as unknown as typeof service.secureWss;
             const count = service._broadcastToAll(JSON.stringify({ type: 'test' }));
             expect(count).toBe(0);
         });
@@ -164,28 +157,22 @@ describe('WebSocketService', () => {
             expect(closedClient.send).not.toHaveBeenCalled();
         });
 
-        it('broadcasts to both WS and WSS clients', () => {
-            const wsMessages: string[] = [];
-            const wssMessages: string[] = [];
+        it('broadcasts to multiple WS clients', () => {
+            const messages: string[] = [];
 
             service.wss = {
                 clients: new Set([
-                    { readyState: 1, send: (msg: string) => wsMessages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
+                    { readyState: 1, send: (msg: string) => messages.push(msg) },
                 ])
             } as unknown as typeof service.wss;
-            service.secureWss = {
-                clients: new Set([
-                    { readyState: 1, send: (msg: string) => wssMessages.push(msg) },
-                    { readyState: 1, send: (msg: string) => wssMessages.push(msg) },
-                ])
-            } as unknown as typeof service.secureWss;
 
             const testMsg = JSON.stringify({ type: 'videoRecordingStateChanged', enabled: true });
             const count = service._broadcastToAll(testMsg);
 
             expect(count).toBe(3);
-            expect(wsMessages).toHaveLength(1);
-            expect(wssMessages).toHaveLength(2);
+            expect(messages).toHaveLength(3);
         });
 
         it('handles client send errors gracefully', () => {
@@ -244,10 +231,7 @@ describe('WebSocketService', () => {
             expect(status).toHaveProperty('browserCounts');
             expect(status).toHaveProperty('clients');
             expect(status).toHaveProperty('wsServerRunning');
-            expect(status).toHaveProperty('wssServerRunning');
             expect(status).toHaveProperty('wsPort');
-            expect(status).toHaveProperty('wssPort');
-            expect(status).toHaveProperty('certificateFingerprint');
         });
 
         it('broadcastVideoRecordingState delegates to recordingHandler', () => {

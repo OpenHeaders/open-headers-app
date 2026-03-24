@@ -387,9 +387,6 @@ function setupIPC(
 
     // WebSocket
     ipcMain.handle('ws-get-connection-status', workspaceHandlers.handleWsGetConnectionStatus.bind(workspaceHandlers));
-    ipcMain.handle('ws-check-cert-trust', workspaceHandlers.handleWsCheckCertTrust.bind(workspaceHandlers));
-    ipcMain.handle('ws-trust-cert', workspaceHandlers.handleWsTrustCert.bind(workspaceHandlers));
-    ipcMain.handle('ws-untrust-cert', workspaceHandlers.handleWsUntrustCert.bind(workspaceHandlers));
 
     // Git
     ipcMain.handle('testGitConnection', gitHandlers.handleTestGitConnection);
