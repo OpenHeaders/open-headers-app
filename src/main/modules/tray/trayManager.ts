@@ -64,9 +64,14 @@ class TrayManager {
             if (process.platform === 'darwin') {
                 log.info('macOS tray setup: clicking will only show the menu');
             } else {
-                // Windows/Linux: double-click to show app
-                this.tray.on('double-click', () => {
-                    windowManager.showWindow();
+                // Windows/Linux: single click toggles window visibility
+                this.tray.on('click', () => {
+                    const mainWindow = windowManager.getMainWindow();
+                    if (mainWindow && mainWindow.isVisible()) {
+                        windowManager.hideWindow();
+                    } else {
+                        windowManager.showWindow();
+                    }
                 });
             }
 
