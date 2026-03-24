@@ -16,19 +16,18 @@
     "dist": "electron-builder --publish never",
     "dist:all": "npm run predist && electron-builder -mwl --x64 --arm64 --publish never",
     "// Platform builds //": "",
-    "build:dmg-bg": "node scripts/build-dmg-background.js",
+    "build:dmg-bg": "node scripts/build/build-dmg-background.js",
     "dist:mac": "npm run predist && electron-builder --mac --publish never",
     "dist:mac:unsigned": "npm run predist && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never",
     "dist:win": "npm run predist:win && electron-builder --win --publish never",
     "dist:win:unsigned": "npm run predist:win && cross-env WIN_CSC_LINK='' electron-builder --win --publish never",
-    "dist:win:no-git": "npm run predist && electron-builder --win --config build/electron-builder-no-git.yml --publish never",
     "dist:linux": "npm run predist && electron-builder --linux --x64 --arm64 --publish never",
     "dist:linux:rpm:x64": "npm run predist && electron-builder --linux --x64 --config.linux.target=rpm --publish never",
     "dist:linux:rpm:arm64": "npm run predist && electron-builder --linux --arm64 --config.linux.target=rpm --publish never",
     "// Windows Git //": "",
     "predist:win": "npm run download-portable-git && npm run build:minimal-git",
-    "download-portable-git": "node build/download-portable-git.js",
-    "build:minimal-git": "node scripts/build-minimal-git.js",
+    "download-portable-git": "node scripts/build/download-portable-git.js",
+    "build:minimal-git": "node scripts/build/build-minimal-git.js",
     "// Testing //": "",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -61,8 +60,8 @@
     ],
     "asar": true,
     "compression": "maximum",
-    "afterSign": "./scripts/notarize.js",
-    "afterPack": "./scripts/afterPackHook.js",
+    "afterSign": "./scripts/build/notarize.js",
+    "afterPack": "./scripts/build/afterPackHook.js",
     "extraResources": [
       {
         "from": "dev-app-update.yml",
@@ -83,13 +82,6 @@
         "filter": [
           "*.png"
         ]
-      },
-      {
-        "from": "build/certificates",
-        "to": "certificates",
-        "filter": [
-          "*.crt"
-        ]
       }
     ],
     "asarUnpack": [
@@ -108,7 +100,7 @@
       "oneClick": true,
       "perMachine": false,
       "artifactName": "${productName}-${version}-Setup.${ext}",
-      "include": "build/installer.nsh",
+      "include": "build/windows/installer.nsh",
       "runAfterFinish": true,
       "deleteAppDataOnUninstall": true,
       "uninstallDisplayName": "OpenHeaders ${version}",
@@ -123,7 +115,7 @@
       "forceCodeSigning": false,
       "extraResources": [
         {
-          "from": "build/portable/MinimalGit",
+          "from": "build/windows/portable/MinimalGit",
           "to": "git",
           "filter": [
             "**/*"
@@ -136,8 +128,8 @@
       "icon": "build/icon.icns",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
+      "entitlements": "build/mac/entitlements.mac.plist",
+      "entitlementsInherit": "build/mac/entitlements.mac.plist",
       "type": "distribution",
       "notarize": false,
       "forceCodeSigning": false,

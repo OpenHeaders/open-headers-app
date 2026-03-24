@@ -18,8 +18,8 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 
 // Paths
-const PORTABLE_GIT_SOURCE = path.join(__dirname, '..', 'build', 'portable', 'PortableGit');
-const MINIMAL_GIT_TARGET = path.join(__dirname, '..', 'build', 'portable', 'MinimalGit');
+const PORTABLE_GIT_SOURCE = path.join(__dirname, '..', '..', 'build', 'windows', 'portable', 'PortableGit');
+const MINIMAL_GIT_TARGET = path.join(__dirname, '..', '..', 'build', 'windows', 'portable', 'MinimalGit');
 
 // Essential files and directories to copy
 const ESSENTIAL_FILES = {
@@ -317,8 +317,8 @@ Not included:
   // Update build configuration instructions
   console.log('\nTo use the minimal Git in your build:');
   console.log('1. Update package.json to use MinimalGit instead of PortableGit:');
-  console.log('   Change: "from": "build/portable/PortableGit"');
-  console.log('   To:     "from": "build/portable/MinimalGit"');
+  console.log('   Change: "from": "build/windows/portable/PortableGit"');
+  console.log('   To:     "from": "build/windows/portable/MinimalGit"');
   console.log('\n2. Test the application to ensure all Git operations work correctly.');
 }
 

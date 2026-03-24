@@ -85,8 +85,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v4
         with:
-          path: build/portable/PortableGit
-          key: portable-git-${{ hashFiles('build/download-portable-git.js') }}
+          path: build/windows/portable/PortableGit
+          key: portable-git-${{ hashFiles('scripts/build/download-portable-git.js') }}
 
       # Prepare build directory
       - name: Prepare build directory
@@ -354,13 +354,6 @@ jobs:
           done
         shell: bash
 
-      # Copy CA certificate to dist for Windows builds
-      - name: Copy CA certificate
-        if: matrix.os == 'windows-latest'
-        run: |
-          cp build/certificates/open-headers-ca.crt dist/
-        shell: bash
-
       # Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -379,7 +372,6 @@ jobs:
             dist/*-builder-debug.yml
             dist/latest*
             dist/install-open-headers.sh
-            dist/*.crt
 
   release:
     needs: build
@@ -429,7 +421,6 @@ jobs:
           # Windows files first (for latest.yml)
           if [ -d "dist/windows-latest-artifacts" ]; then
             cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
-            cp dist/windows-latest-artifacts/*.crt processed_files/ 2>/dev/null || echo "CA certificate not found"
             # Blockmap files for differential updates (if generated)
             cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
             if [ -f "dist/windows-latest-artifacts/latest.yml" ]; then

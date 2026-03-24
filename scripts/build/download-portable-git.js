@@ -14,7 +14,7 @@ function downloadAndExtractPortableGit() {
   console.log(`Running on ${process.platform}, downloading Portable Git for Windows builds...`);
 
   const gitInfo = PORTABLE_GIT.windows;
-  const downloadDir = path.join(__dirname, 'portable');
+  const downloadDir = path.join(__dirname, '..', '..', 'build', 'windows', 'portable');
   const downloadPath = path.join(downloadDir, gitInfo.filename);
   const extractPath = path.join(downloadDir, gitInfo.extractedName);
 
