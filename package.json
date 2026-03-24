@@ -254,7 +254,6 @@
       "format": "ULFO",
       "writeUpdateInfo": false,
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
-      "background": "build/dmg-background.png",
       "window": {
         "width": 540,
         "height": 380
