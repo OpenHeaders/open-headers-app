@@ -70,7 +70,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
     setGlobalLogLevel: vi.fn()
 }));
 
-// Mock atomicFileWriter
+// Mock atomicFileWriter (still used transitively by SettingsCache)
 const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
 vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
@@ -81,6 +81,39 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
         writeFile: vi.fn().mockResolvedValue(undefined)
     }
 }));
+
+// Mock SettingsCache — settingsHandlers now delegates to this singleton
+const mockSettingsGet = vi.fn<() => AppSettings>();
+const mockSettingsSave = vi.fn<(updates: Partial<AppSettings>) => Promise<AppSettings>>();
+vi.mock('../../../src/services/core/SettingsCache.js', () => {
+    const defaultSettings = {
+        launchAtLogin: true,
+        hideOnLaunch: true,
+        showDockIcon: true,
+        showStatusBarIcon: true,
+        theme: 'auto',
+        autoStartProxy: true,
+        proxyCacheEnabled: true,
+        autoHighlightTableEntries: false,
+        autoScrollTableEntries: false,
+        compactMode: false,
+        tutorialMode: true,
+        developerMode: false,
+        videoRecording: false,
+        videoQuality: 'high',
+        recordingHotkey: 'CommandOrControl+Shift+E',
+        recordingHotkeyEnabled: true,
+        logLevel: 'info',
+    };
+
+    const cache = {
+        get: (...args: unknown[]) => mockSettingsGet(...(args as [])),
+        save: (...args: unknown[]) => mockSettingsSave(...(args as [Record<string, unknown>])),
+        load: vi.fn().mockResolvedValue(defaultSettings),
+        isFirstRun: vi.fn().mockReturnValue(false),
+    };
+    return { default: cache, settingsCache: cache, DEFAULT_SETTINGS: defaultSettings, SettingsCache: vi.fn() };
+});
 
 // Mock trayManager
 vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
@@ -139,36 +172,19 @@ describe('SettingsHandlers', () => {
     });
 
     describe('handleGetSettings', () => {
-        it('returns stored settings when settings file exists', async () => {
-            const storedSettings: Partial<AppSettings> = {
-                launchAtLogin: false,
-                hideOnLaunch: false,
-                theme: 'dark',
-                autoStartProxy: false,
-                developerMode: true,
-                logLevel: 'debug'
-            };
-            mockReadJson.mockResolvedValueOnce(storedSettings);
+        it('returns settings from SettingsCache', async () => {
+            const cachedSettings = makeDefaultSettings();
+            cachedSettings.theme = 'dark';
+            cachedSettings.developerMode = true;
+            mockSettingsGet.mockReturnValue(cachedSettings);
 
             const result = await handlers.handleGetSettings();
-            expect(result).toEqual(storedSettings);
+            expect(result).toEqual(cachedSettings);
+            expect(mockSettingsGet).toHaveBeenCalled();
         });
 
-        it('returns full default settings when settings file is missing', async () => {
-            mockReadJson.mockResolvedValueOnce(null);
-
-            const result = await handlers.handleGetSettings();
-
-            expect(result).toEqual(makeDefaultSettings());
-            expect(mockWriteJson).toHaveBeenCalledWith(
-                expect.stringContaining('settings.json'),
-                makeDefaultSettings(),
-                { pretty: true }
-            );
-        });
-
-        it('default settings have correct boolean values', async () => {
-            mockReadJson.mockResolvedValueOnce(null);
+        it('returns default settings when cache has defaults', async () => {
+            mockSettingsGet.mockReturnValue(makeDefaultSettings());
 
             const result = await handlers.handleGetSettings();
             const settings = result as AppSettings;
@@ -185,14 +201,6 @@ describe('SettingsHandlers', () => {
             expect(settings.tutorialMode).toBe(true);
             expect(settings.developerMode).toBe(false);
             expect(settings.videoRecording).toBe(false);
-        });
-
-        it('default settings have correct non-boolean values', async () => {
-            mockReadJson.mockResolvedValueOnce(null);
-
-            const result = await handlers.handleGetSettings();
-            const settings = result as AppSettings;
-
             expect(settings.theme).toBe('auto');
             expect(settings.videoQuality).toBe('high');
             expect(settings.recordingHotkey).toBe('CommandOrControl+Shift+E');
@@ -200,32 +208,33 @@ describe('SettingsHandlers', () => {
             expect(settings.logLevel).toBe('info');
         });
 
-        it('throws on filesystem error', async () => {
-            mockReadJson.mockRejectedValueOnce(new Error('EACCES: permission denied'));
+        it('throws when cache is not loaded', async () => {
+            mockSettingsGet.mockImplementation(() => {
+                throw new Error('SettingsCache.get() called before load()');
+            });
 
-            await expect(handlers.handleGetSettings()).rejects.toThrow('EACCES: permission denied');
+            await expect(handlers.handleGetSettings()).rejects.toThrow('SettingsCache.get() called before load()');
         });
     });
 
     describe('handleSaveSettings', () => {
-        it('saves partial settings atomically and returns success', async () => {
+        it('saves partial settings via SettingsCache and returns success', async () => {
             const partialSettings: Partial<AppSettings> = {
                 theme: 'dark',
                 compactMode: true,
                 developerMode: true
             };
+            mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings(), ...partialSettings });
 
             const result = await handlers.handleSaveSettings(mockEvent, partialSettings);
 
             expect(result).toEqual({ success: true });
-            expect(mockWriteJson).toHaveBeenCalledWith(
-                expect.stringContaining('settings.json'),
+            expect(mockSettingsSave).toHaveBeenCalledWith(
                 expect.objectContaining({
                     theme: 'dark',
                     compactMode: true,
                     developerMode: true
-                }),
-                { pretty: true }
+                })
             );
         });
 
@@ -235,17 +244,18 @@ describe('SettingsHandlers', () => {
                 showDockIcon: 0,
                 developerMode: ''
             } as unknown as Partial<AppSettings>;
+            mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings() });
 
             await handlers.handleSaveSettings(mockEvent, settings);
 
-            const savedData = mockWriteJson.mock.calls[0][1] as Record<string, unknown>;
+            const savedData = mockSettingsSave.mock.calls[0][0] as Record<string, unknown>;
             expect(savedData.hideOnLaunch).toBe(true);
             expect(savedData.showDockIcon).toBe(false);
             expect(savedData.developerMode).toBe(false);
         });
 
         it('returns error result on write failure', async () => {
-            mockWriteJson.mockRejectedValueOnce(new Error('ENOSPC: no space left on device'));
+            mockSettingsSave.mockRejectedValueOnce(new Error('ENOSPC: no space left on device'));
 
             const result = await handlers.handleSaveSettings(mockEvent, { theme: 'light' });
 
@@ -256,6 +266,8 @@ describe('SettingsHandlers', () => {
         });
 
         it('accepts null event for programmatic saves', async () => {
+            mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings(), autoStartProxy: false });
+
             const result = await handlers.handleSaveSettings(null, { autoStartProxy: false });
             expect(result).toEqual({ success: true });
         });

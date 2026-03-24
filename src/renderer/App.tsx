@@ -10,7 +10,6 @@ import { useSettings, useNavigation, useRefreshManager, useWorkspaceSwitch } fro
 import { useWorkspaceSwitchIntegration } from './hooks/useWorkspaceSwitchIntegration';
 import { showMessage } from './utils';
 import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
-import { CompleteWorkspaceSkeleton } from './components/common/skeletons/WorkspaceSkeleton';
 import TeamWorkspaceAcceptInviteModal from './components/modals/TeamWorkspaceAcceptInviteModal';
 import type { TeamWorkspaceInvite } from '../types/workspace';
 import type { AppSettings } from '../types/settings';
@@ -29,32 +28,8 @@ const AppComponent: React.FC = () => {
 
     const { workspaces, activeWorkspaceId, createWorkspace, switchWorkspace } = useWorkspaces();
 
-    // App initialization state
+    // App initialization state — used for skeleton → content transition
     const { isReady } = useCentralizedWorkspace();
-    const [startupTimerCompleted, setStartupTimerCompleted] = useState(false);
-
-    // Start minimum 1 second timer when React mounts
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            setStartupTimerCompleted(true);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Hide CSS overlay only when both app is ready AND minimum 1 second has passed
-    useEffect(() => {
-        if (isReady && startupTimerCompleted) {
-            const initialOverlay = document.getElementById('initial-loading-overlay');
-            if (initialOverlay) {
-                initialOverlay.classList.add('hidden');
-                // Remove it completely after fade animation
-                setTimeout(() => {
-                    initialOverlay.remove();
-                }, 300);
-            }
-        }
-    }, [isReady, startupTimerCompleted]);
 
 
     // Workspace switching UX
@@ -104,7 +79,6 @@ const AppComponent: React.FC = () => {
 
     // Import/Export hook
     const {
-        loading,
         exportModalVisible,
         importModalVisible,
         showExportModal,
@@ -279,22 +253,22 @@ const AppComponent: React.FC = () => {
         };
     }, [handleEnvironmentConfigImport, setActiveTab]);
 
+    // Show skeletons during initial load OR workspace switching
+    const showSkeletons = !isReady || switchState.switching;
+
     return (
         <>
-            {/* Main App Layout */}
-            {switchState.switching ? (
-                <div style={{
-                    position: 'relative',
-                    filter: 'blur(2px)',
-                    pointerEvents: 'none',
-                    opacity: 0.6,
-                    transition: 'all 0.3s ease'
-                }}>
-                    <CompleteWorkspaceSkeleton />
-                </div>
-            ) : (
+            {/* Main App Layout — always rendered (shell-first) */}
+            <div style={switchState.switching ? {
+                position: 'relative',
+                filter: 'blur(2px)',
+                pointerEvents: 'none',
+                opacity: 0.6,
+                transition: 'all 0.3s ease'
+            } : undefined}>
                 <AppLayout
                     // App state
+                    isReady={!showSkeletons}
                     appVersion={appVersion}
                     activeTab={activeTab}
                     tabScrollPositions={tabScrollPositions}
@@ -307,7 +281,6 @@ const AppComponent: React.FC = () => {
                     currentRecord={currentRecord}
                     recordPlaybackTime={recordPlaybackTime}
                     autoHighlight={autoHighlight}
-                    loading={loading}
                     settings={settings}
                     sources={sources}
                     // Event handlers
@@ -331,7 +304,7 @@ const AppComponent: React.FC = () => {
                     onExportModalCancel={() => setExportModalVisible(false)}
                     onImportModalCancel={() => {
                         setImportModalVisible(false);
-                        setPreloadedEnvData(null); // Clear preloaded data
+                        setPreloadedEnvData(null);
                     }}
                     onHandleExport={(config) => { handleExport(config as Parameters<typeof handleExport>[0]); }}
                     onHandleImport={(data) => handleImport(data as Parameters<typeof handleImport>[0])}
@@ -339,7 +312,7 @@ const AppComponent: React.FC = () => {
                     // Refs
                     updateNotificationRef={updateNotificationRef}
                 />
-            )}
+            </div>
 
             {/* Workspace Switch Overlay */}
             <WorkspaceSwitchOverlay

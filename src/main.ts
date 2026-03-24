@@ -1,4 +1,4 @@
-// Electron main process
+// Electron main process — phased startup for fast window display
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType, IpcMainInvokeEvent, IpcMainEvent, MenuItemConstructorOptions } from 'electron';
 import fs from 'fs';
@@ -6,35 +6,17 @@ import path from 'path';
 import mainLogger from './utils/mainLogger';
 import { errorMessage } from './types/common';
 import type { Source } from './types/source';
+import settingsCache from './services/core/SettingsCache';
 
 const { app, ipcMain, Menu, shell } = electron;
 const { createLogger } = mainLogger;
 
-// Core modules
-import appLifecycle from './main/modules/app/lifecycle';
-import windowManager from './main/modules/window/windowManager';
-import trayManager from './main/modules/tray/trayManager';
-import networkHandlers from './main/modules/network/networkHandlers';
-import autoUpdater from './main/modules/updater/autoUpdater';
+// Only import modules needed before app.whenReady()
 import protocolHandler from './main/modules/protocol/protocolHandler';
-import globalShortcuts from './main/modules/shortcuts/globalShortcuts';
-
-// IPC handlers
-import fileHandlers from './main/modules/ipc/handlers/fileHandlers';
-import storageHandlers from './main/modules/ipc/handlers/storageHandlers';
-import settingsHandlers from './main/modules/ipc/handlers/settingsHandlers';
-import systemHandlers from './main/modules/ipc/handlers/systemHandlers';
-import httpHandlers from './main/modules/ipc/handlers/httpHandlers';
-import recordingHandlers from './main/modules/ipc/handlers/recordingHandlers';
-import proxyHandlers from './main/modules/ipc/handlers/proxyHandlers';
-import workspaceHandlers from './main/modules/ipc/handlers/workspaceHandlers';
-import gitHandlers from './main/modules/ipc/handlers/gitHandlers';
 
 const log = createLogger('Main');
 
 let mainWindow: BrowserWindowType | null = null;
-
-// Windows focus helper is initialized and will handle focus enhancement automatically
 
 // Allow E2E tests to use an isolated userData dir so the single-instance lock
 // doesn't conflict with a running dev/prod instance. This must happen BEFORE
@@ -61,414 +43,192 @@ if (!gotTheLock) {
     protocolHandler.setupProtocol();
     protocolHandler.setupProtocolHandlers();
 
-    // Handle dock icon visibility early for macOS
-    if (process.platform === 'darwin') {
-        appLifecycle.setupEarlyDockVisibility().catch((err: Error) =>
-            log.error('Failed to setup early dock visibility:', err)
-        );
-    }
+    // ─── PHASE A: Critical path (before window) ─────────────────────────
+    // Load settings ONCE, apply log level, dock visibility, register startup IPC.
+    // Everything the renderer needs at module-load time is prepared here.
 
-    // Setup all IPC communication handlers
-    function setupIPC() {
-        // File operations
-        ipcMain.handle('openFileDialog', fileHandlers.handleOpenFileDialog);
-        ipcMain.handle('saveFileDialog', fileHandlers.handleSaveFileDialog);
-        ipcMain.handle('readFile', fileHandlers.handleReadFile);
-        ipcMain.handle('writeFile', fileHandlers.handleWriteFile);
-        ipcMain.handle('watchFile', fileHandlers.handleWatchFile);
-        ipcMain.handle('unwatchFile', fileHandlers.handleUnwatchFile);
-        ipcMain.handle('openRecordFile', fileHandlers.handleOpenRecordFile);
-        ipcMain.handle('getResourcePath', fileHandlers.handleGetResourcePath);
-        ipcMain.handle('getEnvVariable', fileHandlers.handleGetEnvVariable);
-        ipcMain.handle('getAppPath', fileHandlers.handleGetAppPath);
-
-        // Storage
-        ipcMain.handle('saveToStorage', storageHandlers.handleSaveToStorage);
-        ipcMain.handle('loadFromStorage', storageHandlers.handleLoadFromStorage);
-        ipcMain.handle('deleteFromStorage', storageHandlers.handleDeleteFromStorage);
-        ipcMain.handle('deleteDirectory', storageHandlers.handleDeleteDirectory);
-
-        // Settings
-        ipcMain.handle('saveSettings', settingsHandlers.handleSaveSettings);
-        ipcMain.handle('getSettings', settingsHandlers.handleGetSettings);
-        ipcMain.handle('setAutoLaunch', settingsHandlers.handleSetAutoLaunch);
-        ipcMain.handle('openExternal', settingsHandlers.handleOpenExternal);
-
-        // System
-        ipcMain.handle('getSystemTimezone', systemHandlers.handleGetSystemTimezone);
-        ipcMain.handle('checkScreenRecordingPermission', systemHandlers.handleCheckScreenRecordingPermission);
-        ipcMain.handle('requestScreenRecordingPermission', systemHandlers.handleRequestScreenRecordingPermission);
-        ipcMain.handle('getAppVersion', () => app.getVersion());
-        ipcMain.handle('showItemInFolder', systemHandlers.handleShowItemInFolder.bind(systemHandlers));
-        ipcMain.handle('openAppPath', systemHandlers.handleOpenAppPath.bind(systemHandlers));
-
-        // Global shortcuts
-        ipcMain.handle('disableRecordingHotkey', () => globalShortcuts.disableHotkey());
-        ipcMain.handle('enableRecordingHotkey', () => globalShortcuts.enableHotkey());
-
-        // Network
-        ipcMain.handle('checkNetworkConnectivity', networkHandlers.checkNetworkConnectivity);
-        ipcMain.handle('getNetworkState', networkHandlers.getNetworkState);
-        ipcMain.handle('forceNetworkCheck', networkHandlers.forceNetworkCheck);
-        ipcMain.handle('getSystemState', networkHandlers.getSystemState);
-        ipcMain.handle('makeHttpRequest', httpHandlers.handleMakeHttpRequest);
-
-        // Recording
-        ipcMain.handle('loadRecordings', recordingHandlers.handleLoadRecordings);
-        ipcMain.handle('loadRecording', recordingHandlers.handleLoadRecording);
-        ipcMain.handle('saveRecording', recordingHandlers.handleSaveRecording);
-        ipcMain.handle('saveUploadedRecording', recordingHandlers.handleSaveUploadedRecording);
-        ipcMain.handle('deleteRecording', recordingHandlers.handleDeleteRecording);
-        ipcMain.handle('downloadRecording', recordingHandlers.handleDownloadRecording);
-        ipcMain.handle('updateRecordingMetadata', recordingHandlers.handleUpdateRecordingMetadata);
-
-        // Proxy
-        ipcMain.handle('proxy-start', proxyHandlers.handleProxyStart);
-        ipcMain.handle('proxy-stop', proxyHandlers.handleProxyStop);
-        ipcMain.handle('proxy-status', proxyHandlers.handleProxyStatus);
-        ipcMain.handle('proxy-get-rules', proxyHandlers.handleProxyGetRules);
-        ipcMain.handle('proxy-save-rule', proxyHandlers.handleProxySaveRule);
-        ipcMain.handle('proxy-delete-rule', proxyHandlers.handleProxyDeleteRule);
-        ipcMain.handle('proxy-clear-cache', proxyHandlers.handleProxyClearCache);
-        ipcMain.handle('proxy-get-cache-stats', proxyHandlers.handleProxyGetCacheStats);
-        ipcMain.handle('proxy-get-cache-entries', proxyHandlers.handleProxyGetCacheEntries);
-        ipcMain.handle('proxy-set-cache-enabled', proxyHandlers.handleProxySetCacheEnabled);
-        ipcMain.handle('proxy-update-header-rules', proxyHandlers.handleProxyUpdateHeaderRules);
-        ipcMain.handle('proxyClearRules', proxyHandlers.handleProxyClearRules);
-        ipcMain.handle('proxy-set-strict-ssl', proxyHandlers.handleProxySetStrictSSL);
-        ipcMain.handle('proxy-add-trusted-certificate', proxyHandlers.handleProxyAddTrustedCertificate);
-        ipcMain.handle('proxy-remove-trusted-certificate', proxyHandlers.handleProxyRemoveTrustedCertificate);
-        ipcMain.handle('proxy-add-certificate-exception', proxyHandlers.handleProxyAddCertificateException);
-        ipcMain.handle('proxy-remove-certificate-exception', proxyHandlers.handleProxyRemoveCertificateException);
-        ipcMain.handle('proxy-get-certificate-info', proxyHandlers.handleProxyGetCertificateInfo);
-
-        // WebSocket
-        ipcMain.handle('ws-get-connection-status', workspaceHandlers.handleWsGetConnectionStatus.bind(workspaceHandlers));
-        ipcMain.handle('ws-check-cert-trust', workspaceHandlers.handleWsCheckCertTrust.bind(workspaceHandlers));
-        ipcMain.handle('ws-trust-cert', workspaceHandlers.handleWsTrustCert.bind(workspaceHandlers));
-        ipcMain.handle('ws-untrust-cert', workspaceHandlers.handleWsUntrustCert.bind(workspaceHandlers));
-
-        // Git
-        ipcMain.handle('testGitConnection', gitHandlers.handleTestGitConnection);
-        ipcMain.handle('getGitStatus', gitHandlers.handleGetGitStatus);
-        ipcMain.handle('installGit', gitHandlers.handleInstallGit);
-        ipcMain.handle('syncGitWorkspace', gitHandlers.handleSyncGitWorkspace);
-        ipcMain.handle('cleanupGitRepository', gitHandlers.handleCleanupGitRepository);
-        ipcMain.handle('commitConfiguration', gitHandlers.handleCommitConfiguration);
-        ipcMain.handle('createBranch', gitHandlers.handleCreateBranch);
-        ipcMain.handle('checkWritePermissions', gitHandlers.handleCheckWritePermissions);
-
-        // CLI API
-        ipcMain.handle('cli-api-status', () => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (!cliApiService) return { running: false, port: 59213, discoveryPath: '', token: '', startedAt: null, totalRequests: 0 };
-            return cliApiService.getStatus();
-        });
-        ipcMain.handle('cli-api-start', async (_event: IpcMainInvokeEvent, port: number) => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
-            try {
-                if (port) cliApiService.port = Number(port);
-                await cliApiService.start();
-                return { success: true, port: cliApiService.port };
-            } catch (err: unknown) {
-                return { success: false, error: errorMessage(err) };
-            }
-        });
-        ipcMain.handle('cli-api-stop', async () => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
-            try {
-                await cliApiService.stop();
-                return { success: true };
-            } catch (err: unknown) {
-                return { success: false, error: errorMessage(err) };
-            }
-        });
-        ipcMain.handle('cli-api-get-logs', () => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (!cliApiService) return [];
-            return cliApiService.getLogs();
-        });
-        ipcMain.handle('cli-api-clear-logs', () => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (cliApiService) cliApiService.clearLogs();
-            return { success: true };
-        });
-        ipcMain.handle('cli-api-regenerate-token', async () => {
-            const cliApiService = appLifecycle.getCliApiService();
-            if (!cliApiService) return { success: false, error: 'CLI API service not available' };
-            try {
-                const token = await cliApiService.regenerateToken();
-                return { success: true, token };
-            } catch (err: unknown) {
-                return { success: false, error: errorMessage(err) };
-            }
-        });
-
-        // Workspace
-        ipcMain.handle('deleteWorkspaceFolder', workspaceHandlers.handleDeleteWorkspaceFolder.bind(workspaceHandlers));
-        ipcMain.handle('workspace-test-connection', workspaceHandlers.handleWorkspaceTestConnection.bind(workspaceHandlers));
-        ipcMain.handle('workspace-sync', workspaceHandlers.handleWorkspaceSync.bind(workspaceHandlers));
-        ipcMain.handle('workspace-sync-all', workspaceHandlers.handleWorkspaceSyncAll.bind(workspaceHandlers));
-        ipcMain.handle('workspace-get-sync-status', workspaceHandlers.handleWorkspaceGetSyncStatus.bind(workspaceHandlers));
-        ipcMain.handle('workspace-auto-sync-enabled', workspaceHandlers.handleWorkspaceAutoSyncEnabled.bind(workspaceHandlers));
-        ipcMain.handle('workspace-open-folder', workspaceHandlers.handleWorkspaceOpenFolder.bind(workspaceHandlers));
-        ipcMain.handle('services-health-check', workspaceHandlers.handleServicesHealthCheck.bind(workspaceHandlers));
-        ipcMain.handle('initializeWorkspaceSync', workspaceHandlers.handleInitializeWorkspaceSync.bind(workspaceHandlers));
-        ipcMain.handle('deleteWorkspace', workspaceHandlers.handleDeleteWorkspace.bind(workspaceHandlers));
-        ipcMain.handle('generate-team-workspace-invite', workspaceHandlers.handleGenerateTeamWorkspaceInvite.bind(workspaceHandlers));
-        ipcMain.handle('generate-environment-config-link', workspaceHandlers.handleGenerateEnvironmentConfigLink.bind(workspaceHandlers));
-
-        // Updates
-        ipcMain.on('check-for-updates', autoUpdater.handleManualUpdateCheck.bind(autoUpdater));
-        ipcMain.on('install-update', autoUpdater.installUpdate.bind(autoUpdater));
-
-        // Window management
-        ipcMain.on('showMainWindow', () => windowManager.showWindow());
-        ipcMain.on('hideMainWindow', () => windowManager.hideWindow());
-        ipcMain.on('minimizeWindow', () => windowManager.minimizeWindow());
-        ipcMain.on('maximizeWindow', () => windowManager.maximizeWindow());
-        ipcMain.on('closeWindow', () => windowManager.closeWindow());
-        ipcMain.on('quitApp', () => {
-            appLifecycle.setQuitting(true);
-            windowManager.sendToWindow('quitApp');
-            app.quit();
-        });
-        ipcMain.on('restartApp', () => {
-            if (!autoUpdater.updateDownloaded) {
-                app.relaunch();
-            }
-            app.quit();
-        });
-
-        // Renderer ready signal
-        ipcMain.on('renderer-ready', () => {
-            log.info('Renderer signaled that it is ready');
-            protocolHandler.setRendererReady();
-        });
-
-        // Runtime updates
-        ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Source[]) => {
-            const webSocketService = (await import('./services/websocket/ws-service')).default;
-            log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
-            if (sources && sources.length > 0) {
-                log.info(`Main: Sources with content: ${sources.filter((s) => s.sourceContent).length}`);
-                sources.forEach((source) => {
-                    log.info(`  Main: Source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
-                });
-            }
-            webSocketService.updateSources(sources);
-        });
-
-        ipcMain.on('proxy-update-source', async (_event: IpcMainEvent, sourceId: string, value: string) => {
-            const proxyService = (await import('./services/proxy/ProxyService')).default;
-            proxyService.updateSource(sourceId, value);
-        });
-
-        ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Source[]) => {
-            const proxyService = (await import('./services/proxy/ProxyService')).default;
-            if (Array.isArray(sources)) {
-                proxyService.updateSources(sources);
-            }
-        });
-
-        // Workspace events
-        ipcMain.on('workspace-switched', workspaceHandlers.handleWorkspaceSwitched.bind(workspaceHandlers));
-        ipcMain.on('workspace-updated', workspaceHandlers.handleWorkspaceUpdated.bind(workspaceHandlers));
-
-        // Environment events - notify WebSocket service when environments change
-        ipcMain.on('environment-switched', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-            const proxyService = (await import('./services/proxy/ProxyService')).default;
-            log.info('Environment switched, notifying proxy service');
-            // Update proxy service with new environment variables
-            if (data && data.variables) {
-                proxyService.updateEnvironmentVariables(data.variables);
-            }
-
-            // Re-load sources since they might have environment-dependent values
-            try {
-                // Get current workspace
-                const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
-                const workspacesData = await fs.promises.readFile(workspacesPath, 'utf8');
-                const { activeWorkspaceId } = JSON.parse(workspacesData);
-
-                if (activeWorkspaceId) {
-                    const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
-                    const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                    const sources = JSON.parse(sourcesData);
-                    if (Array.isArray(sources)) {
-                        proxyService.updateSources(sources);
-                        log.info(`Re-loaded ${sources.length} sources after environment switch`);
-                    }
-                }
-            } catch (error: unknown) {
-                log.warn('Could not re-load sources after environment switch:', errorMessage(error));
-            }
-
-            // Rules re-broadcast is handled by ws-environment-handler's IPC listener
-        });
-
-        ipcMain.on('environment-variables-changed', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-            const proxyService = (await import('./services/proxy/ProxyService')).default;
-            log.info('Environment variables changed, notifying proxy service');
-            // Update proxy service with new environment variables
-            if (data && data.variables) {
-                proxyService.updateEnvironmentVariables(data.variables);
-            }
-            // Rules re-broadcast is handled by ws-environment-handler's IPC listener
-        });
-    }
-
-    // Initialize app when Electron is ready
     app.whenReady().then(async () => {
-        await appLifecycle.initializeApp();
+        // Load settings from disk once — all subsequent reads use the cache
+        const settings = await settingsCache.load();
 
-        await proxyHandlers.autoStartProxy();
+        log.info(`App started at ${new Date().toISOString()}`);
+        log.info(`App version: ${app.getVersion()}`);
 
-        setupIPC();
-
-        mainWindow = windowManager.createWindow();
-
-        // Store window reference for protocol handler
-        protocolHandler.setMainWindow(mainWindow!);
-
-        // Pass window reference to CLI API service for renderer notifications
-        const cliApiService = appLifecycle.getCliApiService();
-        if (cliApiService && mainWindow) {
-            cliApiService.setMainWindow(mainWindow);
+        // Apply log level from cached settings
+        if (settings.logLevel) {
+            const { setGlobalLogLevel } = await import('./utils/mainLogger');
+            setGlobalLogLevel(settings.logLevel);
         }
 
-        trayManager.createTray();
-
-        // Custom application menu — applied on ALL platforms.
-        // Controls which keyboard shortcuts are available (no Reload, no DevTools).
-        // On Windows/Linux the menu bar is hidden (autoHideMenuBar) but shortcuts still work.
-        const isMac = process.platform === 'darwin';
-
-        const openSettings = () => {
-            windowManager.showWindow();
-            setTimeout(() => {
-                windowManager.sendToWindow('navigate-to', { tab: 'settings' });
-            }, 300);
-        };
-
-        const openUpdateCheck = () => {
-            windowManager.showWindow();
-            setTimeout(() => {
-                windowManager.sendToWindow('trigger-update-check');
-            }, 300);
-        };
-
-        const appMenuTemplate = [
-            // macOS app menu (About, Check for Updates, Settings, Services, Hide, Quit)
-            ...(isMac ? [{
-                label: app.getName(),
-                submenu: [
-                    { label: `About ${app.getName()}`, click: () => app.showAboutPanel() },
-                    { label: 'Check for Updates...', click: openUpdateCheck },
-                    { type: 'separator' },
-                    { label: 'Settings...', accelerator: 'Cmd+,', click: openSettings },
-                    { type: 'separator' },
-                    { role: 'services' },
-                    { type: 'separator' },
-                    { role: 'hide' },
-                    { role: 'hideOthers' },
-                    { role: 'unhide' },
-                    { type: 'separator' },
-                    { role: 'quit' }
-                ]
-            }] : []),
-            // File menu
-            {
-                label: 'File',
-                submenu: [
-                    ...(!isMac ? [
-                        { label: 'Settings', accelerator: 'Ctrl+,', click: openSettings },
-                        { label: 'Check for Updates...', click: openUpdateCheck },
-                        { type: 'separator' },
-                    ] : []),
-                    isMac ? { role: 'close' } : { role: 'quit' }
-                ]
-            },
-            // Edit menu (curated — no Substitutions, Speech, Writing Tools, etc.)
-            {
-                label: 'Edit',
-                submenu: [
-                    { role: 'undo' },
-                    { role: 'redo' },
-                    { type: 'separator' },
-                    { role: 'cut' },
-                    { role: 'copy' },
-                    { role: 'paste' },
-                    { role: 'selectAll' }
-                ]
-            },
-            // View menu
-            {
-                label: 'View',
-                submenu: [
-                    { role: 'resetZoom', label: 'Actual Size' },
-                    { role: 'zoomIn' },
-                    { role: 'zoomOut' },
-                    { type: 'separator' },
-                    { role: 'togglefullscreen' },
-                    ...(!app.isPackaged ? [
-                        { type: 'separator' as const },
-                        { role: 'toggleDevTools' as const },
-                        { role: 'reload' as const },
-                        { role: 'forceReload' as const }
-                    ] : [])
-                ]
-            },
-            // Window menu (standard)
-            { role: 'windowMenu' },
-            // Help menu
-            {
-                label: 'Help',
-                submenu: [
-                    {
-                        label: 'Documentation',
-                        click: () => shell.openExternal('https://openheaders.io')
-                    },
-                    {
-                        label: 'Report an Issue',
-                        click: () => shell.openExternal('https://github.com/OpenHeaders/open-headers-app/issues')
-                    }
-                ]
+        // macOS dock visibility (uses cached settings, no disk read)
+        if (process.platform === 'darwin' && app.dock) {
+            if (!settings.showDockIcon) {
+                app.dock.hide();
+            } else {
+                await app.dock.show();
             }
-        ];
-        Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate as MenuItemConstructorOptions[]));
+        }
 
-        await networkHandlers.initializeNetworkService();
-        networkHandlers.setupNativeMonitoring();
+        // First-run auto-launch setup (uses cached settings — SettingsCache already
+        // created the default settings file if it didn't exist)
+        if (settingsCache.isFirstRun()) {
+            log.info('First run detected, enabling auto-launch');
+            try {
+                const AutoLaunch = (await import('auto-launch')).default;
+                const args = process.platform === 'win32'
+                    ? ['--hidden', '--autostart']
+                    : ['--hidden'];
+                const autoLauncher = new AutoLaunch({
+                    name: app.getName(),
+                    path: app.getPath('exe'),
+                    args,
+                    isHidden: true
+                });
+                await autoLauncher.enable();
+                log.info('Auto-launch enabled for first-time user');
+            } catch (autoLaunchError) {
+                log.error('Error setting up auto-launch:', autoLaunchError);
+            }
+            (globalThis as typeof globalThis & { isFirstRun?: boolean }).isFirstRun = true;
+        }
 
-        autoUpdater.setupAutoUpdater();
-
-        // Initialize global shortcuts
-        await globalShortcuts.initialize(app);
-
-        const { AppStateMachine } = await import('./services/core/AppStateMachine');
-        const proxyService = (await import('./services/proxy/ProxyService')).default;
-        const webSocketService = (await import('./services/websocket/ws-service')).default;
-
-        AppStateMachine.serversReady({
-            proxy: proxyService.getStatus(),
-            websocket: webSocketService.getConnectionStatus()
+        // Synchronous IPC: provides settings to preload script instantly (no async round-trip).
+        // This must be registered BEFORE window creation so the preload can call it.
+        ipcMain.on('get-startup-data', (event) => {
+            event.returnValue = {
+                settings: settingsCache.get(),
+                platform: process.platform,
+                version: app.getVersion(),
+                isPackaged: app.isPackaged,
+            };
         });
 
-        log.info('Application initialization complete. State:', AppStateMachine.getStateSummary());
+        // ─── PHASE B: Window + IPC (user sees the app shell) ────────────────
+        // Create the window FIRST, then register IPC handlers.
+        // The renderer loads HTML/JS and renders the themed shell immediately
+        // using window.startupData (no async IPC needed for first paint).
+
+        // Import modules needed for IPC and window
+        const [
+            windowManager,
+            trayManager,
+            appLifecycle,
+            globalShortcuts,
+            autoUpdater,
+            networkHandlers,
+            fileHandlers,
+            storageHandlers,
+            settingsHandlers,
+            systemHandlers,
+            httpHandlers,
+            recordingHandlers,
+            proxyHandlers,
+            workspaceHandlers,
+            gitHandlers,
+        ] = await Promise.all([
+            import('./main/modules/window/windowManager').then(m => m.default),
+            import('./main/modules/tray/trayManager').then(m => m.default),
+            import('./main/modules/app/lifecycle').then(m => m.default),
+            import('./main/modules/shortcuts/globalShortcuts').then(m => m.default),
+            import('./main/modules/updater/autoUpdater').then(m => m.default),
+            import('./main/modules/network/networkHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/fileHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/storageHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/settingsHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/systemHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/httpHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/recordingHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/proxyHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/workspaceHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/gitHandlers').then(m => m.default),
+        ]);
+
+        // Register ALL IPC handlers before creating the window.
+        // This ensures the renderer's first IPC calls (settings, storage) get responses.
+        setupIPC(
+            fileHandlers, storageHandlers, settingsHandlers, systemHandlers,
+            httpHandlers, recordingHandlers, proxyHandlers, workspaceHandlers,
+            gitHandlers, appLifecycle, autoUpdater, globalShortcuts,
+            networkHandlers, windowManager, protocolHandler
+        );
+
+        // Create window — renderer starts loading immediately
+        mainWindow = windowManager.createWindow(settings);
+        protocolHandler.setMainWindow(mainWindow!);
+
+        // Tray + Menu (fast, non-blocking)
+        trayManager.createTray();
+        setupMenu(windowManager);
+
+        // ─── PHASE C: Background services (non-blocking) ───────────────────
+        // Services initialize in the background. The renderer shows skeletons
+        // until workspace data is loaded via IPC.
+
+        const backgroundInit = async () => {
+            try {
+                await appLifecycle.initializeApp();
+
+                await proxyHandlers.autoStartProxy();
+
+                // Pass window reference to CLI API service
+                const cliApiService = appLifecycle.getCliApiService();
+                if (cliApiService && mainWindow) {
+                    cliApiService.setMainWindow(mainWindow);
+                }
+
+                await networkHandlers.initializeNetworkService();
+                networkHandlers.setupNativeMonitoring();
+
+                autoUpdater.setupAutoUpdater();
+                await globalShortcuts.initialize(app);
+
+                const { AppStateMachine } = await import('./services/core/AppStateMachine');
+                const proxyService = (await import('./services/proxy/ProxyService')).default;
+                const webSocketService = (await import('./services/websocket/ws-service')).default;
+
+                AppStateMachine.serversReady({
+                    proxy: proxyService.getStatus(),
+                    websocket: webSocketService.getConnectionStatus()
+                });
+
+                log.info('Application initialization complete. State:', AppStateMachine.getStateSummary());
+            } catch (err) {
+                log.error('Background initialization failed:', err);
+            }
+        };
+
+        // Fire and forget — do not block the window
+        backgroundInit().catch((err: Error) => log.error('Background init error:', err));
 
         // macOS: Show window when dock icon clicked
         app.on('activate', () => {
             if (windowManager.getAllWindows().length === 0) {
-                mainWindow = windowManager.createWindow();
+                mainWindow = windowManager.createWindow(settingsCache.get());
                 protocolHandler.setMainWindow(mainWindow!);
                 const cliApi = appLifecycle.getCliApiService();
                 if (cliApi && mainWindow) cliApi.setMainWindow(mainWindow);
             } else {
                 windowManager.showWindow();
             }
+        });
+
+        // ─── Quit lifecycle ─────────────────────────────────────────────────
+
+        app.on('before-quit', (event) => {
+            if (appLifecycle.isCleanupDone()) return;
+
+            event.preventDefault();
+            globalShortcuts.cleanup();
+            appLifecycle.beforeQuit().then(() => {
+                if (autoUpdater.updateDownloaded) {
+                    autoUpdater.installUpdate();
+                    return;
+                }
+                app.exit(0);
+            }).catch((err: Error) => {
+                log.error('Cleanup failed during quit, forcing exit:', err);
+                app.exit(1);
+            });
         });
     });
 
@@ -485,35 +245,25 @@ if (!gotTheLock) {
     // Handle protocol URLs passed as command line arguments on first launch
     let protocolUrl: string | null = null;
 
-    // Try multiple methods to find the protocol URL
     for (const arg of process.argv) {
-        // Direct protocol URL
         if (arg.startsWith('openheaders://')) {
             protocolUrl = arg;
             break;
         }
-        // URL without protocol prefix (Windows sometimes strips it)
         if (arg.includes('open?')) {
-            if (!arg.startsWith('openheaders://')) {
-                protocolUrl = 'openheaders://' + arg;
-            } else {
-                protocolUrl = arg;
-            }
+            protocolUrl = arg.startsWith('openheaders://') ? arg : 'openheaders://' + arg;
             break;
         }
-        // Check if it's a base64 encoded parameter (Windows edge case)
         if (arg.match(/^[A-Za-z0-9+/]+=*$/) && arg.length > 50) {
             try {
                 const decoded = atob(arg);
                 const parsed = JSON.parse(decoded);
-
-                // Check for unified format
                 if (parsed.action && parsed.version && parsed.data) {
                     log.info('Found base64 encoded unified payload, reconstructing URL');
                     protocolUrl = `openheaders://open?payload=${arg}`;
                     break;
                 }
-            } catch (e) {
+            } catch {
                 // Not a valid base64 JSON, continue
             }
         }
@@ -521,8 +271,6 @@ if (!gotTheLock) {
 
     if (protocolUrl) {
         log.info('Found protocol URL in initial argv:', protocolUrl);
-
-        // Validate the URL first
         const validation = protocolHandler.validateProtocolUrl(protocolUrl);
         if (!validation.valid) {
             log.error('Invalid protocol URL in initial argv:', validation.error);
@@ -533,7 +281,6 @@ if (!gotTheLock) {
             });
         } else {
             app.whenReady().then(() => {
-                // On Windows, delay protocol handling to ensure window is ready and can be focused
                 const protocolDelay = process.platform === 'win32' ? 2000 : 1000;
                 setTimeout(() => {
                     protocolHandler.handleProtocolUrl(protocolUrl!);
@@ -543,32 +290,361 @@ if (!gotTheLock) {
     } else {
         log.info('No protocol URL found in initial argv');
     }
+}
 
-    app.on('before-quit', (event) => {
-        // If cleanup already done (e.g., installUpdate called beforeQuit explicitly),
-        // let the quit proceed without blocking.
-        if (appLifecycle.isCleanupDone()) return;
+// ─── IPC Registration ───────────────────────────────────────────────────────
 
-        // Prevent default quit — Electron doesn't await async handlers,
-        // so we hold the quit until servers are properly closed.
-        event.preventDefault();
+type ModuleDefault<T> = T;
 
-        globalShortcuts.cleanup();
-        appLifecycle.beforeQuit().then(() => {
-            // Servers are closed, ports released.
-            // If an update was downloaded, install it now (after cleanup).
-            if (autoUpdater.updateDownloaded) {
-                autoUpdater.installUpdate();
-                // installUpdate calls quitAndInstall → app.exit, so we're done.
-                return;
-            }
-            // No update — just exit.
-            app.exit(0);
-        }).catch((err: Error) => {
-            log.error('Cleanup failed during quit, forcing exit:', err);
-            app.exit(1);
-        });
+function setupIPC(
+    fileHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/fileHandlers').default>,
+    storageHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/storageHandlers').default>,
+    settingsHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/settingsHandlers').default>,
+    systemHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/systemHandlers').default>,
+    httpHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/httpHandlers').default>,
+    recordingHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/recordingHandlers').default>,
+    proxyHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/proxyHandlers').default>,
+    workspaceHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/workspaceHandlers').default>,
+    gitHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/gitHandlers').default>,
+    appLifecycle: ModuleDefault<typeof import('./main/modules/app/lifecycle').default>,
+    autoUpdater: ModuleDefault<typeof import('./main/modules/updater/autoUpdater').default>,
+    globalShortcuts: ModuleDefault<typeof import('./main/modules/shortcuts/globalShortcuts').default>,
+    networkHandlers: ModuleDefault<typeof import('./main/modules/network/networkHandlers').default>,
+    windowManager: ModuleDefault<typeof import('./main/modules/window/windowManager').default>,
+    protocolHandler: ModuleDefault<typeof import('./main/modules/protocol/protocolHandler').default>,
+) {
+    // File operations
+    ipcMain.handle('openFileDialog', fileHandlers.handleOpenFileDialog);
+    ipcMain.handle('saveFileDialog', fileHandlers.handleSaveFileDialog);
+    ipcMain.handle('readFile', fileHandlers.handleReadFile);
+    ipcMain.handle('writeFile', fileHandlers.handleWriteFile);
+    ipcMain.handle('watchFile', fileHandlers.handleWatchFile);
+    ipcMain.handle('unwatchFile', fileHandlers.handleUnwatchFile);
+    ipcMain.handle('openRecordFile', fileHandlers.handleOpenRecordFile);
+    ipcMain.handle('getResourcePath', fileHandlers.handleGetResourcePath);
+    ipcMain.handle('getEnvVariable', fileHandlers.handleGetEnvVariable);
+    ipcMain.handle('getAppPath', fileHandlers.handleGetAppPath);
+
+    // Storage
+    ipcMain.handle('saveToStorage', storageHandlers.handleSaveToStorage);
+    ipcMain.handle('loadFromStorage', storageHandlers.handleLoadFromStorage);
+    ipcMain.handle('deleteFromStorage', storageHandlers.handleDeleteFromStorage);
+    ipcMain.handle('deleteDirectory', storageHandlers.handleDeleteDirectory);
+
+    // Settings
+    ipcMain.handle('saveSettings', settingsHandlers.handleSaveSettings);
+    ipcMain.handle('getSettings', settingsHandlers.handleGetSettings);
+    ipcMain.handle('setAutoLaunch', settingsHandlers.handleSetAutoLaunch);
+    ipcMain.handle('openExternal', settingsHandlers.handleOpenExternal);
+
+    // System
+    ipcMain.handle('getSystemTimezone', systemHandlers.handleGetSystemTimezone);
+    ipcMain.handle('checkScreenRecordingPermission', systemHandlers.handleCheckScreenRecordingPermission);
+    ipcMain.handle('requestScreenRecordingPermission', systemHandlers.handleRequestScreenRecordingPermission);
+    ipcMain.handle('getAppVersion', () => app.getVersion());
+    ipcMain.handle('showItemInFolder', systemHandlers.handleShowItemInFolder.bind(systemHandlers));
+    ipcMain.handle('openAppPath', systemHandlers.handleOpenAppPath.bind(systemHandlers));
+
+    // Global shortcuts
+    ipcMain.handle('disableRecordingHotkey', () => globalShortcuts.disableHotkey());
+    ipcMain.handle('enableRecordingHotkey', () => globalShortcuts.enableHotkey());
+
+    // Network
+    ipcMain.handle('checkNetworkConnectivity', networkHandlers.checkNetworkConnectivity);
+    ipcMain.handle('getNetworkState', networkHandlers.getNetworkState);
+    ipcMain.handle('forceNetworkCheck', networkHandlers.forceNetworkCheck);
+    ipcMain.handle('getSystemState', networkHandlers.getSystemState);
+    ipcMain.handle('makeHttpRequest', httpHandlers.handleMakeHttpRequest);
+
+    // Recording
+    ipcMain.handle('loadRecordings', recordingHandlers.handleLoadRecordings);
+    ipcMain.handle('loadRecording', recordingHandlers.handleLoadRecording);
+    ipcMain.handle('saveRecording', recordingHandlers.handleSaveRecording);
+    ipcMain.handle('saveUploadedRecording', recordingHandlers.handleSaveUploadedRecording);
+    ipcMain.handle('deleteRecording', recordingHandlers.handleDeleteRecording);
+    ipcMain.handle('downloadRecording', recordingHandlers.handleDownloadRecording);
+    ipcMain.handle('updateRecordingMetadata', recordingHandlers.handleUpdateRecordingMetadata);
+
+    // Proxy
+    ipcMain.handle('proxy-start', proxyHandlers.handleProxyStart);
+    ipcMain.handle('proxy-stop', proxyHandlers.handleProxyStop);
+    ipcMain.handle('proxy-status', proxyHandlers.handleProxyStatus);
+    ipcMain.handle('proxy-get-rules', proxyHandlers.handleProxyGetRules);
+    ipcMain.handle('proxy-save-rule', proxyHandlers.handleProxySaveRule);
+    ipcMain.handle('proxy-delete-rule', proxyHandlers.handleProxyDeleteRule);
+    ipcMain.handle('proxy-clear-cache', proxyHandlers.handleProxyClearCache);
+    ipcMain.handle('proxy-get-cache-stats', proxyHandlers.handleProxyGetCacheStats);
+    ipcMain.handle('proxy-get-cache-entries', proxyHandlers.handleProxyGetCacheEntries);
+    ipcMain.handle('proxy-set-cache-enabled', proxyHandlers.handleProxySetCacheEnabled);
+    ipcMain.handle('proxy-update-header-rules', proxyHandlers.handleProxyUpdateHeaderRules);
+    ipcMain.handle('proxyClearRules', proxyHandlers.handleProxyClearRules);
+    ipcMain.handle('proxy-set-strict-ssl', proxyHandlers.handleProxySetStrictSSL);
+    ipcMain.handle('proxy-add-trusted-certificate', proxyHandlers.handleProxyAddTrustedCertificate);
+    ipcMain.handle('proxy-remove-trusted-certificate', proxyHandlers.handleProxyRemoveTrustedCertificate);
+    ipcMain.handle('proxy-add-certificate-exception', proxyHandlers.handleProxyAddCertificateException);
+    ipcMain.handle('proxy-remove-certificate-exception', proxyHandlers.handleProxyRemoveCertificateException);
+    ipcMain.handle('proxy-get-certificate-info', proxyHandlers.handleProxyGetCertificateInfo);
+
+    // WebSocket
+    ipcMain.handle('ws-get-connection-status', workspaceHandlers.handleWsGetConnectionStatus.bind(workspaceHandlers));
+    ipcMain.handle('ws-check-cert-trust', workspaceHandlers.handleWsCheckCertTrust.bind(workspaceHandlers));
+    ipcMain.handle('ws-trust-cert', workspaceHandlers.handleWsTrustCert.bind(workspaceHandlers));
+    ipcMain.handle('ws-untrust-cert', workspaceHandlers.handleWsUntrustCert.bind(workspaceHandlers));
+
+    // Git
+    ipcMain.handle('testGitConnection', gitHandlers.handleTestGitConnection);
+    ipcMain.handle('getGitStatus', gitHandlers.handleGetGitStatus);
+    ipcMain.handle('installGit', gitHandlers.handleInstallGit);
+    ipcMain.handle('syncGitWorkspace', gitHandlers.handleSyncGitWorkspace);
+    ipcMain.handle('cleanupGitRepository', gitHandlers.handleCleanupGitRepository);
+    ipcMain.handle('commitConfiguration', gitHandlers.handleCommitConfiguration);
+    ipcMain.handle('createBranch', gitHandlers.handleCreateBranch);
+    ipcMain.handle('checkWritePermissions', gitHandlers.handleCheckWritePermissions);
+
+    // CLI API
+    ipcMain.handle('cli-api-status', () => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (!cliApiService) return { running: false, port: 59213, discoveryPath: '', token: '', startedAt: null, totalRequests: 0 };
+        return cliApiService.getStatus();
     });
+    ipcMain.handle('cli-api-start', async (_event: IpcMainInvokeEvent, port: number) => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+        try {
+            if (port) cliApiService.port = Number(port);
+            await cliApiService.start();
+            return { success: true, port: cliApiService.port };
+        } catch (err: unknown) {
+            return { success: false, error: errorMessage(err) };
+        }
+    });
+    ipcMain.handle('cli-api-stop', async () => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+        try {
+            await cliApiService.stop();
+            return { success: true };
+        } catch (err: unknown) {
+            return { success: false, error: errorMessage(err) };
+        }
+    });
+    ipcMain.handle('cli-api-get-logs', () => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (!cliApiService) return [];
+        return cliApiService.getLogs();
+    });
+    ipcMain.handle('cli-api-clear-logs', () => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (cliApiService) cliApiService.clearLogs();
+        return { success: true };
+    });
+    ipcMain.handle('cli-api-regenerate-token', async () => {
+        const cliApiService = appLifecycle.getCliApiService();
+        if (!cliApiService) return { success: false, error: 'CLI API service not available' };
+        try {
+            const token = await cliApiService.regenerateToken();
+            return { success: true, token };
+        } catch (err: unknown) {
+            return { success: false, error: errorMessage(err) };
+        }
+    });
+
+    // Workspace
+    ipcMain.handle('deleteWorkspaceFolder', workspaceHandlers.handleDeleteWorkspaceFolder.bind(workspaceHandlers));
+    ipcMain.handle('workspace-test-connection', workspaceHandlers.handleWorkspaceTestConnection.bind(workspaceHandlers));
+    ipcMain.handle('workspace-sync', workspaceHandlers.handleWorkspaceSync.bind(workspaceHandlers));
+    ipcMain.handle('workspace-sync-all', workspaceHandlers.handleWorkspaceSyncAll.bind(workspaceHandlers));
+    ipcMain.handle('workspace-get-sync-status', workspaceHandlers.handleWorkspaceGetSyncStatus.bind(workspaceHandlers));
+    ipcMain.handle('workspace-auto-sync-enabled', workspaceHandlers.handleWorkspaceAutoSyncEnabled.bind(workspaceHandlers));
+    ipcMain.handle('workspace-open-folder', workspaceHandlers.handleWorkspaceOpenFolder.bind(workspaceHandlers));
+    ipcMain.handle('services-health-check', workspaceHandlers.handleServicesHealthCheck.bind(workspaceHandlers));
+    ipcMain.handle('initializeWorkspaceSync', workspaceHandlers.handleInitializeWorkspaceSync.bind(workspaceHandlers));
+    ipcMain.handle('deleteWorkspace', workspaceHandlers.handleDeleteWorkspace.bind(workspaceHandlers));
+    ipcMain.handle('generate-team-workspace-invite', workspaceHandlers.handleGenerateTeamWorkspaceInvite.bind(workspaceHandlers));
+    ipcMain.handle('generate-environment-config-link', workspaceHandlers.handleGenerateEnvironmentConfigLink.bind(workspaceHandlers));
+
+    // Updates
+    ipcMain.on('check-for-updates', autoUpdater.handleManualUpdateCheck.bind(autoUpdater));
+    ipcMain.on('install-update', autoUpdater.installUpdate.bind(autoUpdater));
+
+    // Window management
+    ipcMain.on('showMainWindow', () => windowManager.showWindow());
+    ipcMain.on('hideMainWindow', () => windowManager.hideWindow());
+    ipcMain.on('minimizeWindow', () => windowManager.minimizeWindow());
+    ipcMain.on('maximizeWindow', () => windowManager.maximizeWindow());
+    ipcMain.on('closeWindow', () => windowManager.closeWindow());
+    ipcMain.on('quitApp', () => {
+        appLifecycle.setQuitting(true);
+        windowManager.sendToWindow('quitApp');
+        app.quit();
+    });
+    ipcMain.on('restartApp', () => {
+        if (!autoUpdater.updateDownloaded) {
+            app.relaunch();
+        }
+        app.quit();
+    });
+
+    // Renderer ready signal
+    ipcMain.on('renderer-ready', () => {
+        log.info('Renderer signaled that it is ready');
+        protocolHandler.setRendererReady();
+    });
+
+    // Runtime updates
+    ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Source[]) => {
+        const webSocketService = (await import('./services/websocket/ws-service')).default;
+        log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
+        if (sources && sources.length > 0) {
+            log.info(`Main: Sources with content: ${sources.filter((s) => s.sourceContent).length}`);
+            sources.forEach((source) => {
+                log.info(`  Main: Source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
+            });
+        }
+        webSocketService.updateSources(sources);
+    });
+
+    ipcMain.on('proxy-update-source', async (_event: IpcMainEvent, sourceId: string, value: string) => {
+        const proxyService = (await import('./services/proxy/ProxyService')).default;
+        proxyService.updateSource(sourceId, value);
+    });
+
+    ipcMain.on('proxy-update-sources', async (_event: IpcMainEvent, sources: Source[]) => {
+        const proxyService = (await import('./services/proxy/ProxyService')).default;
+        if (Array.isArray(sources)) {
+            proxyService.updateSources(sources);
+        }
+    });
+
+    // Workspace events
+    ipcMain.on('workspace-switched', workspaceHandlers.handleWorkspaceSwitched.bind(workspaceHandlers));
+    ipcMain.on('workspace-updated', workspaceHandlers.handleWorkspaceUpdated.bind(workspaceHandlers));
+
+    // Environment events
+    ipcMain.on('environment-switched', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
+        const proxyService = (await import('./services/proxy/ProxyService')).default;
+        log.info('Environment switched, notifying proxy service');
+        if (data && data.variables) {
+            proxyService.updateEnvironmentVariables(data.variables);
+        }
+
+        try {
+            const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
+            const workspacesData = await fs.promises.readFile(workspacesPath, 'utf8');
+            const { activeWorkspaceId } = JSON.parse(workspacesData);
+
+            if (activeWorkspaceId) {
+                const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
+                const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
+                const sources = JSON.parse(sourcesData);
+                if (Array.isArray(sources)) {
+                    proxyService.updateSources(sources);
+                    log.info(`Re-loaded ${sources.length} sources after environment switch`);
+                }
+            }
+        } catch (error: unknown) {
+            log.warn('Could not re-load sources after environment switch:', errorMessage(error));
+        }
+    });
+
+    ipcMain.on('environment-variables-changed', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
+        const proxyService = (await import('./services/proxy/ProxyService')).default;
+        log.info('Environment variables changed, notifying proxy service');
+        if (data && data.variables) {
+            proxyService.updateEnvironmentVariables(data.variables);
+        }
+    });
+}
+
+// ─── Application Menu ───────────────────────────────────────────────────────
+
+function setupMenu(
+    windowManager: typeof import('./main/modules/window/windowManager').default,
+) {
+    const isMac = process.platform === 'darwin';
+
+    const openSettings = () => {
+        windowManager.showWindow();
+        setTimeout(() => {
+            windowManager.sendToWindow('navigate-to', { tab: 'settings' });
+        }, 300);
+    };
+
+    const openUpdateCheck = () => {
+        windowManager.showWindow();
+        setTimeout(() => {
+            windowManager.sendToWindow('trigger-update-check');
+        }, 300);
+    };
+
+    const appMenuTemplate = [
+        ...(isMac ? [{
+            label: app.getName(),
+            submenu: [
+                { label: `About ${app.getName()}`, click: () => app.showAboutPanel() },
+                { label: 'Check for Updates...', click: openUpdateCheck },
+                { type: 'separator' },
+                { label: 'Settings...', accelerator: 'Cmd+,', click: openSettings },
+                { type: 'separator' },
+                { role: 'services' },
+                { type: 'separator' },
+                { role: 'hide' },
+                { role: 'hideOthers' },
+                { role: 'unhide' },
+                { type: 'separator' },
+                { role: 'quit' }
+            ]
+        }] : []),
+        {
+            label: 'File',
+            submenu: [
+                ...(!isMac ? [
+                    { label: 'Settings', accelerator: 'Ctrl+,', click: openSettings },
+                    { label: 'Check for Updates...', click: openUpdateCheck },
+                    { type: 'separator' },
+                ] : []),
+                isMac ? { role: 'close' } : { role: 'quit' }
+            ]
+        },
+        {
+            label: 'Edit',
+            submenu: [
+                { role: 'undo' },
+                { role: 'redo' },
+                { type: 'separator' },
+                { role: 'cut' },
+                { role: 'copy' },
+                { role: 'paste' },
+                { role: 'selectAll' }
+            ]
+        },
+        {
+            label: 'View',
+            submenu: [
+                { role: 'resetZoom', label: 'Actual Size' },
+                { role: 'zoomIn' },
+                { role: 'zoomOut' },
+                { type: 'separator' },
+                { role: 'togglefullscreen' },
+                ...(!app.isPackaged ? [
+                    { type: 'separator' as const },
+                    { role: 'toggleDevTools' as const },
+                    { role: 'reload' as const },
+                    { role: 'forceReload' as const }
+                ] : [])
+            ]
+        },
+        { role: 'windowMenu' },
+        {
+            label: 'Help',
+            submenu: [
+                { label: 'Documentation', click: () => shell.openExternal('https://openheaders.io') },
+                { label: 'Report an Issue', click: () => shell.openExternal('https://github.com/OpenHeaders/open-headers-app/issues') }
+            ]
+        }
+    ];
+
+    Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate as MenuItemConstructorOptions[]));
 }
 
 export { app, mainWindow };

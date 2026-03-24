@@ -1,6 +1,17 @@
 // preload.ts - Modularized secure bridge between renderer and main process
 import electron from 'electron';
-const { contextBridge } = electron;
+const { contextBridge, ipcRenderer } = electron;
+
+// Synchronous startup data — available to renderer at module load time (no async IPC).
+// The main process loads settings before creating the window, so this is always ready.
+const startupData = ipcRenderer.sendSync('get-startup-data') as {
+    settings: Record<string, unknown>;
+    platform: string;
+    version: string;
+    isPackaged: boolean;
+};
+
+contextBridge.exposeInMainWorld('startupData', startupData);
 
 // Import modules
 import httpBridge from './preload/modules/httpBridge';

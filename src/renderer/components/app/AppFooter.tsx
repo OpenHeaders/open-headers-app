@@ -7,9 +7,10 @@ import BrowserConnectionStatus from '../status/BrowserConnectionStatus';
 const { Footer } = Layout;
 const { Text } = Typography;
 
-import type { GlobalToken } from 'antd/es/theme/interface';
-interface AppFooterProps { appVersion: string; theme: GlobalToken; debugComponents: React.ReactNode; }
-export function AppFooter({ appVersion, theme, debugComponents }: AppFooterProps) {
+interface AppFooterProps { appVersion: string; debugComponents: React.ReactNode; }
+export function AppFooter({ appVersion: appVersionProp, debugComponents }: AppFooterProps) {
+  // Use startupData for instant version on first render, then prop once loaded via IPC
+  const appVersion = appVersionProp || window.startupData?.version || '';
   return (
     <Footer className="app-footer" style={{
       padding: '8px 24px',

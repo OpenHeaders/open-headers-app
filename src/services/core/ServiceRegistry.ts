@@ -59,13 +59,54 @@ class ServiceRegistry {
       return;
     }
 
-    this.buildInitializationOrder();
+    // Group services by dependency depth for parallel initialization.
+    // Services at the same depth have no mutual dependencies and can run concurrently.
+    const depths = this.getInitializationDepths();
 
-    for (const serviceName of this.initializationOrder) {
-      await this.initializeService(serviceName);
+    for (const group of depths) {
+      await Promise.all(group.map(name => this.initializeService(name)));
     }
 
     this.initialized = true;
+  }
+
+  /**
+   * Group services by dependency depth. Depth 0 = no dependencies,
+   * depth 1 = depends only on depth-0 services, etc.
+   */
+  private getInitializationDepths(): string[][] {
+    this.buildInitializationOrder();
+
+    const depthMap = new Map<string, number>();
+
+    const getDepth = (name: string): number => {
+      if (depthMap.has(name)) return depthMap.get(name)!;
+
+      const serviceInfo = this.services.get(name);
+      if (!serviceInfo || serviceInfo.dependencies.length === 0) {
+        depthMap.set(name, 0);
+        return 0;
+      }
+
+      const maxDepDep = Math.max(...serviceInfo.dependencies.map(dep => getDepth(dep)));
+      const depth = maxDepDep + 1;
+      depthMap.set(name, depth);
+      return depth;
+    };
+
+    for (const name of this.initializationOrder) {
+      getDepth(name);
+    }
+
+    // Group by depth
+    const maxDepth = Math.max(...depthMap.values(), 0);
+    const groups: string[][] = [];
+    for (let d = 0; d <= maxDepth; d++) {
+      const group = this.initializationOrder.filter(name => depthMap.get(name) === d);
+      if (group.length > 0) groups.push(group);
+    }
+
+    return groups;
   }
 
   async initializeService(name: string): Promise<ServiceInstance> {
