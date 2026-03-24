@@ -77,7 +77,7 @@ open-headers-app/
 │   │   ├── network/        # Network state monitoring
 │   │   ├── proxy/          # HTTP proxy service
 │   │   ├── video/          # Video capture and export
-│   │   ├── websocket/      # WebSocket service (WS & WSS)
+│   │   ├── websocket/      # WebSocket service
 │   │   └── workspace/      # Git sync and workspace management
 │   ├── main/               # Main process modules
 │   │   └── modules/        # IPC handlers, protocol, tray, updater
