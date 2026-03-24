@@ -248,27 +248,6 @@ describe('WebSocketService', () => {
     });
 
     describe('_dispatchMessage', () => {
-        it('dispatches requestSources to sourceHandler when client initialized', () => {
-            const mockWs = { isInitialized: true } as Parameters<typeof service._dispatchMessage>[0];
-            const spy = vi.spyOn(service.sourceHandler, 'sendSourcesToClient').mockResolvedValue();
-            service._dispatchMessage(mockWs, { type: 'requestSources' });
-            expect(spy).toHaveBeenCalledWith(mockWs);
-        });
-
-        it('does not dispatch requestSources when client not initialized', () => {
-            const mockWs = { isInitialized: false } as Parameters<typeof service._dispatchMessage>[0];
-            const spy = vi.spyOn(service.sourceHandler, 'sendSourcesToClient').mockResolvedValue();
-            service._dispatchMessage(mockWs, { type: 'requestSources' });
-            expect(spy).not.toHaveBeenCalled();
-        });
-
-        it('dispatches requestRules to ruleHandler when client initialized', () => {
-            const mockWs = { isInitialized: true } as Parameters<typeof service._dispatchMessage>[0];
-            const spy = vi.spyOn(service.ruleHandler, 'sendRulesToClient').mockResolvedValue();
-            service._dispatchMessage(mockWs, { type: 'requestRules' });
-            expect(spy).toHaveBeenCalledWith(mockWs);
-        });
-
         it('dispatches toggleRule to ruleHandler', () => {
             const mockWs = {} as Parameters<typeof service._dispatchMessage>[0];
             const spy = vi.spyOn(service.ruleHandler, 'handleToggleRule').mockResolvedValue();

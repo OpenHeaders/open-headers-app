@@ -34,7 +34,7 @@ interface NetworkServiceLike {
 }
 
 type WSMessage =
-    | { type: 'requestSources' | 'requestRules' | 'getVideoRecordingState' | 'getRecordingHotkey' }
+    | { type: 'getVideoRecordingState' | 'getRecordingHotkey' }
     | { type: 'browserInfo'; browser: string; version?: string; extensionVersion?: string }
     | { type: 'toggleRule'; ruleId: string | number; enabled: boolean }
     | { type: 'toggleAllRules'; ruleIds: string[]; enabled: boolean }
@@ -306,12 +306,6 @@ class WebSocketService {
 
     _dispatchMessage(ws: ExtendedWebSocket, data: WSMessage): void {
         switch (data.type) {
-            case 'requestSources':
-                if (ws.isInitialized) void this.sourceHandler.sendSourcesToClient(ws);
-                break;
-            case 'requestRules':
-                if (ws.isInitialized) void this.ruleHandler.sendRulesToClient(ws);
-                break;
             case 'getVideoRecordingState':
                 void this.recordingHandler.sendVideoRecordingState(ws);
                 break;
