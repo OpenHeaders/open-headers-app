@@ -40,40 +40,26 @@ const defaultSettings: AppSettings = {
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const [settings, setSettings] = useState<Settings>(defaultSettings);
-    const [loading, setLoading] = useState(true);
-    // Add mounted ref
+    // Initialize from synchronous startup data — no async IPC needed for first render.
+    // window.startupData is injected by the preload script before React mounts.
+    const initialSettings: AppSettings = {
+        ...defaultSettings,
+        ...(window.startupData?.settings ?? {}),
+    };
+
+    const [settings, setSettings] = useState<Settings>(initialSettings);
+    const [loading, setLoading] = useState(false); // Not loading — settings are already available
     const isMounted = useRef(true);
 
     useEffect(() => {
+        // Apply log level from startup data
+        if (initialSettings.logLevel) {
+            setGlobalLogLevel(initialSettings.logLevel);
+        }
         return () => {
             isMounted.current = false;
         };
-    }, []);
-
-    // Load settings on component mount
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const loaded = await window.electronAPI.getSettings();
-                const storedSettings: AppSettings = { ...defaultSettings, ...loaded };
-                if (isMounted.current) {
-                    setSettings(storedSettings);
-                    if (storedSettings.logLevel) {
-                        setGlobalLogLevel(storedSettings.logLevel);
-                    }
-                    setLoading(false);
-                }
-            } catch (error) {
-                log.error('Error loading settings:', error);
-                if (isMounted.current) {
-                    showMessage('error', 'Failed to load settings, using defaults');
-                    setLoading(false);
-                }
-            }
-        };
-
-        loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Save settings

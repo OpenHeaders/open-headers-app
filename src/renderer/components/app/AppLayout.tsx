@@ -22,6 +22,7 @@ import type { NewSourceData } from '../sources/source-form';
 import type { ExportOptions, ImportOptions } from '../../services/export-import/core/types';
 
 interface AppLayoutProps {
+  isReady: boolean;
   appVersion: string;
   activeTab: string;
   tabScrollPositions: Record<string, number>;
@@ -34,7 +35,6 @@ interface AppLayoutProps {
   currentRecord: Recording | null;
   recordPlaybackTime: number;
   autoHighlight: boolean;
-  loading: { export: boolean; import: boolean };
   settings: AppSettings;
   sources: Source[];
   onTabChange: (tab: string) => void;
@@ -65,6 +65,7 @@ interface AppLayoutProps {
 const { Content } = Layout;
 
 export function AppLayout({
+  isReady,
   appVersion,
   activeTab,
   tabScrollPositions,
@@ -77,7 +78,6 @@ export function AppLayout({
   currentRecord,
   recordPlaybackTime,
   autoHighlight,
-  loading,
   settings,
   sources,
   onTabChange,
@@ -119,6 +119,7 @@ export function AppLayout({
 
       <Content className={`app-content ${typeof window !== 'undefined' && window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
         <AppTabs
+          isReady={isReady}
           activeTab={activeTab}
           onTabChange={onTabChange}
           tabScrollPositions={tabScrollPositions}
@@ -140,7 +141,6 @@ export function AppLayout({
 
       <AppFooter
         appVersion={appVersion}
-        theme={token}
         debugComponents={
           !!settings?.developerMode && (
             <>

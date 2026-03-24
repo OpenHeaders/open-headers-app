@@ -441,8 +441,17 @@ declare global {
     };
   }
 
+  /** Startup data injected synchronously by the preload script */
+  interface StartupData {
+    settings: AppSettings;
+    platform: string;
+    version: string;
+    isPackaged: boolean;
+  }
+
   interface Window {
     electronAPI: ElectronAPI;
+    startupData: StartupData;
     generateTOTP: (secret: string, period?: number, digits?: number, timeOffset?: number) => Promise<string>;
     rrwebPlayer?: RRWebPlayerModule | RRWebPlayerConstructor;
   }

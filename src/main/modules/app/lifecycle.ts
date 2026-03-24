@@ -1,9 +1,6 @@
-import electron from 'electron';
-import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
 import { errorMessage } from '../../../types/common';
-import atomicWriter from '../../../utils/atomicFileWriter';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
 import serviceRegistry from '../../../services/core/ServiceRegistry';
 import GitSyncService from '../../../services/workspace/git/GitSyncService';
@@ -15,7 +12,6 @@ import webSocketService from '../../../services/websocket/ws-service';
 import type { CliApiService } from '../../../services/cli/CliApiService';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
-const { app } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('AppLifecycle');
 
@@ -37,15 +33,12 @@ class AppLifecycle {
     async initializeApp() {
         await AppStateMachine.initialize();
 
-        log.info(`App started at ${new Date().toISOString()}`);
         log.info(`Process argv: ${JSON.stringify(process.argv)}`);
-        log.info(`App version: ${app.getVersion()}`);
-        log.info(`Platform: ${process.platform}`);
         log.info(`Executable path: ${process.execPath}`);
 
+        // Settings are already loaded by SettingsCache in main.ts (Phase A).
+        // First-run setup and log level are also handled there.
         AppStateMachine.settingsLoaded({});
-        await this.setupFirstRun();
-        await this.applyStartupLogLevel();
         AppStateMachine.settingsReady();
         await this.initializeServices();
     }
@@ -111,88 +104,6 @@ class AppLifecycle {
         } catch (error) {
             log.error('Failed to initialize services:', error);
             throw error; // Re-throw to indicate critical failure
-        }
-    }
-
-    getSettingsPath() {
-        return path.join(app.getPath('userData'), 'settings.json');
-    }
-
-    async setupFirstRun() {
-        try {
-            const settingsPath = this.getSettingsPath();
-
-            // Use async file operations
-            let isFirstRun: boolean;
-            try {
-                await fs.promises.access(settingsPath);
-                isFirstRun = false;
-            } catch (error) {
-                isFirstRun = true;
-            }
-
-            if (isFirstRun) {
-                log.info('First run detected, creating default settings with auto-launch enabled');
-
-                const defaultSettings = {
-                    launchAtLogin: true,
-                    hideOnLaunch: true,
-                    showDockIcon: true,
-                    showStatusBarIcon: true,
-                    theme: 'auto',
-                    autoStartProxy: true,
-                    proxyCacheEnabled: true,
-                    autoHighlightTableEntries: false,
-                    autoScrollTableEntries: false,
-                    compactMode: false,
-                    tutorialMode: true,
-                    developerMode: false,
-                    videoRecording: false,
-                    videoQuality: 'high',
-                    recordingHotkey: 'CommandOrControl+Shift+E',
-                    logLevel: 'info'
-                };
-
-                await atomicWriter.writeJson(settingsPath, defaultSettings, { pretty: true });
-                log.info('Created default settings file with auto-launch and hide enabled');
-                const AutoLaunch = (await import('auto-launch')).default;
-                try {
-                    const args = process.platform === 'win32' ?
-                        ['--hidden', '--autostart'] :
-                        ['--hidden'];
-
-                    const autoLauncher = new AutoLaunch({
-                        name: app.getName(),
-                        path: app.getPath('exe'),
-                        args: args,
-                        isHidden: true
-                    });
-
-                    await autoLauncher.enable();
-                    log.info('Auto-launch enabled for first-time user');
-                } catch (autoLaunchError) {
-                    log.error('Error setting up auto-launch for first-time user:', autoLaunchError);
-                }
-
-                (globalThis as typeof globalThis & { isFirstRun?: boolean }).isFirstRun = true;
-            }
-        } catch (err) {
-            log.error('Error during first run setup:', err);
-        }
-    }
-
-    async applyStartupLogLevel() {
-        try {
-            const settingsPath = this.getSettingsPath();
-            const data = await fs.promises.readFile(settingsPath, 'utf8');
-            const settings = JSON.parse(data);
-            if (settings.logLevel) {
-                const { setGlobalLogLevel } = await import('../../../utils/mainLogger');
-                setGlobalLogLevel(settings.logLevel);
-                log.info(`Applied log level from settings: ${settings.logLevel}`);
-            }
-        } catch (err) {
-            // Ignore - will use default log level
         }
     }
 
@@ -274,32 +185,7 @@ class AppLifecycle {
         return this.fileWatchers;
     }
 
-    async setupEarlyDockVisibility() {
-        log.info('Checking early dock visibility settings');
-        const settingsPath = this.getSettingsPath();
-
-        try {
-            try {
-                await fs.promises.access(settingsPath);
-                const settingsData = await fs.promises.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData);
-
-                if (process.platform === 'darwin' && app.dock) {
-                    if (settings.showDockIcon === false) {
-                        log.info('Hiding dock icon at startup based on settings');
-                        app.dock.hide();
-                    } else {
-                        log.info('Showing dock icon at startup based on settings');
-                        await app.dock.show();
-                    }
-                }
-            } catch (accessError) {
-                log.debug('Settings file does not exist, skipping dock visibility setup');
-            }
-        } catch (err) {
-            log.error('Error applying early dock visibility settings:', err);
-        }
-    }
+    // Dock visibility is now handled in main.ts Phase A using SettingsCache
 }
 
 const appLifecycle = new AppLifecycle();

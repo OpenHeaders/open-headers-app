@@ -147,6 +147,7 @@ export const IPC_SEND = {
     RESTART_APP: 'restartApp',
 
     // Renderer lifecycle
+    GET_STARTUP_DATA: 'get-startup-data',
     RENDERER_READY: 'renderer-ready',
 
     // Runtime updates

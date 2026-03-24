@@ -111,7 +111,7 @@ class ProxyService extends EventEmitter {
         }
 
         try {
-            if (port) {
+            if (port !== undefined) {
                 this.port = port;
             }
 

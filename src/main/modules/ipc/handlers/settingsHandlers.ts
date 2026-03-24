@@ -1,8 +1,7 @@
 import electron from 'electron';
-import path from 'path';
 import AutoLaunch from 'auto-launch';
 import mainLogger from '../../../../utils/mainLogger';
-import atomicWriter from '../../../../utils/atomicFileWriter';
+import settingsCache from '../../../../services/core/SettingsCache';
 import trayManager from '../../tray/trayManager';
 import webSocketService from '../../../../services/websocket/ws-service';
 import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
@@ -16,8 +15,6 @@ const log = createLogger('SettingsHandlers');
 class SettingsHandlers {
     async handleSaveSettings(_: IpcInvokeEvent | null, settings: Partial<AppSettings>) {
         try {
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
             // Ensure ALL boolean settings are properly typed
             type BooleanKey = { [K in keyof AppSettings]-?: NonNullable<AppSettings[K]> extends boolean ? K : never }[keyof AppSettings];
             const booleanSettings: BooleanKey[] = [
@@ -35,7 +32,8 @@ class SettingsHandlers {
                 }
             }
 
-            await atomicWriter.writeJson(settingsPath, mutableSettings, { pretty: true });
+            // Save through SettingsCache — updates in-memory cache + persists to disk
+            await settingsCache.save(mutableSettings);
 
             // Broadcast video recording state change to connected extensions
             if ('videoRecording' in mutableSettings) {
@@ -82,45 +80,10 @@ class SettingsHandlers {
         }
     }
 
-    async handleGetSettings(): Promise<Partial<AppSettings>> {
-        try {
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-
-            // Try to read with atomic reader first
-            const settings = await atomicWriter.readJson(settingsPath);
-
-            if (settings !== null) {
-                return settings as Partial<AppSettings>;
-            } else {
-                // Default settings
-                const defaultSettings: AppSettings = {
-                    launchAtLogin: true,
-                    hideOnLaunch: true,
-                    showDockIcon: true,
-                    showStatusBarIcon: true,
-                    theme: 'auto',
-                    autoStartProxy: true,
-                    proxyCacheEnabled: true,
-                    autoHighlightTableEntries: false,
-                    autoScrollTableEntries: false,
-                    compactMode: false,
-                    tutorialMode: true,
-                    developerMode: false,
-                    videoRecording: false,
-                    videoQuality: 'high',
-                    recordingHotkey: 'CommandOrControl+Shift+E',
-                    recordingHotkeyEnabled: true,
-                    logLevel: 'info'
-                };
-
-                // Create settings file atomically
-                await atomicWriter.writeJson(settingsPath, defaultSettings, { pretty: true });
-                return defaultSettings;
-            }
-        } catch (err) {
-            log.error('Error getting settings:', err);
-            throw err;
-        }
+    async handleGetSettings(): Promise<AppSettings> {
+        // SettingsCache is always loaded before the window is created,
+        // so get() is guaranteed to have data here.
+        return settingsCache.get();
     }
 
     async handleSetAutoLaunch(_: IpcInvokeEvent, enable: boolean) {

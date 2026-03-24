@@ -1,10 +1,10 @@
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType, BrowserWindowConstructorOptions, WebContents } from 'electron';
 import path from 'path';
-import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
 import windowsFocusHelper from '../utils/windowsFocus';
 import appLifecycle from '../app/lifecycle';
+import type { AppSettings } from '../../../types/settings';
 
 const { BrowserWindow, shell, app } = electron;
 const { createLogger } = mainLogger;
@@ -27,7 +27,7 @@ class WindowManager {
         };
     }
 
-    createWindow() {
+    createWindow(settings?: AppSettings) {
         // Create window hidden to prevent flash during startup configuration
         // Platform-specific window configuration
         const windowConfig: BrowserWindowConstructorOptions = {
@@ -74,7 +74,7 @@ class WindowManager {
         // Setup other configurations after loading starts
         this.setupCSP();
         this.detectAutoLaunch();
-        this.setupWindowEvents();
+        this.setupWindowEvents(settings);
 
         // Development mode DevTools — auto-open only when unpackaged with --dev flag
         if (!app.isPackaged && process.argv.includes('--dev')) {
@@ -129,51 +129,31 @@ class WindowManager {
         log.info('Auto-launch detection result:', this.appLaunchArgs.isAutoLaunch);
     }
 
-    setupWindowEvents() {
+    setupWindowEvents(settings?: AppSettings) {
         // Smart window visibility based on launch context and user settings
         this.mainWindow!.once('ready-to-show', () => {
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            try {
-                if (fs.existsSync(settingsPath)) {
-                    const settingsData = fs.readFileSync(settingsPath, 'utf8');
-                    const settings = JSON.parse(settingsData);
+            const hideOnLaunch = Boolean(settings?.hideOnLaunch);
+            const isAutoLaunch = this.appLaunchArgs.isAutoLaunch;
 
-                    const hideOnLaunch = Boolean(settings.hideOnLaunch);
-                    const isAutoLaunch = this.appLaunchArgs.isAutoLaunch;
+            log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}`);
 
-                    log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}`);
+            // Hide window only for auto-launches when user has enabled the setting
+            const shouldHideWindow = hideOnLaunch && isAutoLaunch;
 
-                    // Hide window only for auto-launches when user has enabled the setting
-                    const shouldHideWindow = hideOnLaunch && isAutoLaunch;
-
-                    if (!shouldHideWindow) {
-                        log.info('Showing window on startup (manual launch detected)');
-                        // Use the enhanced focus helper for consistent Windows behavior
-                        windowsFocusHelper.focusWindow(this.mainWindow!);
-                    } else {
-                        log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
-                    }
-
-                    // Apply dock visibility AFTER window is shown/hidden
-                    // macOS automatically shows dock when a window becomes visible,
-                    // so we must re-apply the user's dock preference after window visibility is set
-                    if (process.platform === 'darwin') {
-                        setTimeout(async () => {
-                            // Lazy import to avoid circular dependency (trayManager imports windowManager)
-                            const trayManager = (await import('../tray/trayManager')).default;
-                            trayManager.updateTray(settings);
-                            log.info('Applied dock visibility setting after window ready');
-                        }, 100);
-                    }
-                } else {
-                    log.info('No settings file, showing window by default');
-                    // Use the enhanced focus helper for consistent Windows behavior
-                    windowsFocusHelper.focusWindow(this.mainWindow!);
-                }
-            } catch (err) {
-                log.error('Error loading settings:', err);
-                // Use the enhanced focus helper for consistent Windows behavior
+            if (!shouldHideWindow) {
+                log.info('Showing window on startup (manual launch detected)');
                 windowsFocusHelper.focusWindow(this.mainWindow!);
+            } else {
+                log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
+            }
+
+            // Apply dock visibility AFTER window is shown/hidden
+            if (process.platform === 'darwin' && settings) {
+                setTimeout(async () => {
+                    const trayManager = (await import('../tray/trayManager')).default;
+                    trayManager.updateTray(settings);
+                    log.info('Applied dock visibility setting after window ready');
+                }, 100);
             }
         });
 

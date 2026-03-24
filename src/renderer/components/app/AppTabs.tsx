@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Tabs, Alert } from 'antd';
 import {
     PlayCircleOutlined,
@@ -11,15 +11,25 @@ import {
 import SourceForm from '../sources/SourceForm';
 import SourceTable from '../sources/SourceTable';
 import { WorkflowRecording, WorkflowDetails } from '../features/workflow-recording';
-import Rules from '../rules/Rules';
-import Workspaces from '../features/workspaces';
-import Environments from '../features/environments';
-import ServerConfig from '../server-config/ServerConfig';
+import {
+    RecordViewerSkeleton,
+    ProxyRulesSkeleton,
+    SourceListSkeleton,
+    EnvironmentsSkeleton
+} from '../common/skeletons/WorkspaceSkeleton';
 import type { Source } from '../../../types/source';
 import type { Recording } from '../../../types/recording';
 import type { NewSourceData } from '../sources/source-form';
 
+// Lazy-load tab content that isn't visible on first render.
+// These modules (and their sub-trees) are only parsed when the tab is first activated.
+const Rules = lazy(() => import('../rules/Rules'));
+const Workspaces = lazy(() => import('../features/workspaces'));
+const Environments = lazy(() => import('../features/environments'));
+const ServerConfig = lazy(() => import('../server-config/ServerConfig'));
+
 interface AppTabsProps {
+    isReady: boolean;
     activeTab: string;
     onTabChange: (key: string) => void;
     tabScrollPositions: Record<string, number>;
@@ -39,6 +49,7 @@ interface AppTabsProps {
 }
 
 export function AppTabs({
+                            isReady,
                             activeTab,
                             onTabChange,
                             tabScrollPositions,
@@ -61,12 +72,12 @@ export function AppTabs({
         if (currentContainer) {
             onTabScrollPositionChange(activeTab, currentContainer.scrollTop);
         }
-        
+
         // If switching to Workflows tab while viewing a record, reset the view
         if (key === 'record-viewer' && currentRecord) {
             onRecordChange(null);
         }
-        
+
         onTabChange(key);
         setTimeout(() => {
             const newContainer = document.querySelector('.ant-tabs-tabpane-active .content-container');
@@ -87,7 +98,7 @@ export function AppTabs({
         {
             key: 'record-viewer',
             label: (
-                <span 
+                <span
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     onClick={handleWorkflowsTabClick}
                 >
@@ -97,25 +108,29 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    <WorkflowRecording
-                        record={currentRecord}
-                        onRecordChange={(newRecord: Recording | null) => {
-                            onRecordChange(newRecord);
-                            onPlaybackTimeChange(0);
-                        }}
-                        onPlaybackTimeChange={onPlaybackTimeChange}
-                        autoHighlight={autoHighlight}
-                        renderDetails={(showDetails: boolean) =>
-                            showDetails && currentRecord ? (
-                                <WorkflowDetails
-                                    record={currentRecord}
-                                    playbackTime={recordPlaybackTime}
-                                    autoHighlight={autoHighlight}
-                                    onAutoHighlightChange={onAutoHighlightChange}
-                                />
-                            ) : null
-                        }
-                    />
+                    {isReady ? (
+                        <WorkflowRecording
+                            record={currentRecord}
+                            onRecordChange={(newRecord: Recording | null) => {
+                                onRecordChange(newRecord);
+                                onPlaybackTimeChange(0);
+                            }}
+                            onPlaybackTimeChange={onPlaybackTimeChange}
+                            autoHighlight={autoHighlight}
+                            renderDetails={(showDetails: boolean) =>
+                                showDetails && currentRecord ? (
+                                    <WorkflowDetails
+                                        record={currentRecord}
+                                        playbackTime={recordPlaybackTime}
+                                        autoHighlight={autoHighlight}
+                                        onAutoHighlightChange={onAutoHighlightChange}
+                                    />
+                                ) : null
+                            }
+                        />
+                    ) : (
+                        <RecordViewerSkeleton />
+                    )}
                 </div>
             )
         },
@@ -129,7 +144,13 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    <Rules />
+                    {isReady ? (
+                        <Suspense fallback={<ProxyRulesSkeleton />}>
+                            <Rules />
+                        </Suspense>
+                    ) : (
+                        <ProxyRulesSkeleton />
+                    )}
                 </div>
             )
         },
@@ -143,33 +164,39 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    {tutorialMode !== false && (
-                        <Alert
-                            message="Dynamic Values for Header Rules"
-                            description={
-                                <div>
-                                    <div>Sources provide dynamic values that can be used in header rules.</div>
-                                    <div style={{marginTop: 8}}>
-                                        Create HTTP sources to fetch values from APIs, file sources to read from local files, or environment variable sources.
-                                    </div>
-                                    <div style={{marginTop: 8}}>
-                                        These values are automatically refreshed and synced with the browser extension, allowing headers to have dynamic content that updates in real-time.
-                                    </div>
-                                </div>
-                            }
-                            type="info"
-                            showIcon
-                            closable
-                            style={{ marginBottom: 16, marginTop: 16 }}
-                        />
+                    {isReady ? (
+                        <>
+                            {tutorialMode && (
+                                <Alert
+                                    message="Dynamic Values for Header Rules"
+                                    description={
+                                        <div>
+                                            <div>Sources provide dynamic values that can be used in header rules.</div>
+                                            <div style={{marginTop: 8}}>
+                                                Create HTTP sources to fetch values from APIs, file sources to read from local files, or environment variable sources.
+                                            </div>
+                                            <div style={{marginTop: 8}}>
+                                                These values are automatically refreshed and synced with the browser extension, allowing headers to have dynamic content that updates in real-time.
+                                            </div>
+                                        </div>
+                                    }
+                                    type="info"
+                                    showIcon
+                                    closable
+                                    style={{ marginBottom: 16, marginTop: 16 }}
+                                />
+                            )}
+                            <SourceForm onAddSource={onAddSource} />
+                            <SourceTable
+                                sources={sources}
+                                onRemoveSource={onRemoveSource}
+                                onRefreshSource={onRefreshSource}
+                                onUpdateSource={onUpdateSource}
+                            />
+                        </>
+                    ) : (
+                        <SourceListSkeleton />
                     )}
-                    <SourceForm onAddSource={onAddSource} />
-                    <SourceTable
-                        sources={sources}
-                        onRemoveSource={onRemoveSource}
-                        onRefreshSource={onRefreshSource}
-                        onUpdateSource={onUpdateSource}
-                    />
                 </div>
             )
         },
@@ -183,7 +210,13 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    <Environments />
+                    {isReady ? (
+                        <Suspense fallback={<EnvironmentsSkeleton />}>
+                            <Environments />
+                        </Suspense>
+                    ) : (
+                        <EnvironmentsSkeleton />
+                    )}
                 </div>
             )
         },
@@ -197,7 +230,13 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    <Workspaces />
+                    {isReady ? (
+                        <Suspense fallback={<SourceListSkeleton />}>
+                            <Workspaces />
+                        </Suspense>
+                    ) : (
+                        <SourceListSkeleton />
+                    )}
                 </div>
             )
         },
@@ -211,7 +250,13 @@ export function AppTabs({
             ),
             children: (
                 <div className="content-container">
-                    <ServerConfig activeParentTab={activeTab} />
+                    {isReady ? (
+                        <Suspense fallback={<ProxyRulesSkeleton />}>
+                            <ServerConfig activeParentTab={activeTab} />
+                        </Suspense>
+                    ) : (
+                        <ProxyRulesSkeleton />
+                    )}
                 </div>
             )
         }
