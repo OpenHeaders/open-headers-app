@@ -278,29 +278,6 @@ class WSClientHandler {
         this.broadcastConnectionStatus();
     }
 
-    /**
-     * Perform heartbeat check on all clients
-     */
-    performHeartbeat(): void {
-        if (!this.wsService.wss) return;
-
-        (this.wsService.wss.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.isAlive = false;
-                client.ping(() => {});
-            }
-        });
-
-        setTimeout(() => {
-            if (!this.wsService.wss) return;
-            (this.wsService.wss.clients as Set<ExtendedWebSocket>).forEach((client: ExtendedWebSocket) => {
-                if (!client.isAlive && client.readyState === WebSocket.OPEN) {
-                    log.info(`Terminating dead client: ${client.clientId}`);
-                    client.terminate();
-                }
-            });
-        }, 30000);
-    }
 }
 
 export { WSClientHandler };

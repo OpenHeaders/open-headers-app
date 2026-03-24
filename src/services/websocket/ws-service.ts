@@ -127,7 +127,7 @@ class WebSocketService {
             this._setupWsServer();
 
             if (this.sourceService) this.sourceHandler.registerSourceEvents();
-            this.sourceHandler.loadInitialData();
+            void this.sourceHandler.loadInitialData();
             this.clientHandler.startClientCleanup();
 
             this.networkStateHandler = new WSNetworkStateHandler(this);
@@ -135,9 +135,9 @@ class WebSocketService {
                 this.networkStateHandler.initialize(options.networkService);
             }
 
-            this.recordingHandler.initializeVideoCaptureService();
+            void this.recordingHandler.initializeVideoCaptureService();
             this.environmentHandler.setupEnvironmentListener();
-            this.environmentHandler.syncProxyService();
+            void this.environmentHandler.syncProxyService();
 
             this.isInitializing = false;
             return true;
@@ -246,7 +246,7 @@ class WebSocketService {
         server.on('connection', (ws: ExtendedWebSocket, request: http.IncomingMessage) => {
             log.info('WS client connected');
 
-            const clientId = `WS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const clientId = `WS-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
             const userAgent = request.headers['user-agent'] || '';
             const browserInfo = this.clientHandler.parseBrowserInfo(userAgent);
 
@@ -258,7 +258,7 @@ class WebSocketService {
             });
             ws.clientId = clientId;
 
-            this.clientHandler.initializeClient(ws, clientId);
+            void this.clientHandler.initializeClient(ws, clientId);
             this.clientHandler.broadcastConnectionStatus();
 
             ws.on('close', () => {
@@ -307,41 +307,41 @@ class WebSocketService {
     _dispatchMessage(ws: ExtendedWebSocket, data: WSMessage): void {
         switch (data.type) {
             case 'requestSources':
-                if (ws.isInitialized) this.sourceHandler.sendSourcesToClient(ws);
+                if (ws.isInitialized) void this.sourceHandler.sendSourcesToClient(ws);
                 break;
             case 'requestRules':
-                if (ws.isInitialized) this.ruleHandler.sendRulesToClient(ws);
+                if (ws.isInitialized) void this.ruleHandler.sendRulesToClient(ws);
                 break;
             case 'getVideoRecordingState':
-                this.recordingHandler.sendVideoRecordingState(ws);
+                void this.recordingHandler.sendVideoRecordingState(ws);
                 break;
             case 'getRecordingHotkey':
-                this.recordingHandler.sendRecordingHotkey(ws);
+                void this.recordingHandler.sendRecordingHotkey(ws);
                 break;
             case 'toggleRule':
-                this.ruleHandler.handleToggleRule(data.ruleId, data.enabled);
+                void this.ruleHandler.handleToggleRule(data.ruleId, data.enabled);
                 break;
             case 'toggleAllRules':
-                this.ruleHandler.handleToggleAllRules(data.ruleIds, data.enabled);
+                void this.ruleHandler.handleToggleAllRules(data.ruleIds, data.enabled);
                 break;
             case 'saveRecording':
             case 'saveWorkflow':
                 this.recordingHandler.handleSaveRecordingMessage(ws, { type: data.type, recording: data.recording });
                 break;
             case 'focusApp':
-                this._handleFocusApp(data.navigation ?? {});
+                void this._handleFocusApp(data.navigation ?? {});
                 break;
             case 'startSyncRecording':
                 log.info('Received startSyncRecording request:', data.data);
-                this.recordingHandler.handleStartSyncRecording(ws, data.data);
+                void this.recordingHandler.handleStartSyncRecording(ws, data.data);
                 break;
             case 'stopSyncRecording':
                 log.info('Received stopSyncRecording request:', data.data);
-                this.recordingHandler.handleStopSyncRecording(ws, data.data);
+                void this.recordingHandler.handleStopSyncRecording(ws, data.data);
                 break;
             case 'recordingStateSync':
                 log.info('Received recordingStateSync:', data.data);
-                this.recordingHandler.handleRecordingStateSync(ws, data.data);
+                void this.recordingHandler.handleRecordingStateSync(ws, data.data);
                 break;
         }
     }
