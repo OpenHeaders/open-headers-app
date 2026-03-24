@@ -29,13 +29,7 @@ interface WsConnectionStatus {
         extensionVersion: string;
     }[];
     wsServerRunning: boolean;
-    wssServerRunning: boolean;
     wsPort: number;
-    wssPort: number;
-    certificateFingerprint: string | null;
-    certificatePath: string | null;
-    certificateExpiry: string | null;
-    certificateSubject: string | null;
     error?: string;
 }
 
