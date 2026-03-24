@@ -2,9 +2,9 @@ const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const buildDir = path.join(__dirname, '..', 'build');
-const svgPath = path.join(buildDir, 'dmg-background.svg');
-const pngPath = path.join(buildDir, 'dmg-background.png');
+const macDir = path.join(__dirname, '..', '..', 'build', 'mac');
+const svgPath = path.join(macDir, 'dmg-background.svg');
+const pngPath = path.join(macDir, 'dmg-background.png');
 
 // Check if SVG exists
 if (!fs.existsSync(svgPath)) {
@@ -26,7 +26,7 @@ function convertWithRsvg() {
 function convertWithQlmanage() {
     try {
         // qlmanage is available on macOS
-        const tempDir = path.join(buildDir, 'temp-ql');
+        const tempDir = path.join(macDir, 'temp-ql');
         fs.mkdirSync(tempDir, { recursive: true });
         execSync(`qlmanage -t -s 540 -o "${tempDir}" "${svgPath}"`, { stdio: 'pipe' });
 
@@ -66,7 +66,7 @@ if (convertWithRsvg()) {
     console.log('Successfully converted using sips');
 } else {
     console.log('\nCould not automatically convert SVG to PNG.');
-    console.log('Please convert build/dmg-background.svg to build/dmg-background.png manually.');
+    console.log('Please convert build/mac/dmg-background.svg to build/mac/dmg-background.png manually.');
     console.log('\nOptions:');
     console.log('  1. Install librsvg: brew install librsvg');
     console.log('  2. Use an online converter');

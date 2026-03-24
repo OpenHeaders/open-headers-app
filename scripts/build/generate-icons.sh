@@ -5,7 +5,7 @@
 echo "Generating icons from logo.svg..."
 
 # Source and destination paths
-SOURCE_SVG="build/logo.svg"
+SOURCE_SVG="build/assets/logo.svg"
 BUILD_DIR="build"
 
 # Check if source SVG exists
@@ -58,7 +58,7 @@ cp "$TEMP_DIR/icon_48.png" "$BUILD_DIR/icon48.png"
 # Generate template icons for macOS tray (monochrome)
 echo "Creating macOS template icons..."
 # Use a special template SVG without background for macOS tray icons
-TEMPLATE_SVG="$BUILD_DIR/logoTemplate.svg"
+TEMPLATE_SVG="$BUILD_DIR/assets/logoTemplate.svg"
 
 # Check if template SVG exists, if not create it from the main logo
 if [ ! -f "$TEMPLATE_SVG" ]; then
