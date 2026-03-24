@@ -121,11 +121,6 @@ const BrowserConnectionStatus = () => {
 
         // Listen for connection status updates from main process
         let unsubscribe: (() => void) | undefined;
-        const handleStatusUpdate = (status: ConnectionStatus) => {
-            setConnectionStatus(status);
-            setIsLoading(false);
-        };
-
         if (window.electronAPI && window.electronAPI.onWsConnectionStatusChanged) {
             unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data) => {
                 setConnectionStatus(prev => ({ ...prev, ...data }));
@@ -188,7 +183,7 @@ const BrowserConnectionStatus = () => {
                     {clients.length > 0 && (
                         <div className="client-list">
                             <strong>Active Connections:</strong>
-                            {clients.slice(0, 5).map((client, index) => (
+                            {clients.slice(0, 5).map((client) => (
                                 <div key={client.id} className="client-info">
                                     <Space size="small">
                                         {getBrowserIcon(client.browser)}
