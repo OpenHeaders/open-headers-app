@@ -155,14 +155,8 @@ vi.mock('../../../src/services/websocket/ws-service.js', () => ({
         broadcastRecordingHotkeyChange: vi.fn(),
         getConnectionStatus: vi.fn(() => ({
             totalConnections: 0, browserCounts: {}, clients: [],
-            wsServerRunning: false, wssServerRunning: false,
-            wsPort: 59210, wssPort: 59211,
-            certificateFingerprint: null, certificatePath: null,
-            certificateExpiry: null, certificateSubject: null
+            wsServerRunning: false, wsPort: 59210,
         })),
-        checkCertificateTrust: vi.fn().mockResolvedValue({ trusted: false }),
-        trustCertificate: vi.fn().mockResolvedValue({ success: true }),
-        untrustCertificate: vi.fn().mockResolvedValue({ success: true }),
         onWorkspaceSwitch: vi.fn().mockResolvedValue(undefined)
     }
 }));
@@ -588,30 +582,7 @@ describe('WorkspaceHandlers', () => {
             expect(result).toHaveProperty('browserCounts');
             expect(result).toHaveProperty('clients');
             expect(result).toHaveProperty('wsServerRunning');
-            expect(result).toHaveProperty('wssServerRunning');
             expect(result).toHaveProperty('wsPort');
-            expect(result).toHaveProperty('wssPort');
-        });
-    });
-
-    describe('handleWsCheckCertTrust', () => {
-        it('returns certificate trust status', async () => {
-            const result = await handlers.handleWsCheckCertTrust();
-            expect(result).toHaveProperty('trusted');
-        });
-    });
-
-    describe('handleWsTrustCert', () => {
-        it('returns success on trust', async () => {
-            const result = await handlers.handleWsTrustCert();
-            expect(result).toEqual({ success: true });
-        });
-    });
-
-    describe('handleWsUntrustCert', () => {
-        it('returns success on untrust', async () => {
-            const result = await handlers.handleWsUntrustCert();
-            expect(result).toEqual({ success: true });
         });
     });
 

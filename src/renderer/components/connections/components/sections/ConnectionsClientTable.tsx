@@ -98,7 +98,7 @@ const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
             key: 'connectionType',
             width: 80,
             render: (type: string) => (
-                <Tag color={type === 'WSS' ? 'green' : 'blue'}>{type}</Tag>
+                <Tag color="blue">{type}</Tag>
             )
         }
     ];

@@ -85,9 +85,6 @@ interface EnvironmentLinkData {
 const workspaceAPI = {
     // WebSocket status
     wsGetConnectionStatus: (): Promise<WsConnectionStatus> => ipcRenderer.invoke('ws-get-connection-status'),
-    wsCheckCertTrust: (): Promise<{ trusted: boolean; error?: string }> => ipcRenderer.invoke('ws-check-cert-trust'),
-    wsTrustCert: (): Promise<OperationResult> => ipcRenderer.invoke('ws-trust-cert'),
-    wsUntrustCert: (): Promise<OperationResult> => ipcRenderer.invoke('ws-untrust-cert'),
 
     // Core workspace operations
     initializeWorkspaceSync: (workspaceId: string): Promise<OperationResult> => ipcRenderer.invoke('initializeWorkspaceSync', workspaceId),

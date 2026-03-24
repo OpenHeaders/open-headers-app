@@ -88,9 +88,6 @@ export const IPC_INVOKE = {
 
     // WebSocket
     WS_GET_CONNECTION_STATUS: 'ws-get-connection-status',
-    WS_CHECK_CERT_TRUST: 'ws-check-cert-trust',
-    WS_TRUST_CERT: 'ws-trust-cert',
-    WS_UNTRUST_CERT: 'ws-untrust-cert',
 
     // Git
     TEST_GIT_CONNECTION: 'testGitConnection',

@@ -599,9 +599,7 @@ test.describe('WebSocket Service', () => {
         expect(typeof status.browserCounts).toBe('object');
         expect(Array.isArray(status.clients)).toBe(true);
         expect(typeof status.wsServerRunning).toBe('boolean');
-        expect(typeof status.wssServerRunning).toBe('boolean');
         expect(typeof status.wsPort).toBe('number');
-        expect(typeof status.wssPort).toBe('number');
     });
 
     test('WebSocket tab shows connection details', async () => {

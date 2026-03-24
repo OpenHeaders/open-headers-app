@@ -220,49 +220,8 @@ class WorkspaceHandlers {
                 browserCounts: {},
                 clients: [],
                 wsServerRunning: false,
-                wssServerRunning: false,
-                wsPort: 59210,
-                wssPort: 59211,
-                certificateFingerprint: null,
-                certificatePath: null,
                 error: errorMessage(error)
             };
-        }
-    }
-
-    async handleWsCheckCertTrust() {
-        try {
-            if (!webSocketService) {
-                return { trusted: false, error: 'WebSocket service not available' };
-            }
-            return await webSocketService.checkCertificateTrust();
-        } catch (error: unknown) {
-            log.error('Error checking certificate trust:', error);
-            return { trusted: false, error: errorMessage(error) };
-        }
-    }
-
-    async handleWsTrustCert() {
-        try {
-            if (!webSocketService) {
-                return { success: false, error: 'WebSocket service not available' };
-            }
-            return await webSocketService.trustCertificate();
-        } catch (error: unknown) {
-            log.error('Error trusting certificate:', error);
-            return { success: false, error: errorMessage(error) };
-        }
-    }
-
-    async handleWsUntrustCert() {
-        try {
-            if (!webSocketService) {
-                return { success: false, error: 'WebSocket service not available' };
-            }
-            return await webSocketService.untrustCertificate();
-        } catch (error: unknown) {
-            log.error('Error untrusting certificate:', error);
-            return { success: false, error: errorMessage(error) };
         }
     }
 

@@ -310,18 +310,9 @@ declare global {
         extensionVersion: string;
       }[];
       wsServerRunning: boolean;
-      wssServerRunning: boolean;
       wsPort: number;
-      wssPort: number;
-      certificateFingerprint: string | null;
-      certificatePath: string | null;
-      certificateExpiry: string | null;
-      certificateSubject: string | null;
       error?: string;
     }>;
-    wsCheckCertTrust: () => Promise<{ trusted: boolean; error?: string }>;
-    wsTrustCert: () => Promise<{ success: boolean; error?: string }>;
-    wsUntrustCert: () => Promise<{ success: boolean; error?: string }>;
 
     // Git
     testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number }; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;

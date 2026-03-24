@@ -28,7 +28,6 @@ interface NetworkServiceLike {
 
 interface WSServiceLike {
     wss: WebSocketServer | null;
-    secureWss: WebSocketServer | null;
 }
 
 class WSNetworkStateHandler {
@@ -120,19 +119,6 @@ class WSNetworkStateHandler {
             });
         }
 
-        // Send to WSS clients
-        if (this.wsService.secureWss && this.wsService.secureWss.clients) {
-            this.wsService.secureWss.clients.forEach((client: WS) => {
-                if (client.readyState === 1) { // WebSocket.OPEN
-                    try {
-                        client.send(message);
-                        clientCount++;
-                    } catch (error) {
-                        log.error('Error sending network state to WSS client:', error);
-                    }
-                }
-            });
-        }
 
         if (clientCount > 0) {
             log.debug(`Broadcasted network state to ${clientCount} client(s)`);
