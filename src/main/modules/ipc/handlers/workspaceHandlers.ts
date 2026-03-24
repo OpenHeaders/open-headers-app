@@ -19,7 +19,6 @@ import type { ProgressStep } from '../../../../services/workspace/git/utils/GitC
 import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
 import type { RulesStorage } from '../../../../types/rules';
 import serviceRegistry from '../../../../services/core/ServiceRegistry';
-import type { AppSettings } from '../../../../types/settings';
 
 const { app, shell, BrowserWindow } = electron;
 const { createLogger } = mainLogger;
@@ -203,13 +202,7 @@ class WorkspaceHandlers {
                     browserCounts: {},
                     clients: [],
                     wsServerRunning: false,
-                    wssServerRunning: false,
                     wsPort: 59210,
-                    wssPort: 59211,
-                    certificateFingerprint: null,
-                    certificatePath: null,
-                    certificateExpiry: null,
-                    certificateSubject: null
                 };
             }
             return webSocketService.getConnectionStatus();

@@ -48,7 +48,7 @@ The application consists of these main components:
 | Service                   | Description                                                |
 |---------------------------|------------------------------------------------------------|
 | `src/services/proxy/`     | HTTP proxy with header injection, caching, domain matching |
-| `src/services/websocket/` | WS/WSS servers for browser extension communication         |
+| `src/services/websocket/` | WebSocket server for browser extension communication       |
 | `src/services/workspace/` | Git-based team workspace sync                              |
 | `src/services/cli/`       | REST API for CLI tool integration                          |
 | `src/services/network/`   | Network state monitoring (online/offline, VPN detection)   |
@@ -335,10 +335,8 @@ npm run dist:mac:unsigned
 
 Provides browser extension communication:
 
-- **WS** (port 59210): Chrome/Edge
-- **WSS** (port 59211): Firefox (self-signed certificates)
-- Certificates auto-generated using node-forge
-- Binds to localhost only
+- **WS** (port 59210): All browsers (Chrome, Edge, Firefox, Safari)
+- Binds to localhost only — never exposed to the network
 - Broadcasts source/rule changes to connected extensions
 
 ## Key Feature Areas
