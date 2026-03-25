@@ -379,7 +379,7 @@ class AtomicFileWriter {
   /**
    * Read and parse JSON file
    */
-  async readJson(filePath: string): Promise<unknown> {
+  async readJson<T = unknown>(filePath: string): Promise<T | null> {
     const content = await this.readFile(filePath);
     if (content === null) {
       return null;

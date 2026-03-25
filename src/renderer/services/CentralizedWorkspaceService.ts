@@ -11,7 +11,7 @@
 
 import { createLogger } from '../utils/error-handling/logger';
 import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
-import type { Source } from '../../types/source';
+import type { Source, SourceUpdate } from '../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType, CommitInfo } from '../../types/workspace';
 import type { ProxyRule } from '../../types/proxy';
 import {
@@ -503,19 +503,20 @@ class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState
   /**
    * Update a source
    */
-  async updateSource(sourceId: string, updates: Partial<Source>): Promise<Source | null> {
+  async updateSource(sourceId: string, updates: SourceUpdate): Promise<Source | null> {
     let updatedSource: Source | null = null;
     const sources = this.state.sources.map((source) => {
       if (source.sourceId === String(sourceId)) {
-        const mergedUpdates: Partial<Source> = { ...updates };
-        if (updates.refreshOptions && source.refreshOptions) {
-          mergedUpdates.refreshOptions = {
-            ...source.refreshOptions,
-            ...updates.refreshOptions
-          };
+        // Build a fully-resolved Source update by merging partial refreshOptions
+        // with the existing complete refreshOptions (preserving required fields).
+        const { refreshOptions: refreshUpdates, ...otherUpdates } = updates;
+        const resolvedUpdates: Partial<Source> = { ...otherUpdates };
+        if (refreshUpdates) {
+          const base = source.refreshOptions ?? { enabled: false };
+          resolvedUpdates.refreshOptions = { ...base, ...refreshUpdates };
         }
 
-        const updated: Source = { ...source, ...mergedUpdates, updatedAt: new Date().toISOString() };
+        const updated: Source = { ...source, ...resolvedUpdates, updatedAt: new Date().toISOString() };
 
         // Schedule dependency check if needed
         if (updated.sourceType === 'http' && updated.activationState === 'waiting_for_deps') {

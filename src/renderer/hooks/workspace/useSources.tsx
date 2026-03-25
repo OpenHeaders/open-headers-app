@@ -1,7 +1,7 @@
 import {useCallback} from 'react';
 import {useCentralizedWorkspace} from '../useCentralizedWorkspace';
 import {showMessage} from '../../utils';
-import type { Source, RefreshOptions } from '../../../types/source';
+import type { Source, SourceUpdate, RefreshOptions } from '../../../types/source';
 
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('useSources');
@@ -10,7 +10,7 @@ const log = createLogger('useSources');
 interface UseSourcesReturn {
   sources: Source[];
   addSource: (sourceData: Source) => Promise<Source | null>;
-  updateSource: (sourceId: string, updates: Partial<Source>) => Promise<Source | null>;
+  updateSource: (sourceId: string, updates: SourceUpdate) => Promise<Source | null>;
   removeSource: (sourceId: string) => Promise<boolean>;
   updateSourceContent: (sourceId: string, content: string) => Promise<boolean>;
   importSources: (newSources: Source[], replace?: boolean) => Promise<boolean>;
@@ -35,7 +35,7 @@ export function useSources(): UseSourcesReturn {
     }
   }, [service]);
 
-  const updateSource = useCallback(async (sourceId: string, updates: Partial<Source>): Promise<Source | null> => {
+  const updateSource = useCallback(async (sourceId: string, updates: SourceUpdate): Promise<Source | null> => {
     try {
       log.debug('updateSource called', { sourceId, updates });
       const updatedSource: Source | null = await service.updateSource(sourceId, updates);

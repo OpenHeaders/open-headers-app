@@ -762,8 +762,8 @@ class WorkspaceSyncScheduler {
             return {
               ...remoteSource,
               // Preserve local execution state
-              sourceContent: existingSource.sourceContent ?? '',
-              originalResponse: existingSource.originalResponse ?? '{}',
+              sourceContent: existingSource.sourceContent ?? null,
+              originalResponse: existingSource.originalResponse ?? null,
               isFiltered: existingSource.isFiltered,
               filteredWith: existingSource.filteredWith,
               activationState: existingSource.activationState ?? remoteSource.activationState,

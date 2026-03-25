@@ -51,7 +51,6 @@ export interface RefreshOptions {
   interval?: number;
   lastRefresh?: number | null;
   nextRefresh?: number | null;
-  preserveTiming?: boolean;
   alignToMinute?: boolean;
   alignToHour?: boolean;
   alignToDay?: boolean;
@@ -95,6 +94,15 @@ export interface Source {
   /** HTTP response headers — populated after each fetch, used by ContentViewer */
   responseHeaders?: Record<string, string> | null;
 }
+
+/**
+ * Partial update payload for Source — allows partial refreshOptions
+ * so callers can update individual fields (e.g. lastRefresh) without
+ * specifying required fields like enabled.
+ */
+export type SourceUpdate = Partial<Omit<Source, 'refreshOptions'>> & {
+  refreshOptions?: Partial<RefreshOptions>;
+};
 
 /** Data produced by the source creation form — no sourceId yet. */
 export type NewSourceData = Omit<Source, 'sourceId'> & {

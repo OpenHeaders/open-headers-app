@@ -294,24 +294,22 @@ if (!gotTheLock) {
 
 // ─── IPC Registration ───────────────────────────────────────────────────────
 
-type ModuleDefault<T> = T;
-
 function setupIPC(
-    fileHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/fileHandlers').default>,
-    storageHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/storageHandlers').default>,
-    settingsHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/settingsHandlers').default>,
-    systemHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/systemHandlers').default>,
-    httpHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/httpHandlers').default>,
-    recordingHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/recordingHandlers').default>,
-    proxyHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/proxyHandlers').default>,
-    workspaceHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/workspaceHandlers').default>,
-    gitHandlers: ModuleDefault<typeof import('./main/modules/ipc/handlers/gitHandlers').default>,
-    appLifecycle: ModuleDefault<typeof import('./main/modules/app/lifecycle').default>,
-    autoUpdater: ModuleDefault<typeof import('./main/modules/updater/autoUpdater').default>,
-    globalShortcuts: ModuleDefault<typeof import('./main/modules/shortcuts/globalShortcuts').default>,
-    networkHandlers: ModuleDefault<typeof import('./main/modules/network/networkHandlers').default>,
-    windowManager: ModuleDefault<typeof import('./main/modules/window/windowManager').default>,
-    protocolHandler: ModuleDefault<typeof import('./main/modules/protocol/protocolHandler').default>,
+    fileHandlers: typeof import('./main/modules/ipc/handlers/fileHandlers').default,
+    storageHandlers: typeof import('./main/modules/ipc/handlers/storageHandlers').default,
+    settingsHandlers: typeof import('./main/modules/ipc/handlers/settingsHandlers').default,
+    systemHandlers: typeof import('./main/modules/ipc/handlers/systemHandlers').default,
+    httpHandlers: typeof import('./main/modules/ipc/handlers/httpHandlers').default,
+    recordingHandlers: typeof import('./main/modules/ipc/handlers/recordingHandlers').default,
+    proxyHandlers: typeof import('./main/modules/ipc/handlers/proxyHandlers').default,
+    workspaceHandlers: typeof import('./main/modules/ipc/handlers/workspaceHandlers').default,
+    gitHandlers: typeof import('./main/modules/ipc/handlers/gitHandlers').default,
+    appLifecycle: typeof import('./main/modules/app/lifecycle').default,
+    autoUpdater: typeof import('./main/modules/updater/autoUpdater').default,
+    globalShortcuts: typeof import('./main/modules/shortcuts/globalShortcuts').default,
+    networkHandlers: typeof import('./main/modules/network/networkHandlers').default,
+    windowManager: typeof import('./main/modules/window/windowManager').default,
+    protocolHandler: typeof import('./main/modules/protocol/protocolHandler').default,
 ) {
     // File operations
     ipcMain.handle('openFileDialog', fileHandlers.handleOpenFileDialog);
@@ -355,6 +353,14 @@ function setupIPC(
     ipcMain.handle('forceNetworkCheck', networkHandlers.forceNetworkCheck);
     ipcMain.handle('getSystemState', networkHandlers.getSystemState);
     ipcMain.handle('makeHttpRequest', httpHandlers.handleMakeHttpRequest);
+
+    // Source refresh (main-process owned)
+    void import('./main/modules/ipc/handlers/sourceRefreshHandlers').then(({ default: sourceRefreshHandlers }) => {
+        ipcMain.handle('source-refresh:manual', sourceRefreshHandlers.handleManualRefresh);
+        ipcMain.handle('source-refresh:update-source', sourceRefreshHandlers.handleUpdateSource);
+        ipcMain.handle('source-refresh:get-status', sourceRefreshHandlers.handleGetStatus);
+        ipcMain.handle('source-refresh:get-time-until', sourceRefreshHandlers.handleGetTimeUntil);
+    });
 
     // Recording
     ipcMain.handle('loadRecordings', recordingHandlers.handleLoadRecordings);
@@ -491,13 +497,7 @@ function setupIPC(
     // Runtime updates
     ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Source[]) => {
         const webSocketService = (await import('./services/websocket/ws-service')).default;
-        log.info(`Main: Received updateWebSocketSources with ${sources?.length || 0} sources`);
-        if (sources && sources.length > 0) {
-            log.info(`Main: Sources with content: ${sources.filter((s) => s.sourceContent).length}`);
-            sources.forEach((source) => {
-                log.info(`  Main: Source ${source.sourceId}: hasContent=${!!source.sourceContent}, contentLength=${source.sourceContent?.length || 0}`);
-            });
-        }
+        log.info(`Received updateWebSocketSources with ${sources?.length || 0} sources`);
         webSocketService.updateSources(sources);
     });
 

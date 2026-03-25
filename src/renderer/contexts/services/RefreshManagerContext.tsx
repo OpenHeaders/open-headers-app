@@ -1,189 +1,227 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import refreshManagerIntegration from '../../services/RefreshManagerIntegration';
-import type { HttpService, SourceUpdateData } from '../../services/RefreshManager';
-import { useHttp } from '../../hooks/useHttp';
+/**
+ * RefreshManagerContext — thin IPC bridge to main-process SourceRefreshService.
+ *
+ * The main process owns all refresh scheduling, circuit breaking, and HTTP fetching.
+ * This context only:
+ *  - Subscribes to IPC events for content/status/schedule updates
+ *  - Applies content updates to workspace state
+ *  - Exposes query methods that forward to main via IPC
+ */
+
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useSources } from '../../hooks/workspace';
-import { getCentralizedWorkspaceService } from '../../services/CentralizedWorkspaceService';
 import { createLogger } from '../../utils/error-handling/logger';
-import type { Source } from '../../../types/source';
+import type { Source, SourceUpdate } from '../../../types/source';
 const log = createLogger('RefreshManagerContext');
 
 interface RefreshStatus {
-  isRefreshing: boolean;
-  isOverdue: boolean;
-  isPaused: boolean;
-  consecutiveErrors: number;
-  isRetry: boolean;
-  attemptNumber: number;
-  failureCount: number;
-  circuitBreaker: {
-    state: string;
-    isOpen: boolean;
-    canManualBypass: boolean;
-    timeUntilNextAttempt: string | null;
-    timeUntilNextAttemptMs: number;
-    consecutiveOpenings: number;
-    currentTimeout: number;
+    isRefreshing: boolean;
+    isOverdue: boolean;
+    isPaused: boolean;
+    consecutiveErrors: number;
+    isRetry: boolean;
+    attemptNumber: number;
     failureCount: number;
-  };
+    lastRefresh?: number;
+    success?: boolean;
+    error?: string;
+    circuitBreaker: {
+        state: string;
+        isOpen: boolean;
+        canManualBypass: boolean;
+        timeUntilNextAttempt: string | null;
+        timeUntilNextAttemptMs: number;
+        consecutiveOpenings: number;
+        currentTimeout: number;
+        failureCount: number;
+    };
 }
 
 interface RefreshManagerContextValue {
-  isReady: () => boolean;
-  manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (source: Source) => void;
-  updateSource: (source: Source) => void;
-  removeSource: (sourceId: string) => Promise<void>;
-  getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => number;
-  getRefreshStatus: (sourceId: string) => RefreshStatus;
+    isReady: () => boolean;
+    manualRefresh: (sourceId: string) => Promise<boolean>;
+    addSource: (source: Source) => void;
+    updateSource: (source: Source) => void;
+    removeSource: (sourceId: string) => Promise<void>;
+    getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => number;
+    getRefreshStatus: (sourceId: string) => RefreshStatus;
 }
 
-/**
- * RefreshManager Context
- * Provides RefreshManager functionality to the entire app
- */
 export const RefreshManagerContext = createContext<RefreshManagerContextValue | null>(null);
 
+// Cache for async IPC results so getRefreshStatus/getTimeUntilRefresh stay synchronous
+const statusCache = new Map<string, RefreshStatus>();
+/** Stores the absolute nextRefresh timestamp — delta is computed on each call */
+const nextRefreshCache = new Map<string, number | null>();
+
+const DEFAULT_STATUS: RefreshStatus = {
+    isRefreshing: false,
+    isOverdue: false,
+    isPaused: false,
+    consecutiveErrors: 0,
+    isRetry: false,
+    attemptNumber: 0,
+    failureCount: 0,
+    circuitBreaker: {
+        state: 'closed',
+        isOpen: false,
+        canManualBypass: false,
+        timeUntilNextAttempt: null,
+        timeUntilNextAttemptMs: 0,
+        consecutiveOpenings: 0,
+        currentTimeout: 0,
+        failureCount: 0
+    }
+};
+
 export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { updateSource } = useSources();
-    const http = useHttp();
-    const initializationRef = useRef(false);
-    const httpServiceRef = useRef<HttpService | null>(null);
+    const { updateSource, sources: currentSources } = useSources();
+    const cleanupRefs = useRef<Array<() => void>>([]);
+    const [, setRenderTick] = useState(0);
+    const bumpRender = () => setRenderTick(n => n + 1);
 
-    // Update HTTP service reference when http changes
+    // On mount, fetch current schedules from main process.
+    // Schedule events during startup fire before the renderer is ready — this catches up.
     useEffect(() => {
-        httpServiceRef.current = {
-            request: http.request
-        };
-    }, [http]);
+        if (!window.electronAPI?.sourceRefresh || !currentSources.length) return;
 
-    // Initialize RefreshManager once when the provider mounts
-    useEffect(() => {
-        if (initializationRef.current) {
-            return;
-        }
-
-        initializationRef.current = true;
-
-        const updateCallback = (sourceId: string, content: string | null | undefined, additionalData: SourceUpdateData) => {
-            log.debug('RefreshManager update callback:', { sourceId, hasContent: !!content, additionalData });
-
-            // Get the source to check if it has a JSON filter
-            const source = (getCentralizedWorkspaceService().getState().sources).find((s) => s.sourceId === String(sourceId));
-
-            // Build updates object
-            const updates: Partial<Source> = {};
-
-            // Only update content if it's explicitly provided (not undefined)
-            // This prevents schedule updates from clearing content
-            // Note: null is considered an explicit clear (e.g., on errors)
-            if (content !== undefined) {
-                updates.sourceContent = content;
-            }
-
-            // Copy over additional data
-            if (additionalData) {
-                if (additionalData.originalResponse) {
-                    updates.originalResponse = additionalData.originalResponse;
-                    updates.isFiltered = true;
-                    updates.filteredWith = source?.jsonFilter?.path ?? null;
-                } else {
-                    if (source?.jsonFilter?.enabled === false) {
-                        updates.originalResponse = null;
-                        updates.isFiltered = false;
-                        updates.filteredWith = null;
+        for (const source of currentSources) {
+            if (source.sourceType === 'http') {
+                window.electronAPI.sourceRefresh.getTimeUntilRefresh(source.sourceId).then(ms => {
+                    if (ms > 0) {
+                        nextRefreshCache.set(source.sourceId, Date.now() + ms);
+                        bumpRender();
                     }
-                }
-
-                // Merge refreshOptions to preserve all settings
-                if (additionalData.refreshOptions) {
-                    updates.refreshOptions = {
-                        ...(source?.refreshOptions ?? { enabled: false }),
-                        ...additionalData.refreshOptions
-                    };
-                }
-
-                if (additionalData.refreshStatus) {
-                    updates.refreshStatus = additionalData.refreshStatus;
-                }
-
-                // Store HTTP response headers for ContentViewer
-                if (additionalData.headers) {
-                    updates.responseHeaders = additionalData.headers;
-                }
+                }).catch(() => {});
             }
+        }
+    }, [currentSources.length]);
 
-            void updateSource(sourceId, updates);
-        };
+    useEffect(() => {
+        if (!window.electronAPI?.sourceRefresh) return;
 
-        const initialize = async () => {
-            try {
-                // Wait a bit to ensure services are ready
-                await new Promise(resolve => setTimeout(resolve, 100));
+        const api = window.electronAPI.sourceRefresh;
 
-                await refreshManagerIntegration.initialize(
-                    httpServiceRef.current!,
-                    updateCallback
-                );
+        // Listen for content updates from main process
+        const cleanupContent = api.onContentUpdated((data) => {
+            log.debug('Content updated from main process:', data.sourceId);
 
-                log.info('RefreshManager initialized successfully');
-            } catch (error) {
-                log.error('Failed to initialize RefreshManager:', error);
-                initializationRef.current = false; // Allow retry
-            }
-        };
-
-        void initialize();
-
-        // Listen for workspace switch events
-        const handleWorkspaceSwitch = async () => {
-            log.info('Workspace switch detected, cleaning up RefreshManager sources');
-            try {
-                await refreshManagerIntegration.cleanupAllSources();
-            } catch (error) {
-                log.error('Error cleaning up sources during workspace switch:', error);
-            }
-        };
-
-        // Listen for workspace sync events
-        const handleWorkspaceSync = async (event: CustomEvent<{ workspaceId: string; reason: string }>) => {
-            log.info(`Workspace sync detected (${event.detail?.reason}), cleaning up RefreshManager sources`);
-            try {
-                await refreshManagerIntegration.cleanupAllSources();
-            } catch (error) {
-                log.error('Error cleaning up sources during workspace sync:', error);
-            }
-        };
-
-        window.addEventListener('workspace-switching', handleWorkspaceSwitch);
-        window.addEventListener('workspace-syncing', handleWorkspaceSync);
-
-        // Cleanup on unmount
-        return () => {
-            window.removeEventListener('workspace-switching', handleWorkspaceSwitch);
-            window.removeEventListener('workspace-syncing', handleWorkspaceSync);
-
-            const cleanup = async () => {
-                try {
-                    await refreshManagerIntegration.destroy();
-                    log.info('RefreshManager cleaned up');
-                } catch (error) {
-                    log.error('Error cleaning up RefreshManager:', error);
-                }
+            const updates: SourceUpdate = {
+                sourceContent: data.content,
+                responseHeaders: data.headers,
+                needsInitialFetch: false,
+                // Persist lastRefresh so the scheduler recovers correct timing after app restart.
+                // CentralizedWorkspaceService merges refreshOptions shallowly — only lastRefresh
+                // is included here so existing enabled/interval/type values are preserved.
+                refreshOptions: { lastRefresh: data.lastRefresh }
             };
-            void cleanup();
+
+            if (data.isFiltered && data.originalResponse) {
+                updates.originalResponse = data.originalResponse;
+                updates.isFiltered = true;
+                updates.filteredWith = data.filteredWith ?? null;
+            } else {
+                updates.originalResponse = null;
+                updates.isFiltered = false;
+                updates.filteredWith = null;
+            }
+
+            void updateSource(data.sourceId, updates);
+        });
+
+        // Listen for status changes — update cache and trigger re-render.
+        // On refresh completion, also push into workspace state so SourceTable
+        // (which reads from workspace sources, not the context cache) updates immediately.
+        const cleanupStatus = api.onStatusChanged((data) => {
+            const prev = statusCache.get(data.sourceId);
+            const status = data.status as unknown as RefreshStatus;
+            statusCache.set(data.sourceId, status);
+            bumpRender();
+
+            // Only push workspace state on isRefreshing transitions to avoid excessive saves
+            const wasRefreshing = prev?.isRefreshing ?? false;
+            if (wasRefreshing && !status.isRefreshing) {
+                void updateSource(data.sourceId, {
+                    refreshStatus: {
+                        isRefreshing: false,
+                        lastRefresh: status.lastRefresh,
+                        success: status.success,
+                        error: status.error,
+                        failureCount: status.failureCount
+                    }
+                });
+            }
+        });
+
+        // Listen for schedule updates — store absolute timestamp and trigger re-render.
+        const cleanupSchedule = api.onScheduleUpdated((data) => {
+            nextRefreshCache.set(data.sourceId, data.nextRefresh);
+            bumpRender();
+        });
+
+        cleanupRefs.current = [cleanupContent, cleanupStatus, cleanupSchedule];
+
+        return () => {
+            cleanupRefs.current.forEach(fn => fn());
+            cleanupRefs.current = [];
         };
     }, [updateSource]);
 
-    // Context value with all RefreshManager methods
     const value: RefreshManagerContextValue = {
-        isReady: () => refreshManagerIntegration.isReady(),
-        manualRefresh: (sourceId: string) => refreshManagerIntegration.manualRefresh(sourceId),
-        addSource: (source: Source) => refreshManagerIntegration.addSource(source),
-        updateSource: (source: Source) => refreshManagerIntegration.updateSource(source),
-        removeSource: (sourceId: string) => refreshManagerIntegration.removeSource(sourceId),
-        getTimeUntilRefresh: (sourceId: string, sourceData: Source | null) => refreshManagerIntegration.getTimeUntilRefresh(sourceId, sourceData),
-        getRefreshStatus: (sourceId: string) => refreshManagerIntegration.getRefreshStatus(sourceId)
+        isReady: () => !!window.electronAPI?.sourceRefresh,
+
+        manualRefresh: async (sourceId: string) => {
+            if (!window.electronAPI?.sourceRefresh) return false;
+            const result = await window.electronAPI.sourceRefresh.manualRefresh(sourceId);
+            return result.success;
+        },
+
+        // These are no-ops — main process manages source lifecycle via WSSourceHandler
+        addSource: () => {},
+        updateSource: () => {},
+        removeSource: async () => {},
+
+        getTimeUntilRefresh: (sourceId: string, _sourceData: Source | null) => {
+            const nextRefresh = nextRefreshCache.get(sourceId);
+            if (nextRefresh) {
+                return Math.max(0, nextRefresh - Date.now());
+            }
+
+            // No cached timestamp yet — kick off async fetch in background
+            if (window.electronAPI?.sourceRefresh) {
+                window.electronAPI.sourceRefresh.getTimeUntilRefresh(sourceId).then(ms => {
+                    // Convert delta back to absolute timestamp for future calls
+                    if (ms > 0) {
+                        nextRefreshCache.set(sourceId, Date.now() + ms);
+                    }
+                }).catch(() => {});
+            }
+            return 0;
+        },
+
+        getRefreshStatus: (sourceId: string) => {
+            const cached = statusCache.get(sourceId);
+            if (cached) return cached;
+
+            // Kick off async fetch in background
+            if (window.electronAPI?.sourceRefresh) {
+                window.electronAPI.sourceRefresh.getRefreshStatus(sourceId).then(status => {
+                    statusCache.set(sourceId, {
+                        ...DEFAULT_STATUS,
+                        isRefreshing: status.isRefreshing,
+                        failureCount: status.failureCount,
+                        circuitBreaker: {
+                            ...DEFAULT_STATUS.circuitBreaker,
+                            state: status.circuitBreaker.state,
+                            isOpen: status.circuitBreaker.isOpen,
+                            timeUntilNextAttemptMs: status.circuitBreaker.timeUntilNextAttemptMs,
+                            failureCount: status.circuitBreaker.failureCount
+                        }
+                    });
+                }).catch(() => {});
+            }
+            return DEFAULT_STATUS;
+        }
     };
 
     return (
@@ -193,9 +231,6 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
     );
 };
 
-/**
- * Hook to use RefreshManager functionality
- */
 export const useRefreshManager = (): RefreshManagerContextValue => {
     const context = useContext(RefreshManagerContext);
     if (!context) {

@@ -146,7 +146,7 @@ describe('WSRuleHandler', () => {
             expect(result.header[0].headerValue).toBe('');
         });
 
-        it('keeps original headerValue when source has null content', () => {
+        it('excludes rule when source has null content (readiness gate)', () => {
             mockService.sources = [
                 makeSource({ sourceId: 'src-null', sourceContent: null })
             ];
@@ -159,12 +159,12 @@ describe('WSRuleHandler', () => {
                     prefix: 'Bearer ',
                     suffix: '',
                     headerName: 'Authorization',
-                    headerValue: '', // explicit empty
+                    headerValue: '',
                 })]
             };
             const result = handler._populateDynamicHeaderValues(rules);
-            // sourceContent is null so dynamic population is skipped
-            expect(result.header[0].headerValue).toBe('');
+            // sourceContent is null — rule excluded until content arrives
+            expect(result.header).toHaveLength(0);
         });
 
         it('resolves env vars in header values and marks as active', () => {

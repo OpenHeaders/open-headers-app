@@ -15,6 +15,7 @@ import type { HeaderRule, RulesStorage } from './rules';
 import type { Workspace, WorkspaceAuthData, CommitInfo, TeamWorkspaceInvite, WorkspaceDataUpdatedData, WorkspaceSyncCompletedData, CliWorkspaceJoinedData } from './workspace';
 import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from './environment';
 import type { RecordingData } from '../services/websocket/utils/recordingPreprocessor';
+import type { RefreshStatusInfo, ContentUpdatedPayload, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
 
 declare global {
 
@@ -370,6 +371,17 @@ declare global {
     // Runtime updates
     updateWebSocketSources: (sources: Source[] | { type: 'rules-update'; data: RulesStorage }) => void;
     cleanupTempFiles: (...args: string[]) => void;
+
+    // Source refresh (main-process owned lifecycle)
+    sourceRefresh: {
+        manualRefresh: (sourceId: string) => Promise<{ success: boolean; error?: string }>;
+        updateSource: (source: Source) => Promise<void>;
+        getRefreshStatus: (sourceId: string) => Promise<RefreshStatusInfo>;
+        getTimeUntilRefresh: (sourceId: string) => Promise<number>;
+        onContentUpdated: (callback: (data: ContentUpdatedPayload) => void) => (() => void);
+        onStatusChanged: (callback: (data: StatusChangedPayload) => void) => (() => void);
+        onScheduleUpdated: (callback: (data: ScheduleUpdatedPayload) => void) => (() => void);
+    };
 
     // Event listeners (return cleanup function)
     onNavigateTo: (callback: (data: NavigationData) => void) => (() => void);

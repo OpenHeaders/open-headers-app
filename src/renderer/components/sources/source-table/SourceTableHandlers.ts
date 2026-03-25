@@ -28,11 +28,6 @@ import { showMessage } from '../../../utils/ui/messageUtil';
 import { debugRefreshState } from './SourceTableUtils';
 import type { Source } from '../../../../types/source';
 
-interface RefreshDisplayState {
-    text: string;
-    timestamp: number;
-}
-
 interface LoggerLike {
     debug: (message: string, data?: unknown) => void;
     error: (message: string, data?: unknown) => void;
@@ -46,7 +41,6 @@ interface TimeManagerLike {
 interface SaveSourceParams {
     onUpdateSource: (sourceId: string, data: Partial<Source>) => Promise<Source | null>;
     setRefreshingSourceId: (id: string | null) => void;
-    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     setEditModalVisible: (visible: boolean) => void;
     handleRefreshSource: (sourceId: string, source: Source) => Promise<boolean>;
     log: LoggerLike;
@@ -55,7 +49,6 @@ interface SaveSourceParams {
 interface RefreshSourceParams {
     onRefreshSource: (sourceId: string, updatedSource?: Source | null) => Promise<boolean>;
     setRefreshingSourceId: (id: string | null) => void;
-    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     timeManager: TimeManagerLike;
     log: LoggerLike;
 }
@@ -63,7 +56,6 @@ interface RefreshSourceParams {
 interface RemoveSourceParams {
     onRemoveSource: (sourceId: string) => Promise<boolean>;
     setRemovingSourceId: (id: string | null) => void;
-    setRefreshDisplayStates: (updater: (prev: Record<string, RefreshDisplayState>) => Record<string, RefreshDisplayState>) => void;
     sources: Source[];
 }
 
@@ -78,19 +70,10 @@ interface ModalHandlerParams {
 
 /**
  * Creates save source handler with refresh logic
- * @param {Object} params - Handler parameters
- * @param {Function} params.onUpdateSource - Update source callback
- * @param {Function} params.setRefreshingSourceId - Set refreshing state
- * @param {Function} params.setRefreshDisplayStates - Set display states
- * @param {Function} params.setEditModalVisible - Set modal visibility
- * @param {Function} params.handleRefreshSource - Refresh source handler
- * @param {Object} params.log - Logger instance
- * @returns {Function} Save source handler
  */
 export const createSaveSourceHandler = ({
     onUpdateSource,
     setRefreshingSourceId,
-    setRefreshDisplayStates,
     setEditModalVisible,
     handleRefreshSource,
     log
@@ -120,29 +103,21 @@ export const createSaveSourceHandler = ({
         if (updatedSource) {
             log.debug('Source updated successfully');
 
-            // Clear cached refresh display state to force immediate UI update
-            // This ensures the "Refreshes in..." text updates immediately after save
-            setRefreshDisplayStates(prev => {
-                // Only update if the key exists to avoid unnecessary re-renders
-                if (sourceData.sourceId in prev) {
-                    const { [sourceData.sourceId]: _, ...rest } = prev;
-                    log.debug(`Cleared refresh display cache for source ${sourceData.sourceId}`);
-                    return rest;
+            // Push updated config directly to main-process SourceRefreshService
+            // so it picks up new refreshOptions immediately (no disk-read race).
+            // Must await before triggering refresh to ensure config is applied first.
+            if (updatedSource.sourceType === 'http' && window.electronAPI?.sourceRefresh) {
+                try {
+                    await window.electronAPI.sourceRefresh.updateSource(updatedSource);
+                } catch (err) {
+                    log.error('Failed to push source config to main process:', err);
                 }
-                return prev;
-            });
+            }
 
             // Trigger refresh if explicitly requested via refreshNow flag
-            // This is typically set when user saves with refresh intention
             if (shouldRefreshNow) {
-                log.debug('Triggering refresh after save...', {
-                    reason: 'immediate-refresh-requested'
-                });
+                log.debug('Triggering refresh after save...');
 
-                // Use a promise to wait for the next tick and ensure source is updated
-                // This prevents race conditions with state updates
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
                 try {
                     const refreshSuccess = await handleRefreshSource(sourceData.sourceId, updatedSource);
 
@@ -177,83 +152,40 @@ export const createSaveSourceHandler = ({
         showMessage('error', `Error: ${(error instanceof Error ? error.message : String(error))}`);
         return false;
     } finally {
-        // Clear refreshing state with delay to ensure UI updates properly
-        // Delay allows users to see the loading state briefly for better UX
-        setTimeout(() => {
-            setRefreshingSourceId(null);
-        }, 1500);
+        setRefreshingSourceId(null);
     }
 };
 
 /**
  * Creates refresh source handler with status tracking
- * @param {Object} params - Handler parameters
- * @param {Function} params.onRefreshSource - Refresh source callback
- * @param {Function} params.setRefreshingSourceId - Set refreshing state
- * @param {Function} params.setRefreshDisplayStates - Set display states
- * @param {Object} params.timeManager - Time manager instance
- * @param {Object} params.log - Logger instance
- * @returns {Function} Refresh source handler
  */
 export const createRefreshSourceHandler = ({
     onRefreshSource,
     setRefreshingSourceId,
-    setRefreshDisplayStates,
     timeManager,
     log
 }: RefreshSourceParams) => async (sourceId: string, updatedSource: Source | null = null) => {
-    // Manual refresh handler with comprehensive status tracking
-    // Coordinates with RefreshManager and provides visual feedback
     try {
         debugRefreshState(sourceId, 'Manual Refresh Started', {}, log, timeManager);
-        log.debug('Starting refresh for source', sourceId);
-
-        // Set refreshing state for visual feedback
         setRefreshingSourceId(sourceId);
 
-        // Update display state immediately to show "Refreshing..." text
-        // This provides immediate feedback before the actual refresh completes
-        setRefreshDisplayStates(prev => ({
-            ...prev,
-            [sourceId]: {
-                text: 'Refreshing...',
-                timestamp: timeManager.now()
-            }
-        }));
-
-        // Call the parent refresh handler (which delegates to RefreshManager)
-        // Parent handler typically fetches new data and updates the source content
         const success = await onRefreshSource(sourceId, updatedSource);
-
         debugRefreshState(sourceId, 'Manual Refresh Completed', { success }, log, timeManager);
-
         return success;
     } catch (error) {
         debugRefreshState(sourceId, 'Manual Refresh Error', { error: (error instanceof Error ? error.message : String(error)) }, log, timeManager);
         return false;
     } finally {
-        // Clear refreshing state with a delay to ensure UI updates
-        // Delay allows users to see the completion state briefly
-        setTimeout(() => {
-            setRefreshingSourceId(null);
-            debugRefreshState(sourceId, 'Cleared Refreshing State', {}, log, timeManager);
-        }, 1500);
+        setRefreshingSourceId(null);
     }
 };
 
 /**
  * Creates remove source handler with cleanup
- * @param {Object} params - Handler parameters
- * @param {Function} params.onRemoveSource - Remove source callback
- * @param {Function} params.setRemovingSourceId - Set removing state
- * @param {Function} params.setRefreshDisplayStates - Set display states
- * @param {Array} params.sources - Sources array
- * @returns {Function} Remove source handler
  */
 export const createRemoveSourceHandler = ({
     onRemoveSource,
     setRemovingSourceId,
-    setRefreshDisplayStates,
     sources
 }: RemoveSourceParams) => async (sourceId: string) => {
     // Remove source handler with comprehensive cleanup and user feedback
@@ -271,13 +203,6 @@ export const createRemoveSourceHandler = ({
         const success = await onRemoveSource(sourceId);
 
         if (success) {
-            // Clean up display states to prevent stale display and memory leaks
-            setRefreshDisplayStates(prev => {
-                const updated = { ...prev };
-                delete updated[sourceId];
-                return updated;
-            });
-
             // Show warning message with extended duration and important info
             showMessage('warning',
                 `${sourceType} source ${sourceTag} has been removed. Any browser extension rules using this source will be affected.`,

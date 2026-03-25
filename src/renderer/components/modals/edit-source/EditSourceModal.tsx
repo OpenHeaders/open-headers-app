@@ -66,25 +66,12 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
         refreshNow: true
     });
 
-    // Original values for comparison during save
-    const originalValuesRef = useRef({
-        interval: 0,
-        enabled: false
-    });
-
     /**
      * Initializes form data when source changes or modal opens
      * Populates form fields with source data and sets up initial state
      */
     useEffect(() => {
         if (open && source) {
-
-            // Store original values for comparison
-            originalValuesRef.current = {
-                interval: source.refreshOptions?.interval || 0,
-                enabled: source.refreshOptions?.enabled || false
-            };
-
             // Extract TOTP configuration
             const hasTotpSecret = !!(source.requestOptions?.totpSecret);
             const extractedTotpSecret = source.requestOptions?.totpSecret || '';
@@ -133,7 +120,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
                 refreshOptions: initialValues.refreshOptions,
                 totpEnabled: hasTotpSecret,
                 totpSecret: extractedTotpSecret,
-                refreshNow: true
+                refreshNow: !source.sourceContent
             };
 
 
@@ -142,7 +129,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Reset component state
             setHasUserEdits(false);
-            setRefreshNow(true);
+            setRefreshNow(!source.sourceContent);
             isInitializedRef.current = true;
 
         }
@@ -306,11 +293,10 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
 
             // Use FormSubmissionHandler for complex validation and data preparation
             const submissionHandler = new FormSubmissionHandler(
-                form, 
-                source, 
-                envContext, 
-                httpOptionsRef, 
-                originalValuesRef
+                form,
+                source,
+                envContext,
+                httpOptionsRef,
             );
 
             // Set additional state for handler

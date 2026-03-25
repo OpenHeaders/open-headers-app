@@ -7,10 +7,12 @@ import WebSocket from 'ws';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
+import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
 import type { Workspace } from '../../types/workspace';
 import type { Source } from '../../types/source';
 import type { RulesCollection, RulesStorage } from '../../types/rules';
+import type { SourceRefreshService } from '../source-refresh/SourceRefreshService';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');
@@ -32,6 +34,7 @@ interface WSServiceLike {
     sourceService: SourceServiceLike | null;
     ruleHandler: { broadcastRules(): void };
     _broadcastToAll(message: string): number;
+    sourceRefreshService: SourceRefreshService | null;
 }
 
 class WSSourceHandler {
@@ -68,6 +71,77 @@ class WSSourceHandler {
 
         if (this.wsService.rules && Object.keys(this.wsService.rules).length > 0) {
             this.wsService.ruleHandler.broadcastRules();
+        }
+
+        // Notify SourceRefreshService of new/updated sources
+        this._syncSourcesToRefreshService(sourceArray);
+    }
+
+    /**
+     * Sync sources to SourceRefreshService for scheduling and eager fetching.
+     *
+     * The WebSocket broadcast receives CLEANED sources (stripped of refreshOptions,
+     * requestOptions, etc.) which are fine for the browser extension but insufficient
+     * for scheduling. So we read full source data from disk instead.
+     */
+    private _syncSourcesToRefreshService(broadcastedSources: Source[]): void {
+        const refreshService = this.wsService.sourceRefreshService;
+        if (!refreshService) return;
+        if (!this.wsService.appDataPath) return;
+
+        const currentHttpIds = new Set<string>();
+        for (const source of broadcastedSources) {
+            if (source.sourceType === 'http') {
+                currentHttpIds.add(source.sourceId);
+            }
+        }
+
+        // Read full sources from disk (includes refreshOptions, requestOptions, etc.)
+        this._loadFullSourcesFromDisk().then(fullSources => {
+            for (const source of fullSources) {
+                if (source.sourceType === 'http') {
+                    // Merge: use disk data for config, but keep broadcast content if fresher
+                    const broadcasted = broadcastedSources.find(s => s.sourceId === source.sourceId);
+                    if (broadcasted?.sourceContent && !source.sourceContent) {
+                        source.sourceContent = broadcasted.sourceContent;
+                    }
+                    refreshService.updateSource(source).catch(err => {
+                        log.warn(`Failed to sync source ${source.sourceId} to refresh service:`, err);
+                    });
+                }
+            }
+
+            refreshService.removeSourcesNotIn(currentHttpIds).catch(err => {
+                log.warn('Failed to clean up removed sources from refresh service:', err);
+            });
+        }).catch(err => {
+            log.warn('Failed to load full sources from disk for refresh service:', err);
+        });
+    }
+
+    /**
+     * Load full source data from disk (with refreshOptions, requestOptions, etc.)
+     * Uses atomicWriter to avoid reading partially-written files.
+     */
+    private async _loadFullSourcesFromDisk(): Promise<Source[]> {
+        const appDataPath = this.wsService.appDataPath;
+        if (!appDataPath) return [];
+
+        const workspacesPath = path.join(appDataPath, 'workspaces.json');
+        let activeWorkspaceId = 'default-personal';
+
+        try {
+            const workspaces = await atomicWriter.readJson<{ activeWorkspaceId?: string }>(workspacesPath);
+            if (workspaces?.activeWorkspaceId) {
+                activeWorkspaceId = workspaces.activeWorkspaceId;
+            }
+        } catch (_e) { /* use default */ }
+
+        const sourcesPath = path.join(appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
+        try {
+            return await atomicWriter.readJson<Source[]>(sourcesPath) ?? [];
+        } catch (_e) {
+            return [];
         }
     }
 
@@ -198,6 +272,13 @@ class WSSourceHandler {
             // Here we only broadcast to WebSocket clients.
             this.wsService.ruleHandler.broadcastRules();
             this.broadcastSources();
+
+            // Re-sync sources to SourceRefreshService for the new workspace
+            const refreshService = this.wsService.sourceRefreshService;
+            if (refreshService) {
+                await refreshService.clearAllSources();
+                this._syncSourcesToRefreshService(this.wsService.sources);
+            }
         } catch (error) {
             log.error(`Error loading data for workspace ${workspaceId}:`, error);
             this.wsService.rules = { header: [], request: [], response: [] };
@@ -288,6 +369,8 @@ class WSSourceHandler {
                 log.info(`No sources file found at ${sourcesPath}, starting with empty sources`);
                 this.wsService.sources = [];
             }
+            // Sync loaded sources to SourceRefreshService
+            this._syncSourcesToRefreshService(this.wsService.sources);
         } catch (error) {
             log.error('Error loading initial data:', error);
             this.wsService.rules = { header: [], request: [], response: [] };

@@ -1,8 +1,11 @@
 /**
- * Source Refresh Hook
+ * Source Refresh Hook — simplified to delegate HTTP refreshes to main process.
  *
- * Handles source refresh operations including HTTP requests, file watching,
- * and source addition with proper content fetching.
+ * HTTP refresh is now handled by main-process SourceRefreshService.
+ * This hook handles:
+ *  - Manual refresh via IPC
+ *  - Source addition with initial content fetching (still uses useHttp for the
+ *    creation flow since the source doesn't exist in main yet)
  */
 
 import { useCallback } from 'react';
@@ -14,7 +17,6 @@ const log = createLogger('useSourceRefresh');
 
 interface UseSourceRefreshDeps {
   sources: Source[];
-  updateSource: (sourceId: string, updates: Partial<Source>) => void;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
   addSource: (sourceData: Source) => Promise<Source | null>;
@@ -26,98 +28,53 @@ interface UseSourceRefreshReturn {
   handleAddSource: (sourceData: NewSourceData) => Promise<boolean>;
 }
 
-/**
- * Hook for handling source refresh operations
- */
-export function useSourceRefresh({ sources, updateSource, refreshSource, manualRefresh, addSource }: UseSourceRefreshDeps): UseSourceRefreshReturn {
+export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSource }: UseSourceRefreshDeps): UseSourceRefreshReturn {
   const http = useHttp();
 
   /**
-   * Handle HTTP source refresh with actual HTTP request
+   * Handle HTTP source refresh — delegates to main process via IPC
    */
-  const handleHttpSourceRefresh = useCallback(async (sourceId: string, updatedSource: Source | null = null): Promise<boolean> => {
+  const handleHttpSourceRefresh = useCallback(async (sourceId: string, _updatedSource: Source | null = null): Promise<boolean> => {
     try {
-      // Find the source - use the sources from the hook which are always fresh
-      const source = updatedSource || sources.find((s) => s.sourceId === sourceId);
-      if (!source || source.sourceType !== 'http') {
-        log.error(`HTTP source ${sourceId} not found`);
-        return false;
+      if (window.electronAPI?.sourceRefresh) {
+        const result = await window.electronAPI.sourceRefresh.manualRefresh(sourceId);
+        if (result.success) {
+          showMessage('success', 'Source refreshed');
+          return true;
+        } else {
+          showMessage('error', `Failed to refresh source: ${result.error || 'Unknown error'}`);
+          return false;
+        }
       }
-
-      log.debug(`Making HTTP request for source ${sourceId}`, source);
-
-      // Make the HTTP request
-      const jsonFilter = { enabled: source.jsonFilter?.enabled ?? false, path: source.jsonFilter?.path };
-      const result = await http.request(
-        sourceId,
-        source.sourcePath || '',
-        source.sourceMethod || 'GET',
-        source.requestOptions || {},
-        jsonFilter
-      );
-
-      // Update the source content and metadata
-      const updates: Partial<Source> = {
-        sourceContent: result.content,
-        responseHeaders: result.headers ?? null
-      };
-
-      // If there's a JSON filter, store the original response and filtering metadata
-      if (result.isFiltered && result.originalResponse) {
-        updates.originalResponse = result.originalResponse;
-        updates.isFiltered = true;
-        updates.filteredWith = result.filteredWith;
-      } else {
-        // Clear filtering metadata if not filtered
-        updates.originalResponse = null;
-        updates.isFiltered = false;
-        updates.filteredWith = null;
-      }
-
-      // Update needsInitialFetch flag if this was the first fetch
-      if (source.needsInitialFetch) {
-        updates.needsInitialFetch = false;
-      }
-
-      // Update the source with all changes at once
-      updateSource(sourceId, updates);
-
-      showMessage('success', 'Source refreshed');
-      return true;
+      // Fallback to RefreshManager context
+      return manualRefresh(sourceId);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       log.error(`Failed to refresh HTTP source ${sourceId}:`, error);
       showMessage('error', `Failed to refresh source: ${message}`);
       return false;
     }
-  }, [sources, updateSource, http]);
+  }, [manualRefresh]);
 
-  /**
-   * Wrapper for refreshSource that handles HTTP sources properly
-   */
   const refreshSourceWithHttp = useCallback(async (sourceId: string): Promise<boolean> => {
-    // Find the source type
-    const source = sources.find((s) => s.sourceId === sourceId);
+    const source = sources.find(s => s.sourceId === sourceId);
     if (source && source.sourceType === 'http') {
-      // Use RefreshManager for HTTP sources to ensure proper scheduling
-      return manualRefresh(sourceId);
-    } else {
-      // For non-HTTP sources, use the regular refresh
-      return refreshSource(sourceId);
+      return handleHttpSourceRefresh(sourceId);
     }
-  }, [sources, manualRefresh, refreshSource]);
+    return refreshSource(sourceId);
+  }, [sources, handleHttpSourceRefresh, refreshSource]);
 
   /**
-   * Handle add source with initial content fetching for HTTP sources
+   * Handle add source — fetches initial content for HTTP sources before adding.
+   * Uses renderer-side useHttp for the creation flow since the source
+   * doesn't exist in the main-process SourceRefreshService yet.
+   * After adding, the main process picks it up via workspace sync.
    */
   const handleAddSource = useCallback(async (sourceData: NewSourceData): Promise<boolean> => {
     log.debug('Adding source:', sourceData);
 
-    // Build the enriched source data (with content from initial fetch)
-    // sourceId will be assigned by SourceManager.addSource
     const enrichedData: Source = { sourceId: '', ...sourceData };
 
-    // For HTTP sources, fetch content BEFORE adding the source
     if (sourceData.sourceType === 'http') {
       try {
         log.debug('Fetching initial content for HTTP source before adding');
@@ -143,8 +100,6 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
         }
 
         enrichedData.refreshOptions = { ...(sourceData.refreshOptions || { enabled: false }), lastRefresh: Date.now() };
-
-        log.debug('Initial content fetched successfully');
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : String(error);
         log.error('Failed to fetch initial content:', error);
@@ -153,27 +108,17 @@ export function useSourceRefresh({ sources, updateSource, refreshSource, manualR
       }
     }
 
-    // Now add the source with content already included
     const newSource = await addSource(enrichedData);
     if (newSource) {
-      log.debug('Source added successfully:', newSource);
       showMessage('success', 'Source added successfully');
 
-      // RefreshManager will automatically pick up the new source through the workspace service subscription
-
-      // For file and env sources, trigger refresh after adding
       if (sourceData.sourceType === 'file' || sourceData.sourceType === 'env') {
-        log.debug(`Triggering initial fetch for new ${sourceData.sourceType} source`);
-        setTimeout(() => {
-          refreshSource(newSource.sourceId);
-        }, 100); // Small delay to ensure state has propagated
+        setTimeout(() => { refreshSource(newSource.sourceId); }, 100);
       }
 
       return true;
-    } else {
-      log.debug('Failed to add source');
-      return false;
     }
+    return false;
   }, [http, addSource, refreshSource]);
 
   return {
