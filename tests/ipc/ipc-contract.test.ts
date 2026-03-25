@@ -71,14 +71,16 @@ function extractPreloadOnChannels(source: string): string[] {
 
 const mainSource = readFile('src/main.ts');
 const preloadSource = readDir('src/preload');
-// Video export manager registers IPC handlers outside main.ts
+// Services that register IPC handlers outside main.ts
 const videoExportSource = readFile('src/services/video/video-export-manager.ts');
+const workspaceStateHandlersSource = readFile('src/main/modules/ipc/handlers/workspaceStateHandlers.ts');
 // Services that send to renderer
 const servicesSource = readDir('src/services') + readDir('src/main/modules');
 
 const mainHandleChannels = new Set([
     ...extractHandleChannels(mainSource),
     ...extractHandleChannels(videoExportSource),
+    ...extractHandleChannels(workspaceStateHandlersSource),
 ]);
 const mainOnChannels = new Set(extractOnChannels(mainSource));
 const preloadInvokeChannels = new Set(extractInvokeChannels(preloadSource));
@@ -101,7 +103,7 @@ describe('IPC Contract', () => {
         });
 
         it('no duplicate handle() registrations', () => {
-            const allHandles = extractHandleChannels(mainSource + videoExportSource);
+            const allHandles = extractHandleChannels(mainSource + videoExportSource + workspaceStateHandlersSource);
             const seen = new Set<string>();
             const dupes: string[] = [];
             for (const ch of allHandles) {

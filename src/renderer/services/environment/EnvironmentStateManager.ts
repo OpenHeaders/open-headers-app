@@ -1,7 +1,6 @@
 /**
  * EnvironmentStateManager - Manages environment state and listeners
  */
-import BaseStateManager from '../workspace/BaseStateManager';
 import { createLogger } from '../../utils/error-handling/logger';
 import type { EnvironmentVariable } from '../../../types/environment';
 const log = createLogger('EnvironmentStateManager');
@@ -15,38 +14,48 @@ export interface EnvironmentServiceState {
   error: string | null;
 }
 
-class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> {
+type StateListener = (state: EnvironmentServiceState, changedKeys: string[]) => void;
+
+class EnvironmentStateManager {
+  state: EnvironmentServiceState;
+  private listeners: Set<StateListener> = new Set();
   initPromise: Promise<boolean> | null;
   loadPromises: Map<string, Promise<boolean>>;
   hasLoadedInitialData: boolean;
 
   constructor() {
-    super('EnvironmentStateManager', {
+    this.state = {
       currentWorkspaceId: 'default-personal',
       environments: { Default: {} },
       activeEnvironment: 'Default',
       isLoading: false,
       isReady: false,
       error: null
-    });
+    };
 
     this.initPromise = null;
-    this.loadPromises = new Map(); // Track load promises per workspace
-    this.hasLoadedInitialData = false; // Track if we've loaded data at least once
+    this.loadPromises = new Map();
+    this.hasLoadedInitialData = false;
   }
 
-  /**
-   * Override setState to log environment-specific details
-   */
-  setState(updates: Partial<EnvironmentServiceState>) {
-    const prevState = { ...this.state };
-    super.setState(updates);
-
+  subscribe(listener: StateListener): () => void {
+    this.listeners.add(listener);
+    listener(this.getState(), []);
+    return () => this.listeners.delete(listener);
   }
 
-  /**
-   * Get current state (immutable copy)
-   */
+  private notifyListeners(changedKeys: string[] = []): void {
+    const state = this.getState();
+    for (const listener of this.listeners) {
+      try { listener(state, changedKeys); } catch (e) { log.error('Listener error:', e); }
+    }
+  }
+
+  setState(updates: Partial<EnvironmentServiceState>): void {
+    this.state = { ...this.state, ...updates };
+    this.notifyListeners(Object.keys(updates));
+  }
+
   getState(): EnvironmentServiceState {
     return {
       ...this.state,
@@ -54,17 +63,11 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
     };
   }
 
-  /**
-   * Check if service is ready
-   */
-  isReady() {
+  isReady(): boolean {
     return this.state.isReady && !this.state.isLoading;
   }
 
-  /**
-   * Wait for service to be ready
-   */
-  async waitForReady(timeout = 5000) {
+  async waitForReady(timeout = 5000): Promise<boolean> {
     const startTime = Date.now();
 
     while (!this.state.isReady) {
@@ -72,7 +75,6 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
         throw new Error('Timeout waiting for environment service to be ready');
       }
 
-      // If not loading and not ready, trigger initialization
       if (!this.state.isLoading && !this.initPromise) {
         log.warn('Service not ready and not loading, initialization may be needed');
       }
@@ -83,60 +85,40 @@ class EnvironmentStateManager extends BaseStateManager<EnvironmentServiceState> 
     return true;
   }
 
-  /**
-   * Track initialization promise
-   */
-  setInitPromise(promise: Promise<boolean>) {
+  setInitPromise(promise: Promise<boolean>): void {
     this.initPromise = promise;
   }
 
-  /**
-   * Get initialization promise
-   */
-  getInitPromise() {
+  getInitPromise(): Promise<boolean> | null {
     return this.initPromise;
   }
 
-  /**
-   * Track load promise for workspace
-   */
-  setLoadPromise(workspaceId: string, promise: Promise<boolean>) {
+  setLoadPromise(workspaceId: string, promise: Promise<boolean>): void {
     this.loadPromises.set(workspaceId, promise);
   }
 
-  /**
-   * Get load promise for workspace
-   */
-  getLoadPromise(workspaceId: string) {
+  getLoadPromise(workspaceId: string): Promise<boolean> | undefined {
     return this.loadPromises.get(workspaceId);
   }
 
-  /**
-   * Clear load promise for workspace
-   */
-  clearLoadPromise(workspaceId: string) {
+  clearLoadPromise(workspaceId: string): void {
     this.loadPromises.delete(workspaceId);
   }
 
-  /**
-   * Check if workspace is being loaded
-   */
-  isLoadingWorkspace(workspaceId: string) {
+  isLoadingWorkspace(workspaceId: string): boolean {
     return this.loadPromises.has(workspaceId);
   }
 
-  /**
-   * Mark that initial data has been loaded
-   */
-  markInitialDataLoaded() {
+  markInitialDataLoaded(): void {
     this.hasLoadedInitialData = true;
   }
 
-  /**
-   * Check if initial data has been loaded
-   */
-  hasInitialData() {
+  hasInitialData(): boolean {
     return this.hasLoadedInitialData;
+  }
+
+  cleanup(): void {
+    this.listeners.clear();
   }
 }
 

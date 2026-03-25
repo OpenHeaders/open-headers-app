@@ -1,11 +1,9 @@
 /**
- * Source Refresh Hook — simplified to delegate HTTP refreshes to main process.
+ * Source Refresh Hook — delegates all refreshes to main process.
  *
- * HTTP refresh is now handled by main-process SourceRefreshService.
- * This hook handles:
- *  - Manual refresh via IPC
- *  - Source addition with initial content fetching (still uses useHttp for the
- *    creation flow since the source doesn't exist in main yet)
+ * HTTP refresh is handled by main-process SourceRefreshService.
+ * File/env refresh is handled by main-process WorkspaceStateService.
+ * This hook provides the UI-facing API for source operations.
  */
 
 import { useCallback } from 'react';

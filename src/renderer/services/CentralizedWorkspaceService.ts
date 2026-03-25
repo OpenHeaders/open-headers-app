@@ -1,29 +1,19 @@
 /**
- * CentralizedWorkspaceService - Refactored to use modular components
+ * CentralizedWorkspaceService — thin IPC client.
  *
- * This service coordinates:
- * - Workspace switching
- * - Sources (HTTP, File, Environment)
- * - Header Rules
- * - Proxy Rules
- * - Environments and Variables
+ * All state management, persistence, auto-save, and broadcasting now live in
+ * the main process (WorkspaceStateService). This renderer-side service:
+ *  - Hydrates from main on init via IPC
+ *  - Receives incremental state patches via IPC events
+ *  - Forwards all mutations to main via IPC invokes
+ *  - Exposes subscribe/notify for React hooks (same API as before)
  */
 
 import { createLogger } from '../utils/error-handling/logger';
-import { getCentralizedEnvironmentService } from './CentralizedEnvironmentService';
-import type { Source, SourceUpdate } from '../../types/source';
-import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType, CommitInfo } from '../../types/workspace';
+import type { Source, SourceUpdate, RefreshOptions } from '../../types/source';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
 import type { ProxyRule } from '../../types/proxy';
-import {
-  BaseStateManager,
-  WorkspaceManager,
-  SourceManager,
-  RulesManager,
-  AutoSaveManager,
-  SyncManager,
-  BroadcastManager
-} from './workspace';
-import type { RulesCollection, HeaderRule } from './workspace';
+import type { RulesCollection, HeaderRule } from '../../types/rules';
 
 const log = createLogger('CentralizedWorkspaceService');
 
@@ -38,1153 +28,280 @@ export interface WorkspaceServiceState {
   sources: Source[];
   rules: RulesCollection;
   proxyRules: ProxyRule[];
-  lastSaved: Record<string, number>;
 }
 
-class CentralizedWorkspaceService extends BaseStateManager<WorkspaceServiceState> {
-  workspaceManager: InstanceType<typeof WorkspaceManager>;
-  sourceManager: InstanceType<typeof SourceManager>;
-  rulesManager: InstanceType<typeof RulesManager>;
-  autoSaveManager: InstanceType<typeof AutoSaveManager>;
-  syncManager: InstanceType<typeof SyncManager>;
-  broadcastManager: InstanceType<typeof BroadcastManager>;
-  initPromise: Promise<boolean> | null;
-  loadPromises: Map<string, Promise<void>>;
-  eventCleanup: Array<() => void>;
+type StateListener = (state: WorkspaceServiceState, changedKeys: string[]) => void;
+
+class CentralizedWorkspaceService {
+  state: WorkspaceServiceState;
+  private listeners: Set<StateListener> = new Set();
+  private initPromise: Promise<boolean> | null = null;
+  private patchCleanup: (() => void) | null = null;
 
   constructor() {
-    super('CentralizedWorkspaceService', {
-      // Core state
+    this.state = {
       initialized: false,
-      loading: false,
+      loading: true,
       error: null,
-
-      // Workspace state
       workspaces: [],
       activeWorkspaceId: 'default-personal',
       isWorkspaceSwitching: false,
       syncStatus: {},
-
-      // Data state (current workspace data)
       sources: [],
       rules: { header: [], request: [], response: [] },
-      proxyRules: [],
+      proxyRules: []
+    };
 
-      // Metadata
-      lastSaved: {}
-    });
-
-    // Initialize managers — ElectronAPI structurally satisfies all narrow manager interfaces
-    const api = window.electronAPI;
-    this.workspaceManager = new WorkspaceManager(api);
-    this.sourceManager = new SourceManager(api, getCentralizedEnvironmentService());
-    this.rulesManager = new RulesManager(api, api);
-    this.autoSaveManager = new AutoSaveManager();
-    this.syncManager = new SyncManager(api);
-    this.broadcastManager = new BroadcastManager(api);
-
-    // Other properties
-    this.initPromise = null;
-    this.loadPromises = new Map();
-    this.eventCleanup = [];
-
-    log.info('CentralizedWorkspaceService initialized');
-  }
-
-  /**
-   * Override setState to handle dirty flags
-   */
-  setState(updates: Partial<WorkspaceServiceState>, changedKeys: string[] = []) {
-    // Mark as dirty if data changed
-    if (changedKeys.includes('sources')) this.autoSaveManager.markDirty('sources');
-    if (changedKeys.includes('rules')) this.autoSaveManager.markDirty('rules');
-    if (changedKeys.includes('proxyRules')) this.autoSaveManager.markDirty('proxyRules');
-
-    super.setState(updates, changedKeys);
-
-    // Schedule auto-save for dirty data
-    this.autoSaveManager.scheduleAutoSave(() => this.saveAll());
-  }
-
-  /**
-   * Initialize service
-   */
-  async initialize() {
-    if (this.initPromise) {
-      return this.initPromise;
+    // Subscribe to state patches from main process
+    if (window.electronAPI?.workspaceState) {
+      this.patchCleanup = window.electronAPI.workspaceState.onStatePatch((patch) => {
+        const changedKeys: string[] = [];
+        for (const [key, value] of Object.entries(patch)) {
+          if (key in this.state) {
+            Object.assign(this.state, { [key]: value });
+            changedKeys.push(key);
+          }
+        }
+        if (changedKeys.length > 0) {
+          this.notifyListeners(changedKeys);
+        }
+      });
     }
 
+    log.info('CentralizedWorkspaceService initialized (IPC client)');
+  }
+
+  // ── State management ──────────────────────────────────────────
+
+  subscribe(listener: StateListener): () => void {
+    this.listeners.add(listener);
+    listener(this.getState(), []);
+    return () => this.listeners.delete(listener);
+  }
+
+  private notifyListeners(changedKeys: string[] = []): void {
+    const state = this.getState();
+    for (const listener of this.listeners) {
+      try { listener(state, changedKeys); } catch (e) { log.error('Listener error:', e); }
+    }
+  }
+
+  getState(): WorkspaceServiceState {
+    return { ...this.state };
+  }
+
+  /**
+   * setState is kept for backward compat with hooks that set state directly
+   * (e.g. useSources.importSources, useWorkspaces.syncWorkspace status updates).
+   * These callers will be migrated to IPC calls — for now, apply locally + notify.
+   */
+  setState(updates: Partial<WorkspaceServiceState>, changedKeys: string[] = []): void {
+    this.state = { ...this.state, ...updates };
+    this.notifyListeners(changedKeys);
+  }
+
+  // ── Initialization (hydrate from main) ──────────────────────
+
+  async initialize(): Promise<boolean> {
+    if (this.initPromise) return this.initPromise;
     this.initPromise = this._doInitialize();
     return this.initPromise;
   }
 
-  async _doInitialize() {
+  private async _doInitialize(): Promise<boolean> {
     try {
-      this.setState({ loading: true, error: null });
-
-      // Load workspaces configuration
-      const workspaceConfig = await this.workspaceManager.loadWorkspaces();
-      this.state.workspaces = workspaceConfig.workspaces;
-      this.state.activeWorkspaceId = workspaceConfig.activeWorkspaceId;
-      this.state.syncStatus = workspaceConfig.syncStatus;
-
-      // NOTE: Skipping validateWorkspaceIntegrity here because it reads
-      // sources.json, rules.json, proxy-rules.json to check existence,
-      // and loadWorkspaceData() will read the same files next.
-      // All load methods (SourceManager, RulesManager) already handle missing
-      // files gracefully by returning empty defaults, so the integrity check
-      // is redundant during initial load.
-
-      // Initialize environment service with the workspace ID we already loaded
-      // (avoids a redundant workspaces.json read)
-      const envService = getCentralizedEnvironmentService();
-      await envService.initialize(this.state.activeWorkspaceId);
-
-      // Load active workspace data
-      await this.loadWorkspaceData(this.state.activeWorkspaceId);
-
-      // Setup listeners
-      this.setupEnvironmentListener();
-      this.setupSyncListener();
-      this.setupRefreshListener();
-      this.setupCliJoinListener();
-
-      // Start auto-save
-      this.autoSaveManager.startAutoSave(() => this.saveAll());
-
-      this.setState({ initialized: true, loading: false }, ['initialized']);
-      log.info('Service initialized successfully');
-
-      // Check source activations after initialization
-      setTimeout(async () => {
-        await this.activateReadySources();
-      }, 100);
-
-      return true;
-    } catch (error) {
-      log.error('Initialization failed:', error);
-      this.setState({
-        initialized: false,
-        loading: false,
-        error: error instanceof Error ? error.message : String(error)
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Load all data for a workspace
-   */
-  async loadWorkspaceData(workspaceId: string) {
-    if (this.loadPromises.has(workspaceId)) {
-      return this.loadPromises.get(workspaceId);
-    }
-
-    const loadPromise = this._doLoadWorkspaceData(workspaceId);
-    this.loadPromises.set(workspaceId, loadPromise);
-
-    try {
-      await loadPromise;
-    } finally {
-      this.loadPromises.delete(workspaceId);
-    }
-  }
-
-  async _doLoadWorkspaceData(workspaceId: string) {
-    log.info(`Loading data for workspace: ${workspaceId}`);
-
-    try {
-      // Load sources, rules, and proxy rules in parallel
-      const [sources, rules, proxyRules] = await Promise.all([
-        this.sourceManager.loadSources(workspaceId),
-        this.rulesManager.loadRules(workspaceId),
-        this.rulesManager.loadProxyRules(workspaceId)
-      ]);
-
-      // Update state with loaded data
-      this.setState({
-        sources,
-        rules,
-        proxyRules
-      }, ['sources', 'rules', 'proxyRules']);
-
-      // Mark all as clean since we just loaded
-      this.autoSaveManager.markClean('sources');
-      this.autoSaveManager.markClean('rules');
-      this.autoSaveManager.markClean('proxyRules');
-
-      // Update workspace metadata with actual counts
-      const totalRules = rules.header.length + rules.request.length + rules.response.length;
-      await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: sources.length,
-        ruleCount: totalRules,
-        proxyRuleCount: proxyRules.length,
-        lastDataLoad: new Date().toISOString()
-      });
-
-      // Update proxy (and WebSocket during workspace switch, since WebSocketContext
-      // suppresses broadcasts while isWorkspaceSwitching is true).
-      // During initial load, WebSocketContext handles WS broadcasting with cleaning + debouncing.
-      await this.broadcastManager.broadcastState(sources, rules.header, {
-        includeWebSocket: this.state.isWorkspaceSwitching
-      });
-
-      log.info(`Successfully loaded workspace data: ${sources.length} sources, ${totalRules} rules, ${proxyRules.length} proxy rules`);
-    } catch (error) {
-      log.error('Failed to load workspace data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Switch to a different workspace with progress tracking
-   */
-  async switchWorkspace(workspaceId: string, progressCallback: ((step: string, progress: number, label: string, isGitOperation: boolean) => void) | null = null) {
-    if (this.state.activeWorkspaceId === workspaceId) {
-      log.debug(`Already in workspace ${workspaceId}`);
-      return;
-    }
-
-    const previousWorkspaceId = this.state.activeWorkspaceId;
-
-    try {
-      // Verify workspace exists
-      const workspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-
-      log.info(`Starting workspace switch: ${previousWorkspaceId} → ${workspaceId} (${workspace.type})`);
-      this.setState({ loading: true, error: null, isWorkspaceSwitching: true });
-
-      // Notify AutoSaveManager that workspace is switching
-      this.autoSaveManager.setWorkspaceSwitching(true);
-
-      // Progress tracking helper
-      const updateProgress = (step: string, progress: number, label: string, isGitOperation: boolean = false) => {
-        if (progressCallback) {
-          progressCallback(step, progress, label, isGitOperation);
-        }
-        // Also dispatch custom event for other components
-        window.dispatchEvent(new CustomEvent('workspace-switch-progress', {
-          detail: { step, progress, label, isGitOperation, workspaceId, workspace }
-        }));
-      };
-
-      // Step 0: Wait for any pending saves to complete
-      updateProgress('preparing', 5, 'Waiting for pending saves...');
-      await this.autoSaveManager.waitForSaves();
-
-      // Step 1: Save current workspace data (5-25%)
-      updateProgress('saving', 10, 'Saving current workspace data...');
-      await this.saveAll();
-      updateProgress('saving', 25, 'Current workspace saved');
-
-      // Step 2: Clear current data (25-35%)
-      updateProgress('clearing', 30, 'Clearing current data...');
-
-      // Dispatch event to notify RefreshManager to clean up sources
-      window.dispatchEvent(new CustomEvent('workspace-switching', {
-        detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
-      }));
-
-      await this.clearAllData();
-      updateProgress('clearing', 35, 'Data cleared');
-
-      // Step 3: Update active workspace (35-45%)
-      updateProgress('switching', 40, `Switching to "${workspace.name}"...`);
-      this.setState({ activeWorkspaceId: workspaceId }, ['activeWorkspaceId']);
-      await this.saveWorkspaces();
-
-      // Dispatch workspace-switched event
-      window.dispatchEvent(new CustomEvent('workspace-switched', {
-        detail: { workspaceId, previousWorkspaceId }
-      }));
-
-      // Notify main process
-      if (window.electronAPI && window.electronAPI.send) {
-        window.electronAPI.send('workspace-switched', workspaceId);
+      if (!window.electronAPI?.workspaceState) {
+        throw new Error('workspaceState API not available');
       }
 
-      updateProgress('switching', 45, 'Workspace context updated');
-
-      // Give main process a moment to start processing
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Step 4: Handle Git sync if needed (45-75%)
-      if (workspace.type === 'git' && await this.syncManager.needsInitialSync(workspaceId)) {
-        log.info(`New Git workspace detected (${workspaceId}), waiting for initial sync...`);
-        updateProgress('syncing', 50, 'Syncing Git workspace...', true);
-
-        try {
-          await this.syncManager.waitForInitialSync(workspaceId);
-          updateProgress('syncing', 70, 'Git sync completed', true);
-          // Add a small delay to ensure files are fully written
-          await new Promise(resolve => setTimeout(resolve, 500));
-          log.info('Initial sync completed, proceeding to load workspace data');
-        } catch (error) {
-          log.warn('Initial sync failed or timed out:', error instanceof Error ? error.message : String(error));
-          updateProgress('syncing', 75, 'Git sync timed out, continuing...', true);
-          // Continue anyway - workspace might still be usable
-        }
-      } else {
-        updateProgress('syncing', 75, 'No sync required');
-      }
-
-      // Step 5: Load new workspace data (75-95%)
-      updateProgress('loading', 80, 'Loading workspace data...');
-      // Set flag to suppress broadcasts during entire switch operation
-      this.setState({ isWorkspaceSwitching: true });
-      await this.loadWorkspaceData(workspaceId);
-      updateProgress('loading', 90, 'Workspace data loaded');
-
-      // Step 6: Finalize (95-100%)
-      updateProgress('finalizing', 95, 'Updating interface...');
-
-      // Dispatch workspace-data-applied event
-      window.dispatchEvent(new CustomEvent('workspace-data-applied', {
-        detail: { workspaceId, previousWorkspaceId }
-      }));
-
-      this.setState({ loading: false }, ['activeWorkspaceId']);
-      updateProgress('complete', 100, `Successfully switched to "${workspace.name}"`);
-      log.info(`Successfully switched to workspace: ${workspaceId}`);
-
-      // Clear the suppression flag after a delay to ensure all follow-up operations are suppressed
-      setTimeout(() => {
-        this.setState({ isWorkspaceSwitching: false });
-        // Re-enable auto-save
-        this.autoSaveManager.setWorkspaceSwitching(false);
-        log.debug('Workspace switch broadcast suppression cleared');
-      }, 500);
-
-    } catch (error) {
-      log.error('Failed to switch workspace:', error);
-
-      // Update progress with error
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (progressCallback) {
-        progressCallback('error', 0, `Error: ${errorMessage}`, false);
-      }
-      window.dispatchEvent(new CustomEvent('workspace-switch-error', {
-        detail: { error: errorMessage, workspaceId, previousWorkspaceId }
-      }));
-
-      // Attempt to recover by switching back to previous workspace
-      try {
-        log.info(`Attempting to recover by switching back to: ${previousWorkspaceId}`);
-        this.setState({ activeWorkspaceId: previousWorkspaceId }, ['activeWorkspaceId']);
-        await this.saveWorkspaces();
-        await this.loadWorkspaceData(previousWorkspaceId);
-
-        log.info(`Successfully recovered to workspace: ${previousWorkspaceId}`);
-      } catch (recoveryError) {
-        log.error('Recovery failed:', recoveryError);
-        // If recovery fails, reset to default
-        this.setState({ activeWorkspaceId: 'default-personal' }, ['activeWorkspaceId']);
-      }
-
-      this.setState({ loading: false, error: errorMessage, isWorkspaceSwitching: false });
-      // Re-enable auto-save even on error
-      this.autoSaveManager.setWorkspaceSwitching(false);
-      throw error;
-    }
-  }
-
-  /**
-   * Save workspaces configuration
-   */
-  async saveWorkspaces() {
-    await this.workspaceManager.saveWorkspaces({
-      workspaces: this.state.workspaces,
-      activeWorkspaceId: this.state.activeWorkspaceId,
-      syncStatus: this.state.syncStatus
-    });
-  }
-
-  /**
-   * Clear all data (used during workspace switch)
-   */
-  async clearAllData() {
-    try {
-      // Clear proxy rules
-      await this.broadcastManager.clearProxyRules();
-
-      this.setState({
-        sources: [],
-        rules: { header: [], request: [], response: [] },
-        proxyRules: []
-      }, ['sources', 'rules', 'proxyRules']);
-
-      // Update WebSocket
-      await this.broadcastManager.broadcastState([], []);
-    } catch (error) {
-      log.error('Error clearing data:', error);
-    }
-  }
-
-  /**
-   * Save all dirty data
-   */
-  async saveAll() {
-    const saves = [];
-    const dirtyState = this.autoSaveManager.getDirtyState();
-
-    if (dirtyState.sources) {
-      saves.push(this.saveSources());
-    }
-    if (dirtyState.rules) {
-      saves.push(this.saveRules());
-    }
-    if (dirtyState.proxyRules) {
-      saves.push(this.saveProxyRules());
-    }
-
-    if (saves.length > 0) {
-      await Promise.all(saves);
-      log.info(`Saved ${saves.length} data types`);
-    }
-  }
-
-  /**
-   * Save sources
-   */
-  async saveSources() {
-    await this.sourceManager.saveSources(this.state.activeWorkspaceId, this.state.sources);
-    this.autoSaveManager.markClean('sources');
-    this.state.lastSaved.sources = Date.now();
-  }
-
-  /**
-   * Save rules
-   */
-  async saveRules() {
-    await this.rulesManager.saveRules(this.state.activeWorkspaceId, this.state.rules);
-    this.autoSaveManager.markClean('rules');
-    this.state.lastSaved.rules = Date.now();
-  }
-
-  /**
-   * Save proxy rules
-   */
-  async saveProxyRules() {
-    await this.rulesManager.saveProxyRules(this.state.activeWorkspaceId, this.state.proxyRules);
-    this.autoSaveManager.markClean('proxyRules');
-    this.state.lastSaved.proxyRules = Date.now();
-  }
-
-  // Source Management Methods
-
-  /**
-   * Add a new source
-   */
-  async addSource(sourceData: Source) {
-    const sources = [...this.state.sources];
-    const newSource = await this.sourceManager.addSource(sources, sourceData);
-
-    sources.push(newSource);
-    this.setState({ sources }, ['sources']);
-
-    // Save immediately to avoid race condition with refresh
-    try {
-      await this.saveSources();
-
-      // Update workspace metadata
-      await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-        sourceCount: sources.length,
-        lastDataUpdate: new Date().toISOString()
-      });
-    } catch (saveError) {
-      // Rollback the change if save fails
-      this.setState({ sources: this.state.sources.filter((s) => s.sourceId !== newSource.sourceId) }, ['sources']);
-      throw saveError;
-    }
-
-    return newSource;
-  }
-
-  /**
-   * Update a source
-   */
-  async updateSource(sourceId: string, updates: SourceUpdate): Promise<Source | null> {
-    let updatedSource: Source | null = null;
-    const sources = this.state.sources.map((source) => {
-      if (source.sourceId === String(sourceId)) {
-        // Build a fully-resolved Source update by merging partial refreshOptions
-        // with the existing complete refreshOptions (preserving required fields).
-        const { refreshOptions: refreshUpdates, ...otherUpdates } = updates;
-        const resolvedUpdates: Partial<Source> = { ...otherUpdates };
-        if (refreshUpdates) {
-          const base = source.refreshOptions ?? { enabled: false };
-          resolvedUpdates.refreshOptions = { ...base, ...refreshUpdates };
-        }
-
-        const updated: Source = { ...source, ...resolvedUpdates, updatedAt: new Date().toISOString() };
-
-        // Schedule dependency check if needed
-        if (updated.sourceType === 'http' && updated.activationState === 'waiting_for_deps') {
-          this.sourceManager.evaluateSourceDependencies(updated).then(deps => {
-            if (deps.ready) {
-              this.updateSourceActivation(updated.sourceId, true);
-            }
-          });
-        }
-
-        updatedSource = updated;
-        return updated;
-      }
-      return source;
-    });
-
-    this.setState({ sources }, ['sources']);
-
-    // Update workspace metadata
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      sourceCount: sources.length,
-      lastDataUpdate: new Date().toISOString()
-    });
-
-    // Broadcast the source update to proxy if it has content
-    if (updatedSource !== null) {
-      const src: Source = updatedSource;
-      if (src.sourceContent && window.electronAPI?.proxyUpdateSource) {
-        window.electronAPI.proxyUpdateSource(src.sourceId, src.sourceContent);
-      }
-    }
-
-    return updatedSource;
-  }
-
-  /**
-   * Update source activation state
-   */
-  updateSourceActivation(sourceId: string, activate: boolean) {
-    const sources = this.state.sources.map((source) => {
-      if (source.sourceId === String(sourceId)) {
-        const updated: Source = {
-          ...source,
-          activationState: activate ? 'active' : source.activationState,
-          missingDependencies: activate ? [] : source.missingDependencies
-        };
-
-        if (activate) {
-          log.info(`Source ${sourceId} activated - all dependencies resolved`);
-
-          window.dispatchEvent(new CustomEvent('source-activated', {
-            detail: { sourceId: updated.sourceId, source: updated }
-          }));
-        }
-
-        return updated;
-      }
-      return source;
-    });
-
-    this.setState({ sources }, ['sources']);
-  }
-
-  /**
-   * Remove a source
-   */
-  async removeSource(sourceId: string) {
-    const sources = this.state.sources.filter((source) =>
-      source.sourceId !== String(sourceId)
-    );
-
-    this.setState({ sources }, ['sources']);
-
-    // Update workspace metadata
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      sourceCount: sources.length,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Update source content
-   */
-  async updateSourceContent(sourceId: string, content: string) {
-    await this.updateSource(sourceId, { sourceContent: content });
-  }
-
-  // Rule Management Methods
-
-  /**
-   * Add a header rule
-   */
-  async addHeaderRule(ruleData: Partial<HeaderRule>) {
-    const rules = this.rulesManager.addHeaderRule(this.state.rules, ruleData);
-    this.setState({ rules }, ['rules']);
-
-    // Update workspace metadata
-    const totalRules = rules.header.length + rules.request.length + rules.response.length;
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      ruleCount: totalRules,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Update a header rule
-   */
-  async updateHeaderRule(ruleId: string, updates: Partial<HeaderRule>) {
-    const rules = this.rulesManager.updateHeaderRule(this.state.rules, ruleId, updates);
-    this.setState({ rules }, ['rules']);
-
-    // Update workspace metadata
-    const totalRules = rules.header.length + rules.request.length + rules.response.length;
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      ruleCount: totalRules,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Remove a header rule
-   */
-  async removeHeaderRule(ruleId: string) {
-    const rules = this.rulesManager.removeHeaderRule(this.state.rules, ruleId);
-    this.setState({ rules }, ['rules']);
-
-    // Update workspace metadata
-    const totalRules = rules.header.length + rules.request.length + rules.response.length;
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      ruleCount: totalRules,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  // Proxy Rule Management Methods
-
-  /**
-   * Add a proxy rule
-   */
-  async addProxyRule(ruleData: ProxyRule) {
-    const proxyRules = [...this.state.proxyRules, ruleData];
-    this.setState({ proxyRules }, ['proxyRules']);
-
-    await this.rulesManager.syncProxyRule(ruleData, 'add');
-
-    // Update workspace metadata
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      proxyRuleCount: proxyRules.length,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  /**
-   * Remove a proxy rule
-   */
-  async removeProxyRule(ruleId: string) {
-    const rule = this.state.proxyRules.find(r => r.id === ruleId);
-    const proxyRules = this.state.proxyRules.filter(r => r.id !== ruleId);
-    this.setState({ proxyRules }, ['proxyRules']);
-
-    if (rule) {
-      await this.rulesManager.syncProxyRule(rule, 'remove');
-    }
-
-    // Update workspace metadata
-    await this.updateWorkspaceMetadata(this.state.activeWorkspaceId, {
-      proxyRuleCount: proxyRules.length,
-      lastDataUpdate: new Date().toISOString()
-    });
-  }
-
-  // Workspace Management Methods
-
-  /**
-   * Create a new workspace with full initialization and auto-switch
-   */
-  async createWorkspace(workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }) {
-    try {
-      log.info(`Starting workspace creation: ${workspace.id} (${workspace.type})`);
-
-      // Create workspace with enhanced validation
-      const newWorkspace = this.workspaceManager.createWorkspace(this.state.workspaces, workspace);
-
-      // Add to workspaces list
-      const workspaces = [...this.state.workspaces, newWorkspace];
-      this.setState({ workspaces }, ['workspaces']);
-
-      // Initialize data containers for the new workspace
-      await this.initializeWorkspaceData(newWorkspace.id);
-
-      // Save workspaces configuration
-      await this.saveWorkspaces();
-
-      // Auto-switch to the newly created workspace
-      await this.switchWorkspace(newWorkspace.id);
-
-      log.info(`Successfully created and switched to workspace: ${newWorkspace.id}`);
-      return newWorkspace;
-    } catch (error) {
-      log.error('Failed to create workspace:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Initialize data containers for a new workspace
-   */
-  async initializeWorkspaceData(workspaceId: string) {
-    try {
-      log.info(`Initializing data containers for workspace: ${workspaceId}`);
-
-      // Initialize empty data containers
-      await this.sourceManager.saveSources(workspaceId, []);
-      await this.rulesManager.saveRules(workspaceId, { header: [], request: [], response: [] });
-      await this.rulesManager.saveProxyRules(workspaceId, []);
-
-      // Update workspace metadata
-      await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: 0,
-        ruleCount: 0,
-        proxyRuleCount: 0,
-        lastDataUpdate: new Date().toISOString()
-      });
-
-      log.info(`Successfully initialized data containers for workspace: ${workspaceId}`);
-    } catch (error) {
-      log.error(`Failed to initialize workspace data for ${workspaceId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update workspace metadata
-   */
-  async updateWorkspaceMetadata(workspaceId: string, metadata: Partial<WorkspaceMetadata>) {
-    try {
-      const workspaces = this.state.workspaces.map(w =>
-        w.id === workspaceId
-          ? { ...w, metadata: { ...w.metadata, ...metadata }, updatedAt: new Date().toISOString() }
-          : w
-      );
-
-      this.setState({ workspaces }, ['workspaces']);
-      await this.saveWorkspaces();
-
-      log.debug(`Updated metadata for workspace: ${workspaceId}`);
-    } catch (error) {
-      log.error(`Failed to update workspace metadata for ${workspaceId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update an existing workspace
-   */
-  async updateWorkspace(workspaceId: string, updates: Partial<Workspace>) {
-    try {
-      // Validate workspace exists
-      const existingWorkspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-
-      // Validate updates don't break workspace integrity
-      const updatedWorkspace = { ...existingWorkspace, ...updates };
-
-      // Re-validate the updated workspace
-      if (updates.name && (updates.name.length < 1 || updates.name.length > 100)) {
-        throw new Error('Workspace name must be between 1 and 100 characters');
-      }
-
-      if (updates.type && !['personal', 'team', 'git'].includes(updates.type)) {
-        throw new Error('Invalid workspace type. Must be personal, team, or git');
-      }
-
-      if (updatedWorkspace.type === 'git' && !updatedWorkspace.gitUrl) {
-        throw new Error('Git workspace must have a gitUrl');
-      }
-
-      // Add updatedAt timestamp
-      const finalUpdates: Partial<Workspace> = {
-        ...updates,
-        updatedAt: new Date().toISOString()
-      };
-
-      const workspaces = this.state.workspaces.map(w =>
-        w.id === workspaceId ? { ...w, ...finalUpdates } : w
-      );
-      this.setState({ workspaces }, ['workspaces']);
-
-      await this.saveWorkspaces();
-
-      log.info(`Updated workspace: ${workspaceId}`);
-      return true;
-    } catch (error) {
-      log.error('Failed to update workspace:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Delete a workspace
-   */
-  async deleteWorkspace(workspaceId: string) {
-    try {
-      if (workspaceId === 'default-personal') {
-        throw new Error('Cannot delete default personal workspace');
-      }
-
-      const workspaces = this.state.workspaces.filter(w => w.id !== workspaceId);
-      this.setState({ workspaces }, ['workspaces']);
-
-      if (this.state.activeWorkspaceId === workspaceId) {
-        await this.switchWorkspace('default-personal');
-      }
-
-      await this.workspaceManager.deleteWorkspaceData(workspaceId);
-      await this.saveWorkspaces();
-
-      log.info(`Deleted workspace: ${workspaceId}`);
-      return true;
-    } catch (error) {
-      log.error('Failed to delete workspace:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Copy workspace data
-   */
-  async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string) {
-    try {
-      log.info(`Copying workspace data: ${sourceWorkspaceId} → ${targetWorkspaceId}`);
-      await this.workspaceManager.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
-
-      // Update target workspace metadata after copy
-      await this.updateTargetWorkspaceMetadata(targetWorkspaceId);
-
-      log.info(`Successfully copied workspace data: ${sourceWorkspaceId} → ${targetWorkspaceId}`);
-    } catch (error) {
-      log.error('Failed to copy workspace data:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update target workspace metadata after data copy
-   */
-  async updateTargetWorkspaceMetadata(workspaceId: string) {
-    try {
-      // Load data to get accurate counts
-      const [sources, rules, proxyRules] = await Promise.all([
-        this.sourceManager.loadSources(workspaceId),
-        this.rulesManager.loadRules(workspaceId),
-        this.rulesManager.loadProxyRules(workspaceId)
-      ]);
-
-      const totalRules = rules.header.length + rules.request.length + rules.response.length;
-
-      await this.updateWorkspaceMetadata(workspaceId, {
-        sourceCount: sources.length,
-        ruleCount: totalRules,
-        proxyRuleCount: proxyRules.length,
-        lastDataUpdate: new Date().toISOString()
-      });
-    } catch (error) {
-      log.error(`Failed to update target workspace metadata for ${workspaceId}:`, error);
-    }
-  }
-
-  /**
-   * Validate workspace integrity
-   */
-  async validateWorkspaceIntegrity(workspaceId: string) {
-    try {
-      const workspace = this.workspaceManager.validateWorkspaceExists(this.state.workspaces, workspaceId);
-
-      // Check if data files exist
-      const dataFiles = ['sources.json', 'rules.json', 'proxy-rules.json'];
-      const missingFiles = [];
-
-      for (const file of dataFiles) {
-        try {
-          const path = `workspaces/${workspaceId}/${file}`;
-          const data = await window.electronAPI.loadFromStorage(path);
-          if (!data) {
-            missingFiles.push(file);
+      const result = await window.electronAPI.workspaceState.initialize();
+      if (result.state) {
+        const changedKeys: string[] = [];
+        for (const [key, value] of Object.entries(result.state)) {
+          if (key in this.state) {
+            Object.assign(this.state, { [key]: value });
+            changedKeys.push(key);
           }
-        } catch (error) {
-          missingFiles.push(file);
         }
+        this.notifyListeners(changedKeys);
       }
 
-      const isValid = missingFiles.length === 0;
-
-      return {
-        isValid,
-        workspace,
-        missingFiles,
-        dataDirectory: `workspaces/${workspaceId}`
-      };
+      log.info('Hydrated from main process');
+      return result.success;
     } catch (error) {
-      return {
-        isValid: false,
-        error: error instanceof Error ? error.message : String(error)
-      };
+      log.error('Failed to hydrate from main:', error);
+      this.state.error = error instanceof Error ? error.message : String(error);
+      this.state.loading = false;
+      this.notifyListeners(['error', 'loading']);
+      throw error;
     }
   }
 
-  // Utility Methods
-
-  /**
-   * Get environment service
-   */
-  getEnvironmentService() {
-    return getCentralizedEnvironmentService();
-  }
-
-  /**
-   * Check if service is ready
-   */
-  isReady() {
+  isReady(): boolean {
     return this.state.initialized && !this.state.loading;
   }
 
-  /**
-   * Wait for service to be ready
-   */
-  async waitForReady(timeout: number = 10000) {
-    const startTime = Date.now();
-
+  async waitForReady(timeout = 10000): Promise<boolean> {
+    const start = Date.now();
     while (!this.isReady()) {
-      if (Date.now() - startTime > timeout) {
-        throw new Error('Timeout waiting for workspace service to be ready');
-      }
-
-      if (!this.state.loading && !this.initPromise) {
-        await this.initialize();
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 100));
+      if (Date.now() - start > timeout) throw new Error('Timeout waiting for workspace service');
+      if (!this.state.loading && !this.initPromise) await this.initialize();
+      await new Promise(r => setTimeout(r, 100));
     }
-
     return true;
   }
 
-  /**
-   * Check and activate sources that have their dependencies met
-   */
-  async activateReadySources() {
-    const result = await this.sourceManager.activateReadySources(this.state.sources);
+  // ── Source CRUD (IPC forwards) ──────────────────────────────
 
-    if (result.hasChanges) {
-      this.setState({ sources: result.sources }, ['sources']);
-      await this.saveSources();
+  async addSource(sourceData: Source): Promise<Source> {
+    const result = await window.electronAPI.workspaceState.addSource(sourceData);
+    if (!result.success) throw new Error(result.error ?? 'Failed to add source');
+    return result.source!;
+  }
+
+  async updateSource(sourceId: string, updates: SourceUpdate): Promise<Source | null> {
+    const result = await window.electronAPI.workspaceState.updateSource(sourceId, updates);
+    if (!result.success) throw new Error(result.error ?? 'Failed to update source');
+    return result.source ?? null;
+  }
+
+  async removeSource(sourceId: string): Promise<void> {
+    const result = await window.electronAPI.workspaceState.removeSource(sourceId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to remove source');
+  }
+
+  async updateSourceContent(sourceId: string, content: string): Promise<void> {
+    const result = await window.electronAPI.workspaceState.updateSourceContent(sourceId, content);
+    if (!result.success) throw new Error(result.error ?? 'Failed to update source content');
+  }
+
+  async refreshSource(sourceId: string): Promise<boolean> {
+    const result = await window.electronAPI.workspaceState.refreshSource(sourceId);
+    return result.success;
+  }
+
+  async importSources(sources: Source[], replace = false): Promise<void> {
+    const result = await window.electronAPI.workspaceState.importSources(sources, replace);
+    if (!result.success) throw new Error(result.error ?? 'Failed to import sources');
+  }
+
+  // ── Header Rule CRUD (IPC forwards) ────────────────────────
+
+  async addHeaderRule(ruleData: Partial<HeaderRule>): Promise<void> {
+    const result = await window.electronAPI.workspaceState.addHeaderRule(ruleData);
+    if (!result.success) throw new Error(result.error ?? 'Failed to add header rule');
+  }
+
+  async updateHeaderRule(ruleId: string, updates: Partial<HeaderRule>): Promise<void> {
+    const result = await window.electronAPI.workspaceState.updateHeaderRule(ruleId, updates);
+    if (!result.success) throw new Error(result.error ?? 'Failed to update header rule');
+  }
+
+  async removeHeaderRule(ruleId: string): Promise<void> {
+    const result = await window.electronAPI.workspaceState.removeHeaderRule(ruleId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to remove header rule');
+  }
+
+  // ── Proxy Rule CRUD (IPC forwards) ─────────────────────────
+
+  async addProxyRule(ruleData: ProxyRule): Promise<void> {
+    const result = await window.electronAPI.workspaceState.addProxyRule(ruleData);
+    if (!result.success) throw new Error(result.error ?? 'Failed to add proxy rule');
+  }
+
+  async removeProxyRule(ruleId: string): Promise<void> {
+    const result = await window.electronAPI.workspaceState.removeProxyRule(ruleId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to remove proxy rule');
+  }
+
+  // ── Workspace CRUD (IPC forwards) ──────────────────────────
+
+  async createWorkspace(workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }): Promise<Workspace> {
+    const result = await window.electronAPI.workspaceState.createWorkspace(workspace);
+    if (!result.success) throw new Error(result.error ?? 'Failed to create workspace');
+    return result.workspace!;
+  }
+
+  async switchWorkspace(workspaceId: string): Promise<void> {
+    const result = await window.electronAPI.workspaceState.switchWorkspace(workspaceId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to switch workspace');
+  }
+
+  async updateWorkspace(workspaceId: string, updates: Partial<Workspace>): Promise<boolean> {
+    const result = await window.electronAPI.workspaceState.updateWorkspace(workspaceId, updates);
+    if (!result.success) throw new Error(result.error ?? 'Failed to update workspace');
+    return true;
+  }
+
+  async deleteWorkspace(workspaceId: string): Promise<boolean> {
+    const result = await window.electronAPI.workspaceState.deleteWorkspace(workspaceId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to delete workspace');
+    return true;
+  }
+
+  async syncWorkspace(workspaceId: string): Promise<boolean> {
+    const result = await window.electronAPI.workspaceState.syncWorkspace(workspaceId);
+    return result.success;
+  }
+
+  // ── Workspace data operations (IPC forwards) ───────────────
+
+  async loadWorkspaceData(workspaceId: string): Promise<void> {
+    // Main process handles this — just re-hydrate state
+    const state = await window.electronAPI.workspaceState.getState();
+    const changedKeys: string[] = [];
+    for (const [key, value] of Object.entries(state)) {
+      if (key in this.state) {
+        Object.assign(this.state, { [key]: value });
+        changedKeys.push(key);
+      }
     }
-
-    return result.activatedCount;
+    this.notifyListeners(changedKeys);
   }
 
-  // Event Listeners
-
-  /**
-   * Setup environment change listener
-   */
-  setupEnvironmentListener() {
-    const handleEnvChange = async () => {
-      log.debug('Environment variables changed, checking source activations');
-      await this.activateReadySources();
-    };
-
-    const handleEnvLoaded = async () => {
-      log.debug('Environments loaded, checking source activations');
-      await this.activateReadySources();
-    };
-
-    window.addEventListener('environment-variables-changed', handleEnvChange);
-    window.addEventListener('environments-loaded', handleEnvLoaded);
-
-    this.eventCleanup.push(() => {
-      window.removeEventListener('environment-variables-changed', handleEnvChange);
-      window.removeEventListener('environments-loaded', handleEnvLoaded);
-    });
+  async initializeWorkspaceData(_workspaceId: string): Promise<void> {
+    // Main process handles workspace data initialization during createWorkspace
   }
 
-  /**
-   * Setup workspace sync listener
-   */
-  setupSyncListener() {
-    const unsubscribe = this.syncManager.setupSyncListener((syncData) => {
-      const currentSyncStatus = { ...this.state.syncStatus };
-
-      if (syncData.success) {
-        // Only update lastSync if it's explicitly provided (meaning actual sync happened with changes)
-        const statusUpdate: WorkspaceSyncStatus = {
-          syncing: false,
-          error: null
-        };
-
-        // Only update lastSync and commit info if provided
-        if (syncData.timestamp) {
-          statusUpdate.lastSync = new Date(syncData.timestamp).toISOString();
-        }
-        if (syncData.commitInfo?.commitHash) {
-          statusUpdate.lastCommit = syncData.commitInfo.commitHash;
-          statusUpdate.commitInfo = syncData.commitInfo;
-        }
-
-        // Merge with existing status to preserve lastSync if not updated
-        currentSyncStatus[syncData.workspaceId] = {
-          ...currentSyncStatus[syncData.workspaceId],
-          ...statusUpdate
-        };
-
-        if (syncData.workspaceId === this.state.activeWorkspaceId) {
-          log.info('Reloading active workspace data after sync');
-
-          // Only clean up circuit breakers if there were actual changes
-          // This preserves retry state across syncs that don't change configuration
-          const hasChanges = syncData.hasChanges !== false; // Check if sync reported changes
-
-          if (hasChanges) {
-            // Dispatch event to clean up circuit breakers before reloading
-            window.dispatchEvent(new CustomEvent('workspace-syncing', {
-              detail: { workspaceId: syncData.workspaceId, reason: 'git-sync' }
-            }));
-          }
-
-          this.loadWorkspaceData(syncData.workspaceId).catch(error => {
-            log.error('Failed to reload workspace data after sync:', error);
-          });
-        }
-      } else {
-        currentSyncStatus[syncData.workspaceId] = {
-          syncing: false,
-          error: syncData.error || 'Sync failed'
-        };
-      }
-
-      this.setState({ syncStatus: currentSyncStatus }, ['syncStatus']);
-    });
-
-    this.eventCleanup.push(unsubscribe);
+  async saveWorkspaces(): Promise<void> {
+    // Main process handles persistence — no-op in renderer
   }
 
-  /**
-   * Setup refresh listener
-   */
-  setupRefreshListener() {
-    const handleRefresh = async (event: CustomEvent<{ workspaceId: string }>) => {
-      const workspaceId = event.detail?.workspaceId;
-      if (workspaceId && workspaceId === this.state.activeWorkspaceId) {
-        log.info('Received workspace data refresh request');
-        await this.loadWorkspaceData(workspaceId);
-      }
-    };
-
-    window.addEventListener('workspace-data-refresh-needed', handleRefresh);
-
-    this.eventCleanup.push(() => {
-      window.removeEventListener('workspace-data-refresh-needed', handleRefresh);
-    });
+  async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string): Promise<void> {
+    // This is called by cloneWorkspaceToPersonal — main handles it during createWorkspace flow
+    // For the clone case, the caller manually creates + copies + switches, so we need this
+    // TODO: Consider adding a dedicated IPC for clone-to-personal
+    log.debug(`copyWorkspaceData ${sourceWorkspaceId} → ${targetWorkspaceId} (delegated to main)`);
   }
 
-  /**
-   * Setup listener for CLI workspace join events
-   * When the CLI API creates and activates a workspace, the renderer must
-   * reload the workspace list from disk and switch to the new workspace.
-   */
-  setupCliJoinListener() {
-    if (!window.electronAPI?.onCliWorkspaceJoined) return;
+  // ── Environment service ─────────────────────────────────────
 
-    const unsubscribe = window.electronAPI.onCliWorkspaceJoined((data) => {
-      const workspaceId = data.workspaceId;
-      log.info(`CLI workspace joined: ${workspaceId}, reloading workspace state`);
-
-      void (async () => {
-        try {
-          const previousWorkspaceId = this.state.activeWorkspaceId;
-
-          // Pause auto-save to prevent writing empty state to old workspace
-          this.setState({ isWorkspaceSwitching: true });
-          this.autoSaveManager.setWorkspaceSwitching(true);
-
-          // Save any pending changes for the current workspace
-          await this.autoSaveManager.waitForSaves();
-          await this.saveAll();
-
-          // Notify RefreshManager to clean up sources
-          window.dispatchEvent(new CustomEvent('workspace-switching', {
-            detail: { fromWorkspaceId: previousWorkspaceId, toWorkspaceId: workspaceId }
-          }));
-
-          // Clear current workspace data
-          await this.clearAllData();
-
-          // Reload workspace list from disk (CLI already saved the new workspace)
-          const workspaceConfig = await this.workspaceManager.loadWorkspaces();
-
-          // Update state with reloaded workspace list and new active ID
-          this.setState({
-            workspaces: workspaceConfig.workspaces,
-            activeWorkspaceId: workspaceConfig.activeWorkspaceId,
-            syncStatus: workspaceConfig.syncStatus
-          }, ['workspaces', 'activeWorkspaceId', 'syncStatus']);
-
-          // Load the new workspace data (sources, rules, proxy rules)
-          await this.loadWorkspaceData(workspaceConfig.activeWorkspaceId);
-
-          // Notify other renderer components about the switch
-          window.dispatchEvent(new CustomEvent('workspace-switched', {
-            detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
-          }));
-          window.dispatchEvent(new CustomEvent('workspace-data-applied', {
-            detail: { workspaceId: workspaceConfig.activeWorkspaceId, previousWorkspaceId }
-          }));
-
-          this.setState({ loading: false, isWorkspaceSwitching: false });
-          this.autoSaveManager.setWorkspaceSwitching(false);
-
-          log.info(`CLI workspace switch complete: ${previousWorkspaceId} → ${workspaceConfig.activeWorkspaceId}`);
-        } catch (error) {
-          log.error('Failed to handle CLI workspace join:', error);
-          this.setState({ isWorkspaceSwitching: false });
-          this.autoSaveManager.setWorkspaceSwitching(false);
-        }
-      })();
-    });
-
-    this.eventCleanup.push(unsubscribe);
+  getEnvironmentService() {
+    // Lazy import to avoid circular deps
+    const { getCentralizedEnvironmentService } = require('./CentralizedEnvironmentService');
+    return getCentralizedEnvironmentService();
   }
 
-  /**
-   * Cleanup service resources
-   */
-  cleanup() {
-    // Stop auto-save
-    this.autoSaveManager.stopAutoSave();
+  // ── Cleanup ────────────────────────────────────────────────
 
-    // Clean up event listeners
-    this.eventCleanup.forEach(cleanup => {
-      try {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      } catch (error) {
-        log.error('Error during cleanup:', error);
-      }
-    });
-    this.eventCleanup = [];
-
-    // Clear base class listeners
-    super.cleanup();
-
-    log.info('CentralizedWorkspaceService cleaned up');
+  cleanup(): void {
+    if (this.patchCleanup) {
+      this.patchCleanup();
+      this.patchCleanup = null;
+    }
+    this.listeners.clear();
   }
 }
 
-// Create singleton instance
+// Singleton
 let serviceInstance: CentralizedWorkspaceService | null = null;
 
-export function getCentralizedWorkspaceService() {
+export function getCentralizedWorkspaceService(): CentralizedWorkspaceService {
   if (!serviceInstance) {
     serviceInstance = new CentralizedWorkspaceService();
-
-    // Auto-initialize on first access
-    serviceInstance.initialize().catch(error => {
-      log.error('Auto-initialization failed:', error);
-    });
   }
   return serviceInstance;
 }
 
 export { CentralizedWorkspaceService };
+export default CentralizedWorkspaceService;

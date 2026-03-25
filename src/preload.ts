@@ -30,6 +30,7 @@ import workspaceAPI from './preload/api/workspaceAPI';
 import videoAPI from './preload/api/videoAPI';
 import cliAPI from './preload/api/cliAPI';
 import sourceRefreshAPI from './preload/api/sourceRefreshAPI';
+import { createWorkspaceStateAPI } from './preload/api/workspaceStateAPI';
 
 // Expose protected methods to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -68,7 +69,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ...cliAPI,
 
     // Source refresh (main-process owned lifecycle)
-    sourceRefresh: sourceRefreshAPI
+    sourceRefresh: sourceRefreshAPI,
+
+    // Workspace state (main-process owned)
+    workspaceState: createWorkspaceStateAPI()
 });
 
 // TOTP generation helper
