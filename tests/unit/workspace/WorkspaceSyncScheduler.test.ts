@@ -47,12 +47,12 @@ vi.mock('../../../src/services/workspace/git/utils/EnvironmentSyncUtils.js', () 
   ENV_FILE_READ_MAX_RETRIES: 3
 }));
 
-import {
-  WorkspaceSyncScheduler,
-  type GitSyncService,
-  type WorkspaceSettingsServiceInterface,
-  type NetworkService,
-} from '../../../src/services/workspace/WorkspaceSyncScheduler';
+import { WorkspaceSyncScheduler } from '../../../src/services/workspace/WorkspaceSyncScheduler';
+import type {
+  GitSyncServiceLike as GitSyncService,
+  WorkspaceSettingsServiceLike as WorkspaceSettingsServiceInterface,
+  NetworkServiceLike as NetworkService,
+} from '../../../src/services/workspace/sync/types';
 
 /** Helper to access private fields for test assertions. */
 function testable(s: WorkspaceSyncScheduler) {
@@ -60,6 +60,7 @@ function testable(s: WorkspaceSyncScheduler) {
     syncInProgress: Map<string, boolean>;
     activeWorkspaceId: string | null;
     activeWorkspace: Workspace | null;
+    checkGitConnectivity(workspaceId: string, workspace: Workspace): Promise<boolean>;
   };
 }
 
@@ -382,8 +383,8 @@ describe('WorkspaceSyncScheduler', () => {
       gitSync.testConnection.mockResolvedValue({ success: true });
       const workspace = testWorkspace({ gitUrl: 'https://github.com/test' });
 
-      const result1 = await scheduler.checkGitConnectivity('ws-1', workspace);
-      const result2 = await scheduler.checkGitConnectivity('ws-1', workspace);
+      const result1 = await testable(scheduler).checkGitConnectivity('ws-1', workspace);
+      const result2 = await testable(scheduler).checkGitConnectivity('ws-1', workspace);
 
       expect(result1).toBe(true);
       expect(result2).toBe(true);
@@ -395,8 +396,47 @@ describe('WorkspaceSyncScheduler', () => {
       gitSync.testConnection.mockRejectedValue(new Error('timeout'));
       const workspace = testWorkspace({ gitUrl: 'https://github.com/test' });
 
-      const result = await scheduler.checkGitConnectivity('ws-1', workspace);
+      const result = await testable(scheduler).checkGitConnectivity('ws-1', workspace);
       expect(result).toBe(false);
+    });
+  });
+
+  describe('setSyncStatusOwner()', () => {
+    it('routes sync status updates to syncStatusOwner instead of WorkspaceSettingsService', async () => {
+      const syncStatusOwner = { updateSyncStatus: vi.fn() };
+      scheduler.setSyncStatusOwner(syncStatusOwner);
+
+      gitSync.syncWorkspace.mockResolvedValue({ success: true });
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'https://github.com/openheaders/test' }));
+
+      // syncStatusOwner should have received the status update
+      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith('ws-1', expect.objectContaining({
+        syncing: false
+      }));
+
+      // WorkspaceSettingsService should NOT have been called for sync status
+      expect(settingsService.updateSyncStatus).not.toHaveBeenCalled();
+    });
+
+    it('falls back to WorkspaceSettingsService when no syncStatusOwner is set', async () => {
+      // Don't call setSyncStatusOwner — should fall back
+      gitSync.syncWorkspace.mockResolvedValue({ success: true });
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'https://github.com/openheaders/test' }));
+
+      expect(settingsService.updateSyncStatus).toHaveBeenCalled();
+    });
+
+    it('routes error sync status to syncStatusOwner', async () => {
+      const syncStatusOwner = { updateSyncStatus: vi.fn() };
+      scheduler.setSyncStatusOwner(syncStatusOwner);
+
+      gitSync.syncWorkspace.mockRejectedValue(new Error('auth failed'));
+      await scheduler.performSync('ws-1', testWorkspace({ gitUrl: 'https://github.com/openheaders/test' }));
+
+      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith('ws-1', expect.objectContaining({
+        syncing: false,
+        error: 'auth failed'
+      }));
     });
   });
 });

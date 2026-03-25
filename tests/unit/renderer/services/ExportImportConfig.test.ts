@@ -54,7 +54,6 @@ describe('ExportImportConfig constants', () => {
   describe('EVENTS', () => {
     it('has all expected event names with correct values', () => {
       expect(EVENTS).toEqual({
-        WORKSPACE_DATA_REFRESH: 'workspace-data-refresh-needed',
         PROXY_RULES_UPDATED: 'proxy-rules-updated',
         RULES_UPDATED: 'rules-updated',
         ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed',

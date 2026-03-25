@@ -5,7 +5,7 @@
  * including type-specific handling and complex merge/replace logic.
  */
 
-import { createRulesStorage, exportForExtension, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
+import { createRulesStorage, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
 import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../core/types';
 import type { RulesCollection } from '../../../../types/rules';
@@ -164,9 +164,6 @@ export class RulesHandler {
       // Save the updated rules
       await this._saveRulesStorage(existingRulesStorage);
 
-      // Update WebSocket service with new rules
-      await this._updateWebSocketService(existingRulesStorage);
-
       // Emit event for UI updates
       if (stats.imported.total > 0) {
         this._emitRulesUpdatedEvent(stats);
@@ -273,25 +270,6 @@ export class RulesHandler {
       await window.electronAPI.saveToStorage(rulesPath, JSON.stringify(rulesStorage));
     } catch (error) {
       throw new Error(`Failed to save rules storage: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Updates the WebSocket service with new rules
-   * @param {Object} rulesStorage - Rules storage to export
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _updateWebSocketService(rulesStorage: RulesStorage) {
-    try {
-      const exportData = exportForExtension(rulesStorage);
-      window.electronAPI.updateWebSocketSources({
-        type: 'rules-update',
-        data: exportData
-      });
-    } catch (error) {
-      log.warn('Failed to update WebSocket service:', error);
-      // Don't throw - this is not critical for the import operation
     }
   }
 

@@ -153,15 +153,14 @@ const TeamWorkspaceAcceptInviteModal = ({
     }, [isCompleted, workspaceId, onSuccess]);
 
     useEffect(() => {
-        const handleWorkspaceSwitchStart = () => {
-            onCancel();
-        };
+        if (!window.electronAPI?.workspaceState) return;
 
-        window.addEventListener('workspace-switch-progress', handleWorkspaceSwitchStart);
-        
-        return () => {
-            window.removeEventListener('workspace-switch-progress', handleWorkspaceSwitchStart);
-        };
+        // Close modal when workspace switch starts (via IPC from main process)
+        const cleanup = window.electronAPI.workspaceState.onSwitchProgress(() => {
+            onCancel();
+        });
+
+        return cleanup;
     }, [onCancel]);
 
     const checkGitStatus = async () => {
@@ -494,7 +493,7 @@ const TeamWorkspaceAcceptInviteModal = ({
                 onCancel={onCancel}
                 footer={renderFooter()}
                 width={700}
-                destroyOnClose
+                destroyOnHidden
                 centered
                 styles={{
                     body: { 

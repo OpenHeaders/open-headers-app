@@ -128,8 +128,6 @@ describe('IPC Contract', () => {
             const rendererContextChannels = [
                 'environment-switched',
                 'environment-variables-changed',
-                'workspace-switched',
-                'workspace-updated',
                 'get-startup-data', // Sent via sendSync in preload (not regular send pattern)
             ];
             const realOrphans = unusedListeners.filter(ch => !rendererContextChannels.includes(ch));

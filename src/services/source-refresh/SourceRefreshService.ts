@@ -397,6 +397,17 @@ class SourceRefreshService {
         return this.refreshSource(sourceId, { reason: 'manual', bypassCircuitBreaker: true });
     }
 
+    /**
+     * Reset the circuit breaker for a source. Called when environment variables
+     * change — sources that depended on env vars (waiting_for_deps → active) or
+     * sources whose templated credentials just changed need a clean slate.
+     */
+    resetCircuitBreaker(sourceId: string): void {
+        const cbKey = formatCircuitBreakerKey('http', sourceId);
+        this.circuitBreakerManager.breakers.delete(cbKey);
+        log.info(`Circuit breaker reset for source ${sourceId}`);
+    }
+
     // ── Scheduling ──────────────────────────────────────────────────
 
     private async scheduleSource(source: Source): Promise<void> {

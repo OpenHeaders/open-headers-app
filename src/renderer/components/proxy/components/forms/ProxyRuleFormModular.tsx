@@ -175,7 +175,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
             onCancel={onCancel}
             footer={null}
             width={600}
-            destroyOnClose
+            destroyOnHidden
             styles={{
                 body: { 
                     maxHeight: '70vh', 

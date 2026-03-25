@@ -29,8 +29,6 @@ const systemAPI = {
 
     send: (channel: string, ...args: unknown[]): void => {
         const allowedChannels = [
-            'workspace-switched',
-            'workspace-updated',
             'environment-switched',
             'environment-variables-changed'
         ];

@@ -1,6 +1,6 @@
 import electron from 'electron';
 import type { Source } from '../../types/source';
-import type { RefreshStatusInfo, ContentUpdatedPayload, StatusChangedPayload, ScheduleUpdatedPayload } from '../../types/source-refresh';
+import type { RefreshStatusInfo, StatusChangedPayload, ScheduleUpdatedPayload } from '../../types/source-refresh';
 
 const { ipcRenderer } = electron;
 
@@ -16,12 +16,6 @@ const sourceRefreshAPI = {
 
     getTimeUntilRefresh: (sourceId: string): Promise<number> =>
         ipcRenderer.invoke('source-refresh:get-time-until', sourceId),
-
-    onContentUpdated: (callback: (data: ContentUpdatedPayload) => void): (() => void) => {
-        const handler = (_event: Electron.IpcRendererEvent, data: ContentUpdatedPayload) => callback(data);
-        ipcRenderer.on('source-refresh:content-updated', handler);
-        return () => ipcRenderer.removeListener('source-refresh:content-updated', handler);
-    },
 
     onStatusChanged: (callback: (data: StatusChangedPayload) => void): (() => void) => {
         const handler = (_event: Electron.IpcRendererEvent, data: StatusChangedPayload) => callback(data);

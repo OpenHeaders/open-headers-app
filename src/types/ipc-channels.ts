@@ -150,6 +150,7 @@ export const IPC_INVOKE = {
     WORKSPACE_STATE_CREATE_WORKSPACE: 'workspace-state:create-workspace',
     WORKSPACE_STATE_UPDATE_WORKSPACE: 'workspace-state:update-workspace',
     WORKSPACE_STATE_DELETE_WORKSPACE: 'workspace-state:delete-workspace',
+    WORKSPACE_STATE_COPY_WORKSPACE_DATA: 'workspace-state:copy-workspace-data',
     WORKSPACE_STATE_SYNC_WORKSPACE: 'workspace-state:sync-workspace',
 } as const;
 
@@ -174,13 +175,8 @@ export const IPC_SEND = {
     RENDERER_READY: 'renderer-ready',
 
     // Runtime updates
-    UPDATE_WEBSOCKET_SOURCES: 'updateWebSocketSources',
     PROXY_UPDATE_SOURCE: 'proxy-update-source',
     PROXY_UPDATE_SOURCES: 'proxy-update-sources',
-
-    // Workspace events
-    WORKSPACE_SWITCHED: 'workspace-switched',
-    WORKSPACE_UPDATED: 'workspace-updated',
 
     // Environment events
     ENVIRONMENT_SWITCHED: 'environment-switched',

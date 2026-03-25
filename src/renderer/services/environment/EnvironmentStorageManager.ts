@@ -49,23 +49,23 @@ class EnvironmentStorageManager {
 
       if (data) {
         const parsed = JSON.parse(data);
-        
+
         if (parsed.environments && typeof parsed.environments === 'object') {
-          // Validate before returning
           if (Object.keys(parsed.environments).length === 0) {
             log.warn(`Empty environments loaded for workspace ${workspaceId}, using defaults`);
             return {
               environments: { Default: {} },
-              activeEnvironment: 'Default'
+              activeEnvironment: 'Default',
+              isNewlyCreated: true
             };
           }
 
           log.info(`Loaded ${Object.keys(parsed.environments).length} environments for workspace ${workspaceId}`);
-          
-          
+
           return {
             environments: parsed.environments,
-            activeEnvironment: parsed.activeEnvironment || 'Default'
+            activeEnvironment: parsed.activeEnvironment || 'Default',
+            isNewlyCreated: false
           };
         }
       }
@@ -74,7 +74,8 @@ class EnvironmentStorageManager {
       log.warn(`No environments found for workspace ${workspaceId}, initializing defaults`);
       return {
         environments: { Default: {} },
-        activeEnvironment: 'Default'
+        activeEnvironment: 'Default',
+        isNewlyCreated: true
       };
 
     } catch (error) {

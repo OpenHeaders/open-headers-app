@@ -31,7 +31,7 @@ const mockUpdateWorkspace = vi.fn();
 const mockLoadWorkspaceData = vi.fn();
 const mockSetState = vi.fn();
 const mockCopyWorkspaceData = vi.fn().mockResolvedValue(undefined);
-const mockSyncGitWorkspace = vi.fn();
+const mockSyncWorkspace = vi.fn();
 
 const mockState = {
   workspaces: [
@@ -57,13 +57,13 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
       updateWorkspace: mockUpdateWorkspace,
       loadWorkspaceData: mockLoadWorkspaceData,
       copyWorkspaceData: mockCopyWorkspaceData,
+      syncWorkspace: mockSyncWorkspace,
     },
   }),
 }));
 
 Object.defineProperty(window, 'electronAPI', {
   value: {
-    syncGitWorkspace: mockSyncGitWorkspace,
     send: vi.fn(),
   },
   writable: true,
@@ -85,7 +85,7 @@ describe('useWorkspaces', () => {
     mockUpdateWorkspace.mockResolvedValue(true);
     mockLoadWorkspaceData.mockResolvedValue(undefined);
     mockCopyWorkspaceData.mockResolvedValue(undefined);
-    mockSyncGitWorkspace.mockResolvedValue({ success: true });
+    mockSyncWorkspace.mockResolvedValue(true);
     mockShowMessage.mockClear();
     mockSetState.mockClear();
   });
@@ -203,7 +203,7 @@ describe('useWorkspaces', () => {
 
   describe('syncWorkspace', () => {
     it('syncs git workspace successfully', async () => {
-      mockSyncGitWorkspace.mockResolvedValue({ success: true });
+      mockSyncWorkspace.mockResolvedValue(true);
 
       const { result } = renderHook(() => useWorkspaces());
 
@@ -213,7 +213,7 @@ describe('useWorkspaces', () => {
       });
 
       expect(synced).toBe(true);
-      expect(mockSyncGitWorkspace).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901');
+      expect(mockSyncWorkspace).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901');
       expect(mockShowMessage).toHaveBeenCalledWith('success', 'Workspace synced successfully');
     });
 
@@ -242,7 +242,7 @@ describe('useWorkspaces', () => {
     });
 
     it('suppresses success message when silent option is set', async () => {
-      mockSyncGitWorkspace.mockResolvedValue({ success: true });
+      mockSyncWorkspace.mockResolvedValue(true);
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {
@@ -253,7 +253,7 @@ describe('useWorkspaces', () => {
     });
 
     it('shows error message on sync failure', async () => {
-      mockSyncGitWorkspace.mockResolvedValue({ success: false, error: 'Auth failed' });
+      mockSyncWorkspace.mockRejectedValue(new Error('Auth failed'));
 
       const { result } = renderHook(() => useWorkspaces());
       await act(async () => {

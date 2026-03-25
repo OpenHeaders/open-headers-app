@@ -1,5 +1,4 @@
 import electron from 'electron';
-import type { Source } from '../../types/source';
 import type { AppSettings } from '../../types/settings';
 
 const { ipcRenderer } = electron;
@@ -9,10 +8,6 @@ const settingsAPI = {
     getSettings: (): Promise<Partial<AppSettings>> => ipcRenderer.invoke('getSettings'),
 
     setAutoLaunch: (enable: boolean): Promise<{ success: boolean; message?: string }> => ipcRenderer.invoke('setAutoLaunch', enable),
-
-    updateWebSocketSources: (sources: Source[]): void => {
-        ipcRenderer.send('updateWebSocketSources', sources);
-    }
 };
 
 export default settingsAPI;

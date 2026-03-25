@@ -17,6 +17,7 @@ class WindowManager {
         startMinimized: boolean;
         isAutoLaunch: boolean;
     };
+    private _launchedByProtocol = false;
 
     constructor() {
         this.mainWindow = null;
@@ -25,6 +26,15 @@ class WindowManager {
             startMinimized: process.argv.includes('--hidden') || process.argv.includes('--minimize') || process.argv.includes('/hidden'),
             isAutoLaunch: false
         };
+    }
+
+    /**
+     * Mark that the app was launched (or activated) by a protocol URL
+     * that requires user interaction. Forces the window to show regardless
+     * of hideOnLaunch / isAutoLaunch settings.
+     */
+    setLaunchedByProtocol() {
+        this._launchedByProtocol = true;
     }
 
     createWindow(settings?: AppSettings) {
@@ -134,18 +144,26 @@ class WindowManager {
         this.mainWindow!.once('ready-to-show', () => {
             const hideOnLaunch = Boolean(settings?.hideOnLaunch);
             const isAutoLaunch = this.appLaunchArgs.isAutoLaunch;
+            const launchedByProtocol = this._launchedByProtocol;
 
-            log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}`);
+            log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}, launchedByProtocol=${launchedByProtocol}`);
 
-            // Hide window only for auto-launches when user has enabled the setting
-            const shouldHideWindow = hideOnLaunch && isAutoLaunch;
+            // Hide window only for auto-launches when user has enabled the setting,
+            // but ALWAYS show when launched by a protocol URL (user clicked a link
+            // that requires interaction — invite acceptance, env import, etc.)
+            const shouldHideWindow = hideOnLaunch && isAutoLaunch && !launchedByProtocol;
 
             if (!shouldHideWindow) {
-                log.info('Showing window on startup (manual launch detected)');
+                log.info(launchedByProtocol
+                    ? 'Showing window on startup (launched by protocol URL)'
+                    : 'Showing window on startup (manual launch detected)');
                 windowsFocusHelper.focusWindow(this.mainWindow!);
             } else {
                 log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
             }
+
+            // Reset the flag after the first show decision
+            this._launchedByProtocol = false;
 
             // Apply dock visibility AFTER window is shown/hidden
             if (process.platform === 'darwin' && settings) {

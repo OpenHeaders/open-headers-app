@@ -338,7 +338,7 @@ const HeaderRuleForm = ({ visible, onCancel, onSave, initialValues }: HeaderRule
             onCancel={onCancel}
             footer={null}
             width={600}
-            destroyOnClose
+            destroyOnHidden
             styles={{
                 body: { 
                     maxHeight: '70vh', 

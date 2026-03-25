@@ -31,7 +31,6 @@ import { showMessage } from '../../utils';
 import { 
     createRulesStorage, 
     createRule,
-    exportForExtension,
     RULE_TYPES 
 } from '../../utils';
 import {
@@ -147,19 +146,8 @@ const HeaderRules = () => {
         // Listen for rules update events
         window.addEventListener('rules-updated', handleRulesImported);
         
-        // Listen for workspace switches
-        const handleWorkspaceSwitch = () => {
-            log.info('Workspace switched, reloading rules');
-            loadRules().catch(error => log.error('Failed to reload rules:', error));
-        };
-        
-        window.addEventListener('workspace-switched', handleWorkspaceSwitch);
-        window.addEventListener('workspace-data-applied', handleWorkspaceSwitch);
-        
         return () => {
             window.removeEventListener('rules-updated', handleRulesImported);
-            window.removeEventListener('workspace-switched', handleWorkspaceSwitch);
-            window.removeEventListener('workspace-data-applied', handleWorkspaceSwitch);
         };
     }, [activeWorkspaceId]);
 
@@ -251,16 +239,7 @@ const HeaderRules = () => {
             
             
             setRules(newRules);
-            
-            // Trigger automatic sync to browser extensions
-            // Send new format
-            const exportData = exportForExtension(rulesStorage);
-            window.electronAPI.updateWebSocketSources({
-                type: 'rules-update',
-                data: exportData
-            });
-            
-            
+
             // Dispatch event for other components
             window.dispatchEvent(new CustomEvent('rules-updated', { 
                 detail: { rules: rulesStorage } 

@@ -14,27 +14,6 @@ class EnvironmentEventManager {
   }
 
   /**
-   * Setup workspace change listener
-   */
-  setupWorkspaceListener(onWorkspaceChange: (workspaceId: string) => Promise<void>) {
-    const handleWorkspaceSwitch = async (event: Event) => {
-      const newWorkspaceId = (event as CustomEvent).detail?.workspaceId;
-      if (!newWorkspaceId) return;
-      
-      log.info(`Workspace switched event received: ${newWorkspaceId}`);
-      await onWorkspaceChange(newWorkspaceId);
-    };
-    
-    window.addEventListener('workspace-switched', handleWorkspaceSwitch);
-    window.addEventListener('workspace-data-applied', handleWorkspaceSwitch);
-    
-    this.listeners.push(() => {
-      window.removeEventListener('workspace-switched', handleWorkspaceSwitch);
-      window.removeEventListener('workspace-data-applied', handleWorkspaceSwitch);
-    });
-  }
-
-  /**
    * Setup environment structure change listener
    */
   setupEnvironmentStructureListener(onStructureChange: (data: { workspaceId: string }) => Promise<void>) {

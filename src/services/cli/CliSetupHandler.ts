@@ -21,7 +21,6 @@ const { createLogger } = mainLogger;
 const getLazyDeps = async () => ({
     appLifecycle: (await import('../../main/modules/app/lifecycle')).default,
     proxyService: (await import('../proxy/ProxyService')).default,
-    webSocketService: (await import('../websocket/ws-service')).default,
 });
 
 const log = createLogger('CliSetup');
@@ -37,7 +36,7 @@ class CliSetupHandler {
     }
 
     async joinWorkspace(data: JoinWorkspaceData): Promise<{ success: boolean; workspaceId?: string; error?: string }> {
-        const { appLifecycle, proxyService, webSocketService } = await getLazyDeps();
+        const { appLifecycle, proxyService } = await getLazyDeps();
         const gitSyncService = appLifecycle.getGitSyncService();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
 
@@ -111,32 +110,14 @@ class CliSetupHandler {
             settings.activeWorkspaceId = workspaceId;
             await workspaceSettingsService.saveSettings(settings);
 
+            // Notify WorkspaceStateService — it reloads workspace list from disk,
+            // loads the new workspace's data, and broadcasts to WS/proxy/renderer.
             try {
-                await proxyService.switchWorkspace(workspaceId);
-                log.info('Proxy service switched to new workspace');
+                const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
+                await workspaceStateService.onCliWorkspaceJoined(workspaceId);
+                log.info('WorkspaceStateService notified of CLI workspace join');
             } catch (err: unknown) {
-                log.warn('Failed to switch proxy service:', errorMessage(err));
-            }
-
-            try {
-                await webSocketService.onWorkspaceSwitch(workspaceId);
-                log.info('WebSocket service switched to new workspace');
-            } catch (err: unknown) {
-                log.warn('Failed to switch WebSocket service:', errorMessage(err));
-            }
-
-            const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-            if (workspaceSyncScheduler) {
-                try {
-                    // Let the scheduler run its normal initial sync (do NOT skipInitialSync).
-                    // The scheduler's background performSync will complete AFTER the CLI's
-                    // importEnvironment calls populate env values, then broadcast
-                    // workspace-data-updated so the renderer reloads with complete data.
-                    await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId);
-                    log.info('Sync scheduler switched to new workspace');
-                } catch (err: unknown) {
-                    log.warn('Failed to switch sync scheduler:', errorMessage(err));
-                }
+                log.warn('Failed to notify WorkspaceStateService:', errorMessage(err));
             }
 
             this._notifyRenderer('cli-workspace-joined', { workspaceId, timestamp: Date.now() });

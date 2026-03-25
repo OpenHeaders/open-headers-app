@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import zlib from 'zlib';
 import { ProtocolHandler } from '../../../src/main/modules/protocol/protocolHandler';
 import { DATA_FORMAT_VERSION } from '../../../src/config/version';
@@ -555,6 +555,92 @@ describe('ProtocolHandler', () => {
         it('rejects invalid data with neither schema nor environments', () => {
             handler.processEnvironmentConfigImport({});
             expect(handler.pendingEnvironmentImport).toBeNull();
+        });
+    });
+
+    describe('processPendingInvites (renderer-ready flow)', () => {
+        it('shows and focuses window when processing pending invite', () => {
+            const showCalls: string[] = [];
+            const win = {
+                webContents: {
+                    send: vi.fn(),
+                    isLoading: () => false,
+                },
+                show: () => { showCalls.push('show'); },
+                focus: () => { showCalls.push('focus'); },
+                isMinimized: () => false,
+                isDestroyed: () => false,
+                restore: () => {},
+            } as unknown as Parameters<typeof handler.setMainWindow>[0];
+
+            handler.setMainWindow(win);
+            handler.pendingInvite = {
+                workspaceName: 'OpenHeaders — Test',
+                repoUrl: 'https://gitlab.openheaders.io/repo.git',
+            };
+
+            handler.setRendererReady();
+
+            // Window should have been shown
+            expect(showCalls).toContain('show');
+            // Invite should have been sent
+            expect(win.webContents.send).toHaveBeenCalledWith('process-team-workspace-invite', expect.objectContaining({
+                workspaceName: 'OpenHeaders — Test',
+            }));
+            expect(handler.pendingInvite).toBeNull();
+        });
+
+        it('shows and focuses window when processing pending environment import', () => {
+            const showCalls: string[] = [];
+            const win = {
+                webContents: {
+                    send: vi.fn(),
+                    isLoading: () => false,
+                },
+                show: () => { showCalls.push('show'); },
+                focus: () => { showCalls.push('focus'); },
+                isMinimized: () => false,
+                isDestroyed: () => false,
+                restore: () => {},
+            } as unknown as Parameters<typeof handler.setMainWindow>[0];
+
+            handler.setMainWindow(win);
+            handler.pendingEnvironmentImport = {
+                environmentSchema: {
+                    environments: {
+                        production: { variables: [{ name: 'API_KEY', isSecret: true }] }
+                    }
+                }
+            };
+
+            handler.setRendererReady();
+
+            expect(showCalls).toContain('show');
+            expect(win.webContents.send).toHaveBeenCalledWith('process-environment-config-import', expect.objectContaining({
+                environmentSchema: expect.any(Object),
+            }));
+            expect(handler.pendingEnvironmentImport).toBeNull();
+        });
+
+        it('does not show window when no pending data', () => {
+            const showCalls: string[] = [];
+            const win = {
+                webContents: {
+                    send: vi.fn(),
+                    isLoading: () => false,
+                },
+                show: () => { showCalls.push('show'); },
+                focus: () => { showCalls.push('focus'); },
+                isMinimized: () => false,
+                isDestroyed: () => false,
+                restore: () => {},
+            } as unknown as Parameters<typeof handler.setMainWindow>[0];
+
+            handler.setMainWindow(win);
+            handler.setRendererReady();
+
+            expect(showCalls).toHaveLength(0);
+            expect(win.webContents.send).not.toHaveBeenCalled();
         });
     });
 

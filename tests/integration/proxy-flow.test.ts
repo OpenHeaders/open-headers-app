@@ -526,7 +526,7 @@ describe('Proxy integration – full request flow', () => {
             expect(echo.headers['authorization']).toBe('Bearer dynamic-token-value (prod)');
         });
 
-        it('keeps unresolved placeholder when variable is not set', async () => {
+        it('skips rule with unresolved env var instead of injecting placeholder', async () => {
             proxyService.ruleStore.rules = [makeProxyRule({
                 id: 'r-unresolved',
                 headerName: 'X-Token',
@@ -538,7 +538,8 @@ describe('Proxy integration – full request flow', () => {
             const res = await proxyRequest(proxyPort, targetUrl);
             const echo = parseEcho(res.body);
 
-            expect(echo.headers['x-token']).toBe('{{UNDEFINED_VAR}}');
+            // Rule should be skipped entirely — no header injected
+            expect(echo.headers['x-token']).toBeUndefined();
         });
 
         it('resolves environment variables in domain patterns', async () => {

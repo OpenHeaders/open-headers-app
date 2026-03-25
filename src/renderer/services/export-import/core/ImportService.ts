@@ -17,7 +17,7 @@ import {
   generateImportWarnings
 } from '../utilities/MessageGeneration';
 import { showMessage } from '../../../utils/ui/messageUtil';
-import { IMPORT_MODES, SUCCESS_MESSAGES, EVENTS } from '../core/ExportImportConfig';
+import { IMPORT_MODES, SUCCESS_MESSAGES } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
 
 import { errorMessage } from '../../../../types/common';
@@ -251,11 +251,6 @@ export class ImportService {
       const successMessage = generateImportSuccessMessage(importStats, importOptions.isGitSync);
       showMessage('success', successMessage);
 
-      // Emit workspace data refresh event if needed
-      if (importStats.environmentsImported > 0 || importStats.rulesImported.total > 0) {
-        this._emitWorkspaceDataRefreshEvent();
-      }
-
       // Show workspace sync success message for Git sync operations
       if (importOptions.isGitSync) {
         showMessage('success', SUCCESS_MESSAGES.WORKSPACE_SYNC_SUCCESS);
@@ -345,20 +340,6 @@ export class ImportService {
            importStats.rulesImported.total > 0 ||
            importStats.environmentsImported > 0 ||
            !!importStats.createdWorkspace;
-  }
-
-  /**
-   * Emits workspace data refresh event
-   * @private
-   */
-  _emitWorkspaceDataRefreshEvent() {
-    try {
-      window.dispatchEvent(new CustomEvent(EVENTS.WORKSPACE_DATA_REFRESH, {
-        detail: { workspaceId: this.dependencies.activeWorkspaceId }
-      }));
-    } catch (error) {
-      log.warn('Failed to emit workspace data refresh event:', error);
-    }
   }
 
   /**

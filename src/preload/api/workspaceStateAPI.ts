@@ -31,6 +31,7 @@ export interface SwitchProgress {
     progress: number;
     label: string;
     isGitOperation: boolean;
+    targetWorkspace?: { id: string; name: string; type: string };
 }
 
 interface OperationResult {
@@ -112,6 +113,9 @@ export function createWorkspaceStateAPI() {
 
         deleteWorkspace: (workspaceId: string): Promise<OperationResult> =>
             ipcRenderer.invoke('workspace-state:delete-workspace', workspaceId),
+
+        copyWorkspaceData: (sourceWorkspaceId: string, targetWorkspaceId: string): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:copy-workspace-data', sourceWorkspaceId, targetWorkspaceId),
 
         syncWorkspace: (workspaceId: string): Promise<OperationResult> =>
             ipcRenderer.invoke('workspace-state:sync-workspace', workspaceId),

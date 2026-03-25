@@ -1,8 +1,6 @@
 // Electron main process — phased startup for fast window display
 import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType, IpcMainInvokeEvent, IpcMainEvent, MenuItemConstructorOptions } from 'electron';
-import fs from 'fs';
-import path from 'path';
 import mainLogger from './utils/mainLogger';
 import { errorMessage } from './types/common';
 import type { Source } from './types/source';
@@ -43,24 +41,28 @@ if (!gotTheLock) {
     protocolHandler.setupProtocol();
     protocolHandler.setupProtocolHandlers();
 
+    app.whenReady().then(async () => {
+        const settings = await phaseA_loadSettings();
+        const modules = await phaseB_createWindow(settings);
+        phaseC_backgroundInit(modules);
+        registerAppEventHandlers(modules);
+    });
+
     // ─── PHASE A: Critical path (before window) ─────────────────────────
     // Load settings ONCE, apply log level, dock visibility, register startup IPC.
     // Everything the renderer needs at module-load time is prepared here.
 
-    app.whenReady().then(async () => {
-        // Load settings from disk once — all subsequent reads use the cache
+    async function phaseA_loadSettings() {
         const settings = await settingsCache.load();
 
         log.info(`App started at ${new Date().toISOString()}`);
         log.info(`App version: ${app.getVersion()}`);
 
-        // Apply log level from cached settings
         if (settings.logLevel) {
             const { setGlobalLogLevel } = await import('./utils/mainLogger');
             setGlobalLogLevel(settings.logLevel);
         }
 
-        // macOS dock visibility (uses cached settings, no disk read)
         if (process.platform === 'darwin' && app.dock) {
             if (!settings.showDockIcon) {
                 app.dock.hide();
@@ -69,31 +71,12 @@ if (!gotTheLock) {
             }
         }
 
-        // First-run auto-launch setup (uses cached settings — SettingsCache already
-        // created the default settings file if it didn't exist)
         if (settingsCache.isFirstRun()) {
-            log.info('First run detected, enabling auto-launch');
-            try {
-                const AutoLaunch = (await import('auto-launch')).default;
-                const args = process.platform === 'win32'
-                    ? ['--hidden', '--autostart']
-                    : ['--hidden'];
-                const autoLauncher = new AutoLaunch({
-                    name: app.getName(),
-                    path: app.getPath('exe'),
-                    args,
-                    isHidden: true
-                });
-                await autoLauncher.enable();
-                log.info('Auto-launch enabled for first-time user');
-            } catch (autoLaunchError) {
-                log.error('Error setting up auto-launch:', autoLaunchError);
-            }
             (globalThis as typeof globalThis & { isFirstRun?: boolean }).isFirstRun = true;
         }
 
         // Synchronous IPC: provides settings to preload script instantly (no async round-trip).
-        // This must be registered BEFORE window creation so the preload can call it.
+        // Must be registered BEFORE window creation so the preload can call it.
         ipcMain.on('get-startup-data', (event) => {
             event.returnValue = {
                 settings: settingsCache.get(),
@@ -103,28 +86,19 @@ if (!gotTheLock) {
             };
         });
 
-        // ─── PHASE B: Window + IPC (user sees the app shell) ────────────────
-        // Create the window FIRST, then register IPC handlers.
-        // The renderer loads HTML/JS and renders the themed shell immediately
-        // using window.startupData (no async IPC needed for first paint).
+        return settings;
+    }
 
-        // Import modules needed for IPC and window
+    // ─── PHASE B: Window + IPC (user sees the app shell) ────────────────
+    // Import modules, register IPC handlers, create window + tray.
+    // The renderer loads HTML/JS and renders the themed shell immediately
+    // using window.startupData (no async IPC needed for first paint).
+
+    async function phaseB_createWindow(settings: Awaited<ReturnType<typeof settingsCache.load>>) {
         const [
-            windowManager,
-            trayManager,
-            appLifecycle,
-            globalShortcuts,
-            autoUpdater,
-            networkHandlers,
-            fileHandlers,
-            storageHandlers,
-            settingsHandlers,
-            systemHandlers,
-            httpHandlers,
-            recordingHandlers,
-            proxyHandlers,
-            workspaceHandlers,
-            gitHandlers,
+            windowManager, trayManager, appLifecycle, globalShortcuts, autoUpdater,
+            networkHandlers, fileHandlers, storageHandlers, settingsHandlers, systemHandlers,
+            httpHandlers, recordingHandlers, proxyHandlers, workspaceHandlers, gitHandlers,
         ] = await Promise.all([
             import('./main/modules/window/windowManager').then(m => m.default),
             import('./main/modules/tray/trayManager').then(m => m.default),
@@ -143,8 +117,6 @@ if (!gotTheLock) {
             import('./main/modules/ipc/handlers/gitHandlers').then(m => m.default),
         ]);
 
-        // Register ALL IPC handlers before creating the window.
-        // This ensures the renderer's first IPC calls (settings, storage) get responses.
         setupIPC(
             fileHandlers, storageHandlers, settingsHandlers, systemHandlers,
             httpHandlers, recordingHandlers, proxyHandlers, workspaceHandlers,
@@ -152,53 +124,90 @@ if (!gotTheLock) {
             networkHandlers, windowManager, protocolHandler
         );
 
-        // Create window — renderer starts loading immediately
+        // If a protocol URL arrived before the window was created, ensure the
+        // window is shown regardless of hideOnLaunch / isAutoLaunch settings.
+        // Covers: macOS open-url (pendingInvite) and Windows/Linux argv (protocolUrl).
+        if (protocolHandler.pendingInvite || protocolHandler.pendingEnvironmentImport || protocolUrl) {
+            windowManager.setLaunchedByProtocol();
+        }
+
         mainWindow = windowManager.createWindow(settings);
         protocolHandler.setMainWindow(mainWindow!);
 
-        // Tray + Menu (fast, non-blocking)
         trayManager.createTray();
         setupMenu(windowManager);
 
-        // ─── PHASE C: Background services (non-blocking) ───────────────────
-        // Services initialize in the background. The renderer shows skeletons
-        // until workspace data is loaded via IPC.
+        return {
+            windowManager, appLifecycle, globalShortcuts, autoUpdater,
+            networkHandlers, proxyHandlers,
+        };
+    }
 
-        const backgroundInit = async () => {
-            try {
-                await appLifecycle.initializeApp();
+    // ─── PHASE C: Background services (non-blocking) ────────────────────
+    // Services initialize in the background. The renderer shows skeletons
+    // until workspace data is loaded via IPC.
 
-                await proxyHandlers.autoStartProxy();
+    function phaseC_backgroundInit(modules: Awaited<ReturnType<typeof phaseB_createWindow>>) {
+        const { appLifecycle, proxyHandlers, networkHandlers, autoUpdater, globalShortcuts } = modules;
 
-                // Pass window reference to CLI API service
-                const cliApiService = appLifecycle.getCliApiService();
-                if (cliApiService && mainWindow) {
-                    cliApiService.setMainWindow(mainWindow);
+        const run = async () => {
+            await appLifecycle.initializeApp();
+            await proxyHandlers.autoStartProxy();
+
+            const cliApiService = appLifecycle.getCliApiService();
+            if (cliApiService && mainWindow) cliApiService.setMainWindow(mainWindow);
+
+            await networkHandlers.initializeNetworkService();
+            networkHandlers.setupNativeMonitoring();
+
+            autoUpdater.setupAutoUpdater();
+            await globalShortcuts.initialize(app);
+
+            const { AppStateMachine } = await import('./services/core/AppStateMachine');
+            const proxyService = (await import('./services/proxy/ProxyService')).default;
+            const webSocketService = (await import('./services/websocket/ws-service')).default;
+
+            AppStateMachine.serversReady({
+                proxy: proxyService.getStatus(),
+                websocket: webSocketService.getConnectionStatus()
+            });
+
+            log.info('Application initialization complete. State:', AppStateMachine.getStateSummary());
+
+            // First-run auto-launch setup — deferred to Phase C so it never
+            // blocks window creation. Not inherently slow, but on first launch
+            // macOS Gatekeeper/XProtect scans unsigned apps (10-30s) which
+            // delays the entire main thread; keeping Phase A minimal ensures
+            // the window appears as soon as the OS releases the process.
+            if (settingsCache.isFirstRun()) {
+                log.info('First run detected, enabling auto-launch');
+                try {
+                    const AutoLaunch = (await import('auto-launch')).default;
+                    const args = process.platform === 'win32'
+                        ? ['--hidden', '--autostart']
+                        : ['--hidden'];
+                    const autoLauncher = new AutoLaunch({
+                        name: app.getName(),
+                        path: app.getPath('exe'),
+                        args,
+                        isHidden: true
+                    });
+                    await autoLauncher.enable();
+                    log.info('Auto-launch enabled for first-time user');
+                } catch (autoLaunchError) {
+                    log.error('Error setting up auto-launch:', autoLaunchError);
                 }
-
-                await networkHandlers.initializeNetworkService();
-                networkHandlers.setupNativeMonitoring();
-
-                autoUpdater.setupAutoUpdater();
-                await globalShortcuts.initialize(app);
-
-                const { AppStateMachine } = await import('./services/core/AppStateMachine');
-                const proxyService = (await import('./services/proxy/ProxyService')).default;
-                const webSocketService = (await import('./services/websocket/ws-service')).default;
-
-                AppStateMachine.serversReady({
-                    proxy: proxyService.getStatus(),
-                    websocket: webSocketService.getConnectionStatus()
-                });
-
-                log.info('Application initialization complete. State:', AppStateMachine.getStateSummary());
-            } catch (err) {
-                log.error('Background initialization failed:', err);
             }
         };
 
         // Fire and forget — do not block the window
-        backgroundInit().catch((err: Error) => log.error('Background init error:', err));
+        run().catch((err: Error) => log.error('Background init error:', err));
+    }
+
+    // ─── App event handlers ─────────────────────────────────────────────
+
+    function registerAppEventHandlers(modules: Awaited<ReturnType<typeof phaseB_createWindow>>) {
+        const { windowManager, appLifecycle, globalShortcuts, autoUpdater } = modules;
 
         // macOS: Show window when dock icon clicked
         app.on('activate', () => {
@@ -211,8 +220,6 @@ if (!gotTheLock) {
                 windowManager.showWindow();
             }
         });
-
-        // ─── Quit lifecycle ─────────────────────────────────────────────────
 
         app.on('before-quit', (event) => {
             if (appLifecycle.isCleanupDone()) return;
@@ -230,7 +237,7 @@ if (!gotTheLock) {
                 app.exit(1);
             });
         });
-    });
+    }
 
     // Windows/Linux: Quit when all windows closed
     app.on('window-all-closed', () => {
@@ -499,13 +506,7 @@ function setupIPC(
         protocolHandler.setRendererReady();
     });
 
-    // Runtime updates
-    ipcMain.on('updateWebSocketSources', async (_event: IpcMainEvent, sources: Source[]) => {
-        const webSocketService = (await import('./services/websocket/ws-service')).default;
-        log.info(`Received updateWebSocketSources with ${sources?.length || 0} sources`);
-        webSocketService.updateSources(sources);
-    });
-
+    // Runtime updates — proxy source updates are still used by some direct callers
     ipcMain.on('proxy-update-source', async (_event: IpcMainEvent, sourceId: string, value: string) => {
         const proxyService = (await import('./services/proxy/ProxyService')).default;
         proxyService.updateSource(sourceId, value);
@@ -518,42 +519,22 @@ function setupIPC(
         }
     });
 
-    // Workspace events
-    ipcMain.on('workspace-switched', workspaceHandlers.handleWorkspaceSwitched.bind(workspaceHandlers));
-    ipcMain.on('workspace-updated', workspaceHandlers.handleWorkspaceUpdated.bind(workspaceHandlers));
-
-    // Environment events
+    // Environment events — delegate to WorkspaceStateService which owns all state.
+    // It re-evaluates source dependencies, resets circuit breakers, updates proxy,
+    // and triggers fetches. Works even without a renderer window.
     ipcMain.on('environment-switched', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-        const proxyService = (await import('./services/proxy/ProxyService')).default;
-        log.info('Environment switched, notifying proxy service');
+        log.info('Environment switched, notifying WorkspaceStateService');
         if (data && data.variables) {
-            proxyService.updateEnvironmentVariables(data.variables);
-        }
-
-        try {
-            const workspacesPath = path.join(app.getPath('userData'), 'workspaces.json');
-            const workspacesData = await fs.promises.readFile(workspacesPath, 'utf8');
-            const { activeWorkspaceId } = JSON.parse(workspacesData);
-
-            if (activeWorkspaceId) {
-                const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
-                const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                const sources = JSON.parse(sourcesData);
-                if (Array.isArray(sources)) {
-                    proxyService.updateSources(sources);
-                    log.info(`Re-loaded ${sources.length} sources after environment switch`);
-                }
-            }
-        } catch (error: unknown) {
-            log.warn('Could not re-load sources after environment switch:', errorMessage(error));
+            const workspaceStateService = (await import('./services/workspace/WorkspaceStateService')).default;
+            await workspaceStateService.onEnvironmentVariablesChanged(data.variables);
         }
     });
 
     ipcMain.on('environment-variables-changed', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-        const proxyService = (await import('./services/proxy/ProxyService')).default;
-        log.info('Environment variables changed, notifying proxy service');
+        log.info('Environment variables changed, notifying WorkspaceStateService');
         if (data && data.variables) {
-            proxyService.updateEnvironmentVariables(data.variables);
+            const workspaceStateService = (await import('./services/workspace/WorkspaceStateService')).default;
+            await workspaceStateService.onEnvironmentVariablesChanged(data.variables);
         }
     });
 }

@@ -112,7 +112,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
             ]}
             width={800}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" style={{ width: '100%' }} size={20}>
                 <div style={{ marginTop: 8 }}>

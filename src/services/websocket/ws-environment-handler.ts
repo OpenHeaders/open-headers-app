@@ -1,11 +1,20 @@
 /**
  * WebSocket Environment Handler
- * Manages environment variable loading, template resolution, and proxy sync
+ * Manages environment variable resolution and template substitution.
+ *
+ * Variable sources (in priority order):
+ *  1. In-memory cache — set explicitly via setVariables() when env vars change.
+ *     This avoids racing with async disk writes.
+ *  2. Disk fallback — reads environments.json on cold start or after workspace switch
+ *     when no cache exists yet.
+ *
+ * All consumers (SourceDependencyEvaluator, SourceFetcher, ws-rule-handler) call
+ * loadEnvironmentVariables(), which returns the cache or falls back to disk.
  */
 
-import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
+import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import type { Source } from '../../types/source';
 import type { RulesCollection } from '../../types/rules';
@@ -23,14 +32,92 @@ interface WSServiceLike {
 class WSEnvironmentHandler {
     wsService: WSServiceLike;
 
+    /** In-memory variable cache. When set, loadEnvironmentVariables() returns this
+     *  instead of reading from disk. Cleared on workspace switch. */
+    private variableCache: Record<string, string> | null = null;
+
     constructor(wsService: WSServiceLike) {
         this.wsService = wsService;
     }
 
     /**
-     * Load environment variables from workspace files
+     * Update the in-memory variable cache. Called by WorkspaceStateService when
+     * environment variables change (switch, edit, import). All subsequent calls
+     * to loadEnvironmentVariables() return this cache until cleared.
+     */
+    setVariables(variables: Record<string, string>): void {
+        this.variableCache = variables;
+    }
+
+    /**
+     * Clear the in-memory cache. Called on workspace switch so the next
+     * loadEnvironmentVariables() reads from the new workspace's disk file.
+     */
+    clearVariableCache(): void {
+        this.variableCache = null;
+    }
+
+    /**
+     * Load environment variables. Returns in-memory cache if available,
+     * otherwise reads from the active workspace's environments.json on disk.
      */
     loadEnvironmentVariables(): Record<string, string> {
+        if (this.variableCache) {
+            return this.variableCache;
+        }
+
+        return this.loadVariablesFromDisk();
+    }
+
+    /**
+     * Resolve template with environment variables
+     */
+    resolveTemplate(template: string, variables: Record<string, string>): string {
+        if (!template) {
+            return template;
+        }
+
+        return template.replace(/\{\{([^}]+)\}\}/g, (match: string, varName: string) => {
+            const trimmedVarName = varName.trim();
+            const value = variables[trimmedVarName];
+
+            if (value !== undefined && value !== null && value !== '') {
+                return value;
+            }
+
+            return match;
+        });
+    }
+
+    /**
+     * Setup environment change listener — re-broadcasts rules to WebSocket
+     * clients when env vars affect header rules.
+     */
+    setupEnvironmentListener(): void {
+        try {
+            const { ipcMain } = electron;
+
+            const broadcastIfEnvVars = () => {
+                if (this.wsService.rules && this.wsService.rules.header) {
+                    const hasEnvVars = this.wsService.rules.header.some((rule) => rule.hasEnvVars);
+                    if (hasEnvVars) {
+                        this.wsService.ruleHandler.broadcastRules();
+                    }
+                }
+            };
+
+            ipcMain.on('environment-variables-changed', broadcastIfEnvVars);
+            ipcMain.on('environment-switched', broadcastIfEnvVars);
+
+            log.info('Environment change listener setup for WebSocket service');
+        } catch (error: unknown) {
+            log.warn('Could not setup environment listener:', error);
+        }
+    }
+
+    // ── Private ──────────────────────────────────────────────────
+
+    private loadVariablesFromDisk(): Record<string, string> {
         try {
             const workspacesPath = path.join(this.wsService.appDataPath!, 'workspaces.json');
             let activeWorkspaceId = 'default-personal';
@@ -56,6 +143,9 @@ class WSEnvironmentHandler {
                         Object.entries(environments[activeEnvironment]).forEach(([key, data]: [string, unknown]) => {
                             variables[key] = typeof data === 'object' && data !== null ? (data as Record<string, string>).value : String(data);
                         });
+
+                        // Warm the cache for future calls within the same workspace
+                        this.variableCache = variables;
                         return variables;
                     } else {
                         log.warn(`Active environment '${activeEnvironment}' not found in environments data`);
@@ -67,79 +157,6 @@ class WSEnvironmentHandler {
         } catch (error) {
             log.error('Error loading environment variables:', error);
             return {};
-        }
-    }
-
-    /**
-     * Resolve template with environment variables
-     */
-    resolveTemplate(template: string, variables: Record<string, string>): string {
-        if (!template) {
-            return template;
-        }
-
-        return template.replace(/\{\{([^}]+)\}\}/g, (match: string, varName: string) => {
-            const trimmedVarName = varName.trim();
-            const value = variables[trimmedVarName];
-
-            if (value !== undefined && value !== null && value !== '') {
-                return value;
-            }
-
-            return match;
-        });
-    }
-
-    /**
-     * Setup environment change listener
-     */
-    setupEnvironmentListener(): void {
-        try {
-            const { ipcMain } = electron;
-
-            const broadcastIfEnvVars = () => {
-                if (this.wsService.rules && this.wsService.rules.header) {
-                    const hasEnvVars = this.wsService.rules.header.some((rule) => rule.hasEnvVars);
-                    if (hasEnvVars) {
-                        this.wsService.ruleHandler.broadcastRules();
-                    }
-                }
-            };
-
-            // Proxy updates are handled by main.js IPC handlers;
-            // here we only re-broadcast rules to WebSocket clients when env vars affect them
-            ipcMain.on('environment-variables-changed', broadcastIfEnvVars);
-            ipcMain.on('environment-switched', broadcastIfEnvVars);
-            // workspace-switched is handled by sourceHandler.onWorkspaceSwitch()
-            // which loads fresh rules/sources and broadcasts — no need to duplicate here
-
-            log.info('Environment change listener setup for WebSocket service');
-        } catch (error: unknown) {
-            log.warn('Could not setup environment listener:', error);
-        }
-    }
-
-    /**
-     * Synchronize proxy service with current state (env vars, rules, sources)
-     */
-    async syncProxyService(): Promise<void> {
-        try {
-            const proxyService = (await import('../proxy/ProxyService')).default;
-
-            const envVars = this.loadEnvironmentVariables();
-            if (envVars) {
-                proxyService.updateEnvironmentVariables(envVars);
-            }
-
-            if (this.wsService.rules.header.length > 0) {
-                proxyService.updateHeaderRules(this.wsService.rules.header);
-            }
-
-            if (this.wsService.sources && this.wsService.sources.length > 0) {
-                proxyService.updateSources(this.wsService.sources);
-            }
-        } catch (error) {
-            log.error('Failed to sync proxy service:', error);
         }
     }
 }
