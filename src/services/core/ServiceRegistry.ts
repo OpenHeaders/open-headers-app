@@ -45,6 +45,26 @@ class ServiceRegistry {
     });
   }
 
+  /**
+   * Register a service that was already initialized externally (e.g., lazily created).
+   * The registry will still call its shutdown method during shutdownAll().
+   */
+  registerInitialized(name: string, service: ServiceInstance): void {
+    if (this.services.has(name)) {
+      throw new Error(`Service ${name} is already registered`);
+    }
+
+    this.services.set(name, {
+      name,
+      service,
+      dependencies: [],
+      initMethod: 'initialize',
+      initialized: true,
+      initPromise: null,
+      error: null
+    });
+  }
+
   get(name: string): ServiceInstance {
     const serviceInfo = this.services.get(name);
     if (!serviceInfo) {
@@ -195,9 +215,18 @@ class ServiceRegistry {
   }
 
   async shutdownAll(): Promise<void> {
-    const shutdownOrder = [...this.initializationOrder].reverse();
+    // Shut down in reverse initialization order first, then any late-registered services
+    const orderedNames = new Set([...this.initializationOrder].reverse());
+    const allNames = [...orderedNames];
 
-    for (const serviceName of shutdownOrder) {
+    // Append services registered after initializeAll (e.g., lazily-created services)
+    for (const name of this.services.keys()) {
+      if (!orderedNames.has(name)) {
+        allNames.push(name);
+      }
+    }
+
+    for (const serviceName of allNames) {
       const serviceInfo = this.services.get(serviceName);
       if (serviceInfo && serviceInfo.initialized) {
         try {

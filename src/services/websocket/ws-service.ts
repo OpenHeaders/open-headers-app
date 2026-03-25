@@ -13,6 +13,7 @@ import { WSClientHandler } from './ws-client-handler';
 import type { Source } from '../../types/source';
 import type { RulesCollection } from '../../types/rules';
 import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
+import type { SourceRefreshService } from '../source-refresh/SourceRefreshService';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
@@ -74,6 +75,7 @@ class WebSocketService {
     environmentHandler: WSEnvironmentHandler;
     clientHandler: WSClientHandler;
     networkStateHandler: WSNetworkStateHandler | null;
+    sourceRefreshService: SourceRefreshService | null;
 
     constructor() {
         this.wss = null;
@@ -98,6 +100,7 @@ class WebSocketService {
         this.environmentHandler = new WSEnvironmentHandler(this);
         this.clientHandler = new WSClientHandler(this);
         this.networkStateHandler = null;
+        this.sourceRefreshService = null;
     }
 
     /**

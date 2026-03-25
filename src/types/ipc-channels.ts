@@ -57,6 +57,12 @@ export const IPC_INVOKE = {
     GET_SYSTEM_STATE: 'getSystemState',
     MAKE_HTTP_REQUEST: 'makeHttpRequest',
 
+    // Source refresh (main-process owned)
+    SOURCE_REFRESH_MANUAL: 'source-refresh:manual',
+    SOURCE_REFRESH_UPDATE_SOURCE: 'source-refresh:update-source',
+    SOURCE_REFRESH_GET_STATUS: 'source-refresh:get-status',
+    SOURCE_REFRESH_GET_TIME_UNTIL: 'source-refresh:get-time-until',
+
     // Recording
     LOAD_RECORDINGS: 'loadRecordings',
     LOAD_RECORDING: 'loadRecording',

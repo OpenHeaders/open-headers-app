@@ -2,7 +2,6 @@ import React from 'react';
 import type { FormInstance } from 'antd';
 import { showMessage } from '../../../utils';
 import { validateAllFormFields } from './form-validation';
-import timeManager from '../../../services/TimeManager';
 import type { Source, SourceType, SourceMethod, SourceRequestOptions, JsonFilter, RefreshOptions } from '../../../../types/source';
 
 import { createLogger } from '../../../utils/error-handling/logger';
@@ -44,7 +43,6 @@ class FormSubmissionHandler {
     source: Source;
     envContext: FormEnvContext;
     httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>;
-    originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>;
     totpEnabled: boolean;
     totpSecret: string;
 
@@ -53,13 +51,11 @@ class FormSubmissionHandler {
         source: Source,
         envContext: FormEnvContext,
         httpOptionsRef: React.MutableRefObject<HttpOptionsHandle | null>,
-        originalValuesRef: React.MutableRefObject<{ interval?: number; enabled?: boolean }>
     ) {
         this.form = form;
         this.source = source;
         this.envContext = envContext;
         this.httpOptionsRef = httpOptionsRef;
-        this.originalValuesRef = originalValuesRef;
         this.totpEnabled = false;
         this.totpSecret = '';
     }
@@ -160,7 +156,11 @@ class FormSubmissionHandler {
             sourceMethod: values.sourceMethod || 'GET',
             requestOptions,
             jsonFilter: normalizedJsonFilter,
-            refreshOptions: values.refreshOptions || { enabled: false },
+            refreshOptions: {
+                enabled: false,
+                ...this.source.refreshOptions,
+                ...values.refreshOptions,
+            },
             refreshNow: shouldRefreshNow,
             isFiltered: this.source.isFiltered || normalizedJsonFilter.enabled,
             filteredWith: normalizedJsonFilter.enabled ? normalizedJsonFilter.path : this.source.filteredWith
@@ -202,35 +202,6 @@ class FormSubmissionHandler {
         }
     }
 
-    configureRefreshTiming(sourceData: EditSourceSubmission, shouldRefreshNow: boolean): void {
-        const hasIntervalChanged =
-            sourceData.refreshOptions?.interval !== this.originalValuesRef.current.interval;
-        const hasEnabledChanged =
-            sourceData.refreshOptions?.enabled !== this.originalValuesRef.current.enabled;
-
-        if (!hasEnabledChanged && !shouldRefreshNow &&
-            this.source.refreshOptions?.nextRefresh &&
-            this.source.refreshOptions.nextRefresh > timeManager.now()) {
-
-            if (!sourceData.refreshOptions) {
-                sourceData.refreshOptions = { enabled: false };
-            }
-            sourceData.refreshOptions.preserveTiming = true;
-
-            if (hasIntervalChanged) {
-                log.debug(`Interval changed but preserving timing (no immediate refresh): old=${this.originalValuesRef.current.interval}m, new=${sourceData.refreshOptions.interval}m`);
-            }
-        } else if (hasEnabledChanged) {
-            if (sourceData.refreshOptions) {
-                sourceData.refreshOptions.preserveTiming = false;
-            }
-        } else if (shouldRefreshNow) {
-            if (sourceData.refreshOptions) {
-                sourceData.refreshOptions.preserveTiming = false;
-            }
-        }
-    }
-
     ensureUrlProtocol(sourceData: EditSourceSubmission): void {
         if (sourceData.sourceType === 'http' && sourceData.sourcePath && !sourceData.sourcePath.match(/^https?:\/\//i)) {
             sourceData.sourcePath = 'https://' + sourceData.sourcePath;
@@ -251,7 +222,6 @@ class FormSubmissionHandler {
             this.updateFromHttpOptions(sourceData);
             this.validateFinalSourceData(sourceData);
             this.ensureUrlProtocol(sourceData);
-            this.configureRefreshTiming(sourceData, shouldRefreshNow);
 
             return sourceData;
         } catch (error) {

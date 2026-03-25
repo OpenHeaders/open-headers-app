@@ -21,6 +21,7 @@ function createMockService(sources: Source[] = []): ConstructorParameters<typeof
         sources,
         appDataPath: null,
         sourceService: null,
+        sourceRefreshService: null,
         ruleHandler: { broadcastRules: vi.fn() },
         _broadcastToAll: vi.fn().mockReturnValue(0)
     };

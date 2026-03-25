@@ -1,55 +1,65 @@
 import { useSettings } from '../../contexts';
+import { useRefreshManager } from '../../contexts';
+import { useSources } from '../../hooks/workspace';
 import React, { useState, useEffect } from 'react';
-import { Badge, Card, Space, Typography, Progress, Tag } from 'antd';
+import { Badge, Card, Space, Typography, Tag, theme } from 'antd';
 import { SyncOutlined } from '@ant-design/icons';
-import { adaptiveCircuitBreakerManager } from '../../utils/error-handling';
-import type { BreakerStatusMap } from '../../utils/error-handling/AdaptiveCircuitBreaker';
 
 const { Text } = Typography;
 
+interface BreakerEntry {
+    name: string;
+    state: string;
+    isOpen: boolean;
+    failureCount: number;
+    timeUntilNextAttemptMs: number;
+}
+
 export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean }) {
     const { settings } = useSettings();
-    const [breakers, setBreakers] = useState<BreakerStatusMap>({});
-    const [isExpanded, setIsExpanded] = useState(false);
-    
+    const refreshManager = useRefreshManager();
+    const { sources } = useSources();
+    const [, setTick] = useState(0);
+
+    // Poll every 2s to refresh display
     useEffect(() => {
-        // Update status every 2 seconds
-        const updateStatus = () => {
-            try {
-                const status = adaptiveCircuitBreakerManager.getAllStatus();
-                setBreakers(status);
-            } catch (error) {
-                console.error('Error getting circuit breaker status:', error);
-            }
-        };
-        
-        updateStatus();
-        const interval = setInterval(updateStatus, 2000);
-        
+        const interval = setInterval(() => setTick(n => n + 1), 2000);
         return () => clearInterval(interval);
     }, []);
-    
-    // Only show in developer mode
-    if (!settings?.developerMode) {
-        return null;
+
+    const { token } = theme.useToken();
+
+    if (!settings?.developerMode) return null;
+
+    // Build breaker list from main-process status via RefreshManager context
+    const breakers: BreakerEntry[] = [];
+    for (const source of sources) {
+        if (source.sourceType !== 'http') continue;
+        const status = refreshManager.getRefreshStatus(source.sourceId);
+        const cb = status.circuitBreaker;
+        // Use getTimeUntilRefresh for a live countdown (absolute timestamp that ticks down)
+        // instead of cb.timeUntilNextAttemptMs which is a static snapshot
+        const timeUntilMs = refreshManager.getTimeUntilRefresh(source.sourceId, source);
+        breakers.push({
+            name: `http-${source.sourceId}`,
+            state: cb.state,
+            isOpen: cb.isOpen,
+            failureCount: cb.failureCount,
+            timeUntilNextAttemptMs: timeUntilMs
+        });
     }
-    
-    // Count breakers by state
-    const breakerStates = Object.values(breakers).reduce((acc: { total: number; CLOSED: number; OPEN: number; HALF_OPEN: number; [key: string]: number }, breaker) => {
-        acc[breaker.state] = (acc[breaker.state] || 0) + 1;
-        acc.total++;
-        return acc;
-    }, { total: 0, CLOSED: 0, OPEN: 0, HALF_OPEN: 0 });
-    
-    // Determine overall health
-    const overallHealth = breakerStates.OPEN > 0 ? 'error' : 
-                         breakerStates.HALF_OPEN > 0 ? 'warning' : 
-                         'success';
-    
+
+    const closed = breakers.filter(b => b.state === 'CLOSED').length;
+    const open = breakers.filter(b => b.isOpen).length;
+    const halfOpen = breakers.filter(b => b.state === 'HALF_OPEN').length;
+    const total = breakers.length;
+
+    const overallHealth = open > 0 ? 'error' : halfOpen > 0 ? 'warning' : 'success';
     const healthColor = overallHealth === 'error' ? '#ff4d4f' :
-                       overallHealth === 'warning' ? '#faad14' :
-                       '#52c41a';
-    
+                       overallHealth === 'warning' ? '#faad14' : '#52c41a';
+
+    const [isExpanded, setIsExpanded] = useState(false);
+
     const baseStyle = {
         background: 'rgba(0,0,0,0.8)',
         color: 'white',
@@ -58,43 +68,31 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
         cursor: 'pointer',
         borderRadius: 4,
     };
-    
+
     const style = inFooter ? baseStyle : {
         ...baseStyle,
         position: 'fixed' as const,
         bottom: 10,
-        left: 280, // Position after Network State
+        left: 280,
         zIndex: 9999
     };
-    
+
     return (
         <>
-            {/* Mini view (always visible) */}
-            <div
-                onClick={() => setIsExpanded(!isExpanded)}
-                style={style}
-            >
+            <div onClick={() => setIsExpanded(!isExpanded)} style={style}>
                 Circuit Breaker: <span style={{ color: healthColor }}>
-                    {breakerStates.CLOSED}/{breakerStates.total}
+                    {closed}/{total}
                 </span>
             </div>
-            
-            {/* Expanded view */}
+
             {isExpanded && (
                 <Card
-                    title={
-                        <Space>
-                            <SyncOutlined spin />
-                            <Text>Circuit Breaker Status</Text>
-                        </Space>
-                    }
+                    title={<Space><SyncOutlined spin /><Text>Circuit Breaker Status</Text></Space>}
                     size="small"
-                    extra={
-                        <a onClick={() => setIsExpanded(false)}>Minimize</a>
-                    }
+                    extra={<a onClick={() => setIsExpanded(false)}>Minimize</a>}
                     style={{
                         position: 'fixed',
-                        bottom: 50, // Above footer
+                        bottom: 50,
                         right: 10,
                         width: 350,
                         maxHeight: 400,
@@ -104,82 +102,50 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
                     }}
                 >
                     <Space direction="vertical" style={{ width: '100%' }}>
-                        {/* Summary */}
                         <div>
-                            <Space>
-                                <Badge status={overallHealth} />
-                                <Text strong>Overall Health</Text>
-                            </Space>
+                            <Space><Badge status={overallHealth} /><Text strong>Overall Health</Text></Space>
                             <div style={{ marginTop: 8 }}>
                                 <Space size="small">
-                                    <Tag color="success">{breakerStates.CLOSED} Closed</Tag>
-                                    {breakerStates.HALF_OPEN > 0 && (
-                                        <Tag color="warning">{breakerStates.HALF_OPEN} Half-Open</Tag>
-                                    )}
-                                    {breakerStates.OPEN > 0 && (
-                                        <Tag color="error">{breakerStates.OPEN} Open</Tag>
-                                    )}
+                                    <Tag color="success">{closed} Closed</Tag>
+                                    {halfOpen > 0 && <Tag color="warning">{halfOpen} Half-Open</Tag>}
+                                    {open > 0 && <Tag color="error">{open} Open</Tag>}
                                 </Space>
                             </div>
                         </div>
-                        
-                        {/* Individual breakers */}
+
                         <div style={{ marginTop: 16 }}>
                             <Text type="secondary" style={{ fontSize: 12 }}>Individual Breakers:</Text>
                             <div style={{ marginTop: 8, maxHeight: 200, overflow: 'auto' }}>
-                                {Object.entries(breakers).map(([name, breaker]) => {
+                                {breakers.map(breaker => {
                                     const stateColor = breaker.state === 'CLOSED' ? 'success' :
-                                                     breaker.state === 'HALF_OPEN' ? 'warning' :
-                                                     'error';
-                                    
-                                    const successRate: number = breaker.metrics.totalRequests > 0
-                                        ? parseFloat((breaker.metrics.totalSuccesses / breaker.metrics.totalRequests * 100).toFixed(1))
-                                        : 0;
-                                    
+                                                     breaker.state === 'HALF_OPEN' ? 'warning' : 'error';
                                     return (
-                                        <div 
-                                            key={name} 
-                                            style={{ 
-                                                marginBottom: 12,
-                                                padding: 8,
-                                                backgroundColor: '#fafafa',
-                                                borderRadius: 4
-                                            }}
-                                        >
+                                        <div key={breaker.name} style={{
+                                            marginBottom: 12, padding: 8,
+                                            backgroundColor: token.colorBgContainer, borderRadius: 4
+                                        }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <Text style={{ fontSize: 12 }}>{name}</Text>
+                                                <Text style={{ fontSize: 12 }}>{breaker.name}</Text>
                                                 <Badge status={stateColor} text={breaker.state} />
                                             </div>
-                                            
-                                            {breaker.metrics.totalRequests > 0 && (
-                                                <div style={{ marginTop: 4 }}>
-                                                    <Text type="secondary" style={{ fontSize: 11 }}>
-                                                        Success Rate: {successRate}% ({breaker.metrics.totalSuccesses}/{breaker.metrics.totalRequests})
-                                                    </Text>
-                                                    <Progress 
-                                                        percent={successRate} 
-                                                        size="small" 
-                                                        showInfo={false}
-                                                        strokeColor={successRate > 80 ? '#52c41a' : '#faad14'}
-                                                    />
-                                                </div>
+                                            {breaker.failureCount > 0 && (
+                                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                                    Failures: {breaker.failureCount}
+                                                </Text>
                                             )}
-                                            
-                                            {breaker.state === 'OPEN' && breaker.nextAttemptTime && (
+                                            {breaker.isOpen && breaker.timeUntilNextAttemptMs > 0 && (
                                                 <div style={{ marginTop: 4 }}>
                                                     <Text type="secondary" style={{ fontSize: 11 }}>
-                                                        Next attempt in {Math.round((breaker.nextAttemptTime - Date.now()) / 1000)}s
+                                                        Next attempt in {Math.round(breaker.timeUntilNextAttemptMs / 1000)}s
                                                     </Text>
-                                                    {breaker.backoff && breaker.backoff.consecutiveOpenings > 0 && (
-                                                        <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
-                                                            Backoff: {breaker.backoff.consecutiveOpenings}x (timeout: {Math.round(breaker.backoff.currentTimeout / 1000)}s)
-                                                        </Text>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
                                     );
                                 })}
+                                {breakers.length === 0 && (
+                                    <Text type="secondary" style={{ fontSize: 11 }}>No HTTP sources</Text>
+                                )}
                             </div>
                         </div>
                     </Space>

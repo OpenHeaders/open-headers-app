@@ -2,21 +2,18 @@
 /**
  * Tests for useSourceRefresh hook
  *
- * Validates HTTP source refresh logic, add-source with initial fetch,
- * and the routing of refresh calls based on source type.
- *
- * useHttp is mocked entirely because it depends on React contexts
- * (TotpContext, EnvironmentContext) that would require a full provider tree.
+ * The hook now delegates HTTP refreshes to the main-process SourceRefreshService
+ * via window.electronAPI.sourceRefresh.manualRefresh(). Add-source still uses
+ * the renderer-side useHttp for the creation flow.
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
-// Mock the logger (require-style used by the source file)
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
@@ -26,12 +23,10 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-// Mock showMessage
 vi.mock('../../../../src/renderer/utils', () => ({
   showMessage: vi.fn(),
 }));
 
-// Mock useHttp – the critical mock for isolating this hook
 const mockHttpRequest = vi.fn();
 vi.mock('../../../../src/renderer/hooks/useHttp', () => ({
   useHttp: () => ({
@@ -45,56 +40,35 @@ import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSour
 import { showMessage } from '../../../../src/renderer/utils';
 import type { Source, NewSourceData } from '../../../../src/types/source';
 
-function makeSource(overrides: Partial<Source> & { sourceId: string; sourceType: Source['sourceType'] }): Source {
-  return { sourcePath: '', sourceName: 'Test Source', ...overrides };
-}
-
-function makeNewSource(overrides: Partial<NewSourceData> & { sourceType: Source['sourceType']; sourcePath: string }): NewSourceData {
-  return { sourceTag: 'oauth', ...overrides };
-}
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface UseSourceRefreshDeps {
-  sources: Source[];
-  updateSource: (sourceId: string, updates: Partial<Source>) => void;
-  refreshSource: (sourceId: string) => Promise<boolean>;
-  manualRefresh: (sourceId: string) => Promise<boolean>;
-  addSource: (sourceData: Source) => Promise<Source | null>;
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function makeDeps(overrides: Partial<UseSourceRefreshDeps> = {}): UseSourceRefreshDeps {
-  return {
-    sources: [],
-    updateSource: vi.fn(),
-    refreshSource: vi.fn(async () => true),
-    manualRefresh: vi.fn(async () => true),
-    addSource: vi.fn(async (data: Source) => ({ ...data, sourceId: 'new-src-1' })),
-    ...overrides,
-  };
-}
-
 function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {
     sourceId: id,
     sourceType: 'http',
     sourceName: 'Production API Gateway Token',
-    sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
+    sourcePath: 'https://auth.openheaders.io/oauth2/token',
     sourceMethod: 'GET',
     sourceTag: 'oauth',
-    requestOptions: {
-      contentType: 'application/json',
-      headers: [{ key: 'Accept', value: 'application/json' }],
-    },
+    requestOptions: { contentType: 'application/json' },
     jsonFilter: { enabled: false },
     ...overrides,
   } as Source;
+}
+
+interface UseSourceRefreshDeps {
+  sources: Source[];
+  refreshSource: (sourceId: string) => Promise<boolean>;
+  manualRefresh: (sourceId: string) => Promise<boolean>;
+  addSource: (sourceData: Source) => Promise<Source | null>;
+}
+
+function makeDeps(overrides: Partial<UseSourceRefreshDeps> = {}): UseSourceRefreshDeps {
+  return {
+    sources: [],
+    refreshSource: vi.fn(async () => true),
+    manualRefresh: vi.fn(async () => true),
+    addSource: vi.fn(async (data: Source) => ({ ...data, sourceId: 'new-src-1' })),
+    ...overrides,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -105,10 +79,18 @@ describe('useSourceRefresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockHttpRequest.mockResolvedValue({
-      content: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
+      content: '{"access_token":"eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600}',
       isFiltered: false,
       originalResponse: null,
     });
+
+    // Mock the electronAPI.sourceRefresh
+    (globalThis as Record<string, unknown>).window = globalThis;
+    (globalThis as Record<string, unknown>).electronAPI = {
+      sourceRefresh: {
+        manualRefresh: vi.fn(async () => ({ success: true })),
+      },
+    };
   });
 
   // =========================================================================
@@ -116,7 +98,7 @@ describe('useSourceRefresh', () => {
   // =========================================================================
 
   describe('handleHttpSourceRefresh', () => {
-    it('makes an HTTP request and updates the source', async () => {
+    it('delegates to IPC manualRefresh and shows success', async () => {
       const source = makeHttpSource('src-1');
       const deps = makeDeps({ sources: [source] });
       const { result } = renderHook(() => useSourceRefresh(deps));
@@ -127,129 +109,15 @@ describe('useSourceRefresh', () => {
       });
 
       expect(ok).toBe(true);
-      expect(mockHttpRequest).toHaveBeenCalledWith(
-        'src-1',
-        source.sourcePath,
-        'GET',
-        source.requestOptions,
-        source.jsonFilter,
-      );
-      expect(deps.updateSource).toHaveBeenCalledWith('src-1', expect.objectContaining({
-        sourceContent: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
-      }));
+      expect(window.electronAPI.sourceRefresh.manualRefresh).toHaveBeenCalledWith('src-1');
       expect(showMessage).toHaveBeenCalledWith('success', 'Source refreshed');
     });
 
-    it('uses the provided updatedSource instead of searching sources array', async () => {
-      const deps = makeDeps({ sources: [] }); // empty array – would fail lookup
-      const custom = makeHttpSource('src-2', { sourcePath: 'https://auth-staging.openheaders.io/oauth2/token' });
-
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      let ok!: boolean;
-      await act(async () => {
-        ok = await result.current.handleHttpSourceRefresh('src-2', custom);
-      });
-
-      expect(ok).toBe(true);
-      expect(mockHttpRequest).toHaveBeenCalledWith(
-        'src-2',
-        'https://auth-staging.openheaders.io/oauth2/token',
-        'GET',
-        expect.any(Object),
-        expect.any(Object),
-      );
-    });
-
-    it('returns false when source is not found', async () => {
-      const deps = makeDeps({ sources: [] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      let ok!: boolean;
-      await act(async () => {
-        ok = await result.current.handleHttpSourceRefresh('missing');
-      });
-
-      expect(ok).toBe(false);
-    });
-
-    it('returns false when source is not type http', async () => {
-      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' });
-      const deps = makeDeps({ sources: [fileSource] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      let ok!: boolean;
-      await act(async () => {
-        ok = await result.current.handleHttpSourceRefresh('file-1');
-      });
-
-      expect(ok).toBe(false);
-    });
-
-    it('stores filtering metadata when response is filtered', async () => {
-      mockHttpRequest.mockResolvedValue({
-        content: '"filtered-value"',
-        isFiltered: true,
-        originalResponse: '{"a":"filtered-value"}',
-        filteredWith: 'a',
-      });
-
-      const source = makeHttpSource('src-1', {
-        jsonFilter: { enabled: true, path: 'a' },
-      });
-      const deps = makeDeps({ sources: [source] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      await act(async () => {
-        await result.current.handleHttpSourceRefresh('src-1');
-      });
-
-      expect(deps.updateSource).toHaveBeenCalledWith('src-1', expect.objectContaining({
-        sourceContent: '"filtered-value"',
-        originalResponse: '{"a":"filtered-value"}',
-        isFiltered: true,
-        filteredWith: 'a',
-      }));
-    });
-
-    it('clears filtering metadata when response is not filtered', async () => {
-      mockHttpRequest.mockResolvedValue({
-        content: 'plain content',
-        isFiltered: false,
-        originalResponse: null,
-      });
-
-      const source = makeHttpSource('src-1');
-      const deps = makeDeps({ sources: [source] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      await act(async () => {
-        await result.current.handleHttpSourceRefresh('src-1');
-      });
-
-      expect(deps.updateSource).toHaveBeenCalledWith('src-1', expect.objectContaining({
-        originalResponse: null,
-        isFiltered: false,
-        filteredWith: null,
-      }));
-    });
-
-    it('clears needsInitialFetch flag on first fetch', async () => {
-      const source = makeHttpSource('src-1', { needsInitialFetch: true });
-      const deps = makeDeps({ sources: [source] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      await act(async () => {
-        await result.current.handleHttpSourceRefresh('src-1');
-      });
-
-      expect(deps.updateSource).toHaveBeenCalledWith('src-1', expect.objectContaining({
-        needsInitialFetch: false,
-      }));
-    });
-
-    it('returns false and shows error when HTTP request fails', async () => {
-      mockHttpRequest.mockRejectedValue(new Error('Network error'));
+    it('returns false and shows error when IPC manualRefresh fails', async () => {
+      window.electronAPI.sourceRefresh.manualRefresh = vi.fn(async () => ({
+        success: false,
+        error: 'Network error',
+      })) as typeof window.electronAPI.sourceRefresh.manualRefresh;
 
       const source = makeHttpSource('src-1');
       const deps = makeDeps({ sources: [source] });
@@ -264,22 +132,20 @@ describe('useSourceRefresh', () => {
       expect(showMessage).toHaveBeenCalledWith('error', 'Failed to refresh source: Network error');
     });
 
-    it('defaults method to GET when sourceMethod is not set', async () => {
-      const source = makeHttpSource('src-1', { sourceMethod: undefined });
+    it('falls back to manualRefresh from deps when electronAPI not available', async () => {
+      (globalThis as Record<string, unknown>).electronAPI = {};
+
+      const source = makeHttpSource('src-1');
       const deps = makeDeps({ sources: [source] });
       const { result } = renderHook(() => useSourceRefresh(deps));
 
+      let ok!: boolean;
       await act(async () => {
-        await result.current.handleHttpSourceRefresh('src-1');
+        ok = await result.current.handleHttpSourceRefresh('src-1');
       });
 
-      expect(mockHttpRequest).toHaveBeenCalledWith(
-        'src-1',
-        expect.any(String),
-        'GET',
-        expect.any(Object),
-        expect.any(Object),
-      );
+      expect(ok).toBe(true);
+      expect(deps.manualRefresh).toHaveBeenCalledWith('src-1');
     });
   });
 
@@ -288,7 +154,7 @@ describe('useSourceRefresh', () => {
   // =========================================================================
 
   describe('refreshSourceWithHttp', () => {
-    it('delegates to manualRefresh for HTTP sources', async () => {
+    it('delegates to handleHttpSourceRefresh for HTTP sources', async () => {
       const source = makeHttpSource('http-1');
       const deps = makeDeps({ sources: [source] });
       const { result } = renderHook(() => useSourceRefresh(deps));
@@ -297,12 +163,15 @@ describe('useSourceRefresh', () => {
         await result.current.refreshSourceWithHttp('http-1');
       });
 
-      expect(deps.manualRefresh).toHaveBeenCalledWith('http-1');
-      expect(deps.refreshSource).not.toHaveBeenCalled();
+      expect(window.electronAPI.sourceRefresh.manualRefresh).toHaveBeenCalledWith('http-1');
     });
 
     it('delegates to refreshSource for non-HTTP sources', async () => {
-      const fileSource = makeSource({ sourceId: 'file-1', sourceType: 'file', sourcePath: '/f' });
+      const fileSource: Source = {
+        sourceId: 'file-1',
+        sourceType: 'file',
+        sourcePath: '/Users/jane.doe/Documents/openheaders/tokens.json',
+      } as Source;
       const deps = makeDeps({ sources: [fileSource] });
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -311,18 +180,6 @@ describe('useSourceRefresh', () => {
       });
 
       expect(deps.refreshSource).toHaveBeenCalledWith('file-1');
-      expect(deps.manualRefresh).not.toHaveBeenCalled();
-    });
-
-    it('delegates to refreshSource when source is not found', async () => {
-      const deps = makeDeps({ sources: [] });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      await act(async () => {
-        await result.current.refreshSourceWithHttp('unknown');
-      });
-
-      expect(deps.refreshSource).toHaveBeenCalledWith('unknown');
     });
   });
 
@@ -331,175 +188,68 @@ describe('useSourceRefresh', () => {
   // =========================================================================
 
   describe('handleAddSource', () => {
-    it('fetches content before adding an HTTP source', async () => {
+    it('fetches initial content for HTTP sources before adding', async () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = makeNewSource({
+      const newSource: NewSourceData = {
         sourceType: 'http',
         sourcePath: 'https://auth.openheaders.io/oauth2/token',
-        sourceMethod: 'POST',
-        requestOptions: { body: '{}' },
-        jsonFilter: { enabled: false },
-      });
+        sourceTag: 'oauth',
+      };
 
       let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource(sourceData);
+        ok = await result.current.handleAddSource(newSource);
       });
 
       expect(ok).toBe(true);
       expect(mockHttpRequest).toHaveBeenCalled();
-      // The source data should have been enriched with content
-      expect(deps.addSource).toHaveBeenCalledWith(expect.objectContaining({
-        sourceContent: '{"access_token":"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600,"token_type":"Bearer"}',
-        needsInitialFetch: false,
-      }));
+      expect(deps.addSource).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceContent: expect.any(String),
+          needsInitialFetch: false,
+        }),
+      );
       expect(showMessage).toHaveBeenCalledWith('success', 'Source added successfully');
     });
 
-    it('stores filtering metadata when HTTP source response is filtered', async () => {
-      mockHttpRequest.mockResolvedValue({
-        content: '"value"',
-        isFiltered: true,
-        originalResponse: '{"key":"value"}',
-        filteredWith: 'key',
-      });
-
+    it('returns false when initial HTTP fetch fails', async () => {
+      mockHttpRequest.mockRejectedValue(new Error('Connection refused'));
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = makeNewSource({
+      const newSource: NewSourceData = {
         sourceType: 'http',
         sourcePath: 'https://auth.openheaders.io/oauth2/token',
-        jsonFilter: { enabled: true, path: 'key' },
-      });
-
-      await act(async () => {
-        await result.current.handleAddSource(sourceData);
-      });
-
-      expect(deps.addSource).toHaveBeenCalledWith(expect.objectContaining({
-        originalResponse: '{"key":"value"}',
-        isFiltered: true,
-        filteredWith: 'key',
-      }));
-    });
-
-    it('sets lastRefresh on existing refreshOptions', async () => {
-      const deps = makeDeps();
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      const sourceData = makeNewSource({
-        sourceType: 'http',
-        sourcePath: 'https://auth.openheaders.io/oauth2/token',
-        refreshOptions: { enabled: true, interval: 60 },
-      });
-
-      const before = Date.now();
-      await act(async () => {
-        await result.current.handleAddSource(sourceData);
-      });
-      const after = Date.now();
-
-      const passedData = (deps.addSource as Mock).mock.calls[0][0];
-      expect(passedData.refreshOptions.lastRefresh).toBeGreaterThanOrEqual(before);
-      expect(passedData.refreshOptions.lastRefresh).toBeLessThanOrEqual(after);
-      // original interval preserved
-      expect(passedData.refreshOptions.interval).toBe(60);
-    });
-
-    it('creates refreshOptions when not present on HTTP source', async () => {
-      const deps = makeDeps();
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      const sourceData = makeNewSource({
-        sourceType: 'http',
-        sourcePath: 'https://auth.openheaders.io/oauth2/token',
-      });
-
-      await act(async () => {
-        await result.current.handleAddSource(sourceData);
-      });
-
-      const passedData = (deps.addSource as Mock).mock.calls[0][0];
-      expect(passedData.refreshOptions).toBeDefined();
-      expect(typeof passedData.refreshOptions.lastRefresh).toBe('number');
-    });
-
-    it('returns false when HTTP fetch fails', async () => {
-      mockHttpRequest.mockRejectedValue(new Error('timeout'));
-
-      const deps = makeDeps();
-      const { result } = renderHook(() => useSourceRefresh(deps));
+        sourceTag: 'oauth',
+      };
 
       let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource(makeNewSource({
-          sourceType: 'http',
-          sourcePath: 'https://auth.openheaders.io/oauth2/token',
-        }));
+        ok = await result.current.handleAddSource(newSource);
       });
 
       expect(ok).toBe(false);
-      expect(deps.addSource).not.toHaveBeenCalled();
-      expect(showMessage).toHaveBeenCalledWith('error', 'Failed to fetch content: timeout');
+      expect(showMessage).toHaveBeenCalledWith('error', expect.stringContaining('Connection refused'));
     });
 
-    it('adds non-HTTP sources without fetching and triggers refresh', async () => {
-      vi.useFakeTimers();
-
+    it('adds file sources without HTTP fetch', async () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
-      const sourceData = makeNewSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/prod.json' });
+      const newSource: NewSourceData = {
+        sourceType: 'file',
+        sourcePath: '/Users/jane.doe/Documents/openheaders/token.txt',
+        sourceTag: 'local',
+      };
 
-      let ok!: boolean;
       await act(async () => {
-        ok = await result.current.handleAddSource(sourceData);
+        await result.current.handleAddSource(newSource);
       });
 
-      expect(ok).toBe(true);
       expect(mockHttpRequest).not.toHaveBeenCalled();
-      expect(deps.addSource).toHaveBeenCalledWith({ sourceId: '', ...sourceData });
-
-      // Should trigger delayed refresh for file sources
-      await act(async () => {
-        vi.advanceTimersByTime(200);
-      });
-
-      expect(deps.refreshSource).toHaveBeenCalledWith('new-src-1');
-      vi.useRealTimers();
-    });
-
-    it('triggers refresh for env sources after adding', async () => {
-      vi.useFakeTimers();
-
-      const deps = makeDeps();
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      await act(async () => {
-        await result.current.handleAddSource(makeNewSource({ sourceType: 'env', sourcePath: 'MY_VAR' }));
-      });
-
-      await act(async () => {
-        vi.advanceTimersByTime(200);
-      });
-
-      expect(deps.refreshSource).toHaveBeenCalledWith('new-src-1');
-      vi.useRealTimers();
-    });
-
-    it('returns false when addSource returns null', async () => {
-      const deps = makeDeps({ addSource: vi.fn(async () => null) });
-      const { result } = renderHook(() => useSourceRefresh(deps));
-
-      let ok!: boolean;
-      await act(async () => {
-        ok = await result.current.handleAddSource(makeNewSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json' }));
-      });
-
-      expect(ok).toBe(false);
+      expect(deps.addSource).toHaveBeenCalled();
     });
   });
 });

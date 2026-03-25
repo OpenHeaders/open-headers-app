@@ -1,4 +1,5 @@
 import fs from 'fs';
+import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import { errorMessage } from '../../../types/common';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
@@ -9,6 +10,7 @@ import WorkspaceSyncScheduler from '../../../services/workspace/WorkspaceSyncSch
 import networkService from '../../../services/network/NetworkService';
 import proxyService from '../../../services/proxy/ProxyService';
 import webSocketService from '../../../services/websocket/ws-service';
+import sourceRefreshService from '../../../services/source-refresh/SourceRefreshService';
 import type { CliApiService } from '../../../services/cli/CliApiService';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
@@ -67,9 +69,78 @@ class AppLifecycle {
             serviceRegistry.register('workspaceSettingsService', workspaceSettingsService, []);
             serviceRegistry.register('workspaceSyncScheduler', workspaceSyncScheduler, ['gitSyncService', 'workspaceSettingsService', 'networkService']);
             serviceRegistry.register('webSocketService', webSocketService, []);
+            serviceRegistry.register('sourceRefreshService', sourceRefreshService, []);
 
             await serviceRegistry.initializeAll();
             log.info('All services initialized successfully');
+
+            // Wire SourceRefreshService dependencies (after all services are initialized)
+            sourceRefreshService.configure(
+                webSocketService.environmentHandler,
+                networkService
+            );
+
+            /** Send an IPC message to all renderer windows */
+            const sendToRenderers = (channel: string, data: unknown) => {
+                try {
+                    const { BrowserWindow } = electron;
+                    for (const win of BrowserWindow.getAllWindows()) {
+                        if (!win.isDestroyed()) {
+                            win.webContents.send(channel, data);
+                        }
+                    }
+                } catch (_e) { /* non-critical */ }
+            };
+
+            // Wire content updates: when a source is fetched, update WS service and re-broadcast
+            sourceRefreshService.onContentUpdate = (sourceId, result) => {
+                const sources = webSocketService.sources;
+                const source = sources.find(s => s.sourceId === sourceId);
+                if (source) {
+                    source.sourceContent = result.content;
+                    source.originalResponse = result.originalResponse;
+                    source.responseHeaders = result.headers;
+                    source.isFiltered = result.isFiltered;
+                    source.filteredWith = result.filteredWith ?? null;
+                    source.needsInitialFetch = false;
+
+                    webSocketService.sourceHandler.broadcastSources();
+                    webSocketService.ruleHandler.broadcastRules();
+                }
+
+                sendToRenderers('source-refresh:content-updated', {
+                    sourceId,
+                    content: result.content,
+                    originalResponse: result.originalResponse,
+                    headers: result.headers,
+                    isFiltered: result.isFiltered,
+                    filteredWith: result.filteredWith,
+                    lastRefresh: Date.now()
+                });
+            };
+
+            sourceRefreshService.onStatusChange = (sourceId, status) => {
+                sendToRenderers('source-refresh:status-changed', { sourceId, status });
+            };
+
+            sourceRefreshService.onScheduleUpdate = (sourceId, lastRefresh, nextRefresh) => {
+                sendToRenderers('source-refresh:schedule-updated', { sourceId, lastRefresh, nextRefresh });
+            };
+
+            // Store on webSocketService so WSSourceHandler can access it
+            webSocketService.sourceRefreshService = sourceRefreshService;
+
+            // Now that callbacks are wired, sync any sources that were loaded during initializeAll.
+            // loadInitialData ran before configure(), so schedule events were lost — replay them now.
+            for (const source of webSocketService.sources) {
+                if (source.sourceType === 'http') {
+                    sourceRefreshService.updateSource(source).catch(err => {
+                        log.warn(`Failed to sync initial source ${source.sourceId}:`, errorMessage(err));
+                    });
+                }
+            }
+
+            log.info('SourceRefreshService wired into WebSocket service');
 
             AppStateMachine.servicesReady(serviceRegistry.getAllServices());
 
@@ -89,7 +160,7 @@ class AppLifecycle {
             await workspaceSyncScheduler.onWorkspaceSwitch(activeWorkspaceId);
 
             // Start CLI API server (non-blocking — app works without it)
-            // Lazy require to avoid circular dependency (CliSetupHandler requires lifecycle)
+            // Lazy import to avoid circular dependency (CliSetupHandler requires lifecycle)
             try {
                 const { CliApiService } = await import('../../../services/cli/CliApiService');
                 const { CliSetupHandler } = await import('../../../services/cli/CliSetupHandler');
@@ -98,6 +169,9 @@ class AppLifecycle {
                 cliApiService.setSetupHandler(cliSetupHandler);
                 this._cliApiService = cliApiService;
                 await cliApiService.start();
+
+                // Register late so shutdownAll() calls stop() automatically
+                serviceRegistry.registerInitialized('cliApiService', cliApiService);
             } catch (error: unknown) {
                 log.warn('CLI API server failed to start (non-critical):', errorMessage(error));
             }
@@ -131,16 +205,6 @@ class AppLifecycle {
     async _performCleanup() {
         for (const watcher of this.fileWatchers.values()) {
             try { watcher.close(); } catch (e) { /* ignore */ }
-        }
-
-        // Stop CLI API server first (fast, deletes cli.json)
-        const cliApiService = this.getCliApiService();
-        if (cliApiService) {
-            try {
-                await cliApiService.stop();
-            } catch (error: unknown) {
-                log.warn('Error stopping CLI API server:', errorMessage(error));
-            }
         }
 
         try {

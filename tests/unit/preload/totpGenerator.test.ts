@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TOTPGenerator } from '../../../src/preload/modules/totpGenerator';
+import { TOTPGenerator } from '../../../src/shared/totpGenerator';
 import timeUtils from '../../../src/preload/modules/timeUtils';
 
 describe('TOTPGenerator', () => {
     let generator: InstanceType<typeof TOTPGenerator>;
 
     beforeEach(() => {
-        generator = new TOTPGenerator();
+        generator = new TOTPGenerator(() => timeUtils.now());
         vi.restoreAllMocks();
     });
 

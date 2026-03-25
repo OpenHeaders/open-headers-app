@@ -9,8 +9,6 @@ import timeManager from '../../services/TimeManager';
 import {
     checkSourceDependencies,
     getRefreshStatusText,
-    updateRefreshDisplayStates,
-    cleanupDisplayStates,
     createSourceTableColumns,
     createSaveSourceHandler,
     createRefreshSourceHandler,
@@ -72,10 +70,9 @@ const SourceTable = ({
                          onRefreshSource,
                          onUpdateSource
                      }: SourceTableProps) => {
-    // State management for refresh display timing and caching
-    // Separate from content to avoid unnecessary re-renders
-    const [refreshDisplayStates, setRefreshDisplayStates] = useState({});
-    
+    // Render tick — bumped every second to update countdown timers
+    const [, setTick] = useState(0);
+
     // Modal visibility states for edit and content viewing
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [contentViewerVisible, setContentViewerVisible] = useState(false);
@@ -164,44 +161,34 @@ const SourceTable = ({
     // Environment change detection and dependency validation
     // Monitors environment changes to update source activation states
 
-    // Refresh status text helper with extracted logic
-    // Wrapper function that provides all necessary dependencies
     const getRefreshStatus = (source: Source) => getRefreshStatusText(
         source,
-        refreshManager, 
-        refreshDisplayStates, 
-        refreshingSourceId, 
-        timeManager
+        refreshManager,
+        refreshingSourceId
     );
 
 
     // Create handlers using extracted logic from source-table package
     // These handlers encapsulate complex business logic and state management
     
-    // Refresh source handler with status tracking and error handling
     const handleRefreshSource = createRefreshSourceHandler({
         onRefreshSource,
         setRefreshingSourceId,
-        setRefreshDisplayStates,
         timeManager,
         log
     });
-    
-    // Save source handler with refresh logic and state management
+
     const handleSaveSource = createSaveSourceHandler({
         onUpdateSource,
         setRefreshingSourceId,
-        setRefreshDisplayStates,
         setEditModalVisible,
-        handleRefreshSource, // Pass the refresh handler properly
+        handleRefreshSource,
         log
     });
-    
-    // Remove source handler with cleanup and user feedback
+
     const handleRemoveSource = createRemoveSourceHandler({
         onRemoveSource,
         setRemovingSourceId,
-        setRefreshDisplayStates,
         sources
     });
     
@@ -212,30 +199,11 @@ const SourceTable = ({
         setContentViewerVisible
     });
 
-    // Update refresh display states using extracted logic
-    // Runs every second to update countdown timers and refresh status
+    // Tick every second to update countdown timers
     useEffect(() => {
-        const timer = setInterval(() => {
-            const updatedStates = updateRefreshDisplayStates(
-                sources, 
-                refreshManager, 
-                refreshDisplayStates, 
-                refreshingSourceId, 
-                timeManager
-            );
-            setRefreshDisplayStates(updatedStates);
-        }, 1000);
-
+        const timer = setInterval(() => setTick(n => n + 1), 1000);
         return () => clearInterval(timer);
-    }, [sources, refreshingSourceId]);
-
-    // Clean up display states when sources change
-    // Removes stale states for deleted sources to prevent memory leaks
-    useEffect(() => {
-        setRefreshDisplayStates(prev => 
-            cleanupDisplayStates(sources, prev, log)
-        );
-    }, [sources]);
+    }, []);
 
     // All handlers are now created using extracted logic above
     // This section previously contained large handler implementations

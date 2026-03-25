@@ -37,23 +37,11 @@ import type { Source } from '../../../../types/source';
 
 const { Text } = Typography;
 
-interface CircuitBreakerInfo {
-    isOpen?: boolean;
-    failureCount?: number;
-    timeUntilNextAttemptMs?: number;
-    timeUntilNextAttempt?: string;
-    canManualBypass?: boolean;
-}
-
-interface RefreshStatusInfo {
-    text: string;
-    isCircuitOpen?: boolean;
-    circuitBreaker?: CircuitBreakerInfo | null;
-}
+import type { RefreshDisplayInfo } from './SourceRefreshManager';
 
 interface SourceTableColumnsParams {
     token: GlobalToken;
-    getRefreshStatusText: (record: Source) => string | RefreshStatusInfo;
+    getRefreshStatusText: (record: Source) => RefreshDisplayInfo;
     handleViewContent: (record: Source) => void;
     handleEditSource: (record: Source) => void;
     handleRemoveSource: (sourceId: string) => void;
@@ -215,142 +203,72 @@ export const createSourceTableColumns = ({
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 {/* HTTP Sources: Full functionality with refresh status and controls */}
                 {record.sourceType === 'http' && (
-                    <>
-                        {/* Real-time refresh status display with dynamic updates */}
-                        <div className={`refresh-status ${record.refreshOptions?.enabled ? 'active' : ''}`}>
-                            {(() => {
-                                const statusInfo = getRefreshStatusText(record);
-                                const statusText = typeof statusInfo === 'object' ? statusInfo.text : statusInfo;
-                                const isCircuitOpen = typeof statusInfo === 'object' && statusInfo.isCircuitOpen;
-                                const circuitBreaker = typeof statusInfo === 'object' ? statusInfo.circuitBreaker : null;
-                                
-                                const statusContent = (
-                                    <span style={{ 
-                                        color: isCircuitOpen ? '#ff4d4f' : 'inherit',
-                                        fontWeight: isCircuitOpen ? 500 : 'normal'
-                                    }}>
-                                        {isCircuitOpen && (
-                                            <ExclamationCircleOutlined style={{ marginRight: 4 }} />
-                                        )}
-                                        {statusText}
-                                    </span>
-                                );
-                                
-                                if (isCircuitOpen && circuitBreaker) {
-                                    const failureText = circuitBreaker.failureCount === 1 
-                                        ? '1 failure' 
-                                        : `${circuitBreaker.failureCount} consecutive failures`;
-                                    const backoffText = (circuitBreaker.timeUntilNextAttemptMs ?? 0) > 0
-                                        ? `Auto-refresh will resume after this retry attempt.`
-                                        : 'Auto-refresh is temporarily paused.';
-                                    
-                                    return (
-                                        <Tooltip 
-                                            title={
-                                                <div>
-                                                    <div>Auto-refresh temporarily disabled after {failureText}.</div>
-                                                    <div>{backoffText}</div>
-                                                    {circuitBreaker.canManualBypass && (
-                                                        <div style={{ marginTop: 4 }}>Use the Refresh button to try manually.</div>
-                                                    )}
-                                                </div>
-                                            }
-                                            placement="top"
-                                        >
-                                            {statusContent}
-                                        </Tooltip>
-                                    );
-                                }
-                                
-                                return statusContent;
-                            })()}
-                        </div>
-                        <Space size="small">
-                            {/* View Content: Opens content viewer modal */}
-                            <Button
-                                type="link"
-                                size="small"
-                                onClick={() => handleViewContent(record)}
-                                style={{ padding: '0 4px', fontSize: '12px' }}
-                                disabled={record.activationState === 'waiting_for_deps'}
-                            >
-                                <EyeOutlined /> View
-                            </Button>
-                            {/* Edit Source: Opens edit modal for configuration */}
-                            <Button
-                                type="link"
-                                size="small"
-                                onClick={() => handleEditSource(record)}
-                                style={{ padding: '0 4px', fontSize: '12px' }}
-                            >
-                                <EditOutlined /> Edit
-                            </Button>
-                            {/* Manual Refresh: Triggers immediate refresh operation */}
-                            {(() => {
-                                const statusInfo = getRefreshStatusText(record);
-                                const circuitBreaker = typeof statusInfo === 'object' ? statusInfo.circuitBreaker : null;
-                                const isCircuitOpen = circuitBreaker?.isOpen;
-                                
-                                const refreshButton = (
-                                    <Button
-                                        type="link"
-                                        size="small"
-                                        onClick={() => handleRefreshSource(record.sourceId)}
-                                        style={{ 
-                                            padding: '0 4px', 
-                                            fontSize: '12px',
-                                            color: isCircuitOpen ? '#1890ff' : undefined
-                                        }}
-                                        loading={refreshingSourceId === record.sourceId}
-                                        disabled={record.activationState === 'waiting_for_deps'}
-                                    >
-                                        <ReloadOutlined /> Refresh
+                    (() => {
+                        const { text: statusText, isCircuitOpen, circuitBreaker } = getRefreshStatusText(record);
+
+                        const cbTooltip = isCircuitOpen && circuitBreaker ? (
+                            <div>
+                                <div>Auto-refresh temporarily disabled after {circuitBreaker.failureCount === 1 ? '1 failure' : `${circuitBreaker.failureCount} consecutive failures`}.</div>
+                                {circuitBreaker.canManualBypass && <div style={{ marginTop: 4 }}>Use the Refresh button to try manually.</div>}
+                            </div>
+                        ) : null;
+
+                        const statusContent = (
+                            <span style={{
+                                color: isCircuitOpen ? '#ff4d4f' : 'inherit',
+                                fontWeight: isCircuitOpen ? 500 : 'normal'
+                            }}>
+                                {isCircuitOpen && <ExclamationCircleOutlined style={{ marginRight: 4 }} />}
+                                {statusText}
+                            </span>
+                        );
+
+                        return (
+                            <>
+                                <div className={`refresh-status ${record.refreshOptions?.enabled ? 'active' : ''}`}>
+                                    {cbTooltip
+                                        ? <Tooltip title={cbTooltip} placement="top">{statusContent}</Tooltip>
+                                        : statusContent}
+                                </div>
+                                <Space size="small">
+                                    <Button type="link" size="small" onClick={() => handleViewContent(record)}
+                                        style={{ padding: '0 4px', fontSize: '12px' }}
+                                        disabled={record.activationState === 'waiting_for_deps'}>
+                                        <EyeOutlined /> View
                                     </Button>
-                                );
-                                
-                                if (isCircuitOpen) {
-                                    const failureText = circuitBreaker.failureCount === 1 
-                                        ? '1 failure' 
-                                        : `${circuitBreaker.failureCount} consecutive failures`;
-                                    const backoffText = `Next retry in ${circuitBreaker.timeUntilNextAttempt || 'a moment'}.`;
-                                    
-                                    return (
-                                        <Tooltip 
-                                            title={
-                                                <div>
-                                                    <div>Auto-refresh temporarily disabled after {failureText}.</div>
-                                                    <div>{backoffText}</div>
-                                                    <div style={{ marginTop: 4 }}>Click to try manually.</div>
-                                                </div>
-                                            }
-                                            placement="top"
-                                        >
-                                            {refreshButton}
+                                    <Button type="link" size="small" onClick={() => handleEditSource(record)}
+                                        style={{ padding: '0 4px', fontSize: '12px' }}>
+                                        <EditOutlined /> Edit
+                                    </Button>
+                                    {cbTooltip ? (
+                                        <Tooltip title={<div>{cbTooltip}<div style={{ marginTop: 4 }}>Click to try manually.</div></div>} placement="top">
+                                            <Button type="link" size="small" onClick={() => handleRefreshSource(record.sourceId)}
+                                                style={{ padding: '0 4px', fontSize: '12px', color: '#1890ff' }}
+                                                loading={refreshingSourceId === record.sourceId}
+                                                disabled={record.activationState === 'waiting_for_deps'}>
+                                                <ReloadOutlined /> Refresh
+                                            </Button>
                                         </Tooltip>
-                                    );
-                                }
-                                
-                                return refreshButton;
-                            })()}
-                            {/* Remove Source: Confirmation dialog for deletion */}
-                            <Popconfirm
-                                title="Remove this source?"
-                                onConfirm={() => handleRemoveSource(record.sourceId)}
-                                okText="Yes"
-                                cancelText="No"
-                            >
-                                <Button
-                                    type="link"
-                                    danger
-                                    size="small"
-                                    loading={removingSourceId === record.sourceId}
-                                    style={{ padding: '0 4px', fontSize: '12px' }}
-                                >
-                                    <DeleteOutlined /> Remove
-                                </Button>
-                            </Popconfirm>
-                        </Space>
-                    </>
+                                    ) : (
+                                        <Button type="link" size="small" onClick={() => handleRefreshSource(record.sourceId)}
+                                            style={{ padding: '0 4px', fontSize: '12px' }}
+                                            loading={refreshingSourceId === record.sourceId}
+                                            disabled={record.activationState === 'waiting_for_deps'}>
+                                            <ReloadOutlined /> Refresh
+                                        </Button>
+                                    )}
+                                    <Popconfirm title="Remove this source?" onConfirm={() => handleRemoveSource(record.sourceId)}
+                                        okText="Yes" cancelText="No">
+                                        <Button type="link" danger size="small"
+                                            loading={removingSourceId === record.sourceId}
+                                            style={{ padding: '0 4px', fontSize: '12px' }}>
+                                            <DeleteOutlined /> Remove
+                                        </Button>
+                                    </Popconfirm>
+                                </Space>
+                            </>
+                        );
+                    })()
                 )}
                 {/* File and Environment Sources: Limited functionality (view and remove only) */}
                 {(record.sourceType === 'file' || record.sourceType === 'env') && (

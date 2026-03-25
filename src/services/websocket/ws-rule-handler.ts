@@ -175,8 +175,13 @@ class WSRuleHandler {
 
                 if (processed.isDynamic && processed.sourceId) {
                     const source = this.wsService.sources.find(s => s.sourceId === processed.sourceId!.toString());
-                    if (source && source.sourceContent) {
+                    if (source && source.sourceContent !== null && source.sourceContent !== undefined) {
+                        // Content is available (including empty string) — populate header value
                         processed.headerValue = (processed.prefix || '') + source.sourceContent + (processed.suffix || '');
+                    } else if (source) {
+                        // Source exists but content not yet fetched — exclude rule until content arrives
+                        log.debug(`Rule "${rule.headerName}" pending — source ${processed.sourceId} content not yet fetched`);
+                        return null;
                     }
                 }
 
