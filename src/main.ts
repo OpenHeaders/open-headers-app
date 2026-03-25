@@ -362,6 +362,11 @@ function setupIPC(
         ipcMain.handle('source-refresh:get-time-until', sourceRefreshHandlers.handleGetTimeUntil);
     });
 
+    // Workspace state (main-process owned)
+    void import('./main/modules/ipc/handlers/workspaceStateHandlers').then(({ registerWorkspaceStateHandlers }) => {
+        registerWorkspaceStateHandlers();
+    });
+
     // Recording
     ipcMain.handle('loadRecordings', recordingHandlers.handleLoadRecordings);
     ipcMain.handle('loadRecording', recordingHandlers.handleLoadRecording);

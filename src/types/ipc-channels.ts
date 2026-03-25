@@ -131,6 +131,26 @@ export const IPC_INVOKE = {
     CHECK_FFMPEG: 'check-ffmpeg',
     DOWNLOAD_FFMPEG: 'download-ffmpeg',
     CONVERT_VIDEO: 'convert-video',
+
+    // Workspace state (main-process owned)
+    WORKSPACE_STATE_INITIALIZE: 'workspace-state:initialize',
+    WORKSPACE_STATE_GET_STATE: 'workspace-state:get-state',
+    WORKSPACE_STATE_SWITCH_WORKSPACE: 'workspace-state:switch-workspace',
+    WORKSPACE_STATE_ADD_SOURCE: 'workspace-state:add-source',
+    WORKSPACE_STATE_UPDATE_SOURCE: 'workspace-state:update-source',
+    WORKSPACE_STATE_REMOVE_SOURCE: 'workspace-state:remove-source',
+    WORKSPACE_STATE_UPDATE_SOURCE_CONTENT: 'workspace-state:update-source-content',
+    WORKSPACE_STATE_REFRESH_SOURCE: 'workspace-state:refresh-source',
+    WORKSPACE_STATE_IMPORT_SOURCES: 'workspace-state:import-sources',
+    WORKSPACE_STATE_ADD_HEADER_RULE: 'workspace-state:add-header-rule',
+    WORKSPACE_STATE_UPDATE_HEADER_RULE: 'workspace-state:update-header-rule',
+    WORKSPACE_STATE_REMOVE_HEADER_RULE: 'workspace-state:remove-header-rule',
+    WORKSPACE_STATE_ADD_PROXY_RULE: 'workspace-state:add-proxy-rule',
+    WORKSPACE_STATE_REMOVE_PROXY_RULE: 'workspace-state:remove-proxy-rule',
+    WORKSPACE_STATE_CREATE_WORKSPACE: 'workspace-state:create-workspace',
+    WORKSPACE_STATE_UPDATE_WORKSPACE: 'workspace-state:update-workspace',
+    WORKSPACE_STATE_DELETE_WORKSPACE: 'workspace-state:delete-workspace',
+    WORKSPACE_STATE_SYNC_WORKSPACE: 'workspace-state:sync-workspace',
 } as const;
 
 // ── Send channels (renderer → main, fire-and-forget) ───────────────
@@ -217,6 +237,10 @@ export const IPC_PUSH = {
     // Workspace data
     WORKSPACE_DATA_UPDATED: 'workspace-data-updated',
     SYNC_STATUS_UPDATED: 'sync-status-updated',
+
+    // Workspace state (main → renderer)
+    WORKSPACE_STATE_PATCH: 'workspace:state-patch',
+    WORKSPACE_SWITCH_PROGRESS: 'workspace:switch-progress',
 } as const;
 
 // ── Type helpers ────────────────────────────────────────────────────

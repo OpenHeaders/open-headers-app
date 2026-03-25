@@ -30,10 +30,7 @@ const mockDeleteWorkspace = vi.fn();
 const mockUpdateWorkspace = vi.fn();
 const mockLoadWorkspaceData = vi.fn();
 const mockSetState = vi.fn();
-const mockSaveWorkspaces = vi.fn().mockResolvedValue(undefined);
-const mockInitializeWorkspaceData = vi.fn().mockResolvedValue(undefined);
 const mockCopyWorkspaceData = vi.fn().mockResolvedValue(undefined);
-const mockWorkspaceManagerCreate = vi.fn();
 const mockSyncGitWorkspace = vi.fn();
 
 const mockState = {
@@ -59,10 +56,7 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
       deleteWorkspace: mockDeleteWorkspace,
       updateWorkspace: mockUpdateWorkspace,
       loadWorkspaceData: mockLoadWorkspaceData,
-      saveWorkspaces: mockSaveWorkspaces,
-      initializeWorkspaceData: mockInitializeWorkspaceData,
       copyWorkspaceData: mockCopyWorkspaceData,
-      workspaceManager: { createWorkspace: mockWorkspaceManagerCreate },
     },
   }),
 }));
@@ -90,8 +84,6 @@ describe('useWorkspaces', () => {
     mockDeleteWorkspace.mockResolvedValue(true);
     mockUpdateWorkspace.mockResolvedValue(true);
     mockLoadWorkspaceData.mockResolvedValue(undefined);
-    mockSaveWorkspaces.mockResolvedValue(undefined);
-    mockInitializeWorkspaceData.mockResolvedValue(undefined);
     mockCopyWorkspaceData.mockResolvedValue(undefined);
     mockSyncGitWorkspace.mockResolvedValue({ success: true });
     mockShowMessage.mockClear();
@@ -221,14 +213,8 @@ describe('useWorkspaces', () => {
       });
 
       expect(synced).toBe(true);
-      expect(mockSetState).toHaveBeenCalledWith(
-        expect.objectContaining({
-          syncStatus: expect.objectContaining({
-            'ws-b2c3d4e5-f6a7-8901': expect.objectContaining({ syncing: false, error: null })
-          })
-        }),
-        ['syncStatus']
-      );
+      expect(mockSyncGitWorkspace).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901');
+      expect(mockShowMessage).toHaveBeenCalledWith('success', 'Workspace synced successfully');
     });
 
     it('rejects sync for non-git workspace', async () => {
@@ -266,7 +252,7 @@ describe('useWorkspaces', () => {
       expect(mockShowMessage).not.toHaveBeenCalledWith('success', expect.anything());
     });
 
-    it('records sync error in syncStatus on failure', async () => {
+    it('shows error message on sync failure', async () => {
       mockSyncGitWorkspace.mockResolvedValue({ success: false, error: 'Auth failed' });
 
       const { result } = renderHook(() => useWorkspaces());
@@ -274,14 +260,7 @@ describe('useWorkspaces', () => {
         await result.current.syncWorkspace('ws-b2c3d4e5-f6a7-8901');
       });
 
-      expect(mockSetState).toHaveBeenCalledWith(
-        expect.objectContaining({
-          syncStatus: expect.objectContaining({
-            'ws-b2c3d4e5-f6a7-8901': expect.objectContaining({ syncing: false, error: 'Auth failed' })
-          })
-        }),
-        ['syncStatus']
-      );
+      expect(mockShowMessage).toHaveBeenCalledWith('error', expect.stringContaining('Auth failed'));
     });
   });
 
@@ -307,7 +286,11 @@ describe('useWorkspaces', () => {
 
   describe('cloneWorkspaceToPersonal', () => {
     it('clones team workspace to personal', async () => {
-      mockWorkspaceManagerCreate.mockImplementation((_workspaces: Workspace[], data: Workspace) => data);
+      mockCreateWorkspace.mockImplementation((data: Partial<Workspace>) => ({
+        ...data,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }));
 
       const { result } = renderHook(() => useWorkspaces());
 
@@ -320,7 +303,10 @@ describe('useWorkspaces', () => {
       expect(cloned!.type).toBe('personal');
       expect(cloned!.name).toBe('OpenHeaders — Staging (GitLab) (Personal Copy)');
       expect(cloned!.clonedFrom).toBe('ws-b2c3d4e5-f6a7-8901');
-      expect(mockInitializeWorkspaceData).toHaveBeenCalled();
+      expect(mockCreateWorkspace).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'personal',
+        name: 'OpenHeaders — Staging (GitLab) (Personal Copy)'
+      }));
       expect(mockCopyWorkspaceData).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901', expect.stringContaining('personal-'));
       expect(mockSwitchWorkspace).toHaveBeenCalledWith(expect.stringContaining('personal-'));
       expect(mockShowMessage).toHaveBeenCalledWith('success', expect.stringContaining('personal copy'));

@@ -16,6 +16,7 @@ import type { Workspace, WorkspaceAuthData, CommitInfo, TeamWorkspaceInvite, Wor
 import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from './environment';
 import type { RecordingData } from '../services/websocket/utils/recordingPreprocessor';
 import type { RefreshStatusInfo, ContentUpdatedPayload, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
+import type { WorkspaceStateAPI } from '../preload/api/workspaceStateAPI';
 
 declare global {
 
@@ -371,6 +372,9 @@ declare global {
     // Runtime updates
     updateWebSocketSources: (sources: Source[] | { type: 'rules-update'; data: RulesStorage }) => void;
     cleanupTempFiles: (...args: string[]) => void;
+
+    // Workspace state (main-process owned)
+    workspaceState: WorkspaceStateAPI;
 
     // Source refresh (main-process owned lifecycle)
     sourceRefresh: {

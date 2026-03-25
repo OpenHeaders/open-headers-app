@@ -29,10 +29,10 @@ const mockAddSource = vi.fn();
 const mockUpdateSource = vi.fn();
 const mockRemoveSource = vi.fn();
 const mockUpdateSourceContent = vi.fn();
+const mockRefreshSource = vi.fn();
+const mockImportSources = vi.fn();
 const mockSetState = vi.fn();
 const mockGetState = vi.fn();
-const mockReadFile = vi.fn();
-const mockGetEnvVariable = vi.fn();
 
 const mockSources: Source[] = [
   { sourceId: 'src-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json', sourceContent: '{"api_key":"ohk_live_4eC39HqLyjWDarjtT1zdp7dc"}' },
@@ -54,17 +54,11 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
       updateSource: mockUpdateSource,
       removeSource: mockRemoveSource,
       updateSourceContent: mockUpdateSourceContent,
+      refreshSource: mockRefreshSource,
+      importSources: mockImportSources,
     },
   }),
 }));
-
-Object.defineProperty(window, 'electronAPI', {
-  value: {
-    readFile: mockReadFile,
-    getEnvVariable: mockGetEnvVariable,
-  },
-  writable: true,
-});
 
 import { useSources } from '../../../../src/renderer/hooks/workspace/useSources';
 
@@ -81,8 +75,8 @@ describe('useSources', () => {
     mockRemoveSource.mockResolvedValue(undefined);
     mockUpdateSourceContent.mockResolvedValue(undefined);
     mockGetState.mockReturnValue({ sources: mockSources });
-    mockReadFile.mockReset().mockResolvedValue('{"api_key":"ohk_live_4eC39HqLyjWDarjtT1zdp7dc","expires_at":"2026-03-22T00:00:00Z"}');
-    mockGetEnvVariable.mockReset().mockResolvedValue('ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
+    mockRefreshSource.mockReset().mockResolvedValue(true);
+    mockImportSources.mockReset().mockResolvedValue(undefined);
     mockIsWorkspaceSwitching = false;
   });
 
@@ -180,7 +174,7 @@ describe('useSources', () => {
   // ── refreshSource ──────────────────────────────────────────────
 
   describe('refreshSource', () => {
-    it('refreshes file source by re-reading file', async () => {
+    it('delegates file source refresh to service via IPC', async () => {
       const { result } = renderHook(() => useSources());
 
       let refreshed = false;
@@ -189,12 +183,11 @@ describe('useSources', () => {
       });
 
       expect(refreshed).toBe(true);
-      expect(mockReadFile).toHaveBeenCalledWith('/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json');
-      expect(mockUpdateSourceContent).toHaveBeenCalledWith('src-1', '{"api_key":"ohk_live_4eC39HqLyjWDarjtT1zdp7dc","expires_at":"2026-03-22T00:00:00Z"}');
+      expect(mockRefreshSource).toHaveBeenCalledWith('src-1');
       expect(mockShowMessage).toHaveBeenCalledWith('success', 'Source refreshed');
     });
 
-    it('refreshes env source by re-reading env variable', async () => {
+    it('delegates env source refresh to service via IPC', async () => {
       const { result } = renderHook(() => useSources());
 
       let refreshed = false;
@@ -203,11 +196,10 @@ describe('useSources', () => {
       });
 
       expect(refreshed).toBe(true);
-      expect(mockGetEnvVariable).toHaveBeenCalledWith('OPENHEADERS_API_KEY');
-      expect(mockUpdateSourceContent).toHaveBeenCalledWith('src-3', 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc');
+      expect(mockRefreshSource).toHaveBeenCalledWith('src-3');
     });
 
-    it('returns true for HTTP source without making request', async () => {
+    it('delegates HTTP source refresh to service via IPC', async () => {
       const { result } = renderHook(() => useSources());
 
       let refreshed = false;
@@ -216,11 +208,12 @@ describe('useSources', () => {
       });
 
       expect(refreshed).toBe(true);
-      expect(mockReadFile).not.toHaveBeenCalled();
-      expect(mockGetEnvVariable).not.toHaveBeenCalled();
+      expect(mockRefreshSource).toHaveBeenCalledWith('src-2');
     });
 
-    it('returns false for non-existent source', async () => {
+    it('returns false when service refresh fails', async () => {
+      mockRefreshSource.mockRejectedValue(new Error('Source non-existent not found'));
+
       const { result } = renderHook(() => useSources());
 
       let refreshed = true;
@@ -236,7 +229,7 @@ describe('useSources', () => {
   // ── importSources ──────────────────────────────────────────────
 
   describe('importSources', () => {
-    it('merges new sources with existing by default', async () => {
+    it('delegates import to service via IPC (merge by default)', async () => {
       const newSources = [{ sourceId: 'new-1', sourceType: 'file' as const, sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/imported.json' }];
 
       const { result } = renderHook(() => useSources());
@@ -247,14 +240,11 @@ describe('useSources', () => {
       });
 
       expect(imported).toBe(true);
-      expect(mockSetState).toHaveBeenCalledWith(
-        { sources: [...mockSources, ...newSources] },
-        ['sources']
-      );
+      expect(mockImportSources).toHaveBeenCalledWith(newSources, false);
       expect(mockShowMessage).toHaveBeenCalledWith('success', expect.stringContaining('Imported'));
     });
 
-    it('replaces all sources when replace=true', async () => {
+    it('delegates replace import to service via IPC', async () => {
       const newSources = [{ sourceId: 'replaced-1', sourceType: 'file' as const }];
 
       const { result } = renderHook(() => useSources());
@@ -263,10 +253,7 @@ describe('useSources', () => {
         await result.current.importSources(newSources, true);
       });
 
-      expect(mockSetState).toHaveBeenCalledWith(
-        { sources: newSources },
-        ['sources']
-      );
+      expect(mockImportSources).toHaveBeenCalledWith(newSources, true);
     });
   });
 
