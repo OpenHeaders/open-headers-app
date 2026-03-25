@@ -1,4 +1,4 @@
-import fs from 'fs';
+import type { FSWatcher } from 'fs';
 import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import { errorMessage } from '../../../types/common';
@@ -11,6 +11,7 @@ import networkService from '../../../services/network/NetworkService';
 import proxyService from '../../../services/proxy/ProxyService';
 import webSocketService from '../../../services/websocket/ws-service';
 import sourceRefreshService from '../../../services/source-refresh/SourceRefreshService';
+import workspaceStateService from '../../../services/workspace/WorkspaceStateService';
 import type { CliApiService } from '../../../services/cli/CliApiService';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
@@ -20,7 +21,7 @@ const log = createLogger('AppLifecycle');
 class AppLifecycle {
     isQuitting: boolean;
     _cleanupDone: boolean;
-    fileWatchers: Map<string, fs.FSWatcher>;
+    fileWatchers: Map<string, FSWatcher>;
     private _gitSyncService: GitSyncService | null = null;
     private _workspaceSettingsService: WorkspaceSettingsService | null = null;
     private _workspaceSyncScheduler: WorkspaceSyncScheduler | null = null;
@@ -92,31 +93,13 @@ class AppLifecycle {
                 } catch (_e) { /* non-critical */ }
             };
 
-            // Wire content updates: when a source is fetched, update WS service and re-broadcast
+            // Wire content updates: when a source is fetched, update WorkspaceStateService
+            // (which owns state and broadcasts to WS/proxy/renderer via workspace:state-patch).
+            // No separate renderer notification needed — the state patch carries all updated fields.
             sourceRefreshService.onContentUpdate = (sourceId, result) => {
-                const sources = webSocketService.sources;
-                const source = sources.find(s => s.sourceId === sourceId);
-                if (source) {
-                    source.sourceContent = result.content;
-                    source.originalResponse = result.originalResponse;
-                    source.responseHeaders = result.headers;
-                    source.isFiltered = result.isFiltered;
-                    source.filteredWith = result.filteredWith ?? null;
-                    source.needsInitialFetch = false;
-
-                    webSocketService.sourceHandler.broadcastSources();
-                    webSocketService.ruleHandler.broadcastRules();
-                }
-
-                sendToRenderers('source-refresh:content-updated', {
-                    sourceId,
-                    content: result.content,
-                    originalResponse: result.originalResponse,
-                    headers: result.headers,
-                    isFiltered: result.isFiltered,
-                    filteredWith: result.filteredWith,
-                    lastRefresh: Date.now()
-                });
+                workspaceStateService.updateSourceFetchResult(sourceId, result).catch(e =>
+                    log.warn(`Failed to update source fetch result for ${sourceId}:`, errorMessage(e))
+                );
             };
 
             sourceRefreshService.onStatusChange = (sourceId, status) => {
@@ -130,34 +113,33 @@ class AppLifecycle {
             // Store on webSocketService so WSSourceHandler can access it
             webSocketService.sourceRefreshService = sourceRefreshService;
 
-            // Now that callbacks are wired, sync any sources that were loaded during initializeAll.
-            // loadInitialData ran before configure(), so schedule events were lost — replay them now.
-            for (const source of webSocketService.sources) {
-                if (source.sourceType === 'http') {
-                    sourceRefreshService.updateSource(source).catch(err => {
-                        log.warn(`Failed to sync initial source ${source.sourceId}:`, errorMessage(err));
-                    });
-                }
-            }
-
             log.info('SourceRefreshService wired into WebSocket service');
 
+            // Configure and initialize WorkspaceStateService — the single owner of workspace state.
+            // This must happen after all services are initialized so it can broadcast to them.
+            workspaceStateService.configure({
+                webSocketService,
+                proxyService,
+                sourceRefreshService,
+                syncScheduler: workspaceSyncScheduler as Parameters<typeof workspaceStateService.configure>[0]['syncScheduler']
+            });
+
+            serviceRegistry.registerInitialized('workspaceStateService', workspaceStateService);
+
+            // Initialize: loads workspaces + active workspace data, starts auto-save,
+            // broadcasts to WS/proxy. App is operational even without a renderer window.
+            await workspaceStateService.initialize();
+            log.info('WorkspaceStateService initialized — app is operational');
+
+            // Wire sync scheduler → WorkspaceStateService:
+            // 1. Sync status: scheduler pushes status to WorkspaceStateService (single owner
+            //    of workspaces.json). This ensures the renderer sees sync status updates.
+            // 2. Data changes: when git sync changes data on disk, reload in-memory state.
+            workspaceSyncScheduler.setSyncStatusOwner(workspaceStateService);
+            workspaceSyncScheduler.onSyncDataChanged = (workspaceId: string) =>
+                workspaceStateService.onSyncDataChanged(workspaceId);
+
             AppStateMachine.servicesReady(serviceRegistry.getAllServices());
-
-            const workspacesData = await workspaceSettingsService.loadWorkspacesData();
-            const activeWorkspaceId = workspacesData.activeWorkspaceId || 'default-personal';
-
-            log.info(`Initial workspace: ${activeWorkspaceId}`);
-
-            // Initialize proxy service with current workspace
-            try {
-                await proxyService.switchWorkspace(activeWorkspaceId);
-                log.info(`Proxy service initialized with workspace: ${activeWorkspaceId}`);
-            } catch (error) {
-                log.error('Failed to initialize proxy service workspace:', error);
-            }
-
-            await workspaceSyncScheduler.onWorkspaceSwitch(activeWorkspaceId);
 
             // Start CLI API server (non-blocking — app works without it)
             // Lazy import to avoid circular dependency (CliSetupHandler requires lifecycle)

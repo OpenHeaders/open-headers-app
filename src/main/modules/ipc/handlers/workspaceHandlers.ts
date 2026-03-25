@@ -12,12 +12,10 @@ import webSocketService from '../../../../services/websocket/ws-service';
 import proxyService from '../../../../services/proxy/ProxyService';
 import networkService from '../../../../services/network/NetworkService';
 import type { IpcInvokeEvent, IpcFireEvent, OperationResult } from '../../../../types/common';
-import type { Source } from '../../../../types/source';
 import { errorMessage } from '../../../../types/common';
 import type { Workspace, WorkspaceAuthData, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
 import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
-import type { EnvironmentsFile, EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
-import type { RulesStorage } from '../../../../types/rules';
+import type { EnvironmentMap, EnvironmentSchema, EnvironmentSchemaVariable, EnvironmentConfigData } from '../../../../types/environment';
 import serviceRegistry from '../../../../services/core/ServiceRegistry';
 
 const { app, shell, BrowserWindow } = electron;
@@ -218,73 +216,19 @@ class WorkspaceHandlers {
         }
     }
 
+    /**
+     * Handle initial git sync for newly created git workspaces.
+     * Proxy/WS/state orchestration is handled by WorkspaceStateService — this only
+     * manages the one-time initial git pull + data import for new git workspaces.
+     */
     async handleWorkspaceSwitched(event: IpcFireEvent | IpcInvokeEvent, workspaceId: string, skipInitialSync = false) {
         log.info(`Received workspace switch event: ${workspaceId}${skipInitialSync ? ' (skip initial sync)' : ''}`);
-
-        // Switch proxy service to new workspace
-        try {
-            await proxyService.switchWorkspace(workspaceId);
-            log.info(`Proxy service switched to workspace: ${workspaceId}`);
-
-            // Load environment variables for the workspace
-            try {
-                const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
-                const envData = await fs.promises.readFile(envPath, 'utf8');
-                const { environments, activeEnvironment } = JSON.parse(envData) as EnvironmentsFile;
-                const activeVars = environments[activeEnvironment] ?? {};
-                proxyService.updateEnvironmentVariables(activeVars);
-                log.info(`Loaded ${Object.keys(activeVars).length} environment variables for proxy service`);
-            } catch (error: unknown) {
-                log.info('No environment variables found for proxy, starting with empty variables');
-                proxyService.updateEnvironmentVariables({});
-            }
-
-            // Load sources for the workspace
-            try {
-                const sourcesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'sources.json');
-                const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
-                const sources: Source[] = JSON.parse(sourcesData);
-                if (Array.isArray(sources)) {
-                    proxyService.updateSources(sources);
-                    log.info(`Loaded ${sources.length} sources for proxy service`);
-                }
-            } catch (error: unknown) {
-                log.info('No sources file found for proxy, starting with empty sources');
-            }
-
-            // Load header rules for the workspace
-            try {
-                const rulesPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'rules.json');
-                const rulesData = await fs.promises.readFile(rulesPath, 'utf8');
-                const rulesStorage: Partial<RulesStorage> = JSON.parse(rulesData);
-                if (rulesStorage.rules && rulesStorage.rules.header) {
-                    proxyService.updateHeaderRules(rulesStorage.rules.header);
-                    log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
-                }
-            } catch (error: unknown) {
-                log.info('No header rules file found for proxy, starting with empty rules');
-            }
-        } catch (error) {
-            log.error('Error switching proxy service workspace:', error);
-        }
-
-        // Update WebSocket service with new workspace rules
-        try {
-            await webSocketService.onWorkspaceSwitch(workspaceId);
-            log.info(`WebSocket service updated for workspace: ${workspaceId}`);
-        } catch (error) {
-            log.error('Error updating WebSocket service for workspace:', error);
-        }
 
         const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
         const gitSyncService = appLifecycle.getGitSyncService();
 
         // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
-        // This block owns the initial sync: it pulls from Git, imports data, and
-        // signals the renderer with isInitialSync: true so waitForInitialSync() resolves.
-        // The scheduler is then told to skip its own immediate sync to avoid a redundant
-        // second Git pull — it only sets up the periodic timer.
         let didInitialSync = false;
         if (!skipInitialSync && workspaceSettingsService && gitSyncService) {
             const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
@@ -297,11 +241,9 @@ class WorkspaceHandlers {
                 let needsInitialSync: boolean;
                 try {
                     await fs.promises.access(sourcesPath);
-                    // Detect empty or placeholder source files
                     const data = await fs.promises.readFile(sourcesPath, 'utf8');
                     needsInitialSync = !data || data.trim() === '[]' || data.trim() === '';
-                } catch (error) {
-                    // Missing source file indicates new workspace
+                } catch (_error) {
                     needsInitialSync = true;
                 }
 
@@ -325,8 +267,9 @@ class WorkspaceHandlers {
                             authData: workspace.authData ?? {}
                         });
 
-                        // Import synced data so it's on disk before the renderer loads it.
                         if (result.success && result.data && workspaceSyncScheduler) {
+                            // importSyncedData writes to disk and notifies WorkspaceStateService
+                            // via onSyncDataChanged callback to reload in-memory state.
                             await workspaceSyncScheduler.importSyncedData(workspaceId, result.data);
                         }
 
@@ -352,17 +295,7 @@ class WorkspaceHandlers {
         }
 
         if (workspaceSyncScheduler) {
-            // If we already performed the initial sync above, tell the scheduler
-            // to only set up the periodic timer — no need for a redundant Git pull.
             await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId, { skipInitialSync: didInitialSync });
-        }
-    }
-
-    async handleWorkspaceUpdated(_event: IpcFireEvent, data: { workspaceId: string; workspace: Workspace }) {
-        log.info(`Received workspace update event:`, data);
-        const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-        if (workspaceSyncScheduler && data.workspace) {
-            await workspaceSyncScheduler.onWorkspaceUpdated(data.workspaceId, data.workspace);
         }
     }
 

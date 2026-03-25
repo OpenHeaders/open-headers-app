@@ -268,18 +268,8 @@ class CentralizedWorkspaceService {
   }
 
   async copyWorkspaceData(sourceWorkspaceId: string, targetWorkspaceId: string): Promise<void> {
-    // This is called by cloneWorkspaceToPersonal — main handles it during createWorkspace flow
-    // For the clone case, the caller manually creates + copies + switches, so we need this
-    // TODO: Consider adding a dedicated IPC for clone-to-personal
-    log.debug(`copyWorkspaceData ${sourceWorkspaceId} → ${targetWorkspaceId} (delegated to main)`);
-  }
-
-  // ── Environment service ─────────────────────────────────────
-
-  getEnvironmentService() {
-    // Lazy import to avoid circular deps
-    const { getCentralizedEnvironmentService } = require('./CentralizedEnvironmentService');
-    return getCentralizedEnvironmentService();
+    const result = await window.electronAPI.workspaceState.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
+    if (!result.success) throw new Error(result.error ?? 'Failed to copy workspace data');
   }
 
   // ── Cleanup ────────────────────────────────────────────────

@@ -95,7 +95,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
             open={open}
             onCancel={onClose}
             width={700}
-            destroyOnClose={false}
+            destroyOnHidden={false}
             className="content-viewer-modal"
             footer={[
                 <Button key="close" onClick={onClose}>

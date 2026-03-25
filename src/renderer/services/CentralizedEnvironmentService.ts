@@ -17,6 +17,7 @@ import {
   EnvironmentEventManager
 } from './environment';
 import type { EnvironmentServiceState } from './environment/EnvironmentStateManager';
+import type { EnvironmentMap } from '../../types/environment';
 
 const log = createLogger('CentralizedEnvironmentService');
 
@@ -35,7 +36,7 @@ class CentralizedEnvironmentService {
     this.templateResolver = new TemplateResolver();
     this.eventManager = new EnvironmentEventManager();
 
-    // Setup workspace listener
+    // Setup listeners (environment structure changes from IPC)
     this.setupWorkspaceListener();
 
     log.info('CentralizedEnvironmentService initialized');
@@ -130,7 +131,7 @@ class CentralizedEnvironmentService {
   async _doLoadWorkspace(workspaceId: string | null) {
     try {
       const data = await this.storageManager.loadEnvironments(workspaceId ?? '');
-      
+
       this.stateManager.setState({
         currentWorkspaceId: workspaceId ?? 'default-personal',
         environments: data.environments,
@@ -138,12 +139,12 @@ class CentralizedEnvironmentService {
       });
 
       this.stateManager.markInitialDataLoaded();
-      
-      // If we just loaded defaults, save them
-      if (Object.keys(data.environments).length === 1 && data.environments.Default) {
+
+      // Only save if we created fresh defaults (no file existed or was empty)
+      if (data.isNewlyCreated) {
         await this.saveEnvironments();
       }
-      
+
       return true;
     } catch (error) {
       log.error(`Failed to load workspace ${workspaceId}:`, error);
@@ -152,20 +153,11 @@ class CentralizedEnvironmentService {
   }
 
   /**
-   * Setup listener for workspace changes
+   * Setup listener for environment structure changes from IPC
    */
   setupWorkspaceListener() {
-    this.eventManager.setupWorkspaceListener(async (newWorkspaceId: string) => {
-      const currentState = this.stateManager.getState();
-      if (currentState.currentWorkspaceId !== newWorkspaceId) {
-        log.info(`[CentralizedEnvironmentService] Workspace changed from ${currentState.currentWorkspaceId} to ${newWorkspaceId}`);
-        await this.handleWorkspaceChange(newWorkspaceId);
-      }
-    });
-    
     this.eventManager.setupEnvironmentStructureListener(async (data: { workspaceId: string }) => {
       const currentState = this.stateManager.getState();
-      // Only reload if it's for the current workspace
       if (currentState.currentWorkspaceId === data.workspaceId) {
         log.info(`[CentralizedEnvironmentService] Environment structure changed for current workspace, reloading`);
         await this.loadWorkspaceEnvironments(data.workspaceId);
@@ -173,7 +165,7 @@ class CentralizedEnvironmentService {
       }
     });
   }
-  
+
   /**
    * Handle workspace change
    */
@@ -290,24 +282,7 @@ class CentralizedEnvironmentService {
       isSecret
     );
 
-    this.stateManager.setState({ environments: updatedEnvironments });
-    await this.saveEnvironments();
-
-    // Dispatch event
-    this.eventManager.dispatchVariablesChanged(
-      environmentName,
-      updatedEnvironments[environmentName]
-    );
-
-    // Only notify main process if the changed environment is active —
-    // proxy and WebSocket broadcasts only care about active env vars
-    if (window.electronAPI && window.electronAPI.send && state.activeEnvironment === environmentName) {
-      window.electronAPI.send('environment-variables-changed', {
-        environment: environmentName,
-        variables: updatedEnvironments[environmentName]
-      });
-    }
-
+    await this.commitEnvironmentChange(updatedEnvironments, environmentName);
     return true;
   }
 
@@ -316,7 +291,6 @@ class CentralizedEnvironmentService {
    */
   async batchSetVariablesInEnvironment(environmentName: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>) {
     const state = this.stateManager.getState();
-    // Deep copy to avoid mutations
     const updatedEnvironments = JSON.parse(JSON.stringify(state.environments));
 
     if (!updatedEnvironments[environmentName]) {
@@ -335,25 +309,31 @@ class CentralizedEnvironmentService {
       }
     }
 
+    await this.commitEnvironmentChange(updatedEnvironments, environmentName);
+    return true;
+  }
+
+  /**
+   * Persist environment changes: update state, save to disk, dispatch events,
+   * and notify main process if the changed environment is active.
+   */
+  private async commitEnvironmentChange(updatedEnvironments: EnvironmentMap, environmentName: string) {
+    const state = this.stateManager.getState();
+
     this.stateManager.setState({ environments: updatedEnvironments });
     await this.saveEnvironments();
 
-    // Dispatch renderer event once for entire batch
     this.eventManager.dispatchVariablesChanged(
       environmentName,
       updatedEnvironments[environmentName]
     );
 
-    // Only notify main process if the changed environment is active —
-    // proxy and WebSocket broadcasts only care about active env vars
-    if (window.electronAPI && window.electronAPI.send && state.activeEnvironment === environmentName) {
+    if (window.electronAPI?.send && state.activeEnvironment === environmentName) {
       window.electronAPI.send('environment-variables-changed', {
         environment: environmentName,
         variables: updatedEnvironments[environmentName]
       });
     }
-
-    return true;
   }
 
   /**

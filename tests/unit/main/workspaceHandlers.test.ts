@@ -586,19 +586,6 @@ describe('WorkspaceHandlers', () => {
         });
     });
 
-    describe('handleWorkspaceUpdated', () => {
-        it('calls onWorkspaceUpdated on scheduler', async () => {
-            const workspace = makeWorkspace();
-
-            await handlers.handleWorkspaceUpdated(
-                mockEvent as unknown as IpcFireEvent,
-                { workspaceId: workspace.id, workspace }
-            );
-
-            expect(mockOnWorkspaceUpdated).toHaveBeenCalledWith(workspace.id, workspace);
-        });
-    });
-
     describe('handleDeleteWorkspace', () => {
         it('returns success when workspace is found and folder is deleted', async () => {
             // Folder does not exist (access fails)

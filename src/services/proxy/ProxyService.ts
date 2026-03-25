@@ -475,6 +475,9 @@ class ProxyService extends EventEmitter {
             if (proxyRule.headerRuleId) {
                 const headerRule = this.headerRules.find(hr => hr.id === proxyRule.headerRuleId);
                 if (headerRule && headerRule.isEnabled) {
+                    // Skip rules with unresolved env vars — don't inject garbage
+                    if (!this.isRuleReady(headerRule)) return;
+
                     if (!headerRule.domains || headerRule.domains.length === 0) {
                         applicableRules.push(headerRule);
                     } else {
@@ -490,6 +493,9 @@ class ProxyService extends EventEmitter {
                     }
                 }
             } else {
+                // Skip rules with unresolved env vars — don't inject garbage
+                if (!this.isRuleReady(proxyRule)) return;
+
                 if (!proxyRule.domains || proxyRule.domains.length === 0) {
                     applicableRules.push(proxyRule);
                 } else {
@@ -539,9 +545,41 @@ class ProxyService extends EventEmitter {
         });
     }
 
+    /**
+     * Check if a string has unresolved {{env_var}} references after resolution.
+     * Returns true if all variables are resolved (or no variables present).
+     */
+    private isFullyResolved(template: string | undefined): boolean {
+        if (!template) return true;
+        const resolved = this.resolveEnvironmentVariables(template);
+        return !/\{\{[^}]+}}/.test(resolved);
+    }
+
+    /**
+     * Check if a rule has all its env var dependencies resolved.
+     * Rules with unresolved variables should not be applied to requests.
+     */
+    private isRuleReady(rule: HeaderRule | ProxyRule): boolean {
+        if (!this.isFullyResolved(rule.headerName)) return false;
+        if (!this.isFullyResolved(rule.headerValue)) return false;
+        if (!this.isFullyResolved(rule.prefix)) return false;
+        if (!this.isFullyResolved(rule.suffix)) return false;
+        if (rule.domains) {
+            for (const domain of rule.domains) {
+                if (!this.isFullyResolved(domain)) return false;
+            }
+        }
+        return true;
+    }
+
     updateHeaderRules(rules: HeaderRule[]): void {
         this.headerRules = rules || [];
         this.log.info(`Header rules updated: ${this.headerRules.length} rules loaded`);
+    }
+
+    updateProxyRules(rules: ProxyRule[]): void {
+        this.ruleStore.rules = rules || [];
+        this.log.info(`Proxy rules updated: ${this.ruleStore.rules.length} rules loaded`);
     }
 
     updateSource(sourceId: string | number, value: string): void {

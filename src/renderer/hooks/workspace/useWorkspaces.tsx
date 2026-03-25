@@ -96,23 +96,20 @@ export function useWorkspaces(): UseWorkspacesReturn {
       if (!workspace) throw new Error('Workspace not found');
       if (workspace.type !== 'git') throw new Error('Only git-based workspaces can be synced');
 
-      // Trigger sync via existing IPC (WorkspaceSyncScheduler handles the actual git ops)
-      const result = await window.electronAPI.syncGitWorkspace(workspaceId);
+      const result = await service.syncWorkspace(workspaceId);
 
-      if (result.success) {
+      if (result) {
         if (options.silent !== true) {
           showMessage('success', 'Workspace synced successfully');
         }
-      } else {
-        throw new Error(result.error || 'Sync failed');
       }
 
-      return result.success;
+      return result;
     } catch (error: unknown) {
       showMessage('error', `Sync failed: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
-  }, [workspaces]);
+  }, [service, workspaces]);
 
   const cloneWorkspaceToPersonal = useCallback(async (workspaceId: string, newName: string | null = null): Promise<Workspace | null> => {
     try {

@@ -35,12 +35,6 @@ export function useWorkspaceSync({ activeWorkspaceId }: UseWorkspaceSyncDeps): v
         return;
       }
 
-      // Dispatch custom event to notify components about data refresh
-      // (this should always happen regardless of notification coalescing)
-      window.dispatchEvent(new CustomEvent('workspace-data-refresh-needed', {
-        detail: { workspaceId: activeWorkspaceId }
-      }));
-
       // Coalesce notifications: when multiple sync events arrive in a burst
       // (e.g. app waking from background with queued IPC events), reset the
       // timer on each event so only one notification shows after the burst settles.

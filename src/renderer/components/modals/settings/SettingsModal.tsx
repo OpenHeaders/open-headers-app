@@ -446,7 +446,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
             ]}
             centered
             styles={modalStyles.modal}
-            destroyOnClose
+            destroyOnHidden
         >
             <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif' }}>
                 <PermissionAlert

@@ -13,11 +13,15 @@ export function useCentralizedWorkspace() {
   const [state, setState] = useState(service.getState());
 
   useEffect(() => {
+    // Hydrate from main process on first mount
+    if (!service.getState().initialized) {
+      service.initialize().catch(e => {
+        console.error('Failed to initialize workspace service:', e);
+      });
+    }
+
     const unsubscribe = service.subscribe((newState: WorkspaceServiceState) => {
       setState(newState);
-
-      // Remove per-hook logging to avoid spam
-      // Logging should be done in the service itself
     });
     return () => { unsubscribe(); };
   }, [service]);

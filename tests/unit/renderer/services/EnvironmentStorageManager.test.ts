@@ -126,6 +126,7 @@ describe('EnvironmentStorageManager', () => {
       expect(result).toEqual({
         environments: { Default: {} },
         activeEnvironment: 'Default',
+        isNewlyCreated: true,
       });
     });
 
@@ -137,6 +138,7 @@ describe('EnvironmentStorageManager', () => {
       expect(result).toEqual({
         environments: { Default: {} },
         activeEnvironment: 'Default',
+        isNewlyCreated: true,
       });
     });
 
@@ -145,6 +147,7 @@ describe('EnvironmentStorageManager', () => {
       mockStorageAPI.loadFromStorage.mockResolvedValue(JSON.stringify(stored));
       const result = await manager.loadEnvironments(WORKSPACE_ID);
       expect(result.activeEnvironment).toBe('Default');
+      expect(result.isNewlyCreated).toBe(false);
     });
 
     it('returns defaults when data has no environments key', async () => {
@@ -153,6 +156,7 @@ describe('EnvironmentStorageManager', () => {
       expect(result).toEqual({
         environments: { Default: {} },
         activeEnvironment: 'Default',
+        isNewlyCreated: true,
       });
     });
 

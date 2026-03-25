@@ -17,55 +17,15 @@ class WindowsFocusHelper {
         this.foregroundModule = null;
         this.isWindows = process.platform === 'win32';
 
-        // Try to load @openheaders/windows-foreground if on Windows
         if (this.isWindows) {
             try {
-                // Use dynamic require to prevent webpack from trying to bundle it
-                this.foregroundModule = eval("require")('@openheaders/windows-foreground');
+                // externalizeDepsPlugin() keeps node_modules external, so require() works directly
+                // node-gyp-build inside the package handles prebuild/fallback resolution
+                this.foregroundModule = require('@openheaders/windows-foreground');
                 log.info('@openheaders/windows-foreground loaded successfully');
             } catch (error: unknown) {
-                // Try multiple fallback paths for the module
-                const fallbackPaths: string[] = [];
-
-                try {
-                    const path = eval("require")('path');
-                    const { app } = eval("require")('electron');
-                    const appPath = app.getAppPath();
-
-                    // Try unpacked asar location
-                    fallbackPaths.push(path.join(
-                        appPath.replace('app.asar', 'app.asar.unpacked'),
-                        'node_modules',
-                        '@openheaders',
-                        'windows-foreground'
-                    ));
-
-                    // Try direct node_modules path (for development)
-                    fallbackPaths.push(path.join(
-                        appPath,
-                        'node_modules',
-                        '@openheaders',
-                        'windows-foreground'
-                    ));
-
-                    // Try to load from each fallback path
-                    for (const fallbackPath of fallbackPaths) {
-                        try {
-                            this.foregroundModule = eval("require")(fallbackPath);
-                            log.info('@openheaders/windows-foreground loaded from fallback path:', fallbackPath);
-                            break;
-                        } catch (pathError: unknown) {
-                            log.debug(`Failed to load from path: ${fallbackPath} ${errorMessage(pathError)}`);
-                        }
-                    }
-                } catch (fallbackError: unknown) {
-                    log.debug('Error setting up fallback paths:', errorMessage(fallbackError));
-                }
-
-                if (!this.foregroundModule) {
-                    log.warn('@openheaders/windows-foreground not available, using fallback focus methods');
-                    log.debug('Original error:', errorMessage(error));
-                }
+                log.warn('@openheaders/windows-foreground not available, using fallback focus methods');
+                log.debug('Load error:', errorMessage(error));
             }
         }
     }

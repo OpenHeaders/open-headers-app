@@ -66,7 +66,6 @@ export const DEFAULTS: {
  * Event names for custom events dispatched during import/export
  */
 export const EVENTS = {
-  WORKSPACE_DATA_REFRESH: 'workspace-data-refresh-needed',
   PROXY_RULES_UPDATED: 'proxy-rules-updated',
   RULES_UPDATED: 'rules-updated',
   ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed'

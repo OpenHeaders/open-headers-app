@@ -97,12 +97,12 @@ class GitExecutor {
       ...options
     };
 
-    log.debug(`Executing: ${fullCommand}`, { cwd: execOptions.cwd });
+    log.debug(`Executing: ${this.redactCredentials(fullCommand)}`, { cwd: execOptions.cwd });
 
     try {
       return await execAsync(fullCommand, execOptions);
     } catch (error) {
-      log.error(`Command failed: ${fullCommand}`, error);
+      log.error(`Command failed: ${this.redactCredentials(fullCommand)}`, error);
       throw this.enhanceError(toError(error), fullCommand);
     }
   }
@@ -134,6 +134,18 @@ class GitExecutor {
     }
 
     return enhancedError;
+  }
+
+  /**
+   * Redact credentials from git command strings for safe logging.
+   * Matches patterns like `https://token:x-oauth-basic@host` or `https://user:pass@host`.
+   */
+  private redactCredentials(command: string): string {
+    return command.replace(/https?:\/\/[^@\s"]+@/g, (match) => {
+      const protocolEnd = match.indexOf('://') + 3;
+      const protocol = match.slice(0, protocolEnd);
+      return `${protocol}***@`;
+    });
   }
 
   /**

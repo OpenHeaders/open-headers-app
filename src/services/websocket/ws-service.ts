@@ -140,7 +140,7 @@ class WebSocketService {
 
             void this.recordingHandler.initializeVideoCaptureService();
             this.environmentHandler.setupEnvironmentListener();
-            void this.environmentHandler.syncProxyService();
+            // Proxy sync is handled by WorkspaceStateService.initialize() via broadcastToServices().
 
             this.isInitializing = false;
             return true;

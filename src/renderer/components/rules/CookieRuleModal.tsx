@@ -425,7 +425,7 @@ const CookieRuleModal = ({ visible, onCancel, onSave, initialValues }: CookieRul
             onCancel={onCancel}
             footer={null}
             width={800}
-            destroyOnClose
+            destroyOnHidden
             styles={{
                 body: { 
                     height: 'calc(85vh - 100px)',

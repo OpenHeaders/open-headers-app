@@ -8,7 +8,6 @@ import settingsHandlers from './settingsHandlers';
 import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
 import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
-import type { Source } from '../../../../types/source';
 import type { ProxyRule } from '../../../../types/proxy';
 
 
@@ -56,31 +55,9 @@ class ProxyHandlers {
                         proxyService.updateEnvironmentVariables(variables);
                         log.info(`Loaded ${Object.keys(variables).length} environment variables for proxy service`);
 
-                        // Load sources for the current workspace
-                        try {
-                            const sourcesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'sources.json');
-                            const sourcesData = await fsPromises.readFile(sourcesPath, 'utf8');
-                            const sources: Source[] = JSON.parse(sourcesData);
-                            if (Array.isArray(sources)) {
-                                proxyService.updateSources(sources);
-                                log.info(`Loaded ${sources.length} sources for proxy service`);
-                            }
-                        } catch (error: unknown) {
-                            log.info('No sources file found for proxy, starting with empty sources');
-                        }
-
-                        // Load header rules for the current workspace
-                        try {
-                            const rulesPath = path.join(app.getPath('userData'), 'workspaces', activeWorkspaceId, 'rules.json');
-                            const rulesData = await fsPromises.readFile(rulesPath, 'utf8');
-                            const rulesStorage = JSON.parse(rulesData) as { rules?: { header?: HeaderRule[] } };
-                            if (rulesStorage.rules && rulesStorage.rules.header) {
-                                proxyService.updateHeaderRules(rulesStorage.rules.header);
-                                log.info(`Loaded ${rulesStorage.rules.header.length} header rules for proxy service`);
-                            }
-                        } catch (error: unknown) {
-                            log.info('No header rules file found for proxy, starting with empty rules');
-                        }
+                        // Sources and header rules are NOT loaded here.
+                        // WorkspaceStateService.initialize() already pushed them to proxyService
+                        // via broadcastToServices(). Re-reading from disk would be redundant.
                     }
                 } catch (error: unknown) {
                     log.info('No environment variables found for proxy, starting with empty variables');

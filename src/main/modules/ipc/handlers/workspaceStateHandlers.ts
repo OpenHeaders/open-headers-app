@@ -196,11 +196,20 @@ export function registerWorkspaceStateHandlers(): void {
         }
     });
 
+    ipcMain.handle('workspace-state:copy-workspace-data', async (_event, sourceWorkspaceId: string, targetWorkspaceId: string) => {
+        try {
+            await workspaceStateService.copyWorkspaceData(sourceWorkspaceId, targetWorkspaceId);
+            return { success: true };
+        } catch (error) {
+            log.error('Copy workspace data failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
     ipcMain.handle('workspace-state:sync-workspace', async (_event, workspaceId: string) => {
         try {
-            // Update sync status to syncing
-            workspaceStateService.updateSyncStatus(workspaceId, { syncing: true });
-            return { success: true };
+            const result = await workspaceStateService.syncWorkspace(workspaceId);
+            return result;
         } catch (error) {
             log.error('Sync workspace failed:', error);
             return { success: false, error: errorMessage(error) };

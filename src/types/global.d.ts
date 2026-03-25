@@ -15,7 +15,7 @@ import type { HeaderRule, RulesStorage } from './rules';
 import type { Workspace, WorkspaceAuthData, CommitInfo, TeamWorkspaceInvite, WorkspaceDataUpdatedData, WorkspaceSyncCompletedData, CliWorkspaceJoinedData } from './workspace';
 import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from './environment';
 import type { RecordingData } from '../services/websocket/utils/recordingPreprocessor';
-import type { RefreshStatusInfo, ContentUpdatedPayload, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
+import type { RefreshStatusInfo, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
 import type { WorkspaceStateAPI } from '../preload/api/workspaceStateAPI';
 
 declare global {
@@ -37,11 +37,6 @@ declare global {
   /** Custom DOM events used in the renderer */
   interface WindowEventMap {
     'source-activated': CustomEvent<SourceActivatedDetail>;
-    'workspace-switching': CustomEvent<{ fromWorkspaceId: string; toWorkspaceId: string }>;
-    'workspace-syncing': CustomEvent<{ workspaceId: string; reason: string }>;
-    'workspace-switch-progress': CustomEvent<{ step: string; workspaceId: string; workspace?: Workspace }>;
-    'workspace-data-applied': Event;
-    'workspace-data-refresh-needed': CustomEvent<{ workspaceId: string }>;
   }
 
   // --- Event data types for IPC callbacks ---
@@ -370,7 +365,6 @@ declare global {
     restartApp: () => void;
 
     // Runtime updates
-    updateWebSocketSources: (sources: Source[] | { type: 'rules-update'; data: RulesStorage }) => void;
     cleanupTempFiles: (...args: string[]) => void;
 
     // Workspace state (main-process owned)
@@ -382,7 +376,6 @@ declare global {
         updateSource: (source: Source) => Promise<void>;
         getRefreshStatus: (sourceId: string) => Promise<RefreshStatusInfo>;
         getTimeUntilRefresh: (sourceId: string) => Promise<number>;
-        onContentUpdated: (callback: (data: ContentUpdatedPayload) => void) => (() => void);
         onStatusChanged: (callback: (data: StatusChangedPayload) => void) => (() => void);
         onScheduleUpdated: (callback: (data: ScheduleUpdatedPayload) => void) => (() => void);
     };

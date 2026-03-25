@@ -1,17 +1,23 @@
 /**
  * RefreshManagerContext — thin IPC bridge to main-process SourceRefreshService.
  *
- * The main process owns all refresh scheduling, circuit breaking, and HTTP fetching.
- * This context only:
- *  - Subscribes to IPC events for content/status/schedule updates
- *  - Applies content updates to workspace state
- *  - Exposes query methods that forward to main via IPC
+ * The main process owns all refresh scheduling, circuit breaking, HTTP fetching,
+ * and source state updates. This context only:
+ *  - Subscribes to IPC events for status/schedule updates (for UI indicators)
+ *  - Exposes synchronous cache-based query methods for status and timing
+ *  - Forwards manual refresh requests to main via IPC
+ *
+ * IMPORTANT: This context does NOT echo data back to main. When the main process
+ * fetches a source, it updates WorkspaceStateService directly. The renderer
+ * receives the updated sources via workspace:state-patch IPC. This context only
+ * maintains supplementary caches (refresh status, next-refresh timestamps) that
+ * are not part of the core workspace state.
  */
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useSources } from '../../hooks/workspace';
 import { createLogger } from '../../utils/error-handling/logger';
-import type { Source, SourceUpdate } from '../../../types/source';
+import type { Source } from '../../../types/source';
 const log = createLogger('RefreshManagerContext');
 
 interface RefreshStatus {
@@ -75,7 +81,7 @@ const DEFAULT_STATUS: RefreshStatus = {
 };
 
 export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { updateSource, sources: currentSources } = useSources();
+    const { sources: currentSources } = useSources();
     const cleanupRefs = useRef<Array<() => void>>([]);
     const [, setRenderTick] = useState(0);
     const bumpRender = () => setRenderTick(n => n + 1);
@@ -102,70 +108,26 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
 
         const api = window.electronAPI.sourceRefresh;
 
-        // Listen for content updates from main process
-        const cleanupContent = api.onContentUpdated((data) => {
-            log.debug('Content updated from main process:', data.sourceId);
-
-            const updates: SourceUpdate = {
-                sourceContent: data.content,
-                responseHeaders: data.headers,
-                needsInitialFetch: false,
-                // Persist lastRefresh so the scheduler recovers correct timing after app restart.
-                // CentralizedWorkspaceService merges refreshOptions shallowly — only lastRefresh
-                // is included here so existing enabled/interval/type values are preserved.
-                refreshOptions: { lastRefresh: data.lastRefresh }
-            };
-
-            if (data.isFiltered && data.originalResponse) {
-                updates.originalResponse = data.originalResponse;
-                updates.isFiltered = true;
-                updates.filteredWith = data.filteredWith ?? null;
-            } else {
-                updates.originalResponse = null;
-                updates.isFiltered = false;
-                updates.filteredWith = null;
-            }
-
-            void updateSource(data.sourceId, updates);
-        });
-
-        // Listen for status changes — update cache and trigger re-render.
-        // On refresh completion, also push into workspace state so SourceTable
-        // (which reads from workspace sources, not the context cache) updates immediately.
+        // Status changes — update local cache for UI indicators only.
+        // Do NOT push status back to main; refresh status is a renderer-side UI concern.
         const cleanupStatus = api.onStatusChanged((data) => {
-            const prev = statusCache.get(data.sourceId);
-            const status = data.status as unknown as RefreshStatus;
-            statusCache.set(data.sourceId, status);
+            statusCache.set(data.sourceId, data.status as unknown as RefreshStatus);
             bumpRender();
-
-            // Only push workspace state on isRefreshing transitions to avoid excessive saves
-            const wasRefreshing = prev?.isRefreshing ?? false;
-            if (wasRefreshing && !status.isRefreshing) {
-                void updateSource(data.sourceId, {
-                    refreshStatus: {
-                        isRefreshing: false,
-                        lastRefresh: status.lastRefresh,
-                        success: status.success,
-                        error: status.error,
-                        failureCount: status.failureCount
-                    }
-                });
-            }
         });
 
-        // Listen for schedule updates — store absolute timestamp and trigger re-render.
+        // Schedule updates — store absolute timestamp and trigger re-render.
         const cleanupSchedule = api.onScheduleUpdated((data) => {
             nextRefreshCache.set(data.sourceId, data.nextRefresh);
             bumpRender();
         });
 
-        cleanupRefs.current = [cleanupContent, cleanupStatus, cleanupSchedule];
+        cleanupRefs.current = [cleanupStatus, cleanupSchedule];
 
         return () => {
             cleanupRefs.current.forEach(fn => fn());
             cleanupRefs.current = [];
         };
-    }, [updateSource]);
+    }, []);
 
     const value: RefreshManagerContextValue = {
         isReady: () => !!window.electronAPI?.sourceRefresh,
@@ -176,7 +138,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
             return result.success;
         },
 
-        // These are no-ops — main process manages source lifecycle via WSSourceHandler
+        // These are no-ops — main process manages source lifecycle
         addSource: () => {},
         updateSource: () => {},
         removeSource: async () => {},

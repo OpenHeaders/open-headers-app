@@ -147,10 +147,7 @@ class ProtocolHandler {
 
     handleProtocolUrl(url: string) {
         try {
-            log.info('=== PROTOCOL HANDLER DEBUG START ===');
-            log.info('Handling protocol URL:', url);
-            log.info('URL type:', typeof url);
-            log.info('URL length:', url?.length);
+            log.info(`Handling protocol URL (${url?.length ?? 0} chars)`);
 
             // Validate the URL first
             const validation = this.validateProtocolUrl(url);
@@ -164,9 +161,7 @@ class ProtocolHandler {
             const urlObj = validation.urlObj!;
             const params = new URLSearchParams(urlObj.search);
 
-            log.info(`Parsed URL - pathname: ${urlObj.pathname} host: ${urlObj.host} search: ${urlObj.search}`);
-            log.info(`URL protocol: ${urlObj.protocol} hostname: ${urlObj.hostname}`);
-            log.info('All URL params:', Array.from(params.entries()));
+            log.debug(`URL details — host: ${urlObj.host}, params: ${Array.from(params.keys()).join(', ')}`);
 
             // Check for different compression types
             let payload = params.get('payload');
@@ -570,13 +565,18 @@ class ProtocolHandler {
         }
     }
 
-    // Process any pending invites - called when main window is set
+    // Process any pending invites - called when renderer is ready
     processPendingInvites() {
         const win = this.mainWindow;
         if (!win) return;
 
+        // Show the window — protocol actions require user interaction
+        if (this.pendingInvite || this.pendingEnvironmentImport) {
+            this.showAndFocusWindow(win);
+        }
+
         if (this.pendingInvite) {
-            log.info('Processing pending team workspace invite from setMainWindow');
+            log.info('Processing pending team workspace invite from setRendererReady');
             const invite = this.pendingInvite;
             if (win.webContents.isLoading()) {
                 win.webContents.once('did-finish-load', () => {
@@ -589,7 +589,7 @@ class ProtocolHandler {
         }
 
         if (this.pendingEnvironmentImport) {
-            log.info('Processing pending environment config import from setMainWindow');
+            log.info('Processing pending environment config import from setRendererReady');
             const envImport = this.pendingEnvironmentImport;
             if (win.webContents.isLoading()) {
                 win.webContents.once('did-finish-load', () => {

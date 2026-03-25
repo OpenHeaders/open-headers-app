@@ -180,70 +180,6 @@ describe('EnvironmentEventManager', () => {
   });
 
   // ========================================================================
-  // setupWorkspaceListener
-  // ========================================================================
-  describe('setupWorkspaceListener', () => {
-    it('registers listeners for workspace-switched and workspace-data-applied', () => {
-      manager.setupWorkspaceListener(vi.fn());
-      expect(addEventListenerSpy).toHaveBeenCalledWith(
-        'workspace-switched',
-        expect.any(Function)
-      );
-      expect(addEventListenerSpy).toHaveBeenCalledWith(
-        'workspace-data-applied',
-        expect.any(Function)
-      );
-    });
-
-    it('calls onWorkspaceChange with enterprise workspace ID', async () => {
-      const onWorkspaceChange = vi.fn();
-      manager.setupWorkspaceListener(onWorkspaceChange);
-
-      const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: { workspaceId: WORKSPACE_ID } });
-
-      expect(onWorkspaceChange).toHaveBeenCalledWith(WORKSPACE_ID);
-    });
-
-    it('handles workspace-data-applied event too', async () => {
-      const onWorkspaceChange = vi.fn();
-      manager.setupWorkspaceListener(onWorkspaceChange);
-
-      // workspace-data-applied is the second addEventListener call
-      const handler = addEventListenerSpy.mock.calls[1][1];
-      await handler({ detail: { workspaceId: 'ws-synced-from-git' } });
-
-      expect(onWorkspaceChange).toHaveBeenCalledWith('ws-synced-from-git');
-    });
-
-    it('ignores events without workspaceId', async () => {
-      const onWorkspaceChange = vi.fn();
-      manager.setupWorkspaceListener(onWorkspaceChange);
-
-      const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: {} });
-      expect(onWorkspaceChange).not.toHaveBeenCalled();
-    });
-
-    it('ignores events with null detail', async () => {
-      const onWorkspaceChange = vi.fn();
-      manager.setupWorkspaceListener(onWorkspaceChange);
-
-      const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: null });
-      expect(onWorkspaceChange).not.toHaveBeenCalled();
-    });
-
-    it('ignores events with undefined detail', async () => {
-      const onWorkspaceChange = vi.fn();
-      manager.setupWorkspaceListener(onWorkspaceChange);
-
-      const handler = addEventListenerSpy.mock.calls[0][1];
-      await handler({ detail: undefined });
-      expect(onWorkspaceChange).not.toHaveBeenCalled();
-    });
-  });
-
   // ========================================================================
   // setupEnvironmentStructureListener
   // ========================================================================
@@ -332,22 +268,8 @@ describe('EnvironmentEventManager', () => {
   // cleanup
   // ========================================================================
   describe('cleanup', () => {
-    it('removes all registered listeners on cleanup', () => {
-      manager.setupWorkspaceListener(vi.fn());
-      manager.cleanup();
-
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'workspace-switched',
-        expect.any(Function)
-      );
-      expect(removeEventListenerSpy).toHaveBeenCalledWith(
-        'workspace-data-applied',
-        expect.any(Function)
-      );
-    });
-
     it('clears the listeners array', () => {
-      manager.setupWorkspaceListener(vi.fn());
+      manager.setupEnvironmentStructureListener(vi.fn());
       manager.cleanup();
       expect(manager.listeners).toEqual([]);
     });
@@ -362,20 +284,16 @@ describe('EnvironmentEventManager', () => {
     });
 
     it('is safe to call multiple times', () => {
-      manager.setupWorkspaceListener(vi.fn());
+      manager.setupEnvironmentStructureListener(vi.fn());
       manager.cleanup();
       manager.cleanup();
       expect(manager.listeners).toEqual([]);
     });
 
-    it('cleans up both workspace and structure listeners together', () => {
-      manager.setupWorkspaceListener(vi.fn());
+    it('cleans up structure listeners on cleanup', () => {
       manager.setupEnvironmentStructureListener(vi.fn());
       manager.cleanup();
 
-      // workspace-switched, workspace-data-applied, environments-structure-changed
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('workspace-switched', expect.any(Function));
-      expect(removeEventListenerSpy).toHaveBeenCalledWith('workspace-data-applied', expect.any(Function));
       expect(removeEventListenerSpy).toHaveBeenCalledWith('environments-structure-changed', expect.any(Function));
       expect(manager.listeners).toEqual([]);
     });

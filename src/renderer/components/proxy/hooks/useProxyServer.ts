@@ -259,12 +259,6 @@ export const useProxyServer = () => {
             loadRules().catch(console.error);
         };
         
-        const handleWorkspaceSwitch = () => {
-            console.log('Workspace switched, reloading proxy rules');
-            loadRules().catch(console.error);
-            loadHeaderRules().catch(console.error);
-        };
-
         const handleHeaderRulesUpdate = () => {
             console.log('Header rules updated, reloading');
             loadHeaderRules().catch(console.error);
@@ -272,16 +266,12 @@ export const useProxyServer = () => {
 
         // Add event listeners
         window.addEventListener('proxy-rules-updated', handleProxyRulesUpdate);
-        window.addEventListener('workspace-switched', handleWorkspaceSwitch);
         window.addEventListener('rules-updated', handleHeaderRulesUpdate);
-        window.addEventListener('workspace-data-applied', handleWorkspaceSwitch);
 
         // Cleanup
         return () => {
             window.removeEventListener('proxy-rules-updated', handleProxyRulesUpdate);
-            window.removeEventListener('workspace-switched', handleWorkspaceSwitch);
             window.removeEventListener('rules-updated', handleHeaderRulesUpdate);
-            window.removeEventListener('workspace-data-applied', handleWorkspaceSwitch);
         };
     }, [activeWorkspaceId]);
 

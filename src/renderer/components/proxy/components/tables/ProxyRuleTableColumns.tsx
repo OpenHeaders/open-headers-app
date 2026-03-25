@@ -3,7 +3,7 @@ import { Tag, Button, Space, Popconfirm, Typography, Switch, Tooltip } from 'ant
 import { EditOutlined, DeleteOutlined, LinkOutlined, SolutionOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { getSourceName, truncateValue, truncateDomain } from '../../utils';
 import { useEnvironments } from '../../../../contexts';
-import { getResolvedPreview } from '../../../../utils/validation/environment-variables';
+import { getResolvedPreview, checkRuleActivation } from '../../../../utils/validation/environment-variables';
 import type { Source } from '../../../../../types/source';
 import type { ProxyRule } from '../../../../../types/proxy';
 import type { HeaderRule } from '../../../../../types/rules';
@@ -14,6 +14,55 @@ export type { HeaderRule } from '../../../../../types/rules';
 const { Text } = Typography;
 
 export type ProxySource = Pick<Source, 'sourceId' | 'sourceContent'>;
+
+/**
+ * Check if a proxy rule (or its referenced header rule) has unresolved env vars.
+ * Returns { isWaiting, missingVars } for display in the table.
+ */
+function useProxyRuleActivation(record: ProxyRule, headerRules: HeaderRule[]) {
+    const envContext = useEnvironments();
+
+    // Determine the effective rule to check (referenced header rule or inline proxy rule)
+    let ruleToCheck: { headerName?: string; headerValue?: string; isDynamic?: boolean; prefix?: string; suffix?: string; domains?: string[]; isEnabled?: boolean; hasEnvVars?: boolean; envVars?: string[] };
+
+    if (record.headerRuleId) {
+        const headerRule = headerRules.find(r => r.id === record.headerRuleId);
+        if (!headerRule) return { isWaiting: false, missingVars: [] as string[] };
+        ruleToCheck = headerRule;
+    } else {
+        const hasEnvVars = !!(record.hasEnvVars ||
+            (record.headerName && record.headerName.includes('{{')) ||
+            (record.headerValue && record.headerValue.includes('{{')) ||
+            (record.prefix && record.prefix.includes('{{')) ||
+            (record.suffix && record.suffix.includes('{{')) ||
+            (record.domains && record.domains.some(d => d && d.includes('{{'))));
+
+        if (!hasEnvVars) return { isWaiting: false, missingVars: [] as string[] };
+
+        ruleToCheck = {
+            headerName: record.headerName,
+            headerValue: record.headerValue,
+            isDynamic: record.isDynamic,
+            prefix: record.prefix,
+            suffix: record.suffix,
+            domains: record.domains,
+            isEnabled: record.enabled !== false,
+            hasEnvVars: true,
+        };
+    }
+
+    if (!envContext.environmentsReady) {
+        return { isWaiting: true, missingVars: [] as string[] };
+    }
+
+    const variables = envContext.getAllVariables();
+    const activation = checkRuleActivation(ruleToCheck, variables);
+
+    return {
+        isWaiting: activation.activationState === 'waiting_for_deps',
+        missingVars: activation.missingVars || [],
+    };
+}
 
 /**
  * Proxy Rule Table Column Definitions
@@ -125,6 +174,7 @@ export const createDomainsColumn = (headerRules: HeaderRule[]) => ({
 // Header Column Component
 const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRule; sources: ProxySource[]; headerRules: HeaderRule[] }) => {
     const envContext = useEnvironments();
+    const { isWaiting } = useProxyRuleActivation(record, headerRules);
     
     let headerInfo;
     if (record.headerRuleId) {
@@ -208,7 +258,7 @@ const HeaderColumnContent = ({ record, sources, headerRules }: { record: ProxyRu
     }
     
     return (
-        <Space direction="vertical" size="small">
+        <Space direction="vertical" size="small" style={{ opacity: isWaiting ? 0.5 : 1 }}>
             <Space align="center">
                 <Text strong>{displayName}</Text>
                 {nameHasEnvVars && (
@@ -237,29 +287,25 @@ export const createHeaderColumn = (sources: ProxySource[], headerRules: HeaderRu
 /**
  * Type Column - Shows whether rule is custom or reference, and if it uses environment variables
  */
-export const createTypeColumn = (headerRules: HeaderRule[]) => ({
-    title: 'Type',
-    key: 'type',
-    width: '15%',
-    align: 'center',
-    render: (_: unknown, record: ProxyRule) => {
-        let hasEnvVars = false;
+// Type Column Component (needs hook access for env var checking)
+const TypeColumnContent = ({ record, headerRules }: { record: ProxyRule; headerRules: HeaderRule[] }) => {
+    const { isWaiting, missingVars } = useProxyRuleActivation(record, headerRules);
 
-        if (record.headerRuleId) {
-            // Check if referenced header rule has env vars
-            const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
-            hasEnvVars = headerRule?.hasEnvVars ?? false;
-        } else {
-            // Check if custom rule has env vars in any field
-            hasEnvVars = !!(record.hasEnvVars ||
-                        (record.headerName && record.headerName.includes('{{')) ||
-                        (record.headerValue && record.headerValue.includes('{{')) ||
-                        (record.prefix && record.prefix.includes('{{')) ||
-                        (record.suffix && record.suffix.includes('{{')) ||
-                        (record.domains && record.domains.some(d => d && d.includes('{{'))));
-        }
-        
-        return (
+    let hasEnvVars = false;
+    if (record.headerRuleId) {
+        const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);
+        hasEnvVars = headerRule?.hasEnvVars ?? false;
+    } else {
+        hasEnvVars = !!(record.hasEnvVars ||
+                    (record.headerName && record.headerName.includes('{{')) ||
+                    (record.headerValue && record.headerValue.includes('{{')) ||
+                    (record.prefix && record.prefix.includes('{{')) ||
+                    (record.suffix && record.suffix.includes('{{')) ||
+                    (record.domains && record.domains.some(d => d && d.includes('{{'))));
+    }
+
+    return (
+        <div>
             <Space size={4}>
                 {record.headerRuleId ? (
                     <Tooltip title="Using existing header rule">
@@ -276,25 +322,63 @@ export const createTypeColumn = (headerRules: HeaderRule[]) => ({
                     </Tag>
                 )}
             </Space>
-        );
-    }
+            {isWaiting && missingVars.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center', marginTop: '4px' }}>
+                    <span style={{ fontSize: '10px', color: '#faad14', fontWeight: 500 }}>
+                        Waiting for:
+                    </span>
+                    <Tag
+                        color="warning"
+                        style={{ fontSize: '9px', padding: '0 4px', margin: 0 }}
+                    >
+                        {missingVars[0]}
+                    </Tag>
+                    {missingVars.length > 1 && (
+                        <Tooltip title={missingVars.slice(1).join(', ')}>
+                            <Tag style={{ fontSize: '9px', padding: '0 4px', margin: 0 }}>
+                                +{missingVars.length - 1} more
+                            </Tag>
+                        </Tooltip>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export const createTypeColumn = (headerRules: HeaderRule[]) => ({
+    title: 'Type',
+    key: 'type',
+    width: '15%',
+    align: 'center',
+    render: (_: unknown, record: ProxyRule) => <TypeColumnContent record={record} headerRules={headerRules} />
 });
 
 /**
  * Status Column - Toggle switch for enabling/disabling rules
  */
-export const createStatusColumn = (onToggle: (id: string, checked: boolean) => void) => ({
+// Status Column Component (needs hook access for env var checking)
+const StatusColumnContent = ({ record, headerRules, onToggle }: { record: ProxyRule; headerRules: HeaderRule[]; onToggle: (id: string, checked: boolean) => void }) => {
+    const { isWaiting } = useProxyRuleActivation(record, headerRules);
+
+    return (
+        <Tooltip title={isWaiting ? 'Skipped — missing environment variables' : undefined}>
+            <Switch
+                checked={record.enabled !== false && !isWaiting}
+                onChange={(checked: boolean) => onToggle && onToggle(record.id, checked)}
+                size="small"
+                disabled={isWaiting}
+            />
+        </Tooltip>
+    );
+};
+
+export const createStatusColumn = (headerRules: HeaderRule[], onToggle: (id: string, checked: boolean) => void) => ({
     title: 'Status',
     key: 'status',
     width: '8%',
     align: 'center',
-    render: (_: unknown, record: ProxyRule) => (
-        <Switch
-            checked={record.enabled !== false}
-            onChange={(checked: boolean) => onToggle && onToggle(record.id, checked)}
-            size="small"
-        />
-    )
+    render: (_: unknown, record: ProxyRule) => <StatusColumnContent record={record} headerRules={headerRules} onToggle={onToggle} />
 });
 
 /**
@@ -336,6 +420,6 @@ export const createAllColumns = (sources: ProxySource[], headerRules: HeaderRule
     createTypeColumn(headerRules),
     createDomainsColumn(headerRules),
     createHeaderColumn(sources, headerRules),
-    createStatusColumn(onToggle),
+    createStatusColumn(headerRules, onToggle),
     createActionsColumn(onEdit, onDelete)
 ];

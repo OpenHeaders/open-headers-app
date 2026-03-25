@@ -304,7 +304,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
             onCancel={onCancel}
             footer={null}
             width={mode === 'cookie' ? 800 : 600}
-            destroyOnClose
+            destroyOnHidden
             styles={{
                 body: { 
                     height: mode === 'cookie' ? 'calc(85vh - 100px)' : 'calc(70vh - 100px)',

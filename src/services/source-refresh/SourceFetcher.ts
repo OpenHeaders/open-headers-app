@@ -25,6 +25,39 @@ interface EnvironmentResolver {
 }
 
 /**
+ * Encode a form body from the UI's "key:value\n" line format into proper
+ * application/x-www-form-urlencoded "key=value&key2=value2" format.
+ * Mirrors httpHandlers._processFormData() which the old renderer-based fetch used.
+ */
+export function encodeFormBody(body: string): string {
+    // Already in key=value& format
+    if (body.includes('=') && body.includes('&')) {
+        return body;
+    }
+    // key=value with newline separators
+    if (body.includes('=') && body.includes('\n')) {
+        return body.split('\n')
+            .filter(line => line.trim() !== '' && line.includes('='))
+            .join('&');
+    }
+    // key:value with newline separators (the standard UI format)
+    if (body.includes(':')) {
+        const params = new URLSearchParams();
+        for (const line of body.split('\n')) {
+            const trimmed = line.trim();
+            if (trimmed === '') continue;
+            const colonPos = trimmed.indexOf(':');
+            if (colonPos > 0) {
+                const key = trimmed.substring(0, colonPos).trim();
+                params.append(key, trimmed.substring(colonPos + 1).trim());
+            }
+        }
+        return params.toString();
+    }
+    return body;
+}
+
+/**
  * Resolve all {{VAR}} placeholders in a string using environment variables.
  */
 function resolveTemplateString(
@@ -101,7 +134,17 @@ export async function fetchSourceContent(
 
     const contentType = opts.contentType || 'application/json';
 
+    // Encode form data: the UI stores form bodies as "key:value\n" lines.
+    // Convert to proper URL-encoded "key=value&key2=value2" format.
+    if (body && contentType === 'application/x-www-form-urlencoded') {
+        body = encodeFormBody(body);
+    }
+
     log.info(`Fetching source ${source.sourceId}: ${method} ${parsedUrl.href}`);
+    log.debug(`Source ${source.sourceId} request details — Content-Type: ${contentType}, headers: ${JSON.stringify(Object.keys(headers))}, bodyLength: ${body?.length ?? 0}, envVarCount: ${Object.keys(envVars).length}, hasTOTP: ${!!totpCode}`);
+    log.debug(`Source ${source.sourceId} full headers: ${JSON.stringify(headers)}`);
+    log.debug(`Source ${source.sourceId} full body: ${body}`);
+    log.debug(`Source ${source.sourceId} envVars keys: ${JSON.stringify(Object.keys(envVars))}`);
 
     // Make the HTTP request using electron.net
     const { responseBody, responseHeaders, statusCode } = await new Promise<{

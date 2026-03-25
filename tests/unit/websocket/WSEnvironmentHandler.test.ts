@@ -134,4 +134,71 @@ describe('WSEnvironmentHandler', () => {
             expect(result).toBe(`Bearer ${longJwt}`);
         });
     });
+
+    describe('variable cache', () => {
+        it('returns cached variables from setVariables instead of reading disk', () => {
+            const cached = { API_KEY: 'ohk_cached_key', SECRET: 'ohk_cached_secret' };
+            handler.setVariables(cached);
+
+            const result = handler.loadEnvironmentVariables();
+            expect(result).toBe(cached);
+        });
+
+        it('clearVariableCache forces next load to fall back to disk', () => {
+            handler.setVariables({ API_KEY: 'ohk_cached' });
+            handler.clearVariableCache();
+
+            // After clearing, loadEnvironmentVariables falls back to disk.
+            // With a mock appDataPath that doesn't exist, it returns {}.
+            const result = handler.loadEnvironmentVariables();
+            expect(result).toEqual({});
+        });
+
+        it('setVariables overwrites previous cache', () => {
+            handler.setVariables({ OLD_KEY: 'old_value' });
+            handler.setVariables({ NEW_KEY: 'new_value' });
+
+            const result = handler.loadEnvironmentVariables();
+            expect(result).toEqual({ NEW_KEY: 'new_value' });
+            expect(result).not.toHaveProperty('OLD_KEY');
+        });
+
+        it('setVariables stores plain strings — callers must normalize objects before calling', () => {
+            // The renderer sends { value, isSecret } objects via IPC.
+            // WorkspaceStateService.onEnvironmentVariablesChanged normalizes them
+            // to plain strings BEFORE calling setVariables. Verify that setVariables
+            // stores and returns exactly what it receives.
+            const normalized = { USERNAME: 'user@openheaders.io', PASSWORD: 's3cret' };
+            handler.setVariables(normalized);
+
+            const result = handler.loadEnvironmentVariables();
+            expect(result.USERNAME).toBe('user@openheaders.io');
+            expect(result.PASSWORD).toBe('s3cret');
+        });
+    });
+
+    describe('environment variable normalization (integration pattern)', () => {
+        it('normalizes { value, isSecret } objects to plain strings', () => {
+            // This tests the normalization pattern used by WorkspaceStateService.onEnvironmentVariablesChanged
+            const rawFromRenderer: Record<string, string | { value: string; isSecret?: boolean }> = {
+                API_KEY: { value: 'ohk_live_key123', isSecret: true },
+                USERNAME: { value: 'admin@openheaders.io', isSecret: false },
+                DOMAIN: 'openheaders.io' // already a string
+            };
+
+            const resolved: Record<string, string> = {};
+            for (const [key, val] of Object.entries(rawFromRenderer)) {
+                resolved[key] = typeof val === 'object' && val !== null ? val.value : String(val);
+            }
+
+            handler.setVariables(resolved);
+            const result = handler.loadEnvironmentVariables();
+
+            expect(result.API_KEY).toBe('ohk_live_key123');
+            expect(result.USERNAME).toBe('admin@openheaders.io');
+            expect(result.DOMAIN).toBe('openheaders.io');
+            // Must not contain [object Object]
+            expect(Object.values(result).join('')).not.toContain('[object Object]');
+        });
+    });
 });

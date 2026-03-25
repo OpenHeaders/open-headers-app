@@ -73,32 +73,13 @@ describe('useWorkspaceSync', () => {
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
   });
 
-  it('dispatches workspace-data-refresh-needed event for active workspace', () => {
-    renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
-
-    const handler = vi.fn();
-    window.addEventListener('workspace-data-refresh-needed', handler);
-
-    capturedCallback!({ workspaceId: enterpriseWorkspaceId, timestamp: Date.now() });
-
-    expect(handler).toHaveBeenCalledTimes(1);
-    const event: CustomEvent = handler.mock.calls[0][0];
-    expect(event.detail.workspaceId).toBe(enterpriseWorkspaceId);
-
-    window.removeEventListener('workspace-data-refresh-needed', handler);
-  });
-
   it('ignores updates for non-active workspace', () => {
     renderHook(() => useWorkspaceSync({ activeWorkspaceId: enterpriseWorkspaceId }));
 
-    const handler = vi.fn();
-    window.addEventListener('workspace-data-refresh-needed', handler);
-
     capturedCallback!({ workspaceId: 'ws-b2c3d4e5-f6a7-8901-bcde-other', timestamp: Date.now() });
 
-    expect(handler).not.toHaveBeenCalled();
-
-    window.removeEventListener('workspace-data-refresh-needed', handler);
+    // Should not show any message for non-active workspace
+    expect(mockShowMessage).not.toHaveBeenCalled();
   });
 
   it('shows success notification after coalesce delay', () => {

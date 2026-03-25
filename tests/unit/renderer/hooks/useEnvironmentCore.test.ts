@@ -36,11 +36,21 @@ const mockService = {
       mockUnsubscribe();
     };
   }),
+  initialize: vi.fn().mockResolvedValue(true),
+  handleWorkspaceChange: vi.fn().mockResolvedValue(undefined),
 };
 
 vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
   getCentralizedEnvironmentService: () => mockService,
   CentralizedEnvironmentService: class {},
+}));
+
+vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
+  useCentralizedWorkspace: () => ({
+    activeWorkspaceId: 'default-personal',
+    initialized: true,
+    loading: false,
+  }),
 }));
 
 import { useEnvironmentCore } from '../../../../src/renderer/hooks/environment/useEnvironmentCore';
