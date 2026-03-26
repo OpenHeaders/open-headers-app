@@ -22,7 +22,7 @@ const log = createLogger('WorkspaceCrud');
 export async function createWorkspace(
     ctx: StateContext,
     workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType },
-    switchWorkspace: (id: string) => Promise<void>
+    switchWorkspace: (id: string, options?: { skipInitialSync?: boolean }) => Promise<void>
 ): Promise<Workspace> {
     if (ctx.state.workspaces.some(w => w.id === workspace.id)) {
         throw new Error(`Workspace with ID ${workspace.id} already exists`);
@@ -58,7 +58,8 @@ export async function createWorkspace(
     await Promise.all([
         atomicWriter.writeJson(path.join(dir, 'sources.json'), []),
         atomicWriter.writeJson(path.join(dir, 'rules.json'), { version: DATA_FORMAT_VERSION, rules: { header: [], request: [], response: [] }, metadata: { totalRules: 0, lastUpdated: new Date().toISOString() } }, { pretty: true }),
-        atomicWriter.writeJson(path.join(dir, 'proxy-rules.json'), [])
+        atomicWriter.writeJson(path.join(dir, 'proxy-rules.json'), []),
+        atomicWriter.writeJson(path.join(dir, 'environments.json'), { environments: { Default: {} }, activeEnvironment: 'Default' }, { pretty: true })
     ]);
 
     await ctx.saveWorkspacesConfig();
@@ -99,7 +100,7 @@ export async function updateWorkspace(ctx: StateContext, workspaceId: string, up
 export async function deleteWorkspace(
     ctx: StateContext,
     workspaceId: string,
-    switchWorkspace: (id: string) => Promise<void>
+    switchWorkspace: (id: string, options?: { skipInitialSync?: boolean }) => Promise<void>
 ): Promise<boolean> {
     if (workspaceId === 'default-personal') {
         throw new Error('Cannot delete default personal workspace');

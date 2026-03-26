@@ -164,7 +164,7 @@ describe('updateWorkspace', () => {
     it('notifies sync scheduler for active workspace', async () => {
         const onWorkspaceUpdated = vi.fn().mockResolvedValue(undefined);
         const ctx = createCtx({
-            syncScheduler: { onWorkspaceSwitch: vi.fn(), onWorkspaceUpdated },
+            syncScheduler: { onWorkspaceSwitch: vi.fn(), onWorkspaceUpdated, importSyncedData: vi.fn() },
         });
         await updateWorkspace(ctx, 'default-personal', { description: 'Updated desc' });
         expect(onWorkspaceUpdated).toHaveBeenCalledWith('default-personal', expect.objectContaining({ description: 'Updated desc' }));

@@ -20,7 +20,6 @@ const { createLogger } = mainLogger;
 // Lazy-loaded to avoid circular dependencies at startup
 const getLazyDeps = async () => ({
     appLifecycle: (await import('../../main/modules/app/lifecycle')).default,
-    proxyService: (await import('../proxy/ProxyService')).default,
 });
 
 const log = createLogger('CliSetup');
@@ -35,8 +34,14 @@ class CliSetupHandler {
         this.mainWindow = window;
     }
 
+    /**
+     * Join a team workspace via CLI.
+     *
+     * Thin I/O adapter: validates input, tests git connection, syncs the repo,
+     * then delegates all state management to WorkspaceStateService.onCliWorkspaceCreated.
+     */
     async joinWorkspace(data: JoinWorkspaceData): Promise<{ success: boolean; workspaceId?: string; error?: string }> {
-        const { appLifecycle, proxyService } = await getLazyDeps();
+        const { appLifecycle } = await getLazyDeps();
         const gitSyncService = appLifecycle.getGitSyncService();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
 
@@ -54,6 +59,7 @@ class CliSetupHandler {
             const normalizedAuthType = toAuthType(authType);
             const normalizedAuthData = this._normalizeAuthData(normalizedAuthType, authData);
 
+            // 1. Test git connection (CLI-specific I/O)
             log.info(`Testing connection to ${repoUrl} (branch: ${branch || 'main'})`);
             const connectionResult = await gitSyncService.testConnection({
                 url: repoUrl,
@@ -69,28 +75,12 @@ class CliSetupHandler {
             }
             log.info('Connection test passed');
 
+            // 2. Generate workspace ID + unique name (CLI-specific)
             const workspaceId = `team-${crypto.randomBytes(8).toString('hex')}`;
             const baseName = workspaceName || 'Team Workspace';
             const uniqueName = await this._generateUniqueWorkspaceName(baseName, workspaceSettingsService);
 
-            log.info(`Creating workspace: ${uniqueName} (${workspaceId})`);
-            await workspaceSettingsService.addWorkspace({
-                id: workspaceId,
-                name: uniqueName,
-                type: 'git',
-                description: inviterName ? `Invited by ${inviterName}` : 'Team workspace',
-                gitUrl: repoUrl,
-                gitBranch: branch || 'main',
-                gitPath: configPath || 'config/open-headers.json',
-                authType: normalizedAuthType,
-                authData: normalizedAuthData,
-                inviteMetadata: {
-                    invitedBy: inviterName || null,
-                    inviteId: data.inviteId || null,
-                    joinedAt: new Date().toISOString()
-                }
-            });
-
+            // 3. Git sync (I/O — clone repo + read config)
             log.info(`Syncing workspace ${workspaceId}...`);
             const syncResult = await gitSyncService.syncWorkspace({
                 workspaceId,
@@ -106,19 +96,27 @@ class CliSetupHandler {
                 log.warn(`Initial sync returned non-success: ${syncResult.error}`);
             }
 
-            const settings = await workspaceSettingsService.getSettings();
-            settings.activeWorkspaceId = workspaceId;
-            await workspaceSettingsService.saveSettings(settings);
-
-            // Notify WorkspaceStateService — it reloads workspace list from disk,
-            // loads the new workspace's data, and broadcasts to WS/proxy/renderer.
-            try {
-                const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
-                await workspaceStateService.onCliWorkspaceJoined(workspaceId);
-                log.info('WorkspaceStateService notified of CLI workspace join');
-            } catch (err: unknown) {
-                log.warn('Failed to notify WorkspaceStateService:', errorMessage(err));
-            }
+            // 4. Delegate all state management to WorkspaceStateService
+            const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
+            await workspaceStateService.onCliWorkspaceCreated({
+                workspaceId,
+                workspaceConfig: {
+                    name: uniqueName,
+                    type: 'git',
+                    description: inviterName ? `Invited by ${inviterName}` : 'Team workspace',
+                    gitUrl: repoUrl,
+                    gitBranch: branch || 'main',
+                    gitPath: configPath || 'config/open-headers.json',
+                    authType: normalizedAuthType,
+                    authData: normalizedAuthData,
+                    inviteMetadata: {
+                        invitedBy: inviterName || null,
+                        inviteId: data.inviteId || null,
+                        joinedAt: new Date().toISOString()
+                    }
+                },
+                syncData: syncResult.success ? syncResult.data ?? null : null
+            });
 
             this._notifyRenderer('cli-workspace-joined', { workspaceId, timestamp: Date.now() });
 
@@ -130,8 +128,15 @@ class CliSetupHandler {
         }
     }
 
+    /**
+     * Import environment variables via CLI.
+     *
+     * Merges new env data into the workspace's environments.json on disk,
+     * then notifies WorkspaceStateService so it updates envResolver, proxy,
+     * re-evaluates source dependencies, and activates/fetches ready sources.
+     */
     async importEnvironment(data: EnvironmentImportData): Promise<{ success: boolean; error?: string }> {
-        const { appLifecycle, proxyService } = await getLazyDeps();
+        const { appLifecycle } = await getLazyDeps();
         const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
         if (!workspaceSettingsService) {
             return { success: false, error: 'Services not ready' };
@@ -147,6 +152,7 @@ class CliSetupHandler {
 
             const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
 
+            // Read + merge env data (CLI-specific file I/O)
             let existingData: EnvironmentsFile = { environments: { Default: {} }, activeEnvironment: 'Default' };
             try {
                 const existing = await atomicWriter.readJson(envPath);
@@ -167,10 +173,13 @@ class CliSetupHandler {
 
             log.info(`Imported ${Object.keys(data.environments).length} environment(s) into workspace ${workspaceId}`);
 
+            // Delegate state propagation to WorkspaceStateService:
+            // updates envResolver + proxy, re-evaluates source deps, activates sources
             try {
-                proxyService.updateEnvironmentVariables(activeVars);
+                const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
+                await workspaceStateService.onEnvironmentVariablesChanged(activeVars);
             } catch (err: unknown) {
-                log.warn('Failed to update proxy env vars:', errorMessage(err));
+                log.warn('Failed to notify WorkspaceStateService of env change:', errorMessage(err));
             }
 
             this._notifyRenderer('environments-structure-changed', { workspaceId, timestamp: Date.now() });

@@ -22,6 +22,7 @@ import type { Source, SourceUpdate } from '../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
 import type { HeaderRule } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
+import type { SyncData } from './sync/types';
 
 import {
     type WorkspaceState,
@@ -274,7 +275,7 @@ class WorkspaceStateService {
 
     // ── Workspace switching ───────────────────────────────────────
 
-    async switchWorkspace(workspaceId: string): Promise<void> {
+    async switchWorkspace(workspaceId: string, options: { skipInitialSync?: boolean } = {}): Promise<void> {
         if (this.state.activeWorkspaceId === workspaceId) return;
 
         const previousWorkspaceId = this.state.activeWorkspaceId;
@@ -288,7 +289,7 @@ class WorkspaceStateService {
             this.beginWorkspaceSwitch(target);
             await this.saveCurrentWorkspace(target);
             await this.teardownCurrentWorkspace(target);
-            await this.activateNewWorkspace(workspaceId, workspace.name, target);
+            await this.activateNewWorkspace(workspaceId, workspace.name, target, options);
             await this.loadNewWorkspaceData(workspaceId, workspace.name, target);
             this.finalizeWorkspaceSwitch(workspace.name, target);
         } catch (error) {
@@ -324,7 +325,7 @@ class WorkspaceStateService {
         }
     }
 
-    private async activateNewWorkspace(workspaceId: string, workspaceName: string, target: { id: string; name: string; type: string }): Promise<void> {
+    private async activateNewWorkspace(workspaceId: string, workspaceName: string, target: { id: string; name: string; type: string }, options: { skipInitialSync?: boolean } = {}): Promise<void> {
         sendProgressToRenderers('switching', 40, `Switching to "${workspaceName}"...`, false, target);
 
         this.state.activeWorkspaceId = workspaceId;
@@ -333,14 +334,16 @@ class WorkspaceStateService {
 
         if (this.proxyService) {
             await this.proxyService.switchWorkspace(workspaceId).catch(e => log.error('Proxy switch failed:', errorMessage(e)));
-            await this.loadAndSetProxyEnvVars(workspaceId);
         }
+        // Load env vars into envResolver + proxy before loadWorkspaceData so
+        // evaluateAllSourceDependencies can resolve template variables.
+        await this.loadAndApplyEnvVars(workspaceId);
         if (this.webSocketService) {
             this.webSocketService.sources = [];
             this.webSocketService.rules = { header: [], request: [], response: [] };
         }
         if (this.syncScheduler) {
-            await this.syncScheduler.onWorkspaceSwitch(workspaceId).catch(e => log.warn('Sync scheduler switch failed:', errorMessage(e)));
+            await this.syncScheduler.onWorkspaceSwitch(workspaceId, { skipInitialSync: options.skipInitialSync }).catch(e => log.warn('Sync scheduler switch failed:', errorMessage(e)));
         }
         if (this.sourceRefreshService) {
             await this.sourceRefreshService.clearAllSources().catch(e => log.warn('Failed to clear refresh sources:', errorMessage(e)));
@@ -383,14 +386,21 @@ class WorkspaceStateService {
         sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'activeWorkspaceId', 'loading', 'isWorkspaceSwitching', 'error']);
     }
 
-    private async loadAndSetProxyEnvVars(workspaceId: string): Promise<void> {
+    /**
+     * Load environment variables from disk and apply to envResolver + proxy.
+     * Must be called BEFORE loadWorkspaceData when the workspace changes,
+     * so that evaluateAllSourceDependencies has the variables available.
+     */
+    private async loadAndApplyEnvVars(workspaceId: string): Promise<void> {
         try {
             const envPath = workspaceDir(this.appDataPath, workspaceId) + '/environments.json';
             const envData = await fs.promises.readFile(envPath, 'utf8');
             const { environments, activeEnvironment } = JSON.parse(envData);
-            this.proxyService!.updateEnvironmentVariables(environments?.[activeEnvironment] ?? {});
+            const activeVars = environments?.[activeEnvironment] ?? {};
+            const resolved = this.normalizeEnvVariables(activeVars);
+            this.applyEnvVariablesToServices(resolved);
         } catch (_e) {
-            this.proxyService!.updateEnvironmentVariables({});
+            this.applyEnvVariablesToServices({});
         }
     }
 
@@ -457,22 +467,39 @@ class WorkspaceStateService {
     async onSyncDataChanged(workspaceId: string): Promise<void> {
         if (workspaceId === this.state.activeWorkspaceId) {
             log.info('Reloading workspace data after sync');
+            await this.loadAndApplyEnvVars(workspaceId);
             await this.loadWorkspaceData(workspaceId);
-            if (this.proxyService) await this.loadAndSetProxyEnvVars(workspaceId);
             sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules']);
         }
     }
 
-    async onCliWorkspaceJoined(workspaceId: string): Promise<void> {
-        log.info(`CLI workspace joined: ${workspaceId}`);
-        await this.saveAll();
-        const config = await loadWorkspacesConfig(this.appDataPath);
-        this.state.workspaces = config.workspaces;
-        this.state.activeWorkspaceId = config.activeWorkspaceId;
-        this.state.syncStatus = config.syncStatus;
-        await this.loadWorkspaceData(config.activeWorkspaceId);
-        if (this.proxyService) await this.loadAndSetProxyEnvVars(config.activeWorkspaceId);
-        sendPatchToRenderers(this.state, ['workspaces', 'activeWorkspaceId', 'syncStatus', 'sources', 'rules', 'proxyRules']);
+    /**
+     * Called by CliSetupHandler after it tests the git connection and syncs
+     * the repository. Reuses crudCreateWorkspace for workspace entry creation,
+     * imports synced data to disk, then switchWorkspace handles the rest.
+     */
+    async onCliWorkspaceCreated(params: {
+        workspaceId: string;
+        workspaceConfig: Partial<Workspace> & { name: string; type: WorkspaceType };
+        syncData: SyncData | null;
+    }): Promise<void> {
+        const { workspaceId, workspaceConfig, syncData } = params;
+        log.info(`CLI workspace created: ${workspaceId}`);
+
+        // 1. Create workspace entry via crudCreateWorkspace. Pass a no-op switch
+        //    callback — we'll do the actual switch after importing synced data.
+        await crudCreateWorkspace(this.ctx, { ...workspaceConfig, id: workspaceId }, async () => {});
+
+        // 2. Import synced data (sources, rules, proxy rules, environments) to disk
+        //    BEFORE switching, so loadWorkspaceData reads populated files.
+        if (syncData && this.syncScheduler) {
+            await this.syncScheduler.importSyncedData(workspaceId, syncData, { broadcastToExtensions: false });
+        }
+
+        // 3. Delegate switch lifecycle: teardown → load env vars → load data →
+        //    start sync scheduler → broadcast. skipInitialSync because we just synced.
+        await this.switchWorkspace(workspaceId, { skipInitialSync: true });
+        log.info(`CLI workspace ${workspaceId} fully activated`);
     }
 
     // ── Environment variable changes ────────────────────────────

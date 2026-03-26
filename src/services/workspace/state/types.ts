@@ -6,6 +6,7 @@ import type { Source } from '../../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '../../../types/workspace';
 import type { HeaderRule, RulesCollection } from '../../../types/rules';
 import type { ProxyRule } from '../../../types/proxy';
+import type { SyncData } from '../sync/types';
 
 // ── State shape ───────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ export interface SourceRefreshServiceLike {
 export interface WorkspaceSyncSchedulerLike {
     onWorkspaceSwitch(workspaceId: string, options?: { skipInitialSync?: boolean }): Promise<void>;
     onWorkspaceUpdated(workspaceId: string, workspace: Workspace): Promise<void>;
+    importSyncedData(workspaceId: string, data: SyncData, options?: { broadcastToExtensions?: boolean }): Promise<void>;
 }
 
 // ── Dirty tracking ────────────────────────────────────────────────
