@@ -53,6 +53,7 @@ export interface EnvironmentResolverLike {
 }
 
 export interface SourceRefreshServiceLike {
+    activeWorkspaceId: string;
     updateSource(source: Source): Promise<void>;
     removeSourcesNotIn(ids: Set<string>): Promise<void>;
     clearAllSources(): Promise<void>;

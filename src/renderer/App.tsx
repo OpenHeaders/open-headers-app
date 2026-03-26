@@ -106,6 +106,7 @@ const AppComponent: React.FC = () => {
     // Source refresh hook
     const { refreshSourceWithHttp, handleAddSource } = useSourceRefresh({
         sources,
+        workspaceId: activeWorkspaceId,
         refreshSource,
         manualRefresh,
         addSource

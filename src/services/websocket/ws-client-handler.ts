@@ -46,6 +46,9 @@ interface ClientHandlerDeps {
     clientInitializationLocks: Map<string, InitLock>;
     wss: WebSocketServer | null;
     wsPort: number;
+    /** Resolves when WorkspaceStateService has loaded initial state.
+     *  Client init waits on this so we never send empty/stale data. */
+    stateReady: Promise<void>;
     sourceHandler: { sendSourcesToClient(ws: WebSocket): Promise<void> };
     ruleHandler: { sendRulesToClient(ws: WebSocket): Promise<void> };
     recordingHandler: { sendVideoRecordingState(ws: WebSocket): Promise<void> };
@@ -70,6 +73,11 @@ class WSClientHandler {
      * Initialize client with proper locking to prevent race conditions
      */
     async initializeClient(ws: ExtendedWebSocket, clientId: string): Promise<void> {
+        // Wait until workspace state is loaded before sending any data.
+        // The WS server starts early (so extensions know the app is up),
+        // but we defer data delivery until sources/rules/env vars are populated.
+        await this.wsService.stateReady;
+
         const existingLock = this.wsService.clientInitializationLocks.get(clientId);
         if (existingLock) {
             if (existingLock.status === 'initializing') {

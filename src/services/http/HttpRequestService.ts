@@ -80,7 +80,7 @@ class HttpRequestService {
         let totpCode: string | null = null;
         if (spec.totpSecret) {
             // Check cooldown
-            const cooldown = this.totpTracker.checkCooldown(spec.sourceId);
+            const cooldown = this.totpTracker.checkCooldown(spec.workspaceId, spec.sourceId);
             if (cooldown.inCooldown) {
                 throw new Error(`TOTP cooldown active. Please wait ${cooldown.remainingSeconds} seconds before making another request.`);
             }
@@ -94,7 +94,7 @@ class HttpRequestService {
                 throw new Error('Failed to generate TOTP code');
             }
 
-            this.totpTracker.recordUsage(spec.sourceId, spec.totpSecret, totpCode);
+            this.totpTracker.recordUsage(spec.workspaceId, spec.sourceId, spec.totpSecret, totpCode);
             log.debug(`TOTP code generated for source ${spec.sourceId}`);
         }
 

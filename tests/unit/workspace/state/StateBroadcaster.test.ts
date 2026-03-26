@@ -80,6 +80,7 @@ describe('syncToRefreshService', () => {
         const updateSource = vi.fn().mockResolvedValue(undefined);
         const removeSourcesNotIn = vi.fn().mockResolvedValue(undefined);
         const refreshService: SourceRefreshServiceLike = {
+            activeWorkspaceId: 'ws-test-1',
             updateSource, removeSourcesNotIn,
             clearAllSources: vi.fn(), manualRefresh: vi.fn(), resetCircuitBreaker: vi.fn(),
         };

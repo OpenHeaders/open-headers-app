@@ -2,8 +2,12 @@
  * TotpCooldownTracker — main-process owner of TOTP cooldown state.
  *
  * Prevents TOTP codes from being reused within their validity period (30 seconds)
- * by tracking when each code was last used for each source. Shared between
- * SourceRefreshService (scheduled refreshes) and HttpRequestService (test/initial requests).
+ * by tracking when each code was last used per workspace+source pair. Source IDs
+ * are workspace-scoped (e.g., both workspaces may have source "1" with different
+ * TOTP secrets), so cooldowns are keyed by `workspaceId:sourceId`.
+ *
+ * Shared between SourceRefreshService (scheduled refreshes) and HttpRequestService
+ * (test/initial requests).
  */
 
 import mainLogger from '../../utils/mainLogger';
@@ -31,32 +35,38 @@ class TotpCooldownTracker {
         this.cleanupInterval = null;
     }
 
-    recordUsage(sourceId: string, secret: string, code: string): void {
+    /** Build the composite key that scopes cooldowns per workspace+source. */
+    private key(workspaceId: string, sourceId: string): string {
+        return `${workspaceId}:${sourceId}`;
+    }
+
+    recordUsage(workspaceId: string, sourceId: string, secret: string, code: string): void {
         if (!sourceId || !code) return;
 
         const now = timeManager.now();
         const cooldownUntil = now + this.TOTP_PERIOD;
+        const k = this.key(workspaceId, sourceId);
 
-        this.usageMap.set(sourceId, {
+        this.usageMap.set(k, {
             lastCode: code,
             lastUsedTime: now,
             cooldownUntil,
             secret
         });
 
-        log.debug(`Recorded TOTP usage for source: ${sourceId}, cooldown until: ${timeManager.formatTimestamp(cooldownUntil)}`);
+        log.debug(`Recorded TOTP usage for source: ${sourceId} (workspace: ${workspaceId}), cooldown until: ${timeManager.formatTimestamp(cooldownUntil)}`);
 
         if (!this.cleanupInterval && this.usageMap.size > 0) {
             this.cleanupInterval = setInterval(() => this.cleanup(), this.CLEANUP_INTERVAL);
         }
     }
 
-    checkCooldown(sourceId: string): TotpCooldownInfo {
+    checkCooldown(workspaceId: string, sourceId: string): TotpCooldownInfo {
         if (!sourceId) {
             return { inCooldown: false, remainingSeconds: 0, lastUsedTime: null };
         }
 
-        const usage = this.usageMap.get(sourceId);
+        const usage = this.usageMap.get(this.key(workspaceId, sourceId));
         if (!usage) {
             return { inCooldown: false, remainingSeconds: 0, lastUsedTime: null };
         }
@@ -72,17 +82,17 @@ class TotpCooldownTracker {
         return { inCooldown: false, remainingSeconds: 0, lastUsedTime: usage.lastUsedTime };
     }
 
-    getCooldownSeconds(sourceId: string): number {
-        return this.checkCooldown(sourceId).remainingSeconds;
+    getCooldownSeconds(workspaceId: string, sourceId: string): number {
+        return this.checkCooldown(workspaceId, sourceId).remainingSeconds;
     }
 
     getAllActiveCooldowns(): string[] {
         const now = timeManager.now();
         const active: string[] = [];
 
-        for (const [sourceId, usage] of this.usageMap.entries()) {
+        for (const [compositeKey, usage] of this.usageMap.entries()) {
             if (now < usage.cooldownUntil) {
-                active.push(sourceId);
+                active.push(compositeKey);
             }
         }
 
@@ -95,9 +105,9 @@ class TotpCooldownTracker {
         const now = timeManager.now();
         let cleaned = 0;
 
-        for (const [sourceId, usage] of this.usageMap.entries()) {
+        for (const [compositeKey, usage] of this.usageMap.entries()) {
             if (now >= usage.cooldownUntil) {
-                this.usageMap.delete(sourceId);
+                this.usageMap.delete(compositeKey);
                 cleaned++;
             }
         }

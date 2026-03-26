@@ -18,7 +18,7 @@ class HttpRequestHandlers {
     private totpTracker: TotpCooldownTracker | null = null;
 
     handleExecuteRequest: (event: IpcInvokeEvent, spec: HttpRequestSpec) => Promise<HttpRequestResult>;
-    handleGetTotpCooldown: (event: IpcInvokeEvent, sourceId: string) => TotpCooldownInfo;
+    handleGetTotpCooldown: (event: IpcInvokeEvent, workspaceId: string, sourceId: string) => TotpCooldownInfo;
     handleGenerateTotpPreview: (event: IpcInvokeEvent, secret: string) => Promise<string>;
 
     constructor() {
@@ -42,16 +42,16 @@ class HttpRequestHandlers {
             throw new Error('HttpRequestService not configured yet. Please wait for app initialization.');
         }
 
-        log.info(`Execute request: ${spec.method} ${spec.url} (source: ${spec.sourceId})`);
+        log.info(`Execute request: ${spec.method} ${spec.url} (source: ${spec.sourceId}, workspace: ${spec.workspaceId})`);
         return this.service.execute(spec);
     }
 
-    _handleGetTotpCooldown(_: IpcInvokeEvent, sourceId: string): TotpCooldownInfo {
+    _handleGetTotpCooldown(_: IpcInvokeEvent, workspaceId: string, sourceId: string): TotpCooldownInfo {
         if (!this.totpTracker) {
             return { inCooldown: false, remainingSeconds: 0, lastUsedTime: null };
         }
 
-        return this.totpTracker.checkCooldown(sourceId);
+        return this.totpTracker.checkCooldown(workspaceId, sourceId);
     }
 
     async _handleGenerateTotpPreview(_: IpcInvokeEvent, secret: string): Promise<string> {

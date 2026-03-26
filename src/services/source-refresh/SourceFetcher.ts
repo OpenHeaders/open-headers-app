@@ -24,6 +24,7 @@ const log = createLogger('SourceFetcher');
 export async function fetchSourceContent(
     source: Source,
     httpService: HttpRequestService,
+    workspaceId: string,
     timeoutMs: number = 15000
 ): Promise<FetchResult> {
     if (!httpService) {
@@ -46,6 +47,7 @@ export async function fetchSourceContent(
             ? { enabled: true, path: source.jsonFilter.path || '' }
             : undefined,
         sourceId,
+        workspaceId,
         timeout: timeoutMs
     };
 

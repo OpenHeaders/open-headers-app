@@ -80,6 +80,7 @@ function createEnvResolver(initialVars: Record<string, string> = {}): Environmen
 
 function createRefreshService(): SourceRefreshServiceLike {
     return {
+        activeWorkspaceId: 'ws-test-1',
         manualRefresh: vi.fn().mockResolvedValue({ success: true }),
         resetCircuitBreaker: vi.fn(),
         updateSource: vi.fn().mockResolvedValue(undefined),

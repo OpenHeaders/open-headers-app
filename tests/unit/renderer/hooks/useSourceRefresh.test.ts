@@ -50,6 +50,7 @@ function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
 
 interface UseSourceRefreshDeps {
   sources: Source[];
+  workspaceId: string;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
   addSource: (sourceData: Source) => Promise<Source | null>;
@@ -58,6 +59,7 @@ interface UseSourceRefreshDeps {
 function makeDeps(overrides: Partial<UseSourceRefreshDeps> = {}): UseSourceRefreshDeps {
   return {
     sources: [],
+    workspaceId: 'ws-test-1',
     refreshSource: vi.fn(async () => true),
     manualRefresh: vi.fn(async () => true),
     addSource: vi.fn(async (data: Source) => ({ ...data, sourceId: 'new-src-1' })),
