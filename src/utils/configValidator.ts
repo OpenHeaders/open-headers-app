@@ -1,47 +1,9 @@
 /**
  * Configuration File Validator
  *
- * Shared validation logic for Open Headers configuration files
- * Used by Import modal and Git workspace validation
- * This is a shared utility that can be used by both main and renderer processes
+ * Pure JSON analysis for Open Headers configuration files.
+ * No Node.js APIs (fs, path, etc.) — safe for both main and renderer processes.
  */
-
-function errMsg(e: unknown): string { return e instanceof Error ? e.message : String(e); }
-
-interface LoggerLike {
-  debug(...args: unknown[]): void;
-  info(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
-  error(...args: unknown[]): void;
-}
-
-// Console-based fallback logger
-const consoleLog: LoggerLike = {
-  debug: (...args: unknown[]) => console.debug('[ConfigValidator]', ...args),
-  info: (...args: unknown[]) => console.info('[ConfigValidator]', ...args),
-  warn: (...args: unknown[]) => console.warn('[ConfigValidator]', ...args),
-  error: (...args: unknown[]) => console.error('[ConfigValidator]', ...args)
-};
-
-// Lazy-initialized logger — resolves on first use
-let _log: LoggerLike | null = null;
-const getLog = (): LoggerLike => {
-  if (_log) return _log;
-  try {
-    _log = consoleLog;
-  } catch {
-    _log = consoleLog;
-  }
-  return _log;
-};
-
-// Proxy that lazily resolves the logger
-const log: LoggerLike = {
-  debug: (...args: unknown[]) => getLog().debug(...args),
-  info: (...args: unknown[]) => getLog().info(...args),
-  warn: (...args: unknown[]) => getLog().warn(...args),
-  error: (...args: unknown[]) => getLog().error(...args),
-};
 
 import type { EnvironmentMap } from '../types/environment';
 import type { EnvironmentSchema } from '../types/environment';
@@ -95,24 +57,6 @@ interface AnalysisError {
 }
 
 type AnalysisResult = EnvAnalysisResult | MainAnalysisResult | AnalysisError;
-
-
-interface ValidationSummary {
-  sources: number;
-  rules: number;
-  proxyRules: number;
-  environments: number;
-  variables: number;
-  isMultiFile: boolean;
-}
-
-interface ValidationResult {
-  valid: boolean;
-  error?: string;
-  configFile?: AnalysisResult;
-  envFile?: AnalysisResult | null;
-  summary?: ValidationSummary;
-}
 
 /**
  * Helper function to calculate environment count
@@ -185,94 +129,13 @@ async function analyzeConfigFile(content: string, isEnvFile: boolean = false, is
       rawData: data
     };
   } catch (error: unknown) {
-    log.error('Config file analysis failed:', error);
+    console.error('[ConfigValidator] Config file analysis failed:', error);
     return {
       valid: false,
-      error: errMsg(error)
+      error: error instanceof Error ? error.message : String(error)
     };
   }
 }
 
-/**
- * Validate Git workspace configuration
- */
-async function validateGitWorkspaceConfig(configPath: string, envPath?: string): Promise<ValidationResult> {
-  const { promises: fsPromises } = await import('fs');
-
-  try {
-    log.info('Validating Git workspace config:', { configPath, envPath });
-
-    // Read and validate main config file
-    const configContent: string = await fsPromises.readFile(configPath, 'utf8');
-    const configResult = await analyzeConfigFile(configContent, false, !!envPath);
-
-    if (!configResult.valid) {
-      return {
-        valid: false,
-        error: `Main config file validation failed: ${configResult.error}`
-      };
-    }
-
-    let envResult: AnalysisResult | null = null;
-    if (envPath) {
-      // Read and validate environment file
-      const envContent: string = await fsPromises.readFile(envPath, 'utf8');
-      envResult = await analyzeConfigFile(envContent, true, true);
-
-      if (!envResult.valid) {
-        return {
-          valid: false,
-          error: `Environment file validation failed: ${envResult.error}`
-        };
-      }
-    }
-
-    // Narrow via discriminant: configResult.valid is true (checked above), kind is 'main' (isEnvFile=false)
-    if (configResult.kind !== 'main') return { valid: false, error: 'Unexpected analysis result type' };
-    const totalSources = configResult.sourceCount;
-    const totalRules = configResult.ruleCount;
-    const totalProxyRules = configResult.proxyRuleCount;
-    const totalEnvironments = Math.max(configResult.environmentCount, envResult?.valid ? envResult.environmentCount : 0);
-    const totalVariables = Math.max(configResult.variableCount, envResult?.valid ? envResult.variableCount : 0);
-
-    return {
-      valid: true,
-      configFile: configResult,
-      envFile: envResult,
-      summary: {
-        sources: totalSources,
-        rules: totalRules,
-        proxyRules: totalProxyRules,
-        environments: totalEnvironments,
-        variables: totalVariables,
-        isMultiFile: !!envPath
-      }
-    };
-  } catch (error: unknown) {
-    log.error('Git workspace validation error:', error);
-    return {
-      valid: false,
-      error: errMsg(error)
-    };
-  }
-}
-
-/**
- * Read and validate multi-file configuration
- */
-async function readAndValidateMultiFileConfig(configPath: string, envPath: string): Promise<ValidationResult> {
-  return await validateGitWorkspaceConfig(configPath, envPath);
-}
-
-export {
-  analyzeConfigFile,
-  validateGitWorkspaceConfig,
-  readAndValidateMultiFileConfig
-};
+export { analyzeConfigFile };
 export type { AnalysisResult, MainAnalysisResult, EnvAnalysisResult, AnalysisError, ConfigData };
-
-export default {
-  analyzeConfigFile,
-  validateGitWorkspaceConfig,
-  readAndValidateMultiFileConfig
-};
