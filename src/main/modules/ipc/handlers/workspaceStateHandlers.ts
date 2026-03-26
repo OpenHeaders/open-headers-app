@@ -216,5 +216,61 @@ export function registerWorkspaceStateHandlers(): void {
         }
     });
 
+    // ── Environment CRUD ───────────────────────────────────────────
+
+    ipcMain.handle('workspace-state:get-environment-state', () => {
+        return workspaceStateService.getEnvironmentState();
+    });
+
+    ipcMain.handle('workspace-state:create-environment', async (_event, name: string) => {
+        try {
+            await workspaceStateService.createEnvironment(name);
+            return { success: true };
+        } catch (error) {
+            log.error('Create environment failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
+    ipcMain.handle('workspace-state:delete-environment', async (_event, name: string) => {
+        try {
+            await workspaceStateService.deleteEnvironment(name);
+            return { success: true };
+        } catch (error) {
+            log.error('Delete environment failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
+    ipcMain.handle('workspace-state:switch-environment', async (_event, name: string) => {
+        try {
+            await workspaceStateService.switchEnvironment(name);
+            return { success: true };
+        } catch (error) {
+            log.error('Switch environment failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
+    ipcMain.handle('workspace-state:set-variable', async (_event, name: string, value: string | null, environment: string, isSecret: boolean) => {
+        try {
+            await workspaceStateService.setVariable(name, value, environment, isSecret);
+            return { success: true };
+        } catch (error) {
+            log.error('Set variable failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
+    ipcMain.handle('workspace-state:batch-set-variables', async (_event, environment: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>) => {
+        try {
+            await workspaceStateService.batchSetVariables(environment, variables);
+            return { success: true };
+        } catch (error) {
+            log.error('Batch set variables failed:', error);
+            return { success: false, error: errorMessage(error) };
+        }
+    });
+
     log.info('Workspace state IPC handlers registered');
 }

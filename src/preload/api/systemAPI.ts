@@ -27,14 +27,9 @@ const systemAPI = {
     quitApp: (): void => ipcRenderer.send('quitApp'),
     restartApp: (): void => ipcRenderer.send('restartApp'),
 
-    send: (channel: string, ...args: unknown[]): void => {
-        const allowedChannels = [
-            'environment-switched',
-            'environment-variables-changed'
-        ];
-        if (allowedChannels.includes(channel)) {
-            ipcRenderer.send(channel, ...args);
-        }
+    send: (_channel: string, ..._args: unknown[]): void => {
+        // Environment IPC channels removed — main process now owns environment state.
+        // All environment mutations go through workspace-state:* IPC handlers.
     },
 
     signalRendererReady: (): void => {

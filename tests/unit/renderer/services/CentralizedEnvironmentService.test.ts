@@ -3,7 +3,7 @@
  *
  * CentralizedEnvironmentService.ts uses mixed CJS/ESM syntax (require + export)
  * which prevents direct import in vitest. Instead, we test the component managers
- * individually: EnvironmentVariableManager, EnvironmentStateManager, plus pure
+ * individually: EnvironmentVariableManager, plus pure
  * state-management patterns that mirror CES behaviour.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -19,48 +19,11 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-// Mock BaseStateManager (required by EnvironmentStateManager)
-vi.mock('../../../../src/renderer/services/workspace/BaseStateManager', () => {
-  type StateListener = (state: Record<string, unknown>, changedKeys: string[]) => void;
-  return { default: class {
-    listeners: Set<StateListener>;
-    state: Record<string, unknown>;
-    log: { debug: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> };
-    serviceName: string;
-    constructor(name?: string, initialState?: Record<string, unknown>) {
-      this.serviceName = name || '';
-      this.listeners = new Set();
-      this.state = initialState || {};
-      this.log = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
-    }
-    subscribe(listener: StateListener) {
-      this.listeners.add(listener);
-      listener(this.getState(), []);
-      return () => this.listeners.delete(listener);
-    }
-    notifyListeners(changedKeys: string[] = []) {
-      const state = this.getState();
-      this.listeners.forEach((l: StateListener) => { try { l(state, changedKeys); } catch {} });
-    }
-    getState() { return JSON.parse(JSON.stringify(this.state)); }
-    setState(updates: Record<string, unknown>, changedKeys: string[] = []) {
-      this.state = { ...this.state, ...updates };
-      this.notifyListeners(changedKeys);
-    }
-    cleanup() { this.listeners.clear(); }
-  } };
-});
-
 // Import the CJS sub-managers
 const EnvironmentVariableManagerModule = await import(
   '../../../../src/renderer/services/environment/EnvironmentVariableManager'
 );
 const EnvironmentVariableManager = EnvironmentVariableManagerModule.default;
-
-const EnvironmentStateManagerModule = await import(
-  '../../../../src/renderer/services/environment/EnvironmentStateManager'
-);
-const EnvironmentStateManager = EnvironmentStateManagerModule.default;
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic factory helpers
@@ -471,187 +434,6 @@ describe('EnvironmentVariableManager', () => {
 });
 
 // ======================================================================
-// EnvironmentStateManager
-// ======================================================================
-describe('EnvironmentStateManager', () => {
-  let esm: InstanceType<typeof EnvironmentStateManager>;
-
-  beforeEach(() => {
-    esm = new EnvironmentStateManager();
-  });
-
-  afterEach(() => {
-    esm.cleanup();
-  });
-
-  describe('initial state', () => {
-    it('has correct defaults with full shape assertion', () => {
-      const state = esm.getState();
-      expect(state).toEqual({
-        currentWorkspaceId: 'default-personal',
-        environments: { Default: {} },
-        activeEnvironment: 'Default',
-        isLoading: false,
-        isReady: false,
-        error: null,
-      });
-    });
-
-    it('has no initial data loaded', () => {
-      expect(esm.hasInitialData()).toBe(false);
-    });
-
-    it('has no init promise', () => {
-      expect(esm.getInitPromise()).toBeNull();
-    });
-  });
-
-  describe('setState()', () => {
-    it('merges enterprise workspace state updates', () => {
-      esm.setState({
-        currentWorkspaceId: ENTERPRISE_WORKSPACE_ID,
-        environments: makeEnterpriseEnvironments(),
-        activeEnvironment: 'Production',
-        isLoading: false,
-        isReady: true,
-      });
-      const state = esm.getState();
-      expect(state.currentWorkspaceId).toBe(ENTERPRISE_WORKSPACE_ID);
-      expect(state.activeEnvironment).toBe('Production');
-      expect(state.isReady).toBe(true);
-      expect(Object.keys(state.environments)).toEqual([
-        'Default',
-        'Staging — EU Region',
-        'QA — Integration Tests',
-        'Pre-production',
-        'Production',
-      ]);
-    });
-
-    it('notifies listeners on state change', () => {
-      const listener = vi.fn();
-      esm.subscribe(listener);
-      listener.mockClear();
-
-      esm.setState({ isReady: true, currentWorkspaceId: ENTERPRISE_WORKSPACE_ID });
-      expect(listener).toHaveBeenCalledTimes(1);
-      const [state] = listener.mock.calls[0];
-      expect(state.isReady).toBe(true);
-      expect(state.currentWorkspaceId).toBe(ENTERPRISE_WORKSPACE_ID);
-    });
-  });
-
-  describe('getState()', () => {
-    it('returns an immutable copy — mutations do not affect internal state', () => {
-      esm.setState({ environments: makeEnterpriseEnvironments() });
-      const state = esm.getState();
-      state.environments['Hacked'] = {};
-      state.currentWorkspaceId = 'hacked-workspace';
-      const fresh = esm.getState();
-      expect(fresh.environments['Hacked']).toBeUndefined();
-      expect(fresh.currentWorkspaceId).toBe('default-personal');
-    });
-  });
-
-  describe('isReady()', () => {
-    it('returns false when not ready', () => {
-      expect(esm.isReady()).toBe(false);
-    });
-
-    it('returns false when loading even if isReady flag is true', () => {
-      esm.state.isReady = true;
-      esm.state.isLoading = true;
-      expect(esm.isReady()).toBe(false);
-    });
-
-    it('returns true when ready and not loading', () => {
-      esm.state.isReady = true;
-      esm.state.isLoading = false;
-      expect(esm.isReady()).toBe(true);
-    });
-  });
-
-  describe('init promise management', () => {
-    it('setInitPromise / getInitPromise round-trip', () => {
-      const promise = Promise.resolve(true);
-      esm.setInitPromise(promise);
-      expect(esm.getInitPromise()).toBe(promise);
-    });
-  });
-
-  describe('load promise management', () => {
-    it('manages promises per workspace ID', () => {
-      const promiseA = Promise.resolve(true);
-      const promiseB = Promise.resolve(true);
-      esm.setLoadPromise(ENTERPRISE_WORKSPACE_ID, promiseA);
-      esm.setLoadPromise('ws-other-workspace', promiseB);
-
-      expect(esm.getLoadPromise(ENTERPRISE_WORKSPACE_ID)).toBe(promiseA);
-      expect(esm.getLoadPromise('ws-other-workspace')).toBe(promiseB);
-      expect(esm.isLoadingWorkspace(ENTERPRISE_WORKSPACE_ID)).toBe(true);
-
-      esm.clearLoadPromise(ENTERPRISE_WORKSPACE_ID);
-      expect(esm.isLoadingWorkspace(ENTERPRISE_WORKSPACE_ID)).toBe(false);
-      expect(esm.isLoadingWorkspace('ws-other-workspace')).toBe(true);
-    });
-
-    it('returns undefined for unknown workspace', () => {
-      expect(esm.getLoadPromise('ws-unknown')).toBeUndefined();
-    });
-  });
-
-  describe('initial data tracking', () => {
-    it('starts without initial data and marks it loaded', () => {
-      expect(esm.hasInitialData()).toBe(false);
-      esm.markInitialDataLoaded();
-      expect(esm.hasInitialData()).toBe(true);
-    });
-  });
-
-  describe('subscribe', () => {
-    it('calls listener immediately with current state including defaults', () => {
-      const listener = vi.fn();
-      esm.subscribe(listener);
-      expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith(
-        expect.objectContaining({
-          currentWorkspaceId: 'default-personal',
-          environments: { Default: {} },
-          activeEnvironment: 'Default',
-          isLoading: false,
-          isReady: false,
-          error: null,
-        }),
-        []
-      );
-    });
-
-    it('returns an unsubscribe function that prevents future notifications', () => {
-      const listener = vi.fn();
-      const unsub = esm.subscribe(listener);
-      listener.mockClear();
-
-      unsub();
-      esm.setState({ isReady: true });
-      expect(listener).not.toHaveBeenCalled();
-    });
-
-    it('supports multiple concurrent listeners', () => {
-      const listenerA = vi.fn();
-      const listenerB = vi.fn();
-      esm.subscribe(listenerA);
-      esm.subscribe(listenerB);
-      listenerA.mockClear();
-      listenerB.mockClear();
-
-      esm.setState({ activeEnvironment: 'Production' });
-      expect(listenerA).toHaveBeenCalledTimes(1);
-      expect(listenerB).toHaveBeenCalledTimes(1);
-    });
-  });
-});
-
-// ======================================================================
 // CES-style patterns — pure state management logic
 // ======================================================================
 describe('CES state management patterns', () => {
@@ -786,20 +568,4 @@ describe('CES state management patterns', () => {
     });
   });
 
-  describe('waitForReady pattern', () => {
-    it('resolves immediately when already ready', async () => {
-      const esm = new EnvironmentStateManager();
-      esm.setState({ isReady: true });
-      const result = await esm.waitForReady(100);
-      expect(result).toBe(true);
-      esm.cleanup();
-    });
-
-    it('throws on timeout when not ready', async () => {
-      vi.useRealTimers();
-      const esm = new EnvironmentStateManager();
-      await expect(esm.waitForReady(100)).rejects.toThrow('Timeout waiting for environment service to be ready');
-      esm.cleanup();
-    });
-  });
 });

@@ -12,6 +12,7 @@ import type { Source } from '../../../types/source';
 import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../types/workspace';
 import type { RulesCollection, RulesStorage } from '../../../types/rules';
 import type { ProxyRule } from '../../../types/proxy';
+import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
 
 const { createLogger } = mainLogger;
 const log = createLogger('StatePersistence');
@@ -126,6 +127,28 @@ export async function saveAll(
         log.debug(`Saved ${saves.length} data types`);
     }
     return saves.length;
+}
+
+// ── Environments (environments.json) ──────────────────────────────
+
+export async function loadEnvironments(appDataPath: string, workspaceId: string): Promise<EnvironmentsFile> {
+    const envPath = path.join(workspaceDir(appDataPath, workspaceId), 'environments.json');
+    try {
+        const data = await atomicWriter.readJson<EnvironmentsFile>(envPath);
+        if (data?.environments && Object.keys(data.environments).length > 0) {
+            return {
+                environments: data.environments,
+                activeEnvironment: data.activeEnvironment || 'Default'
+            };
+        }
+    } catch (_e) { /* fall through */ }
+
+    return { environments: { Default: {} }, activeEnvironment: 'Default' };
+}
+
+export async function saveEnvironments(appDataPath: string, workspaceId: string, data: EnvironmentsFile): Promise<void> {
+    const envPath = path.join(workspaceDir(appDataPath, workspaceId), 'environments.json');
+    await atomicWriter.writeJson(envPath, data, { pretty: true });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────

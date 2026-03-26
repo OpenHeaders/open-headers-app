@@ -35,9 +35,8 @@ vi.mock('../../../../src/utils/atomicFileWriter.js', () => ({
 
 vi.mock('../../../../src/config/version', () => ({ DATA_FORMAT_VERSION: '3.0.0' }));
 
-// Mock fs.promises used by loadAndApplyEnvVars and mkdir
+// Mock fs.promises used by mkdir in crudCreateWorkspace
 const mockMkdir = vi.fn().mockResolvedValue(undefined);
-const mockReadFile = vi.fn().mockRejectedValue(new Error('ENOENT'));
 vi.mock('fs', async () => {
     const actual = await vi.importActual<typeof fs>('fs');
     return {
@@ -47,13 +46,11 @@ vi.mock('fs', async () => {
             promises: {
                 ...actual.promises,
                 mkdir: (...args: unknown[]) => mockMkdir(...args),
-                readFile: (...args: unknown[]) => mockReadFile(...args),
             },
         },
         promises: {
             ...actual.promises,
             mkdir: (...args: unknown[]) => mockMkdir(...args),
-            readFile: (...args: unknown[]) => mockReadFile(...args),
         },
     };
 });
@@ -150,8 +147,8 @@ function createConfiguredService() {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    // Default: environments.json read fails (file doesn't exist) — loadAndApplyEnvVars uses fallback
-    mockReadFile.mockRejectedValue(new Error('ENOENT'));
+    // Default: readJson returns null (file doesn't exist) — loadEnvironmentData uses fallback
+    mockReadJson.mockResolvedValue(null);
 });
 
 describe('WorkspaceStateService.onCliWorkspaceCreated', () => {
@@ -239,16 +236,21 @@ describe('WorkspaceStateService.onCliWorkspaceCreated', () => {
     it('loads env vars into envResolver before loading workspace data', async () => {
         const { service, envResolver } = createConfiguredService();
 
-        // Simulate environments.json existing with populated values
-        mockReadFile.mockResolvedValueOnce(JSON.stringify({
-            environments: {
-                Default: {
-                    API_HOST: { value: 'api.openheaders.io', isSecret: false },
-                    API_KEY: { value: 'secret123', isSecret: true },
-                }
-            },
-            activeEnvironment: 'Default'
-        }));
+        // Simulate environments.json existing with populated values via atomicWriter.readJson
+        mockReadJson.mockImplementation(async (filePath: string) => {
+            if (typeof filePath === 'string' && filePath.includes('environments.json')) {
+                return {
+                    environments: {
+                        Default: {
+                            API_HOST: { value: 'api.openheaders.io', isSecret: false },
+                            API_KEY: { value: 'secret123', isSecret: true },
+                        }
+                    },
+                    activeEnvironment: 'Default'
+                };
+            }
+            return null;
+        });
 
         await service.onCliWorkspaceCreated({ workspaceId, workspaceConfig, syncData });
 

@@ -11,6 +11,7 @@ import type { Source, SourceUpdate } from '../../types/source';
 import type { HeaderRule } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
 import type { Workspace, WorkspaceType } from '../../types/workspace';
+import type { EnvironmentMap } from '../../types/environment';
 import type { WorkspaceState } from '../../services/workspace/WorkspaceStateService';
 
 export interface WorkspaceStatePatch {
@@ -24,6 +25,8 @@ export interface WorkspaceStatePatch {
     error?: string | null;
     initialized?: boolean;
     isWorkspaceSwitching?: boolean;
+    environments?: EnvironmentMap;
+    activeEnvironment?: string;
 }
 
 export interface SwitchProgress {
@@ -119,6 +122,25 @@ export function createWorkspaceStateAPI() {
 
         syncWorkspace: (workspaceId: string): Promise<OperationResult> =>
             ipcRenderer.invoke('workspace-state:sync-workspace', workspaceId),
+
+        // Environment CRUD
+        getEnvironmentState: (): Promise<{ environments: EnvironmentMap; activeEnvironment: string }> =>
+            ipcRenderer.invoke('workspace-state:get-environment-state'),
+
+        createEnvironment: (name: string): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:create-environment', name),
+
+        deleteEnvironment: (name: string): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:delete-environment', name),
+
+        switchEnvironment: (name: string): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:switch-environment', name),
+
+        setVariable: (name: string, value: string | null, environment: string, isSecret: boolean): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:set-variable', name, value, environment, isSecret),
+
+        batchSetVariables: (environment: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>): Promise<OperationResult> =>
+            ipcRenderer.invoke('workspace-state:batch-set-variables', environment, variables),
 
         // IPC event listeners (main → renderer)
         onStatePatch: (callback: (patch: WorkspaceStatePatch) => void): (() => void) => {

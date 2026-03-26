@@ -31,6 +31,7 @@ function makeState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
         workspaces: [], activeWorkspaceId: 'default-personal',
         isWorkspaceSwitching: false, syncStatus: {},
         sources: [], rules: { header: [], request: [], response: [] }, proxyRules: [],
+        environments: { Default: {} }, activeEnvironment: 'Default',
         ...overrides,
     };
 }

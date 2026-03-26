@@ -14,7 +14,6 @@
 
 import fs from 'fs';
 import path from 'path';
-import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import type { Source } from '../../types/source';
 import type { RulesCollection } from '../../types/rules';
@@ -90,29 +89,15 @@ class WSEnvironmentHandler {
     }
 
     /**
-     * Setup environment change listener — re-broadcasts rules to WebSocket
-     * clients when env vars affect header rules.
+     * Setup environment change listener.
+     *
+     * Environment changes are now handled by WorkspaceStateService which calls
+     * broadcastToServices() after env var changes. That pushes updated rules
+     * to the WS service directly. This method is kept as a no-op for backward
+     * compatibility with callers.
      */
     setupEnvironmentListener(): void {
-        try {
-            const { ipcMain } = electron;
-
-            const broadcastIfEnvVars = () => {
-                if (this.wsService.rules && this.wsService.rules.header) {
-                    const hasEnvVars = this.wsService.rules.header.some((rule) => rule.hasEnvVars);
-                    if (hasEnvVars) {
-                        this.wsService.ruleHandler.broadcastRules();
-                    }
-                }
-            };
-
-            ipcMain.on('environment-variables-changed', broadcastIfEnvVars);
-            ipcMain.on('environment-switched', broadcastIfEnvVars);
-
-            log.info('Environment change listener setup for WebSocket service');
-        } catch (error: unknown) {
-            log.warn('Could not setup environment listener:', error);
-        }
+        log.info('Environment change listener: no-op (handled by WorkspaceStateService.broadcastToServices)');
     }
 
     // ── Private ──────────────────────────────────────────────────

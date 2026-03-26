@@ -1,12 +1,8 @@
-import path from 'path';
 import crypto from 'crypto';
-import electron from 'electron';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
-import atomicWriter from '../../utils/atomicFileWriter';
 import type { InferOutput } from 'valibot';
 import { errorMessage } from '../../types/common';
-import type { EnvironmentsFile } from '../../types/environment';
 import type { AuthType } from '../../types/workspace';
 import type { JoinWorkspaceDataSchema, EnvironmentImportDataSchema } from '../../validation/cli-schemas';
 
@@ -14,8 +10,6 @@ const VALID_AUTH_TYPES = new Set<string>(['none', 'token', 'ssh', 'ssh-key', 'ba
 function toAuthType(value: string | undefined): AuthType {
     return VALID_AUTH_TYPES.has(value || '') ? (value as AuthType) : 'none';
 }
-
-const { app } = electron;
 const { createLogger } = mainLogger;
 // Lazy-loaded to avoid circular dependencies at startup
 const getLazyDeps = async () => ({
@@ -131,59 +125,21 @@ class CliSetupHandler {
     /**
      * Import environment variables via CLI.
      *
-     * Merges new env data into the workspace's environments.json on disk,
-     * then notifies WorkspaceStateService so it updates envResolver, proxy,
-     * re-evaluates source dependencies, and activates/fetches ready sources.
+     * Delegates entirely to WorkspaceStateService.importEnvironments which
+     * merges incoming data into in-memory state, persists to disk, updates
+     * envResolver + proxy, re-evaluates source dependencies, and activates/fetches
+     * ready sources.
      */
     async importEnvironment(data: EnvironmentImportData): Promise<{ success: boolean; error?: string }> {
-        const { appLifecycle } = await getLazyDeps();
-        const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
-        if (!workspaceSettingsService) {
-            return { success: false, error: 'Services not ready' };
-        }
-
         if (!data || !data.environments) {
             return { success: false, error: 'Missing environments data' };
         }
 
         try {
-            const settings = await workspaceSettingsService.getSettings();
-            const workspaceId = settings.activeWorkspaceId || 'default-personal';
+            const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
+            await workspaceStateService.importEnvironments(data.environments);
 
-            const envPath = path.join(app.getPath('userData'), 'workspaces', workspaceId, 'environments.json');
-
-            // Read + merge env data (CLI-specific file I/O)
-            let existingData: EnvironmentsFile = { environments: { Default: {} }, activeEnvironment: 'Default' };
-            try {
-                const existing = await atomicWriter.readJson(envPath);
-                if (existing) existingData = existing as EnvironmentsFile;
-            } catch { /* File doesn't exist yet */ }
-
-            for (const [envName, variables] of Object.entries(data.environments)) {
-                if (!existingData.environments[envName]) {
-                    existingData.environments[envName] = {};
-                }
-                Object.assign(existingData.environments[envName], variables);
-            }
-
-            await atomicWriter.writeJson(envPath, existingData, { pretty: true });
-
-            const activeEnvName = existingData.activeEnvironment || 'Default';
-            const activeVars = existingData.environments[activeEnvName] || {};
-
-            log.info(`Imported ${Object.keys(data.environments).length} environment(s) into workspace ${workspaceId}`);
-
-            // Delegate state propagation to WorkspaceStateService:
-            // updates envResolver + proxy, re-evaluates source deps, activates sources
-            try {
-                const workspaceStateService = (await import('../workspace/WorkspaceStateService')).default;
-                await workspaceStateService.onEnvironmentVariablesChanged(activeVars);
-            } catch (err: unknown) {
-                log.warn('Failed to notify WorkspaceStateService of env change:', errorMessage(err));
-            }
-
-            this._notifyRenderer('environments-structure-changed', { workspaceId, timestamp: Date.now() });
-
+            log.info(`Imported ${Object.keys(data.environments).length} environment(s)`);
             return { success: true };
         } catch (err: unknown) {
             log.error('Environment import failed:', err);

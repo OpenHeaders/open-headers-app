@@ -16,9 +16,11 @@ export {
     loadSources,
     loadRules,
     loadProxyRules,
+    loadEnvironments,
     saveSources,
     saveRules,
     saveProxyRules,
+    saveEnvironments,
     saveAll,
 } from './StatePersistence';
 export type { WorkspacesConfig } from './StatePersistence';

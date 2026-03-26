@@ -519,24 +519,9 @@ function setupIPC(
         }
     });
 
-    // Environment events — delegate to WorkspaceStateService which owns all state.
-    // It re-evaluates source dependencies, resets circuit breakers, updates proxy,
-    // and triggers fetches. Works even without a renderer window.
-    ipcMain.on('environment-switched', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-        log.info('Environment switched, notifying WorkspaceStateService');
-        if (data && data.variables) {
-            const workspaceStateService = (await import('./services/workspace/WorkspaceStateService')).default;
-            await workspaceStateService.onEnvironmentVariablesChanged(data.variables);
-        }
-    });
-
-    ipcMain.on('environment-variables-changed', async (_event: IpcMainEvent, data: { variables?: Record<string, string> }) => {
-        log.info('Environment variables changed, notifying WorkspaceStateService');
-        if (data && data.variables) {
-            const workspaceStateService = (await import('./services/workspace/WorkspaceStateService')).default;
-            await workspaceStateService.onEnvironmentVariablesChanged(data.variables);
-        }
-    });
+    // Environment events — main process (WorkspaceStateService) now owns all environment
+    // state directly. No IPC listeners needed — CRUD operations come through
+    // workspace-state:* IPC handlers registered in workspaceStateHandlers.ts.
 }
 
 // ─── Application Menu ───────────────────────────────────────────────────────
