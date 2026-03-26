@@ -480,7 +480,7 @@ test.describe('IPC Communication', () => {
                 hasLoadRecordings: typeof api.loadRecordings === 'function',
                 hasProxyStatus: typeof api.proxyStatus === 'function',
                 hasWsGetConnectionStatus: typeof api.wsGetConnectionStatus === 'function',
-                hasMakeHttpRequest: typeof api.makeHttpRequest === 'function',
+                hasHttpRequest: typeof api.httpRequest === 'object' && typeof api.httpRequest.executeRequest === 'function',
                 hasGetNetworkState: typeof api.getNetworkState === 'function',
                 hasOpenFileDialog: typeof api.openFileDialog === 'function',
                 hasSaveToStorage: typeof api.saveToStorage === 'function',
@@ -494,7 +494,7 @@ test.describe('IPC Communication', () => {
         expect(methods.hasLoadRecordings).toBe(true);
         expect(methods.hasProxyStatus).toBe(true);
         expect(methods.hasWsGetConnectionStatus).toBe(true);
-        expect(methods.hasMakeHttpRequest).toBe(true);
+        expect(methods.hasHttpRequest).toBe(true);
         expect(methods.hasGetNetworkState).toBe(true);
         expect(methods.hasOpenFileDialog).toBe(true);
         expect(methods.hasSaveToStorage).toBe(true);
@@ -711,16 +711,16 @@ test.describe('Git Integration', () => {
 // TOTP Generator
 // ---------------------------------------------------------------------------
 test.describe('TOTP Generator', () => {
-    test('generateTOTP function is exposed on window', async () => {
+    test('httpRequest.generateTotpPreview is exposed via electronAPI', async () => {
         const hasTOTP = await page.evaluate(() => {
-            return typeof window.generateTOTP === 'function';
+            return typeof window.electronAPI.httpRequest.generateTotpPreview === 'function';
         });
         expect(hasTOTP).toBe(true);
     });
 
     test('can generate a TOTP code with a test secret', async () => {
         const totp = await page.evaluate(async () => {
-            return await window.generateTOTP('JBSWY3DPEHPK3PXP');
+            return await window.electronAPI.httpRequest.generateTotpPreview('JBSWY3DPEHPK3PXP');
         });
 
         // TOTP should be a 6-digit string

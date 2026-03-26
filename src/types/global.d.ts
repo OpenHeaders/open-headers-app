@@ -9,7 +9,7 @@
 import type { Source, SourceRequestOptions } from './source';
 import type { AppSettings } from './settings';
 import type { NetworkInterfaceInfo } from 'os';
-import type { HttpRequestOptions } from './http';
+import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
 import type { ProxyRule, CacheStats, CacheEntry } from './proxy';
 import type { HeaderRule, RulesStorage } from './rules';
 import type { Workspace, WorkspaceAuthData, CommitInfo, TeamWorkspaceInvite, WorkspaceDataUpdatedData, WorkspaceSyncCompletedData, CliWorkspaceJoinedData } from './workspace';
@@ -252,7 +252,12 @@ declare global {
       version: number;
       confidence?: number;
     }>;
-    makeHttpRequest: (url: string, method: string, options?: HttpRequestOptions) => Promise<string>;
+    // HTTP request execution (main-process owned)
+    httpRequest: {
+        executeRequest: (spec: HttpRequestSpec) => Promise<HttpRequestResult>;
+        getTotpCooldown: (sourceId: string) => Promise<TotpCooldownInfo>;
+        generateTotpPreview: (secret: string) => Promise<string>;
+    };
 
     // Shortcuts
     disableRecordingHotkey: () => Promise<void>;
@@ -452,7 +457,6 @@ declare global {
   interface Window {
     electronAPI: ElectronAPI;
     startupData: StartupData;
-    generateTOTP: (secret: string, period?: number, digits?: number, timeOffset?: number) => Promise<string>;
     rrwebPlayer?: RRWebPlayerModule | RRWebPlayerConstructor;
   }
 }

@@ -22,6 +22,8 @@ vi.mock('../../../../src/utils/mainLogger', () => ({
 }));
 
 import { SourceRefreshService } from '../../../../src/services/source-refresh/SourceRefreshService';
+import { HttpRequestService } from '../../../../src/services/http/HttpRequestService';
+import { TotpCooldownTracker } from '../../../../src/services/http/TotpCooldownTracker';
 import type { Source } from '../../../../src/types/source';
 
 function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
@@ -56,7 +58,8 @@ describe('SourceRefreshService', () => {
         service = new SourceRefreshService();
         envResolver = makeEnvResolver();
         service.initialize();
-        service.configure(envResolver, null);
+        const httpRequestService = new HttpRequestService(envResolver, new TotpCooldownTracker());
+        service.configure(null, httpRequestService);
     });
 
     afterEach(async () => {

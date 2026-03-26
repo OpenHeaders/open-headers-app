@@ -98,7 +98,7 @@ if (!gotTheLock) {
         const [
             windowManager, trayManager, appLifecycle, globalShortcuts, autoUpdater,
             networkHandlers, fileHandlers, storageHandlers, settingsHandlers, systemHandlers,
-            httpHandlers, recordingHandlers, proxyHandlers, workspaceHandlers, gitHandlers,
+            httpRequestHandlers, recordingHandlers, proxyHandlers, workspaceHandlers, gitHandlers,
         ] = await Promise.all([
             import('./main/modules/window/windowManager').then(m => m.default),
             import('./main/modules/tray/trayManager').then(m => m.default),
@@ -110,7 +110,7 @@ if (!gotTheLock) {
             import('./main/modules/ipc/handlers/storageHandlers').then(m => m.default),
             import('./main/modules/ipc/handlers/settingsHandlers').then(m => m.default),
             import('./main/modules/ipc/handlers/systemHandlers').then(m => m.default),
-            import('./main/modules/ipc/handlers/httpHandlers').then(m => m.default),
+            import('./main/modules/ipc/handlers/httpRequestHandlers').then(m => m.default),
             import('./main/modules/ipc/handlers/recordingHandlers').then(m => m.default),
             import('./main/modules/ipc/handlers/proxyHandlers').then(m => m.default),
             import('./main/modules/ipc/handlers/workspaceHandlers').then(m => m.default),
@@ -119,7 +119,7 @@ if (!gotTheLock) {
 
         setupIPC(
             fileHandlers, storageHandlers, settingsHandlers, systemHandlers,
-            httpHandlers, recordingHandlers, proxyHandlers, workspaceHandlers,
+            httpRequestHandlers, recordingHandlers, proxyHandlers, workspaceHandlers,
             gitHandlers, appLifecycle, autoUpdater, globalShortcuts,
             networkHandlers, windowManager, protocolHandler
         );
@@ -306,7 +306,7 @@ function setupIPC(
     storageHandlers: typeof import('./main/modules/ipc/handlers/storageHandlers').default,
     settingsHandlers: typeof import('./main/modules/ipc/handlers/settingsHandlers').default,
     systemHandlers: typeof import('./main/modules/ipc/handlers/systemHandlers').default,
-    httpHandlers: typeof import('./main/modules/ipc/handlers/httpHandlers').default,
+    httpRequestHandlers: typeof import('./main/modules/ipc/handlers/httpRequestHandlers').default,
     recordingHandlers: typeof import('./main/modules/ipc/handlers/recordingHandlers').default,
     proxyHandlers: typeof import('./main/modules/ipc/handlers/proxyHandlers').default,
     workspaceHandlers: typeof import('./main/modules/ipc/handlers/workspaceHandlers').default,
@@ -359,7 +359,11 @@ function setupIPC(
     ipcMain.handle('getNetworkState', networkHandlers.getNetworkState);
     ipcMain.handle('forceNetworkCheck', networkHandlers.forceNetworkCheck);
     ipcMain.handle('getSystemState', networkHandlers.getSystemState);
-    ipcMain.handle('makeHttpRequest', httpHandlers.handleMakeHttpRequest);
+
+    // HTTP request execution (main-process owned)
+    ipcMain.handle('http:execute-request', httpRequestHandlers.handleExecuteRequest);
+    ipcMain.handle('http:get-totp-cooldown', httpRequestHandlers.handleGetTotpCooldown);
+    ipcMain.handle('http:generate-totp-preview', httpRequestHandlers.handleGenerateTotpPreview);
 
     // Source refresh (main-process owned)
     void import('./main/modules/ipc/handlers/sourceRefreshHandlers').then(({ default: sourceRefreshHandlers }) => {

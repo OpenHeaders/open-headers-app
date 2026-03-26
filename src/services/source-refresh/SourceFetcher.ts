@@ -1,241 +1,70 @@
 /**
- * SourceFetcher — performs a single HTTP fetch for a source in the main process.
+ * SourceFetcher — adapts a Source object into an HttpRequestSpec and
+ * delegates execution to HttpRequestService.
  *
- * Resolves env-var templates, generates TOTP codes, makes the HTTP request
- * via electron.net, and applies JSON filters. No scheduling or retry logic —
- * that belongs in SourceRefreshService.
+ * Owns the Source → request mapping and the "throw on 4xx/5xx" policy
+ * that SourceRefreshService expects. No direct HTTP or TOTP logic.
  */
 
-import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
-import { TOTPGenerator } from '../../shared/totpGenerator';
-import { applyJsonFilter } from '../../shared/jsonFilter';
-import type { Source, SourceRequestOptions } from '../../types/source';
+import type { HttpRequestService } from '../http/HttpRequestService';
+import type { Source } from '../../types/source';
+import type { HttpRequestSpec } from '../../types/http';
 import type { FetchResult } from '../../types/source-refresh';
 
-const { net } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('SourceFetcher');
 
-const totpGenerator = new TOTPGenerator();
-
-interface EnvironmentResolver {
-    loadEnvironmentVariables(): Record<string, string>;
-    resolveTemplate(template: string, variables: Record<string, string>): string;
-}
-
-/**
- * Encode a form body from the UI's "key:value\n" line format into proper
- * application/x-www-form-urlencoded "key=value&key2=value2" format.
- * Mirrors httpHandlers._processFormData() which the old renderer-based fetch used.
- */
-export function encodeFormBody(body: string): string {
-    // Already in key=value& format
-    if (body.includes('=') && body.includes('&')) {
-        return body;
-    }
-    // key=value with newline separators
-    if (body.includes('=') && body.includes('\n')) {
-        return body.split('\n')
-            .filter(line => line.trim() !== '' && line.includes('='))
-            .join('&');
-    }
-    // key:value with newline separators (the standard UI format)
-    if (body.includes(':')) {
-        const params = new URLSearchParams();
-        for (const line of body.split('\n')) {
-            const trimmed = line.trim();
-            if (trimmed === '') continue;
-            const colonPos = trimmed.indexOf(':');
-            if (colonPos > 0) {
-                const key = trimmed.substring(0, colonPos).trim();
-                params.append(key, trimmed.substring(colonPos + 1).trim());
-            }
-        }
-        return params.toString();
-    }
-    return body;
-}
-
-/**
- * Resolve all {{VAR}} placeholders in a string using environment variables.
- */
-function resolveTemplateString(
-    text: string | undefined | null,
-    envVars: Record<string, string>,
-    resolver: EnvironmentResolver,
-    totpCode: string | null = null
-): string {
-    if (!text) return '';
-    let result = resolver.resolveTemplate(text, envVars);
-    if (totpCode) {
-        result = result.replace(/\[\[TOTP_CODE]]/g, totpCode);
-    }
-    return result;
-}
-
 /**
  * Fetch content for a single HTTP source.
+ *
+ * Delegates to HttpRequestService for the full pipeline
+ * (template resolution, TOTP, HTTP, JSON filter).
  */
 export async function fetchSourceContent(
     source: Source,
-    envResolver: EnvironmentResolver,
+    httpService: HttpRequestService,
     timeoutMs: number = 15000
 ): Promise<FetchResult> {
-    const envVars = envResolver.loadEnvironmentVariables();
-    const opts = source.requestOptions || {} as SourceRequestOptions;
-
-    // Generate TOTP if needed
-    let totpCode: string | null = null;
-    if (opts.totpSecret) {
-        const resolved = resolveTemplateString(opts.totpSecret, envVars, envResolver);
-        const normalizedSecret = resolved.replace(/\s/g, '').replace(/=/g, '');
-        totpCode = await totpGenerator.generate(normalizedSecret, 30, 6, 0);
-        if (!totpCode || totpCode === 'ERROR') {
-            throw new Error('Failed to generate TOTP code');
-        }
+    if (!httpService) {
+        throw new Error('HttpRequestService not available — cannot fetch source content');
     }
 
-    // Resolve URL
-    const url = resolveTemplateString(source.sourcePath, envVars, envResolver, totpCode);
-    if (!url || url === 'https://' || url === 'http://') {
-        throw new Error(`Invalid URL after variable substitution: "${url}"`);
+    const sourceId = String(source.sourceId);
+    const opts = source.requestOptions || {};
+
+    // Convert Source → HttpRequestSpec
+    const spec: HttpRequestSpec = {
+        url: source.sourcePath || '',
+        method: source.sourceMethod || 'GET',
+        headers: opts.headers,
+        queryParams: opts.queryParams,
+        body: opts.body,
+        contentType: opts.contentType,
+        totpSecret: opts.totpSecret,
+        jsonFilter: source.jsonFilter?.enabled
+            ? { enabled: true, path: source.jsonFilter.path || '' }
+            : undefined,
+        sourceId,
+        timeout: timeoutMs
+    };
+
+    log.info(`Fetching source ${sourceId}: ${spec.method} ${spec.url}`);
+
+    const result = await httpService.execute(spec);
+
+    // SourceRefreshService expects errors on 4xx/5xx
+    if (result.statusCode >= 400) {
+        throw new Error(`HTTP ${result.statusCode} error`);
     }
 
-    // Build headers
-    const headers: Record<string, string> = {};
-    if (opts.headers) {
-        for (const h of opts.headers) {
-            if (h.key) {
-                headers[h.key] = resolveTemplateString(h.value, envVars, envResolver, totpCode);
-            }
-        }
-    }
-
-    // Build query params
-    const parsedUrl = new URL(url);
-    if (opts.queryParams) {
-        for (const p of opts.queryParams) {
-            if (p.key) {
-                parsedUrl.searchParams.append(
-                    resolveTemplateString(p.key, envVars, envResolver, totpCode),
-                    resolveTemplateString(p.value, envVars, envResolver, totpCode)
-                );
-            }
-        }
-    }
-
-    // Build body
-    let body: string | undefined;
-    const method = source.sourceMethod || 'GET';
-    if (['POST', 'PUT', 'PATCH'].includes(method) && opts.body) {
-        body = resolveTemplateString(opts.body, envVars, envResolver, totpCode);
-    }
-
-    const contentType = opts.contentType || 'application/json';
-
-    // Encode form data: the UI stores form bodies as "key:value\n" lines.
-    // Convert to proper URL-encoded "key=value&key2=value2" format.
-    if (body && contentType === 'application/x-www-form-urlencoded') {
-        body = encodeFormBody(body);
-    }
-
-    log.info(`Fetching source ${source.sourceId}: ${method} ${parsedUrl.href}`);
-    log.debug(`Source ${source.sourceId} request details — Content-Type: ${contentType}, headers: ${JSON.stringify(Object.keys(headers))}, bodyLength: ${body?.length ?? 0}, envVarCount: ${Object.keys(envVars).length}, hasTOTP: ${!!totpCode}`);
-    log.debug(`Source ${source.sourceId} full headers: ${JSON.stringify(headers)}`);
-    log.debug(`Source ${source.sourceId} full body: ${body}`);
-    log.debug(`Source ${source.sourceId} envVars keys: ${JSON.stringify(Object.keys(envVars))}`);
-
-    // Make the HTTP request using electron.net
-    const { responseBody, responseHeaders, statusCode } = await new Promise<{
-        responseBody: string;
-        responseHeaders: Record<string, string>;
-        statusCode: number;
-    }>((resolve, reject) => {
-        try {
-            const request = net.request({
-                method,
-                url: parsedUrl.toString(),
-                redirect: 'follow'
-            });
-
-            const timeoutId = setTimeout(() => {
-                request.abort();
-                reject(new Error(`Request timed out after ${timeoutMs}ms`));
-            }, timeoutMs);
-
-            // Set headers
-            for (const [key, value] of Object.entries(headers)) {
-                request.setHeader(key, value);
-            }
-
-            if (body && contentType) {
-                request.setHeader('Content-Type', contentType);
-            }
-
-            request.setHeader('User-Agent', `OpenHeaders/${electron.app.getVersion()}`);
-
-            let data = '';
-            let status = 0;
-            let respHeaders: Record<string, string> = {};
-
-            request.on('response', (response) => {
-                clearTimeout(timeoutId);
-                status = response.statusCode;
-                // Electron headers are Record<string, string[]> — flatten to first value
-                const rawHeaders = response.headers as Record<string, string | string[]>;
-                for (const [key, val] of Object.entries(rawHeaders)) {
-                    respHeaders[key] = Array.isArray(val) ? val[0] : val;
-                }
-
-                response.on('data', (chunk: Buffer) => {
-                    data += chunk.toString();
-                });
-
-                response.on('end', () => {
-                    resolve({ responseBody: data, responseHeaders: respHeaders, statusCode: status });
-                });
-            });
-
-            request.on('error', (error: Error) => {
-                clearTimeout(timeoutId);
-                reject(error);
-            });
-
-            if (body) {
-                request.write(Buffer.from(body));
-            }
-            request.end();
-        } catch (error) {
-            reject(error);
-        }
-    });
-
-    if (statusCode >= 400) {
-        throw new Error(`HTTP ${statusCode} error`);
-    }
-
-    log.info(`Source ${source.sourceId} fetched: HTTP ${statusCode}, ${responseBody.length} bytes`);
-
-    // Apply JSON filter if configured
-    const jsonFilter = source.jsonFilter;
-    let content = responseBody;
-    let isFiltered = false;
-    let filteredWith: string | undefined;
-
-    if (jsonFilter?.enabled && jsonFilter.path) {
-        const resolvedPath = resolveTemplateString(jsonFilter.path, envVars, envResolver, totpCode);
-        const filtered = applyJsonFilter(responseBody, { enabled: true, path: resolvedPath });
-        content = typeof filtered === 'string' ? filtered : JSON.stringify(filtered, null, 2);
-        isFiltered = true;
-        filteredWith = resolvedPath;
-    }
+    log.info(`Source ${sourceId} fetched: HTTP ${result.statusCode}, ${result.responseSize} bytes, ${result.duration}ms`);
 
     return {
-        content,
-        originalResponse: responseBody,
-        headers: responseHeaders,
-        isFiltered,
-        filteredWith
+        content: result.filteredBody ?? result.body,
+        originalResponse: result.originalResponse ?? result.body,
+        headers: result.headers,
+        isFiltered: result.isFiltered,
+        filteredWith: result.filteredWith
     };
 }

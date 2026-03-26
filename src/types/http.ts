@@ -2,52 +2,8 @@
  * HTTP domain types.
  *
  * Types for the HTTP request/response lifecycle across the IPC boundary
- * (renderer → preload → main) and the renderer-side processing pipeline.
+ * (renderer → preload → main).
  */
-
-import type { JsonObject } from './common';
-
-// ── IPC wire format (what crosses the preload bridge) ────────────────
-
-export interface HttpConnectionOptions {
-  keepAlive?: boolean;
-  timeout?: number;
-  requestId?: string;
-}
-
-/** Options sent from renderer → main via `makeHttpRequest`. */
-export interface HttpRequestOptions {
-  headers?: Record<string, string>;
-  queryParams?: Record<string, string>;
-  body?: string | JsonObject;
-  contentType?: string;
-  enableRetries?: boolean;
-  connectionOptions?: HttpConnectionOptions;
-}
-
-/** JSON payload returned by main → renderer (stringified over IPC). */
-export interface HttpResponsePayload {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-  networkContext?: {
-    isOnline: boolean;
-    networkQuality?: string;
-  };
-}
-
-// ── Renderer-side processed result ───────────────────────────────────
-
-/** Result returned by `useHttp().request()` after response processing. */
-export interface HttpResult {
-  content: string;
-  originalResponse?: string;
-  headers?: Record<string, string>;
-  rawResponse?: string;
-  filteredWith?: string;
-  isFiltered?: boolean;
-  duration?: number;
-}
 
 // ── Shared callback signatures ───────────────────────────────────────
 
@@ -77,4 +33,45 @@ export interface EnvironmentContextLike {
   activeEnvironment: string;
   getAllVariables: () => Record<string, string>;
   resolveTemplate: (text: string) => string;
+}
+
+// ── HttpRequestService types (main-process HTTP execution) ───────────
+
+/**
+ * Input to HttpRequestService — raw, unresolved templates.
+ * ALL string fields may contain {{VAR}} environment variable templates
+ * and [[TOTP_CODE]] placeholders. The service resolves everything.
+ */
+export interface HttpRequestSpec {
+  url: string;
+  method: string;
+  headers?: Array<{ key: string; value: string }>;
+  queryParams?: Array<{ key: string; value: string }>;
+  body?: string;
+  contentType?: string;
+  totpSecret?: string;
+  jsonFilter?: { enabled: boolean; path: string };
+  sourceId: string;
+  timeout?: number;
+}
+
+/** Rich result from HttpRequestService. */
+export interface HttpRequestResult {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+  duration: number;
+  responseSize: number;
+  filteredBody?: string;
+  isFiltered: boolean;
+  filteredWith?: string;
+  originalResponse?: string;
+  error?: string;
+}
+
+/** TOTP cooldown state for IPC queries. */
+export interface TotpCooldownInfo {
+  inCooldown: boolean;
+  remainingSeconds: number;
+  lastUsedTime: number | null;
 }

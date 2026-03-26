@@ -23,17 +23,13 @@ import {
     calculateDelayWithJitter,
     formatCircuitBreakerKey
 } from '../../shared/retryConfig';
+import type { HttpRequestService } from '../http/HttpRequestService';
 import type { Source } from '../../types/source';
 
 const { createLogger } = mainLogger;
 const log = createLogger('SourceRefreshService');
 
 // ── Types ────────────────────────────────────────────────────────────
-
-interface EnvironmentResolver {
-    loadEnvironmentVariables(): Record<string, string>;
-    resolveTemplate(template: string, variables: Record<string, string>): string;
-}
 
 interface NetworkServiceLike {
     getState(): { isOnline: boolean; networkQuality: string };
@@ -63,8 +59,8 @@ class SourceRefreshService {
     private deduplicator: RequestDeduplicator;
     private circuitBreakerManager: AdaptiveCircuitBreakerManager;
 
-    private envResolver: EnvironmentResolver | null;
     private networkService: NetworkServiceLike | null;
+    private httpRequestService: HttpRequestService | null;
 
     private overdueCheckTimer: ReturnType<typeof setInterval> | null;
     private isDestroyed: boolean;
@@ -83,8 +79,8 @@ class SourceRefreshService {
         this.deduplicator = new RequestDeduplicator();
         this.circuitBreakerManager = new AdaptiveCircuitBreakerManager(CIRCUIT_BREAKER_CONFIG);
 
-        this.envResolver = null;
         this.networkService = null;
+        this.httpRequestService = null;
 
         this.overdueCheckTimer = null;
         this.isDestroyed = false;
@@ -128,9 +124,9 @@ class SourceRefreshService {
      * Wire dependencies after all services are initialized.
      * Called from lifecycle.ts after serviceRegistry.initializeAll().
      */
-    configure(envResolver: EnvironmentResolver, networkService: NetworkServiceLike | null): void {
-        this.envResolver = envResolver;
+    configure(networkService: NetworkServiceLike | null, httpRequestService: HttpRequestService): void {
         this.networkService = networkService;
+        this.httpRequestService = httpRequestService;
 
         if (networkService) {
             networkService.on('state-changed', (event) => {
@@ -276,8 +272,8 @@ class SourceRefreshService {
             return { success: false, error: 'Source not found' };
         }
 
-        if (!this.envResolver) {
-            return { success: false, error: 'Environment resolver not available' };
+        if (!this.httpRequestService) {
+            return { success: false, error: 'HttpRequestService not available' };
         }
 
         const dedupKey = `refresh-${sourceId}`;
@@ -298,7 +294,7 @@ class SourceRefreshService {
                 const breaker = this.circuitBreakerManager.getBreaker(cbKey, CIRCUIT_BREAKER_CONFIG);
 
                 const result = await breaker.execute(
-                    () => fetchSourceContent(source, this.envResolver!),
+                    () => fetchSourceContent(source, this.httpRequestService!),
                     { bypassIfOpen: bypassCircuitBreaker, reason }
                 );
 

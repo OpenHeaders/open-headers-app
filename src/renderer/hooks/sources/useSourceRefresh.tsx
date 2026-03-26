@@ -7,10 +7,10 @@
  */
 
 import { useCallback } from 'react';
-import { useHttp } from '../useHttp';
 import { showMessage } from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
 import type { Source, NewSourceData } from '../../../types/source';
+import type { HttpRequestSpec } from '../../../types/http';
 const log = createLogger('useSourceRefresh');
 
 interface UseSourceRefreshDeps {
@@ -27,7 +27,6 @@ interface UseSourceRefreshReturn {
 }
 
 export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSource }: UseSourceRefreshDeps): UseSourceRefreshReturn {
-  const http = useHttp();
 
   /**
    * Handle HTTP source refresh — delegates to main process via IPC
@@ -63,10 +62,9 @@ export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSou
   }, [sources, handleHttpSourceRefresh, refreshSource]);
 
   /**
-   * Handle add source — fetches initial content for HTTP sources before adding.
-   * Uses renderer-side useHttp for the creation flow since the source
-   * doesn't exist in the main-process SourceRefreshService yet.
-   * After adding, the main process picks it up via workspace sync.
+   * Handle add source — fetches initial content for HTTP sources via main process
+   * before adding. The source doesn't exist in SourceRefreshService yet, so we
+   * call HttpRequestService directly via IPC.
    */
   const handleAddSource = useCallback(async (sourceData: NewSourceData): Promise<boolean> => {
     log.debug('Adding source:', sourceData);
@@ -78,16 +76,29 @@ export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSou
         log.debug('Fetching initial content for HTTP source before adding');
         showMessage('info', 'Fetching content...');
 
-        const jsonFilter = { enabled: sourceData.jsonFilter?.enabled ?? false, path: sourceData.jsonFilter?.path };
-        const result = await http.request(
-          'new-source-' + Date.now(),
-          sourceData.sourcePath || '',
-          sourceData.sourceMethod || 'GET',
-          sourceData.requestOptions || {},
-          jsonFilter
-        );
+        const spec: HttpRequestSpec = {
+          url: sourceData.sourcePath || '',
+          method: sourceData.sourceMethod || 'GET',
+          headers: sourceData.requestOptions?.headers,
+          queryParams: sourceData.requestOptions?.queryParams,
+          body: sourceData.requestOptions?.body,
+          contentType: sourceData.requestOptions?.contentType,
+          totpSecret: sourceData.requestOptions?.totpSecret,
+          jsonFilter: sourceData.jsonFilter?.enabled
+              ? { enabled: true, path: sourceData.jsonFilter.path || '' }
+              : undefined,
+          sourceId: 'new-source-' + Date.now()
+        };
 
-        enrichedData.sourceContent = result.content;
+        const result = await window.electronAPI.httpRequest.executeRequest(spec);
+
+        // Fail on HTTP errors — user should see why the source can't be fetched
+        if (result.statusCode >= 400) {
+          showMessage('error', `Failed to fetch content: HTTP ${result.statusCode} error`);
+          return false;
+        }
+
+        enrichedData.sourceContent = result.filteredBody ?? result.body;
         enrichedData.needsInitialFetch = false;
         enrichedData.responseHeaders = result.headers ?? null;
 
@@ -117,7 +128,7 @@ export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSou
       return true;
     }
     return false;
-  }, [http, addSource, refreshSource]);
+  }, [addSource, refreshSource]);
 
   return {
     handleHttpSourceRefresh,
