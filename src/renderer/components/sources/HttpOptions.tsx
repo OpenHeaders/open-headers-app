@@ -34,7 +34,6 @@ import type { TestResponseContent } from '../../../types/http';
 import {
     // Validation functions
     validateVariableExists,
-    resolveAllVariables,
     
     // Testing functions
     createHttpTestHandler,
@@ -93,7 +92,6 @@ const HttpOptions = forwardRef(({
     const {
         canUseTotpSecret,
         getCooldownSeconds,
-        checkIfRequestUsesTotp,
         trackTotpSecret,
         untrackTotpSecret
     } = useTotpState();
@@ -169,7 +167,6 @@ const HttpOptions = forwardRef(({
     // TOTP functions
     const generateTotpCode = createTotpCodeGenerator({
         getTotpStateFromForm,
-        resolveAllVariables: (text) => resolveAllVariables(text, envContext),
         setTotpError,
         setTotpTesting,
         setTotpCode
@@ -185,7 +182,7 @@ const HttpOptions = forwardRef(({
     });
 
     const handleTestRequest = createHttpTestHandler({
-        form, getTotpStateFromForm, getCooldownSeconds, checkIfRequestUsesTotp,
+        form, getTotpStateFromForm,
         envContext, http, setTesting, onTestingChange, setTestResponseContent,
         setTestResponseVisible, setRawResponse, onTestResponse, effectiveSourceId, testSourceId
     });

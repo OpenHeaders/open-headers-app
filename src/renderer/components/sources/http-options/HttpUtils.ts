@@ -43,7 +43,6 @@ interface TotpToggleParams {
 
 interface TotpCodeGeneratorParams {
     getTotpStateFromForm: () => TotpState;
-    resolveAllVariables: (text: string) => string;
     setTotpError: (error: string | null) => void;
     setTotpTesting: (testing: boolean) => void;
     setTotpCode: (code: string) => void;
@@ -208,7 +207,6 @@ export const createTotpSecretHandler = ({
  * 
  * @param {Object} params - Generator parameters
  * @param {Function} params.getTotpStateFromForm - Function to get TOTP state
- * @param {Function} params.resolveAllVariables - Function to resolve variables
  * @param {Function} params.setTotpError - TOTP error state setter
  * @param {Function} params.setTotpTesting - TOTP testing state setter
  * @param {Function} params.setTotpCode - TOTP code state setter
@@ -216,14 +214,13 @@ export const createTotpSecretHandler = ({
  */
 export const createTotpCodeGenerator = ({
     getTotpStateFromForm,
-    resolveAllVariables,
     setTotpError,
     setTotpTesting,
     setTotpCode
 }: TotpCodeGeneratorParams) => async () => {
     try {
         const { secret } = getTotpStateFromForm();
-        
+
         if (!secret) {
             setTotpError('Please enter a secret key');
             return;
@@ -232,22 +229,9 @@ export const createTotpCodeGenerator = ({
         setTotpError(null);
         setTotpTesting(true);
 
-        // Resolve any variables in the secret first
-        const resolvedSecret = resolveAllVariables(secret);
-
-        // Normalize secret for better compatibility
-        const normalizedSecret = resolvedSecret.replace(/\s/g, '').replace(/=/g, '');
-
-
-        // Use the window.generateTOTP function
-        const totpCode = await window.generateTOTP(normalizedSecret, 30, 6, 0);
-
-        if (totpCode === 'ERROR') {
-            setTotpError('Failed to generate code. Check your secret key.');
-            setTotpCode('ERROR');
-        } else {
-            setTotpCode(totpCode);
-        }
+        // Main process resolves env vars and generates TOTP code
+        const totpCode = await window.electronAPI.httpRequest.generateTotpPreview(secret);
+        setTotpCode(totpCode);
     } catch (error) {
         log.error('Error generating TOTP:', error);
         setTotpError(`Error: ${(error instanceof Error ? error.message : String(error))}`);

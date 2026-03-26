@@ -1,33 +1,21 @@
+/**
+ * TotpContext — renderer-side TOTP state for UI display.
+ *
+ * Cooldown tracking is owned by main-process TotpCooldownTracker.
+ * This context polls main via IPC for cooldown state and provides
+ * synchronous access to cached values for component rendering.
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import totpUsageTracker from '../../services/TotpUsageTracker';
-import { createLogger } from '../../utils/error-handling/logger';
-
-const log = createLogger('TotpContext');
-
-interface RequestOptions {
-  headers?: Array<{ key: string; value: string }> | Record<string, string>;
-  queryParams?: Array<{ key: string; value: string }> | Record<string, string>;
-  body?: string;
-  totpSecret?: string;
-  contentType?: string;
-}
 
 interface TotpContextValue {
-  testingWithTotp: boolean;
-  checkIfRequestUsesTotp: (url: string, method: string, requestOptions: RequestOptions) => boolean;
   canUseTotpForSource: (sourceId: string) => boolean;
   getCooldownSecondsForSource: (sourceId: string) => number;
-  startTestingWithTotpForSource: (sourceId: string) => void;
-  endTestingWithTotpForSource: (sourceId: string) => void;
-  recordTotpUsageForSource: (sourceId: string, secret: string, code: string) => void;
   trackTotpSource: (sourceId: string) => void;
   untrackTotpSource: (sourceId: string) => void;
   // Legacy method names for backward compatibility
   canUseTotpSecret: (sourceId: string) => boolean;
   getCooldownSeconds: (sourceId: string) => number;
-  startTestingWithTotp: (sourceId: string) => void;
-  endTestingWithTotp: (sourceId: string) => void;
-  recordTotpUsage: (sourceId: string, secret: string, code: string) => void;
   trackTotpSecret: (sourceId: string) => void;
   untrackTotpSecret: (sourceId: string) => void;
 }
@@ -43,243 +31,114 @@ export const useTotpState = (): TotpContextValue => {
 };
 
 export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Track TOTP cooldowns for each source
+    // Local cache of cooldown state — polled from main process
     const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
-    // Track if any testing is in progress with TOTP
-    const [testingWithTotp, setTestingWithTotp] = useState(false);
-    // Track which sources are currently being tested
-    const testingSourcesRef = useRef<Set<string>>(new Set());
-    // Track if we have active cooldowns to monitor
+    const trackedSourcesRef = useRef<Set<string>>(new Set());
     const [hasActiveCooldowns, setHasActiveCooldowns] = useState(false);
-    // Use ref to track the interval to prevent multiple intervals
     const monitoringIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Check if a request would use TOTP
-    const checkIfRequestUsesTotp = useCallback((url: string, method: string, requestOptions: RequestOptions): boolean => {
-        // Check if [[TOTP_CODE]] is present anywhere
-        const checkString = (str: string) => str && str.includes('[[TOTP_CODE]]');
-
-        // Check URL
-        if (checkString(url)) return true;
-
-        // Check headers
-        if (requestOptions?.headers) {
-            if (Array.isArray(requestOptions.headers)) {
-                for (const header of requestOptions.headers) {
-                    if (checkString(header.key) || checkString(header.value)) return true;
-                }
-            } else if (typeof requestOptions.headers === 'object') {
-                for (const [key, value] of Object.entries(requestOptions.headers)) {
-                    if (checkString(key as string) || checkString(value as string)) return true;
-                }
-            }
-        }
-
-        // Check query params
-        if (requestOptions?.queryParams) {
-            if (Array.isArray(requestOptions.queryParams)) {
-                for (const param of requestOptions.queryParams) {
-                    if (checkString(param.key) || checkString(param.value)) return true;
-                }
-            } else if (typeof requestOptions.queryParams === 'object') {
-                for (const [key, value] of Object.entries(requestOptions.queryParams)) {
-                    if (checkString(key as string) || checkString(value as string)) return true;
-                }
-            }
-        }
-
-        // Check body
-        return !!(requestOptions?.body && checkString(requestOptions.body));
-
-
-    }, []);
-
-    // Check if a source can use TOTP (not in cooldown and not being tested)
+    // Check if a source can use TOTP (reads from local cache)
     const canUseTotpForSource = useCallback((sourceId: string): boolean => {
         if (!sourceId) return true;
+        return (cooldowns[sourceId] || 0) <= 0;
+    }, [cooldowns]);
 
-        // Check if in cooldown
-        const cooldownStatus = totpUsageTracker.checkCooldown(sourceId);
-
-        if (cooldownStatus.inCooldown) {
-            return false;
-        }
-
-        // Check if currently being tested
-        return !testingSourcesRef.current.has(sourceId);
-
-
-    }, []);
-
-    // Get cooldown remaining seconds for a source
+    // Get cooldown remaining seconds (reads from local cache)
     const getCooldownSecondsForSource = useCallback((sourceId: string): number => {
         if (!sourceId) return 0;
         return cooldowns[sourceId] || 0;
     }, [cooldowns]);
 
-    // Start testing with TOTP for a source
-    const startTestingWithTotpForSource = useCallback((sourceId: string): void => {
-        if (sourceId) {
-            testingSourcesRef.current.add(sourceId);
-            setTestingWithTotp(true);
-            log.debug('Started testing with TOTP for source:', sourceId);
-        }
-    }, []);
-
-    // End testing with TOTP for a source
-    const endTestingWithTotpForSource = useCallback((sourceId: string): void => {
-        if (sourceId) {
-            testingSourcesRef.current.delete(sourceId);
-            if (testingSourcesRef.current.size === 0) {
-                setTestingWithTotp(false);
-            }
-            log.debug('Ended testing with TOTP for source:', sourceId);
-        }
-    }, []);
-
-    // Record TOTP usage for a source
-    const recordTotpUsageForSource = useCallback((sourceId: string, secret: string, code: string): void => {
-        if (!sourceId || !code) return;
-
-        log.debug('[TotpContext] Recording TOTP usage:', {
-            sourceId,
-            code: code.substring(0, 3) + '***'
-        });
-
-        totpUsageTracker.recordUsage(sourceId, secret, code);
-
-        // Update cooldown immediately
-        const cooldownStatus = totpUsageTracker.checkCooldown(sourceId);
-        setCooldowns(prev => ({
-            ...prev,
-            [sourceId]: cooldownStatus.remainingSeconds
-        }));
-
-        // Mark that we have active cooldowns
-        setHasActiveCooldowns(true);
-
-        log.debug('[TotpContext] TOTP usage recorded, cooldown status:', {
-            sourceId,
-            cooldownStatus,
-            hasActiveCooldowns: true
-        });
-    }, []);
-
-    // Monitor all tracked sources for cooldown updates
+    // Poll main process for cooldown state
     useEffect(() => {
-        const checkAllCooldowns = (): boolean => {
-            const newCooldowns: Record<string, number> = {};
-            let stillHasActiveCooldowns = false;
-
-            // Get all sources that might have cooldowns
+        const checkAllCooldowns = async (): Promise<boolean> => {
             const allSourceIds = new Set<string>();
+            Object.keys(cooldowns).forEach(id => allSourceIds.add(id));
+            trackedSourcesRef.current.forEach(id => allSourceIds.add(id));
 
-            // Add sources from current cooldowns state
-            Object.keys(cooldowns).forEach(sourceId => allSourceIds.add(sourceId));
+            if (allSourceIds.size === 0) return false;
 
-            // Add sources currently being tested
-            testingSourcesRef.current.forEach(sourceId => allSourceIds.add(sourceId));
+            const newCooldowns: Record<string, number> = {};
+            let stillActive = false;
 
-            // Check the tracker directly for any sources with active cooldowns
-            // This ensures we don't miss newly added cooldowns
-            totpUsageTracker.getAllActiveCooldowns().forEach((sourceId: string) => allSourceIds.add(sourceId));
-
-            // Check each source
             for (const sourceId of allSourceIds) {
-                const status = totpUsageTracker.checkCooldown(sourceId);
-                if (status.inCooldown) {
-                    newCooldowns[sourceId] = status.remainingSeconds;
-                    stillHasActiveCooldowns = true;
+                try {
+                    const info = await window.electronAPI.httpRequest.getTotpCooldown(sourceId);
+                    if (info.inCooldown) {
+                        newCooldowns[sourceId] = info.remainingSeconds;
+                        stillActive = true;
+                    }
+                } catch (e) {
+                    // IPC not ready yet — skip
                 }
             }
 
             setCooldowns(newCooldowns);
-
-            return stillHasActiveCooldowns;
+            return stillActive;
         };
 
         const startMonitoring = () => {
-            // Prevent multiple intervals
             if (monitoringIntervalRef.current) return;
 
-            // Initial check
-            const hasActive = checkAllCooldowns();
-
-            if (hasActive) {
-                monitoringIntervalRef.current = setInterval(() => {
-                    const stillActive = checkAllCooldowns();
-                    if (!stillActive && monitoringIntervalRef.current) {
-                        clearInterval(monitoringIntervalRef.current);
-                        monitoringIntervalRef.current = null;
-                        setHasActiveCooldowns(false);
-                    }
-                }, 1000);
-            } else {
-                setHasActiveCooldowns(false);
-            }
+            checkAllCooldowns().then(hasActive => {
+                if (hasActive) {
+                    monitoringIntervalRef.current = setInterval(() => {
+                        checkAllCooldowns().then(stillActive => {
+                            if (!stillActive && monitoringIntervalRef.current) {
+                                clearInterval(monitoringIntervalRef.current);
+                                monitoringIntervalRef.current = null;
+                                setHasActiveCooldowns(false);
+                            }
+                        });
+                    }, 1000);
+                } else {
+                    setHasActiveCooldowns(false);
+                }
+            });
         };
 
         if (hasActiveCooldowns) {
             startMonitoring();
         }
 
-        // Cleanup on unmount
         return () => {
             if (monitoringIntervalRef.current) {
                 clearInterval(monitoringIntervalRef.current);
                 monitoringIntervalRef.current = null;
             }
         };
-    }, [hasActiveCooldowns]); // Only depend on hasActiveCooldowns to avoid infinite loop
+    }, [hasActiveCooldowns]);
 
-    // Add a source to track (when a component mounts with a TOTP-enabled source)
     const trackTotpSource = useCallback((sourceId: string): void => {
         if (!sourceId) return;
+        trackedSourcesRef.current.add(sourceId);
 
-        const status = totpUsageTracker.checkCooldown(sourceId);
-        if (status.inCooldown) {
-            setCooldowns(prev => ({
-                ...prev,
-                [sourceId]: status.remainingSeconds
-            }));
-            // Mark that we have active cooldowns to trigger monitoring
-            setHasActiveCooldowns(true);
-        }
+        window.electronAPI.httpRequest.getTotpCooldown(sourceId).then(info => {
+            if (info.inCooldown) {
+                setCooldowns(prev => ({ ...prev, [sourceId]: info.remainingSeconds }));
+                setHasActiveCooldowns(true);
+            }
+        }).catch(() => { /* IPC not ready */ });
     }, []);
 
-    // Remove a source from tracking (when a component unmounts)
     const untrackTotpSource = useCallback((sourceId: string): void => {
         if (!sourceId) return;
-
+        trackedSourcesRef.current.delete(sourceId);
         setCooldowns(prev => {
-            const newCooldowns = { ...prev };
-            delete newCooldowns[sourceId];
-            return newCooldowns;
+            const next = { ...prev };
+            delete next[sourceId];
+            return next;
         });
-
-        testingSourcesRef.current.delete(sourceId);
     }, []);
 
     const value: TotpContextValue = {
-        // State
-        testingWithTotp,
-
-        // Methods
-        checkIfRequestUsesTotp,
         canUseTotpForSource,
         getCooldownSecondsForSource,
-        startTestingWithTotpForSource,
-        endTestingWithTotpForSource,
-        recordTotpUsageForSource,
         trackTotpSource,
         untrackTotpSource,
-
-        // Legacy method names for backward compatibility during migration
+        // Legacy aliases
         canUseTotpSecret: canUseTotpForSource,
         getCooldownSeconds: getCooldownSecondsForSource,
-        startTestingWithTotp: startTestingWithTotpForSource,
-        endTestingWithTotp: endTestingWithTotpForSource,
-        recordTotpUsage: recordTotpUsageForSource,
         trackTotpSecret: trackTotpSource,
         untrackTotpSecret: untrackTotpSource
     };

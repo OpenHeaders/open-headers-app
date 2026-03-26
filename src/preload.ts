@@ -13,10 +13,6 @@ const startupData = ipcRenderer.sendSync('get-startup-data') as {
 
 contextBridge.exposeInMainWorld('startupData', startupData);
 
-// Import modules
-import httpBridge from './preload/modules/httpBridge';
-import totpGenerator from './preload/modules/totpGenerator';
-
 // Import APIs
 import fileAPI from './preload/api/fileAPI';
 import systemAPI from './preload/api/systemAPI';
@@ -30,6 +26,7 @@ import workspaceAPI from './preload/api/workspaceAPI';
 import videoAPI from './preload/api/videoAPI';
 import cliAPI from './preload/api/cliAPI';
 import sourceRefreshAPI from './preload/api/sourceRefreshAPI';
+import httpRequestAPI from './preload/api/httpRequestAPI';
 import { createWorkspaceStateAPI } from './preload/api/workspaceStateAPI';
 
 // Expose protected methods to the renderer process
@@ -45,7 +42,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Network operations
     ...networkAPI,
-    makeHttpRequest: httpBridge.makeHttpRequest.bind(httpBridge),
 
     // Update functionality
     ...updateAPI,
@@ -71,9 +67,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Source refresh (main-process owned lifecycle)
     sourceRefresh: sourceRefreshAPI,
 
+    // HTTP request execution (main-process owned)
+    httpRequest: httpRequestAPI,
+
     // Workspace state (main-process owned)
     workspaceState: createWorkspaceStateAPI()
 });
-
-// TOTP generation helper
-contextBridge.exposeInMainWorld('generateTOTP', totpGenerator.generate.bind(totpGenerator));

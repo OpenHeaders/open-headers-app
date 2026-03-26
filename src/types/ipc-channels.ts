@@ -55,7 +55,10 @@ export const IPC_INVOKE = {
     GET_NETWORK_STATE: 'getNetworkState',
     FORCE_NETWORK_CHECK: 'forceNetworkCheck',
     GET_SYSTEM_STATE: 'getSystemState',
-    MAKE_HTTP_REQUEST: 'makeHttpRequest',
+    // HTTP request execution (main-process owned)
+    HTTP_EXECUTE_REQUEST: 'http:execute-request',
+    HTTP_GET_TOTP_COOLDOWN: 'http:get-totp-cooldown',
+    HTTP_GENERATE_TOTP_PREVIEW: 'http:generate-totp-preview',
 
     // Source refresh (main-process owned)
     SOURCE_REFRESH_MANUAL: 'source-refresh:manual',

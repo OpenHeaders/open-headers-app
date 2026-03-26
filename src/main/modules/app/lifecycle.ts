@@ -11,6 +11,9 @@ import networkService from '../../../services/network/NetworkService';
 import proxyService from '../../../services/proxy/ProxyService';
 import webSocketService from '../../../services/websocket/ws-service';
 import sourceRefreshService from '../../../services/source-refresh/SourceRefreshService';
+import { HttpRequestService } from '../../../services/http/HttpRequestService';
+import totpCooldownTracker from '../../../services/http/TotpCooldownTracker';
+import httpRequestHandlers from '../ipc/handlers/httpRequestHandlers';
 import workspaceStateService from '../../../services/workspace/WorkspaceStateService';
 import type { CliApiService } from '../../../services/cli/CliApiService';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
@@ -75,11 +78,18 @@ class AppLifecycle {
             await serviceRegistry.initializeAll();
             log.info('All services initialized successfully');
 
-            // Wire SourceRefreshService dependencies (after all services are initialized)
-            sourceRefreshService.configure(
+            // Create the single HttpRequestService instance — shared by both
+            // SourceRefreshService (scheduled refreshes) and HttpRequestHandlers (IPC test/initial requests)
+            const httpRequestService = new HttpRequestService(
                 webSocketService.environmentHandler,
-                networkService
+                totpCooldownTracker
             );
+
+            // Wire SourceRefreshService dependencies (after all services are initialized)
+            sourceRefreshService.configure(networkService, httpRequestService);
+
+            // Wire HttpRequestHandlers with same shared instance
+            httpRequestHandlers.configure(httpRequestService, totpCooldownTracker);
 
             /** Send an IPC message to all renderer windows */
             const sendToRenderers = (channel: string, data: unknown) => {

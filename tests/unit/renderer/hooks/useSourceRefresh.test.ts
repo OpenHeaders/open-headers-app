@@ -2,13 +2,13 @@
 /**
  * Tests for useSourceRefresh hook
  *
- * The hook now delegates HTTP refreshes to the main-process SourceRefreshService
- * via window.electronAPI.sourceRefresh.manualRefresh(). Add-source still uses
- * the renderer-side useHttp for the creation flow.
+ * The hook delegates HTTP refreshes to main-process SourceRefreshService
+ * via IPC, and initial HTTP fetches to HttpRequestService via IPC.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import type { HttpRequestResult } from '../../../../src/types/http';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -27,18 +27,12 @@ vi.mock('../../../../src/renderer/utils', () => ({
   showMessage: vi.fn(),
 }));
 
-const mockHttpRequest = vi.fn();
-vi.mock('../../../../src/renderer/hooks/useHttp', () => ({
-  useHttp: () => ({
-    request: mockHttpRequest,
-    testRequest: vi.fn(),
-    applyJsonFilter: vi.fn(),
-  }),
-}));
-
 import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSourceRefresh';
 import { showMessage } from '../../../../src/renderer/utils';
 import type { Source, NewSourceData } from '../../../../src/types/source';
+
+const mockExecuteRequest = vi.fn<() => Promise<HttpRequestResult>>();
+const mockManualRefresh = vi.fn<() => Promise<{ success: boolean; error?: string }>>();
 
 function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {
@@ -78,19 +72,30 @@ function makeDeps(overrides: Partial<UseSourceRefreshDeps> = {}): UseSourceRefre
 describe('useSourceRefresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockHttpRequest.mockResolvedValue({
-      content: '{"access_token":"eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600}',
+    mockExecuteRequest.mockResolvedValue({
+      statusCode: 200,
+      headers: { 'content-type': 'application/json' },
+      body: '{"access_token":"eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJzZXJ2aWNlQG9wZW5oZWFkZXJzLmlvIn0.sig","expires_in":3600}',
+      duration: 100,
+      responseSize: 100,
       isFiltered: false,
-      originalResponse: null,
     });
+    mockManualRefresh.mockResolvedValue({ success: true });
 
-    // Mock the electronAPI.sourceRefresh
-    (globalThis as Record<string, unknown>).window = globalThis;
-    (globalThis as Record<string, unknown>).electronAPI = {
-      sourceRefresh: {
-        manualRefresh: vi.fn(async () => ({ success: true })),
+    Object.defineProperty(window, 'electronAPI', {
+      value: {
+        sourceRefresh: {
+          manualRefresh: mockManualRefresh,
+        },
+        httpRequest: {
+          executeRequest: mockExecuteRequest,
+          getTotpCooldown: vi.fn(),
+          generateTotpPreview: vi.fn(),
+        },
       },
-    };
+      writable: true,
+      configurable: true,
+    });
   });
 
   // =========================================================================
@@ -109,15 +114,12 @@ describe('useSourceRefresh', () => {
       });
 
       expect(ok).toBe(true);
-      expect(window.electronAPI.sourceRefresh.manualRefresh).toHaveBeenCalledWith('src-1');
+      expect(mockManualRefresh).toHaveBeenCalledWith('src-1');
       expect(showMessage).toHaveBeenCalledWith('success', 'Source refreshed');
     });
 
     it('returns false and shows error when IPC manualRefresh fails', async () => {
-      window.electronAPI.sourceRefresh.manualRefresh = vi.fn(async () => ({
-        success: false,
-        error: 'Network error',
-      })) as typeof window.electronAPI.sourceRefresh.manualRefresh;
+      mockManualRefresh.mockResolvedValue({ success: false, error: 'Network error' });
 
       const source = makeHttpSource('src-1');
       const deps = makeDeps({ sources: [source] });
@@ -133,7 +135,11 @@ describe('useSourceRefresh', () => {
     });
 
     it('falls back to manualRefresh from deps when electronAPI not available', async () => {
-      (globalThis as Record<string, unknown>).electronAPI = {};
+      Object.defineProperty(window, 'electronAPI', {
+        value: {},
+        writable: true,
+        configurable: true,
+      });
 
       const source = makeHttpSource('src-1');
       const deps = makeDeps({ sources: [source] });
@@ -163,7 +169,7 @@ describe('useSourceRefresh', () => {
         await result.current.refreshSourceWithHttp('http-1');
       });
 
-      expect(window.electronAPI.sourceRefresh.manualRefresh).toHaveBeenCalledWith('http-1');
+      expect(mockManualRefresh).toHaveBeenCalledWith('http-1');
     });
 
     it('delegates to refreshSource for non-HTTP sources', async () => {
@@ -188,7 +194,7 @@ describe('useSourceRefresh', () => {
   // =========================================================================
 
   describe('handleAddSource', () => {
-    it('fetches initial content for HTTP sources before adding', async () => {
+    it('fetches initial content for HTTP sources via IPC before adding', async () => {
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -204,7 +210,12 @@ describe('useSourceRefresh', () => {
       });
 
       expect(ok).toBe(true);
-      expect(mockHttpRequest).toHaveBeenCalled();
+      expect(mockExecuteRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://auth.openheaders.io/oauth2/token',
+          method: 'GET',
+        })
+      );
       expect(deps.addSource).toHaveBeenCalledWith(
         expect.objectContaining({
           sourceContent: expect.any(String),
@@ -215,7 +226,7 @@ describe('useSourceRefresh', () => {
     });
 
     it('returns false when initial HTTP fetch fails', async () => {
-      mockHttpRequest.mockRejectedValue(new Error('Connection refused'));
+      mockExecuteRequest.mockRejectedValue(new Error('Connection refused'));
       const deps = makeDeps();
       const { result } = renderHook(() => useSourceRefresh(deps));
 
@@ -248,7 +259,7 @@ describe('useSourceRefresh', () => {
         await result.current.handleAddSource(newSource);
       });
 
-      expect(mockHttpRequest).not.toHaveBeenCalled();
+      expect(mockExecuteRequest).not.toHaveBeenCalled();
       expect(deps.addSource).toHaveBeenCalled();
     });
   });

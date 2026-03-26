@@ -72,13 +72,12 @@ export type {
 export type { AppSettings, ScreenRecordingPermission } from './settings';
 
 export type {
-  HttpConnectionOptions,
-  HttpRequestOptions,
-  HttpResponsePayload,
-  HttpResult,
   HttpProgressCallback,
   TestResponseContent,
   EnvironmentContextLike,
+  HttpRequestSpec,
+  HttpRequestResult,
+  TotpCooldownInfo,
 } from './http';
 
 export type { RulesCollection } from './rules';
