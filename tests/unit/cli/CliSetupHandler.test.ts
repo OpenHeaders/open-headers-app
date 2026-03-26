@@ -7,7 +7,7 @@ const mockSyncWorkspace = vi.fn();
 const mockGetGitSyncService = vi.fn();
 const mockGetWorkspaceSettingsService = vi.fn();
 const mockOnCliWorkspaceCreated = vi.fn();
-const mockOnEnvironmentVariablesChanged = vi.fn();
+const mockImportEnvironments = vi.fn();
 
 vi.mock('../../../src/main/modules/app/lifecycle', () => ({
     default: {
@@ -19,7 +19,7 @@ vi.mock('../../../src/main/modules/app/lifecycle', () => ({
 vi.mock('../../../src/services/workspace/WorkspaceStateService', () => ({
     default: {
         onCliWorkspaceCreated: (...args: unknown[]) => mockOnCliWorkspaceCreated(...args),
-        onEnvironmentVariablesChanged: (...args: unknown[]) => mockOnEnvironmentVariablesChanged(...args),
+        importEnvironments: (...args: unknown[]) => mockImportEnvironments(...args),
     }
 }));
 
@@ -367,41 +367,31 @@ describe('CliSetupHandler', () => {
             vi.clearAllMocks();
         });
 
-        it('calls onEnvironmentVariablesChanged after writing env data', async () => {
-            mockGetWorkspaceSettingsService.mockReturnValue({
-                getSettings: vi.fn().mockResolvedValue({ activeWorkspaceId: 'team-abc123' }),
-            });
-            mockOnEnvironmentVariablesChanged.mockResolvedValue(undefined);
+        it('delegates to WorkspaceStateService.importEnvironments', async () => {
+            mockImportEnvironments.mockResolvedValue(undefined);
 
-            const result = await handler.importEnvironment({
-                environments: {
-                    Default: { API_KEY: { value: 'test-key', isSecret: true } }
-                }
-            });
+            const envData = {
+                Default: { API_KEY: { value: 'test-key', isSecret: true } }
+            };
+            const result = await handler.importEnvironment({ environments: envData });
 
             expect(result.success).toBe(true);
-            expect(mockOnEnvironmentVariablesChanged).toHaveBeenCalledOnce();
-            // Should pass the active environment's variables
-            const vars = mockOnEnvironmentVariablesChanged.mock.calls[0][0];
-            expect(vars).toHaveProperty('API_KEY');
+            expect(mockImportEnvironments).toHaveBeenCalledOnce();
+            expect(mockImportEnvironments).toHaveBeenCalledWith(envData);
         });
 
-        it('returns error when services are not ready', async () => {
-            mockGetWorkspaceSettingsService.mockReturnValue(null);
+        it('returns error when importEnvironments throws', async () => {
+            mockImportEnvironments.mockRejectedValue(new Error('State service not initialized'));
 
             const result = await handler.importEnvironment({
                 environments: { Default: {} }
             });
 
             expect(result.success).toBe(false);
-            expect(result.error).toBe('Services not ready');
+            expect(result.error).toBe('State service not initialized');
         });
 
         it('returns error when environments data is missing', async () => {
-            mockGetWorkspaceSettingsService.mockReturnValue({
-                getSettings: vi.fn().mockResolvedValue({ activeWorkspaceId: 'test' }),
-            });
-
             const result = await handler.importEnvironment({} as Parameters<typeof handler.importEnvironment>[0]);
 
             expect(result.success).toBe(false);

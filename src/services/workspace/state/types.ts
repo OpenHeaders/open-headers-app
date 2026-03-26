@@ -6,6 +6,7 @@ import type { Source } from '../../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '../../../types/workspace';
 import type { HeaderRule, RulesCollection } from '../../../types/rules';
 import type { ProxyRule } from '../../../types/proxy';
+import type { EnvironmentMap } from '../../../types/environment';
 import type { SyncData } from '../sync/types';
 
 // ── State shape ───────────────────────────────────────────────────
@@ -21,6 +22,8 @@ export interface WorkspaceState {
     sources: Source[];
     rules: RulesCollection;
     proxyRules: ProxyRule[];
+    environments: EnvironmentMap;
+    activeEnvironment: string;
 }
 
 // ── External service interfaces ───────────────────────────────────
@@ -71,6 +74,7 @@ export interface DirtyFlags {
     rules: boolean;
     proxyRules: boolean;
     workspaces: boolean;
+    environments: boolean;
 }
 
 // ── Context passed to CRUD submodules ─────────────────────────────
@@ -92,6 +96,7 @@ export interface StateContext {
     scheduleDebouncedSave(): void;
     saveAll(): Promise<void>;
     saveSources(): Promise<void>;
+    saveEnvironments(): Promise<void>;
     saveWorkspacesConfig(): Promise<void>;
     loadWorkspaceData(workspaceId: string): Promise<void>;
     updateWorkspaceMetadataInMemory(workspaceId: string, metadata: Partial<WorkspaceMetadata>): void;

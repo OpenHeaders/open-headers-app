@@ -179,7 +179,7 @@ describe('saveAll', () => {
     });
 
     it('returns 0 when nothing is dirty', async () => {
-        const dirty = { sources: false, rules: false, proxyRules: false, workspaces: false };
+        const dirty = { sources: false, rules: false, proxyRules: false, workspaces: false, environments: false };
         const data = {
             sources: [],
             rules: { header: [], request: [], response: [] } as RulesCollection,

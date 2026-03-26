@@ -152,6 +152,12 @@ export const IPC_INVOKE = {
     WORKSPACE_STATE_DELETE_WORKSPACE: 'workspace-state:delete-workspace',
     WORKSPACE_STATE_COPY_WORKSPACE_DATA: 'workspace-state:copy-workspace-data',
     WORKSPACE_STATE_SYNC_WORKSPACE: 'workspace-state:sync-workspace',
+    WORKSPACE_STATE_GET_ENVIRONMENT_STATE: 'workspace-state:get-environment-state',
+    WORKSPACE_STATE_CREATE_ENVIRONMENT: 'workspace-state:create-environment',
+    WORKSPACE_STATE_DELETE_ENVIRONMENT: 'workspace-state:delete-environment',
+    WORKSPACE_STATE_SWITCH_ENVIRONMENT: 'workspace-state:switch-environment',
+    WORKSPACE_STATE_SET_VARIABLE: 'workspace-state:set-variable',
+    WORKSPACE_STATE_BATCH_SET_VARIABLES: 'workspace-state:batch-set-variables',
 } as const;
 
 // ── Send channels (renderer → main, fire-and-forget) ───────────────
@@ -177,10 +183,6 @@ export const IPC_SEND = {
     // Runtime updates
     PROXY_UPDATE_SOURCE: 'proxy-update-source',
     PROXY_UPDATE_SOURCES: 'proxy-update-sources',
-
-    // Environment events
-    ENVIRONMENT_SWITCHED: 'environment-switched',
-    ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed',
 } as const;
 
 // ── Push channels (main → renderer, via webContents.send) ──────────

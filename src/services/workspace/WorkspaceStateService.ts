@@ -15,13 +15,13 @@
  */
 
 import electron from 'electron';
-import fs from 'fs';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import type { Source, SourceUpdate } from '../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
 import type { HeaderRule } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
+import type { EnvironmentMap } from '../../types/environment';
 import type { SyncData } from './sync/types';
 
 import {
@@ -40,9 +40,11 @@ import {
     loadSources,
     loadRules,
     loadProxyRules,
+    loadEnvironments,
     saveSources as persistSources,
     saveRules as persistRules,
     saveProxyRules as persistProxyRules,
+    saveEnvironments as persistEnvironments,
     // Source dependencies
     evaluateAllSourceDependencies,
     activateReadySources as evaluateActivations,
@@ -90,7 +92,7 @@ class WorkspaceStateService {
     private syncScheduler: WorkspaceSyncSchedulerLike | null = null;
 
     // Auto-save
-    private dirty: DirtyFlags = { sources: false, rules: false, proxyRules: false, workspaces: false };
+    private dirty: DirtyFlags = { sources: false, rules: false, proxyRules: false, workspaces: false, environments: false };
     private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
     private isSaving = false;
     private debounceSaveTimer: ReturnType<typeof setTimeout> | null = null;
@@ -104,7 +106,8 @@ class WorkspaceStateService {
             initialized: false, loading: false, error: null,
             workspaces: [], activeWorkspaceId: 'default-personal',
             isWorkspaceSwitching: false, syncStatus: {},
-            sources: [], rules: { header: [], request: [], response: [] }, proxyRules: []
+            sources: [], rules: { header: [], request: [], response: [] }, proxyRules: [],
+            environments: { Default: {} }, activeEnvironment: 'Default'
         };
         log.info('WorkspaceStateService created');
     }
@@ -124,6 +127,7 @@ class WorkspaceStateService {
             scheduleDebouncedSave: () => this.scheduleDebouncedSave(),
             saveAll: () => this.saveAll(),
             saveSources: () => this.saveSources(),
+            saveEnvironments: () => this.saveEnvironments(),
             saveWorkspacesConfig: () => this.saveWorkspacesConfig(),
             loadWorkspaceData: (id) => this.loadWorkspaceData(id),
             updateWorkspaceMetadataInMemory: (id, m) => this.updateWorkspaceMetadataInMemory(id, m),
@@ -164,12 +168,14 @@ class WorkspaceStateService {
             this.state.activeWorkspaceId = config.activeWorkspaceId;
             this.state.syncStatus = config.syncStatus;
 
+            await this.loadEnvironmentData(this.state.activeWorkspaceId);
+            await this.applyActiveEnvVarsToServices();
             await this.loadWorkspaceData(this.state.activeWorkspaceId);
             this.startAutoSave();
 
             this.state.initialized = true;
             this.state.loading = false;
-            sendPatchToRenderers(this.state, ['initialized', 'loading', 'workspaces', 'activeWorkspaceId', 'syncStatus', 'sources', 'rules', 'proxyRules']);
+            sendPatchToRenderers(this.state, ['initialized', 'loading', 'workspaces', 'activeWorkspaceId', 'syncStatus', 'sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
 
             log.info(`Initialized with workspace ${this.state.activeWorkspaceId}: ${this.state.sources.length} sources, ${this.state.rules.header.length} header rules`);
             setTimeout(() => { this.activateReadySources().catch(e => log.warn('Activation check failed:', errorMessage(e))); }, 200);
@@ -202,6 +208,7 @@ class WorkspaceStateService {
         this.dirty.sources = false;
         this.dirty.rules = false;
         this.dirty.proxyRules = false;
+        this.dirty.environments = false;
 
         const totalRules = rules.header.length + rules.request.length + rules.response.length;
         this.updateWorkspaceMetadataInMemory(workspaceId, {
@@ -228,6 +235,13 @@ class WorkspaceStateService {
         await persistProxyRules(this.appDataPath, this.state.activeWorkspaceId, this.state.proxyRules);
         this.dirty.proxyRules = false;
     }
+    private async saveEnvironments(): Promise<void> {
+        await persistEnvironments(this.appDataPath, this.state.activeWorkspaceId, {
+            environments: this.state.environments,
+            activeEnvironment: this.state.activeEnvironment
+        });
+        this.dirty.environments = false;
+    }
     private async saveWorkspacesConfig(): Promise<void> {
         await persistWorkspacesConfig(this.appDataPath, {
             workspaces: this.state.workspaces,
@@ -245,6 +259,7 @@ class WorkspaceStateService {
             if (this.dirty.sources) saves.push(this.saveSources());
             if (this.dirty.rules) saves.push(this.saveRules());
             if (this.dirty.proxyRules) saves.push(this.saveProxyRules());
+            if (this.dirty.environments) saves.push(this.saveEnvironments());
             if (this.dirty.workspaces) saves.push(this.saveWorkspacesConfig());
             if (saves.length > 0) { await Promise.all(saves); log.debug(`Saved ${saves.length} data types`); }
         } catch (error) { log.error('Auto-save failed:', error); }
@@ -256,7 +271,7 @@ class WorkspaceStateService {
     private startAutoSave(): void {
         if (this.autoSaveTimer) return;
         this.autoSaveTimer = setInterval(() => {
-            if ((this.dirty.sources || this.dirty.rules || this.dirty.proxyRules || this.dirty.workspaces) && !this.state.isWorkspaceSwitching) {
+            if ((this.dirty.sources || this.dirty.rules || this.dirty.proxyRules || this.dirty.environments || this.dirty.workspaces) && !this.state.isWorkspaceSwitching) {
                 this.saveAll().catch(e => log.error('Periodic save failed:', errorMessage(e)));
             }
         }, 5000);
@@ -335,9 +350,10 @@ class WorkspaceStateService {
         if (this.proxyService) {
             await this.proxyService.switchWorkspace(workspaceId).catch(e => log.error('Proxy switch failed:', errorMessage(e)));
         }
-        // Load env vars into envResolver + proxy before loadWorkspaceData so
-        // evaluateAllSourceDependencies can resolve template variables.
-        await this.loadAndApplyEnvVars(workspaceId);
+        // Load env data from disk + apply to envResolver + proxy before loadWorkspaceData
+        // so evaluateAllSourceDependencies can resolve template variables.
+        await this.loadEnvironmentData(workspaceId);
+        this.applyActiveEnvVarsToServices();
         if (this.webSocketService) {
             this.webSocketService.sources = [];
             this.webSocketService.rules = { header: [], request: [], response: [] };
@@ -363,7 +379,7 @@ class WorkspaceStateService {
 
         this.state.loading = false;
         this.state.isWorkspaceSwitching = false;
-        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'workspaces', 'activeWorkspaceId', 'loading', 'isWorkspaceSwitching']);
+        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'workspaces', 'activeWorkspaceId', 'loading', 'isWorkspaceSwitching', 'environments', 'activeEnvironment']);
         sendProgressToRenderers('complete', 100, `Successfully switched to "${workspaceName}"`, false, target);
 
         log.info(`Successfully switched to workspace: ${target.id}`);
@@ -383,25 +399,29 @@ class WorkspaceStateService {
         this.state.loading = false;
         this.state.isWorkspaceSwitching = false;
         this.state.error = errorMessage(error);
-        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'activeWorkspaceId', 'loading', 'isWorkspaceSwitching', 'error']);
+        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'activeWorkspaceId', 'loading', 'isWorkspaceSwitching', 'error', 'environments', 'activeEnvironment']);
     }
 
     /**
-     * Load environment variables from disk and apply to envResolver + proxy.
+     * Load environment data from disk into state.
+     */
+    private async loadEnvironmentData(workspaceId: string): Promise<void> {
+        const envData = await loadEnvironments(this.appDataPath, workspaceId);
+        this.state.environments = envData.environments;
+        this.state.activeEnvironment = envData.activeEnvironment;
+        this.dirty.environments = false;
+    }
+
+    /**
+     * Apply the active environment's variables to envResolver + proxy.
      * Must be called BEFORE loadWorkspaceData when the workspace changes,
      * so that evaluateAllSourceDependencies has the variables available.
+     * Reads from in-memory state, not disk.
      */
-    private async loadAndApplyEnvVars(workspaceId: string): Promise<void> {
-        try {
-            const envPath = workspaceDir(this.appDataPath, workspaceId) + '/environments.json';
-            const envData = await fs.promises.readFile(envPath, 'utf8');
-            const { environments, activeEnvironment } = JSON.parse(envData);
-            const activeVars = environments?.[activeEnvironment] ?? {};
-            const resolved = this.normalizeEnvVariables(activeVars);
-            this.applyEnvVariablesToServices(resolved);
-        } catch (_e) {
-            this.applyEnvVariablesToServices({});
-        }
+    private applyActiveEnvVarsToServices(): void {
+        const activeVars = this.state.environments[this.state.activeEnvironment] ?? {};
+        const resolved = this.normalizeEnvVariables(activeVars);
+        this.applyEnvVariablesToServices(resolved);
     }
 
     // ── Source + Rule CRUD (delegated) ────────────────────────────
@@ -467,9 +487,10 @@ class WorkspaceStateService {
     async onSyncDataChanged(workspaceId: string): Promise<void> {
         if (workspaceId === this.state.activeWorkspaceId) {
             log.info('Reloading workspace data after sync');
-            await this.loadAndApplyEnvVars(workspaceId);
+            await this.loadEnvironmentData(workspaceId);
+            this.applyActiveEnvVarsToServices();
             await this.loadWorkspaceData(workspaceId);
-            sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules']);
+            sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
         }
     }
 
@@ -500,6 +521,135 @@ class WorkspaceStateService {
         //    start sync scheduler → broadcast. skipInitialSync because we just synced.
         await this.switchWorkspace(workspaceId, { skipInitialSync: true });
         log.info(`CLI workspace ${workspaceId} fully activated`);
+    }
+
+    // ── Environment CRUD ──────────────────────────────────────────
+
+    getEnvironmentState(): { environments: EnvironmentMap; activeEnvironment: string } {
+        return { environments: this.state.environments, activeEnvironment: this.state.activeEnvironment };
+    }
+
+    async createEnvironment(name: string): Promise<void> {
+        if (this.state.environments[name]) {
+            throw new Error(`Environment '${name}' already exists`);
+        }
+        this.state.environments = { ...this.state.environments, [name]: {} };
+        this.dirty.environments = true;
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['environments']);
+        log.info(`Created environment: ${name}`);
+    }
+
+    async deleteEnvironment(name: string): Promise<void> {
+        if (name === 'Default') {
+            throw new Error('Cannot delete Default environment');
+        }
+        if (!this.state.environments[name]) {
+            throw new Error(`Environment '${name}' does not exist`);
+        }
+        const { [name]: _deleted, ...remaining } = this.state.environments;
+        this.state.environments = remaining;
+        this.dirty.environments = true;
+
+        const wasActive = this.state.activeEnvironment === name;
+        if (wasActive) {
+            this.state.activeEnvironment = 'Default';
+        }
+
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['environments', 'activeEnvironment']);
+
+        if (wasActive) {
+            const activeVars = this.state.environments['Default'] ?? {};
+            await this.onEnvironmentVariablesChanged(activeVars);
+        }
+        log.info(`Deleted environment: ${name}`);
+    }
+
+    async switchEnvironment(name: string): Promise<void> {
+        if (!this.state.environments[name]) {
+            throw new Error(`Environment '${name}' does not exist`);
+        }
+        if (this.state.activeEnvironment === name) return;
+
+        log.info(`Switching environment: ${this.state.activeEnvironment} → ${name}`);
+        this.state.activeEnvironment = name;
+        this.dirty.environments = true;
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['activeEnvironment']);
+
+        const activeVars = this.state.environments[name] ?? {};
+        await this.onEnvironmentVariablesChanged(activeVars);
+    }
+
+    async setVariable(name: string, value: string | null, environment: string, isSecret: boolean): Promise<void> {
+        if (!this.state.environments[environment]) {
+            throw new Error(`Environment '${environment}' does not exist`);
+        }
+
+        const envCopy = { ...this.state.environments[environment] };
+        if (value === null || value === '') {
+            delete envCopy[name];
+        } else {
+            envCopy[name] = { value, isSecret, updatedAt: new Date().toISOString() };
+        }
+        this.state.environments = { ...this.state.environments, [environment]: envCopy };
+        this.dirty.environments = true;
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['environments']);
+
+        if (environment === this.state.activeEnvironment) {
+            await this.onEnvironmentVariablesChanged(this.state.environments[environment]);
+        }
+    }
+
+    async batchSetVariables(environment: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>): Promise<void> {
+        if (!this.state.environments[environment]) {
+            throw new Error(`Environment '${environment}' does not exist`);
+        }
+
+        const envCopy = { ...this.state.environments[environment] };
+        for (const { name, value, isSecret } of variables) {
+            if (value === null || value === '') {
+                delete envCopy[name];
+            } else {
+                envCopy[name] = { value, isSecret: isSecret ?? false, updatedAt: new Date().toISOString() };
+            }
+        }
+        this.state.environments = { ...this.state.environments, [environment]: envCopy };
+        this.dirty.environments = true;
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['environments']);
+
+        if (environment === this.state.activeEnvironment) {
+            await this.onEnvironmentVariablesChanged(this.state.environments[environment]);
+        }
+    }
+
+    /**
+     * Merge imported environment data into the active workspace's state.
+     * Creates missing environments and merges variables into existing ones.
+     * Persists to disk, broadcasts to renderer, and triggers source re-evaluation.
+     *
+     * This is the proper entry point for CLI environment imports — the state
+     * owner handles the merge, persistence, and all downstream effects.
+     */
+    async importEnvironments(incoming: Record<string, Record<string, { value: string; isSecret: boolean }>>): Promise<void> {
+        const merged = { ...this.state.environments };
+        for (const [envName, variables] of Object.entries(incoming)) {
+            if (!merged[envName]) {
+                merged[envName] = {};
+            }
+            Object.assign(merged[envName], variables);
+        }
+        this.state.environments = merged;
+        this.dirty.environments = true;
+        await this.saveEnvironments();
+        sendPatchToRenderers(this.state, ['environments']);
+
+        // Re-evaluate source dependencies with the updated active environment vars
+        const activeVars = this.state.environments[this.state.activeEnvironment] ?? {};
+        await this.onEnvironmentVariablesChanged(activeVars);
     }
 
     // ── Environment variable changes ────────────────────────────
