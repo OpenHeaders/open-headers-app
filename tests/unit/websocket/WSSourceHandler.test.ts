@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { WSSourceHandler } from '../../../src/services/websocket/ws-source-handler';
 import type { Source } from '../../../src/types/source';
-import type { RulesCollection } from '../../../src/types/rules';
 
 function makeSource(overrides: Partial<Source> & { sourceId: string }): Source {
     return {
@@ -17,11 +16,7 @@ function makeSource(overrides: Partial<Source> & { sourceId: string }): Source {
 
 function createMockService(sources: Source[] = []): ConstructorParameters<typeof WSSourceHandler>[0] {
     return {
-        rules: { header: [], request: [], response: [] },
         sources,
-        appDataPath: null,
-        sourceService: null,
-        sourceRefreshService: null,
         ruleHandler: { broadcastRules: vi.fn() },
         _broadcastToAll: vi.fn().mockReturnValue(0)
     };
@@ -160,34 +155,11 @@ describe('WSSourceHandler', () => {
             expect(mockService.sources).toEqual(newSources);
         });
 
-        it('also broadcasts rules when content changes and rules exist', () => {
-            mockService.rules = {
-                header: [{ id: 'rule-1' }] as RulesCollection['header'],
-                request: [],
-                response: [],
-            };
+        it('also broadcasts rules when content changes', () => {
             mockService.sources = [];
             handler.updateSources([
                 makeSource({ sourceId: 'src-1', sourceContent: 'content' })
             ]);
-            expect(mockService.ruleHandler.broadcastRules).toHaveBeenCalled();
-        });
-
-        it('handles rules-update message format (non-array input)', () => {
-            const rulesData = {
-                type: 'rules-update' as const,
-                data: {
-                    rules: {
-                        header: [{ id: 'rule-from-msg' }] as RulesCollection['header'],
-                        request: [],
-                        response: [],
-                    },
-                    version: '1.0.0',
-                    metadata: { totalRules: 1, lastUpdated: '2026-01-20T14:45:12.345Z' },
-                }
-            };
-            handler.updateSources(rulesData as Parameters<typeof handler.updateSources>[0]);
-            expect(mockService.rules).toEqual(rulesData.data.rules);
             expect(mockService.ruleHandler.broadcastRules).toHaveBeenCalled();
         });
     });
@@ -209,55 +181,4 @@ describe('WSSourceHandler', () => {
         });
     });
 
-    describe('registerSourceEvents', () => {
-        it('registers for source service events when available', () => {
-            const onMock = vi.fn();
-            mockService.sourceService = {
-                on: onMock,
-                getAllSources: () => [],
-            };
-            handler.registerSourceEvents();
-            expect(onMock).toHaveBeenCalledWith('source:updated', expect.any(Function));
-            expect(onMock).toHaveBeenCalledWith('source:removed', expect.any(Function));
-            expect(onMock).toHaveBeenCalledWith('sources:loaded', expect.any(Function));
-        });
-
-        it('does nothing when sourceService is null', () => {
-            mockService.sourceService = null;
-            // Should not throw
-            handler.registerSourceEvents();
-        });
-
-        it('does nothing when sourceService has no on method', () => {
-            mockService.sourceService = { getAllSources: () => [] };
-            // Should not throw
-            handler.registerSourceEvents();
-        });
-    });
-
-    describe('_updateAndBroadcast', () => {
-        it('updates sources from service and broadcasts', () => {
-            const freshSources = [
-                makeSource({ sourceId: 'src-refreshed', sourceContent: 'refreshed-token' })
-            ];
-            mockService.sourceService = {
-                getAllSources: () => freshSources,
-            };
-            handler._updateAndBroadcast();
-            expect(mockService.sources).toEqual(freshSources);
-            expect(mockService._broadcastToAll).toHaveBeenCalled();
-        });
-
-        it('still broadcasts even when getAllSources is not available', () => {
-            mockService.sourceService = {};
-            handler._updateAndBroadcast();
-            expect(mockService._broadcastToAll).toHaveBeenCalled();
-        });
-
-        it('does nothing when sourceService is null', () => {
-            mockService.sourceService = null;
-            handler._updateAndBroadcast();
-            expect(mockService._broadcastToAll).not.toHaveBeenCalled();
-        });
-    });
 });

@@ -25,6 +25,7 @@ function createMockService(): ConstructorParameters<typeof WSClientHandler>[0] {
         ruleHandler: { sendRulesToClient: vi.fn().mockResolvedValue(undefined) },
         recordingHandler: { sendVideoRecordingState: vi.fn().mockResolvedValue(undefined) },
         networkStateHandler: null,
+        _sendToRenderers: vi.fn(),
     };
 }
 

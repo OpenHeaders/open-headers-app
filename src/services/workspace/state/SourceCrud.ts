@@ -205,6 +205,27 @@ export async function updateHeaderRule(ctx: StateContext, ruleId: string, update
     sendPatchToRenderers(ctx.state, ['rules']);
 }
 
+/**
+ * Batch-update multiple header rules and broadcast once.
+ * Used by handleToggleAllRules to avoid N broadcasts for N toggles.
+ */
+export async function updateHeaderRulesBatch(ctx: StateContext, updates: Array<{ ruleId: string; changes: Partial<HeaderRule> }>): Promise<void> {
+    const now = new Date().toISOString();
+    const updateMap = new Map(updates.map(u => [u.ruleId, u.changes]));
+
+    ctx.state.rules = {
+        ...ctx.state.rules,
+        header: ctx.state.rules.header.map(rule => {
+            const changes = updateMap.get(rule.id);
+            return changes ? { ...rule, ...changes, updatedAt: now } : rule;
+        })
+    };
+    ctx.dirty.rules = true;
+    ctx.scheduleDebouncedSave();
+    broadcastToServices(ctx.state, ctx.webSocketService, ctx.proxyService);
+    sendPatchToRenderers(ctx.state, ['rules']);
+}
+
 export async function removeHeaderRule(ctx: StateContext, ruleId: string): Promise<void> {
     ctx.state.rules = { ...ctx.state.rules, header: ctx.state.rules.header.filter(rule => rule.id !== ruleId) };
     ctx.dirty.rules = true;
@@ -219,6 +240,9 @@ export async function addProxyRule(ctx: StateContext, ruleData: ProxyRule): Prom
     ctx.state.proxyRules = [...ctx.state.proxyRules, ruleData];
     ctx.dirty.proxyRules = true;
     ctx.scheduleDebouncedSave();
+    if (ctx.proxyService) {
+        ctx.proxyService.updateProxyRules(ctx.state.proxyRules);
+    }
     sendPatchToRenderers(ctx.state, ['proxyRules']);
 }
 
@@ -226,5 +250,8 @@ export async function removeProxyRule(ctx: StateContext, ruleId: string): Promis
     ctx.state.proxyRules = ctx.state.proxyRules.filter(r => r.id !== ruleId);
     ctx.dirty.proxyRules = true;
     ctx.scheduleDebouncedSave();
+    if (ctx.proxyService) {
+        ctx.proxyService.updateProxyRules(ctx.state.proxyRules);
+    }
     sendPatchToRenderers(ctx.state, ['proxyRules']);
 }

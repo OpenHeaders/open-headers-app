@@ -63,6 +63,7 @@ import {
     refreshSource as crudRefreshSource,
     addHeaderRule as crudAddHeaderRule,
     updateHeaderRule as crudUpdateHeaderRule,
+    updateHeaderRulesBatch as crudUpdateHeaderRulesBatch,
     removeHeaderRule as crudRemoveHeaderRule,
     addProxyRule as crudAddProxyRule,
     removeProxyRule as crudRemoveProxyRule,
@@ -435,6 +436,7 @@ class WorkspaceStateService {
     async refreshSource(sourceId: string): Promise<boolean> { return crudRefreshSource(this.ctx, sourceId); }
     async addHeaderRule(ruleData: Partial<HeaderRule>): Promise<void> { return crudAddHeaderRule(this.ctx, ruleData); }
     async updateHeaderRule(ruleId: string, updates: Partial<HeaderRule>): Promise<void> { return crudUpdateHeaderRule(this.ctx, ruleId, updates); }
+    async updateHeaderRulesBatch(updates: Array<{ ruleId: string; changes: Partial<HeaderRule> }>): Promise<void> { return crudUpdateHeaderRulesBatch(this.ctx, updates); }
     async removeHeaderRule(ruleId: string): Promise<void> { return crudRemoveHeaderRule(this.ctx, ruleId); }
     async addProxyRule(ruleData: ProxyRule): Promise<void> { return crudAddProxyRule(this.ctx, ruleData); }
     async removeProxyRule(ruleId: string): Promise<void> { return crudRemoveProxyRule(this.ctx, ruleId); }

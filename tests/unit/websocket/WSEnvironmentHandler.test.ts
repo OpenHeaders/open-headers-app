@@ -1,20 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { WSEnvironmentHandler } from '../../../src/services/websocket/ws-environment-handler';
 
-function createMockService(): ConstructorParameters<typeof WSEnvironmentHandler>[0] {
-    return {
-        appDataPath: '/Users/jane.doe/Library/Application Support/OpenHeaders',
-        rules: { header: [], request: [], response: [] },
-        sources: [],
-        ruleHandler: { broadcastRules: () => {} }
-    };
-}
-
 describe('WSEnvironmentHandler', () => {
     let handler: WSEnvironmentHandler;
 
     beforeEach(() => {
-        handler = new WSEnvironmentHandler(createMockService());
+        handler = new WSEnvironmentHandler();
     });
 
     describe('resolveTemplate', () => {
@@ -144,12 +135,11 @@ describe('WSEnvironmentHandler', () => {
             expect(result).toBe(cached);
         });
 
-        it('clearVariableCache forces next load to fall back to disk', () => {
+        it('clearVariableCache causes next load to return empty', () => {
             handler.setVariables({ API_KEY: 'ohk_cached' });
             handler.clearVariableCache();
 
-            // After clearing, loadEnvironmentVariables falls back to disk.
-            // With a mock appDataPath that doesn't exist, it returns {}.
+            // After clearing, loadEnvironmentVariables returns empty (no disk fallback).
             const result = handler.loadEnvironmentVariables();
             expect(result).toEqual({});
         });

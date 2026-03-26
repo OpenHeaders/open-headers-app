@@ -4,7 +4,7 @@ import { WSNetworkStateHandler } from '../../../src/services/websocket/ws-networ
 
 function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler>[0] {
     return {
-        wss: null,
+        _broadcastToAll: vi.fn().mockReturnValue(0),
     };
 }
 
@@ -228,58 +228,16 @@ describe('WSNetworkStateHandler', () => {
     });
 
     describe('broadcastNetworkState', () => {
-        it('sends to all open WS clients', () => {
-            const messages: string[] = [];
-            const mockWss = {
-                clients: new Set([
-                    { readyState: 1, send: (msg: string) => messages.push(msg) },
-                    { readyState: 3, send: vi.fn() }, // closed - should not receive
-                ])
-            };
-            handler.wsService.wss = mockWss as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
-
+        it('delegates to _broadcastToAll with correct message', () => {
             handler.broadcastNetworkState();
 
-            expect(messages).toHaveLength(1);
-            const parsed = JSON.parse(messages[0]);
+            const broadcastFn = handler.wsService._broadcastToAll as ReturnType<typeof vi.fn>;
+            expect(broadcastFn).toHaveBeenCalledTimes(1);
+
+            const parsed = JSON.parse(broadcastFn.mock.calls[0][0] as string);
             expect(parsed.type).toBe('network-state-update');
             expect(parsed.data.networkState).toBeDefined();
             expect(parsed.data.timestamp).toBeGreaterThan(0);
-        });
-
-        it('sends to multiple WS clients', () => {
-            const messages: string[] = [];
-
-            handler.wsService.wss = {
-                clients: new Set([
-                    { readyState: 1, send: (msg: string) => messages.push(msg) },
-                    { readyState: 1, send: (msg: string) => messages.push(msg) },
-                    { readyState: 1, send: (msg: string) => messages.push(msg) },
-                ])
-            } as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
-
-            handler.broadcastNetworkState();
-
-            expect(messages).toHaveLength(3);
-        });
-
-        it('handles null server gracefully', () => {
-            handler.wsService.wss = null;
-            handler.broadcastNetworkState();
-            // Should not throw
-        });
-
-        it('handles client send errors gracefully', () => {
-            const throwingClient = {
-                readyState: 1,
-                send: () => { throw new Error('Connection reset'); }
-            };
-            handler.wsService.wss = {
-                clients: new Set([throwingClient])
-            } as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
-
-            // Should not throw
-            handler.broadcastNetworkState();
         });
 
         it('broadcasts current state including VPN and connection type', () => {
@@ -291,16 +249,10 @@ describe('WSNetworkStateHandler', () => {
                 lastUpdate: 0,
             });
 
-            const messages: string[] = [];
-            handler.wsService.wss = {
-                clients: new Set([
-                    { readyState: 1, send: (msg: string) => messages.push(msg) },
-                ])
-            } as unknown as ConstructorParameters<typeof WSNetworkStateHandler>[0]['wss'];
-
-            handler.broadcastNetworkState();
-
-            const parsed = JSON.parse(messages[0]);
+            const broadcastFn = handler.wsService._broadcastToAll as ReturnType<typeof vi.fn>;
+            // updateNetworkState calls broadcastNetworkState internally
+            const lastCall = broadcastFn.mock.calls[broadcastFn.mock.calls.length - 1];
+            const parsed = JSON.parse(lastCall[0] as string);
             expect(parsed.data.networkState).toEqual({
                 isOnline: true,
                 networkQuality: 'good',

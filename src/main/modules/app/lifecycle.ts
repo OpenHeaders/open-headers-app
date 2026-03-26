@@ -120,10 +120,7 @@ class AppLifecycle {
                 sendToRenderers('source-refresh:schedule-updated', { sourceId, lastRefresh, nextRefresh });
             };
 
-            // Store on webSocketService so WSSourceHandler can access it
-            webSocketService.sourceRefreshService = sourceRefreshService;
-
-            log.info('SourceRefreshService wired into WebSocket service');
+            log.info('SourceRefreshService configured');
 
             // Configure and initialize WorkspaceStateService — the single owner of workspace state.
             // This must happen after all services are initialized so it can broadcast to them.
@@ -135,6 +132,13 @@ class AppLifecycle {
             });
 
             serviceRegistry.registerInitialized('workspaceStateService', workspaceStateService);
+
+            // Wire rule toggle: extensions send toggleRule via WS → delegate to
+            // WorkspaceStateService (single state owner) for persistence + broadcast.
+            webSocketService.ruleHandler.onRuleToggle = (ruleId, updates) =>
+                workspaceStateService.updateHeaderRule(ruleId, updates);
+            webSocketService.ruleHandler.onRuleToggleBatch = (updates) =>
+                workspaceStateService.updateHeaderRulesBatch(updates);
 
             // Initialize: loads workspaces + active workspace data, starts auto-save,
             // broadcasts to WS/proxy. App is operational even without a renderer window.

@@ -1,17 +1,18 @@
 /**
  * WebSocket Rule Handler
- * Manages rule broadcasting, dynamic value population, and toggle from extensions
+ * Manages rule broadcasting, dynamic value population, and toggle from extensions.
+ *
+ * Rule toggling is delegated to WorkspaceStateService (the single state owner)
+ * via the onRuleToggle callback, which handles persistence, broadcasting, and
+ * renderer notification. This avoids dual-state ownership between the WS service
+ * and WorkspaceStateService.
  */
 
 import WebSocket from 'ws';
-import fs from 'fs';
-import path from 'path';
-import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import type { Source } from '../../types/source';
-import type { HeaderRule, RulesCollection, RulesStorage } from '../../types/rules';
-import atomicWriter from '../../utils/atomicFileWriter';
+import type { HeaderRule, RulesCollection } from '../../types/rules';
 import { DATA_FORMAT_VERSION } from '../../config/version';
 
 const { createLogger } = mainLogger;
@@ -25,10 +26,9 @@ interface ProcessedHeaderRule extends Omit<HeaderRule, 'hasEnvVars' | 'envVars'>
     envVars?: string[];
 }
 
-interface WSServiceLike {
+interface RuleHandlerDeps {
     rules: RulesCollection;
     sources: Source[];
-    appDataPath: string | null;
     environmentHandler: {
         loadEnvironmentVariables(): Record<string, string>;
         resolveTemplate(template: string, variables: Record<string, string>): string;
@@ -37,9 +37,23 @@ interface WSServiceLike {
 }
 
 class WSRuleHandler {
-    wsService: WSServiceLike;
+    wsService: RuleHandlerDeps;
 
-    constructor(wsService: WSServiceLike) {
+    /**
+     * Callback to delegate a single rule toggle to WorkspaceStateService.
+     * Set by lifecycle.ts after WorkspaceStateService is configured.
+     * When null, toggle requests are logged as warnings and ignored.
+     */
+    onRuleToggle: ((ruleId: string, updates: Partial<HeaderRule>) => Promise<void>) | null = null;
+
+    /**
+     * Callback to delegate a batch of rule updates to WorkspaceStateService.
+     * Mutates all rules and broadcasts once (instead of N times).
+     * Set by lifecycle.ts after WorkspaceStateService is configured.
+     */
+    onRuleToggleBatch: ((updates: Array<{ ruleId: string; changes: Partial<HeaderRule> }>) => Promise<void>) | null = null;
+
+    constructor(wsService: RuleHandlerDeps) {
         this.wsService = wsService;
     }
 
@@ -175,12 +189,13 @@ class WSRuleHandler {
 
                 if (processed.isDynamic && processed.sourceId) {
                     const source = this.wsService.sources.find(s => s.sourceId === processed.sourceId!.toString());
-                    if (source && source.sourceContent !== null && source.sourceContent !== undefined) {
-                        // Content is available (including empty string) — populate header value
+                    if (source && source.activationState !== 'waiting_for_deps'
+                        && source.sourceContent !== null && source.sourceContent !== undefined) {
+                        // Content is available (including empty string) and source deps are met — populate header value
                         processed.headerValue = (processed.prefix || '') + source.sourceContent + (processed.suffix || '');
                     } else if (source) {
-                        // Source exists but content not yet fetched — exclude rule until content arrives
-                        log.debug(`Rule "${rule.headerName}" pending — source ${processed.sourceId} content not yet fetched`);
+                        // Source exists but either has unresolved deps or content not yet fetched — exclude rule
+                        log.debug(`Rule "${rule.headerName}" pending — source ${processed.sourceId} ${source.activationState === 'waiting_for_deps' ? 'has unresolved dependencies' : 'content not yet fetched'}`);
                         return null;
                     }
                 }
@@ -197,146 +212,60 @@ class WSRuleHandler {
     // ──────────────────────────────────────────────
 
     /**
-     * Handle toggle rule request from extension
+     * Handle toggle rule request from extension.
+     * Delegates to WorkspaceStateService via onRuleToggle callback,
+     * which handles persistence, WS broadcast, proxy update, and renderer notification.
      */
     async handleToggleRule(ruleId: string | number, enabled: boolean): Promise<void> {
+        if (!this.onRuleToggle) {
+            log.warn(`Cannot toggle rule ${ruleId} — onRuleToggle not wired yet`);
+            return;
+        }
+
         try {
-            if (!this.wsService.rules || !this.wsService.rules.header) {
-                log.error('No header rules available to toggle');
-                return;
-            }
-
-            let ruleFound = false;
-            const updatedHeaderRulesCollection = this.wsService.rules.header.map((rule: HeaderRule) => {
-                if (String(rule.id) === String(ruleId)) {
-                    ruleFound = true;
-                    return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
-                }
-                return rule;
-            });
-
-            if (!ruleFound) {
-                log.error(`Rule ${ruleId} not found`);
-                return;
-            }
-
-            this.wsService.rules.header = updatedHeaderRulesCollection;
-            await this._persistAndNotify();
+            await this.onRuleToggle(String(ruleId), { isEnabled: enabled });
             log.info(`Successfully toggled rule ${ruleId} to ${enabled}`);
         } catch (error) {
-            log.error('Error handling toggle rule:', error);
+            log.error('Error handling toggle rule:', errorMessage(error));
         }
     }
 
     /**
-     * Handle toggle all rules request from extension
+     * Handle toggle all rules request from extension.
+     * Uses batch callback to mutate all rules and broadcast once.
+     * Falls back to individual toggles if batch callback is not wired.
      */
     async handleToggleAllRules(ruleIds: string[], enabled: boolean): Promise<void> {
-        try {
-            log.info(`Handling toggle all rules request: ${ruleIds.length} rules -> ${enabled}`);
+        log.info(`Handling toggle all rules request: ${ruleIds.length} rules -> ${enabled}`);
 
-            if (!this.wsService.rules || !this.wsService.rules.header) {
-                log.error('No header rules available to toggle');
-                return;
-            }
-
-            let rulesUpdated = 0;
-            const updatedHeaderRulesCollection = this.wsService.rules.header.map((rule: HeaderRule) => {
-                if (ruleIds.includes(String(rule.id))) {
-                    rulesUpdated++;
-                    return { ...rule, isEnabled: enabled, updatedAt: new Date().toISOString() };
-                }
-                return rule;
-            });
-
-            if (rulesUpdated === 0) {
-                log.warn('No rules were updated');
-                return;
-            }
-
-            this.wsService.rules.header = updatedHeaderRulesCollection;
-            await this._persistAndNotify();
-            log.info(`Successfully toggled ${rulesUpdated} rules to ${enabled}`);
-        } catch (error) {
-            log.error('Error handling toggle all rules:', error);
-        }
-    }
-
-    /**
-     * Persist rules to disk, broadcast to extensions, and notify desktop UI
-     */
-    async _persistAndNotify(): Promise<void> {
-        if (this.wsService.appDataPath) {
+        if (this.onRuleToggleBatch) {
             try {
-                const workspacesPath = path.join(this.wsService.appDataPath, 'workspaces.json');
-                let activeWorkspaceId = 'default-personal';
-
-                if (fs.existsSync(workspacesPath)) {
-                    const workspacesData = await fs.promises.readFile(workspacesPath, 'utf8');
-                    const workspaces = JSON.parse(workspacesData);
-                    if (workspaces.activeWorkspaceId) {
-                        activeWorkspaceId = workspaces.activeWorkspaceId;
-                    }
-                }
-
-                const rulesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'rules.json');
-
-                let rulesStorage: RulesStorage;
-                try {
-                    const existingData = await fs.promises.readFile(rulesPath, 'utf8');
-                    rulesStorage = JSON.parse(existingData) as RulesStorage;
-                } catch (e) {
-                    rulesStorage = {
-                        version: DATA_FORMAT_VERSION,
-                        rules: this.wsService.rules,
-                        metadata: {
-                            totalRules: this.wsService.rules.header.length + this.wsService.rules.request.length + this.wsService.rules.response.length,
-                            lastUpdated: new Date().toISOString()
-                        }
-                    };
-                }
-
-                rulesStorage.rules = this.wsService.rules;
-                rulesStorage.metadata = {
-                    totalRules: this.wsService.rules.header.length + this.wsService.rules.request.length + this.wsService.rules.response.length,
-                    lastUpdated: new Date().toISOString()
-                };
-
-                await atomicWriter.writeJson(rulesPath, rulesStorage, { pretty: true });
-                log.info(`Rules persisted to disk for workspace ${activeWorkspaceId}`);
+                await this.onRuleToggleBatch(
+                    ruleIds.map(id => ({ ruleId: String(id), changes: { isEnabled: enabled } }))
+                );
+                log.info(`Successfully toggled ${ruleIds.length} rules to ${enabled}`);
             } catch (error) {
-                log.error('Failed to persist rules to disk:', error);
+                log.error('Error handling batch toggle all rules:', errorMessage(error));
+            }
+            return;
+        }
+
+        if (!this.onRuleToggle) {
+            log.warn('Cannot toggle rules — onRuleToggle not wired yet');
+            return;
+        }
+
+        // Fallback: toggle individually, continue on error
+        let succeeded = 0;
+        for (const ruleId of ruleIds) {
+            try {
+                await this.onRuleToggle(String(ruleId), { isEnabled: enabled });
+                succeeded++;
+            } catch (error) {
+                log.error(`Error toggling rule ${ruleId}:`, errorMessage(error));
             }
         }
-
-        this.broadcastRules();
-
-        try {
-            const { BrowserWindow } = await import('electron');
-            const windows = BrowserWindow.getAllWindows();
-            windows.forEach((window: BrowserWindowType) => {
-                if (window && !window.isDestroyed()) {
-                    const rulesData = {
-                        rules: { header: this.wsService.rules.header },
-                        metadata: {
-                            totalRules: this.wsService.rules.header.length,
-                            lastUpdated: new Date().toISOString()
-                        },
-                        version: DATA_FORMAT_VERSION
-                    };
-
-                    window.webContents.executeJavaScript(`
-                        window.dispatchEvent(new CustomEvent('rules-updated', {
-                            detail: { rules: ${JSON.stringify(rulesData)} }
-                        }));
-                    `).catch((err: Error) => {
-                        log.error('Failed to dispatch rules-updated event:', err);
-                    });
-                }
-            });
-        } catch (error) {
-            log.error('Failed to notify main window:', error);
-        }
+        log.info(`Toggled ${succeeded}/${ruleIds.length} rules to ${enabled}`);
     }
 }
 

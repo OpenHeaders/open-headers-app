@@ -13,7 +13,7 @@ import { WSClientHandler } from './ws-client-handler';
 import type { Source } from '../../types/source';
 import type { RulesCollection } from '../../types/rules';
 import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
-import type { SourceRefreshService } from '../source-refresh/SourceRefreshService';
+import settingsCache from '../core/SettingsCache';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WebSocketService');
@@ -23,11 +23,6 @@ interface InitLock {
     promise: Promise<boolean> | null;
 }
 
-
-interface SourceServiceLike {
-    on?(event: string, handler: () => void): void;
-    getAllSources?(): Source[];
-}
 
 interface NetworkServiceLike {
     getState(): { isOnline: boolean; networkQuality: string; lastUpdate: number } | null;
@@ -47,7 +42,6 @@ type WSMessage =
 
 interface InitializeOptions {
     wsPort?: number;
-    sourceService?: SourceServiceLike;
     appDataPath?: string;
     networkService?: NetworkServiceLike;
 }
@@ -60,12 +54,9 @@ class WebSocketService {
     isInitializing: boolean;
     sources: Source[];
     rules: RulesCollection;
-    sourceService: SourceServiceLike | null;
     appDataPath: string | null;
     connectedClients: Map<string, WSClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
-    rulesBroadcastTimer: ReturnType<typeof setTimeout> | null;
-    lastRulesBroadcast: number;
     _closing: boolean;
 
     // Handlers
@@ -75,7 +66,6 @@ class WebSocketService {
     environmentHandler: WSEnvironmentHandler;
     clientHandler: WSClientHandler;
     networkStateHandler: WSNetworkStateHandler | null;
-    sourceRefreshService: SourceRefreshService | null;
 
     constructor() {
         this.wss = null;
@@ -85,22 +75,20 @@ class WebSocketService {
         this.isInitializing = false;
         this.sources = [];
         this.rules = { header: [], request: [], response: [] };
-        this.sourceService = null;
         this.appDataPath = null;
         this.connectedClients = new Map();
         this.clientInitializationLocks = new Map();
-        this.rulesBroadcastTimer = null;
-        this.lastRulesBroadcast = 0;
         this._closing = false;
 
         // Handlers
         this.recordingHandler = new WSRecordingHandler(this);
+        this.recordingHandler.onFocusApp = (nav) => this._handleFocusApp(nav);
+        this.recordingHandler.onNotifyRenderers = (channel, data) => this._sendToRenderers(channel, data);
         this.ruleHandler = new WSRuleHandler(this);
         this.sourceHandler = new WSSourceHandler(this);
-        this.environmentHandler = new WSEnvironmentHandler(this);
+        this.environmentHandler = new WSEnvironmentHandler();
         this.clientHandler = new WSClientHandler(this);
         this.networkStateHandler = null;
-        this.sourceRefreshService = null;
     }
 
     /**
@@ -114,7 +102,6 @@ class WebSocketService {
             log.info('Initializing WebSocket service...');
 
             if (options.wsPort) this.wsPort = options.wsPort;
-            if (options.sourceService) this.sourceService = options.sourceService;
             if (options.appDataPath) this.appDataPath = options.appDataPath;
 
             if (!this.appDataPath) {
@@ -129,8 +116,11 @@ class WebSocketService {
 
             this._setupWsServer();
 
-            if (this.sourceService) this.sourceHandler.registerSourceEvents();
-            void this.sourceHandler.loadInitialData();
+            // Wire SettingsCache reader — loaded in Phase A before services init
+            this.recordingHandler.onReadSetting = (key) => settingsCache.get()[key];
+
+            // Initial data loading is handled by WorkspaceStateService.initialize()
+            // which calls broadcastToServices() to populate this.sources and this.rules.
             this.clientHandler.startClientCleanup();
 
             this.networkStateHandler = new WSNetworkStateHandler(this);
@@ -139,8 +129,7 @@ class WebSocketService {
             }
 
             void this.recordingHandler.initializeVideoCaptureService();
-            this.environmentHandler.setupEnvironmentListener();
-            // Proxy sync is handled by WorkspaceStateService.initialize() via broadcastToServices().
+            // Environment changes and proxy sync are handled by WorkspaceStateService.
 
             this.isInitializing = false;
             return true;
@@ -345,6 +334,16 @@ class WebSocketService {
 
     // ── Shared utilities ──────────────────────────
 
+    /** Send an IPC message to all open renderer windows. No-ops with zero windows. */
+    _sendToRenderers(channel: string, data: unknown): void {
+        try {
+            const { BrowserWindow } = electron;
+            for (const win of BrowserWindow.getAllWindows()) {
+                if (!win.isDestroyed()) win.webContents.send(channel, data);
+            }
+        } catch { /* non-critical */ }
+    }
+
     async _handleFocusApp(navigation: { tab?: string; subTab?: string; action?: string; itemId?: string }): Promise<void> {
         try {
             log.info('_handleFocusApp called with navigation:', navigation);
@@ -383,8 +382,7 @@ class WebSocketService {
     }
 
     // Source delegators
-    updateSources(sources: Parameters<WSSourceHandler['updateSources']>[0]): void { this.sourceHandler.updateSources(sources); }
-    onWorkspaceSwitch(workspaceId: string): Promise<void> { return this.sourceHandler.onWorkspaceSwitch(workspaceId); }
+    updateSources(sources: Source[]): void { this.sourceHandler.updateSources(sources); }
 
     // Rule delegators
     updateRules(rules: RulesCollection): void { this.ruleHandler.updateRules(rules); }

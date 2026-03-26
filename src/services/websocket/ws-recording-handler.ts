@@ -5,7 +5,6 @@
 
 import WebSocket from 'ws';
 import electron from 'electron';
-import type { BrowserWindow as BrowserWindowType } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../utils/mainLogger';
@@ -19,10 +18,16 @@ import type { AppSettings } from '../../types/settings';
 const { createLogger } = mainLogger;
 const log = createLogger('WSRecordingHandler');
 
-interface WSServiceLike {
+interface RecordingHandlerDeps {
     appDataPath: string | null;
     _broadcastToAll(message: string): number;
-    _handleFocusApp(navigation: { tab?: string; subTab?: string; action?: string; itemId?: string }): void;
+}
+
+interface FocusNavigation {
+    tab?: string;
+    subTab?: string;
+    action?: string;
+    itemId?: string;
 }
 
 interface DisplayInfo {
@@ -101,12 +106,49 @@ interface SaveRecordingMessageData {
 }
 
 class WSRecordingHandler {
-    wsService: WSServiceLike;
+    wsService: RecordingHandlerDeps;
     videoCaptureService: VideoCaptureServiceLike | null;
 
-    constructor(wsService: WSServiceLike) {
+    /** Callback to focus the app window. Set by ws-service after construction. */
+    onFocusApp: ((navigation: FocusNavigation) => void) | null = null;
+
+    /** Callback to send IPC to renderer windows. Set by ws-service after construction. */
+    onNotifyRenderers: ((channel: string, data: unknown) => void) | null = null;
+
+    /** Callback to read a setting value. Set by ws-service after construction.
+     *  Falls back to defaults when not wired (e.g., in tests). */
+    onReadSetting: (<K extends keyof AppSettings>(key: K) => AppSettings[K]) | null = null;
+
+    constructor(wsService: RecordingHandlerDeps) {
         this.wsService = wsService;
         this.videoCaptureService = null;
+    }
+
+    /** Read a setting, falling back to built-in defaults when callback not wired. */
+    private _readSetting<K extends keyof AppSettings>(key: K): AppSettings[K] {
+        if (this.onReadSetting) return this.onReadSetting(key);
+        // Fallback defaults for when callback is not wired (startup / tests)
+        const defaults: Partial<AppSettings> = {
+            videoRecording: false,
+            recordingHotkey: 'CommandOrControl+Shift+E',
+            recordingHotkeyEnabled: true,
+        };
+        return defaults[key] as AppSettings[K];
+    }
+
+    /** Send an IPC message to all renderer windows. No-ops when no windows exist. */
+    private _notifyRenderers(channel: string, data: unknown): void {
+        if (this.onNotifyRenderers) {
+            this.onNotifyRenderers(channel, data);
+            return;
+        }
+        // Fallback: direct BrowserWindow access (matches pre-existing behavior)
+        try {
+            const { BrowserWindow } = electron;
+            for (const win of BrowserWindow.getAllWindows()) {
+                if (!win.isDestroyed()) win.webContents.send(channel, data);
+            }
+        } catch { /* non-critical */ }
     }
 
     /**
@@ -129,20 +171,7 @@ class WSRecordingHandler {
      */
     async sendVideoRecordingState(ws: WebSocket): Promise<void> {
         try {
-            const { app } = electron;
-            const fsPromises = fs.promises;
-
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: Partial<AppSettings> = {};
-
-            try {
-                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(settingsData) as Partial<AppSettings>;
-            } catch (error) {
-                log.debug('Settings file not found, using defaults');
-            }
-
-            const videoRecordingEnabled = settings.videoRecording || false;
+            const videoRecordingEnabled = this._readSetting('videoRecording') || false;
 
             const message = JSON.stringify({
                 type: 'videoRecordingStateChanged',
@@ -176,21 +205,8 @@ class WSRecordingHandler {
      */
     async sendRecordingHotkey(ws: WebSocket): Promise<void> {
         try {
-            const { app } = electron;
-            const fsPromises = fs.promises;
-
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let settings: Partial<AppSettings> = {};
-
-            try {
-                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                settings = JSON.parse(settingsData) as Partial<AppSettings>;
-            } catch (error) {
-                log.debug('Settings file not found, using defaults');
-            }
-
-            const recordingHotkey = settings.recordingHotkey || 'CommandOrControl+Shift+E';
-            const recordingHotkeyEnabled = settings.recordingHotkeyEnabled !== undefined ? settings.recordingHotkeyEnabled : true;
+            const recordingHotkey = this._readSetting('recordingHotkey') || 'CommandOrControl+Shift+E';
+            const recordingHotkeyEnabled = this._readSetting('recordingHotkeyEnabled') ?? true;
 
             ws.send(JSON.stringify({
                 type: 'recordingHotkeyResponse',
@@ -227,10 +243,7 @@ class WSRecordingHandler {
      */
     notifyRecordingProcessing(recordId: string, metadata: ProcessingNotificationMeta): void {
         try {
-            const { BrowserWindow } = electron;
-            const windows = BrowserWindow.getAllWindows();
-
-            const processingNotification = {
+            this._notifyRenderers('recording-processing', {
                 id: recordId,
                 status: 'processing',
                 timestamp: metadata.timestamp,
@@ -241,13 +254,6 @@ class WSRecordingHandler {
                 source: 'extension',
                 hasVideo: false,
                 hasProcessedVersion: false
-            };
-
-            windows.forEach((window: BrowserWindowType) => {
-                if (window && !window.isDestroyed()) {
-                    window.webContents.send('recording-processing', processingNotification);
-                    log.info('Sent recording-processing event to renderer');
-                }
             });
         } catch (error) {
             log.error('Failed to notify recording processing:', error);
@@ -259,19 +265,7 @@ class WSRecordingHandler {
      */
     notifyRecordingProgress(recordId: string, stage: string, progress: number, details: { eventCount?: number } = {}): void {
         try {
-            const { BrowserWindow } = electron;
-            const windows = BrowserWindow.getAllWindows();
-
-            windows.forEach((window: BrowserWindowType) => {
-                if (window && !window.isDestroyed()) {
-                    window.webContents.send('recording-progress', {
-                        recordId,
-                        stage,
-                        progress,
-                        details
-                    });
-                }
-            });
+            this._notifyRenderers('recording-progress', { recordId, stage, progress, details });
         } catch (error) {
             log.error('Failed to notify recording progress:', error);
         }
@@ -402,14 +396,7 @@ class WSRecordingHandler {
             this.notifyRecordingProgress(recordId, 'complete', 100);
 
             try {
-                const { BrowserWindow } = electron;
-                const windows = BrowserWindow.getAllWindows();
-                windows.forEach((window: BrowserWindowType) => {
-                    if (window && !window.isDestroyed()) {
-                        window.webContents.send('recording-received', metadata);
-                        log.info('Sent recording-received event to renderer');
-                    }
-                });
+                this._notifyRenderers('recording-received', metadata);
             } catch (error) {
                 log.error('Failed to notify renderer:', error);
             }
@@ -429,19 +416,7 @@ class WSRecordingHandler {
      */
     async handleStartSyncRecording(ws: WebSocket, data: StartSyncRecordingData): Promise<void> {
         try {
-            const { app } = electron;
-            const fsPromises = fs.promises;
-
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let videoRecordingEnabled = false;
-
-            try {
-                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData) as Partial<AppSettings>;
-                videoRecordingEnabled = settings.videoRecording || false;
-            } catch (error) {
-                log.debug('Could not read settings file, assuming video recording is disabled');
-            }
+            const videoRecordingEnabled = this._readSetting('videoRecording') || false;
 
             if (!videoRecordingEnabled) {
                 log.info('Video recording is disabled in settings, skipping video capture');
@@ -483,19 +458,7 @@ class WSRecordingHandler {
      */
     async handleStopSyncRecording(ws: WebSocket, data: StopSyncRecordingData): Promise<void> {
         try {
-            const { app } = electron;
-            const fsPromises = fs.promises;
-
-            const settingsPath = path.join(app.getPath('userData'), 'settings.json');
-            let videoRecordingEnabled = false;
-
-            try {
-                const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
-                const settings = JSON.parse(settingsData) as Partial<AppSettings>;
-                videoRecordingEnabled = settings.videoRecording || false;
-            } catch (error) {
-                log.debug('Could not read settings file, assuming video recording is disabled');
-            }
+            const videoRecordingEnabled = this._readSetting('videoRecording') || false;
 
             if (!videoRecordingEnabled) {
                 log.info('Video recording is disabled in settings, ignoring stop request');
@@ -556,11 +519,13 @@ class WSRecordingHandler {
         const recordId = data.recording.record.metadata?.recordId ?? '';
 
         log.info('Immediately navigating to records tab for:', recordId);
-        this.wsService._handleFocusApp({
-            tab: 'record-viewer',
-            action: 'highlight',
-            itemId: recordId
-        });
+        if (this.onFocusApp) {
+            this.onFocusApp({
+                tab: 'record-viewer',
+                action: 'highlight',
+                itemId: recordId
+            });
+        }
 
         this.notifyRecordingProcessing(recordId, {
             url: data.recording.record.metadata?.url || 'Unknown',

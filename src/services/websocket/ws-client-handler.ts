@@ -4,8 +4,6 @@
  */
 
 import WebSocket, { WebSocketServer } from 'ws';
-import electron from 'electron';
-import type { BrowserWindow as BrowserWindowType } from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
@@ -43,7 +41,7 @@ interface InitLock {
     promise: Promise<boolean> | null;
 }
 
-interface WSServiceLike {
+interface ClientHandlerDeps {
     connectedClients: Map<string, WSClientInfo>;
     clientInitializationLocks: Map<string, InitLock>;
     wss: WebSocketServer | null;
@@ -52,15 +50,16 @@ interface WSServiceLike {
     ruleHandler: { sendRulesToClient(ws: WebSocket): Promise<void> };
     recordingHandler: { sendVideoRecordingState(ws: WebSocket): Promise<void> };
     networkStateHandler: { sendInitialState(ws: WebSocket): void } | null;
+    _sendToRenderers(channel: string, data: unknown): void;
 }
 
 class WSClientHandler {
-    wsService: WSServiceLike;
+    wsService: ClientHandlerDeps;
     clientCleanupInterval: ReturnType<typeof setInterval> | null;
     maxClientInactivity: number;
     cleanupIntervalTime: number;
 
-    constructor(wsService: WSServiceLike) {
+    constructor(wsService: ClientHandlerDeps) {
         this.wsService = wsService;
         this.clientCleanupInterval = null;
         this.maxClientInactivity = 5 * 60 * 1000; // 5 minutes
@@ -197,14 +196,8 @@ class WSClientHandler {
      */
     broadcastConnectionStatus(): void {
         try {
-            const { BrowserWindow } = electron;
             const status = this.getConnectionStatus();
-
-            BrowserWindow.getAllWindows().forEach((win: BrowserWindowType) => {
-                if (win && !win.isDestroyed()) {
-                    win.webContents.send('ws-connection-status-changed', status);
-                }
-            });
+            this.wsService._sendToRenderers('ws-connection-status-changed', status);
         } catch (error: unknown) {
             log.debug('Could not broadcast connection status:', errorMessage(error));
         }
