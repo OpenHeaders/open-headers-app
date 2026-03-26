@@ -71,6 +71,9 @@ export default defineConfig({
         root: 'src/renderer',
         build: {
             outDir: resolve('dist-webpack/renderer'),
+            // Electron loads renderer assets from local disk, not over a network —
+            // the default 500KB web-app limit is not meaningful here
+            chunkSizeWarningLimit: 1500,
             rollupOptions: {
                 input: resolve(__dirname, 'src/renderer/index.html'),
                 onwarn(warning, warn) {
