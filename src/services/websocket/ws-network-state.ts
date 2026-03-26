@@ -3,7 +3,7 @@
  * Manages network state broadcasting to WebSocket clients
  */
 
-import WS, { WebSocketServer } from 'ws';
+import WS from 'ws';
 import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
@@ -26,15 +26,15 @@ interface NetworkServiceLike {
     on(event: string, cb: (event: NetworkStateEvent) => void): void;
 }
 
-interface WSServiceLike {
-    wss: WebSocketServer | null;
+interface NetworkStateHandlerDeps {
+    _broadcastToAll(message: string): number;
 }
 
 class WSNetworkStateHandler {
-    wsService: WSServiceLike;
+    wsService: NetworkStateHandlerDeps;
     currentNetworkState: NetworkState;
 
-    constructor(wsService: WSServiceLike) {
+    constructor(wsService: NetworkStateHandlerDeps) {
         this.wsService = wsService;
         this.currentNetworkState = {
             isOnline: true,
@@ -103,23 +103,7 @@ class WSNetworkStateHandler {
             }
         });
 
-        let clientCount = 0;
-
-        // Send to WS clients
-        if (this.wsService.wss && this.wsService.wss.clients) {
-            this.wsService.wss.clients.forEach((client: WS) => {
-                if (client.readyState === 1) { // WebSocket.OPEN
-                    try {
-                        client.send(message);
-                        clientCount++;
-                    } catch (error) {
-                        log.error('Error sending network state to WS client:', error);
-                    }
-                }
-            });
-        }
-
-
+        const clientCount = this.wsService._broadcastToAll(message);
         if (clientCount > 0) {
             log.debug(`Broadcasted network state to ${clientCount} client(s)`);
         }

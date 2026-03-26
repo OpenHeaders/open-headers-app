@@ -13,14 +13,12 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
 interface MockWSService {
     appDataPath: string;
     _broadcastToAll: Mock<(message: string) => number>;
-    _handleFocusApp: Mock;
 }
 
 function createMockWSService(): MockWSService {
     return {
         appDataPath: '/Users/jane.doe/Library/Application Support/OpenHeaders',
         _broadcastToAll: vi.fn().mockReturnValue(3),
-        _handleFocusApp: vi.fn()
     };
 }
 
@@ -35,9 +33,13 @@ describe('WSRecordingHandler', () => {
     let handler: WSRecordingHandler;
     let mockService: MockWSService;
 
+    let mockFocusApp: Mock;
+
     beforeEach(() => {
         mockService = createMockWSService();
+        mockFocusApp = vi.fn();
         handler = new WSRecordingHandler(mockService as ConstructorParameters<typeof WSRecordingHandler>[0]);
+        handler.onFocusApp = mockFocusApp;
     });
 
     describe('constructor', () => {
@@ -321,7 +323,7 @@ describe('WSRecordingHandler', () => {
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
-            expect(mockService._handleFocusApp).toHaveBeenCalledWith({
+            expect(mockFocusApp).toHaveBeenCalledWith({
                 tab: 'record-viewer',
                 action: 'highlight',
                 itemId: recordId,
@@ -404,7 +406,7 @@ describe('WSRecordingHandler', () => {
 
             handler.handleSaveRecordingMessage(mockWs, data);
 
-            expect(mockService._handleFocusApp).toHaveBeenCalledWith({
+            expect(mockFocusApp).toHaveBeenCalledWith({
                 tab: 'record-viewer',
                 action: 'highlight',
                 itemId: recordId,

@@ -71,10 +71,7 @@ describe('WebSocketService', () => {
         it('initializes lifecycle flags correctly', () => {
             expect(service._closing).toBe(false);
             expect(service.isInitializing).toBe(false);
-            expect(service.sourceService).toBeNull();
             expect(service.appDataPath).toBeNull();
-            expect(service.rulesBroadcastTimer).toBeNull();
-            expect(service.lastRulesBroadcast).toBe(0);
         });
     });
 
@@ -186,8 +183,8 @@ describe('WebSocketService', () => {
                 clients: new Set([throwingClient, goodClient])
             } as unknown as typeof service.wss;
 
-            const count = service._broadcastToAll(JSON.stringify({ type: 'test' }));
-            // Throwing client counted before error, good client counted after
+            service._broadcastToAll(JSON.stringify({ type: 'test' }));
+            // Throwing client errors silently, good client still receives
             expect(goodClient.send).toHaveBeenCalled();
         });
     });

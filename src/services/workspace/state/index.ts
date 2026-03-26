@@ -48,6 +48,7 @@ export {
     refreshSource,
     addHeaderRule,
     updateHeaderRule,
+    updateHeaderRulesBatch,
     removeHeaderRule,
     addProxyRule,
     removeProxyRule,

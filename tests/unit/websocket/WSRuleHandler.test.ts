@@ -167,6 +167,57 @@ describe('WSRuleHandler', () => {
             expect(result.header).toHaveLength(0);
         });
 
+        it('excludes rule when source has stale content but is waiting_for_deps', () => {
+            mockService.sources = [
+                makeSource({
+                    sourceId: 'src-stale',
+                    sourceContent: 'stale-token-from-previous-fetch',
+                    activationState: 'waiting_for_deps',
+                    missingDependencies: ['API_HOST'],
+                })
+            ];
+            const rules: RulesCollection = {
+                ...emptyRules,
+                header: [makeHeaderRule({
+                    id: 'rule-stale-dep',
+                    isDynamic: true,
+                    sourceId: 'src-stale',
+                    prefix: 'Bearer ',
+                    suffix: '',
+                    headerName: 'Authorization',
+                    headerValue: '',
+                })]
+            };
+            const result = handler._populateDynamicHeaderValues(rules);
+            // Source has stale content but deps are unresolved — rule must be excluded
+            expect(result.header).toHaveLength(0);
+        });
+
+        it('includes rule when source has content and is active', () => {
+            mockService.sources = [
+                makeSource({
+                    sourceId: 'src-active',
+                    sourceContent: 'fresh-token',
+                    activationState: 'active',
+                })
+            ];
+            const rules: RulesCollection = {
+                ...emptyRules,
+                header: [makeHeaderRule({
+                    id: 'rule-active-dep',
+                    isDynamic: true,
+                    sourceId: 'src-active',
+                    prefix: 'Bearer ',
+                    suffix: '',
+                    headerName: 'Authorization',
+                    headerValue: '',
+                })]
+            };
+            const result = handler._populateDynamicHeaderValues(rules);
+            expect(result.header).toHaveLength(1);
+            expect(result.header[0].headerValue).toBe('Bearer fresh-token');
+        });
+
         it('resolves env vars in header values and marks as active', () => {
             mockService.environmentHandler.loadEnvironmentVariables = () => ({
                 API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc'
@@ -420,6 +471,87 @@ describe('WSRuleHandler', () => {
             handler.updateRules(rules);
             expect(mockService.rules.header).toHaveLength(1);
             expect(mockService._broadcastToAll).toHaveBeenCalled();
+        });
+    });
+
+    describe('handleToggleRule', () => {
+        it('delegates to onRuleToggle callback with stringified ruleId', async () => {
+            const onToggle = vi.fn().mockResolvedValue(undefined);
+            handler.onRuleToggle = onToggle;
+
+            await handler.handleToggleRule('rule-abc-123', false);
+            expect(onToggle).toHaveBeenCalledWith('rule-abc-123', { isEnabled: false });
+        });
+
+        it('coerces numeric ruleId to string', async () => {
+            const onToggle = vi.fn().mockResolvedValue(undefined);
+            handler.onRuleToggle = onToggle;
+
+            await handler.handleToggleRule(42 as unknown as string, true);
+            expect(onToggle).toHaveBeenCalledWith('42', { isEnabled: true });
+        });
+
+        it('logs warning and returns when onRuleToggle is not wired', async () => {
+            handler.onRuleToggle = null;
+            // Should not throw
+            await handler.handleToggleRule('rule-1', true);
+        });
+
+        it('catches and logs errors from onRuleToggle callback', async () => {
+            handler.onRuleToggle = vi.fn().mockRejectedValue(new Error('persistence failed'));
+            // Should not throw
+            await handler.handleToggleRule('rule-1', true);
+        });
+    });
+
+    describe('handleToggleAllRules', () => {
+        it('uses batch callback when available (single broadcast)', async () => {
+            const onBatch = vi.fn().mockResolvedValue(undefined);
+            handler.onRuleToggleBatch = onBatch;
+            handler.onRuleToggle = vi.fn();
+
+            await handler.handleToggleAllRules(['rule-1', 'rule-2', 'rule-3'], false);
+
+            expect(onBatch).toHaveBeenCalledWith([
+                { ruleId: 'rule-1', changes: { isEnabled: false } },
+                { ruleId: 'rule-2', changes: { isEnabled: false } },
+                { ruleId: 'rule-3', changes: { isEnabled: false } },
+            ]);
+            // Should NOT have called the individual toggle
+            expect(handler.onRuleToggle).not.toHaveBeenCalled();
+        });
+
+        it('falls back to individual toggles when batch callback not wired', async () => {
+            const onToggle = vi.fn().mockResolvedValue(undefined);
+            handler.onRuleToggle = onToggle;
+            handler.onRuleToggleBatch = null;
+
+            await handler.handleToggleAllRules(['rule-a', 'rule-b'], true);
+
+            expect(onToggle).toHaveBeenCalledTimes(2);
+            expect(onToggle).toHaveBeenCalledWith('rule-a', { isEnabled: true });
+            expect(onToggle).toHaveBeenCalledWith('rule-b', { isEnabled: true });
+        });
+
+        it('continues toggling remaining rules when one fails in fallback mode', async () => {
+            const onToggle = vi.fn()
+                .mockResolvedValueOnce(undefined)
+                .mockRejectedValueOnce(new Error('rule-2 failed'))
+                .mockResolvedValueOnce(undefined);
+            handler.onRuleToggle = onToggle;
+            handler.onRuleToggleBatch = null;
+
+            await handler.handleToggleAllRules(['rule-1', 'rule-2', 'rule-3'], true);
+
+            // All three were attempted despite rule-2 failure
+            expect(onToggle).toHaveBeenCalledTimes(3);
+        });
+
+        it('logs warning when neither callback is wired', async () => {
+            handler.onRuleToggle = null;
+            handler.onRuleToggleBatch = null;
+            // Should not throw
+            await handler.handleToggleAllRules(['rule-1'], true);
         });
     });
 

@@ -11,7 +11,7 @@ import settingsHandlers from './settingsHandlers';
 import webSocketService from '../../../../services/websocket/ws-service';
 import proxyService from '../../../../services/proxy/ProxyService';
 import networkService from '../../../../services/network/NetworkService';
-import type { IpcInvokeEvent, IpcFireEvent, OperationResult } from '../../../../types/common';
+import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';
 import type { Workspace, WorkspaceAuthData, TeamWorkspaceInvite, ServicesHealth } from '../../../../types/workspace';
 import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
@@ -111,7 +111,7 @@ class WorkspaceHandlers {
         try {
             const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
             if (workspaceSyncScheduler) {
-                return await workspaceSyncScheduler.getSyncStatus();
+                return workspaceSyncScheduler.getSyncStatus();
             }
             return {};
         } catch (error) {
@@ -164,7 +164,7 @@ class WorkspaceHandlers {
 
             // Check workspace sync scheduler
             if (workspaceSyncScheduler) {
-                health.workspaceSyncScheduler = workspaceSyncScheduler !== null;
+                health.workspaceSyncScheduler = true;
             }
 
             // Check network service
@@ -175,7 +175,7 @@ class WorkspaceHandlers {
 
             // Check proxy service
             if (proxyService) {
-                const proxyStatus = await proxyService.getStatus();
+                const proxyStatus = proxyService.getStatus();
                 health.proxyService = proxyStatus !== null;
             }
 
@@ -216,106 +216,19 @@ class WorkspaceHandlers {
         }
     }
 
-    /**
-     * Handle initial git sync for newly created git workspaces.
-     * Proxy/WS/state orchestration is handled by WorkspaceStateService — this only
-     * manages the one-time initial git pull + data import for new git workspaces.
-     */
-    async handleWorkspaceSwitched(event: IpcFireEvent | IpcInvokeEvent, workspaceId: string, skipInitialSync = false) {
-        log.info(`Received workspace switch event: ${workspaceId}${skipInitialSync ? ' (skip initial sync)' : ''}`);
-
-        const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
-        const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
-        const gitSyncService = appLifecycle.getGitSyncService();
-
-        // Handle initial sync for new Git workspaces (unless skipInitialSync is true)
-        let didInitialSync = false;
-        if (!skipInitialSync && workspaceSettingsService && gitSyncService) {
-            const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find(w => w.id === workspaceId);
-
-            if (workspace && workspace.type === 'git') {
-                const workspacePath = path.join(app.getPath('userData'), 'workspaces', workspaceId);
-                const sourcesPath = path.join(workspacePath, 'sources.json');
-
-                let needsInitialSync: boolean;
-                try {
-                    await fs.promises.access(sourcesPath);
-                    const data = await fs.promises.readFile(sourcesPath, 'utf8');
-                    needsInitialSync = !data || data.trim() === '[]' || data.trim() === '';
-                } catch (_error) {
-                    needsInitialSync = true;
-                }
-
-                if (needsInitialSync) {
-                    log.info('New Git workspace detected, triggering immediate sync');
-                    didInitialSync = true;
-
-                    try {
-                        event.sender.send('workspace-sync-started', {
-                            workspaceId,
-                            isInitialSync: true
-                        });
-
-                        const result = await gitSyncService.syncWorkspace({
-                            workspaceId,
-                            workspaceName: workspace.name,
-                            url: workspace.gitUrl,
-                            branch: workspace.gitBranch || 'main',
-                            path: workspace.gitPath || 'config/open-headers.json',
-                            authType: workspace.authType || 'none',
-                            authData: workspace.authData ?? {}
-                        });
-
-                        if (result.success && result.data && workspaceSyncScheduler) {
-                            // importSyncedData writes to disk and notifies WorkspaceStateService
-                            // via onSyncDataChanged callback to reload in-memory state.
-                            await workspaceSyncScheduler.importSyncedData(workspaceId, result.data);
-                        }
-
-                        event.sender.send('workspace-sync-completed', {
-                            workspaceId,
-                            success: result.success,
-                            error: result.error,
-                            isInitialSync: true,
-                            timestamp: new Date().toISOString()
-                        });
-                    } catch (error: unknown) {
-                        log.error('Initial sync failed:', error);
-                        event.sender.send('workspace-sync-completed', {
-                            workspaceId,
-                            success: false,
-                            error: errorMessage(error),
-                            isInitialSync: true,
-                            timestamp: new Date().toISOString()
-                        });
-                    }
-                }
-            }
-        }
-
-        if (workspaceSyncScheduler) {
-            await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId, { skipInitialSync: didInitialSync });
-        }
-    }
-
-    async handleInitializeWorkspaceSync(event: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
+    async handleInitializeWorkspaceSync(_event: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
         try {
             log.info(`Initializing workspace sync for workspace: ${workspaceId}`);
 
-            // Trigger the same logic as workspace switch to ensure proper initialization
-            await this.handleWorkspaceSwitched(event, workspaceId);
+            const workspaceSyncScheduler = appLifecycle.getWorkspaceSyncScheduler();
+            if (workspaceSyncScheduler) {
+                await workspaceSyncScheduler.onWorkspaceSwitch(workspaceId);
+            }
 
-            return {
-                success: true,
-                message: 'Workspace sync initialized successfully'
-            };
+            return { success: true, message: 'Workspace sync initialized successfully' };
         } catch (error: unknown) {
             log.error('Error initializing workspace sync:', error);
-            return {
-                success: false,
-                error: errorMessage(error)
-            };
+            return { success: false, error: errorMessage(error) };
         }
     }
 
