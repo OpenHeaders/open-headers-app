@@ -255,7 +255,7 @@ declare global {
     // HTTP request execution (main-process owned)
     httpRequest: {
         executeRequest: (spec: HttpRequestSpec) => Promise<HttpRequestResult>;
-        getTotpCooldown: (sourceId: string) => Promise<TotpCooldownInfo>;
+        getTotpCooldown: (workspaceId: string, sourceId: string) => Promise<TotpCooldownInfo>;
         generateTotpPreview: (secret: string) => Promise<string>;
     };
 

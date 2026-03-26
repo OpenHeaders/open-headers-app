@@ -87,6 +87,7 @@ function makeSpec(overrides: Partial<HttpRequestSpec> = {}): HttpRequestSpec {
         url: 'https://api.openheaders.io/v1/sources',
         method: 'GET',
         sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
         ...overrides,
     };
 }
@@ -275,7 +276,7 @@ describe('HttpRequestService', () => {
             const service = new HttpRequestService(resolver, tracker);
 
             // Record a TOTP usage to trigger cooldown
-            tracker.recordUsage('src-1', 'secret', '123456');
+            tracker.recordUsage('ws-test-1', 'src-1', 'secret', '123456');
 
             await expect(
                 service.execute(makeSpec({ totpSecret: 'secret' }))
@@ -327,7 +328,7 @@ describe('HttpRequestService', () => {
             const service = new HttpRequestService(resolver, tracker);
 
             await service.generateTotpPreview('JBSWY3DPEHPK3PXP');
-            expect(tracker.checkCooldown('src-1').inCooldown).toBe(false);
+            expect(tracker.checkCooldown('ws-test-1', 'src-1').inCooldown).toBe(false);
         });
     });
 });

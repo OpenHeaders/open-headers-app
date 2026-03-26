@@ -15,6 +15,7 @@ const log = createLogger('useSourceRefresh');
 
 interface UseSourceRefreshDeps {
   sources: Source[];
+  workspaceId: string;
   refreshSource: (sourceId: string) => Promise<boolean>;
   manualRefresh: (sourceId: string) => Promise<boolean>;
   addSource: (sourceData: Source) => Promise<Source | null>;
@@ -26,7 +27,7 @@ interface UseSourceRefreshReturn {
   handleAddSource: (sourceData: NewSourceData) => Promise<boolean>;
 }
 
-export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSource }: UseSourceRefreshDeps): UseSourceRefreshReturn {
+export function useSourceRefresh({ sources, workspaceId, refreshSource, manualRefresh, addSource }: UseSourceRefreshDeps): UseSourceRefreshReturn {
 
   /**
    * Handle HTTP source refresh — delegates to main process via IPC
@@ -87,7 +88,8 @@ export function useSourceRefresh({ sources, refreshSource, manualRefresh, addSou
           jsonFilter: sourceData.jsonFilter?.enabled
               ? { enabled: true, path: sourceData.jsonFilter.path || '' }
               : undefined,
-          sourceId: 'new-source-' + Date.now()
+          sourceId: 'new-source-' + Date.now(),
+          workspaceId
         };
 
         const result = await window.electronAPI.httpRequest.executeRequest(spec);

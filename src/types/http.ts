@@ -52,6 +52,8 @@ export interface HttpRequestSpec {
   totpSecret?: string;
   jsonFilter?: { enabled: boolean; path: string };
   sourceId: string;
+  /** Active workspace ID — scopes TOTP cooldowns so different workspaces don't collide. */
+  workspaceId: string;
   timeout?: number;
 }
 

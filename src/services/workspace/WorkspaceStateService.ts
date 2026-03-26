@@ -169,6 +169,9 @@ class WorkspaceStateService {
             this.state.activeWorkspaceId = config.activeWorkspaceId;
             this.state.syncStatus = config.syncStatus;
 
+            if (this.sourceRefreshService) {
+                this.sourceRefreshService.activeWorkspaceId = this.state.activeWorkspaceId;
+            }
             await this.loadEnvironmentData(this.state.activeWorkspaceId);
             await this.applyActiveEnvVarsToServices();
             await this.loadWorkspaceData(this.state.activeWorkspaceId);
@@ -193,6 +196,7 @@ class WorkspaceStateService {
     // ── State access ──────────────────────────────────────────────
 
     getState(): WorkspaceState { return { ...this.state }; }
+    getActiveWorkspaceId(): string { return this.state.activeWorkspaceId; }
 
     // ── Workspace data loading ────────────────────────────────────
 
@@ -363,6 +367,7 @@ class WorkspaceStateService {
             await this.syncScheduler.onWorkspaceSwitch(workspaceId, { skipInitialSync: options.skipInitialSync }).catch(e => log.warn('Sync scheduler switch failed:', errorMessage(e)));
         }
         if (this.sourceRefreshService) {
+            this.sourceRefreshService.activeWorkspaceId = workspaceId;
             await this.sourceRefreshService.clearAllSources().catch(e => log.warn('Failed to clear refresh sources:', errorMessage(e)));
         }
 

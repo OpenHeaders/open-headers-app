@@ -31,6 +31,7 @@ interface HttpTestHandlerParams {
     onTestResponse?: (response: string) => void;
     effectiveSourceId: string;
     testSourceId: string;
+    workspaceId: string;
 }
 
 /**
@@ -187,7 +188,7 @@ interface HttpFormValues {
  * Build an HttpRequestSpec from form values — raw, unresolved templates.
  * Main process handles all template resolution.
  */
-function buildRequestSpec(form: FormInstance, values: HttpFormValues, totpState: TotpState, effectiveSourceId: string, sourcePath?: string | null, sourceMethod?: string | null): HttpRequestSpec {
+function buildRequestSpec(form: FormInstance, values: HttpFormValues, totpState: TotpState, effectiveSourceId: string, workspaceId: string, sourcePath?: string | null, sourceMethod?: string | null): HttpRequestSpec {
     let url = sourcePath || values.sourcePath || '';
     if (!url.match(/^https?:\/\//i)) {
         url = 'https://' + url;
@@ -237,7 +238,8 @@ function buildRequestSpec(form: FormInstance, values: HttpFormValues, totpState:
         contentType,
         totpSecret,
         jsonFilter,
-        sourceId: effectiveSourceId
+        sourceId: effectiveSourceId,
+        workspaceId
     };
 }
 
@@ -257,7 +259,8 @@ export const createHttpTestHandler = ({
     setRawResponse,
     onTestResponse,
     effectiveSourceId,
-    testSourceId
+    testSourceId,
+    workspaceId
 }: HttpTestHandlerParams) => async (sourcePath: string | null = null, sourceMethod: string | null = null, _progressCallback: HttpProgressCallback | null = null, cleanupCallback: (() => void) | null = null) => {
     const totpState = getTotpStateFromForm();
 
@@ -290,7 +293,7 @@ export const createHttpTestHandler = ({
         setTestResponseVisible(false);
 
         // Build spec from form values — all raw, unresolved
-        const spec = buildRequestSpec(form, values, totpState, effectiveSourceId, sourcePath, sourceMethod);
+        const spec = buildRequestSpec(form, values, totpState, effectiveSourceId, workspaceId, sourcePath, sourceMethod);
 
         // Execute via main process
         const result = await http.testRequest(spec);

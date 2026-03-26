@@ -62,6 +62,9 @@ class SourceRefreshService {
     private networkService: NetworkServiceLike | null;
     private httpRequestService: HttpRequestService | null;
 
+    /** Active workspace ID — scopes TOTP cooldowns per workspace. Set by WorkspaceStateService. */
+    activeWorkspaceId: string;
+
     private overdueCheckTimer: ReturnType<typeof setInterval> | null;
     private isDestroyed: boolean;
     private isPaused: boolean;
@@ -81,6 +84,7 @@ class SourceRefreshService {
 
         this.networkService = null;
         this.httpRequestService = null;
+        this.activeWorkspaceId = 'default-personal';
 
         this.overdueCheckTimer = null;
         this.isDestroyed = false;
@@ -294,7 +298,7 @@ class SourceRefreshService {
                 const breaker = this.circuitBreakerManager.getBreaker(cbKey, CIRCUIT_BREAKER_CONFIG);
 
                 const result = await breaker.execute(
-                    () => fetchSourceContent(source, this.httpRequestService!),
+                    () => fetchSourceContent(source, this.httpRequestService!, this.activeWorkspaceId),
                     { bypassIfOpen: bypassCircuitBreaker, reason }
                 );
 

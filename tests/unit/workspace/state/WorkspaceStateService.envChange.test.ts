@@ -66,6 +66,7 @@ function createRefreshService(): SourceRefreshServiceLike & {
     removeSourcesNotIn: ReturnType<typeof vi.fn>;
 } {
     return {
+        activeWorkspaceId: 'ws-test-1',
         manualRefresh: vi.fn<(id: string) => Promise<{ success: boolean; error?: string }>>().mockResolvedValue({ success: true }),
         resetCircuitBreaker: vi.fn<(id: string) => void>(),
         updateSource: vi.fn<(source: Source) => Promise<void>>().mockResolvedValue(undefined),

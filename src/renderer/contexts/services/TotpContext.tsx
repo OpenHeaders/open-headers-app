@@ -7,6 +7,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useWorkspaces } from '../data';
 
 interface TotpContextValue {
   canUseTotpForSource: (sourceId: string) => boolean;
@@ -31,6 +32,8 @@ export const useTotpState = (): TotpContextValue => {
 };
 
 export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { activeWorkspaceId } = useWorkspaces();
+
     // Local cache of cooldown state — polled from main process
     const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
     const trackedSourcesRef = useRef<Set<string>>(new Set());
@@ -63,7 +66,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             for (const sourceId of allSourceIds) {
                 try {
-                    const info = await window.electronAPI.httpRequest.getTotpCooldown(sourceId);
+                    const info = await window.electronAPI.httpRequest.getTotpCooldown(activeWorkspaceId, sourceId);
                     if (info.inCooldown) {
                         newCooldowns[sourceId] = info.remainingSeconds;
                         stillActive = true;
@@ -113,7 +116,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sourceId) return;
         trackedSourcesRef.current.add(sourceId);
 
-        window.electronAPI.httpRequest.getTotpCooldown(sourceId).then(info => {
+        window.electronAPI.httpRequest.getTotpCooldown(activeWorkspaceId, sourceId).then(info => {
             if (info.inCooldown) {
                 setCooldowns(prev => ({ ...prev, [sourceId]: info.remainingSeconds }));
                 setHasActiveCooldowns(true);

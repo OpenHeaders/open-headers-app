@@ -143,6 +143,7 @@ class AppLifecycle {
             // Initialize: loads workspaces + active workspace data, starts auto-save,
             // broadcasts to WS/proxy. App is operational even without a renderer window.
             await workspaceStateService.initialize();
+            webSocketService.markStateReady();
             log.info('WorkspaceStateService initialized — app is operational');
 
             // Wire sync scheduler → WorkspaceStateService:

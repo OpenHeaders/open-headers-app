@@ -93,6 +93,7 @@ describe('addSource', () => {
         const updateSourceFn = vi.fn().mockResolvedValue(undefined);
         const ctx = createCtx({
             sourceRefreshService: {
+                activeWorkspaceId: 'ws-test-1',
                 updateSource: updateSourceFn,
                 removeSourcesNotIn: vi.fn().mockResolvedValue(undefined),
                 clearAllSources: vi.fn(),

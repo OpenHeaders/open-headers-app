@@ -21,6 +21,7 @@ function createMockService(): ConstructorParameters<typeof WSClientHandler>[0] {
         clientInitializationLocks: new Map(),
         wss: null,
         wsPort: 59210,
+        stateReady: Promise.resolve(),
         sourceHandler: { sendSourcesToClient: vi.fn().mockResolvedValue(undefined) },
         ruleHandler: { sendRulesToClient: vi.fn().mockResolvedValue(undefined) },
         recordingHandler: { sendVideoRecordingState: vi.fn().mockResolvedValue(undefined) },
@@ -208,6 +209,24 @@ describe('WSClientHandler', () => {
     });
 
     describe('initializeClient', () => {
+        it('waits for stateReady before sending data', async () => {
+            let resolveReady!: () => void;
+            mockService.stateReady = new Promise(resolve => { resolveReady = resolve; });
+            const mockWs = { isInitialized: false } as Parameters<typeof handler.initializeClient>[0];
+
+            const initPromise = handler.initializeClient(mockWs, 'WS-gated');
+
+            // Not yet initialized — stateReady hasn't resolved
+            await new Promise(r => setTimeout(r, 10));
+            expect(mockService.sourceHandler.sendSourcesToClient).not.toHaveBeenCalled();
+
+            // Resolve the gate
+            resolveReady();
+            await initPromise;
+            expect(mockWs.isInitialized).toBe(true);
+            expect(mockService.sourceHandler.sendSourcesToClient).toHaveBeenCalled();
+        });
+
         it('initializes client with sources, rules, and recording state', async () => {
             const mockWs = { isInitialized: false } as Parameters<typeof handler.initializeClient>[0];
             const clientId = 'WS-1709123456789-a1b2c3d4e';
@@ -289,6 +308,9 @@ describe('WSClientHandler', () => {
             // initializeClient creates an internal lock promise that rejects on failure.
             // We need to catch both the main call and the lock promise to avoid unhandled rejections.
             const initPromise = handler.initializeClient(mockWs, clientId);
+
+            // Wait a microtask so initializeClient passes the stateReady gate and sets the lock
+            await Promise.resolve();
 
             // The lock promise is stored in clientInitializationLocks — catch it to prevent unhandled rejection
             const lock = mockService.clientInitializationLocks.get(clientId);

@@ -59,6 +59,11 @@ class WebSocketService {
     clientInitializationLocks: Map<string, InitLock>;
     _closing: boolean;
 
+    /** Resolves when WorkspaceStateService has loaded initial state.
+     *  Clients that connect before this wait transparently. */
+    stateReady: Promise<void>;
+    private _resolveStateReady!: () => void;
+
     // Handlers
     recordingHandler: WSRecordingHandler;
     ruleHandler: WSRuleHandler;
@@ -79,6 +84,7 @@ class WebSocketService {
         this.connectedClients = new Map();
         this.clientInitializationLocks = new Map();
         this._closing = false;
+        this.stateReady = new Promise(resolve => { this._resolveStateReady = resolve; });
 
         // Handlers
         this.recordingHandler = new WSRecordingHandler(this);
@@ -368,6 +374,12 @@ class WebSocketService {
     }
 
     // ── Public API / delegators ───────────────────
+
+    /** Signal that workspace state is loaded — unblocks any clients waiting for initial data. */
+    markStateReady(): void {
+        this._resolveStateReady();
+        log.info('State ready — clients will now receive data');
+    }
 
     isConnected(): boolean { return this.connectedClients.size > 0; }
 

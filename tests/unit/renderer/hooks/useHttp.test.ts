@@ -66,6 +66,7 @@ describe('useHttp', () => {
         url: 'https://api.openheaders.io/data',
         method: 'GET',
         sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
       };
 
       let response: HttpRequestResult;
@@ -91,6 +92,7 @@ describe('useHttp', () => {
         contentType: 'application/json',
         totpSecret: '{{TOTP_SECRET}}',
         sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
       };
 
       await act(async () => {
@@ -116,6 +118,7 @@ describe('useHttp', () => {
         url: 'https://api.openheaders.io/test',
         method: 'GET',
         sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
       };
 
       let response: Awaited<ReturnType<typeof result.current.testRequest>>;
@@ -138,6 +141,7 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
         });
       });
 
@@ -157,6 +161,7 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
         });
       });
 
@@ -181,6 +186,7 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
+        workspaceId: 'ws-test-1',
           jsonFilter: { enabled: true, path: 'data.value' },
         });
       });

@@ -27,6 +27,7 @@ import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, us
 import { Tabs } from 'antd';
 import type { FormInstance } from 'antd';
 import { useTotpState, useEnvironments } from '../../contexts';
+import { useWorkspaces } from '../../hooks/useCentralizedWorkspace';
 import { useHttp } from '../../hooks/useHttp';
 import type { TestResponseContent } from '../../../types/http';
 
@@ -88,6 +89,7 @@ const HttpOptions = forwardRef(({
 }: HttpOptionsProps, ref) => {
     // Get contexts
     const envContext = useEnvironments();
+    const { activeWorkspaceId } = useWorkspaces();
     const http = useHttp();
     const {
         canUseTotpSecret,
@@ -184,7 +186,8 @@ const HttpOptions = forwardRef(({
     const handleTestRequest = createHttpTestHandler({
         form, getTotpStateFromForm,
         envContext, http, setTesting, onTestingChange, setTestResponseContent,
-        setTestResponseVisible, setRawResponse, onTestResponse, effectiveSourceId, testSourceId
+        setTestResponseVisible, setRawResponse, onTestResponse, effectiveSourceId, testSourceId,
+        workspaceId: activeWorkspaceId
     });
 
     const imperativeHandleMethods = createImperativeHandleMethods({
