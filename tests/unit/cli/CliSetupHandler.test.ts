@@ -1,5 +1,46 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { BrowserWindow } from 'electron';
+
+// ── Mocks for joinWorkspace / importEnvironment lazy deps ────────
+const mockTestConnection = vi.fn();
+const mockSyncWorkspace = vi.fn();
+const mockGetGitSyncService = vi.fn();
+const mockGetWorkspaceSettingsService = vi.fn();
+const mockOnCliWorkspaceCreated = vi.fn();
+const mockOnEnvironmentVariablesChanged = vi.fn();
+
+vi.mock('../../../src/main/modules/app/lifecycle', () => ({
+    default: {
+        getGitSyncService: (...args: unknown[]) => mockGetGitSyncService(...args),
+        getWorkspaceSettingsService: (...args: unknown[]) => mockGetWorkspaceSettingsService(...args),
+    }
+}));
+
+vi.mock('../../../src/services/workspace/WorkspaceStateService', () => ({
+    default: {
+        onCliWorkspaceCreated: (...args: unknown[]) => mockOnCliWorkspaceCreated(...args),
+        onEnvironmentVariablesChanged: (...args: unknown[]) => mockOnEnvironmentVariablesChanged(...args),
+    }
+}));
+
+vi.mock('../../../src/utils/mainLogger', () => ({
+    default: {
+        createLogger: () => ({
+            info: () => {},
+            warn: () => {},
+            error: () => {},
+            debug: () => {},
+        }),
+    },
+}));
+
+vi.mock('../../../src/utils/atomicFileWriter', () => ({
+    default: {
+        readJson: vi.fn().mockResolvedValue(null),
+        writeJson: vi.fn().mockResolvedValue(undefined),
+    }
+}));
+
 import { CliSetupHandler } from '../../../src/services/cli/CliSetupHandler';
 
 type AuthData = Parameters<CliSetupHandler['_normalizeAuthData']>[1];
@@ -198,6 +239,173 @@ describe('CliSetupHandler', () => {
             handler.setMainWindow(win);
             expect(handler.mainWindow).toBe(win);
             handler.mainWindow = null;
+        });
+    });
+
+    describe('joinWorkspace()', () => {
+        const validJoinData = {
+            repoUrl: 'https://git.openheaders.io/team/config.git',
+            branch: 'main',
+            configPath: 'config/open-headers.json',
+            authType: 'none' as const,
+            workspaceName: 'OpenHeaders Team',
+            inviterName: 'alice@openheaders.io',
+        };
+
+        const mockSyncData = {
+            sources: [{ sourceId: 'src-1', url: 'https://api.openheaders.io/headers', sourceType: 'http' }],
+            rules: { header: [{ id: 'r-1' }], request: [], response: [] },
+            proxyRules: [{ id: 'pr-1' }],
+        };
+
+        function setupMocks(overrides: {
+            connectionSuccess?: boolean;
+            syncSuccess?: boolean;
+            syncData?: typeof mockSyncData | null;
+        } = {}) {
+            const {
+                connectionSuccess = true,
+                syncSuccess = true,
+                syncData = mockSyncData,
+            } = overrides;
+
+            mockTestConnection.mockResolvedValue({ success: connectionSuccess, error: connectionSuccess ? undefined : 'Connection refused' });
+            mockSyncWorkspace.mockResolvedValue({ success: syncSuccess, data: syncData, error: syncSuccess ? undefined : 'Sync failed' });
+            mockOnCliWorkspaceCreated.mockResolvedValue(undefined);
+
+            mockGetGitSyncService.mockReturnValue({
+                testConnection: mockTestConnection,
+                syncWorkspace: mockSyncWorkspace,
+            });
+            mockGetWorkspaceSettingsService.mockReturnValue({
+                getSettings: vi.fn().mockResolvedValue({ workspaces: [] }),
+            });
+        }
+
+        beforeEach(() => {
+            vi.clearAllMocks();
+        });
+
+        it('delegates state management to WorkspaceStateService.onCliWorkspaceCreated', async () => {
+            setupMocks();
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(true);
+            expect(result.workspaceId).toMatch(/^team-[a-f0-9]{16}$/);
+            expect(mockOnCliWorkspaceCreated).toHaveBeenCalledOnce();
+        });
+
+        it('passes workspace config and sync data to onCliWorkspaceCreated', async () => {
+            setupMocks();
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(true);
+            const call = mockOnCliWorkspaceCreated.mock.calls[0][0];
+            expect(call.workspaceId).toMatch(/^team-/);
+            expect(call.workspaceConfig.name).toBe('OpenHeaders Team');
+            expect(call.workspaceConfig.type).toBe('git');
+            expect(call.workspaceConfig.gitUrl).toBe('https://git.openheaders.io/team/config.git');
+            expect(call.workspaceConfig.inviteMetadata.invitedBy).toBe('alice@openheaders.io');
+            expect(call.syncData).toBe(mockSyncData);
+        });
+
+        it('passes null syncData when sync fails', async () => {
+            setupMocks({ syncSuccess: false, syncData: null });
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(true);
+            const call = mockOnCliWorkspaceCreated.mock.calls[0][0];
+            expect(call.syncData).toBeNull();
+        });
+
+        it('passes null syncData when sync returns no data', async () => {
+            setupMocks({ syncData: null });
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(true);
+            const call = mockOnCliWorkspaceCreated.mock.calls[0][0];
+            expect(call.syncData).toBeNull();
+        });
+
+        it('returns error when connection test fails', async () => {
+            setupMocks({ connectionSuccess: false });
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toContain('Connection test failed');
+            expect(mockSyncWorkspace).not.toHaveBeenCalled();
+            expect(mockOnCliWorkspaceCreated).not.toHaveBeenCalled();
+        });
+
+        it('returns error when services are not ready', async () => {
+            mockGetGitSyncService.mockReturnValue(null);
+            mockGetWorkspaceSettingsService.mockReturnValue(null);
+
+            const result = await handler.joinWorkspace(validJoinData);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Services not ready');
+        });
+
+        it('returns error when repoUrl is missing', async () => {
+            setupMocks();
+
+            const result = await handler.joinWorkspace({ ...validJoinData, repoUrl: '' });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Missing repoUrl');
+        });
+    });
+
+    describe('importEnvironment()', () => {
+        beforeEach(() => {
+            vi.clearAllMocks();
+        });
+
+        it('calls onEnvironmentVariablesChanged after writing env data', async () => {
+            mockGetWorkspaceSettingsService.mockReturnValue({
+                getSettings: vi.fn().mockResolvedValue({ activeWorkspaceId: 'team-abc123' }),
+            });
+            mockOnEnvironmentVariablesChanged.mockResolvedValue(undefined);
+
+            const result = await handler.importEnvironment({
+                environments: {
+                    Default: { API_KEY: { value: 'test-key', isSecret: true } }
+                }
+            });
+
+            expect(result.success).toBe(true);
+            expect(mockOnEnvironmentVariablesChanged).toHaveBeenCalledOnce();
+            // Should pass the active environment's variables
+            const vars = mockOnEnvironmentVariablesChanged.mock.calls[0][0];
+            expect(vars).toHaveProperty('API_KEY');
+        });
+
+        it('returns error when services are not ready', async () => {
+            mockGetWorkspaceSettingsService.mockReturnValue(null);
+
+            const result = await handler.importEnvironment({
+                environments: { Default: {} }
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Services not ready');
+        });
+
+        it('returns error when environments data is missing', async () => {
+            mockGetWorkspaceSettingsService.mockReturnValue({
+                getSettings: vi.fn().mockResolvedValue({ activeWorkspaceId: 'test' }),
+            });
+
+            const result = await handler.importEnvironment({} as Parameters<typeof handler.importEnvironment>[0]);
+
+            expect(result.success).toBe(false);
+            expect(result.error).toBe('Missing environments data');
         });
     });
 });

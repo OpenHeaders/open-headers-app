@@ -119,6 +119,7 @@ function createService(opts: {
     const syncScheduler = {
         onWorkspaceSwitch: vi.fn().mockResolvedValue(undefined),
         onWorkspaceUpdated: vi.fn().mockResolvedValue(undefined),
+        importSyncedData: vi.fn().mockResolvedValue(undefined),
     };
     service.configure({
         webSocketService: wsService,
