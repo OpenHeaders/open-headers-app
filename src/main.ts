@@ -537,16 +537,12 @@ function setupMenu(
 
     const openSettings = () => {
         windowManager.showWindow();
-        setTimeout(() => {
-            windowManager.sendToWindow('navigate-to', { tab: 'settings' });
-        }, 300);
+        windowManager.sendToWindow('navigate-to', { tab: 'settings' });
     };
 
     const openUpdateCheck = () => {
         windowManager.showWindow();
-        setTimeout(() => {
-            windowManager.sendToWindow('trigger-update-check');
-        }, 300);
+        windowManager.sendToWindow('trigger-update-check');
     };
 
     const appMenuTemplate = [

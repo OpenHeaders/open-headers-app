@@ -42,9 +42,7 @@ class TrayManager {
                     label: 'Settings',
                     click: () => {
                         windowManager.showWindow();
-                        setTimeout(() => {
-                            windowManager.sendToWindow('navigate-to', { tab: 'settings' });
-                        }, 300);
+                        windowManager.sendToWindow('navigate-to', { tab: 'settings' });
                     }
                 },
                 { type: 'separator' },

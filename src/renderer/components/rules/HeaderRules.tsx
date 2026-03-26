@@ -23,7 +23,6 @@ import {
     ExclamationCircleOutlined,
     WarningOutlined,
     EnvironmentOutlined,
-    RightCircleTwoTone,
     CopyrightTwoTone
 } from '@ant-design/icons';
 import UnifiedHeaderModal from './header/unified-modal/UnifiedHeaderModal';
@@ -35,8 +34,7 @@ import {
 } from '../../utils';
 import {
     checkRuleActivation,
-    getResolvedPreview,
-    extractVariablesFromRule
+    getResolvedPreview
 } from '../../utils/validation/environment-variables';
 
 import type { HeaderRule } from '../../../types/rules';
@@ -68,13 +66,14 @@ const HeaderRules = () => {
     }, [rules]);
     
     // Get navigation context
-    const { 
-        getHighlight, 
-        applyHighlight, 
-        registerActionHandler, 
+    const {
+        getHighlight,
+        applyHighlight,
+        registerActionHandler,
+        flushPendingActions,
         executeAction,
-        ACTIONS, 
-        TARGETS 
+        ACTIONS,
+        TARGETS
     } = useNavigation();
     
     // Apply highlight when table data changes
@@ -204,7 +203,13 @@ const HeaderRules = () => {
             }
             
             setRules(headerRules);
+            rulesRef.current = headerRules;
             log.info(`Loaded ${headerRules.length} header rules`);
+            // Data is ready — execute any pending navigation actions (e.g. edit
+            // triggered from the browser extension before this tab was active).
+            // Deferred to next macrotask so React fully completes the setRules
+            // render cycle before the action handler opens a modal.
+            setTimeout(() => flushPendingActions(TARGETS.RULES_HEADERS), 0);
         } catch (error) {
             log.error('Failed to load header rules:', error);
             showMessage('error', 'Failed to load header rules');
@@ -443,7 +448,7 @@ const HeaderRules = () => {
         }
 
         // Build the actual value with prefix/suffix
-        let actualValue = content;
+        let actualValue: string;
         let prefix = rule.prefix || '';
         let suffix = rule.suffix || '';
         
@@ -582,7 +587,7 @@ const HeaderRules = () => {
                 
                 // Prepare display value based on source type
                 let displayValue = info.sourceInfo || '';
-                let label = '';
+                let label: string;
                 
                 if (sourceType === 'http') {
                     label = 'URL';
@@ -764,13 +769,8 @@ const HeaderRules = () => {
             width: 140,
             sorter: (a: HeaderRule, b: HeaderRule) => (a.domains || []).join(',').localeCompare((b.domains || []).join(',')),
             render: (domains: string[], record: HeaderRule) => {
-                // Check if rule has missing dependencies
-                const info = getDynamicValueInfo(record);
-                const hasMissingDeps = info.activationState === 'waiting_for_deps';
-                
                 // Resolve domains with env vars if needed
                 let resolvedDomains = domains;
-                let hasUnresolvedVars = false;
                 
                 if (record.hasEnvVars && envContext.environmentsReady) {
                     const variables = envContext.getAllVariables();
@@ -778,19 +778,15 @@ const HeaderRules = () => {
                         if (domain && domain.includes('{{')) {
                             const preview = getResolvedPreview(domain, variables);
                             const previewText = preview.text ?? '';
-                            // Check if domain has unresolved variables
+                            // Unresolved variables — keep original domain
                             if (previewText.includes('{{') && previewText.includes('}}')) {
-                                hasUnresolvedVars = true;
-                                return domain; // Return original domain if unresolved
+                                return domain;
                             }
                             // Split comma-separated domains from resolved env vars
                             return previewText.split(',').map(d => d.trim()).filter(d => d);
                         }
                         return domain;
                     });
-                } else if (!envContext.environmentsReady) {
-                    // Environment not ready, keep original domains
-                    hasUnresolvedVars = domains.some((d: string) => d && d.includes('{{'));
                 }
                 
                 return (
