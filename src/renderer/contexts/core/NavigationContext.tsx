@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useState, useContext, useCallback, useRef } from 'react';
 import { theme } from 'antd';
 import { createLogger } from '../../utils/error-handling/logger';
 import type { JsonValue } from '../../../types/common';
@@ -35,6 +35,7 @@ interface NavigationContextValue {
   navigate: (intent: NavigationIntent) => void;
   clearNavigationIntent: () => void;
   registerActionHandler: (target: string, action: string, handler: (itemId: string, data: NavigationActionData) => void) => () => void;
+  flushPendingActions: (target: string) => void;
   executeAction: (target: string, action: string, itemId: string, data?: NavigationActionData) => void;
   highlights: Record<string, HighlightInfo>;
   clearHighlight: (target: string) => void;
@@ -84,8 +85,12 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // State to track highlights for different sections
     const [highlights, setHighlights] = useState<Record<string, HighlightInfo>>({});
 
-    // State to track action handlers
-    const [actionHandlers, setActionHandlers] = useState<Record<string, (itemId: string, data: NavigationActionData) => void>>({});
+    // Action handlers stored in a ref so navigate/executeAction always see the
+    // latest registrations without stale-closure issues. State is kept in sync
+    // purely to trigger re-renders when the set of handlers changes (e.g. for
+    // context consumers that depend on handler availability).
+    const actionHandlersRef = useRef<Record<string, (itemId: string, data: NavigationActionData) => void>>({});
+    const [, setActionHandlersVersion] = useState(0);
 
     // Ref to store pending actions
     const pendingActionsRef = useRef<PendingAction[]>([]);
@@ -118,14 +123,15 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         // If there's an action other than highlight, try to execute it
         if (intent.action && intent.action !== NAVIGATION_ACTIONS.HIGHLIGHT && intent.target) {
             const key = `${intent.target}.${intent.action}`;
-            const handler = actionHandlers[key];
+            const handler = actionHandlersRef.current[key];
 
             if (handler) {
-                // Handler already exists, execute immediately
+                // Handler already exists — wait one frame so React flushes
+                // the tab-switch state update before the action fires.
                 log.info(`Handler already registered for ${key}, executing action immediately`);
-                setTimeout(() => {
+                requestAnimationFrame(() => {
                     handler(intent.itemId!, intent.data || {});
-                }, 500); // Small delay to ensure component is ready
+                });
             } else {
                 // No handler yet, store as pending
                 const pendingAction: PendingAction = {
@@ -140,7 +146,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 log.info('Total pending actions:', pendingActionsRef.current.length);
             }
         }
-    }, [actionHandlers]);
+    }, []); // stable — reads from ref, never stale
 
     /**
      * Register an action handler for a specific target
@@ -148,38 +154,41 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const registerActionHandler = useCallback((target: string, action: string, handler: (itemId: string, data: NavigationActionData) => void): (() => void) => {
         const key = `${target}.${action}`;
 
-        setActionHandlers(prev => ({
-            ...prev,
-            [key]: handler
-        }));
+        actionHandlersRef.current = { ...actionHandlersRef.current, [key]: handler };
+        setActionHandlersVersion(v => v + 1);
 
-        // Check if there are any pending actions for this handler
-        const now = Date.now();
-        pendingActionsRef.current = pendingActionsRef.current.filter(pending => {
-            // Remove actions older than 10 seconds
-            if (now - pending.timestamp > 10000) {
-                return false;
-            }
-
-            // Execute matching pending actions
-            if (pending.target === target && pending.action === action) {
-                setTimeout(() => {
-                    handler(pending.itemId, pending.data);
-                }, 500); // Give more time for rules to load
-                return false; // Remove from pending
-            }
-
-            return true; // Keep in pending
-        });
+        // Pending actions are NOT executed here — the component must call
+        // flushPendingActions(target) once its data is loaded.
 
         // Return cleanup function
         return () => {
-            setActionHandlers(prev => {
-                const newHandlers = { ...prev };
-                delete newHandlers[key];
-                return newHandlers;
-            });
+            const updated = { ...actionHandlersRef.current };
+            delete updated[key];
+            actionHandlersRef.current = updated;
+            setActionHandlersVersion(v => v + 1);
         };
+    }, []);
+
+    /**
+     * Flush pending actions for a target. Components call this after their
+     * data has loaded so actions execute against populated state, not empty.
+     */
+    const flushPendingActions = useCallback((target: string) => {
+        const now = Date.now();
+        pendingActionsRef.current = pendingActionsRef.current.filter(pending => {
+            if (now - pending.timestamp > 10000) return false;
+
+            if (pending.target === target) {
+                const key = `${pending.target}.${pending.action}`;
+                const handler = actionHandlersRef.current[key];
+                if (handler) {
+                    log.info(`Flushing pending action: ${key} for item: ${pending.itemId}`);
+                    handler(pending.itemId, pending.data);
+                    return false;
+                }
+            }
+            return true;
+        });
     }, []);
 
     /**
@@ -187,23 +196,23 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      */
     const executeAction = useCallback((target: string, action: string, itemId: string, data: NavigationActionData = {}) => {
         const key = `${target}.${action}`;
-        const handler = actionHandlers[key];
+        const handler = actionHandlersRef.current[key];
 
         if (handler) {
             log.debug(`Executing action: ${key} for item: ${itemId}`);
             handler(itemId, data);
         } else {
             log.warn(`No handler registered for action: ${key}`);
-            // If handler not ready yet, retry after a short delay
-            setTimeout(() => {
-                const retryHandler = actionHandlers[key];
+            // If handler not ready yet, retry after next frame
+            requestAnimationFrame(() => {
+                const retryHandler = actionHandlersRef.current[key];
                 if (retryHandler) {
                     log.debug(`Executing action (retry): ${key} for item: ${itemId}`);
                     retryHandler(itemId, data);
                 }
-            }, 500);
+            });
         }
-    }, [actionHandlers]);
+    }, []); // stable — reads from ref
 
     /**
      * Clear navigation intent
@@ -268,8 +277,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         const elementSelector = selector || `tr[data-row-key="${itemId}"]`;
 
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
+        // Wait for next paint so React has flushed DOM updates
+        requestAnimationFrame(() => {
             const element = document.querySelector(elementSelector) as HTMLElement;
             if (element) {
                 // Remove any existing highlights first
@@ -318,7 +327,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     });
                 });
             }
-        }, 300);
+        });
     }, [highlights, token]);
 
     const value: NavigationContextValue = {
@@ -329,6 +338,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         // Action handlers
         registerActionHandler,
+        flushPendingActions,
         executeAction,
 
         // Highlights

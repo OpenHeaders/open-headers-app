@@ -1,13 +1,12 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
     Form,
     Input,
     Radio,
-    AutoComplete,
     Typography
 } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
-import { 
+import {
     validateEnvironmentVariables,
     formatMissingVariables
 } from '../../../../utils/validation/environment-variables';
@@ -37,14 +36,13 @@ interface FormHeaderProps {
     headerType: string;
     setHeaderType: (type: string) => void;
     envVarValidation: EnvVarValidationState;
-    setEnvVarValidation: React.Dispatch<React.SetStateAction<EnvVarValidationState>>;
     envContext: EnvContext;
 }
 
-// Common header suggestions
+// Common header suggestions for the native datalist
 const HEADER_SUGGESTIONS = [
     'Authorization',
-    'Content-Type', 
+    'Content-Type',
     'Accept',
     'User-Agent',
     'Cache-Control',
@@ -98,44 +96,31 @@ const FormHeader: React.FC<FormHeaderProps> = ({
     headerType,
     setHeaderType,
     envVarValidation,
-    setEnvVarValidation,
     envContext
 }) => {
     const form = Form.useFormInstance();
-    
-    // Helper function to validate environment variables in a field
-    const validateFieldEnvVars = (fieldName: string, value: string): EnvVarFieldValidation | null => {
+
+    // Pure env-var check — no state side effects. Safe to call from validators.
+    const checkEnvVars = useCallback((value: string) => {
         if (!value || !envContext.environmentsReady) return null;
-        
         const variables = envContext.getAllVariables();
-        const validation = validateEnvironmentVariables(value, variables);
-        
-        setEnvVarValidation((prev: EnvVarValidationState) => ({
-            ...prev,
-            [fieldName]: validation
-        }));
+        return validateEnvironmentVariables(value, variables);
+    }, [envContext]);
 
-        return validation;
-    };
-
-    // Validation for header name
-    const validateHeaderName = (_: unknown, value: string) => {
+    // Validation for header name — pure, stable reference
+    const validateHeaderName = useCallback((_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Header name is required');
         }
-        
-        // Validate environment variables first
-        const envValidation = validateFieldEnvVars('headerName', value);
+
+        const envValidation = checkEnvVars(value);
         if (envValidation && !envValidation.isValid) {
             return Promise.reject(formatMissingVariables(envValidation.missingVars));
         }
-        
-        // For validation of forbidden headers
+
         const hasEnvVars = envValidation && envValidation.hasVars;
         if (!hasEnvVars) {
             const headerName = value.trim().toLowerCase();
-            
-            // Check if it's a forbidden header
             if (FORBIDDEN_HEADERS.some(forbidden => {
                 if (forbidden.endsWith('-')) {
                     return headerName.startsWith(forbidden.toLowerCase());
@@ -145,29 +130,31 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                 return Promise.reject(`"${value}" is a forbidden header that cannot be modified`);
             }
         }
-        
-        return Promise.resolve();
-    };
 
-    // Validation for cookie name
-    const validateCookieName = (_: unknown, value: string) => {
+        return Promise.resolve();
+    }, [checkEnvVars]);
+
+    // Validation for cookie name — pure, stable reference
+    const validateCookieName = useCallback((_: unknown, value: string) => {
         if (!value || !value.trim()) {
             return Promise.reject('Cookie name is required');
         }
-        
-        // Check for invalid characters
+
         if (/[=;,\s]/.test(value)) {
             return Promise.reject('Cookie name cannot contain =, ;, comma, or spaces');
         }
-        
-        // Validate environment variables
-        const envValidation = validateFieldEnvVars('cookieName', value);
+
+        const envValidation = checkEnvVars(value);
         if (envValidation && !envValidation.isValid) {
             return Promise.reject(formatMissingVariables(envValidation.missingVars));
         }
-        
+
         return Promise.resolve();
-    };
+    }, [checkEnvVars]);
+
+    // Stable rules arrays
+    const headerNameRules = useMemo(() => [{ validator: validateHeaderName }], [validateHeaderName]);
+    const cookieNameRules = useMemo(() => [{ validator: validateCookieName }], [validateCookieName]);
 
     return (
         <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -175,32 +162,23 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                 <Form.Item
                     name="headerName"
                     style={{ marginBottom: 0, flex: 1 }}
-                    rules={[{ validator: validateHeaderName }]}
+                    rules={headerNameRules}
                     extra={envVarValidation.headerName?.hasVars && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
                             <InfoCircleOutlined /> Uses environment variables: {envVarValidation.headerName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
                         </Text>
                     )}
                 >
-                    <AutoComplete
-                        options={HEADER_SUGGESTIONS.map(h => ({ value: h }))}
+                    <Input
                         placeholder="Header Name"
                         size="small"
-                        style={{ width: '100%' }}
-                        filterOption={(inputValue, option) =>
-                            option?.value.toLowerCase().includes(inputValue.toLowerCase()) ?? false
-                        }
+                        list="header-name-suggestions"
                         onBlur={(e) => {
-                            const fieldValue = (e.target as HTMLInputElement).value;
-                            // Only normalize if it doesn't contain env vars
-                            if (!fieldValue.includes('{{')) {
+                            const fieldValue = e.target.value;
+                            if (fieldValue && !fieldValue.includes('{{')) {
                                 const normalized = normalizeHeaderName(fieldValue);
                                 form.setFieldsValue({ headerName: normalized });
                             }
-                            validateFieldEnvVars('headerName', fieldValue);
-                        }}
-                        onChange={(fieldValue) => {
-                            validateFieldEnvVars('headerName', fieldValue);
                         }}
                     />
                 </Form.Item>
@@ -208,7 +186,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                 <Form.Item
                     name="cookieName"
                     style={{ marginBottom: 0, flex: 1 }}
-                    rules={[{ validator: validateCookieName }]}
+                    rules={cookieNameRules}
                     extra={envVarValidation.cookieName?.hasVars && (
                         <Text type="secondary" style={{ fontSize: 12 }}>
                             <InfoCircleOutlined /> Uses environment variables: {envVarValidation.cookieName.usedVars.map((v: string) => `{{${v}}}`).join(', ')}
@@ -218,17 +196,22 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                     <Input
                         placeholder="Cookie Name"
                         size="small"
-                        onChange={(e) => validateFieldEnvVars('cookieName', e.target.value)}
                     />
                 </Form.Item>
             )}
-            
-            <Form.Item 
-                name="headerType" 
+
+            {/* Native datalist for header name suggestions — zero React overhead,
+                no rc-select, no internal useSafeState mount loop */}
+            <datalist id="header-name-suggestions">
+                {HEADER_SUGGESTIONS.map(h => <option key={h} value={h} />)}
+            </datalist>
+
+            <Form.Item
+                name="headerType"
                 initialValue={mode === 'cookie' ? 'response' : 'request'}
                 style={{ marginBottom: 0 }}
             >
-                <Radio.Group 
+                <Radio.Group
                     size="small"
                     value={headerType}
                     onChange={(e) => setHeaderType(e.target.value)}
@@ -239,7 +222,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({
                     <Radio.Button value="response">Response</Radio.Button>
                 </Radio.Group>
             </Form.Item>
-            
+
             <Form.Item
                 name="tag"
                 style={{ marginBottom: 0, width: 180 }}

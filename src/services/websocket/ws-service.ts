@@ -276,6 +276,7 @@ class WebSocketService {
             ws.on('message', (msg: WS.RawData) => {
                 try {
                     const data = JSON.parse(msg.toString()) as WSMessage;
+                    log.debug(`Received message from client ${clientId}: type=${data.type}`);
                     const c = this.connectedClients.get(clientId);
                     if (c) c.lastActivity = new Date();
 
@@ -362,10 +363,10 @@ class WebSocketService {
             windowsFocusHelper.focusWindow(mainWindow);
 
             if (navigation && (navigation.tab || navigation.subTab)) {
-                setTimeout(() => {
-                    mainWindow.webContents.send('navigate-to', navigation);
-                    log.info('Sent navigation event to renderer:', navigation);
-                }, 500);
+                // Electron IPC is in-process — the renderer receives the message
+                // regardless of window visibility, so no delay is needed.
+                mainWindow.webContents.send('navigate-to', navigation);
+                log.info('Sent navigation event to renderer:', navigation);
             }
             log.info('App focused successfully');
         } catch (error) {

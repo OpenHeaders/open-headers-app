@@ -199,7 +199,7 @@ function handleSettingsNavigation(
  * Handles tab focus after navigation
  */
 function handleTabFocus(navigation: NavigationRequest): void {
-  setTimeout(() => {
+  requestAnimationFrame(() => {
     const focusedElement = document.activeElement as HTMLElement;
     if (focusedElement && focusedElement.closest('.ant-tabs-tab')) {
       focusedElement.blur();
@@ -214,5 +214,5 @@ function handleTabFocus(navigation: NavigationRequest): void {
         }
       }
     });
-  }, 100);
+  });
 }
