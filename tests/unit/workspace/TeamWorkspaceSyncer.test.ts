@@ -211,24 +211,23 @@ describe('TeamWorkspaceSyncer', () => {
             expect(result.behind).toBe(3);
         });
 
-        it('returns ERROR status on fetch failure', async () => {
+        it('throws on fetch failure (infrastructure errors propagate)', async () => {
             deps.executor.execute.mockRejectedValue(new Error('network timeout'));
 
-            const result = await syncer.checkSyncStatus('/repo', 'main');
-            expect(result.status).toBe(SYNC_STATUS.ERROR);
-            expect(result.error).toBe('network timeout');
+            await expect(syncer.checkSyncStatus('/repo', 'main'))
+                .rejects.toThrow('network timeout');
         });
 
-        it('retries fetch when branch not found on remote', async () => {
+        it('retries fetch when branch not found on remote, then throws', async () => {
             // First fetch fails with missing ref
             deps.executor.execute.mockRejectedValueOnce(new Error("couldn't find remote ref main"));
             // Second fetch also fails
             deps.executor.execute.mockRejectedValueOnce(new Error("couldn't find remote ref main"));
-            // Third fetch also fails - exhausts retries
+            // Third fetch also fails - exhausts retries, throws
             deps.executor.execute.mockRejectedValueOnce(new Error("couldn't find remote ref main"));
 
-            const result = await syncer.checkSyncStatus('/repo', 'main');
-            expect(result.status).toBe(SYNC_STATUS.ERROR);
+            await expect(syncer.checkSyncStatus('/repo', 'main'))
+                .rejects.toThrow("couldn't find remote ref main");
             // Should have tried 3 times
             expect(deps.executor.execute).toHaveBeenCalledTimes(3);
         });
@@ -243,7 +242,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { status: SYNC_STATUS.NEEDS_PULL, behind: 3 },
+                status: { status: SYNC_STATUS.NEEDS_PULL, localCommit: 'local-abc', remoteCommit: 'remote-def', behind: 3 },
                 progressCallback,
                 path: 'config/'
             });
@@ -270,7 +269,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { status: SYNC_STATUS.NEEDS_PUSH, ahead: 2 },
+                status: { status: SYNC_STATUS.NEEDS_PUSH, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 2 },
                 progressCallback
             });
 
@@ -291,7 +290,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 2 },
+                status: { status: SYNC_STATUS.CONFLICT, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 1, behind: 2 },
                 autoResolve: false,
                 progressCallback: vi.fn()
             });
@@ -314,7 +313,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 2 },
+                status: { status: SYNC_STATUS.CONFLICT, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 1, behind: 2 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });
@@ -339,7 +338,7 @@ describe('TeamWorkspaceSyncer', () => {
                 branch: 'main',
                 authType: 'none',
                 authData: { env: {} },
-                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 1 },
+                status: { status: SYNC_STATUS.CONFLICT, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 1, behind: 1 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });
@@ -348,18 +347,20 @@ describe('TeamWorkspaceSyncer', () => {
             expect(result.resolved).toBe(true);
         });
 
-        it('returns conflict status when auto-resolve fails', async () => {
-            // hasLocalChanges
+        it('returns conflict status and aborts rebase when auto-resolve fails', async () => {
+            // hasLocalChanges — no changes
             deps.executor.execute.mockResolvedValueOnce({ stdout: '' });
             // pull --rebase fails
             deps.executor.execute.mockRejectedValueOnce(new Error('CONFLICT: merge conflict'));
+            // rebase --abort (cleanup)
+            deps.executor.execute.mockResolvedValueOnce({ stdout: '' });
 
             const result = await syncer.handleConflict({
                 repoDir: '/repo',
                 branch: 'main',
                 authType: 'none',
                 authData: {},
-                status: { status: SYNC_STATUS.CONFLICT, ahead: 1, behind: 1 },
+                status: { status: SYNC_STATUS.CONFLICT, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 1, behind: 1 },
                 autoResolve: true,
                 progressCallback: vi.fn()
             });
@@ -367,6 +368,41 @@ describe('TeamWorkspaceSyncer', () => {
             expect(result.success).toBe(false);
             expect(result.status).toBe(SYNC_STATUS.CONFLICT);
             expect(result.requiresManualResolution).toBe(true);
+            // Verify rebase was aborted to restore clean state
+            expect(deps.executor.execute).toHaveBeenCalledWith(
+                'rebase --abort',
+                { cwd: '/repo' }
+            );
+        });
+
+        it('aborts rebase and restores stash when auto-resolve fails with stashed changes', async () => {
+            // hasLocalChanges — has changes
+            deps.executor.execute.mockResolvedValueOnce({ stdout: ' M config.json\n' });
+            // stash push
+            deps.executor.execute.mockResolvedValueOnce({ stdout: '' });
+            // pull --rebase fails
+            deps.executor.execute.mockRejectedValueOnce(new Error('CONFLICT: merge conflict'));
+            // rebase --abort (cleanup)
+            deps.executor.execute.mockResolvedValueOnce({ stdout: '' });
+            // stash pop (restore)
+            deps.executor.execute.mockResolvedValueOnce({ stdout: '' });
+
+            const result = await syncer.handleConflict({
+                repoDir: '/repo',
+                branch: 'main',
+                authType: 'none',
+                authData: {},
+                status: { status: SYNC_STATUS.CONFLICT, localCommit: 'local-abc', remoteCommit: 'remote-def', ahead: 1, behind: 1 },
+                autoResolve: true,
+                progressCallback: vi.fn()
+            });
+
+            expect(result.success).toBe(false);
+            expect(result.requiresManualResolution).toBe(true);
+            // Verify cleanup: rebase aborted, then stash restored
+            const executeCalls = deps.executor.execute.mock.calls.map(c => c[0]);
+            expect(executeCalls).toContain('rebase --abort');
+            expect(executeCalls).toContain('stash pop');
         });
     });
 
@@ -393,8 +429,8 @@ describe('TeamWorkspaceSyncer', () => {
             expect(result.changes).toBe(false);
         });
 
-        it('returns error status when sync fails', async () => {
-            deps.executor.execute.mockRejectedValue(new Error('fatal error'));
+        it('returns error with original message when sync fails', async () => {
+            deps.executor.execute.mockRejectedValue(new Error('fatal: SSL connection timeout'));
 
             const result = await syncer.syncWorkspace({
                 workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
@@ -404,9 +440,9 @@ describe('TeamWorkspaceSyncer', () => {
 
             expect(result.success).toBe(false);
             expect(result.status).toBe(SYNC_STATUS.ERROR);
-            // checkSyncStatus catches the error and returns ERROR status,
-            // then syncWorkspace's switch default throws "Unknown sync status: error"
-            expect(result.message).toContain('Unknown sync status');
+            // checkSyncStatus now throws, syncWorkspace's catch preserves the original error
+            expect(result.message).toBe('fatal: SSL connection timeout');
+            expect(result.error).toBe('fatal: SSL connection timeout');
         });
 
         it('calls progressCallback during sync', async () => {

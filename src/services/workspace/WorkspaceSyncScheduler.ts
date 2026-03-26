@@ -11,9 +11,11 @@
  */
 
 import mainLogger from '../../utils/mainLogger';
+import { isTransientNetworkError } from './git/operations/TeamWorkspaceSyncer';
 import { broadcastToRenderers } from './sync/SyncBroadcaster';
 import { checkForDataChanges } from './sync/SyncChangeDetector';
 import { importSyncedData } from './sync/SyncDataImporter';
+import { isSyncableWorkspace } from '../../types/workspace';
 import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
 import type {
     SyncConfig,
@@ -156,7 +158,7 @@ class WorkspaceSyncScheduler {
             this.activeWorkspaceId = workspaceId;
             this.activeWorkspace = workspace;
 
-            if ((workspace.type === 'git' || workspace.type === 'team') && workspace.autoSync !== false) {
+            if (isSyncableWorkspace(workspace) && workspace.autoSync !== false) {
                 this.startSync(workspaceId, workspace, { skipInitialSync: options.skipInitialSync });
             } else {
                 log.info(`Workspace ${workspaceId} is not a Git workspace or has autoSync disabled`);
@@ -179,7 +181,7 @@ class WorkspaceSyncScheduler {
             this.stopSync(workspaceId);
             this.activeWorkspace = workspace;
 
-            if ((workspace.type === 'git' || workspace.type === 'team') && workspace.autoSync !== false) {
+            if (isSyncableWorkspace(workspace) && workspace.autoSync !== false) {
                 log.info(`Restarting auto-sync for workspace ${workspaceId}`);
                 this.startSync(workspaceId, workspace);
             } else {
@@ -190,14 +192,17 @@ class WorkspaceSyncScheduler {
 
     // ── Timer management ─────────────────────────────────────────
 
+    /**
+     * Schedule periodic sync for a workspace.
+     *
+     * Always creates the timer — performSync is the gatekeeper that checks
+     * network, git status, and dedup. This ensures the timer exists even if
+     * the network is temporarily offline at call time (e.g., app starts
+     * without WiFi, workspace switches during VPN toggle).
+     */
     startSync(workspaceId: string, workspace: Workspace, options: { skipInitialSync?: boolean } = {}): void {
         if (this.syncTimers.has(workspaceId)) {
             log.debug(`Sync already scheduled for workspace ${workspaceId}`);
-            return;
-        }
-
-        if (!this.networkService.getState().isOnline) {
-            log.info(`Network is offline, deferring sync schedule for workspace ${workspaceId}`);
             return;
         }
 
@@ -358,7 +363,7 @@ class WorkspaceSyncScheduler {
             return { success: false, error };
         }
 
-        if (workspace.type !== 'git' && workspace.type !== 'team') {
+        if (!isSyncableWorkspace(workspace)) {
             const error = 'Only Git/Team workspaces can be synced';
             log.error(`Manual sync failed for workspace ${workspaceId}:`, error);
             return { success: false, error };
@@ -416,40 +421,52 @@ class WorkspaceSyncScheduler {
         }
     }
 
+    /**
+     * Resume syncing after network recovery.
+     *
+     * Ensures the periodic timer exists (covers the case where startSync was
+     * called while offline — the timer is always created now, but older code
+     * paths may have cleared it). Then triggers an immediate sync after a
+     * short delay so the user doesn't wait up to an hour for the next tick.
+     */
     private async resumeAllSyncs(): Promise<void> {
         this.networkOfflineTime = null;
         this.gitConnectivityCache.clear();
         this.lastGitConnectivityCheck.clear();
 
-        if (this.activeWorkspaceId && this.activeWorkspace) {
-            if ((this.activeWorkspace.type === 'git' || this.activeWorkspace.type === 'team') && this.activeWorkspace.autoSync !== false) {
-                log.info(`Scheduling sync for active workspace ${this.activeWorkspaceId} after ${SYNC_CONSTANTS.RESUME_SYNC_DELAY}ms delay`);
+        if (!this.activeWorkspaceId || !this.activeWorkspace) return;
+        if (!isSyncableWorkspace(this.activeWorkspace) || this.activeWorkspace.autoSync === false) return;
 
-                setTimeout(async () => {
-                    try {
-                        if (!this.networkService.getState().isOnline) {
-                            log.info(`Network went offline again, skipping deferred sync for ${this.activeWorkspaceId}`);
-                            return;
-                        }
-                        if (!this.activeWorkspaceId || !this.activeWorkspace) {
-                            log.info('No active workspace after delay, skipping deferred sync');
-                            return;
-                        }
+        // Ensure periodic timer exists (idempotent — startSync checks syncTimers map)
+        this.startSync(this.activeWorkspaceId, this.activeWorkspace, { skipInitialSync: true });
 
-                        log.info(`Performing deferred sync for workspace ${this.activeWorkspaceId} after network recovery`);
-                        await this.performSync(this.activeWorkspaceId, this.activeWorkspace);
-                    } catch (error) {
-                        log.error(`Failed to sync workspace ${this.activeWorkspaceId} after network recovery:`, error);
-                    }
-                }, SYNC_CONSTANTS.RESUME_SYNC_DELAY);
+        // Immediate sync after short delay — don't wait for next hourly tick
+        const workspaceId = this.activeWorkspaceId;
+        const workspace = this.activeWorkspace;
+
+        setTimeout(async () => {
+            try {
+                if (!this.networkService.getState().isOnline) {
+                    log.info(`Network went offline again, skipping deferred sync for ${workspaceId}`);
+                    return;
+                }
+
+                log.info(`Performing deferred sync for workspace ${workspaceId} after network recovery`);
+                await this.performSync(workspaceId, workspace);
+            } catch (error) {
+                log.error(`Failed to sync workspace ${workspaceId} after network recovery:`, error);
             }
-        }
+        }, SYNC_CONSTANTS.RESUME_SYNC_DELAY);
     }
 
     // ── Error handling / status ───────────────────────────────────
 
     private async handleSyncError(workspaceId: string, error: Error): Promise<void> {
-        log.error(`Failed to sync workspace ${workspaceId}:`, error);
+        if (isTransientNetworkError(error.message)) {
+            log.warn(`Sync skipped for workspace ${workspaceId} (transient): ${error.message}`);
+        } else {
+            log.error(`Failed to sync workspace ${workspaceId}:`, error);
+        }
 
         broadcastToRenderers('workspace-sync-completed', {
             workspaceId,

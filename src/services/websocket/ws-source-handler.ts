@@ -9,6 +9,7 @@ import path from 'path';
 import mainLogger from '../../utils/mainLogger';
 import atomicWriter from '../../utils/atomicFileWriter';
 import { errorMessage } from '../../types/common';
+import { isSyncableWorkspace } from '../../types/workspace';
 import type { Workspace } from '../../types/workspace';
 import type { Source } from '../../types/source';
 import type { RulesCollection, RulesStorage } from '../../types/rules';
@@ -173,7 +174,7 @@ class WSSourceHandler {
                         const workspaceList = workspacesJson.workspaces ?? [];
                         const activeWorkspace = workspaceList.find(w => w.id === activeWorkspaceId);
 
-                        if (activeWorkspace && (activeWorkspace.type === 'git' || activeWorkspace.type === 'team')) {
+                        if (activeWorkspace && isSyncableWorkspace(activeWorkspace)) {
                             const sourcesPath = path.join(this.wsService.appDataPath, 'workspaces', activeWorkspaceId, 'sources.json');
                             if (fs.existsSync(sourcesPath)) {
                                 const sourcesData = await fs.promises.readFile(sourcesPath, 'utf8');
