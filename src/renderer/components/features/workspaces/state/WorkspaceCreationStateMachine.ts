@@ -49,12 +49,19 @@ export const WORKSPACE_CREATION_EVENTS = {
     RESET: 'reset'
 };
 
-interface RollbackAction {
+export interface RollbackAction {
     type: string;
     workspaceId?: string;
     repoPath?: string;
     paths?: string[];
 }
+
+/**
+ * Callback that the controller provides to execute rollback actions.
+ * The state machine declares *what* to roll back; the controller
+ * decides *how* (using its own service dependencies).
+ */
+export type RollbackExecutor = (action: RollbackAction) => Promise<void>;
 
 import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
@@ -195,7 +202,7 @@ class WorkspaceCreationStateMachine {
                 },
                 [WORKSPACE_CREATION_EVENTS.FORM_VALIDATED]: {
                     target: WORKSPACE_CREATION_STATES.GIT_STATUS_CHECK,
-                    condition: (context, event) => event.payload.isTeamWorkspace,
+                    condition: (_context, event) => event.payload.isTeamWorkspace,
                     fallback: WORKSPACE_CREATION_STATES.WORKSPACE_CREATION
                 },
                 [WORKSPACE_CREATION_EVENTS.ERROR_OCCURRED]: {
@@ -219,11 +226,11 @@ class WorkspaceCreationStateMachine {
                     action: () => this.getInitialContext()
                 }
             },
-            
+
             [WORKSPACE_CREATION_STATES.FORM_VALIDATION]: {
                 [WORKSPACE_CREATION_EVENTS.FORM_VALIDATED]: {
                     target: WORKSPACE_CREATION_STATES.GIT_STATUS_CHECK,
-                    condition: (context, event) => event.payload.isTeamWorkspace,
+                    condition: (_context, event) => event.payload.isTeamWorkspace,
                     fallback: WORKSPACE_CREATION_STATES.WORKSPACE_CREATION
                 },
                 [WORKSPACE_CREATION_EVENTS.ERROR_OCCURRED]: {
@@ -251,7 +258,7 @@ class WorkspaceCreationStateMachine {
             [WORKSPACE_CREATION_STATES.GIT_STATUS_CHECK]: {
                 [WORKSPACE_CREATION_EVENTS.GIT_STATUS_CHECKED]: {
                     target: WORKSPACE_CREATION_STATES.CONNECTION_TEST,
-                    condition: (context, event) => event.payload.gitStatus?.isInstalled,
+                    condition: (_context, event) => event.payload.gitStatus?.isInstalled,
                     fallback: WORKSPACE_CREATION_STATES.GIT_INSTALLATION,
                     action: (context, event) => ({ ...context, gitStatus: event.payload.gitStatus })
                 },
@@ -760,50 +767,30 @@ class WorkspaceCreationStateMachine {
         this.transition(WORKSPACE_CREATION_EVENTS.RESET);
     }
 
-    async executeRollback() {
+    /**
+     * Execute all queued rollback actions in reverse order.
+     *
+     * The state machine does NOT know how to perform rollback — it only
+     * tracks what needs rolling back. The caller (WorkspaceCreationController)
+     * provides a `RollbackExecutor` that routes each action through the
+     * proper service layer (WorkspaceStateService via IPC).
+     */
+    async executeRollback(executor: RollbackExecutor): Promise<void> {
         const { rollbackActions } = this.context;
-        
+
         // Clear all timeouts during rollback
         this.clearAllTimeouts();
-        
+
         for (const action of rollbackActions.reverse()) {
             try {
-                await this.executeRollbackAction(action);
+                await executor(action);
             } catch (error) {
                 console.error('Rollback action failed:', error);
                 // Continue with other rollback actions even if one fails
             }
         }
-        
-        this.transition(WORKSPACE_CREATION_EVENTS.ROLLBACK_COMPLETED);
-    }
 
-    async executeRollbackAction(action: RollbackAction) {
-        switch (action.type) {
-            case 'delete_workspace':
-                if (window.electronAPI?.deleteWorkspace) {
-                    await window.electronAPI.deleteWorkspace(action.workspaceId ?? '');
-                } else {
-                    console.warn('deleteWorkspace function not available in electronAPI');
-                }
-                break;
-            case 'cleanup_git_repo':
-                if (window.electronAPI?.cleanupGitRepo && action?.repoPath) {
-                    await window.electronAPI.cleanupGitRepo(action.repoPath);
-                } else {
-                    console.warn('cleanupGitRepo function not available in electronAPI or repoPath missing');
-                }
-                break;
-            case 'cleanup_temp_files':
-                if (window.electronAPI?.cleanupTempFiles && action?.paths) {
-                    await window.electronAPI.cleanupTempFiles(...action.paths);
-                } else {
-                    console.warn('cleanupTempFiles function not available in electronAPI or paths missing');
-                }
-                break;
-            default:
-                console.warn(`Unknown rollback action type: ${action.type}`);
-        }
+        this.transition(WORKSPACE_CREATION_EVENTS.ROLLBACK_COMPLETED);
     }
 
 }

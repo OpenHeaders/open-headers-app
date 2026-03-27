@@ -20,6 +20,7 @@ import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
 import type {
     SyncConfig,
     SyncStatus,
+    PerformSyncResult,
     SchedulerOptions,
     BroadcasterFn,
     GitSyncServiceLike,
@@ -29,7 +30,7 @@ import type {
     SyncData,
     SyncStatusOwnerLike,
 } from './sync/types';
-import { SYNC_CONSTANTS } from './sync/types';
+import { SYNC_CONSTANTS, SYNC_SKIP_MESSAGES } from './sync/types';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSyncScheduler');
@@ -40,8 +41,10 @@ class WorkspaceSyncScheduler {
     private readonly networkService: NetworkServiceLike;
     private readonly broadcaster: BroadcasterFn | null;
 
-    // Callback: notified when sync changes workspace data on disk
-    onSyncDataChanged: ((workspaceId: string) => Promise<void>) | null = null;
+    // Callback: notified when sync changes workspace data.
+    // Receives the SyncData so the receiver can merge directly into in-memory
+    // state rather than reloading from disk (avoids TOCTOU with CRUD operations).
+    onSyncDataChanged: ((workspaceId: string, data: SyncData) => Promise<void>) | null = null;
 
     // Authoritative sync status owner (WorkspaceStateService). When set, sync status
     // updates go here instead of WorkspaceSettingsService, ensuring the renderer sees them.
@@ -159,7 +162,7 @@ class WorkspaceSyncScheduler {
             this.activeWorkspace = workspace;
 
             if (isSyncableWorkspace(workspace) && workspace.autoSync !== false) {
-                this.startSync(workspaceId, workspace, { skipInitialSync: options.skipInitialSync });
+                this.startSync(workspaceId, { skipInitialSync: options.skipInitialSync });
             } else {
                 log.info(`Workspace ${workspaceId} is not a Git workspace or has autoSync disabled`);
             }
@@ -183,7 +186,7 @@ class WorkspaceSyncScheduler {
 
             if (isSyncableWorkspace(workspace) && workspace.autoSync !== false) {
                 log.info(`Restarting auto-sync for workspace ${workspaceId}`);
-                this.startSync(workspaceId, workspace);
+                this.startSync(workspaceId);
             } else {
                 log.info(`Auto-sync disabled for workspace ${workspaceId}`);
             }
@@ -199,23 +202,27 @@ class WorkspaceSyncScheduler {
      * network, git status, and dedup. This ensures the timer exists even if
      * the network is temporarily offline at call time (e.g., app starts
      * without WiFi, workspace switches during VPN toggle).
+     *
+     * Only `workspaceId` is captured by the timer closure. performSync reads
+     * the current workspace from settings at execution time, so auth data,
+     * branch, and path changes are always picked up without restarting the timer.
      */
-    startSync(workspaceId: string, workspace: Workspace, options: { skipInitialSync?: boolean } = {}): void {
+    startSync(workspaceId: string, options: { skipInitialSync?: boolean } = {}): void {
         if (this.syncTimers.has(workspaceId)) {
             log.debug(`Sync already scheduled for workspace ${workspaceId}`);
             return;
         }
 
-        log.info(`Starting auto-sync for workspace ${workspaceId} (${workspace.name})`);
+        log.info(`Starting auto-sync for workspace ${workspaceId}`);
 
         if (!options.skipInitialSync) {
-            this.performSync(workspaceId, workspace).catch(error => {
+            this.performSync(workspaceId).catch(error => {
                 log.error(`Initial sync failed for workspace ${workspaceId}:`, error);
             });
         }
 
         const timerId = setInterval(() => {
-            this.performSync(workspaceId, workspace).catch(error => {
+            this.performSync(workspaceId).catch(error => {
                 log.error(`Periodic sync failed for workspace ${workspaceId}:`, error);
             });
         }, this.syncInterval);
@@ -234,12 +241,71 @@ class WorkspaceSyncScheduler {
 
     // ── Sync execution ───────────────────────────────────────────
 
-    async performSync(workspaceId: string, workspace: Workspace): Promise<void> {
+    /**
+     * Execute a sync for the given workspace.
+     *
+     * Returns a typed result describing what happened so callers can decide
+     * how to surface it:
+     *  - Timer callers ignore the result (fire-and-forget)
+     *  - manualSync translates skip reasons into user-facing errors
+     *
+     * Reads the workspace from the settings service at call time so it always
+     * uses current config (auth, branch, path). This eliminates stale-closure
+     * bugs — timer callbacks and deferred syncs only capture the workspaceId.
+     */
+    async performSync(workspaceId: string): Promise<PerformSyncResult> {
         if (this.syncInProgress.get(workspaceId)) {
             log.debug(`Sync already in progress for workspace ${workspaceId}, skipping`);
-            return;
+            return { outcome: 'skipped', reason: 'already_in_progress' };
         }
 
+        // Acquire the lock synchronously — before any await — so concurrent
+        // calls (periodic timer + manualSync) cannot both pass the guard.
+        this.syncInProgress.set(workspaceId, true);
+
+        try {
+            // Resolve workspace from the authoritative source (settings service)
+            // at execution time, not from a closure-captured snapshot.
+            const resolved = await this.resolveWorkspace(workspaceId);
+            if (resolved.reason) return { outcome: 'skipped', reason: resolved.reason };
+
+            const preflightResult = await this.preflight(workspaceId, resolved.workspace);
+            if (preflightResult.reason) return { outcome: 'skipped', reason: preflightResult.reason };
+
+            await this.executeSyncCore(workspaceId, resolved.workspace);
+            return { outcome: 'completed' };
+        } finally {
+            this.syncInProgress.set(workspaceId, false);
+        }
+    }
+
+    /**
+     * Look up a workspace from the settings service.
+     * Returns the workspace if valid, or a skip reason if not.
+     */
+    private async resolveWorkspace(workspaceId: string): Promise<
+        { workspace: Workspace; reason?: undefined } | { workspace?: undefined; reason: 'workspace_not_found' | 'workspace_not_syncable' }
+    > {
+        const workspaces = await this.workspaceSettingsService.getWorkspaces();
+        const workspace = workspaces.find(w => w.id === workspaceId);
+        if (!workspace) {
+            log.warn(`Workspace ${workspaceId} no longer exists, skipping sync`);
+            return { reason: 'workspace_not_found' };
+        }
+        if (!isSyncableWorkspace(workspace)) {
+            log.debug(`Workspace ${workspaceId} is not syncable, skipping`);
+            return { reason: 'workspace_not_syncable' };
+        }
+        return { workspace };
+    }
+
+    /**
+     * Pre-flight checks: network reachability and git installation.
+     * Returns empty object if sync should proceed, or a skip reason.
+     */
+    private async preflight(workspaceId: string, workspace: Workspace): Promise<
+        { reason?: undefined } | { reason: 'network_offline' | 'git_not_installed' }
+    > {
         const networkState = this.networkService.getState();
 
         // Check network + offline duration for force retry
@@ -250,27 +316,30 @@ class WorkspaceSyncScheduler {
                     const gitReachable = await this.checkGitConnectivity(workspaceId, workspace);
                     if (!gitReachable) {
                         log.debug(`Git server not reachable, skipping sync for workspace ${workspaceId}`);
-                        return;
+                        return { reason: 'network_offline' };
                     }
                     log.info('Git server is reachable despite network offline state, forcing sync');
                 } else {
                     log.debug(`Network offline for ${Math.round(offlineDuration / 1000)}s, waiting before retry`);
-                    return;
+                    return { reason: 'network_offline' };
                 }
             } else {
                 log.debug(`Network is offline, skipping sync for workspace ${workspaceId}`);
-                return;
+                return { reason: 'network_offline' };
             }
         }
 
         const gitStatus = await this.gitSyncService.getGitStatus();
         if (!gitStatus.isInstalled) {
             log.warn('Git is not installed, skipping sync');
-            return;
+            return { reason: 'git_not_installed' };
         }
 
+        return {};
+    }
+
+    private async executeSyncCore(workspaceId: string, workspace: Workspace): Promise<void> {
         log.info(`Starting sync for workspace ${workspaceId} (${workspace.name})`);
-        this.syncInProgress.set(workspaceId, true);
 
         try {
             const startTime = Date.now();
@@ -289,29 +358,34 @@ class WorkspaceSyncScheduler {
 
             if (result.success) {
                 const duration = Date.now() - startTime;
+                const isFirstSync = !this.lastSyncTime.has(workspaceId);
                 this.lastSyncTime.set(workspaceId, Date.now());
-                log.info(`Successfully synced workspace ${workspaceId} in ${duration}ms`);
+                log.info(`Successfully synced workspace ${workspaceId} in ${duration}ms (firstSync: ${isFirstSync})`);
 
                 let hasChanges = false;
                 if (result.data) {
                     hasChanges = await checkForDataChanges(workspaceId, result.data);
 
-                    await importSyncedData(
-                        workspaceId,
-                        result.data,
-                        { broadcastToExtensions: hasChanges },
-                        this.broadcaster,
-                        this.onSyncDataChanged
-                    );
-
                     if (hasChanges) {
+                        // Data diverged from disk — write, reload in-memory state, broadcast.
+                        await importSyncedData(
+                            workspaceId,
+                            result.data,
+                            { broadcastToExtensions: true },
+                            this.broadcaster,
+                            this.onSyncDataChanged
+                        );
+
                         broadcastToRenderers('workspace-data-updated', {
                             workspaceId,
                             timestamp: Date.now(),
                             hasChanges: true
                         }, this.broadcaster);
                     } else {
-                        log.info(`No changes detected for workspace ${workspaceId}, skipping UI refresh`);
+                        // Disk already matches git — skip import entirely.
+                        // This avoids redundant writes and the TOCTOU window where
+                        // a concurrent CRUD write could be overwritten by the import.
+                        log.info(`No changes detected for workspace ${workspaceId}, skipping import`);
                         broadcastToRenderers('workspace-sync-status', {
                             workspaceId,
                             syncing: false,
@@ -330,8 +404,8 @@ class WorkspaceSyncScheduler {
                     hasChanges
                 }, this.broadcaster);
 
-                const shouldUpdateStatus = hasChanges || !this.lastSyncTime.has(workspaceId);
-                if (shouldUpdateStatus) {
+                // Full status update on first sync or data changes; minimal update otherwise.
+                if (isFirstSync || hasChanges) {
                     await this.updateSyncStatus(workspaceId, {
                         syncing: false,
                         lastSync: new Date().toISOString(),
@@ -348,29 +422,17 @@ class WorkspaceSyncScheduler {
         } catch (error: unknown) {
             const err = error instanceof Error ? error : new Error(String(error));
             await this.handleSyncError(workspaceId, err);
-        } finally {
-            this.syncInProgress.set(workspaceId, false);
         }
     }
 
     async manualSync(workspaceId: string): Promise<{ success: boolean; error?: string }> {
-        const workspaces = await this.workspaceSettingsService.getWorkspaces();
-        const workspace = workspaces.find(w => w.id === workspaceId);
-
-        if (!workspace) {
-            const error = `Workspace ${workspaceId} not found`;
-            log.error(`Manual sync failed for workspace ${workspaceId}:`, error);
-            return { success: false, error };
-        }
-
-        if (!isSyncableWorkspace(workspace)) {
-            const error = 'Only Git/Team workspaces can be synced';
-            log.error(`Manual sync failed for workspace ${workspaceId}:`, error);
-            return { success: false, error };
-        }
-
         try {
-            await this.performSync(workspaceId, workspace);
+            const result = await this.performSync(workspaceId);
+
+            if (result.outcome === 'skipped') {
+                return { success: false, error: SYNC_SKIP_MESSAGES[result.reason] };
+            }
+
             return { success: true };
         } catch (error: unknown) {
             const errMsg = error instanceof Error ? error.message : String(error);
@@ -438,23 +500,23 @@ class WorkspaceSyncScheduler {
         if (!isSyncableWorkspace(this.activeWorkspace) || this.activeWorkspace.autoSync === false) return;
 
         // Ensure periodic timer exists (idempotent — startSync checks syncTimers map)
-        this.startSync(this.activeWorkspaceId, this.activeWorkspace, { skipInitialSync: true });
+        this.startSync(this.activeWorkspaceId, { skipInitialSync: true });
 
-        // Immediate sync after short delay — don't wait for next hourly tick
-        const workspaceId = this.activeWorkspaceId;
-        const workspace = this.activeWorkspace;
-
+        // Immediate sync after short delay — don't wait for next hourly tick.
+        // performSync reads the workspace from settings at execution time,
+        // so a workspace switch during the delay automatically syncs the correct one.
+        const targetId = this.activeWorkspaceId;
         setTimeout(async () => {
             try {
                 if (!this.networkService.getState().isOnline) {
-                    log.info(`Network went offline again, skipping deferred sync for ${workspaceId}`);
+                    log.info('Network went offline again, skipping deferred sync');
                     return;
                 }
 
-                log.info(`Performing deferred sync for workspace ${workspaceId} after network recovery`);
-                await this.performSync(workspaceId, workspace);
+                log.info(`Performing deferred sync for workspace ${targetId} after network recovery`);
+                await this.performSync(targetId);
             } catch (error) {
-                log.error(`Failed to sync workspace ${workspaceId} after network recovery:`, error);
+                log.error('Failed to sync workspace after network recovery:', error);
             }
         }, SYNC_CONSTANTS.RESUME_SYNC_DELAY);
     }

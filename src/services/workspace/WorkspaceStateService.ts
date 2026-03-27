@@ -21,8 +21,10 @@ import type { Source, SourceUpdate } from '../../types/source';
 import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
 import type { HeaderRule } from '../../types/rules';
 import type { ProxyRule } from '../../types/proxy';
+import { cloneEnvironmentMap } from '../../types/environment';
 import type { EnvironmentMap } from '../../types/environment';
 import type { SyncData } from './sync/types';
+import { mergeSyncedSources, mergeEnvironments } from './sync/SyncDataImporter';
 
 import {
     type WorkspaceState,
@@ -36,7 +38,6 @@ import {
     // Persistence
     loadWorkspacesConfig,
     saveWorkspacesConfig as persistWorkspacesConfig,
-    workspaceDir,
     loadSources,
     loadRules,
     loadProxyRules,
@@ -82,7 +83,7 @@ const log = createLogger('WorkspaceStateService');
 export type { WorkspaceState } from './state';
 
 class WorkspaceStateService {
-    private state: WorkspaceState;
+    private readonly state: WorkspaceState;
     private readonly appDataPath: string;
 
     // External services (wired after construction)
@@ -173,7 +174,7 @@ class WorkspaceStateService {
                 this.sourceRefreshService.activeWorkspaceId = this.state.activeWorkspaceId;
             }
             await this.loadEnvironmentData(this.state.activeWorkspaceId);
-            await this.applyActiveEnvVarsToServices();
+            this.applyActiveEnvVarsToServices();
             await this.loadWorkspaceData(this.state.activeWorkspaceId);
             this.startAutoSave();
 
@@ -196,7 +197,6 @@ class WorkspaceStateService {
     // ── State access ──────────────────────────────────────────────
 
     getState(): WorkspaceState { return { ...this.state }; }
-    getActiveWorkspaceId(): string { return this.state.activeWorkspaceId; }
 
     // ── Workspace data loading ────────────────────────────────────
 
@@ -491,14 +491,67 @@ class WorkspaceStateService {
         sendPatchToRenderers(this.state, ['syncStatus']);
     }
 
-    async onSyncDataChanged(workspaceId: string): Promise<void> {
-        if (workspaceId === this.state.activeWorkspaceId) {
-            log.info('Reloading workspace data after sync');
-            await this.loadEnvironmentData(workspaceId);
-            this.applyActiveEnvVarsToServices();
-            await this.loadWorkspaceData(workspaceId);
-            sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
+    /**
+     * Merge synced data directly into in-memory state.
+     *
+     * Previous design: write to disk → reload from disk. This had a TOCTOU
+     * race — a CRUD operation between disk-write and reload would be lost
+     * because the reload overwrites in-memory state with the (now stale) disk.
+     *
+     * Current design: merge into the authoritative in-memory state directly.
+     * importSyncedData already wrote to disk for persistence (cold boot /
+     * crash recovery). Here we merge the same SyncData against the current
+     * in-memory state — which may include CRUD changes not yet persisted —
+     * so both sync changes and CRUD changes coexist. Auto-save persists
+     * the combined state to disk within 5 seconds.
+     */
+    async onSyncDataChanged(workspaceId: string, data: SyncData): Promise<void> {
+        if (workspaceId !== this.state.activeWorkspaceId) return;
+
+        log.info('Merging synced data into in-memory state');
+
+        // Sources: remote defines structure, preserve local execution state
+        if (data.sources && Array.isArray(data.sources)) {
+            const merged = mergeSyncedSources(data.sources, this.state.sources);
+            this.state.sources = evaluateAllSourceDependencies(merged, this.envResolver);
+            this.dirty.sources = true;
         }
+
+        // Rules: remote wins (complete replacement)
+        if (data.rules) {
+            this.state.rules = data.rules;
+            this.dirty.rules = true;
+        }
+
+        // Proxy rules: remote wins (complete replacement)
+        if (data.proxyRules && Array.isArray(data.proxyRules)) {
+            this.state.proxyRules = data.proxyRules;
+            this.dirty.proxyRules = true;
+        }
+
+        // Environments: merge with pruning (remote is structure authority)
+        const mergedEnvs = mergeEnvironments(data, this.state.environments);
+        if (mergedEnvs) {
+            // Validate activeEnvironment still exists after pruning
+            const activeStillExists = this.state.activeEnvironment && mergedEnvs[this.state.activeEnvironment];
+            this.state.environments = mergedEnvs;
+            if (!activeStillExists) {
+                this.state.activeEnvironment = Object.keys(mergedEnvs)[0] || 'Default';
+            }
+            this.dirty.environments = true;
+            this.applyActiveEnvVarsToServices();
+        }
+
+        // Update metadata + broadcast to WS/proxy/renderer
+        const totalRules = this.state.rules.header.length + this.state.rules.request.length + this.state.rules.response.length;
+        this.updateWorkspaceMetadataInMemory(workspaceId, {
+            sourceCount: this.state.sources.length, ruleCount: totalRules,
+            proxyRuleCount: this.state.proxyRules.length, lastDataLoad: new Date().toISOString()
+        });
+
+        broadcastToServices(this.state, this.webSocketService, this.proxyService);
+        syncToRefreshService(this.state.sources, this.sourceRefreshService);
+        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
     }
 
     /**
@@ -642,12 +695,14 @@ class WorkspaceStateService {
      * owner handles the merge, persistence, and all downstream effects.
      */
     async importEnvironments(incoming: Record<string, Record<string, { value: string; isSecret: boolean }>>): Promise<void> {
-        const merged = { ...this.state.environments };
+        const merged = cloneEnvironmentMap(this.state.environments);
         for (const [envName, variables] of Object.entries(incoming)) {
             if (!merged[envName]) {
                 merged[envName] = {};
             }
-            Object.assign(merged[envName], variables);
+            for (const [varName, varData] of Object.entries(variables)) {
+                merged[envName][varName] = { ...varData };
+            }
         }
         this.state.environments = merged;
         this.dirty.environments = true;

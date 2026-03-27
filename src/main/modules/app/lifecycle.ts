@@ -149,10 +149,11 @@ class AppLifecycle {
             // Wire sync scheduler → WorkspaceStateService:
             // 1. Sync status: scheduler pushes status to WorkspaceStateService (single owner
             //    of workspaces.json). This ensures the renderer sees sync status updates.
-            // 2. Data changes: when git sync changes data on disk, reload in-memory state.
+            // 2. Data changes: merge synced data directly into in-memory state (not disk
+            //    reload) so concurrent CRUD changes are preserved.
             workspaceSyncScheduler.setSyncStatusOwner(workspaceStateService);
-            workspaceSyncScheduler.onSyncDataChanged = (workspaceId: string) =>
-                workspaceStateService.onSyncDataChanged(workspaceId);
+            workspaceSyncScheduler.onSyncDataChanged = (workspaceId, data) =>
+                workspaceStateService.onSyncDataChanged(workspaceId, data);
 
             AppStateMachine.servicesReady(serviceRegistry.getAllServices());
 

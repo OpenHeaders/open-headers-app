@@ -122,28 +122,21 @@ export async function deleteWorkspace(
     return true;
 }
 
-export async function syncWorkspace(ctx: StateContext, workspaceId: string, updateSyncStatus: (id: string, status: Record<string, unknown>) => void): Promise<{ success: boolean; error?: string }> {
+/**
+ * Trigger a manual sync for a git workspace.
+ *
+ * This is a thin validation + delegation layer. All data loading, status
+ * updates, and broadcasting are handled by WorkspaceSyncScheduler.performSync
+ * (via the onSyncDataChanged callback to WorkspaceStateService).
+ * We must NOT duplicate any of that work here.
+ */
+export async function syncWorkspace(ctx: StateContext, workspaceId: string, _updateSyncStatus: (id: string, status: Record<string, unknown>) => void): Promise<{ success: boolean; error?: string }> {
     const workspace = ctx.state.workspaces.find(w => w.id === workspaceId);
     if (!workspace) return { success: false, error: 'Workspace not found' };
     if (workspace.type !== 'git') return { success: false, error: 'Only git workspaces can be synced' };
     if (!ctx.syncScheduler) return { success: false, error: 'Sync scheduler not available' };
 
-    updateSyncStatus(workspaceId, { syncing: true });
-
-    try {
-        const result = await (ctx.syncScheduler as WorkspaceSyncSchedulerLike & { manualSync(id: string): Promise<{ success: boolean; error?: string }> }).manualSync(workspaceId);
-
-        if (result.success && workspaceId === ctx.state.activeWorkspaceId) {
-            await ctx.loadWorkspaceData(workspaceId);
-            sendPatchToRenderers(ctx.state, ['sources', 'rules', 'proxyRules']);
-        }
-
-        updateSyncStatus(workspaceId, { syncing: false, lastSync: new Date().toISOString() });
-        return result;
-    } catch (error) {
-        updateSyncStatus(workspaceId, { syncing: false, error: errorMessage(error) });
-        return { success: false, error: errorMessage(error) };
-    }
+    return (ctx.syncScheduler as WorkspaceSyncSchedulerLike & { manualSync(id: string): Promise<{ success: boolean; error?: string }> }).manualSync(workspaceId);
 }
 
 export async function copyWorkspaceData(ctx: StateContext, sourceWorkspaceId: string, targetWorkspaceId: string): Promise<void> {

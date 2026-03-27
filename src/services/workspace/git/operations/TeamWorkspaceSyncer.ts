@@ -9,7 +9,7 @@ import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';
 import type { GitRepositoryManager, RepositoryStatus } from '../repository/GitRepositoryManager';
 import type { Source } from '../../../../types/source';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
+import type { WorkspaceAuthData, CommitInfo } from '../../../../types/workspace';
 import type { RulesCollection } from '../../../../types/rules';
 import type { ProxyRule } from '../../../../types/proxy';
 import type { EnvironmentSchema, EnvironmentMap } from '../../../../types/environment';
@@ -107,6 +107,8 @@ interface SyncResult {
   requiresManualResolution?: boolean;
   ahead?: number;
   behind?: number;
+  commitHash?: string;
+  commitInfo?: CommitInfo;
 }
 
 /** Actionable sync status — always one of the four deterministic states.
@@ -196,60 +198,58 @@ class TeamWorkspaceSyncer {
 
       const status = await this.checkSyncStatus(repoDir, branch);
 
-      if (status.status === SYNC_STATUS.UP_TO_DATE) {
-        // Load configuration data even when up to date
-        const configData = await this.loadWorkspaceConfig(repoDir, options.path || 'config/');
+      // Step 2: Handle sync scenario
+      let result: SyncResult;
 
-        return {
+      if (status.status === SYNC_STATUS.UP_TO_DATE) {
+        const configData = await this.loadWorkspaceConfig(repoDir, options.path || 'config/');
+        result = {
           success: true,
           status: status.status,
           message: 'Workspace is up to date',
           changes: false,
           data: configData
         };
-      }
+      } else {
+        switch (status.status) {
+          case SYNC_STATUS.NEEDS_PULL:
+            result = await this.handlePull({
+              repoDir, branch, authType, authData,
+              status, progressCallback, path: options.path
+            });
+            break;
 
-      // Step 2: Handle different sync scenarios
-      switch (status.status) {
-        case SYNC_STATUS.NEEDS_PULL:
-          return await this.handlePull({
-            repoDir,
-            branch,
-            authType,
-            authData,
-            status,
-            progressCallback,
-            path: options.path
-          });
+          case SYNC_STATUS.NEEDS_PUSH:
+            result = await this.handlePush({
+              repoDir, branch, authType, authData,
+              status, progressCallback
+            });
+            break;
 
-        case SYNC_STATUS.NEEDS_PUSH:
-          return await this.handlePush({
-            repoDir,
-            branch,
-            authType,
-            authData,
-            status,
-            progressCallback
-          });
+          case SYNC_STATUS.CONFLICT:
+            result = await this.handleConflict({
+              repoDir, branch, authType, authData,
+              status, autoResolve, progressCallback
+            });
+            break;
 
-        case SYNC_STATUS.CONFLICT:
-          return await this.handleConflict({
-            repoDir,
-            branch,
-            authType,
-            authData,
-            status,
-            autoResolve,
-            progressCallback
-          });
-
-        default: {
-          // Exhaustive check — if this line errors, a new status was added
-          // to SyncStatusResult but not handled here.
-          const _exhaustive: never = status.status;
-          throw new Error(`Unhandled sync status: ${_exhaustive}`);
+          default: {
+            const _exhaustive: never = status.status;
+            throw new Error(`Unhandled sync status: ${_exhaustive}`);
+          }
         }
       }
+
+      // Step 3: Enrich successful results with HEAD commit info.
+      // Done here once rather than in each handler so every current and future
+      // success path automatically provides commit context to the scheduler/UI.
+      if (result.success) {
+        const headInfo = await this.getHeadCommitInfo(repoDir);
+        result.commitHash = headInfo.commitHash;
+        result.commitInfo = headInfo;
+      }
+
+      return result;
 
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -543,11 +543,24 @@ class TeamWorkspaceSyncer {
         try {
           await this.executor.execute('stash pop', { cwd: repoDir });
         } catch (popError) {
-          log.warn('Failed to restore stashed changes after successful rebase:', popError);
+          // Stash pop failed — local changes conflict with the rebased code.
+          // The rebase itself succeeded, so the repo has the latest remote
+          // changes. But the user's local modifications are still in the stash
+          // and need manual resolution. Do NOT push — the local changes
+          // aren't integrated yet.
+          log.error('Stash pop failed after successful rebase — local changes need manual resolution:', popError);
+          return {
+            success: false,
+            status: SYNC_STATUS.CONFLICT,
+            message: 'Rebase succeeded but local changes conflict with updated code. Your changes are preserved in git stash.',
+            changes: true,
+            resolved: false,
+            requiresManualResolution: true
+          };
         }
       }
 
-      // Push rebased changes
+      // Push rebased changes (only reached if stash pop succeeded or nothing was stashed)
       await this.repositoryManager.pushRepository({
         repoDir,
         branch,
@@ -612,6 +625,25 @@ class TeamWorkspaceSyncer {
       return parseInt(stdout.trim()) || 0;
     } catch (error) {
       return 0;
+    }
+  }
+
+  /**
+   * Read HEAD commit info (hash, message, author, date).
+   * Called once per successful sync so the scheduler and renderer always have
+   * up-to-date commit context regardless of which sync path ran.
+   */
+  async getHeadCommitInfo(repoDir: string): Promise<CommitInfo> {
+    try {
+      const { stdout } = await this.executor.execute(
+        'log -1 --pretty=format:%H%n%s%n%an%n%aI',
+        { cwd: repoDir }
+      );
+      const [commitHash, message, author, date] = stdout.trim().split('\n');
+      return { commitHash, message, author, date };
+    } catch (error) {
+      log.warn('Failed to read HEAD commit info:', error);
+      return {};
     }
   }
 
