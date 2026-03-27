@@ -104,6 +104,8 @@ vi.mock('../../../src/services/core/SettingsCache.js', () => {
         recordingHotkey: 'CommandOrControl+Shift+E',
         recordingHotkeyEnabled: true,
         logLevel: 'info',
+        autoUpdate: true,
+        updateChannel: 'stable',
     };
 
     const cache = {
@@ -126,6 +128,12 @@ vi.mock('../../../src/services/websocket/ws-service.js', () => ({
         broadcastVideoRecordingState: vi.fn(),
         broadcastRecordingHotkeyChange: vi.fn()
     }
+}));
+
+// Mock autoUpdater module (dynamically imported by settingsHandlers)
+const mockApplyUpdateSettings = vi.fn();
+vi.mock('../../../src/main/modules/updater/autoUpdater.js', () => ({
+    default: { applyUpdateSettings: mockApplyUpdateSettings }
 }));
 
 // Mock AutoLaunch
@@ -159,7 +167,9 @@ function makeDefaultSettings(): AppSettings {
         videoQuality: 'high',
         recordingHotkey: 'CommandOrControl+Shift+E',
         recordingHotkeyEnabled: true,
-        logLevel: 'info'
+        logLevel: 'info',
+        autoUpdate: true,
+        updateChannel: 'stable'
     };
 }
 
@@ -371,6 +381,47 @@ describe('SettingsHandlers', () => {
                 const result = await handlers.handleOpenExternal(mockEvent, '');
                 expect(result.success).toBe(false);
             });
+        });
+    });
+
+    describe('update settings', () => {
+        it('applies update settings when autoUpdate changes', async () => {
+            const savedSettings = { ...makeDefaultSettings(), autoUpdate: false };
+            mockSettingsSave.mockResolvedValueOnce(savedSettings);
+            mockSettingsGet.mockReturnValue(savedSettings);
+
+            await handlers.handleSaveSettings(mockEvent, { autoUpdate: false });
+
+            expect(mockApplyUpdateSettings).toHaveBeenCalledWith(savedSettings);
+        });
+
+        it('applies update settings when updateChannel changes', async () => {
+            const savedSettings = { ...makeDefaultSettings(), updateChannel: 'prerelease' as const };
+            mockSettingsSave.mockResolvedValueOnce(savedSettings);
+            mockSettingsGet.mockReturnValue(savedSettings);
+
+            await handlers.handleSaveSettings(mockEvent, { updateChannel: 'prerelease' });
+
+            expect(mockApplyUpdateSettings).toHaveBeenCalledWith(savedSettings);
+        });
+
+        it('does not apply update settings when unrelated settings change', async () => {
+            mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings(), theme: 'dark' });
+
+            await handlers.handleSaveSettings(mockEvent, { theme: 'dark' });
+
+            expect(mockApplyUpdateSettings).not.toHaveBeenCalled();
+        });
+
+        it('coerces autoUpdate to boolean', async () => {
+            const savedSettings = makeDefaultSettings();
+            mockSettingsSave.mockResolvedValueOnce(savedSettings);
+            mockSettingsGet.mockReturnValue(savedSettings);
+
+            await handlers.handleSaveSettings(mockEvent, { autoUpdate: 0 } as unknown as Partial<AppSettings>);
+
+            const savedData = mockSettingsSave.mock.calls[0][0] as Record<string, unknown>;
+            expect(savedData.autoUpdate).toBe(false);
         });
     });
 });

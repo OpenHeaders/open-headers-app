@@ -22,7 +22,8 @@ class SettingsHandlers {
                 'tutorialMode', 'autoStartProxy', 'proxyCacheEnabled',
                 'autoHighlightTableEntries', 'autoScrollTableEntries',
                 'compactMode', 'developerMode',
-                'videoRecording', 'pendingVideoRecording'
+                'videoRecording', 'pendingVideoRecording',
+                'autoUpdate'
             ];
 
             const mutableSettings = { ...settings };
@@ -71,6 +72,12 @@ class SettingsHandlers {
                     mutableSettings.recordingHotkey || 'CommandOrControl+Shift+E',
                     'recordingHotkeyEnabled' in mutableSettings ? !!mutableSettings.recordingHotkeyEnabled : true
                 );
+            }
+
+            // Apply update settings if changed
+            if ('autoUpdate' in mutableSettings || 'updateChannel' in mutableSettings) {
+                const autoUpdaterManager = (await import('../../updater/autoUpdater')).default;
+                autoUpdaterManager.applyUpdateSettings(settingsCache.get());
             }
 
             return { success: true };
