@@ -64,12 +64,11 @@ git push origin v4.1.0-beta.1
 ```
 
 CI will:
-- Build with reduced scope for faster turnaround:
-  - macOS: arm64 only, DMG only, no notarization
-  - Windows: unsigned
-  - Linux: x64 only, AppImage + deb (no RPM)
+- Build for all platforms (same artifacts as stable)
+- Sign and notarize macOS builds
+- Skip Windows code signing (SSL.com eSigner has per-signing costs)
+- Generate blockmaps for differential updates
 - Create a **published prerelease** on GitHub (visible to electron-updater)
-- Skip code signing on Windows and notarization on macOS
 
 ## Pre-release vs Stable Builds
 
@@ -142,4 +141,4 @@ If a pre-release has issues:
 
 ## Required CI Secrets
 
-See [CI_SETUP.md](CI_SETUP.md) for the full list of secrets needed for signing and notarization. Pre-releases skip signing, so they work without the signing secrets configured.
+See [CI_SETUP.md](CI_SETUP.md) for the full list of secrets needed for signing and notarization. Pre-releases require macOS signing secrets but skip Windows signing secrets (SSL.com eSigner).

@@ -74,11 +74,10 @@ jobs:
             ~/.electron
             ~/AppData/Local/electron/Cache
             ~/AppData/Local/electron-builder/Cache
-          key: ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-electron-cache-${{ hashFiles('package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
-            ${{ runner.os }}-electron-cache-main-
             ${{ runner.os }}-electron-cache-
+
 
       # Cache Portable Git for Windows builds (avoids re-downloading 55MB + extracting 398MB)
       - name: Cache Portable Git
@@ -163,21 +162,19 @@ jobs:
           mkdir -p dist
         shell: bash
 
-      # Detect if this is an RC/beta/alpha build for optimizations
+      # Detect if this is an RC/beta/alpha build (skips Windows code signing)
       - name: Detect RC build
         id: detect_rc
         run: |
           if [[ "${{ github.ref_name }}" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
             echo "is_rc=true" >> $GITHUB_OUTPUT
-            echo "::notice::Detected RC/beta/alpha build - enabling build optimizations"
+            echo "::notice::Detected RC/beta/alpha build - skipping Windows code signing"
           else
             echo "is_rc=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
-      # Build for macOS
-      # RC builds: same targets as stable, but unsigned and not notarized
-      # Stable builds: full build with signing and notarization
+      # Build for macOS (signed + notarized for all tag builds)
       - name: Build macOS
         if: matrix.os == 'macos-latest'
         run: |
@@ -370,7 +367,7 @@ jobs:
         uses: actions/checkout@v4
 
       # Determine release type based on tag pattern
-      # RC/beta/alpha tags create draft prereleases, stable tags create published releases
+      # RC/beta/alpha tags create published prereleases, stable tags create published releases
       - name: Determine release type
         id: release_type
         run: |
@@ -420,9 +417,9 @@ jobs:
           if [ -d "dist/macos-latest-artifacts" ]; then
             cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
             # RC builds don't have zip files (no block maps)
-            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files (expected for RC)"
+            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files"
             # Blockmap files for differential updates
-            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files (expected for RC)"
+            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
             if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ]; then
               cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
               seen_files["latest-mac.yml"]=1
@@ -435,7 +432,7 @@ jobs:
             cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || echo "No deb files"
             cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || echo "Installation script not found"
 
-            # RPM files (only for stable releases, RC builds skip RPM)
+            # RPM files
             echo "Copying RPM files to processed_files"
             find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
 
@@ -527,7 +524,7 @@ jobs:
           EOF
 
       # Create release using processed files
-      # RC/beta/alpha tags create draft prereleases, stable tags create published releases
+      # RC/beta/alpha tags create published prereleases, stable tags create published releases
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
