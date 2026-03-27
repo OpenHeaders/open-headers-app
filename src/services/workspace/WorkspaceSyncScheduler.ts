@@ -99,7 +99,7 @@ class WorkspaceSyncScheduler {
     // ── Lifecycle ────────────────────────────────────────────────
 
     async initialize(): Promise<void> {
-        this.networkService.on('stateChanged', (event: NetworkStateChange) => {
+        this.networkService.on('state-changed', (event: NetworkStateChange) => {
             if (!event.newState.isOnline && event.oldState.isOnline) {
                 log.info('Network went offline, recording offline time');
                 this.networkOfflineTime = Date.now();
