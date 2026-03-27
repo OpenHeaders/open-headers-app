@@ -8,9 +8,9 @@ import React, { useState, useEffect } from 'react';
 import { Card, Space, Form, theme } from 'antd';
 import { EnvironmentOutlined } from '@ant-design/icons';
 
-import { useEnvironments, useSources, useSettings, useWorkspaces } from '../../../contexts';
+import { useEnvironments, useSources, useSettings } from '../../../contexts';
+import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
 import { showMessage } from '../../../utils/ui/messageUtil';
-import type { RulesStorage } from '../../../../types/rules';
 import type { HeaderRule } from '../../../../types/rules';
 
 import EnvironmentSelector from './EnvironmentSelector';
@@ -46,7 +46,7 @@ const Environments = () => {
 
   const { sources } = useSources();
   const { settings } = useSettings();
-  const { activeWorkspaceId } = useWorkspaces();
+  const { rules: headerRules } = useHeaderRules();
 
   // Form instances
   const [form] = Form.useForm();
@@ -60,43 +60,6 @@ const Environments = () => {
   // Data states
   const [variableUsage, setVariableUsage] = useState<Record<string, string[]>>({});
   const [missingVariables, setMissingVariables] = useState<string[]>([]);
-  const [rules, setRules] = useState<{ header?: HeaderRule[] } | null>(null);
-
-  /**
-   * Load rules to check for environment variable usage
-   */
-  useEffect(() => {
-    const loadRules = async () => {
-      if (!activeWorkspaceId) return;
-      
-      try {
-        const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
-        const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
-        if (rulesData) {
-          const rulesStorage = JSON.parse(rulesData) as RulesStorage;
-          setRules(rulesStorage.rules ?? {});
-        } else {
-          setRules({});
-        }
-      } catch (error) {
-        log.error('Failed to load rules for environment checking:', error);
-        setRules({});
-      }
-    };
-    
-    loadRules();
-    
-    // Listen for rules updates
-    const handleRulesUpdate = () => {
-      loadRules();
-    };
-    
-    window.addEventListener('rules-updated', handleRulesUpdate);
-    
-    return () => {
-      window.removeEventListener('rules-updated', handleRulesUpdate);
-    };
-  }, [activeWorkspaceId]);
 
   /**
    * Updates variable usage information when sources or rules change
@@ -105,9 +68,9 @@ const Environments = () => {
     // Get usage from sources
     const usage = findVariableUsage(sources);
     
-    // Add usage from rules
-    if (rules && rules.header) {
-      rules.header.forEach((rule: HeaderRule) => {
+    // Add usage from header rules
+    if (headerRules.length > 0) {
+      headerRules.forEach((rule: HeaderRule) => {
         if (rule.hasEnvVars && rule.envVars) {
           rule.envVars.forEach((varName: string) => {
             if (!usage[varName]) {
@@ -130,7 +93,7 @@ const Environments = () => {
     const variablesMetadata = getAllVariablesWithMetadata();
     const missing = Object.keys(usage).filter(varName => !variablesMetadata[varName]);
     setMissingVariables(missing);
-  }, [sources, rules, getAllVariablesWithMetadata, findVariableUsage]);
+  }, [sources, headerRules, getAllVariablesWithMetadata, findVariableUsage]);
 
   /**
    * Listens for environment schema updates from team workspace sync
@@ -299,7 +262,7 @@ const Environments = () => {
             missingVariables={missingVariables}
             variableUsage={variableUsage}
             sources={sources}
-            rules={rules ?? {}}
+            rules={{ header: headerRules }}
             onAddVariable={() => setShowAddVariableModal(true)}
             onEditVariable={handleEditVariable}
             onDeleteVariable={deleteVariable}

@@ -8,7 +8,7 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 }));
 
 import { ExportService } from '../../../../src/renderer/services/export-import/core/ExportService';
-import { FILE_FORMATS, DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import { FILE_FORMATS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies, ExportOptions, ExportData, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,10 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
       variableDefinitions: {},
     })),
     createEnvironment: vi.fn(),
+    rules: { header: [], request: [], response: [] },
+    addHeaderRule: vi.fn(async () => true),
+    updateHeaderRule: vi.fn(async () => true),
+    removeHeaderRule: vi.fn(async () => true),
     ...overrides,
   } as ExportImportDependencies;
 }
