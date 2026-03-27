@@ -36,7 +36,9 @@ const defaultSettings: AppSettings = {
     developerMode: false,
     recordingHotkey: 'CommandOrControl+Shift+E',
     recordingHotkeyEnabled: true,
-    logLevel: 'info'
+    logLevel: 'info',
+    autoUpdate: true,
+    updateChannel: 'stable'
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {

@@ -20,7 +20,9 @@ import {
     CloseCircleOutlined,
     WarningOutlined,
     InfoCircleOutlined,
-    BugOutlined
+    BugOutlined,
+    CloudDownloadOutlined,
+    BranchesOutlined
 } from '@ant-design/icons';
 import { Tooltip } from 'antd';
 import { THEME_MODES } from '../../../contexts';
@@ -315,6 +317,57 @@ export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecord
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <BugOutlined style={{ fontSize: 12, color: '#52c41a' }} />
                             <span>Debug</span>
+                        </div>
+                    )
+                }
+            ]
+        }
+    ],
+    updates: [
+        {
+            icon: CloudDownloadOutlined,
+            title: "Auto-update",
+            description: "Automatically check for and download updates",
+            fieldName: "autoUpdate",
+            value: formValues.autoUpdate !== false
+        },
+        {
+            icon: BranchesOutlined,
+            title: "Update channel",
+            description: (
+                <>
+                    Choose which releases to receive{' '}
+                    <Tooltip
+                        overlayStyle={{ maxWidth: 340 }}
+                        title={
+                        <>
+                            <div><strong>Stable:</strong> <span style={{ opacity: 0.75 }}>Production-ready releases, fully tested and code-signed</span></div>
+                            <div><strong>Pre-release:</strong> <span style={{ opacity: 0.75 }}>Includes release candidates (RC), beta, and alpha builds for early testing — may contain bugs and are unsigned</span></div>
+                        </>
+                    }>
+                        <QuestionCircleOutlined style={{ fontSize: 11, cursor: 'help' }} />
+                    </Tooltip>
+                </>
+            ),
+            fieldName: "updateChannel",
+            type: "select",
+            value: formValues.updateChannel || 'stable',
+            options: [
+                {
+                    value: "stable",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <CloudDownloadOutlined style={{ fontSize: 12, color: '#52c41a' }} />
+                            <span>Stable</span>
+                        </div>
+                    )
+                },
+                {
+                    value: "prerelease",
+                    label: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <BranchesOutlined style={{ fontSize: 12, color: '#faad14' }} />
+                            <span>Pre-release</span>
                         </div>
                     )
                 }

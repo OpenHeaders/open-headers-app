@@ -30,5 +30,7 @@ export interface AppSettings {
   recordingHotkey: string;
   recordingHotkeyEnabled: boolean;
   logLevel: string;
+  autoUpdate: boolean;
+  updateChannel: 'stable' | 'prerelease';
   autoSyncWorkspaces?: boolean;
 }

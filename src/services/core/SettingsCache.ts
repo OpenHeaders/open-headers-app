@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     recordingHotkey: 'CommandOrControl+Shift+E',
     recordingHotkeyEnabled: true,
     logLevel: 'info',
+    autoUpdate: true,
+    updateChannel: 'stable',
 };
 
 class SettingsCache {

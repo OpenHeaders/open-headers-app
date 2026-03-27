@@ -176,18 +176,12 @@ jobs:
         shell: bash
 
       # Build for macOS
-      # RC builds: arm64 only, DMG only (no zip/block maps), skip notarization = ~5 min
-      # Stable builds: both archs, DMG + zip with block maps, full notarization = ~20 min
+      # RC builds: same targets as stable, but unsigned and not notarized
+      # Stable builds: full build with signing and notarization
       - name: Build macOS
         if: matrix.os == 'macos-latest'
         run: |
-          if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
-            echo "🚀 RC build: arm64 only, DMG only, no notarization"
-            npx electron-builder --mac dmg --arm64 --publish never
-          else
-            echo "📦 Stable build: full build with both architectures"
-            npm run dist:mac
-          fi
+          npm run dist:mac
         shell: bash
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -304,34 +298,27 @@ jobs:
         run: echo "Skipping Windows code signing for RC build"
 
       # Build for Linux
-      # RC builds: x64 only, AppImage + deb only (no RPM) = faster
-      # Stable builds: both archs, all targets including RPM
+      # RC and stable builds produce the same targets and architectures.
+      # No signing involved on Linux.
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
         run: |
-          if [ "${{ steps.detect_rc.outputs.is_rc }}" == "true" ]; then
-            echo "🚀 RC build: x64 only, AppImage + deb (no RPM)"
-            npx electron-builder --linux appimage deb --x64 --publish never
-          else
-            echo "📦 Stable build: full build with both architectures and all targets"
-            # Build all Linux targets (including RPM)
-            npm run dist:linux
+          npm run dist:linux
 
-            # Verify RPM packages were built successfully
+          # Verify RPM packages were built successfully
+          if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
+            echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
+            npm run dist:linux:rpm:x64
+            npm run dist:linux:rpm:arm64
+
+            # Check again after explicit build attempt
             if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-              echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
-              npm run dist:linux:rpm:x64
-              npm run dist:linux:rpm:arm64
-
-              # Check again after explicit build attempt
-              if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-                echo "::error::Failed to build RPM packages even with explicit build"
-                exit 1
-              fi
-            else
-              echo "RPM packages successfully built in main Linux build:"
-              find dist -name "*.rpm" -type f | xargs ls -la
+              echo "::error::Failed to build RPM packages even with explicit build"
+              exit 1
             fi
+          else
+            echo "RPM packages successfully built in main Linux build:"
+            find dist -name "*.rpm" -type f | xargs ls -la
           fi
         shell: bash
         env:
@@ -393,8 +380,8 @@ jobs:
           # Check if this is a prerelease (rc, beta, alpha)
           if [[ "$TAG_NAME" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "is_draft=true" >> $GITHUB_OUTPUT
-            echo "::notice::Detected RC/Beta/Alpha release: $TAG_NAME - Creating DRAFT prerelease"
+            echo "is_draft=false" >> $GITHUB_OUTPUT
+            echo "::notice::Detected RC/Beta/Alpha release: $TAG_NAME - Creating published prerelease"
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
             echo "is_draft=false" >> $GITHUB_OUTPUT
@@ -455,12 +442,9 @@ jobs:
             RPM_COUNT=$(find processed_files -name "*.rpm" 2>/dev/null | wc -l)
             echo "Found $RPM_COUNT RPM files in processed_files directory"
 
-            # Only fail on missing RPM for stable releases, not RC
-            if [ "$IS_RC" != "true" ] && [ $RPM_COUNT -eq 0 ]; then
-              echo "::error::No RPM files found in artifacts (required for stable release)"
+            if [ $RPM_COUNT -eq 0 ]; then
+              echo "::error::No RPM files found in artifacts"
               exit 1
-            elif [ "$IS_RC" == "true" ] && [ $RPM_COUNT -eq 0 ]; then
-              echo "::notice::No RPM files (expected for RC build)"
             fi
 
             # Continue with other files

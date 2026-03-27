@@ -3,7 +3,9 @@ import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
+import settingsCache from '../../../services/core/SettingsCache';
 import { errorMessage, toErrno } from '../../../types/common';
+import type { AppSettings } from '../../../types/settings';
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('AutoUpdater');
@@ -24,6 +26,7 @@ class AutoUpdaterManager {
     updateDownloaded: boolean;
     downloadedUpdateInfo: UpdateDownloadedEvent | null;
     networkErrorRetryTimer: ReturnType<typeof setTimeout> | null;
+    scheduledCheckTimer: ReturnType<typeof setInterval> | null;
     NETWORK_RETRY_INTERVAL: number;
     CHECK_INTERVAL: number;
 
@@ -34,6 +37,7 @@ class AutoUpdaterManager {
         this.updateDownloaded = false;
         this.downloadedUpdateInfo = null; // Store downloaded update info for later retrieval
         this.networkErrorRetryTimer = null;
+        this.scheduledCheckTimer = null;
         this.NETWORK_RETRY_INTERVAL = 15 * 60 * 1000; // 15 minutes
         this.CHECK_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
     }
@@ -47,8 +51,6 @@ class AutoUpdaterManager {
             debug: () => {}
         } as typeof autoUpdater.logger;
         autoUpdater.allowDowngrade = false;
-        autoUpdater.autoDownload = true;
-        autoUpdater.allowPrerelease = false;
         // Disable electron-updater's built-in auto-install-on-quit.
         // It spawns the NSIS installer during before-quit BEFORE our async
         // server cleanup finishes, causing EADDRINUSE on Windows.
@@ -56,9 +58,23 @@ class AutoUpdaterManager {
         // AFTER servers are properly closed.
         autoUpdater.autoInstallOnAppQuit = false;
 
+        // Apply user settings (autoUpdate + updateChannel)
+        const settings = settingsCache.get();
+        this.applyUpdateSettings(settings);
+
         this.logAppInfo();
         this.setupEventListeners();
         this.scheduleUpdates();
+    }
+
+    /**
+     * Apply update-related settings to electron-updater.
+     * Called on startup and when the user changes settings.
+     */
+    applyUpdateSettings(settings: AppSettings) {
+        autoUpdater.autoDownload = settings.autoUpdate !== false;
+        autoUpdater.allowPrerelease = settings.updateChannel === 'prerelease';
+        log.info(`Update settings applied: autoUpdate=${settings.autoUpdate}, channel=${settings.updateChannel}, allowPrerelease=${autoUpdater.allowPrerelease}`);
     }
 
     logAppInfo() {
@@ -161,13 +177,19 @@ class AutoUpdaterManager {
     }
 
     scheduleUpdates() {
+        const settings = settingsCache.get();
+        if (settings.autoUpdate === false) {
+            log.info('Auto-update disabled, skipping scheduled checks');
+            return;
+        }
+
         // Check for updates on startup (with delay)
         setTimeout(() => {
             this.checkForUpdates();
         }, 3000);
 
         // Set up periodic update checks
-        setInterval(() => {
+        this.scheduledCheckTimer = setInterval(() => {
             this.checkForUpdates();
         }, this.CHECK_INTERVAL);
     }
