@@ -104,7 +104,9 @@ class WSRuleHandler {
      * Broadcast rules to all connected clients
      */
     broadcastRules(): void {
+        const inputCount = this.wsService.rules.header.length;
         const populatedRulesCollection = this._populateDynamicHeaderValues(this.wsService.rules);
+        const outputCount = populatedRulesCollection.header.length;
 
         const message = JSON.stringify({
             type: 'rules-update',
@@ -114,7 +116,8 @@ class WSRuleHandler {
             }
         });
 
-        this.wsService._broadcastToAll(message);
+        const clientCount = this.wsService._broadcastToAll(message);
+        log.info(`broadcastRules: ${inputCount} rules in, ${outputCount} after filtering, sent to ${clientCount} client(s)`);
     }
 
     /**
