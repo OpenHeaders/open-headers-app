@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+
+    /* Strict mode enabled — all new code must be type-safe */
+    "strict": true,
+
+    /* Output */
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    /* Emit is handled by electron-vite — TS is for type-checking only */
+    "noEmit": true,
+
+    /* React JSX support */
+    "jsx": "react-jsx",
+
+    /* Paths */
+    "baseUrl": ".",
+    "outDir": "./dist-webpack",
+
+    /* Quality */
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-webpack",
+    "build",
+    "scripts",
+    /* Renderer excluded — has separate tsconfig */
+    "src/renderer/**/*"
+  ]
+}

@@ -10,6 +10,7 @@ Thank you for your interest in contributing to the Open Headers dynamic sources 
 - [Branching Strategy](#branching-strategy)
 - [Commit Message Guidelines](#commit-message-guidelines)
 - [Pull Request Process](#pull-request-process)
+- [Testing](#testing)
 - [Cross-Platform Testing](#cross-platform-testing)
 - [Testing Automatic Updates](#testing-automatic-updates)
 - [Documentation](#documentation)
@@ -44,46 +45,74 @@ We expect all contributors to follow our Code of Conduct. Please be respectful a
 
 5. **Start the application in development mode**:
    ```bash
-   npm run dev:react
+   npm run dev
    ```
 
 ## Development Workflow
 
 1. **Create a new branch** for your work (see [Branching Strategy](#branching-strategy))
 2. **Make your changes** to the codebase
-3. **Test your changes** thoroughly on your target platform
-4. **Commit your changes** (see [Commit Message Guidelines](#commit-message-guidelines))
-5. **Push your branch** to your fork
-6. **Create a pull request** to the main repository
+3. **Run type checks**: `npx tsc --noEmit`
+4. **Run tests**: `npm test`
+5. **Commit your changes** (see [Commit Message Guidelines](#commit-message-guidelines))
+6. **Push your branch** to your fork
+7. **Create a pull request** to the main repository
 
 ## Project Structure
 
 ```
 open-headers-app/
-├── build/                # Build resources (icons, etc.)
-├── docs/                 # Documentation
-├── src/                  # Source code
-│   ├── main.js           # Electron main process
-│   ├── preload.js        # Electron preload script 
-│   ├── services/         # Backend services
-│   │   └── ws-service.js # WebSocket service (WS & WSS)
-│   ├── ui/               # Legacy UI assets (for reference)
-│   └── renderer/         # React renderer process
-│       ├── App.jsx       # Main React application
-│       ├── App.less      # Application styles
-│       ├── index.jsx     # React entry point
-│       ├── index.html    # HTML template
-│       ├── contexts/     # React contexts
-│       ├── components/   # React components
-│       │   ├── ...       # Various UI components
-│       │   └── UpdateNotification.jsx # Handles automatic updates
-│       ├── hooks/        # Custom React hooks
-│       └── images/       # Application images
-├── webpack.config.js     # Webpack configuration
-├── package.json          # Project configuration
-├── dev-app-update.yml    # Development update configuration
-└── electron-builder.yml  # Electron builder configuration
+├── build/                  # Build resources (icons, entitlements)
+├── docs/                   # Documentation
+├── src/                    # Source code (100% TypeScript)
+│   ├── main.ts             # Electron main process entry
+│   ├── preload.ts          # Electron preload script
+│   ├── config/             # App configuration
+│   ├── types/              # Shared TypeScript type definitions
+│   ├── validation/         # Runtime validation schemas (valibot)
+│   ├── utils/              # Shared utilities
+│   ├── services/           # Backend services
+│   │   ├── cli/            # CLI API service
+│   │   ├── core/           # App state machine, service registry
+│   │   ├── network/        # Network state monitoring
+│   │   ├── proxy/          # HTTP proxy service
+│   │   ├── video/          # Video capture and export
+│   │   ├── websocket/      # WebSocket service
+│   │   └── workspace/      # Git sync and workspace management
+│   ├── main/               # Main process modules
+│   │   └── modules/        # IPC handlers, protocol, tray, updater
+│   ├── preload/            # Preload bridge modules
+│   └── renderer/           # React renderer process
+│       ├── App.tsx          # Main React application
+│       ├── index.tsx        # React entry point
+│       ├── contexts/       # React contexts (core, data, services, ui)
+│       ├── components/     # React components (Ant Design)
+│       ├── hooks/          # Custom React hooks
+│       ├── services/       # Renderer-side services
+│       ├── utils/          # Renderer utilities
+│       └── styles/         # Application styles
+├── tests/                  # Test suite
+│   ├── __mocks__/          # Electron/electron-log mocks
+│   ├── e2e/                # Playwright e2e tests
+│   ├── integration/        # Integration tests
+│   ├── ipc/                # IPC contract tests
+│   └── unit/               # Unit tests (vitest)
+├── electron.vite.config.ts # electron-vite build configuration
+├── vitest.config.ts        # Vitest test configuration
+├── playwright.config.ts    # Playwright e2e configuration
+├── tsconfig.json           # TypeScript configuration (strict mode)
+├── package.json            # Project configuration
+└── electron-builder.yml    # Electron builder configuration
 ```
+
+## Technology Stack
+
+- **Language**: TypeScript (strict mode across entire codebase, zero `any` types)
+- **Framework**: Electron with electron-vite
+- **UI**: React + Ant Design
+- **Testing**: Vitest (unit/integration) + Playwright (e2e)
+- **Build**: electron-vite (Vite for main/preload/renderer)
+- **CI**: GitHub Actions (typecheck + tests + e2e)
 
 ## Branching Strategy
 
@@ -179,15 +208,55 @@ Closes #78
 1. **Create a pull request** from your feature branch to the `main` branch of the original repository
 2. **Fill out the PR template** with all relevant information
 3. **Link any related issues** using GitHub's keywords (Fixes #123, Closes #456, etc.)
-4. **Wait for the review process** - maintainers will review your code
-5. **Make any requested changes** based on the review feedback
-6. **Once approved**, a maintainer will merge your PR
+4. **Ensure CI passes**: TypeScript typecheck, vitest tests, and Playwright e2e tests must all pass
+5. **Wait for the review process** - maintainers will review your code
+6. **Make any requested changes** based on the review feedback
+7. **Once approved**, a maintainer will merge your PR
 
 ### PR Size Guidelines
 
 - Keep PRs focused on a single issue or feature when possible
 - Large changes should be broken into smaller, logically separate PRs
 - If a PR becomes too large, consider splitting it
+
+## Testing
+
+All contributions should include appropriate tests.
+
+### Running Tests
+
+```bash
+# Run all unit and integration tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run e2e tests (requires built app: npm run build)
+npm run test:e2e
+
+# Run TypeScript type checks
+npm run typecheck
+```
+
+### Test Structure
+
+- **Unit tests** (`tests/unit/`): Test individual functions and classes in isolation
+- **Integration tests** (`tests/integration/`): Test service interactions (e.g., proxy flow)
+- **IPC contract tests** (`tests/ipc/`): Verify IPC channel registrations match between main and preload
+- **E2E tests** (`tests/e2e/`): Launch the real Electron app and verify UI and IPC
+
+### Test Guidelines
+
+- Use vitest (not jest) — this project uses vitest
+- Never use `any` type — use proper types from `src/types/`
+- Import types from source, don't re-declare interfaces in test files
+- Use realistic enterprise-style test data (UUIDs, real URLs, proper tokens)
+- Assert full object shapes, not just one or two fields
+- Each test file should have factory functions (e.g., `makeSource()`) for test data
 
 ## Cross-Platform Testing
 
@@ -202,7 +271,7 @@ All contributions should be tested across supported platforms:
 
 ### Recommended Testing (if possible)
 
-2. **Cross-platform testing**:
+1. **Cross-platform testing**:
     - Test on macOS, Windows, and Linux if possible
     - Verify platform-specific features (dock icon, tray icon, etc.)
     - Test with different screen resolutions and DPI settings
@@ -246,13 +315,7 @@ When working on features related to the update system:
         - Download failures
         - Installation failures
 
-4. **Component Testing**:
-    - Test the `UpdateNotification.jsx` component
-    - Verify all user interface elements appear correctly
-    - Ensure progress indicators update properly
-    - Test the manual update check functionality
-
-5. **Publishing Testing**:
+4. **Publishing Testing**:
     - Test the publish scripts locally without actually publishing:
    ```bash
    npm run publish:mac -- --dry-run
@@ -265,9 +328,8 @@ When working on features related to the update system:
 When adding features or making significant changes, please update the relevant documentation:
 
 1. **Code comments**:
-    - Use JSDoc format for function and class documentation
-    - Document React components with prop descriptions
-    - Explain complex logic or platform-specific code
+    - Add comments only where the logic isn't self-evident
+    - Document complex algorithms or platform-specific workarounds
 
 2. **README.md**:
     - Update for new features or changed behaviors
@@ -276,10 +338,6 @@ When adding features or making significant changes, please update the relevant d
 3. **DEVELOPER.md**:
     - Update technical details for developers
     - Document architecture changes
-
-4. **Update Documentation**:
-    - For changes to the update system, ensure both user-facing (README.md)
-      and developer-facing (DEVELOPER.md) documentation is updated
 
 ## Issue Tracking
 
@@ -335,6 +393,7 @@ We follow [Semantic Versioning](https://semver.org/):
 
 When working with React components and Ant Design:
 
+- **TypeScript**: All code must be TypeScript with strict mode — no `any` types
 - **Component Structure**: Each component should have a single responsibility
 - **State Management**: Use context providers for global state, component state for local state
 - **Custom Hooks**: Extract complex logic into custom hooks

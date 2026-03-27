@@ -20,15 +20,18 @@ fi
 
 # Get directory where script is located
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-APPIMAGE_NAME="OpenHeaders-2.4.29-arm64.AppImage"
-APPIMAGE_PATH="$SCRIPT_DIR/$APPIMAGE_NAME"
 
-# Check if AppImage exists
-if [ ! -f "$APPIMAGE_PATH" ]; then
-    echo "Error: $APPIMAGE_NAME not found in the current directory."
+# Auto-detect AppImage file
+APPIMAGE_PATH=$(find "$SCRIPT_DIR" -maxdepth 1 -name "OpenHeaders-*.AppImage" -type f | head -1)
+
+if [ -z "$APPIMAGE_PATH" ]; then
+    echo "Error: No OpenHeaders AppImage found in $SCRIPT_DIR"
     echo "Please place this script in the same directory as the AppImage."
     exit 1
 fi
+
+APPIMAGE_NAME=$(basename "$APPIMAGE_PATH")
+echo "Found: $APPIMAGE_NAME"
 
 # Get the current user for permission setting later
 CURRENT_USER=$(logname || echo $SUDO_USER || echo $USER)
