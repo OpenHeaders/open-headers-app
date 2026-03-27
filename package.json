@@ -1,6 +1,6 @@
 {
   "name": "open-headers",
-  "version": "3.5.0",
+  "version": "4.0.0",
   "description": "OpenHeaders",
   "main": "dist-webpack/main/index.js",
   "scripts": {
