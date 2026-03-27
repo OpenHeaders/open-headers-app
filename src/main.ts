@@ -478,7 +478,6 @@ function setupIPC(
     ipcMain.handle('workspace-open-folder', workspaceHandlers.handleWorkspaceOpenFolder.bind(workspaceHandlers));
     ipcMain.handle('services-health-check', workspaceHandlers.handleServicesHealthCheck.bind(workspaceHandlers));
     ipcMain.handle('initializeWorkspaceSync', workspaceHandlers.handleInitializeWorkspaceSync.bind(workspaceHandlers));
-    ipcMain.handle('deleteWorkspace', workspaceHandlers.handleDeleteWorkspace.bind(workspaceHandlers));
     ipcMain.handle('generate-team-workspace-invite', workspaceHandlers.handleGenerateTeamWorkspaceInvite.bind(workspaceHandlers));
     ipcMain.handle('generate-environment-config-link', workspaceHandlers.handleGenerateEnvironmentConfigLink.bind(workspaceHandlers));
 

@@ -39,6 +39,38 @@ export interface SyncData {
     environmentSchema?: EnvironmentSchema;
 }
 
+/**
+ * Outcome of a performSync call.
+ *
+ * performSync serves two callers with different needs:
+ *  - Timer-driven syncs: fire-and-forget, silently ignore skipped syncs.
+ *  - User-initiated (manualSync): must surface skip reasons as user-facing errors.
+ *
+ * Rather than returning void (which conflates "ran" with "decided not to run"),
+ * performSync returns a typed result so each caller can interpret the outcome
+ * according to its context. This keeps workspace resolution in one place while
+ * giving user-facing paths enough information to report meaningful errors.
+ */
+export type PerformSyncResult =
+    | { outcome: 'completed' }
+    | { outcome: 'skipped'; reason: SyncSkipReason };
+
+export type SyncSkipReason =
+    | 'already_in_progress'
+    | 'workspace_not_found'
+    | 'workspace_not_syncable'
+    | 'network_offline'
+    | 'git_not_installed';
+
+/** Human-readable messages for sync skip reasons, used by user-facing callers. */
+export const SYNC_SKIP_MESSAGES: Record<SyncSkipReason, string> = {
+    already_in_progress: 'Sync is already in progress',
+    workspace_not_found: 'Workspace not found',
+    workspace_not_syncable: 'Only Git/Team workspaces can be synced',
+    network_offline: 'Network is offline',
+    git_not_installed: 'Git is not installed',
+};
+
 export interface SyncStatus {
     scheduled: boolean;
     syncing: boolean;

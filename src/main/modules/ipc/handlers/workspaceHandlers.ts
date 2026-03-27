@@ -232,55 +232,6 @@ class WorkspaceHandlers {
         }
     }
 
-    async handleDeleteWorkspace(_: IpcInvokeEvent, workspaceId: string): Promise<OperationResult> {
-        try {
-            log.info(`Deleting workspace completely: ${workspaceId}`);
-
-            // Delete workspace folder first
-            const folderResult = await this.handleDeleteWorkspaceFolder(_, workspaceId);
-            if (folderResult && !folderResult.success) {
-                log.warn(`Failed to delete workspace folder: ${folderResult.error}`);
-                // Continue anyway, as the folder might not exist
-            }
-
-            // Delete workspace from settings
-            const workspaceSettingsService = appLifecycle.getWorkspaceSettingsService();
-            if (!workspaceSettingsService) {
-                return {
-                    success: false,
-                    error: 'Workspace settings service not available'
-                };
-            }
-
-            // Try to get workspaces first to verify the method exists
-            const workspaces: Workspace[] = await workspaceSettingsService.getWorkspaces();
-            const workspace = workspaces.find(w => w.id === workspaceId);
-
-            if (!workspace) {
-                log.info(`Workspace ${workspaceId} not found in settings, considering it deleted`);
-                return {
-                    success: true,
-                    message: 'Workspace deleted successfully'
-                };
-            }
-
-            // For now, we'll need to use the available methods
-            // The actual deletion from settings might need to be handled differently
-            log.info(`Workspace ${workspaceId} found in settings, folder deletion completed`);
-
-            return {
-                success: true,
-                message: 'Workspace deleted successfully'
-            };
-        } catch (error: unknown) {
-            log.error('Error deleting workspace:', error);
-            return {
-                success: false,
-                error: errorMessage(error)
-            };
-        }
-    }
-
     async handleGenerateTeamWorkspaceInvite(_: IpcInvokeEvent, workspaceData: Workspace & { includeAuthData?: boolean }) {
         try {
             log.info('Generating team workspace invite for:', workspaceData.name);
