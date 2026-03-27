@@ -138,7 +138,7 @@ describe('WorkspaceSyncScheduler', () => {
   describe('initialize()', () => {
     it('registers network state change listener', async () => {
       await scheduler.initialize();
-      expect(networkService.on).toHaveBeenCalledWith('stateChanged', expect.any(Function));
+      expect(networkService.on).toHaveBeenCalledWith('state-changed', expect.any(Function));
     });
   });
 
