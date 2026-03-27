@@ -201,6 +201,9 @@ class AutoUpdaterManager {
             return;
         }
 
+        const channel = autoUpdater.allowPrerelease ? 'prerelease' : 'stable';
+        log.info(`Checking for updates (channel: ${channel})`);
+
         // Check if we're already checking or downloading
         if (this.updateCheckInProgress || this.updateDownloadInProgress) {
             return;

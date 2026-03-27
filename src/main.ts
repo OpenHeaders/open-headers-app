@@ -67,7 +67,7 @@ if (!gotTheLock) {
             if (!settings.showDockIcon) {
                 app.dock.hide();
             } else {
-                await app.dock.show();
+                app.dock.show().catch(() => {});
             }
         }
 
