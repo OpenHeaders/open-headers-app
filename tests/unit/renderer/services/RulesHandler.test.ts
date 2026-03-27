@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import { RULE_TYPES } from '../../../../src/renderer/utils/data-structures/rulesStructure';
-import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportImportDependencies, RuleEntry } from '../../../../src/renderer/services/export-import/core/types';
+import type { HeaderRule } from '../../../../src/types/rules';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -25,21 +25,32 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
       variableDefinitions: {},
     })),
     createEnvironment: vi.fn(),
+    rules: { header: [], request: [], response: [] },
+    addHeaderRule: vi.fn(async () => true),
+    updateHeaderRule: vi.fn(async () => true),
+    removeHeaderRule: vi.fn(async () => true),
     ...overrides,
   } as ExportImportDependencies;
 }
 
-function makeEnterpriseRule(overrides: Partial<RuleEntry> = {}): RuleEntry {
+function makeHeaderRule(overrides: Partial<HeaderRule> = {}): HeaderRule {
   return {
     id: 'rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    name: 'Add OAuth2 Bearer Token (prod)',
-    enabled: true,
-    pattern: '*.openheaders.io',
-    matchType: 'wildcard',
-    ruleType: 'header',
-    headers: [{ name: 'Authorization', value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig', operation: 'set' }],
+    headerName: 'Authorization',
+    headerValue: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig',
+    isEnabled: true,
+    isDynamic: false,
+    isResponse: false,
+    domains: ['*.openheaders.io'],
+    sourceId: null,
+    prefix: '',
+    suffix: '',
+    tag: '',
+    hasEnvVars: false,
+    envVars: [],
+    createdAt: '2025-01-01T00:00:00.000Z',
     ...overrides,
-  };
+  } as HeaderRule;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +71,6 @@ describe('RulesHandler.validateRulesForExport', () => {
 
   it('rejects non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing invalid input to test runtime validation
     const r = handler.validateRulesForExport({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
     expect(r.success).toBe(false);
     expect(r.error).toContain('must be an array');
@@ -91,7 +101,6 @@ describe('RulesHandler.validateRulesForExport', () => {
 
   it('aggregates multiple errors', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing invalid input to test runtime validation
     const r = handler.validateRulesForExport({
       rules: {
         header: [{ name: 'no id' } as unknown as RuleEntry],
@@ -109,7 +118,6 @@ describe('RulesHandler.validateRulesForExport', () => {
 describe('RulesHandler.getRulesStatistics', () => {
   it('returns zero total for null input', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing null to test runtime handling
     const stats = handler.getRulesStatistics(null as unknown as { rules?: Record<string, RuleEntry[]> });
     expect(stats.total).toBe(0);
     expect(stats.metadata).toBeNull();
@@ -139,7 +147,6 @@ describe('RulesHandler.getRulesStatistics', () => {
 
   it('handles non-array entries gracefully', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing invalid input to test runtime handling
     const stats = handler.getRulesStatistics({
       rules: { header: 'bad' } as unknown as Record<string, RuleEntry[]>,
     });
@@ -174,7 +181,6 @@ describe('RulesHandler.getRulesStatistics', () => {
 describe('RulesHandler.analyzeRules', () => {
   it('returns empty arrays for null input', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing null to test runtime handling
     const analysis = handler.analyzeRules(null as unknown as { rules?: Record<string, RuleEntry[]> });
     expect(analysis.warnings).toEqual([]);
     expect(analysis.suggestions).toEqual([]);
@@ -188,7 +194,6 @@ describe('RulesHandler.analyzeRules', () => {
 
   it('warns about non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    // intentionally passing invalid input to test runtime handling
     const analysis = handler.analyzeRules({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
     expect(analysis.warnings.some(w => w.includes('not an array'))).toBe(true);
   });
@@ -250,94 +255,112 @@ describe('RulesHandler.analyzeRules', () => {
 });
 
 // ---------------------------------------------------------------------------
-// _importRulesOfType  (pure logic with mutable state)
+// exportRules — reads from dependencies.rules, not disk
 // ---------------------------------------------------------------------------
-describe('RulesHandler._importRulesOfType', () => {
-  it('returns zeros for empty import array', async () => {
+describe('RulesHandler.exportRules', () => {
+  it('returns null when rules not selected', async () => {
     const handler = new RulesHandler(makeDeps());
-    const stats = await handler._importRulesOfType('header', [], { rules: { header: [] } } as unknown as RulesStorage, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
-    expect(stats.imported).toBe(0);
-    expect(stats.skipped).toBe(0);
+    const result = await handler.exportRules({ selectedItems: { rules: false } });
+    expect(result).toBeNull();
   });
 
-  it('returns zeros for non-array input', async () => {
-    const handler = new RulesHandler(makeDeps());
-    // intentionally passing null to test runtime handling
-    const stats = await handler._importRulesOfType('header', null as unknown as RuleEntry[], { rules: { header: [] } } as unknown as RulesStorage, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
-    expect(stats.imported).toBe(0);
-  });
-
-  it('replaces all rules in replace mode with enterprise data', async () => {
-    const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [makeEnterpriseRule({ id: 'old-rule-id' })] } } as unknown as RulesStorage;
-    const incoming: RuleEntry[] = [
-      makeEnterpriseRule({ id: 'rule-new1-0000-0000-0000-000000000001' }),
-      makeEnterpriseRule({ id: 'rule-new2-0000-0000-0000-000000000002', name: 'Add X-API-Key (staging)' }),
-    ];
-
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.REPLACE, selectedItems: {} });
-    expect(stats).toEqual({ imported: 2, skipped: 0, errors: [] });
-    expect(existing.rules.header).toHaveLength(2);
-    expect(existing.rules.header[0].id).toBe('rule-new1-0000-0000-0000-000000000001');
-    expect(existing.rules.header[1].name).toBe('Add X-API-Key (staging)');
-  });
-
-  it('merges and skips duplicates by ID', async () => {
-    const handler = new RulesHandler(makeDeps());
-    const existingRule = makeEnterpriseRule();
-    const existing = { rules: { header: [existingRule] } } as unknown as RulesStorage;
-    const incoming: RuleEntry[] = [
-      makeEnterpriseRule(), // duplicate — same ID
-      makeEnterpriseRule({ id: 'rule-new1-0000-0000-0000-000000000001', name: 'New Rule' }),
-    ];
-
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
-    expect(stats.imported).toBe(1);
-    expect(stats.skipped).toBe(1);
-    expect(existing.rules.header).toHaveLength(2);
-    expect(existing.rules.header[1].name).toBe('New Rule');
-  });
-
-  it('initializes rule type array if missing in existing storage', async () => {
-    const handler = new RulesHandler(makeDeps());
-    const existing = { rules: {} } as unknown as RulesStorage;
-    const incoming: RuleEntry[] = [{ id: 'r1' }];
-
-    // In merge mode, if existingRulesStorage.rules[ruleType] is undefined,
-    // the code tries `const existingRules = existingRulesStorage.rules[ruleType] || []`
-    // but then pushes into it. We need to ensure the array exists:
-    (existing.rules as Record<string, RuleEntry[]>)['header'] = [];
-
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
-    expect(stats.imported).toBe(1);
-  });
-
-  it('generates ID for rules missing one in merge mode', async () => {
-    const handler = new RulesHandler(makeDeps());
-    const existing = { rules: { header: [] } } as unknown as RulesStorage;
-    const incoming = [{ name: 'No-ID Rule' }] as unknown as RuleEntry[]; // no id
-
-    const stats = await handler._importRulesOfType('header', incoming, existing, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
-    expect(stats.imported).toBe(1);
-    expect((existing.rules as Record<string, RuleEntry[]>).header[0].id).toBeDefined();
-    expect((existing.rules as Record<string, RuleEntry[]>).header[0].id.length).toBeGreaterThan(0);
+  it('exports rules from in-memory state', async () => {
+    const deps = makeDeps({
+      rules: {
+        header: [makeHeaderRule()],
+        request: [],
+        response: [],
+      },
+    });
+    const handler = new RulesHandler(deps);
+    const result = await handler.exportRules({ selectedItems: { rules: true } });
+    expect(result).not.toBeNull();
+    expect(result!.rules.header).toHaveLength(1);
+    expect(result!.rulesMetadata.totalRules).toBe(1);
   });
 });
 
 // ---------------------------------------------------------------------------
-// _generateRuleId  (pure)
+// importRules — uses addHeaderRule/removeHeaderRule, not disk I/O
 // ---------------------------------------------------------------------------
-describe('RulesHandler._generateRuleId', () => {
-  it('returns a non-empty string', () => {
+describe('RulesHandler.importRules', () => {
+  it('returns zeros for empty import', async () => {
     const handler = new RulesHandler(makeDeps());
-    const id = handler._generateRuleId();
-    expect(typeof id).toBe('string');
-    expect(id.length).toBeGreaterThan(0);
+    const stats = await handler.importRules({}, { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
+    expect(stats.imported.total).toBe(0);
+    expect(stats.skipped.total).toBe(0);
   });
 
-  it('generates unique IDs across calls', () => {
-    const handler = new RulesHandler(makeDeps());
-    const ids = new Set(Array.from({ length: 20 }, () => handler._generateRuleId()));
-    expect(ids.size).toBe(20);
+  it('imports header rules via addHeaderRule in merge mode', async () => {
+    const addHeaderRule = vi.fn(async () => true);
+    const deps = makeDeps({ addHeaderRule });
+    const handler = new RulesHandler(deps);
+
+    const stats = await handler.importRules(
+      { rules: { header: [{ id: 'r1', name: 'Rule 1' }, { id: 'r2', name: 'Rule 2' }] } },
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+    );
+
+    expect(stats.imported.total).toBe(2);
+    expect(addHeaderRule).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips duplicates by ID in merge mode', async () => {
+    const addHeaderRule = vi.fn(async () => true);
+    const deps = makeDeps({
+      addHeaderRule,
+      rules: { header: [makeHeaderRule({ id: 'existing-rule' })], request: [], response: [] },
+    });
+    const handler = new RulesHandler(deps);
+
+    const stats = await handler.importRules(
+      { rules: { header: [{ id: 'existing-rule' }, { id: 'new-rule' }] } },
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+    );
+
+    expect(stats.imported.total).toBe(1);
+    expect(stats.skipped.total).toBe(1);
+    expect(addHeaderRule).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears existing rules in replace mode via removeHeaderRule', async () => {
+    const removeHeaderRule = vi.fn(async () => true);
+    const addHeaderRule = vi.fn(async () => true);
+    const deps = makeDeps({
+      removeHeaderRule,
+      addHeaderRule,
+      rules: {
+        header: [makeHeaderRule({ id: 'old-1' }), makeHeaderRule({ id: 'old-2' })],
+        request: [],
+        response: [],
+      },
+    });
+    const handler = new RulesHandler(deps);
+
+    const stats = await handler.importRules(
+      { rules: { header: [{ id: 'new-1' }] } },
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+    );
+
+    expect(removeHeaderRule).toHaveBeenCalledTimes(2);
+    expect(removeHeaderRule).toHaveBeenCalledWith('old-1');
+    expect(removeHeaderRule).toHaveBeenCalledWith('old-2');
+    expect(addHeaderRule).toHaveBeenCalledTimes(1);
+    expect(stats.imported.total).toBe(1);
+  });
+
+  it('records errors when addHeaderRule fails', async () => {
+    const addHeaderRule = vi.fn(async () => { throw new Error('save failed'); });
+    const deps = makeDeps({ addHeaderRule });
+    const handler = new RulesHandler(deps);
+
+    const stats = await handler.importRules(
+      { rules: { header: [{ id: 'r1' }] } },
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+    );
+
+    expect(stats.imported.total).toBe(0);
+    expect(stats.errors).toHaveLength(1);
+    expect(stats.errors[0].error).toContain('save failed');
   });
 });

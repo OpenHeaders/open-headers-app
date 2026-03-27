@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { App } from 'antd';
 import { useSources, useWorkspaces, useSettings } from '../../../contexts';
+import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
 import type { ProxyRule, CacheEntry, CacheStats } from '../../../../types/proxy';
-import type { HeaderRule } from '../../../../types/rules';
 
 /**
  * Proxy Server Management Hook
@@ -27,10 +27,12 @@ export const useProxyServer = () => {
     const { activeWorkspaceId } = useWorkspaces();
     const { settings, saveSettings } = useSettings();
     
+    // Header rules from WorkspaceStateService (via IPC state patches)
+    const { rules: headerRules } = useHeaderRules();
+
     // Proxy server state
     const [proxyStatus, setProxyStatus] = useState({ running: false, port: 59212 });
     const [rules, setRules] = useState<ProxyRule[]>([]);
-    const [headerRules, setHeaderRules] = useState<HeaderRule[]>([]);
     const [loading, setLoading] = useState(false);
 
     // Cache management state
@@ -53,25 +55,6 @@ export const useProxyServer = () => {
     const loadRules = async () => {
         const loadedRules = await window.electronAPI.proxyGetRules();
         setRules(loadedRules);
-    };
-
-    /**
-     * Load header rules from current workspace
-     */
-    const loadHeaderRules = async () => {
-        try {
-            const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
-            const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
-            if (rulesData) {
-                const parsed: { rules?: { header?: HeaderRule[] } } = JSON.parse(rulesData);
-                const loadedHeaderRules = parsed.rules?.header ?? [];
-                setHeaderRules(loadedHeaderRules);
-                // NOTE: Don't re-send to proxy here — BroadcastManager already
-                // sends header rules during workspace load / switch.
-            }
-        } catch (error) {
-            console.error('Failed to load header rules:', error);
-        }
     };
 
     /**
@@ -242,7 +225,6 @@ export const useProxyServer = () => {
     useEffect(() => {
         loadProxyStatus().catch(console.error);
         loadRules().catch(console.error);
-        loadHeaderRules().catch(console.error);
         loadCacheStats().catch(console.error);
 
         // Initialize cache enabled state from settings
@@ -258,20 +240,11 @@ export const useProxyServer = () => {
         const handleProxyRulesUpdate = () => {
             loadRules().catch(console.error);
         };
-        
-        const handleHeaderRulesUpdate = () => {
-            console.log('Header rules updated, reloading');
-            loadHeaderRules().catch(console.error);
-        };
 
-        // Add event listeners
         window.addEventListener('proxy-rules-updated', handleProxyRulesUpdate);
-        window.addEventListener('rules-updated', handleHeaderRulesUpdate);
 
-        // Cleanup
         return () => {
             window.removeEventListener('proxy-rules-updated', handleProxyRulesUpdate);
-            window.removeEventListener('rules-updated', handleHeaderRulesUpdate);
         };
     }, [activeWorkspaceId]);
 
@@ -309,7 +282,6 @@ export const useProxyServer = () => {
         // Loaders (for manual refresh)
         loadProxyStatus,
         loadRules,
-        loadHeaderRules,
         loadCacheStats,
         loadCacheEntries
     };

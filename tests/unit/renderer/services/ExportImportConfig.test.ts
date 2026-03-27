@@ -55,7 +55,6 @@ describe('ExportImportConfig constants', () => {
     it('has all expected event names with correct values', () => {
       expect(EVENTS).toEqual({
         PROXY_RULES_UPDATED: 'proxy-rules-updated',
-        RULES_UPDATED: 'rules-updated',
         ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed',
       });
     });

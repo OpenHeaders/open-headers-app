@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mock CentralizedEnvironmentService before importing EnvironmentsHandler
 vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
@@ -8,7 +8,7 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 }));
 
 import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
-import { IMPORT_MODES, DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies, EnvironmentVariable, EnvironmentSchema } from '../../../../src/renderer/services/export-import/core/types';
 import type { Mock } from 'vitest';
 
@@ -67,6 +67,10 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
       },
     })),
     createEnvironment: vi.fn(),
+    rules: { header: [], request: [], response: [] },
+    addHeaderRule: vi.fn(async () => true),
+    updateHeaderRule: vi.fn(async () => true),
+    removeHeaderRule: vi.fn(async () => true),
     ...overrides,
   } as ExportImportDependencies;
 }
