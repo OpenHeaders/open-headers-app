@@ -1,5 +1,5 @@
 import electron from 'electron';
-import type { Tray as TrayType, NativeImage } from 'electron';
+import type { Tray as TrayType, NativeImage, MenuItemConstructorOptions } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import mainLogger from '../../../utils/mainLogger';
@@ -10,8 +10,14 @@ const { Tray, Menu, app, nativeImage } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('TrayManager');
 
+type UpdateMenuState = 'idle' | 'checking' | 'downloading' | 'ready' | 'up-to-date';
+
 class TrayManager {
     tray: TrayType | null;
+    private updateState: UpdateMenuState = 'idle';
+    private updateVersion: string | null = null;
+    private downloadPercent = 0;
+    private upToDateTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor() {
         this.tray = null;
@@ -24,39 +30,7 @@ class TrayManager {
             let trayIcon = this.findTrayIcon();
             this.tray = new Tray(trayIcon);
             this.tray.setToolTip('Open Headers');
-            const contextMenu = Menu.buildFromTemplate([
-                {
-                    label: 'Show Open Headers',
-                    click: () => {
-                        windowManager.showWindow();
-                    }
-                },
-                {
-                    label: 'Hide Open Headers',
-                    click: () => {
-                        windowManager.hideWindow();
-                    }
-                },
-                { type: 'separator' },
-                {
-                    label: 'Settings',
-                    click: () => {
-                        windowManager.showWindow();
-                        windowManager.sendToWindow('navigate-to', { tab: 'settings' });
-                    }
-                },
-                { type: 'separator' },
-                {
-                    label: 'Quit',
-                    click: () => {
-                        appLifecycle.setQuitting(true);
-                        windowManager.sendToWindow('quitApp');
-                        app.quit();
-                    }
-                }
-            ]);
-
-            this.tray.setContextMenu(contextMenu);
+            this.rebuildContextMenu();
 
             // Platform-specific click behavior
             if (process.platform === 'darwin') {
@@ -77,6 +51,94 @@ class TrayManager {
         } catch (error) {
             log.error('Failed to create tray icon:', error);
             this.createFallbackTray();
+        }
+    }
+
+    private getUpdateMenuItem(): MenuItemConstructorOptions {
+        switch (this.updateState) {
+            case 'checking':
+                return { label: 'Checking for Updates...', enabled: false };
+            case 'downloading':
+                return { label: `Processing Update... (${this.downloadPercent}%)`, enabled: false };
+            case 'ready':
+                return {
+                    label: this.updateVersion ? `Restart to Update (v${this.updateVersion})` : 'Restart to Update',
+                    click: async () => {
+                        const autoUpdaterManager = (await import('../updater/autoUpdater')).default;
+                        autoUpdaterManager.installUpdate();
+                    }
+                };
+            case 'up-to-date':
+                return { label: "You're Up to Date", enabled: false };
+            default:
+                return {
+                    label: 'Check for Updates...',
+                    click: async () => {
+                        const autoUpdaterManager = (await import('../updater/autoUpdater')).default;
+                        autoUpdaterManager.checkForUpdatesManual(true);
+                    }
+                };
+        }
+    }
+
+    private rebuildContextMenu() {
+        if (!this.tray) return;
+
+        const contextMenu = Menu.buildFromTemplate([
+            {
+                label: 'Show Open Headers',
+                click: () => windowManager.showWindow()
+            },
+            {
+                label: 'Hide Open Headers',
+                click: () => windowManager.hideWindow()
+            },
+            { type: 'separator' },
+            {
+                label: 'Settings',
+                click: () => {
+                    windowManager.showWindow();
+                    windowManager.sendToWindow('navigate-to', { tab: 'settings' });
+                }
+            },
+            this.getUpdateMenuItem(),
+            { type: 'separator' },
+            {
+                label: 'Quit',
+                click: () => {
+                    appLifecycle.setQuitting(true);
+                    windowManager.sendToWindow('quitApp');
+                    app.quit();
+                }
+            }
+        ]);
+
+        this.tray.setContextMenu(contextMenu);
+    }
+
+    /**
+     * Update the tray menu's update status item.
+     * Called by AutoUpdaterManager during the update lifecycle.
+     */
+    setUpdateState(state: UpdateMenuState, info?: { version?: string; percent?: number }) {
+        if (this.upToDateTimer) {
+            clearTimeout(this.upToDateTimer);
+            this.upToDateTimer = null;
+        }
+
+        this.updateState = state;
+        if (info?.version) this.updateVersion = info.version;
+        if (info?.percent !== undefined) this.downloadPercent = Math.round(info.percent);
+
+        this.rebuildContextMenu();
+
+        // "Up to date" reverts to idle after 5 seconds
+        if (state === 'up-to-date') {
+            this.upToDateTimer = setTimeout(() => {
+                this.updateState = 'idle';
+                this.rebuildContextMenu();
+                this.upToDateTimer = null;
+            }, 5000);
         }
     }
 
@@ -212,6 +274,10 @@ class TrayManager {
     }
 
     destroy() {
+        if (this.upToDateTimer) {
+            clearTimeout(this.upToDateTimer);
+            this.upToDateTimer = null;
+        }
         if (this.tray) {
             this.tray.destroy();
             this.tray = null;

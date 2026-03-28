@@ -4,6 +4,7 @@ import mainLogger from '../../../utils/mainLogger';
 import networkService from '../../../services/network/NetworkService';
 import windowManager from '../window/windowManager';
 import settingsCache from '../../../services/core/SettingsCache';
+import trayManager from '../tray/trayManager';
 import { errorMessage, toErrno } from '../../../types/common';
 import type { AppSettings } from '../../../types/settings';
 const { app, dialog } = electron;
@@ -92,17 +93,20 @@ class AutoUpdaterManager {
     setupEventListeners() {
         autoUpdater.on('checking-for-update', () => {
             this.updateCheckInProgress = true;
+            trayManager.setUpdateState('checking');
         });
 
         autoUpdater.on('update-available', (info: UpdateInfo) => {
             this.updateCheckInProgress = false;
             this.updateDownloadInProgress = true;
+            trayManager.setUpdateState('downloading', { version: info.version, percent: 0 });
 
             windowManager.sendToWindow('update-available', info);
         });
 
         autoUpdater.on('update-not-available', (info: UpdateInfo) => {
             this.updateCheckInProgress = false;
+            trayManager.setUpdateState('up-to-date');
 
             windowManager.sendToWindow('update-not-available', info);
             windowManager.sendToWindow('clear-update-checking-notification');
@@ -110,13 +114,15 @@ class AutoUpdaterManager {
 
         autoUpdater.on('download-progress', (progressObj: DownloadProgress) => {
             this.updateDownloadInProgress = true;
+            trayManager.setUpdateState('downloading', { percent: progressObj.percent });
             windowManager.sendToWindow('update-progress', progressObj);
         });
 
         autoUpdater.on('update-downloaded', (info: UpdateDownloadedEvent) => {
             this.updateDownloadInProgress = false;
             this.updateDownloaded = true;
-            this.downloadedUpdateInfo = info; // Store for later retrieval
+            this.downloadedUpdateInfo = info;
+            trayManager.setUpdateState('ready', { version: info.version });
 
             windowManager.sendToWindow('update-downloaded', info);
         });
@@ -142,6 +148,7 @@ class AutoUpdaterManager {
         // Reset all states on error
         this.updateCheckInProgress = false;
         this.updateDownloadInProgress = false;
+        trayManager.setUpdateState('idle');
 
         // Always send clear notification event on error
         windowManager.sendToWindow('clear-update-checking-notification');
