@@ -19,6 +19,7 @@
     "build:dmg-bg": "node scripts/build/build-dmg-background.js",
     "dist:mac": "npm run predist && electron-builder --mac --publish never",
     "dist:mac:unsigned": "npm run predist && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --publish never",
+    "dist:mac:unsigned:arm64": "npm run predist && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --arm64 --config.mac.target=dmg --publish never",
     "dist:win": "npm run predist:win && electron-builder --win --publish never",
     "dist:win:unsigned": "npm run predist:win && cross-env WIN_CSC_LINK='' electron-builder --win --publish never",
     "dist:linux": "npm run predist && electron-builder --linux --x64 --arm64 --publish never",

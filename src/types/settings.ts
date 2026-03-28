@@ -31,6 +31,6 @@ export interface AppSettings {
   recordingHotkeyEnabled: boolean;
   logLevel: string;
   autoUpdate: boolean;
-  updateChannel: 'stable' | 'prerelease';
+  updateChannel: 'stable' | 'beta';
   autoSyncWorkspaces?: boolean;
 }

@@ -72,11 +72,14 @@ class AutoUpdaterManager {
      * Called on startup and when the user changes settings.
      */
     applyUpdateSettings(settings: AppSettings) {
-        const isPrerelease = settings.updateChannel === 'prerelease';
+        // If the running app is a beta, force allowPrerelease so electron-updater
+        // sees the current beta release on GitHub. Without this, it skips the beta
+        // release, finds an older stable, and triggers a channel-mismatch downgrade.
+        // The user naturally upgrades to stable when it ships (4.0.0 > 4.0.0-beta.N).
+        const isRunningBeta = app.getVersion().includes('-beta.');
         autoUpdater.autoDownload = settings.autoUpdate !== false;
-        autoUpdater.allowPrerelease = isPrerelease;
-        autoUpdater.channel = isPrerelease ? 'beta' : 'latest';
-        log.info(`Update settings applied: autoUpdate=${settings.autoUpdate}, channel=${autoUpdater.channel}, allowPrerelease=${autoUpdater.allowPrerelease}`);
+        autoUpdater.allowPrerelease = settings.updateChannel === 'beta' || isRunningBeta;
+        log.info(`Update settings applied: autoUpdate=${settings.autoUpdate}, allowPrerelease=${autoUpdater.allowPrerelease}, runningBeta=${isRunningBeta}`);
     }
 
     logAppInfo() {
@@ -203,7 +206,7 @@ class AutoUpdaterManager {
             return;
         }
 
-        const channel = autoUpdater.allowPrerelease ? 'prerelease' : 'stable';
+        const channel = autoUpdater.allowPrerelease ? 'beta' : 'stable';
         log.info(`Checking for updates (channel: ${channel})`);
 
         // Check if we're already checking or downloading

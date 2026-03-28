@@ -17,23 +17,23 @@ Tags must follow [semver 2.0.0](https://semver.org/) with a `v` prefix. All pre-
 
 Users choose their update channel in **Settings > Developer > Updates**:
 
-- **Stable** (default): Only receives published releases (`v4.0.0`)
-- **Pre-release**: Receives everything — stable releases + beta pre-releases
+- **Production** (default): Only receives published releases (`v4.0.0`)
+- **Beta**: Receives everything — stable releases + beta pre-releases
 
 When a stable release ships for the same version line (e.g., `4.1.0` after `4.1.0-beta.3`), all users receive it since `4.1.0 > 4.1.0-beta.3` in semver.
 
 **Hotfix discipline**: If a security hotfix (`4.1.1`) ships while a prerelease (`4.2.0-beta.1`) is in flight, prerelease users won't receive the hotfix (since `4.2.0-beta.1 > 4.1.1`). Always forward-merge hotfixes into the prerelease line and cut a new beta (e.g., `4.2.0-beta.2`).
 
-## How electron-updater Channel Routing Works
+## How electron-updater Routing Works
 
-The app has two update channels, mapped to electron-updater's `channel` property:
+electron-builder v25 always generates `latest*.yml` for every build regardless of the version string. Routing is controlled solely by `allowPrerelease`:
 
-| User setting | `autoUpdater.channel` | `allowPrerelease` | Looks for yml | Sees GitHub prereleases |
-|---|---|---|---|---|
-| Stable | `latest` | `false` | `latest.yml` | No |
-| Pre-release | `beta` | `true` | `beta.yml` | Yes |
+| User setting | `allowPrerelease` | Sees GitHub prereleases | Sees stable releases |
+|---|---|---|---|
+| Production | `false` | No | Yes |
+| Beta | `true` | Yes | Yes |
 
-To ensure beta-channel users can upgrade to stable releases, every stable release cross-publishes its `latest*.yml` files as `beta*.yml` copies. This way beta-channel users always find a matching `beta.yml` regardless of release type.
+**Downgrade prevention**: If the running app is a beta version, `allowPrerelease` is forced to `true` regardless of the user's setting. This prevents electron-updater's channel-mismatch logic from downgrading to an older stable release. The user naturally upgrades to stable when it ships (`4.0.0 > 4.0.0-beta.N`).
 
 ## Creating a Stable Release
 
@@ -54,7 +54,7 @@ CI will:
 - Sign macOS (notarized) and Windows (SSL.com eSigner) builds
 - Generate blockmaps for differential updates
 - Create a published GitHub release with all artifacts
-- Generate `latest*.yml` + `beta*.yml` (cross-published) for electron-updater
+- Generate `latest*.yml` for electron-updater
 
 ## Creating a Pre-release
 
@@ -74,7 +74,7 @@ CI will:
 - Skip Windows code signing (SSL.com eSigner has per-signing costs)
 - Generate blockmaps for differential updates
 - Create a **published prerelease** on GitHub (visible to electron-updater)
-- Generate `beta*.yml` for electron-updater
+- Generate `latest*.yml` for electron-updater
 
 ## Pre-release vs Stable Builds
 
@@ -120,7 +120,7 @@ The app uses the GitHub provider (`dev-app-update.yml`). On each check:
 
 1. Queries the GitHub Releases API (unauthenticated, public)
 2. Filters by `prerelease` flag based on user's channel setting (`allowPrerelease`)
-3. Looks for the channel yml file (`latest.yml` or `beta.yml`) in the release assets
+3. Downloads `latest*.yml` from the release assets
 4. Compares versions via semver
 5. If a newer version exists, downloads and notifies the user
 
