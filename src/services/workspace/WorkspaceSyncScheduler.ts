@@ -20,6 +20,7 @@ import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
 import type {
     SyncConfig,
     SyncStatus,
+    SyncCoreResult,
     PerformSyncResult,
     SchedulerOptions,
     BroadcasterFn,
@@ -244,14 +245,17 @@ class WorkspaceSyncScheduler {
     /**
      * Execute a sync for the given workspace.
      *
-     * Returns a typed result describing what happened so callers can decide
-     * how to surface it:
-     *  - Timer callers ignore the result (fire-and-forget)
-     *  - manualSync translates skip reasons into user-facing errors
+     * This method owns the full sync status lifecycle:
+     *  1. Guard: skip if already in progress
+     *  2. Resolve + preflight: skip if workspace/network not ready
+     *  3. Signal syncing: updateSyncStatus({ syncing: true })
+     *  4. Delegate work to executeSyncCore (pure worker, no status side effects)
+     *  5. Update final status based on result (always sets lastSync on success)
+     *  6. Release lock
      *
-     * Reads the workspace from the settings service at call time so it always
-     * uses current config (auth, branch, path). This eliminates stale-closure
-     * bugs — timer callbacks and deferred syncs only capture the workspaceId.
+     * executeSyncCore returns a SyncCoreResult describing what happened.
+     * This separation ensures status transitions are exhaustive and consistent
+     * regardless of whether changes were detected or not.
      */
     async performSync(workspaceId: string): Promise<PerformSyncResult> {
         if (this.syncInProgress.get(workspaceId)) {
@@ -272,7 +276,27 @@ class WorkspaceSyncScheduler {
             const preflightResult = await this.preflight(workspaceId, resolved.workspace);
             if (preflightResult.reason) return { outcome: 'skipped', reason: preflightResult.reason };
 
-            await this.executeSyncCore(workspaceId, resolved.workspace);
+            // All checks passed — signal syncing state to renderer
+            await this.updateSyncStatus(workspaceId, { syncing: true });
+
+            const result = await this.executeSyncCore(workspaceId, resolved.workspace);
+
+            // Update sync status based on result — always set lastSync on success
+            if (result.success) {
+                await this.updateSyncStatus(workspaceId, {
+                    syncing: false,
+                    lastSync: new Date().toISOString(),
+                    error: null,
+                    lastCommit: result.commitHash,
+                    commitInfo: result.commitInfo
+                });
+            } else {
+                await this.updateSyncStatus(workspaceId, {
+                    syncing: false,
+                    error: result.error ?? 'Sync failed'
+                });
+            }
+
             return { outcome: 'completed' };
         } finally {
             this.syncInProgress.set(workspaceId, false);
@@ -338,7 +362,18 @@ class WorkspaceSyncScheduler {
         return {};
     }
 
-    private async executeSyncCore(workspaceId: string, workspace: Workspace): Promise<void> {
+    /**
+     * Pure worker: execute git sync + data import for a workspace.
+     *
+     * Returns a SyncCoreResult describing what happened. Does NOT modify
+     * sync status — that responsibility belongs to performSync, which
+     * calls this method and updates status based on the result.
+     *
+     * This separation ensures sync status transitions are exhaustive and
+     * centralized in one place (performSync), while this method focuses
+     * purely on the git operations and data import.
+     */
+    private async executeSyncCore(workspaceId: string, workspace: Workspace): Promise<SyncCoreResult> {
         log.info(`Starting sync for workspace ${workspaceId} (${workspace.name})`);
 
         try {
@@ -356,72 +391,70 @@ class WorkspaceSyncScheduler {
 
             const result = await this.gitSyncService.syncWorkspace(syncConfig);
 
-            if (result.success) {
-                const duration = Date.now() - startTime;
-                const isFirstSync = !this.lastSyncTime.has(workspaceId);
-                this.lastSyncTime.set(workspaceId, Date.now());
-                log.info(`Successfully synced workspace ${workspaceId} in ${duration}ms (firstSync: ${isFirstSync})`);
-
-                let hasChanges = false;
-                if (result.data) {
-                    hasChanges = await checkForDataChanges(workspaceId, result.data);
-
-                    if (hasChanges) {
-                        // Data diverged from disk — write, reload in-memory state, broadcast.
-                        await importSyncedData(
-                            workspaceId,
-                            result.data,
-                            { broadcastToExtensions: true },
-                            this.broadcaster,
-                            this.onSyncDataChanged
-                        );
-
-                        broadcastToRenderers('workspace-data-updated', {
-                            workspaceId,
-                            timestamp: Date.now(),
-                            hasChanges: true
-                        }, this.broadcaster);
-                    } else {
-                        // Disk already matches git — skip import entirely.
-                        // This avoids redundant writes and the TOCTOU window where
-                        // a concurrent CRUD write could be overwritten by the import.
-                        log.info(`No changes detected for workspace ${workspaceId}, skipping import`);
-                        broadcastToRenderers('workspace-sync-status', {
-                            workspaceId,
-                            syncing: false,
-                            hasChanges: false
-                        }, this.broadcaster);
-                    }
-                } else {
-                    log.warn(`Sync succeeded but no data was returned for workspace ${workspaceId}`);
-                }
-
+            if (!result.success) {
+                const error = result.error || 'Sync failed';
+                this.logSyncError(workspaceId, error);
                 broadcastToRenderers('workspace-sync-completed', {
-                    workspaceId,
-                    success: true,
-                    timestamp: Date.now(),
-                    commitInfo: result.commitInfo,
-                    hasChanges
+                    workspaceId, success: false, error, timestamp: Date.now()
                 }, this.broadcaster);
+                return { success: false, error, hasChanges: false };
+            }
 
-                // Full status update on first sync or data changes; minimal update otherwise.
-                if (isFirstSync || hasChanges) {
-                    await this.updateSyncStatus(workspaceId, {
-                        syncing: false,
-                        lastSync: new Date().toISOString(),
-                        error: null,
-                        lastCommit: result.commitHash,
-                        commitInfo: result.commitInfo
-                    });
+            const duration = Date.now() - startTime;
+            this.lastSyncTime.set(workspaceId, Date.now());
+            log.info(`Successfully synced workspace ${workspaceId} in ${duration}ms`);
+
+            let hasChanges = false;
+            if (result.data) {
+                hasChanges = await checkForDataChanges(workspaceId, result.data);
+
+                if (hasChanges) {
+                    await importSyncedData(
+                        workspaceId,
+                        result.data,
+                        { broadcastToExtensions: true },
+                        this.broadcaster,
+                        this.onSyncDataChanged
+                    );
+
+                    broadcastToRenderers('workspace-data-updated', {
+                        workspaceId,
+                        timestamp: Date.now(),
+                        hasChanges: true
+                    }, this.broadcaster);
                 } else {
-                    await this.updateSyncStatus(workspaceId, { syncing: false, error: null });
+                    log.info(`No changes detected for workspace ${workspaceId}, skipping import`);
+                    broadcastToRenderers('workspace-sync-status', {
+                        workspaceId,
+                        syncing: false,
+                        hasChanges: false
+                    }, this.broadcaster);
                 }
             } else {
-                await this.handleSyncError(workspaceId, new Error(result.error || 'Sync failed'));
+                log.warn(`Sync succeeded but no data was returned for workspace ${workspaceId}`);
             }
+
+            broadcastToRenderers('workspace-sync-completed', {
+                workspaceId,
+                success: true,
+                timestamp: Date.now(),
+                commitInfo: result.commitInfo,
+                hasChanges
+            }, this.broadcaster);
+
+            return {
+                success: true,
+                hasChanges,
+                commitHash: result.commitHash,
+                commitInfo: result.commitInfo
+            };
         } catch (error: unknown) {
             const err = error instanceof Error ? error : new Error(String(error));
-            await this.handleSyncError(workspaceId, err);
+            this.logSyncError(workspaceId, err.message);
+            broadcastToRenderers('workspace-sync-completed', {
+                workspaceId, success: false, error: err.message, timestamp: Date.now()
+            }, this.broadcaster);
+            return { success: false, error: err.message, hasChanges: false };
         }
     }
 
@@ -523,21 +556,16 @@ class WorkspaceSyncScheduler {
 
     // ── Error handling / status ───────────────────────────────────
 
-    private async handleSyncError(workspaceId: string, error: Error): Promise<void> {
-        if (isTransientNetworkError(error.message)) {
-            log.warn(`Sync skipped for workspace ${workspaceId} (transient): ${error.message}`);
+    /**
+     * Log a sync error with appropriate severity (transient network errors
+     * are warnings, everything else is an error).
+     */
+    private logSyncError(workspaceId: string, errorMsg: string): void {
+        if (isTransientNetworkError(errorMsg)) {
+            log.warn(`Sync skipped for workspace ${workspaceId} (transient): ${errorMsg}`);
         } else {
-            log.error(`Failed to sync workspace ${workspaceId}:`, error);
+            log.error(`Failed to sync workspace ${workspaceId}: ${errorMsg}`);
         }
-
-        broadcastToRenderers('workspace-sync-completed', {
-            workspaceId,
-            success: false,
-            error: error.message,
-            timestamp: Date.now()
-        }, this.broadcaster);
-
-        await this.updateSyncStatus(workspaceId, { syncing: false, error: error.message });
     }
 
     private async updateSyncStatus(workspaceId: string, status: WorkspaceSyncStatus): Promise<void> {

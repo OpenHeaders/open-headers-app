@@ -170,6 +170,16 @@ class WorkspaceStateService {
             this.state.activeWorkspaceId = config.activeWorkspaceId;
             this.state.syncStatus = config.syncStatus;
 
+            // Clear stale syncing flags from crash recovery. If the app was killed
+            // mid-sync, `syncing: true` would be persisted to disk. Nothing is
+            // actually syncing at startup — the scheduler hasn't started yet.
+            for (const [workspaceId, status] of Object.entries(this.state.syncStatus)) {
+                if (status.syncing) {
+                    this.state.syncStatus[workspaceId] = { ...status, syncing: false };
+                    this.dirty.workspaces = true;
+                }
+            }
+
             if (this.sourceRefreshService) {
                 this.sourceRefreshService.activeWorkspaceId = this.state.activeWorkspaceId;
             }
@@ -577,7 +587,18 @@ class WorkspaceStateService {
             await this.syncScheduler.importSyncedData(workspaceId, syncData, { broadcastToExtensions: false });
         }
 
-        // 3. Delegate switch lifecycle: teardown → load env vars → load data →
+        // 3. Set initial sync status so the workspace never appears as "Not synced".
+        //    The CLI flow already synced the data above — record that fact before
+        //    switching, so the renderer sees a valid lastSync immediately.
+        if (syncData) {
+            this.updateSyncStatus(workspaceId, {
+                syncing: false,
+                lastSync: new Date().toISOString(),
+                error: null
+            });
+        }
+
+        // 4. Delegate switch lifecycle: teardown → load env vars → load data →
         //    start sync scheduler → broadcast. skipInitialSync because we just synced.
         await this.switchWorkspace(workspaceId, { skipInitialSync: true });
         log.info(`CLI workspace ${workspaceId} fully activated`);
