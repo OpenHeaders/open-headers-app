@@ -162,15 +162,15 @@ jobs:
           mkdir -p dist
         shell: bash
 
-      # Detect if this is an RC/beta/alpha build (skips Windows code signing)
-      - name: Detect RC build
-        id: detect_rc
+      # Detect if this is a beta (pre-release) build — skips Windows code signing
+      - name: Detect beta build
+        id: detect_beta
         run: |
-          if [[ "${{ github.ref_name }}" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
-            echo "is_rc=true" >> $GITHUB_OUTPUT
-            echo "::notice::Detected RC/beta/alpha build - skipping Windows code signing"
+          if [[ "${{ github.ref_name }}" =~ -beta[.0-9]*$ ]]; then
+            echo "is_beta=true" >> $GITHUB_OUTPUT
+            echo "::notice::Detected beta build - skipping Windows code signing"
           else
-            echo "is_rc=false" >> $GITHUB_OUTPUT
+            echo "is_beta=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
@@ -204,9 +204,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Find the exact exe file name first (only for stable releases, not RC)
+      # Find the exact exe file name first (only for stable releases, not beta)
       - name: Find Windows Executable
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
         id: find-exe
         run: |
           $exeFile = Get-ChildItem -Path "dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
@@ -223,9 +223,9 @@ jobs:
           echo "EXE_FILENAME=$($exeFile.Name)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # Sign Windows executables with SSL.com eSigner (only for stable releases, not RC)
+      # Sign Windows executables with SSL.com eSigner (only for stable releases, not beta)
       - name: Sign Windows Executables
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
         uses: sslcom/esigner-codesign@v1.3.1
         with:
           command: sign
@@ -243,7 +243,7 @@ jobs:
 
       # Regenerate blockmap and update latest.yml after signing (signing changes the exe)
       - name: Update latest.yml and blockmap after signing
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc != 'true'
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
         run: |
           $exePath = "dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
           $blockmapPath = "$exePath.blockmap"
@@ -296,13 +296,13 @@ jobs:
           Get-Content $latestYmlPath
         shell: pwsh
 
-      # Log that signing was skipped for RC
-      - name: Skip signing for RC
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_rc.outputs.is_rc == 'true'
-        run: echo "Skipping Windows code signing for RC build"
+      # Log that signing was skipped for beta
+      - name: Skip signing for beta
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta == 'true'
+        run: echo "Skipping Windows code signing for beta build"
 
       # Build for Linux
-      # RC and stable builds produce the same targets and architectures.
+      # Beta and stable builds produce the same targets and architectures.
       # No signing involved on Linux.
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
@@ -327,6 +327,16 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # For stable releases, cross-publish latest*.yml as beta*.yml so beta-channel
+      # users can discover and upgrade to the stable version via electron-updater.
+      - name: Cross-publish beta channel yml for stable releases
+        if: startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
+        run: |
+          for f in dist/latest*.yml; do
+            [ -f "$f" ] && cp "$f" "${f/latest/beta}"
+          done
+        shell: bash
 
       # Organize artifacts into platform-specific directories to prevent conflicts
       # without renaming files needed for electron-updater
@@ -359,9 +369,6 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.yml
-            dist/*-latest*.yml
-            dist/*-builder-debug.yml
-            dist/latest*
             dist/install-open-headers.sh
 
   release:
@@ -374,18 +381,17 @@ jobs:
         uses: actions/checkout@v4
 
       # Determine release type based on tag pattern
-      # RC/beta/alpha tags create published prereleases, stable tags create published releases
+      # Beta tags create published prereleases, stable tags create published releases
       - name: Determine release type
         id: release_type
         run: |
           TAG_NAME=${GITHUB_REF_NAME}
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
 
-          # Check if this is a prerelease (rc, beta, alpha)
-          if [[ "$TAG_NAME" =~ -(rc|beta|alpha)[.0-9]*$ ]]; then
+          if [[ "$TAG_NAME" =~ -beta[.0-9]*$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
             echo "is_draft=false" >> $GITHUB_OUTPUT
-            echo "::notice::Detected RC/Beta/Alpha release: $TAG_NAME - Creating published prerelease"
+            echo "::notice::Detected beta release: $TAG_NAME - Creating published prerelease"
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
             echo "is_draft=false" >> $GITHUB_OUTPUT
@@ -397,49 +403,48 @@ jobs:
         with:
           path: dist
 
-      # Process and deduplicate artifacts before release
+      # Process and deduplicate artifacts before release.
+      # Stable builds have latest*.yml + beta*.yml (cross-published).
+      # Beta builds have beta*.yml only.
       - name: Process artifacts for release
         run: |
-          IS_RC="${{ steps.release_type.outputs.is_prerelease }}"
+          IS_BETA="${{ steps.release_type.outputs.is_prerelease }}"
 
-          # Create a temporary directory for processed files
           mkdir -p processed_files
-
-          # Track files we've seen to avoid duplicates
           declare -A seen_files
 
-          # Process the artifacts in a specific order to ensure correct files are used
-          # Windows files first (for latest.yml)
+          # --- Windows ---
           if [ -d "dist/windows-latest-artifacts" ]; then
             cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
-            # Blockmap files for differential updates (if generated)
             cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            if [ -f "dist/windows-latest-artifacts/latest.yml" ]; then
-              cp dist/windows-latest-artifacts/latest.yml processed_files/
-              seen_files["latest.yml"]=1
-            fi
+            # Channel yml: latest.yml for stable, beta.yml for beta
+            for yml in latest.yml beta.yml; do
+              if [ -f "dist/windows-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
+                cp "dist/windows-latest-artifacts/$yml" processed_files/
+                seen_files["$yml"]=1
+              fi
+            done
           fi
 
-          # Mac files second
+          # --- macOS ---
           if [ -d "dist/macos-latest-artifacts" ]; then
             cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
-            # RC builds don't have zip files (no block maps)
             cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files"
-            # Blockmap files for differential updates
             cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ]; then
-              cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
-              seen_files["latest-mac.yml"]=1
-            fi
+            for yml in latest-mac.yml beta-mac.yml; do
+              if [ -f "dist/macos-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
+                cp "dist/macos-latest-artifacts/$yml" processed_files/
+                seen_files["$yml"]=1
+              fi
+            done
           fi
 
-          # Linux files last
+          # --- Linux ---
           if [ -d "dist/ubuntu-latest-artifacts" ]; then
             cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/ 2>/dev/null || echo "No AppImage files"
             cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || echo "No deb files"
             cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || echo "Installation script not found"
 
-            # RPM files
             echo "Copying RPM files to processed_files"
             find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
 
@@ -451,18 +456,14 @@ jobs:
               exit 1
             fi
 
-            # Continue with other files
-            if [ -f "dist/ubuntu-latest-artifacts/latest-linux.yml" ] && [ -z "${seen_files[latest-linux.yml]}" ]; then
-              cp dist/ubuntu-latest-artifacts/latest-linux.yml processed_files/
-              seen_files["latest-linux.yml"]=1
-            fi
-            if [ -f "dist/ubuntu-latest-artifacts/latest-linux-arm64.yml" ] && [ -z "${seen_files[latest-linux-arm64.yml]}" ]; then
-              cp dist/ubuntu-latest-artifacts/latest-linux-arm64.yml processed_files/
-              seen_files["latest-linux-arm64.yml"]=1
-            fi
+            for yml in latest-linux.yml latest-linux-arm64.yml beta-linux.yml beta-linux-arm64.yml; do
+              if [ -f "dist/ubuntu-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
+                cp "dist/ubuntu-latest-artifacts/$yml" processed_files/
+                seen_files["$yml"]=1
+              fi
+            done
           fi
 
-          # List processed files
           echo "Files prepared for release:"
           ls -la processed_files/
         shell: bash
@@ -476,12 +477,11 @@ jobs:
           # Add prerelease warning if applicable
           if [ "$IS_PRERELEASE" = "true" ]; then
             cat > release_body.md << EOF
-          > ⚠️ **This is a Release Candidate (RC) build for testing purposes.**
-          > It may contain bugs and is not recommended for production use.
-          > Please report any issues you encounter.
+          > ⚠️ **This is a pre-release build for early testing.**
+          > It may contain bugs and is not code-signed (Windows). Please report any issues you encounter.
 
           ## 📥 Download
-          Download the release candidate for your platform:
+          Download the pre-release for your platform:
           EOF
           else
             cat > release_body.md << EOF
@@ -531,7 +531,7 @@ jobs:
           EOF
 
       # Create release using processed files
-      # RC/beta/alpha tags create published prereleases, stable tags create published releases
+      # Beta tags create published prereleases, stable tags create published releases
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
