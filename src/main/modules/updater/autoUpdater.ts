@@ -72,9 +72,11 @@ class AutoUpdaterManager {
      * Called on startup and when the user changes settings.
      */
     applyUpdateSettings(settings: AppSettings) {
+        const isPrerelease = settings.updateChannel === 'prerelease';
         autoUpdater.autoDownload = settings.autoUpdate !== false;
-        autoUpdater.allowPrerelease = settings.updateChannel === 'prerelease';
-        log.info(`Update settings applied: autoUpdate=${settings.autoUpdate}, channel=${settings.updateChannel}, allowPrerelease=${autoUpdater.allowPrerelease}`);
+        autoUpdater.allowPrerelease = isPrerelease;
+        autoUpdater.channel = isPrerelease ? 'beta' : 'latest';
+        log.info(`Update settings applied: autoUpdate=${settings.autoUpdate}, channel=${autoUpdater.channel}, allowPrerelease=${autoUpdater.allowPrerelease}`);
     }
 
     logAppInfo() {

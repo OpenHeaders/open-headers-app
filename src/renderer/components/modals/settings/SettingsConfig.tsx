@@ -342,7 +342,7 @@ export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecord
                         title={
                         <>
                             <div><strong>Stable:</strong> <span style={{ opacity: 0.75 }}>Production-ready releases, fully tested and code-signed</span></div>
-                            <div><strong>Pre-release:</strong> <span style={{ opacity: 0.75 }}>Includes release candidates (RC), beta, and alpha builds for early testing — may contain bugs and are unsigned</span></div>
+                            <div><strong>Pre-release:</strong> <span style={{ opacity: 0.75 }}>Includes beta builds for early testing — may contain bugs and are unsigned on Windows</span></div>
                         </>
                     }>
                         <QuestionCircleOutlined style={{ fontSize: 11, cursor: 'help' }} />
