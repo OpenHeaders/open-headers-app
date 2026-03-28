@@ -10,7 +10,7 @@ const { Tray, Menu, app, nativeImage } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('TrayManager');
 
-type UpdateMenuState = 'idle' | 'checking' | 'downloading' | 'ready' | 'up-to-date';
+type UpdateMenuState = 'idle' | 'checking' | 'downloading' | 'ready' | 'up-to-date' | 'error';
 
 class TrayManager {
     tray: TrayType | null;
@@ -70,6 +70,8 @@ class TrayManager {
                 };
             case 'up-to-date':
                 return { label: "You're Up to Date", enabled: false };
+            case 'error':
+                return { label: 'Update Check Failed', enabled: false };
             default:
                 return {
                     label: 'Check for Updates...',
@@ -132,8 +134,8 @@ class TrayManager {
 
         this.rebuildContextMenu();
 
-        // "Up to date" reverts to idle after 5 seconds
-        if (state === 'up-to-date') {
+        // Transient states revert to idle after 5 seconds
+        if (state === 'up-to-date' || state === 'error') {
             this.upToDateTimer = setTimeout(() => {
                 this.updateState = 'idle';
                 this.rebuildContextMenu();
