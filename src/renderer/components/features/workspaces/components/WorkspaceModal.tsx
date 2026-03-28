@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Modal, Form, Input, Radio, Alert, Button, Space, Tooltip, App, Switch, Checkbox, Card, Typography } from 'antd';
-import { UserOutlined, TeamOutlined, CheckCircleOutlined, SyncOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, SafetyOutlined, WarningOutlined, DatabaseOutlined, FileOutlined, FolderOutlined } from '@ant-design/icons';
+import { UserOutlined, TeamOutlined, CheckCircleOutlined, SyncOutlined, ExclamationCircleOutlined, QuestionCircleOutlined, SafetyOutlined, WarningOutlined, FileOutlined, FolderOutlined } from '@ant-design/icons';
 import { DEFAULT_VALUES, WORKSPACE_TYPES } from '../constants';
 import { useWorkspaceCreation } from '../hooks/useWorkspaceCreation';
 import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
 import { useWorkspaces } from '../../../../hooks/workspace';
-import { useSources, useEnvironments } from '../../../../hooks/useCentralizedWorkspace';
+import { useSources, useEnvironments, useHeaderRules, useCentralizedWorkspace } from '../../../../hooks/useCentralizedWorkspace';
 import { prepareAuthData } from '../utils';
 import GitStatusAlert from './GitStatusAlert';
 import ConnectionProgressModal from './ConnectionProgressModal';
@@ -55,6 +55,8 @@ const WorkspaceModal = ({
     const workspaceContext = useWorkspaces();
     const { sources, exportSources } = useSources();
     const { environments, generateEnvironmentSchema } = useEnvironments();
+    const { rules: allRules } = useCentralizedWorkspace();
+    const { addRule: addHeaderRule, updateRule: updateHeaderRule, removeRule: removeHeaderRule } = useHeaderRules();
     
     const services = useMemo(() => {
         return WorkspaceServiceAdapterFactory.create({
@@ -291,7 +293,11 @@ const WorkspaceModal = ({
                     environments: environments,
                     createEnvironment: async () => true, // Not needed for export
                     setVariable: async () => true, // Not needed for export
-                    generateEnvironmentSchema: generateEnvironmentSchema
+                    generateEnvironmentSchema: generateEnvironmentSchema,
+                    rules: allRules,
+                    addHeaderRule,
+                    updateHeaderRule,
+                    removeHeaderRule
                 });
                 
                 // Prepare export options

@@ -22,6 +22,10 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
     setVariable: vi.fn(),
     generateEnvironmentSchema: vi.fn(() => ({ environments: {}, variableDefinitions: {} })),
     createEnvironment: vi.fn(),
+    rules: { header: [], request: [], response: [] },
+    addHeaderRule: vi.fn(async () => true),
+    updateHeaderRule: vi.fn(async () => true),
+    removeHeaderRule: vi.fn(async () => true),
     ...overrides,
   } as ExportImportDependencies;
 }

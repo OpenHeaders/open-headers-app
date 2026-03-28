@@ -118,7 +118,6 @@ export const IPC_INVOKE = {
 
     // Workspace
     DELETE_WORKSPACE_FOLDER: 'deleteWorkspaceFolder',
-    DELETE_WORKSPACE: 'deleteWorkspace',
     WORKSPACE_TEST_CONNECTION: 'workspace-test-connection',
     WORKSPACE_SYNC: 'workspace-sync',
     WORKSPACE_SYNC_ALL: 'workspace-sync-all',

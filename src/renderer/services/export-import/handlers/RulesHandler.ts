@@ -1,14 +1,16 @@
 /**
  * Rules Handler for Export/Import Operations
  *
- * This module handles the export and import of application rules,
- * including type-specific handling and complex merge/replace logic.
+ * This module handles the export and import of application rules.
+ * All data access goes through ExportImportDependencies (backed by
+ * WorkspaceStateService via IPC) — never direct file I/O.
  */
 
-import { createRulesStorage, RULE_TYPES } from '../../../utils/data-structures/rulesStructure';
-import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, RulesStorage, RuleEntry } from '../core/types';
+import { IMPORT_MODES } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, RuleEntry } from '../core/types';
 import type { RulesCollection } from '../../../../types/rules';
+import type { HeaderRule } from '../../../../types/rules';
+
 import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
 
@@ -28,7 +30,6 @@ interface RulesToImport {
   rules?: Record<string, RuleEntry[]>;
   metadata?: { totalRules?: number; lastUpdated?: string };
 }
-
 
 /** Import statistics per type */
 interface TypeImportStats {
@@ -51,23 +52,23 @@ interface RulesData {
   metadata?: { totalRules?: number; lastUpdated?: string };
 }
 
+// Rule types enum (local — avoids importing renderer utility from a service module)
+const RULE_TYPES = { HEADER: 'header', PAYLOAD: 'payload', URL: 'url' } as const;
+
 /**
  * Rules Handler Class
  * Manages export and import operations for application rules
  */
 export class RulesHandler {
   dependencies: ExportImportDependencies;
-  activeWorkspaceId: string;
 
   constructor(dependencies: ExportImportDependencies) {
     this.dependencies = dependencies;
-    this.activeWorkspaceId = dependencies.activeWorkspaceId;
   }
 
   /**
-   * Exports rules data for inclusion in export file
-   * @param {Object} options - Export options
-   * @returns {Promise<Object|null>} - Rules data object or null if not selected
+   * Exports rules data for inclusion in export file.
+   * Reads from in-memory state (WorkspaceStateService) — no disk access.
    */
   async exportRules(options: ExportOptions) {
     const { selectedItems } = options;
@@ -78,21 +79,13 @@ export class RulesHandler {
     }
 
     try {
-      let rulesStorage = createRulesStorage();
-
-      const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
-      const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
-
-      if (rulesData) {
-        rulesStorage = JSON.parse(rulesData);
-      }
-
-      const totalRules = Object.values(rulesStorage.rules).reduce((sum, rules) => sum + rules.length, 0);
-      log.info(`Exporting ${totalRules} rules across ${Object.keys(rulesStorage.rules).length} types`);
+      const rules = this.dependencies.rules;
+      const totalRules = rules.header.length + rules.request.length + rules.response.length;
+      log.info(`Exporting ${totalRules} rules`);
 
       return {
-        rules: rulesStorage.rules,
-        rulesMetadata: rulesStorage.metadata
+        rules: { header: rules.header, request: rules.request, response: rules.response },
+        rulesMetadata: { totalRules, lastUpdated: new Date().toISOString() }
       };
     } catch (error) {
       log.error('Failed to export rules:', error);
@@ -101,17 +94,11 @@ export class RulesHandler {
   }
 
   /**
-   * Imports rules from import data
-   * @param {Object} rulesToImport - Rules storage object to import
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics
+   * Imports rules from import data.
+   * Uses WorkspaceStateService CRUD methods via dependencies — no direct file writes.
    */
   async importRules(rulesToImport: RulesToImport, options: ImportOptions) {
-    const stats: {
-      imported: Record<string, number>;
-      skipped: Record<string, number>;
-      errors: Array<{ ruleType: string; ruleId: string; error: string }>;
-    } = {
+    const stats: ImportStats = {
       imported: { total: 0 },
       skipped: { total: 0 },
       errors: []
@@ -132,42 +119,31 @@ export class RulesHandler {
     log.info(`Starting import of ${totalRulesToImport} rules in ${options.importMode} mode`);
 
     try {
-      // Get existing rules storage
-      let existingRulesStorage = await this._getExistingRulesStorage();
-
-      // Handle replace mode - clear all rules
+      // Handle replace mode — remove all existing header rules first
       if (options.importMode === IMPORT_MODES.REPLACE) {
-        existingRulesStorage = createRulesStorage();
+        await this._clearExistingHeaderRules();
       }
 
-      // Process each rule type
-      for (const [ruleType, rulesToImportForType] of Object.entries(rulesToImport.rules)) {
-        const typeStats = await this._importRulesOfType(
-          ruleType,
-          rulesToImportForType,
-          existingRulesStorage,
+      // Build a set of existing rule IDs for merge duplicate detection
+      const existingIds = new Set(this.dependencies.rules.header.map(r => r.id));
+
+      // Process header rules via WorkspaceStateService
+      const headerRules = rulesToImport.rules[RULE_TYPES.HEADER];
+      if (Array.isArray(headerRules) && headerRules.length > 0) {
+        const typeStats = await this._importHeaderRules(
+          headerRules,
+          existingIds,
           options
         );
-
-        stats.imported[ruleType] = typeStats.imported;
-        stats.skipped[ruleType] = typeStats.skipped;
+        stats.imported[RULE_TYPES.HEADER] = typeStats.imported;
+        stats.skipped[RULE_TYPES.HEADER] = typeStats.skipped;
         stats.imported.total += typeStats.imported;
         stats.skipped.total += typeStats.skipped;
         stats.errors.push(...typeStats.errors);
       }
 
-      // Update metadata
-      existingRulesStorage.metadata.totalRules = existingRulesStorage.rules.header.length
-        + existingRulesStorage.rules.request.length + existingRulesStorage.rules.response.length;
-      existingRulesStorage.metadata.lastUpdated = new Date().toISOString();
-
-      // Save the updated rules
-      await this._saveRulesStorage(existingRulesStorage);
-
-      // Emit event for UI updates
-      if (stats.imported.total > 0) {
-        this._emitRulesUpdatedEvent(stats);
-      }
+      // TODO: request/response rule types can be added here when their
+      // CRUD methods are available on WorkspaceStateService.
 
       log.info(`Rules import completed: ${stats.imported.total} imported, ${stats.skipped.total} skipped, ${stats.errors.length} errors`);
       return stats;
@@ -178,60 +154,39 @@ export class RulesHandler {
   }
 
   /**
-   * Imports rules of a specific type
-   * @param {string} ruleType - Type of rules to import
-   * @param {Array} rulesToImport - Rules to import
-   * @param {Object} existingRulesStorage - Existing rules storage
-   * @param {Object} options - Import options
-   * @returns {Promise<Object>} - Import statistics for this type
-   * @private
+   * Import header rules one by one via WorkspaceStateService.
    */
-  async _importRulesOfType(ruleType: string, rulesToImport: RuleEntry[], existingRulesStorage: RulesStorage, options: ImportOptions): Promise<TypeImportStats> {
-    const stats: TypeImportStats = {
-      imported: 0,
-      skipped: 0,
-      errors: []
-    };
+  private async _importHeaderRules(
+    rulesToImport: RuleEntry[],
+    existingIds: Set<string>,
+    options: ImportOptions
+  ): Promise<TypeImportStats> {
+    const stats: TypeImportStats = { imported: 0, skipped: 0, errors: [] };
 
-    if (!Array.isArray(rulesToImport) || rulesToImport.length === 0) {
-      return stats;
-    }
-
-    log.debug(`Importing ${rulesToImport.length} rules of type: ${ruleType}`);
-
-    if (options.importMode === IMPORT_MODES.REPLACE) {
-      // Replace mode: use imported rules directly
-      existingRulesStorage.rules[ruleType] = [...rulesToImport];
-      stats.imported = rulesToImport.length;
-    } else {
-      // Merge mode: check for duplicates
-      const existingRules = existingRulesStorage.rules[ruleType] || [];
-      const existingIds = new Set(existingRules.map((r: RuleEntry) => r.id));
-
-      for (const rule of rulesToImport) {
-        try {
-          if (existingIds.has(rule.id)) {
-            stats.skipped++;
-            log.debug(`Skipping duplicate rule with ID: ${rule.id}`);
-            continue;
-          }
-
-          // Ensure the rule has a valid ID
-          const ruleToAdd = {
-            ...rule,
-            id: rule.id || this._generateRuleId()
-          };
-
-          existingRulesStorage.rules[ruleType].push(ruleToAdd);
-          stats.imported++;
-        } catch (error) {
-          log.error(`Failed to import rule ${rule.id || 'unknown'}:`, error);
-          stats.errors.push({
-            ruleType,
-            ruleId: rule.id || 'unknown',
-            error: error instanceof Error ? error.message : String(error)
-          });
+    for (const rule of rulesToImport) {
+      try {
+        // Skip duplicates in merge mode
+        if (options.importMode === IMPORT_MODES.MERGE && existingIds.has(rule.id)) {
+          stats.skipped++;
+          log.debug(`Skipping duplicate rule with ID: ${rule.id}`);
+          continue;
         }
+
+        // Ensure a valid ID
+        const ruleToAdd: Partial<HeaderRule> = {
+          ...rule as unknown as Partial<HeaderRule>,
+          id: rule.id || this._generateRuleId()
+        };
+
+        await this.dependencies.addHeaderRule(ruleToAdd);
+        stats.imported++;
+      } catch (error) {
+        log.error(`Failed to import rule ${rule.id || 'unknown'}:`, error);
+        stats.errors.push({
+          ruleType: RULE_TYPES.HEADER,
+          ruleId: rule.id || 'unknown',
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
     }
 
@@ -239,87 +194,39 @@ export class RulesHandler {
   }
 
   /**
-   * Gets existing rules storage from the workspace
-   * @returns {Promise<Object>} - Existing rules storage
-   * @private
+   * Removes all existing header rules (used in replace mode).
    */
-  async _getExistingRulesStorage() {
-    try {
-      const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
-      const existingRulesData = await window.electronAPI.loadFromStorage(rulesPath);
+  private async _clearExistingHeaderRules(): Promise<void> {
+    const existingRules = this.dependencies.rules.header;
+    log.info(`Clearing ${existingRules.length} existing header rules`);
 
-      if (existingRulesData) {
-        return JSON.parse(existingRulesData);
+    for (const rule of existingRules) {
+      try {
+        await this.dependencies.removeHeaderRule(rule.id);
+      } catch (error) {
+        log.warn(`Failed to remove header rule ${rule.id}:`, error);
       }
-    } catch (error) {
-      log.debug('No existing rules found, creating new storage');
-    }
-
-    return createRulesStorage();
-  }
-
-  /**
-   * Saves rules storage to the workspace
-   * @param {Object} rulesStorage - Rules storage to save
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _saveRulesStorage(rulesStorage: RulesStorage) {
-    try {
-      const rulesPath = `workspaces/${this.activeWorkspaceId}/rules.json`;
-      await window.electronAPI.saveToStorage(rulesPath, JSON.stringify(rulesStorage));
-    } catch (error) {
-      throw new Error(`Failed to save rules storage: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Emits an event to notify the UI that rules have been updated
-   * @param {Object} stats - Import statistics
-   * @private
-   */
-  _emitRulesUpdatedEvent(stats: ImportStats) {
-    try {
-      window.dispatchEvent(new CustomEvent(EVENTS.RULES_UPDATED, {
-        detail: {
-          imported: stats.imported,
-          skipped: stats.skipped,
-          source: 'import'
-        }
-      }));
-    } catch (error) {
-      log.warn('Failed to emit rules updated event:', error);
     }
   }
 
   /**
    * Generates a unique rule ID
-   * @returns {string} - Unique rule ID
-   * @private
    */
-  _generateRuleId() {
+  private _generateRuleId(): string {
     return Date.now().toString() + Math.random().toString(36).slice(2, 11);
   }
 
   /**
    * Validates rules storage for export
-   * @param {Object} rulesData - Rules data to validate
-   * @returns {Object} - Validation result
    */
   validateRulesForExport(rulesDataInput: RulesData | undefined) {
     const rulesData = rulesDataInput;
     if (!rulesData || typeof rulesData !== 'object') {
-      return {
-        success: false,
-        error: 'Rules data must be an object'
-      };
+      return { success: false, error: 'Rules data must be an object' };
     }
 
     if (!rulesData.rules || typeof rulesData.rules !== 'object') {
-      return {
-        success: false,
-        error: 'Rules data must contain a rules object'
-      };
+      return { success: false, error: 'Rules data must contain a rules object' };
     }
 
     const errors: string[] = [];
@@ -337,10 +244,7 @@ export class RulesHandler {
     });
 
     if (errors.length > 0) {
-      return {
-        success: false,
-        error: errors.join('; ')
-      };
+      return { success: false, error: errors.join('; ') };
     }
 
     return { success: true };
@@ -348,16 +252,10 @@ export class RulesHandler {
 
   /**
    * Gets statistics about rules for reporting
-   * @param {Object} rulesData - Rules data object
-   * @returns {Object} - Statistics object
    */
   getRulesStatistics(rulesData: RulesData) {
     if (!rulesData || !rulesData.rules) {
-      return {
-        total: 0,
-        byType: {},
-        metadata: null
-      };
+      return { total: 0, byType: {}, metadata: null };
     }
 
     const stats: { total: number; byType: Record<string, number>; metadata: RulesData['rulesMetadata'] } = {
@@ -375,11 +273,8 @@ export class RulesHandler {
     return stats;
   }
 
-
   /**
    * Analyzes rules for potential issues or conflicts
-   * @param {Object} rulesData - Rules data to analyze
-   * @returns {Object} - Analysis result with warnings and suggestions
    */
   analyzeRules(rulesData: RulesData) {
     const warnings: string[] = [];

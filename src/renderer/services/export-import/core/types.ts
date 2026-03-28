@@ -29,7 +29,7 @@ export interface EnvironmentSchema {
 
 import type { Source } from '../../../../types/source';
 import type { Workspace } from '../../../../types/workspace';
-import type { RulesCollection, RulesStorage as SharedRulesStorage } from '../../../../types/rules';
+import type { HeaderRule, RulesCollection, RulesStorage as SharedRulesStorage } from '../../../../types/rules';
 import type { ProxyRule } from '../../../../types/proxy';
 import type { EnvironmentVariable } from '../../../../types/environment';
 
@@ -57,6 +57,10 @@ export interface ExportImportDependencies {
   workspaces: WorkspaceData[];
   createWorkspace(workspace: WorkspaceData): Promise<WorkspaceData | null>;
   switchWorkspace(workspaceId: string): Promise<boolean>;
+  rules: RulesCollection;
+  addHeaderRule(ruleData: Partial<HeaderRule>): Promise<boolean>;
+  updateHeaderRule(ruleId: string, updates: Partial<HeaderRule>): Promise<boolean>;
+  removeHeaderRule(ruleId: string): Promise<boolean>;
   environments: Record<string, Record<string, EnvironmentVariable>>;
   createEnvironment(name: string): Promise<boolean>;
   setVariable(name: string, value: string | null, environment?: string | null, isSecret?: boolean): Promise<boolean>;

@@ -574,7 +574,7 @@ describe('NetworkService', () => {
         it('emits stateChanged event on state change', () => {
             svc.isInitialized = true;
             const handler = vi.fn();
-            svc.on('stateChanged', handler);
+            svc.on('state-changed', handler);
             svc.pendingStateChanges = { isOnline: false };
             svc.applyStateChanges();
             expect(handler).toHaveBeenCalledWith(expect.objectContaining({
@@ -689,9 +689,9 @@ describe('NetworkService', () => {
         });
 
         it('removes all event listeners', () => {
-            svc.on('stateChanged', () => {});
+            svc.on('state-changed', () => {});
             svc.destroy();
-            expect(svc.listenerCount('stateChanged')).toBe(0);
+            expect(svc.listenerCount('state-changed')).toBe(0);
         });
     });
 });

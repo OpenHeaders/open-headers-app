@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { WorkspaceHandler } from '../../../../src/renderer/services/export-import/handlers/WorkspaceHandler';
-import { DEFAULTS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies, ExportOptions, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
 
 function makeExportOpts(overrides: Record<string, unknown> = {}): ExportOptions {
@@ -24,6 +23,10 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}) {
     createEnvironment: vi.fn().mockResolvedValue(true),
     setVariable: vi.fn().mockResolvedValue(true),
     generateEnvironmentSchema: vi.fn().mockReturnValue({ environments: {} }),
+    rules: { header: [], request: [], response: [] },
+    addHeaderRule: vi.fn(async () => true),
+    updateHeaderRule: vi.fn(async () => true),
+    removeHeaderRule: vi.fn(async () => true),
     ...overrides,
   } as unknown as ExportImportDependencies;
 }

@@ -1,6 +1,7 @@
-import { useSources, useWorkspaces, useNavigation, useSettings, useEnvironments } from '../../contexts';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
+import { useSources, useNavigation, useSettings, useEnvironments } from '../../contexts';
+import { useHeaderRules } from '../../hooks/useCentralizedWorkspace';
+import React, { useState, useEffect, useRef } from 'react';
+import {
     Card,
     Button,
     Space,
@@ -14,9 +15,9 @@ import {
     Alert
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { 
-    PlusOutlined, 
-    EditOutlined, 
+import {
+    PlusOutlined,
+    EditOutlined,
     DeleteOutlined,
     CopyOutlined,
     ApiOutlined,
@@ -27,10 +28,9 @@ import {
 } from '@ant-design/icons';
 import UnifiedHeaderModal from './header/unified-modal/UnifiedHeaderModal';
 import { showMessage } from '../../utils';
-import { 
-    createRulesStorage, 
+import {
     createRule,
-    RULE_TYPES 
+    RULE_TYPES
 } from '../../utils';
 import {
     checkRuleActivation,
@@ -38,7 +38,6 @@ import {
 } from '../../utils/validation/environment-variables';
 
 import type { HeaderRule } from '../../../types/rules';
-import type { RulesStorage } from '../../../types/rules';
 import { createLogger } from '../../utils/error-handling/logger';
 const log = createLogger('HeaderRules');
 
@@ -47,18 +46,18 @@ const { Title, Text } = Typography;
 type PlaceholderType = 'source_not_found' | 'empty_source' | 'empty_value' | 'missing_env_vars' | null;
 
 const HeaderRules = () => {
-    const [rules, setRules] = useState<HeaderRule[]>([]);
-    const [loading, setLoading] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
     const [editingRule, setEditingRule] = useState<HeaderRule | null>(null);
-    
+
+    // All rule mutations go through main process via IPC (WorkspaceStateService)
+    const { rules, addRule, updateRule, removeRule, toggleRule } = useHeaderRules();
+
     // Get sources from context
     const { sources } = useSources();
-    const { activeWorkspaceId } = useWorkspaces();
     const { settings } = useSettings();
     const envContext = useEnvironments();
     const tutorialMode = settings?.tutorialMode !== undefined ? settings.tutorialMode : true;
-    
+
     // Use ref to always have access to current rules
     const rulesRef = useRef<HeaderRule[]>(rules);
     useEffect(() => {
@@ -99,18 +98,22 @@ const HeaderRules = () => {
         // Register delete action handler
         const unregisterDelete = registerActionHandler(TARGETS.RULES_HEADERS, ACTIONS.DELETE, async (itemId) => {
             try {
-                await handleDeleteRule(itemId);
+                const rule = rulesRef.current.find(r => r.id === itemId);
+                const ruleName = rule ? rule.headerName : 'Rule';
+                const success = await removeRule(itemId);
+                if (success) showMessage('success', `Header rule "${ruleName}" deleted successfully`);
             } catch (error) {
                 log.error('Failed to delete rule:', error);
             }
         });
-        
+
         // Register toggle action handler
         const unregisterToggle = registerActionHandler(TARGETS.RULES_HEADERS, ACTIONS.TOGGLE, async (itemId) => {
             const rule = rulesRef.current.find(r => r.id === itemId);
             if (rule) {
                 try {
-                    await handleToggleRule(itemId, !rule.isEnabled);
+                    const success = await toggleRule(itemId, !rule.isEnabled);
+                    if (success) showMessage('success', `Header rule "${rule.headerName}" ${!rule.isEnabled ? 'enabled' : 'disabled'}`);
                 } catch (error) {
                     log.error('Failed to toggle rule:', error);
                 }
@@ -132,142 +135,18 @@ const HeaderRules = () => {
         };
     }, []); // Empty dependency array - register only once on mount
 
-    // Load rules on mount
+    // Flush pending navigation actions when rules data arrives
     useEffect(() => {
-        loadRules().catch(error => log.error('Failed to load rules:', error));
-        
-        // Listen for import events
-        const handleRulesImported = (event: Event) => {
-            log.info('Header rules imported, reloading:', (event as CustomEvent).detail);
-            loadRules().catch(error => log.error('Failed to reload rules:', error));
-        };
-        
-        // Listen for rules update events
-        window.addEventListener('rules-updated', handleRulesImported);
-        
-        return () => {
-            window.removeEventListener('rules-updated', handleRulesImported);
-        };
-    }, [activeWorkspaceId]);
-
-    // Listen for environment variable changes to update rule states
-    useEffect(() => {
-        // Force re-render when environment variables change
-        const handleEnvChange = () => {
-            log.info('Environment variables changed, updating rule states');
-            // Force a re-render by updating state
-            setRules(currentRules => [...currentRules]);
-        };
-        
-        window.addEventListener('environment-variables-changed', handleEnvChange);
-        window.addEventListener('environment-switched', handleEnvChange);
-        
-        // Also listen to IPC events from main process
-        if (window.electronAPI && window.electronAPI.onEnvironmentVariablesChanged) {
-            const unsubscribe = window.electronAPI.onEnvironmentVariablesChanged(() => {
-                handleEnvChange();
-            });
-            
-            return () => {
-                window.removeEventListener('environment-variables-changed', handleEnvChange);
-                window.removeEventListener('environment-switched', handleEnvChange);
-                if (unsubscribe) unsubscribe();
-            };
-        }
-        
-        return () => {
-            window.removeEventListener('environment-variables-changed', handleEnvChange);
-            window.removeEventListener('environment-switched', handleEnvChange);
-        };
-    }, []);
-
-    // Load rules from storage
-    const loadRules = async () => {
-        try {
-            setLoading(true);
-            let headerRules: HeaderRule[];
-            
-            // Add small delay to ensure workspace data is written
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            // Load from workspace-specific rules.json
-            const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
-            log.debug(`Loading rules from: ${rulesPath}`);
-            const rulesData = await window.electronAPI.loadFromStorage(rulesPath);
-            if (rulesData) {
-                const rulesStorage = JSON.parse(rulesData);
-                headerRules = rulesStorage.rules?.[RULE_TYPES.HEADER] || [];
-            } else {
-                // No data - ensure we have empty rules
-                headerRules = [];
-            }
-            
-            setRules(headerRules);
-            rulesRef.current = headerRules;
-            log.info(`Loaded ${headerRules.length} header rules`);
-            // Data is ready — execute any pending navigation actions (e.g. edit
-            // triggered from the browser extension before this tab was active).
-            // Deferred to next macrotask so React fully completes the setRules
-            // render cycle before the action handler opens a modal.
+        if (rules.length > 0) {
             setTimeout(() => flushPendingActions(TARGETS.RULES_HEADERS), 0);
-        } catch (error) {
-            log.error('Failed to load header rules:', error);
-            showMessage('error', 'Failed to load header rules');
-            // On error, ensure we have empty rules
-            setRules([]);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [rules, flushPendingActions, TARGETS.RULES_HEADERS]);
 
-    // Save rules to storage and sync to extension
-    const saveRules = useCallback(async (newRules: HeaderRule[]) => {
-        try {
-            // Load existing rules storage or create new one
-            let rulesStorage: RulesStorage;
-            const rulesPath = `workspaces/${activeWorkspaceId}/rules.json`;
-            const existingData = await window.electronAPI.loadFromStorage(rulesPath);
-            if (existingData) {
-                rulesStorage = JSON.parse(existingData) as RulesStorage;
-            } else {
-                rulesStorage = createRulesStorage();
-            }
-
-            // Update header rules
-            rulesStorage.rules.header = newRules;
-            rulesStorage.metadata.totalRules = rulesStorage.rules.header.length + rulesStorage.rules.request.length + rulesStorage.rules.response.length;
-            rulesStorage.metadata.lastUpdated = new Date().toISOString();
-            
-            // Save in new format
-            log.debug(`Saving rules to: ${rulesPath}`);
-            await window.electronAPI.saveToStorage(rulesPath, JSON.stringify(rulesStorage));
-            
-            
-            setRules(newRules);
-
-            // Dispatch event for other components
-            window.dispatchEvent(new CustomEvent('rules-updated', { 
-                detail: { rules: rulesStorage } 
-            }));
-            
-            // Update proxy manager with new header rules
-            await window.electronAPI.proxyUpdateHeaderRules(newRules);
-            
-            log.info('Rules saved and automatically synced to browser and proxy');
-            return true;
-        } catch (error) {
-            log.error('Failed to save header rules:', error);
-            showMessage('error', 'Failed to save header rules');
-            return false;
-        }
-    }, []);
-
-    // Handle add/edit rule (generic header rule)
+    // Handle add/edit rule — delegates to WorkspaceStateService via useHeaderRules hook
     const handleSaveRule = async (ruleData: Partial<HeaderRule>) => {
         try {
-            let newRules: HeaderRule[];
             if (editingRule) {
-                // Update existing rule using createRule to ensure proper structure
+                // Build the full updated rule shape via createRule, then send as an update
                 const updatedRule = createRule(RULE_TYPES.HEADER, {
                     ...editingRule,
                     ...ruleData,
@@ -275,18 +154,16 @@ const HeaderRules = () => {
                     createdAt: editingRule.createdAt,
                     updatedAt: new Date().toISOString()
                 }) as HeaderRule;
-                newRules = rules.map(rule =>
-                    rule.id === editingRule.id ? updatedRule : rule
-                );
+                // Send only the changed fields (everything except id)
+                const { id: _id, ...updates } = updatedRule;
+                await updateRule(editingRule.id, updates);
                 showMessage('success', 'Rule updated successfully');
             } else {
-                // Add new rule using createRule
+                // Build a new rule with proper defaults via createRule
                 const newRule = createRule(RULE_TYPES.HEADER, ruleData) as HeaderRule;
-                newRules = [...rules, newRule];
-                showMessage('success', 'Rule added successfully');
+                await addRule(newRule);
             }
-            
-            await saveRules(newRules);
+
             setModalVisible(false);
             setEditingRule(null);
         } catch (error) {
@@ -294,43 +171,6 @@ const HeaderRules = () => {
             showMessage('error', 'Failed to save rule');
         }
     };
-
-    // Handle add/edit cookie rule
-
-    // Handle delete rule
-    const handleDeleteRule = useCallback(async (ruleId: string) => {
-        try {
-            // Find the rule to get its name for the message
-            const rule = rulesRef.current.find(r => r.id === ruleId);
-            const ruleName = rule ? rule.headerName : 'Rule';
-            
-            const newRules = rulesRef.current.filter(rule => rule.id !== ruleId);
-            await saveRules(newRules);
-            showMessage('success', `Header rule "${ruleName}" deleted successfully`);
-        } catch (error) {
-            log.error('Failed to delete rule:', error);
-            showMessage('error', 'Failed to delete rule');
-        }
-    }, []);
-
-    // Handle toggle rule
-    const handleToggleRule = useCallback(async (ruleId: string, enabled: boolean) => {
-        try {
-            const newRules = rulesRef.current.map(rule => 
-                rule.id === ruleId ? { ...rule, isEnabled: enabled } : rule
-            );
-            await saveRules(newRules);
-            
-            // Find the rule to get its name for the message
-            const rule = rulesRef.current.find(r => r.id === ruleId);
-            if (rule) {
-                showMessage('success', `Header rule "${rule.headerName}" ${enabled ? 'enabled' : 'disabled'}`);
-            }
-        } catch (error) {
-            log.error('Failed to toggle rule:', error);
-            showMessage('error', 'Failed to toggle rule');
-        }
-    }, []);
 
     // Helper function to truncate long values
     const truncateValue = (value: string, maxLength: number = 40) => {
@@ -837,7 +677,7 @@ const HeaderRules = () => {
                     <Tooltip title={isWaitingForDeps ? 'Cannot enable - missing environment variables' : undefined}>
                         <Switch
                             checked={record.isEnabled && !isWaitingForDeps}
-                            onChange={(checked) => handleToggleRule(record.id, checked)}
+                            onChange={(checked) => toggleRule(record.id, checked)}
                             size="small"
                             disabled={isWaitingForDeps}
                         />
@@ -950,7 +790,6 @@ const HeaderRules = () => {
                     dataSource={rules}
                     columns={columns}
                     rowKey="id"
-                    loading={loading}
                     scroll={{ x: 1000, y: 280 }}
                     size="small"
                     locale={{

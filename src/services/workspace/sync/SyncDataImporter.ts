@@ -7,8 +7,8 @@
  *  - Proxy rules import
  *  - Environment import with safety guards (backup, validation, value preservation)
  *
- * After writing, notifies WorkspaceStateService via the onSyncDataChanged callback
- * so it can reload in-memory state and broadcast to WS/proxy/renderer.
+ * After writing, passes SyncData to WorkspaceStateService via the onSyncDataChanged
+ * callback so it can merge directly into in-memory state and broadcast.
  */
 
 import electron from 'electron';
@@ -44,14 +44,14 @@ interface ImportOptions {
  * @param data         Synced data from Git
  * @param options      Import options
  * @param broadcaster  Optional broadcaster for IPC events (testing)
- * @param onSyncDataChanged  Callback to notify WorkspaceStateService after write
+ * @param onSyncDataChanged  Callback to merge synced data into in-memory state
  */
 export async function importSyncedData(
     workspaceId: string,
     data: SyncData,
     options: ImportOptions = {},
     broadcaster: BroadcasterFn | null = null,
-    onSyncDataChanged: ((workspaceId: string) => Promise<void>) | null = null
+    onSyncDataChanged: ((workspaceId: string, data: SyncData) => Promise<void>) | null = null
 ): Promise<void> {
     const { broadcastToExtensions = true } = options;
 
@@ -61,14 +61,18 @@ export async function importSyncedData(
 
         await fs.promises.mkdir(workspacePath, { recursive: true });
 
+        // Write to disk for cold boot / crash recovery persistence.
         await importSources(workspacePath, workspaceId, data);
         await importRules(workspacePath, workspaceId, data);
         await importProxyRules(workspacePath, workspaceId, data);
         await importEnvironments(workspacePath, workspaceId, data, broadcaster);
 
-        // Notify WorkspaceStateService to reload from disk and broadcast to WS/proxy/renderer.
+        // Merge synced data directly into in-memory state. The callback
+        // receives the raw SyncData so it can merge against the current
+        // in-memory state (which may include CRUD changes not yet on disk),
+        // rather than reloading from the disk files we just wrote.
         if (broadcastToExtensions && onSyncDataChanged) {
-            await onSyncDataChanged(workspaceId);
+            await onSyncDataChanged(workspaceId, data);
         }
     } catch (error) {
         log.error(`Failed to import synced data for workspace ${workspaceId}:`, error);
@@ -78,12 +82,59 @@ export async function importSyncedData(
 
 // ── Sources ──────────────────────────────────────────────────────
 
+/**
+ * Merge remote sources with existing local sources.
+ *
+ * Remote defines which sources exist (structure authority). For each source,
+ * local execution state (content, fetch results, activation, refresh timers)
+ * is preserved so the app doesn't lose runtime data during sync.
+ *
+ * Exported so both importSources (disk merge for persistence) and
+ * WorkspaceStateService.onSyncDataChanged (memory merge for runtime)
+ * share the same merge logic.
+ */
+export function mergeSyncedSources(remoteSources: Source[], existingSources: Source[]): Source[] {
+    const existingMap = new Map<string, Source>();
+    for (const source of existingSources) {
+        if (source.sourceId) {
+            existingMap.set(source.sourceId, source);
+        }
+    }
+
+    return remoteSources.map((remoteSource): Source => {
+        const existing = existingMap.get(remoteSource.sourceId);
+
+        if (existing) {
+            return {
+                ...remoteSource,
+                sourceContent: existing.sourceContent ?? null,
+                originalResponse: existing.originalResponse ?? null,
+                isFiltered: existing.isFiltered,
+                filteredWith: existing.filteredWith,
+                activationState: existing.activationState ?? remoteSource.activationState,
+                missingDependencies: existing.missingDependencies ?? [],
+                refreshOptions: remoteSource.refreshOptions
+                    ? {
+                        ...remoteSource.refreshOptions,
+                        lastRefresh: existing.refreshOptions?.lastRefresh ?? null,
+                        nextRefresh: existing.refreshOptions?.nextRefresh ?? null
+                    }
+                    : existing.refreshOptions,
+                createdAt: existing.createdAt ?? remoteSource.createdAt,
+                updatedAt: existing.updatedAt ?? remoteSource.updatedAt
+            };
+        }
+
+        return remoteSource;
+    });
+}
+
 async function importSources(workspacePath: string, workspaceId: string, data: SyncData): Promise<void> {
     if (!data.sources || !Array.isArray(data.sources)) return;
 
     const sourcesPath = path.join(workspacePath, 'sources.json');
 
-    // Load existing sources to preserve local execution data
+    // Load existing sources from disk to preserve local execution data
     let existingSources: Source[] = [];
     try {
         const existingData = await fs.promises.readFile(sourcesPath, 'utf8');
@@ -92,40 +143,7 @@ async function importSources(workspacePath: string, workspaceId: string, data: S
         // No existing sources, that's fine
     }
 
-    const existingSourcesMap = new Map<string, Source>();
-    for (const source of existingSources) {
-        if (source.sourceId) {
-            existingSourcesMap.set(source.sourceId, source);
-        }
-    }
-
-    // Merge: use remote config but preserve local execution state
-    const mergedSources = data.sources.map((remoteSource): Source => {
-        const existingSource = existingSourcesMap.get(remoteSource.sourceId);
-
-        if (existingSource) {
-            return {
-                ...remoteSource,
-                sourceContent: existingSource.sourceContent ?? null,
-                originalResponse: existingSource.originalResponse ?? null,
-                isFiltered: existingSource.isFiltered,
-                filteredWith: existingSource.filteredWith,
-                activationState: existingSource.activationState ?? remoteSource.activationState,
-                missingDependencies: existingSource.missingDependencies ?? [],
-                refreshOptions: remoteSource.refreshOptions
-                    ? {
-                        ...remoteSource.refreshOptions,
-                        lastRefresh: existingSource.refreshOptions?.lastRefresh ?? null,
-                        nextRefresh: existingSource.refreshOptions?.nextRefresh ?? null
-                    }
-                    : existingSource.refreshOptions,
-                createdAt: existingSource.createdAt ?? remoteSource.createdAt,
-                updatedAt: existingSource.updatedAt ?? remoteSource.updatedAt
-            };
-        }
-
-        return remoteSource;
-    });
+    const mergedSources = mergeSyncedSources(data.sources, existingSources);
 
     await atomicWriter.writeJson(sourcesPath, mergedSources, { pretty: true });
     log.info(`Imported ${data.sources.length} sources for workspace ${workspaceId} (preserved local execution data)`);
@@ -207,10 +225,14 @@ async function importEnvironments(
         return;
     }
 
-    // Write
+    // Write — validate activeEnvironment still exists in the merged result
+    // (remote may have removed the environment that was locally active)
+    const activeEnvStillExists = existing.activeEnvironment && environmentsToImport[existing.activeEnvironment];
     const environmentsData = {
         environments: environmentsToImport,
-        activeEnvironment: existing.activeEnvironment || Object.keys(environmentsToImport)[0] || 'Default'
+        activeEnvironment: activeEnvStillExists
+            ? existing.activeEnvironment!
+            : Object.keys(environmentsToImport)[0] || 'Default'
     };
 
     await atomicWriter.writeJson(envPath, environmentsData, { pretty: true });
@@ -289,7 +311,14 @@ async function loadExistingEnvironments(
     return result;
 }
 
-function mergeEnvironments(data: SyncData, existing: EnvironmentMap): EnvironmentMap | null {
+/**
+ * Merge synced environment data with existing environments.
+ *
+ * Exported so both importEnvironments (disk merge) and
+ * WorkspaceStateService.onSyncDataChanged (memory merge) share the logic.
+ * Returns null when the sync data contains no environment information.
+ */
+export function mergeEnvironments(data: SyncData, existing: EnvironmentMap): EnvironmentMap | null {
     if (data.environments && typeof data.environments === 'object' && !data.environmentSchema) {
         return mergeDirectEnvironments(data.environments, existing);
     }
@@ -301,17 +330,34 @@ function mergeEnvironments(data: SyncData, existing: EnvironmentMap): Environmen
     return null;
 }
 
+/**
+ * Merge direct environment data from the remote into existing local state.
+ *
+ * The remote is the structure authority: it defines which environments and
+ * variables exist. Local-only environments and variables are pruned so that
+ * remote deletions propagate. Local *values* are preserved when the remote
+ * references the variable but provides no value (placeholder pattern used
+ * for secrets that differ per team member).
+ */
 function mergeDirectEnvironments(remoteEnvs: EnvironmentMap, existing: EnvironmentMap): EnvironmentMap {
-    const merged: EnvironmentMap = { ...existing };
+    const merged: EnvironmentMap = {};
 
     for (const [envName, envVars] of Object.entries(remoteEnvs)) {
-        if (!merged[envName]) merged[envName] = {};
+        merged[envName] = {};
 
         for (const [varName, varData] of Object.entries(envVars)) {
             if (varData.value) {
-                merged[envName][varName] = varData;
-            } else if (!merged[envName][varName]) {
-                merged[envName][varName] = { value: '', isSecret: varData.isSecret };
+                // Remote provides an explicit value — use it
+                merged[envName][varName] = { ...varData };
+            } else {
+                // Remote placeholder — preserve local value if available,
+                // but adopt remote's isSecret flag (admin may have changed it)
+                const existingVar = existing[envName]?.[varName];
+                if (existingVar?.value) {
+                    merged[envName][varName] = { ...existingVar, isSecret: varData.isSecret };
+                } else {
+                    merged[envName][varName] = { value: '', isSecret: varData.isSecret };
+                }
             }
         }
     }
@@ -319,42 +365,48 @@ function mergeDirectEnvironments(remoteEnvs: EnvironmentMap, existing: Environme
     return merged;
 }
 
+/**
+ * Merge schema-based environment data from the remote into existing local state.
+ *
+ * The schema is the structure authority: it defines which environments and
+ * variables exist plus their isSecret flags. Local-only environments and
+ * variables are pruned. Local values are preserved for variables that the
+ * schema still references. When `data.environments` is also present, its
+ * explicit values overlay the schema-defined structure.
+ */
 function mergeSchemaEnvironments(data: SyncData, existing: EnvironmentMap): EnvironmentMap {
-    const merged: EnvironmentMap = { ...existing };
+    const merged: EnvironmentMap = {};
     const schema = data.environmentSchema!;
 
+    // Phase 1: Build structure from schema, preserving local values
     for (const [envName, envSchema] of Object.entries(schema.environments)) {
-        if (!merged[envName]) merged[envName] = {};
+        merged[envName] = {};
 
         if (envSchema.variables && Array.isArray(envSchema.variables)) {
             for (const varDef of envSchema.variables) {
                 if (!varDef.name) continue;
 
-                if (!merged[envName][varDef.name]) {
-                    merged[envName][varDef.name] = { value: '', isSecret: varDef.isSecret ?? false };
-                } else {
-                    const existingVar = merged[envName][varDef.name];
-                    merged[envName][varDef.name] = {
-                        value: existingVar.value,
-                        isSecret: varDef.isSecret !== undefined ? varDef.isSecret : existingVar.isSecret
-                    };
-                }
+                const existingVar = existing[envName]?.[varDef.name];
+                const isSecret = varDef.isSecret !== undefined ? varDef.isSecret : (existingVar?.isSecret ?? false);
+
+                merged[envName][varDef.name] = {
+                    value: existingVar?.value ?? '',
+                    isSecret
+                };
             }
         }
     }
 
-    // Also merge actual values if present alongside schema
+    // Phase 2: Overlay explicit values from data.environments (if present alongside schema)
     if (data.environments) {
         for (const [envName, envVars] of Object.entries(data.environments)) {
-            if (!merged[envName]) {
-                merged[envName] = envVars;
-            } else {
-                for (const [varName, varData] of Object.entries(envVars)) {
-                    if (varData.value) {
-                        merged[envName][varName] = varData;
-                    } else if (!merged[envName][varName]) {
-                        merged[envName][varName] = { value: '', isSecret: varData.isSecret };
-                    }
+            if (!merged[envName]) merged[envName] = {};
+
+            for (const [varName, varData] of Object.entries(envVars)) {
+                if (varData.value) {
+                    merged[envName][varName] = { ...varData };
+                } else if (!merged[envName][varName]) {
+                    merged[envName][varName] = { value: '', isSecret: varData.isSecret };
                 }
             }
         }

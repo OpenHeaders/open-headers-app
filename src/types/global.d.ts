@@ -342,7 +342,6 @@ declare global {
     cliApiRegenerateToken: () => Promise<{ success: boolean; token?: string; error?: string }>;
 
     // Workspace
-    deleteWorkspace: (workspaceId: string) => Promise<{ success: boolean; message?: string; error?: string }>;
     initializeWorkspaceSync: (workspaceId: string) => Promise<{ success: boolean; message?: string; error?: string }>;
     syncWorkspace: (workspaceId: string, options: { silent?: boolean }) => Promise<{ success: boolean; error?: string }>;
     generateTeamWorkspaceInvite: (workspaceData: Partial<Workspace> & { includeAuthData?: boolean }) => Promise<{ success: boolean; inviteData?: TeamWorkspaceInvite; links?: { appLink: string; webLink: string }; error?: string }>;

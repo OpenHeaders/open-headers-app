@@ -218,22 +218,8 @@ const UpdateNotification = forwardRef((props, ref) => {
         };
     }, []); // Empty dependency array - only run once on mount
 
-    // Perform initial silent check (only once) - checks for updates on app startup
-    useEffect(() => {
-        if (initialCheckPerformedRef.current) {
-            return;
-        }
-
-        const initialCheckTimer = setTimeout(() => {
-            initialCheckPerformedRef.current = true;
-            inSilentCheckModeRef.current = true;
-            window.electronAPI.checkForUpdates(false); // false = not manual
-        }, 5000); // Wait 5 seconds after startup to avoid interfering with app initialization
-
-        return () => {
-            clearTimeout(initialCheckTimer);
-        };
-    }, []);
+    // Main process handles the initial update check via scheduleUpdates().
+    // The renderer only triggers checks when the user manually requests one.
 
     // This component doesn't render anything visible
     return null;

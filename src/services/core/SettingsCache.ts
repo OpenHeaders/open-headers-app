@@ -17,27 +17,38 @@ const { app } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('SettingsCache');
 
-const DEFAULT_SETTINGS: AppSettings = {
-    launchAtLogin: true,
-    hideOnLaunch: true,
-    showDockIcon: true,
-    showStatusBarIcon: true,
-    theme: 'auto',
-    autoStartProxy: true,
-    proxyCacheEnabled: true,
-    autoHighlightTableEntries: false,
-    autoScrollTableEntries: false,
-    compactMode: false,
-    tutorialMode: true,
-    developerMode: false,
-    videoRecording: false,
-    videoQuality: 'high',
-    recordingHotkey: 'CommandOrControl+Shift+E',
-    recordingHotkeyEnabled: true,
-    logLevel: 'info',
-    autoUpdate: true,
-    updateChannel: 'stable',
-};
+/**
+ * Compute default settings at runtime.
+ *
+ * Most defaults are static, but updateChannel depends on which binary the
+ * user is running: a beta build defaults to the beta channel so the
+ * settings UI matches reality. Called during load() when Electron's
+ * app.getVersion() is available.
+ */
+function getDefaultSettings(): AppSettings {
+    const isRunningBeta = app.getVersion().includes('-beta.');
+    return {
+        launchAtLogin: true,
+        hideOnLaunch: true,
+        showDockIcon: true,
+        showStatusBarIcon: true,
+        theme: 'auto',
+        autoStartProxy: true,
+        proxyCacheEnabled: true,
+        autoHighlightTableEntries: false,
+        autoScrollTableEntries: false,
+        compactMode: false,
+        tutorialMode: true,
+        developerMode: false,
+        videoRecording: false,
+        videoQuality: 'high',
+        recordingHotkey: 'CommandOrControl+Shift+E',
+        recordingHotkeyEnabled: true,
+        logLevel: 'info',
+        autoUpdate: true,
+        updateChannel: isRunningBeta ? 'beta' : 'production',
+    };
+}
 
 class SettingsCache {
     private settings: AppSettings | null = null;
@@ -55,18 +66,19 @@ class SettingsCache {
         if (this.settings) return this.settings;
 
         const settingsPath = this.getSettingsPath();
+        const defaults = getDefaultSettings();
 
         try {
             await fs.promises.access(settingsPath);
             const data = await fs.promises.readFile(settingsPath, 'utf8');
             const parsed = JSON.parse(data) as Partial<AppSettings>;
-            this.settings = { ...DEFAULT_SETTINGS, ...parsed };
+            this.settings = { ...defaults, ...parsed };
             this._isFirstRun = false;
             log.info('Settings loaded from disk');
         } catch {
             // File doesn't exist or is corrupted — first run
             this._isFirstRun = true;
-            this.settings = { ...DEFAULT_SETTINGS };
+            this.settings = { ...defaults };
             await atomicWriter.writeJson(settingsPath, this.settings, { pretty: true });
             log.info('First run detected, created default settings');
         }
@@ -107,5 +119,5 @@ class SettingsCache {
 
 const settingsCache = new SettingsCache();
 
-export { SettingsCache, settingsCache, DEFAULT_SETTINGS };
+export { SettingsCache, settingsCache, getDefaultSettings };
 export default settingsCache;

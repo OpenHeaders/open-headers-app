@@ -67,7 +67,7 @@ if (!gotTheLock) {
             if (!settings.showDockIcon) {
                 app.dock.hide();
             } else {
-                await app.dock.show();
+                app.dock.show().catch(() => {});
             }
         }
 
@@ -138,7 +138,7 @@ if (!gotTheLock) {
         setupMenu(windowManager);
 
         return {
-            windowManager, appLifecycle, globalShortcuts, autoUpdater,
+            windowManager, trayManager, appLifecycle, globalShortcuts, autoUpdater,
             networkHandlers, proxyHandlers,
         };
     }
@@ -207,7 +207,7 @@ if (!gotTheLock) {
     // ─── App event handlers ─────────────────────────────────────────────
 
     function registerAppEventHandlers(modules: Awaited<ReturnType<typeof phaseB_createWindow>>) {
-        const { windowManager, appLifecycle, globalShortcuts, autoUpdater } = modules;
+        const { windowManager, trayManager, appLifecycle, globalShortcuts, autoUpdater } = modules;
 
         // macOS: Show window when dock icon clicked
         app.on('activate', () => {
@@ -226,6 +226,8 @@ if (!gotTheLock) {
 
             event.preventDefault();
             globalShortcuts.cleanup();
+            autoUpdater.shutdown();
+            trayManager.destroy();
             appLifecycle.beforeQuit().then(() => {
                 if (autoUpdater.updateDownloaded) {
                     autoUpdater.installUpdate();
@@ -478,7 +480,6 @@ function setupIPC(
     ipcMain.handle('workspace-open-folder', workspaceHandlers.handleWorkspaceOpenFolder.bind(workspaceHandlers));
     ipcMain.handle('services-health-check', workspaceHandlers.handleServicesHealthCheck.bind(workspaceHandlers));
     ipcMain.handle('initializeWorkspaceSync', workspaceHandlers.handleInitializeWorkspaceSync.bind(workspaceHandlers));
-    ipcMain.handle('deleteWorkspace', workspaceHandlers.handleDeleteWorkspace.bind(workspaceHandlers));
     ipcMain.handle('generate-team-workspace-invite', workspaceHandlers.handleGenerateTeamWorkspaceInvite.bind(workspaceHandlers));
     ipcMain.handle('generate-environment-config-link', workspaceHandlers.handleGenerateEnvironmentConfigLink.bind(workspaceHandlers));
 
