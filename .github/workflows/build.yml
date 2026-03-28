@@ -174,6 +174,13 @@ jobs:
           fi
         shell: bash
 
+      # For tagged builds, set package.json version to match the tag so artifact filenames align.
+      # This is transient — the change is never committed back to the repo.
+      - name: Align package.json version with tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='${GITHUB_REF_NAME/v/}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+        shell: bash
+
       # Build for macOS (signed + notarized for all tag builds)
       - name: Build macOS
         if: matrix.os == 'macos-latest'
@@ -499,7 +506,7 @@ jobs:
           - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb) (.deb for Debian/Ubuntu)
           - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm) (.rpm for Fedora/RHEL/CentOS)
           - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm) (.rpm for Fedora/RHEL/CentOS)
-          
+
           ### Other
           - [Installation Script](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/install-open-headers.sh) (Helper script for Linux .AppImage installation)
 
