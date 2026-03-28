@@ -55,6 +55,21 @@ export type PerformSyncResult =
     | { outcome: 'completed' }
     | { outcome: 'skipped'; reason: SyncSkipReason };
 
+/**
+ * Return value from executeSyncCore — pure data, no side effects on sync status.
+ *
+ * performSync is the sole owner of sync status lifecycle transitions.
+ * executeSyncCore does the git work and returns what happened so performSync
+ * can update status consistently.
+ */
+export interface SyncCoreResult {
+    success: boolean;
+    error?: string;
+    hasChanges: boolean;
+    commitHash?: string;
+    commitInfo?: CommitInfo;
+}
+
 export type SyncSkipReason =
     | 'already_in_progress'
     | 'workspace_not_found'

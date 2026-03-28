@@ -107,6 +107,13 @@ export async function deleteWorkspace(
     }
 
     ctx.state.workspaces = ctx.state.workspaces.filter(w => w.id !== workspaceId);
+
+    // Clean up orphaned sync status for the deleted workspace
+    if (ctx.state.syncStatus[workspaceId]) {
+        const { [workspaceId]: _deleted, ...remainingSyncStatus } = ctx.state.syncStatus;
+        ctx.state.syncStatus = remainingSyncStatus;
+    }
+
     ctx.dirty.workspaces = true;
 
     if (ctx.state.activeWorkspaceId === workspaceId) {
