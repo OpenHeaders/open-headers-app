@@ -35,25 +35,10 @@ const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: 
         window.electronAPI.openAppPath(pathKey);
     };
 
-    const renderUpdateItems = (items: ReturnType<typeof getSettingsConfig>['updates']) => (
-        <>
-            {items.map((setting, index: number) => (
-                <SettingItem
-                    key={`${setting.fieldName}-${index}`}
-                    {...setting as React.ComponentProps<typeof SettingItem>}
-                    onChange={onChange}
-                />
-            ))}
-        </>
-    );
-
     return (
         <div style={settingsStyles.tabContent}>
             <div style={settingsStyles.section}>Diagnostics</div>
             {renderSettingItems(settingsConfig.developer || [])}
-
-            <div style={settingsStyles.section}>Updates</div>
-            {renderUpdateItems(settingsConfig.updates || [])}
 
             <div style={settingsStyles.section}>Quick Access</div>
             <Space direction="vertical" style={{ width: '100%' }} size={8}>

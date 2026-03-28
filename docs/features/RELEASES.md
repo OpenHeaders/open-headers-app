@@ -15,7 +15,7 @@ Tags must follow [semver 2.0.0](https://semver.org/) with a `v` prefix. All pre-
 
 ## Who Receives What
 
-Users choose their update channel in **Settings > Developer > Updates**:
+Users choose their update channel in **Settings > General**:
 
 - **Production** (default): Only receives published releases (`v4.0.0`)
 - **Beta**: Receives everything — stable releases + beta pre-releases
