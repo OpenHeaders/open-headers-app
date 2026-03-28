@@ -34,6 +34,7 @@ const log = createLogger('SourceRefreshService');
 interface NetworkServiceLike {
     getState(): { isOnline: boolean; networkQuality: string };
     on(event: string, cb: (event: { newState?: { isOnline: boolean; networkQuality: string } }) => void): void;
+    forceCheck(): Promise<{ isOnline: boolean; networkQuality: string }>;
 }
 
 interface ScheduleEntry {
@@ -593,10 +594,44 @@ class SourceRefreshService {
         log.info('System wake — resuming timers');
         this.isPaused = false;
 
+        // Wait for network to be confirmed online before rescheduling.
+        // After sleep, the OS needs time to re-establish connectivity;
+        // firing refreshes immediately wastes TOTP codes on doomed requests
+        // and triggers circuit breakers unnecessarily.
+        const isOnline = await this.waitForNetwork(15000);
+        if (!isOnline) {
+            log.info('Network not available after wake — skipping reschedule, will resume on network recovery');
+            return;
+        }
+
         const entries = await this.schedules.entries();
         for (const [sourceId] of entries) {
             this.calculateAndScheduleNext(sourceId);
         }
+    }
+
+    /**
+     * Wait for the network to come online, polling via forceCheck.
+     * Returns true if online within the timeout, false otherwise.
+     */
+    private async waitForNetwork(timeoutMs: number): Promise<boolean> {
+        if (!this.networkService) return true; // No network service = assume online
+
+        const state = this.networkService.getState();
+        if (state.isOnline) return true;
+
+        const startTime = Date.now();
+        const pollInterval = 2000;
+
+        while (Date.now() - startTime < timeoutMs) {
+            if (this.isDestroyed) return false;
+
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            const freshState = await this.networkService.forceCheck();
+            if (freshState.isOnline) return true;
+        }
+
+        return this.networkService.getState().isOnline;
     }
 
     // ── Status queries ──────────────────────────────────────────────

@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import zlib from 'zlib';
-import crypto from 'crypto';
 import { DATA_FORMAT_VERSION } from '../../../src/config/version';
-import type { Workspace, TeamWorkspaceInvite } from '../../../src/types/workspace';
-import type { IpcInvokeEvent, IpcFireEvent } from '../../../src/types/common';
+import type { Workspace } from '../../../src/types/workspace';
+import type { IpcInvokeEvent } from '../../../src/types/common';
 import type { EnvironmentSchema } from '../../../src/types/environment';
 
 // --- Mocks ---
@@ -586,32 +585,4 @@ describe('WorkspaceHandlers', () => {
         });
     });
 
-    describe('handleDeleteWorkspace', () => {
-        it('returns success when workspace is found and folder is deleted', async () => {
-            // Folder does not exist (access fails)
-            mockFsAccess.mockRejectedValueOnce(new Error('ENOENT'));
-
-            mockGetWorkspaces.mockResolvedValueOnce([makeWorkspace()]);
-
-            const result = await handlers.handleDeleteWorkspace(
-                mockEvent,
-                'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-            );
-
-            expect(result.success).toBe(true);
-            expect(result.message).toBe('Workspace deleted successfully');
-        });
-
-        it('returns success when workspace not found in settings (already gone)', async () => {
-            mockFsAccess.mockRejectedValueOnce(new Error('ENOENT'));
-            mockGetWorkspaces.mockResolvedValueOnce([]);
-
-            const result = await handlers.handleDeleteWorkspace(
-                mockEvent,
-                'nonexistent-workspace-id'
-            );
-
-            expect(result.success).toBe(true);
-        });
-    });
 });

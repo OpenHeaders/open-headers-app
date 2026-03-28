@@ -67,7 +67,6 @@ export const DEFAULTS: {
  */
 export const EVENTS = {
   PROXY_RULES_UPDATED: 'proxy-rules-updated',
-  RULES_UPDATED: 'rules-updated',
   ENVIRONMENT_VARIABLES_CHANGED: 'environment-variables-changed'
 };
 

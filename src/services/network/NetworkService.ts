@@ -309,7 +309,7 @@ class NetworkService extends EventEmitter {
             };
 
 
-            this.emit('stateChanged', eventData);
+            this.emit('state-changed', eventData);
 
         } finally {
             this.stateUpdateLock = false;
@@ -752,8 +752,11 @@ class NetworkService extends EventEmitter {
         const execAsync = util.promisify(child_process.exec);
 
         try {
-            // Try dscacheutil first (faster)
-            const { stdout } = await execAsync(`dscacheutil -q host -a name ${host}`);
+            // Try dscacheutil first (faster) — with a hard timeout to prevent hung processes
+            const { stdout } = await execAsync(`dscacheutil -q host -a name ${host}`, {
+                timeout: 5000,
+                windowsHide: true
+            });
             const ipMatch = stdout.match(/ip_address:\s*([\d.]+)/g);
             if (ipMatch && ipMatch.length > 0) {
                 const ips = ipMatch.map(match => match.replace(/ip_address:\s*/, ''));
@@ -791,7 +794,10 @@ class NetworkService extends EventEmitter {
 
         // Try getent first (more reliable on Linux)
         try {
-            const { stdout } = await execAsync(`getent hosts ${host}`);
+            const { stdout } = await execAsync(`getent hosts ${host}`, {
+                timeout: 5000,
+                windowsHide: true
+            });
             const parts = stdout.trim().split(/\s+/);
             if (parts.length > 0 && parts[0]) {
                 const ips = [parts[0]];

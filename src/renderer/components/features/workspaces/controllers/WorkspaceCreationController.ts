@@ -6,7 +6,8 @@
 import WorkspaceCreationStateMachine, {
     WORKSPACE_CREATION_EVENTS,
     WORKSPACE_CREATION_STATES,
-    type StateChangeData
+    type StateChangeData,
+    type RollbackAction
 } from '../state/WorkspaceCreationStateMachine';
 import { prepareAuthData, prepareWorkspaceData } from '../utils';
 import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
@@ -36,6 +37,7 @@ export interface WorkspaceCreationDependencies {
     };
     workspaceService: {
         create: (data: Partial<Workspace> & { id: string; type: WorkspaceType }) => Promise<Workspace | null>;
+        delete: (workspaceId: string) => Promise<boolean>;
     };
 }
 
@@ -82,7 +84,7 @@ class WorkspaceCreationController {
 
             // Attempt rollback if we're not already in error state
             if (this.stateMachine.getCurrentState() !== WORKSPACE_CREATION_STATES.ERROR) {
-                await this.stateMachine.executeRollback();
+                await this.stateMachine.executeRollback((action) => this.executeRollbackAction(action));
             }
 
             throw error;
@@ -348,16 +350,16 @@ class WorkspaceCreationController {
             this.stateMachine.clearTimeout('initial_commit');
             
             if (!result.success) {
-                const error = new Error(result.error || 'Failed to commit initial configuration');
-                this.stateMachine.setError(error);
-                throw error;
+                this.stateMachine.clearTimeout('initial_commit');
+                this.stateMachine.setError(new Error(result.error || 'Failed to commit initial configuration'));
+                return;
             }
-            
+
             log.info('Initial commit completed successfully');
-            
+
             // Transition to completed state
             this.stateMachine.transition(WORKSPACE_CREATION_EVENTS.INITIAL_COMMIT_COMPLETED);
-            
+
         } catch (error) {
             this.stateMachine.clearTimeout('initial_commit');
             log.error('Initial commit failed:', error);
@@ -382,10 +384,6 @@ class WorkspaceCreationController {
         }
     }
 
-    isAborted() {
-        return this.abortController?.signal.aborted ?? false;
-    }
-
     abort() {
         if (this.abortController) {
             this.abortController.abort();
@@ -396,6 +394,33 @@ class WorkspaceCreationController {
 
     cleanup() {
         // Cleanup resources if needed
+    }
+
+    /**
+     * Execute a single rollback action using the controller's service dependencies.
+     * Routes through the same WorkspaceStateService path as normal CRUD operations,
+     * so the main process owns the state mutation (works without a renderer).
+     */
+    private async executeRollbackAction(action: RollbackAction): Promise<void> {
+        switch (action.type) {
+            case 'delete_workspace':
+                if (action.workspaceId) {
+                    await this.dependencies.workspaceService.delete(action.workspaceId);
+                }
+                break;
+            case 'cleanup_git_repo':
+                if (window.electronAPI?.cleanupGitRepo && action.repoPath) {
+                    await window.electronAPI.cleanupGitRepo(action.repoPath);
+                }
+                break;
+            case 'cleanup_temp_files':
+                if (window.electronAPI?.cleanupTempFiles && action.paths) {
+                    window.electronAPI.cleanupTempFiles(...action.paths);
+                }
+                break;
+            default:
+                log.warn(`Unknown rollback action type: ${action.type}`);
+        }
     }
 
     handleStateChange(stateData: StateChangeData) {
@@ -419,8 +444,8 @@ class WorkspaceCreationController {
                 break;
                 
             case WORKSPACE_CREATION_STATES.ROLLBACK:
-                // Auto-execute rollback
-                this.stateMachine.executeRollback().catch(error => {
+                // Auto-execute rollback — controller provides the executor
+                this.stateMachine.executeRollback((action) => this.executeRollbackAction(action)).catch(error => {
                     log.error('Rollback failed:', error);
                 });
                 break;
@@ -440,10 +465,6 @@ class WorkspaceCreationController {
     addListener(listener: (stateData: StateChangeData) => void) {
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
-    }
-
-    getCurrentState() {
-        return this.stateMachine.getCurrentState();
     }
 
     getContext() {

@@ -20,6 +20,37 @@ const { createLogger } = mainLogger;
 const log = createLogger('SyncChangeDetector');
 
 /**
+ * Order-independent comparison of two arrays of objects keyed by an ID field.
+ * Builds a Map from each array, then compares by key. Returns true if the sets
+ * differ in count or if any entry differs in serialized content.
+ *
+ * `normalize` strips runtime-only fields so the comparison only covers
+ * config-relevant properties (the ones that come from the git repo).
+ */
+function hasCollectionChanges<T>(
+    existing: T[],
+    incoming: T[],
+    getKey: (item: T) => string,
+    normalize: (item: T) => unknown
+): boolean {
+    if (existing.length !== incoming.length) return true;
+
+    const existingMap = new Map<string, string>();
+    for (const item of existing) {
+        existingMap.set(getKey(item), JSON.stringify(normalize(item)));
+    }
+
+    for (const item of incoming) {
+        const key = getKey(item);
+        const existingJson = existingMap.get(key);
+        if (existingJson === undefined) return true; // new item
+        if (existingJson !== JSON.stringify(normalize(item))) return true; // changed
+    }
+
+    return false;
+}
+
+/**
  * Check if synced data has any changes compared to existing workspace files on disk.
  * Returns true if there are changes (or on error, to be safe).
  */
@@ -49,6 +80,7 @@ async function hasSourceChanges(workspacePath: string, newData: SyncData): Promi
         const existingSources: Source[] = JSON.parse(existingData);
 
         const normalizeSource = (source: Source) => ({
+            sourceId: source.sourceId,
             sourceType: source.sourceType,
             sourcePath: source.sourcePath,
             sourceMethod: source.sourceMethod,
@@ -60,13 +92,16 @@ async function hasSourceChanges(workspacePath: string, newData: SyncData): Promi
                 type: source.refreshOptions.type,
                 interval: source.refreshOptions.interval
             } : undefined,
-            sourceId: source.sourceId
         });
 
-        const normalizedExisting = existingSources.map(normalizeSource);
-        const normalizedNew = newData.sources.map(normalizeSource);
+        const changed = hasCollectionChanges(
+            existingSources,
+            newData.sources,
+            (s) => s.sourceId,
+            normalizeSource
+        );
 
-        if (JSON.stringify(normalizedExisting) !== JSON.stringify(normalizedNew)) {
+        if (changed) {
             log.info('Sources have changed');
             return true;
         }
@@ -85,8 +120,22 @@ async function hasRuleChanges(workspacePath: string, newData: SyncData): Promise
         const existingData = await fs.promises.readFile(rulesPath, 'utf8');
         const existingRules: Partial<RulesStorage> = JSON.parse(existingData);
 
-        if (JSON.stringify(existingRules.rules) !== JSON.stringify(newData.rules)) {
-            log.info('Rules have changed');
+        const existing = existingRules.rules;
+        if (!existing) return true;
+
+        const ruleKey = (r: { id: string }) => r.id;
+        const identity = <T>(r: T): T => r;
+
+        if (hasCollectionChanges(existing.header ?? [], newData.rules.header ?? [], ruleKey, identity)) {
+            log.info('Header rules have changed');
+            return true;
+        }
+        if (hasCollectionChanges(existing.request ?? [], newData.rules.request ?? [], ruleKey, identity)) {
+            log.info('Request rules have changed');
+            return true;
+        }
+        if (hasCollectionChanges(existing.response ?? [], newData.rules.response ?? [], ruleKey, identity)) {
+            log.info('Response rules have changed');
             return true;
         }
     } catch (_error) {
@@ -104,7 +153,14 @@ async function hasProxyRuleChanges(workspacePath: string, newData: SyncData): Pr
         const existingData = await fs.promises.readFile(proxyPath, 'utf8');
         const existingProxy: ProxyRule[] = JSON.parse(existingData);
 
-        if (JSON.stringify(existingProxy) !== JSON.stringify(newData.proxyRules)) {
+        const changed = hasCollectionChanges(
+            existingProxy,
+            newData.proxyRules,
+            (r) => r.id,
+            (r) => r
+        );
+
+        if (changed) {
             log.info('Proxy rules have changed');
             return true;
         }
@@ -115,6 +171,20 @@ async function hasProxyRuleChanges(workspacePath: string, newData: SyncData): Pr
     return false;
 }
 
+/**
+ * Fingerprint an environment variable's config-relevant properties.
+ * Excludes `updatedAt` (local timestamp) and `value` (local user data)
+ * unless the remote is explicitly pushing a non-empty value.
+ */
+function envVarFingerprint(isSecret: boolean, remoteValue?: string): string {
+    // Include the remote value only when the remote is explicitly providing one.
+    // Empty-string values mean "placeholder, keep local" in the merge logic.
+    if (remoteValue) {
+        return `${isSecret}|${remoteValue}`;
+    }
+    return `${isSecret}`;
+}
+
 async function hasEnvironmentChanges(workspacePath: string, newData: SyncData): Promise<boolean> {
     if (!newData.environments && !newData.environmentSchema) return false;
 
@@ -122,40 +192,99 @@ async function hasEnvironmentChanges(workspacePath: string, newData: SyncData): 
         const envPath = path.join(workspacePath, 'environments.json');
         const existingData = await fs.promises.readFile(envPath, 'utf8');
         const existingEnv: Partial<EnvironmentsFile> = JSON.parse(existingData);
+        const existingEnvs = existingEnv.environments ?? {};
 
-        const getEnvStructure = (envData: EnvironmentMap): Record<string, string[]> => {
-            const structure: Record<string, string[]> = {};
-            for (const [envName, vars] of Object.entries(envData)) {
-                structure[envName] = Object.keys(vars).sort();
-            }
-            return structure;
-        };
+        // Build fingerprint maps: envName → { varName → fingerprint }
+        const existingFingerprints = buildExistingFingerprints(existingEnvs);
+        const incomingFingerprints = buildIncomingFingerprints(newData, existingEnvs);
 
-        const existingStructure = getEnvStructure(existingEnv.environments ?? {});
+        if (!incomingFingerprints) return false; // No env data to compare
 
-        let newStructure: Record<string, string[]> | undefined;
-        if (newData.environments) {
-            newStructure = getEnvStructure(newData.environments);
-        } else if (newData.environmentSchema?.environments) {
-            newStructure = {};
-            for (const [envName, envSchema] of Object.entries(newData.environmentSchema.environments)) {
-                const varNames: string[] = [];
-                if (envSchema.variables && Array.isArray(envSchema.variables)) {
-                    for (const varDef of envSchema.variables) {
-                        if (varDef.name) varNames.push(varDef.name);
-                    }
-                }
-                newStructure[envName] = varNames.sort();
-            }
+        // Compare environment names
+        const existingEnvNames = Object.keys(existingFingerprints).sort();
+        const incomingEnvNames = Object.keys(incomingFingerprints).sort();
+
+        if (existingEnvNames.length !== incomingEnvNames.length ||
+            existingEnvNames.some((name, i) => name !== incomingEnvNames[i])) {
+            log.info('Environment names have changed');
+            return true;
         }
 
-        if (JSON.stringify(existingStructure) !== JSON.stringify(newStructure)) {
-            log.info('Environment structure has changed');
-            return true;
+        // Compare variable fingerprints per environment
+        for (const envName of existingEnvNames) {
+            const existingVars = existingFingerprints[envName];
+            const incomingVars = incomingFingerprints[envName];
+
+            const existingKeys = Object.keys(existingVars).sort();
+            const incomingKeys = Object.keys(incomingVars).sort();
+
+            if (existingKeys.length !== incomingKeys.length ||
+                existingKeys.some((key, i) => key !== incomingKeys[i])) {
+                log.info(`Environment "${envName}" variable names have changed`);
+                return true;
+            }
+
+            for (const varName of existingKeys) {
+                if (existingVars[varName] !== incomingVars[varName]) {
+                    log.info(`Environment "${envName}" variable "${varName}" metadata has changed`);
+                    return true;
+                }
+            }
         }
     } catch (_error) {
         return true;
     }
 
     return false;
+}
+
+function buildExistingFingerprints(envs: EnvironmentMap): Record<string, Record<string, string>> {
+    const result: Record<string, Record<string, string>> = {};
+    for (const [envName, vars] of Object.entries(envs)) {
+        result[envName] = {};
+        for (const [varName, varData] of Object.entries(vars)) {
+            result[envName][varName] = envVarFingerprint(varData.isSecret);
+        }
+    }
+    return result;
+}
+
+function buildIncomingFingerprints(
+    newData: SyncData,
+    existingEnvs: EnvironmentMap
+): Record<string, Record<string, string>> | null {
+    if (newData.environments && typeof newData.environments === 'object' && !newData.environmentSchema) {
+        // Direct environments — check isSecret and non-empty remote values
+        const result: Record<string, Record<string, string>> = {};
+        for (const [envName, vars] of Object.entries(newData.environments)) {
+            result[envName] = {};
+            for (const [varName, varData] of Object.entries(vars)) {
+                const existingVar = existingEnvs[envName]?.[varName];
+                const existingValue = existingVar?.value;
+                // Only include the remote value in the fingerprint when it would
+                // actually change the local value during merge
+                const remoteValueIfDifferent = varData.value && varData.value !== existingValue
+                    ? varData.value : undefined;
+                result[envName][varName] = envVarFingerprint(varData.isSecret, remoteValueIfDifferent);
+            }
+        }
+        return result;
+    }
+
+    if (newData.environmentSchema?.environments) {
+        // Schema-based — only variable names + isSecret
+        const result: Record<string, Record<string, string>> = {};
+        for (const [envName, envSchema] of Object.entries(newData.environmentSchema.environments)) {
+            result[envName] = {};
+            if (envSchema.variables && Array.isArray(envSchema.variables)) {
+                for (const varDef of envSchema.variables) {
+                    if (!varDef.name) continue;
+                    result[envName][varDef.name] = envVarFingerprint(varDef.isSecret ?? false);
+                }
+            }
+        }
+        return result;
+    }
+
+    return null;
 }

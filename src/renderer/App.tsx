@@ -5,7 +5,7 @@ import { useAppEffects } from './hooks/app';
 import type { InitialAction } from './components/modals/settings/SettingsModal';
 import type { Recording } from '../types/recording';
 import { useSourceRefresh } from './hooks/sources';
-import { useSources, useEnvironments, useWorkspaces, useCentralizedWorkspace } from './hooks/useCentralizedWorkspace';
+import { useSources, useEnvironments, useWorkspaces, useHeaderRules, useCentralizedWorkspace } from './hooks/useCentralizedWorkspace';
 import { useSettings, useNavigation, useRefreshManager, useWorkspaceSwitch } from './contexts';
 import { useWorkspaceSwitchIntegration } from './hooks/useWorkspaceSwitchIntegration';
 import { showMessage } from './utils';
@@ -27,9 +27,10 @@ const AppComponent: React.FC = () => {
     } = useSources();
 
     const { workspaces, activeWorkspaceId, createWorkspace, switchWorkspace } = useWorkspaces();
+    const { addRule: addHeaderRule, updateRule: updateHeaderRule, removeRule: removeHeaderRule } = useHeaderRules();
 
     // App initialization state — used for skeleton → content transition
-    const { isReady } = useCentralizedWorkspace();
+    const { isReady, rules } = useCentralizedWorkspace();
 
 
     // Workspace switching UX
@@ -97,6 +98,10 @@ const AppComponent: React.FC = () => {
         workspaces,
         createWorkspace,
         switchWorkspace,
+        rules,
+        addHeaderRule,
+        updateHeaderRule,
+        removeHeaderRule,
         environments,
         createEnvironment,
         setVariable,
@@ -214,11 +219,13 @@ const AppComponent: React.FC = () => {
     // Listen for team workspace invite and environment import events
     useEffect(() => {
         const handleTeamWorkspaceInvite = (inviteRaw: Partial<TeamWorkspaceInvite>) => {
-            try {
-                if (!inviteRaw.workspaceName || !inviteRaw.repoUrl) {
-                    throw new Error('Invalid invite data structure');
-                }
+            if (!inviteRaw.workspaceName || !inviteRaw.repoUrl) {
+                console.error('Error processing invite: Invalid invite data structure');
+                showMessage('error', 'Invalid invite: Invalid invite data structure');
+                return;
+            }
 
+            try {
                 setTeamWorkspaceInvite(inviteRaw as TeamWorkspaceInvite);
                 setInviteModalVisible(true);
                 setActiveTab('workspaces');
@@ -236,7 +243,7 @@ const AppComponent: React.FC = () => {
         const cleanupInviteListener = window.electronAPI?.onProcessTeamWorkspaceInvite?.(handleTeamWorkspaceInvite);
         const cleanupErrorListener = window.electronAPI?.onShowErrorMessage?.(handleErrorMessage);
         const cleanupEnvImportListener = window.electronAPI?.onProcessEnvironmentConfigImport?.((envData) => {
-            handleEnvironmentConfigImport(envData);
+            void handleEnvironmentConfigImport(envData);
         });
 
         return () => {
@@ -306,7 +313,7 @@ const AppComponent: React.FC = () => {
                         setImportModalVisible(false);
                         setPreloadedEnvData(null);
                     }}
-                    onHandleExport={(config) => { handleExport(config as Parameters<typeof handleExport>[0]); }}
+                    onHandleExport={(config) => { void handleExport(config as Parameters<typeof handleExport>[0]); }}
                     onHandleImport={(data) => handleImport(data as Parameters<typeof handleImport>[0])}
                     preloadedEnvData={preloadedEnvData}
                     // Refs

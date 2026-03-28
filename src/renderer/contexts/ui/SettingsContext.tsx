@@ -38,7 +38,7 @@ const defaultSettings: AppSettings = {
     recordingHotkeyEnabled: true,
     logLevel: 'info',
     autoUpdate: true,
-    updateChannel: 'stable'
+    updateChannel: 'production'
 };
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
