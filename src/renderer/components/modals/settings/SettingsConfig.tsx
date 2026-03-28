@@ -115,10 +115,10 @@ export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecord
             ),
             fieldName: "updateChannel",
             type: "select",
-            value: formValues.updateChannel || 'stable',
+            value: formValues.updateChannel || 'production',
             options: [
                 {
-                    value: "stable",
+                    value: "production",
                     label: (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <CloudDownloadOutlined style={{ fontSize: 12, color: '#52c41a' }} />

@@ -213,7 +213,7 @@ class AutoUpdaterManager {
             return;
         }
 
-        const channel = autoUpdater.allowPrerelease ? 'beta' : 'stable';
+        const channel = autoUpdater.allowPrerelease ? 'beta' : 'production';
         log.info(`Checking for updates (channel: ${channel})`);
 
         // Check if we're already checking or downloading

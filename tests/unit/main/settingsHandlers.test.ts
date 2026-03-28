@@ -105,7 +105,7 @@ vi.mock('../../../src/services/core/SettingsCache.js', () => {
         recordingHotkeyEnabled: true,
         logLevel: 'info',
         autoUpdate: true,
-        updateChannel: 'stable',
+        updateChannel: 'production',
     };
 
     const cache = {
@@ -114,7 +114,7 @@ vi.mock('../../../src/services/core/SettingsCache.js', () => {
         load: vi.fn().mockResolvedValue(defaultSettings),
         isFirstRun: vi.fn().mockReturnValue(false),
     };
-    return { default: cache, settingsCache: cache, DEFAULT_SETTINGS: defaultSettings, SettingsCache: vi.fn() };
+    return { default: cache, settingsCache: cache, getDefaultSettings: () => defaultSettings, SettingsCache: vi.fn() };
 });
 
 // Mock trayManager
@@ -169,7 +169,7 @@ function makeDefaultSettings(): AppSettings {
         recordingHotkeyEnabled: true,
         logLevel: 'info',
         autoUpdate: true,
-        updateChannel: 'stable'
+        updateChannel: 'production'
     };
 }
 
