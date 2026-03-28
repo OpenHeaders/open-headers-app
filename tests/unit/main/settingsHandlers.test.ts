@@ -396,11 +396,11 @@ describe('SettingsHandlers', () => {
         });
 
         it('applies update settings when updateChannel changes', async () => {
-            const savedSettings = { ...makeDefaultSettings(), updateChannel: 'prerelease' as const };
+            const savedSettings = { ...makeDefaultSettings(), updateChannel: 'beta' as const };
             mockSettingsSave.mockResolvedValueOnce(savedSettings);
             mockSettingsGet.mockReturnValue(savedSettings);
 
-            await handlers.handleSaveSettings(mockEvent, { updateChannel: 'prerelease' });
+            await handlers.handleSaveSettings(mockEvent, { updateChannel: 'beta' });
 
             expect(mockApplyUpdateSettings).toHaveBeenCalledWith(savedSettings);
         });

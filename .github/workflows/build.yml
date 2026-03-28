@@ -328,16 +328,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # For stable releases, cross-publish latest*.yml as beta*.yml so beta-channel
-      # users can discover and upgrade to the stable version via electron-updater.
-      - name: Cross-publish beta channel yml for stable releases
-        if: startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
-        run: |
-          for f in dist/latest*.yml; do
-            [ -f "$f" ] && cp "$f" "${f/latest/beta}"
-          done
-        shell: bash
-
       # Organize artifacts into platform-specific directories to prevent conflicts
       # without renaming files needed for electron-updater
       - name: Organize artifacts
@@ -404,12 +394,10 @@ jobs:
           path: dist
 
       # Process and deduplicate artifacts before release.
-      # Stable builds have latest*.yml + beta*.yml (cross-published).
-      # Beta builds have beta*.yml only.
+      # electron-builder v25 always generates latest*.yml regardless of version string.
+      # allowPrerelease is the sole routing mechanism — no channel-specific yml files.
       - name: Process artifacts for release
         run: |
-          IS_BETA="${{ steps.release_type.outputs.is_prerelease }}"
-
           mkdir -p processed_files
           declare -A seen_files
 
@@ -417,13 +405,10 @@ jobs:
           if [ -d "dist/windows-latest-artifacts" ]; then
             cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
             cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            # Channel yml: latest.yml for stable, beta.yml for beta
-            for yml in latest.yml beta.yml; do
-              if [ -f "dist/windows-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
-                cp "dist/windows-latest-artifacts/$yml" processed_files/
-                seen_files["$yml"]=1
-              fi
-            done
+            if [ -f "dist/windows-latest-artifacts/latest.yml" ] && [ -z "${seen_files[latest.yml]}" ]; then
+              cp dist/windows-latest-artifacts/latest.yml processed_files/
+              seen_files["latest.yml"]=1
+            fi
           fi
 
           # --- macOS ---
@@ -431,12 +416,10 @@ jobs:
             cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
             cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files"
             cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            for yml in latest-mac.yml beta-mac.yml; do
-              if [ -f "dist/macos-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
-                cp "dist/macos-latest-artifacts/$yml" processed_files/
-                seen_files["$yml"]=1
-              fi
-            done
+            if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ] && [ -z "${seen_files[latest-mac.yml]}" ]; then
+              cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
+              seen_files["latest-mac.yml"]=1
+            fi
           fi
 
           # --- Linux ---
@@ -456,7 +439,7 @@ jobs:
               exit 1
             fi
 
-            for yml in latest-linux.yml latest-linux-arm64.yml beta-linux.yml beta-linux-arm64.yml; do
+            for yml in latest-linux.yml latest-linux-arm64.yml; do
               if [ -f "dist/ubuntu-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
                 cp "dist/ubuntu-latest-artifacts/$yml" processed_files/
                 seen_files["$yml"]=1

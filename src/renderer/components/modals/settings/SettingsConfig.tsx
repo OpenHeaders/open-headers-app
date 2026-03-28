@@ -341,8 +341,8 @@ export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecord
                         overlayStyle={{ maxWidth: 340 }}
                         title={
                         <>
-                            <div><strong>Stable:</strong> <span style={{ opacity: 0.75 }}>Production-ready releases, fully tested and code-signed</span></div>
-                            <div><strong>Pre-release:</strong> <span style={{ opacity: 0.75 }}>Includes beta builds for early testing — may contain bugs and are unsigned on Windows</span></div>
+                            <div><strong>Production:</strong> <span style={{ opacity: 0.75 }}>Fully tested and stable releases</span></div>
+                            <div><strong>Beta:</strong> <span style={{ opacity: 0.75 }}>Early access to new features and improvements — may be less stable than production releases</span></div>
                         </>
                     }>
                         <QuestionCircleOutlined style={{ fontSize: 11, cursor: 'help' }} />
@@ -358,16 +358,16 @@ export const getSettingsConfig = (formValues: Partial<AppSettings>, screenRecord
                     label: (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <CloudDownloadOutlined style={{ fontSize: 12, color: '#52c41a' }} />
-                            <span>Stable</span>
+                            <span>Production</span>
                         </div>
                     )
                 },
                 {
-                    value: "prerelease",
+                    value: "beta",
                     label: (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <BranchesOutlined style={{ fontSize: 12, color: '#faad14' }} />
-                            <span>Pre-release</span>
+                            <span>Beta</span>
                         </div>
                     )
                 }
