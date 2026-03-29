@@ -1,5 +1,5 @@
+import { Button, Result } from 'antd';
 import React from 'react';
-import { Result, Button } from 'antd';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -21,7 +21,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    console.error(new Date().toISOString(), 'ERROR', '[ErrorBoundary]', 'Error caught by ErrorBoundary:', error, errorInfo);
+    console.error(
+      new Date().toISOString(),
+      'ERROR',
+      '[ErrorBoundary]',
+      'Error caught by ErrorBoundary:',
+      error,
+      errorInfo,
+    );
   }
 
   render(): React.ReactNode {
@@ -33,10 +40,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             title="Something went wrong"
             subTitle="There was an error loading the popup. Please try closing and reopening it."
             extra={
-              <Button
-                type="primary"
-                onClick={() => window.location.reload()}
-              >
+              <Button type="primary" onClick={() => window.location.reload()}>
                 Reload
               </Button>
             }

@@ -1,27 +1,23 @@
 /**
  * Import Service - Core import orchestration
- * 
+ *
  * This service coordinates the import process across all data types,
  * handles file parsing, validation, and provides comprehensive error handling.
  */
 
-import { SourcesHandler } from '../handlers/SourcesHandler';
-import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
-import { RulesHandler } from '../handlers/RulesHandler';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
-import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
-
-import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils';
-import {
-  generateImportSuccessMessage,
-  generateImportWarnings
-} from '../utilities/MessageGeneration';
-import { showMessage } from '../../../utils/ui/messageUtil';
-import { IMPORT_MODES, SUCCESS_MESSAGES } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
-
 import { errorMessage } from '../../../../types/common';
 import { createLogger } from '../../../utils/error-handling/logger';
+import { showMessage } from '../../../utils/ui/messageUtil';
+import { IMPORT_MODES, SUCCESS_MESSAGES } from '../core/ExportImportConfig';
+import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
+import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
+import { RulesHandler } from '../handlers/RulesHandler';
+import { SourcesHandler } from '../handlers/SourcesHandler';
+import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
+import { generateImportSuccessMessage, generateImportWarnings } from '../utilities/MessageGeneration';
+import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils';
+import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
+
 const log = createLogger('ImportService');
 
 /** Import statistics */
@@ -99,7 +95,6 @@ export class ImportService {
 
       const duration = Date.now() - startTime;
       log.info(`Import completed successfully in ${duration}ms`, importStats);
-
     } catch (error) {
       log.error('Import process failed:', error);
       showMessage('error', `Import failed: ${errorMessage(error)}`);
@@ -148,7 +143,7 @@ export class ImportService {
     log.debug('Import files parsed successfully', {
       hasMainData: !!importData,
       hasEnvData: !!envData,
-      version: importData.version
+      version: importData.version,
     });
 
     return { importData, envData };
@@ -180,7 +175,7 @@ export class ImportService {
    */
   async _importAllDataTypes(importData: ImportData, envData: ImportData | null, importOptions: ImportOptions) {
     const { selectedItems } = importOptions;
-    
+
     const allStats: ImportStats = {
       sourcesImported: 0,
       sourcesSkipped: 0,
@@ -190,7 +185,7 @@ export class ImportService {
       rulesSkipped: { total: 0 },
       environmentsImported: 0,
       variablesCreated: 0,
-      errors: []
+      errors: [],
     };
 
     // Import sources
@@ -213,7 +208,7 @@ export class ImportService {
     if (selectedItems.rules && (importData.rules || importData.rulesMetadata)) {
       const rulesData = {
         rules: importData.rules,
-        metadata: importData.rulesMetadata
+        metadata: importData.rulesMetadata,
       };
       const rulesStats = await this.rulesHandler.importRules(rulesData, importOptions);
       allStats.rulesImported = { total: 0, ...rulesStats.imported };
@@ -224,10 +219,7 @@ export class ImportService {
     // Import environments
     if (selectedItems.environments) {
       // Cast through intermediate type for handler-specific ImportData compatibility
-      const envStats = await this.environmentsHandler.importEnvironments(
-        importData,
-        importOptions
-      );
+      const envStats = await this.environmentsHandler.importEnvironments(importData, importOptions);
       allStats.environmentsImported = envStats.environmentsImported;
       allStats.variablesCreated = envStats.variablesCreated;
       allStats.errors.push(...envStats.errors);
@@ -264,7 +256,6 @@ export class ImportService {
       log.warn(`Import completed with ${importStats.errors.length} errors:`, importStats.errors);
     }
   }
-
 
   /**
    * Shows import warnings if any potential issues are detected
@@ -305,7 +296,7 @@ export class ImportService {
     }
 
     // Check if at least one item is selected
-    const hasSelection = Object.values(selectedItems).some(selected => selected === true);
+    const hasSelection = Object.values(selectedItems).some((selected) => selected === true);
     if (!hasSelection) {
       throw new Error('At least one data type must be selected for import');
     }
@@ -335,11 +326,13 @@ export class ImportService {
    * @private
    */
   _hasImportedData(importStats: ImportStats) {
-    return importStats.sourcesImported > 0 ||
-           importStats.proxyRulesImported > 0 ||
-           importStats.rulesImported.total > 0 ||
-           importStats.environmentsImported > 0 ||
-           !!importStats.createdWorkspace;
+    return (
+      importStats.sourcesImported > 0 ||
+      importStats.proxyRulesImported > 0 ||
+      importStats.rulesImported.total > 0 ||
+      importStats.environmentsImported > 0 ||
+      !!importStats.createdWorkspace
+    );
   }
 
   /**
@@ -358,14 +351,14 @@ export class ImportService {
         rules?: { imported: number; skipped: number; byType: Record<string, number> };
         environments?: { environmentsImported: number; variablesCreated: number };
         workspace?: { created: boolean; name: string; type: string };
-      }
+      },
     };
 
     // Sources statistics
     if (importStats.sourcesImported || importStats.sourcesSkipped) {
       stats.dataTypes.sources = {
         imported: importStats.sourcesImported || 0,
-        skipped: importStats.sourcesSkipped || 0
+        skipped: importStats.sourcesSkipped || 0,
       };
       stats.totalImported += stats.dataTypes.sources.imported;
       stats.totalSkipped += stats.dataTypes.sources.skipped;
@@ -375,7 +368,7 @@ export class ImportService {
     if (importStats.proxyRulesImported || importStats.proxyRulesSkipped) {
       stats.dataTypes.proxyRules = {
         imported: importStats.proxyRulesImported || 0,
-        skipped: importStats.proxyRulesSkipped || 0
+        skipped: importStats.proxyRulesSkipped || 0,
       };
       stats.totalImported += stats.dataTypes.proxyRules.imported;
       stats.totalSkipped += stats.dataTypes.proxyRules.skipped;
@@ -386,7 +379,7 @@ export class ImportService {
       stats.dataTypes.rules = {
         imported: importStats.rulesImported.total,
         skipped: importStats.rulesSkipped ? importStats.rulesSkipped.total : 0,
-        byType: { ...importStats.rulesImported }
+        byType: { ...importStats.rulesImported },
       };
       delete stats.dataTypes.rules.byType?.total;
       stats.totalImported += stats.dataTypes.rules.imported ?? 0;
@@ -397,7 +390,7 @@ export class ImportService {
     if (importStats.environmentsImported || importStats.variablesCreated) {
       stats.dataTypes.environments = {
         environmentsImported: importStats.environmentsImported || 0,
-        variablesCreated: importStats.variablesCreated || 0
+        variablesCreated: importStats.variablesCreated || 0,
       };
     }
 
@@ -406,11 +399,10 @@ export class ImportService {
       stats.dataTypes.workspace = {
         created: true,
         name: importStats.createdWorkspace.name ?? '',
-        type: importStats.createdWorkspace.type ?? ''
+        type: importStats.createdWorkspace.type ?? '',
       };
     }
 
     return stats;
   }
-
 }

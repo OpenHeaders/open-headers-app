@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { DisplayInfo, DisplayBounds, BrowserWindowInfo } from '../../src/utils/display-detector';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserWindowInfo, DisplayBounds, DisplayInfo } from '../../src/utils/display-detector';
 
 // Mock browser-api before importing DisplayDetector
 vi.mock('../../src/utils/browser-api', () => ({
@@ -116,14 +116,16 @@ describe('DisplayDetector', () => {
 
   describe('init', () => {
     it('uses Chrome system.display API when available', async () => {
-      mockGetInfo([{
-        id: 'disp-001',
-        name: 'Built-in Display',
-        isPrimary: true,
-        bounds: { left: 0, top: 0, width: 2560, height: 1600 },
-        workArea: { left: 0, top: 25, width: 2560, height: 1575 },
-        displayZoomFactor: 2.0,
-      }]);
+      mockGetInfo([
+        {
+          id: 'disp-001',
+          name: 'Built-in Display',
+          isPrimary: true,
+          bounds: { left: 0, top: 0, width: 2560, height: 1600 },
+          workArea: { left: 0, top: 25, width: 2560, height: 1575 },
+          displayZoomFactor: 2.0,
+        },
+      ]);
 
       const displays = await detector.init();
 
@@ -139,14 +141,16 @@ describe('DisplayDetector', () => {
     });
 
     it('handles display without workArea by using bounds as fallback', async () => {
-      mockGetInfo([{
-        id: 'disp-002',
-        name: '',
-        isPrimary: false,
-        bounds: { left: 0, top: 0, width: 1920, height: 1080 },
-        workArea: undefined,
-        displayZoomFactor: undefined,
-      }]);
+      mockGetInfo([
+        {
+          id: 'disp-002',
+          name: '',
+          isPrimary: false,
+          bounds: { left: 0, top: 0, width: 1920, height: 1080 },
+          workArea: undefined,
+          displayZoomFactor: undefined,
+        },
+      ]);
 
       const displays = await detector.init();
 

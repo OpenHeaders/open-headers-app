@@ -1,11 +1,11 @@
+import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import electron from 'electron';
-import type { IpcMainInvokeEvent, IpcMainEvent } from 'electron';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+import { errorMessage } from '../../types/common';
+import mainLogger from '../../utils/mainLogger';
 import { FFmpegManager } from './ffmpeg-manager';
 import { VideoConverter } from './video-converter';
-import mainLogger from '../../utils/mainLogger';
-import { errorMessage } from '../../types/common';
 
 const { dialog, BrowserWindow, ipcMain, shell } = electron;
 const { createLogger } = mainLogger;
@@ -14,255 +14,260 @@ const fsPromises = fs.promises;
 const log = createLogger('VideoExportManager');
 
 interface ExportResult {
-    success: boolean;
-    error?: string;
-    cancelled?: boolean;
-    path?: string;
-    format?: string;
+  success: boolean;
+  error?: string;
+  cancelled?: boolean;
+  path?: string;
+  format?: string;
 }
 
 /**
  * Video Export Manager for handling export dialog and conversion
  */
 class VideoExportManager {
-    ffmpegManager: FFmpegManager;
+  ffmpegManager: FFmpegManager;
 
-    constructor() {
-        this.ffmpegManager = new FFmpegManager();
-        this.initializeHandlers();
-    }
+  constructor() {
+    this.ffmpegManager = new FFmpegManager();
+    this.initializeHandlers();
+  }
 
-    /**
-     * Initialize IPC handlers
-     */
-    initializeHandlers(): void {
-        // Handle export video request
-        ipcMain.handle('export-video', async (_event: IpcMainInvokeEvent, recordingPath: string) => {
-            return this.showExportDialog(recordingPath);
-        });
+  /**
+   * Initialize IPC handlers
+   */
+  initializeHandlers(): void {
+    // Handle export video request
+    ipcMain.handle('export-video', async (_event: IpcMainInvokeEvent, recordingPath: string) => {
+      return this.showExportDialog(recordingPath);
+    });
 
-        // Handle FFmpeg check
-        ipcMain.handle('check-ffmpeg', async () => {
-            return this.ffmpegManager.checkFFmpeg();
-        });
+    // Handle FFmpeg check
+    ipcMain.handle('check-ffmpeg', async () => {
+      return this.ffmpegManager.checkFFmpeg();
+    });
 
-        // Handle FFmpeg download
-        ipcMain.handle('download-ffmpeg', async (event: IpcMainInvokeEvent) => {
-            const sender = event.sender;
+    // Handle FFmpeg download
+    ipcMain.handle('download-ffmpeg', async (event: IpcMainInvokeEvent) => {
+      const sender = event.sender;
 
-            try {
-                // Send initial downloading status
-                sender.send('ffmpeg-install-status', { phase: 'downloading' });
+      try {
+        // Send initial downloading status
+        sender.send('ffmpeg-install-status', { phase: 'downloading' });
 
-                const result = await this.ffmpegManager.downloadFFmpeg((progress) => {
-                    // Send progress with both percent and size information
-                    sender.send('ffmpeg-download-progress', progress);
-                }, (phase) => {
-                    // Send phase updates
-                    sender.send('ffmpeg-install-status', { phase });
-                });
-                return { success: true, path: result };
-            } catch (error: unknown) {
-                log.error('FFmpeg download failed:', error);
-                return { success: false, error: errorMessage(error) };
-            }
-        });
+        const result = await this.ffmpegManager.downloadFFmpeg(
+          (progress) => {
+            // Send progress with both percent and size information
+            sender.send('ffmpeg-download-progress', progress);
+          },
+          (phase) => {
+            // Send phase updates
+            sender.send('ffmpeg-install-status', { phase });
+          },
+        );
+        return { success: true, path: result };
+      } catch (error: unknown) {
+        log.error('FFmpeg download failed:', error);
+        return { success: false, error: errorMessage(error) };
+      }
+    });
 
-        // Handle video conversion
-        ipcMain.handle('convert-video', async (event: IpcMainInvokeEvent, inputPath: string, outputPath: string) => {
-            const sender = event.sender;
+    // Handle video conversion
+    ipcMain.handle('convert-video', async (event: IpcMainInvokeEvent, inputPath: string, outputPath: string) => {
+      const sender = event.sender;
 
-            try {
-                // Ensure FFmpeg is available before converting
-                const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
-                if (!ffmpegStatus.available) {
-                    throw new Error('FFmpeg not available');
-                }
-
-                const ffmpegPath = this.ffmpegManager.getFFmpegPath();
-                log.info('Using FFmpeg for conversion:', ffmpegPath);
-
-                const converter = new VideoConverter(ffmpegPath!);
-                const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
-                    sender.send('video-conversion-progress', progress);
-                });
-                return result;
-            } catch (error: unknown) {
-                log.error('Video conversion failed:', error);
-                return { success: false, error: errorMessage(error) };
-            }
-        });
-    }
-
-    /**
-     * Show export dialog and handle user choice
-     */
-    async showExportDialog(recordingPath: string): Promise<ExportResult> {
-        const window = BrowserWindow.getFocusedWindow();
-
-        // Check if video file exists
-        const videoPath = path.join(recordingPath, 'video.webm');
-        const videoExists = await this.fileExists(videoPath);
-
-        if (!videoExists) {
-            dialog.showErrorBox(
-                'No Video Available',
-                'This recording does not have a video file. Only rrweb data is available.'
-            );
-            return { success: false, error: 'No video file' };
+      try {
+        // Ensure FFmpeg is available before converting
+        const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
+        if (!ffmpegStatus.available) {
+          throw new Error('FFmpeg not available');
         }
 
-        if (!window) {
-            return { success: false, error: 'No focused window available' };
-        }
+        const ffmpegPath = this.ffmpegManager.getFFmpegPath();
+        log.info('Using FFmpeg for conversion:', ffmpegPath);
 
-        // Show format selection dialog
-        const result = await dialog.showMessageBox(window, {
-            type: 'question',
-            title: 'Export Video Recording',
-            message: 'Choose export format:',
-            detail: 'WebM: Native format, instant export, smaller file size\nMP4: Universal compatibility, works in all chat apps',
-            buttons: ['Export as MP4', 'Export as WebM', 'Cancel'],
-            defaultId: 0,
-            cancelId: 2
+        const converter = new VideoConverter(ffmpegPath!);
+        const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
+          sender.send('video-conversion-progress', progress);
         });
+        return result;
+      } catch (error: unknown) {
+        log.error('Video conversion failed:', error);
+        return { success: false, error: errorMessage(error) };
+      }
+    });
+  }
 
-        if (result.response === 2) {
-            // User cancelled
-            return { success: false, cancelled: true };
-        }
+  /**
+   * Show export dialog and handle user choice
+   */
+  async showExportDialog(recordingPath: string): Promise<ExportResult> {
+    const window = BrowserWindow.getFocusedWindow();
 
-        if (result.response === 1) {
-            // Export as WebM
-            return this.exportWebM(videoPath);
-        }
+    // Check if video file exists
+    const videoPath = path.join(recordingPath, 'video.webm');
+    const videoExists = await this.fileExists(videoPath);
 
-        // Export as MP4
-        return this.exportMP4(videoPath);
+    if (!videoExists) {
+      dialog.showErrorBox(
+        'No Video Available',
+        'This recording does not have a video file. Only rrweb data is available.',
+      );
+      return { success: false, error: 'No video file' };
     }
 
-    /**
-     * Export video as WebM
-     */
-    async exportWebM(videoPath: string): Promise<ExportResult> {
-        try {
-            const result = await dialog.showSaveDialog({
-                title: 'Save Video',
-                defaultPath: `recording_${Date.now()}.webm`,
-                filters: [
-                    { name: 'WebM Video', extensions: ['webm'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
+    if (!window) {
+      return { success: false, error: 'No focused window available' };
+    }
 
-            if (result.canceled) {
-                return { success: false, cancelled: true };
-            }
+    // Show format selection dialog
+    const result = await dialog.showMessageBox(window, {
+      type: 'question',
+      title: 'Export Video Recording',
+      message: 'Choose export format:',
+      detail:
+        'WebM: Native format, instant export, smaller file size\nMP4: Universal compatibility, works in all chat apps',
+      buttons: ['Export as MP4', 'Export as WebM', 'Cancel'],
+      defaultId: 0,
+      cancelId: 2,
+    });
 
-            // Copy file to destination
-            await fsPromises.copyFile(videoPath, result.filePath!);
+    if (result.response === 2) {
+      // User cancelled
+      return { success: false, cancelled: true };
+    }
 
-            // Show in file manager
-            shell.showItemInFolder(result.filePath!);
+    if (result.response === 1) {
+      // Export as WebM
+      return this.exportWebM(videoPath);
+    }
 
-            return { success: true, path: result.filePath, format: 'webm' };
-        } catch (error: unknown) {
-            log.error('Error exporting WebM:', error);
-            return { success: false, error: errorMessage(error) };
+    // Export as MP4
+    return this.exportMP4(videoPath);
+  }
+
+  /**
+   * Export video as WebM
+   */
+  async exportWebM(videoPath: string): Promise<ExportResult> {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Save Video',
+        defaultPath: `recording_${Date.now()}.webm`,
+        filters: [
+          { name: 'WebM Video', extensions: ['webm'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (result.canceled) {
+        return { success: false, cancelled: true };
+      }
+
+      // Copy file to destination
+      await fsPromises.copyFile(videoPath, result.filePath!);
+
+      // Show in file manager
+      shell.showItemInFolder(result.filePath!);
+
+      return { success: true, path: result.filePath, format: 'webm' };
+    } catch (error: unknown) {
+      log.error('Error exporting WebM:', error);
+      return { success: false, error: errorMessage(error) };
+    }
+  }
+
+  /**
+   * Export video as MP4
+   */
+  async exportMP4(videoPath: string): Promise<ExportResult> {
+    try {
+      // Check FFmpeg availability
+      const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
+
+      if (!ffmpegStatus.available) {
+        // Show installation dialog
+        const installChoice = await this.showFFmpegInstallDialog();
+
+        if (installChoice !== 'install') {
+          // Fall back to WebM export
+          return this.exportWebM(videoPath);
         }
-    }
 
-    /**
-     * Export video as MP4
-     */
-    async exportMP4(videoPath: string): Promise<ExportResult> {
-        try {
-            // Check FFmpeg availability
-            const ffmpegStatus = await this.ffmpegManager.checkFFmpeg();
-
-            if (!ffmpegStatus.available) {
-                // Show installation dialog
-                const installChoice = await this.showFFmpegInstallDialog();
-
-                if (installChoice !== 'install') {
-                    // Fall back to WebM export
-                    return this.exportWebM(videoPath);
-                }
-
-                // Install FFmpeg
-                const installResult = await this.installFFmpegWithProgress();
-                if (!installResult.success) {
-                    return installResult;
-                }
-            }
-
-            // Show save dialog
-            const result = await dialog.showSaveDialog({
-                title: 'Save Video',
-                defaultPath: `recording_${Date.now()}.mp4`,
-                filters: [
-                    { name: 'MP4 Video', extensions: ['mp4'] },
-                    { name: 'All Files', extensions: ['*'] }
-                ]
-            });
-
-            if (result.canceled) {
-                return { success: false, cancelled: true };
-            }
-
-            // Convert to MP4
-            const convertResult = await this.convertToMP4WithProgress(videoPath, result.filePath!);
-
-            if (convertResult.success) {
-                // Show in file manager
-                shell.showItemInFolder(result.filePath!);
-            }
-
-            return convertResult;
-        } catch (error: unknown) {
-            log.error('Error exporting MP4:', error);
-            return { success: false, error: errorMessage(error) };
+        // Install FFmpeg
+        const installResult = await this.installFFmpegWithProgress();
+        if (!installResult.success) {
+          return installResult;
         }
+      }
+
+      // Show save dialog
+      const result = await dialog.showSaveDialog({
+        title: 'Save Video',
+        defaultPath: `recording_${Date.now()}.mp4`,
+        filters: [
+          { name: 'MP4 Video', extensions: ['mp4'] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (result.canceled) {
+        return { success: false, cancelled: true };
+      }
+
+      // Convert to MP4
+      const convertResult = await this.convertToMP4WithProgress(videoPath, result.filePath!);
+
+      if (convertResult.success) {
+        // Show in file manager
+        shell.showItemInFolder(result.filePath!);
+      }
+
+      return convertResult;
+    } catch (error: unknown) {
+      log.error('Error exporting MP4:', error);
+      return { success: false, error: errorMessage(error) };
     }
+  }
 
-    /**
-     * Show FFmpeg installation dialog
-     */
-    async showFFmpegInstallDialog(): Promise<string> {
-        const result = await dialog.showMessageBox({
-            type: 'question',
-            title: 'MP4 Export Requires FFmpeg',
-            message: 'To export videos as MP4, FFmpeg needs to be installed.',
-            detail: 'FFmpeg is a free, open-source tool for video conversion. It will be downloaded automatically (~25MB) and stored in the app folder.',
-            buttons: ['Install FFmpeg', 'Export as WebM Instead'],
-            defaultId: 0,
-            cancelId: 1
-        });
+  /**
+   * Show FFmpeg installation dialog
+   */
+  async showFFmpegInstallDialog(): Promise<string> {
+    const result = await dialog.showMessageBox({
+      type: 'question',
+      title: 'MP4 Export Requires FFmpeg',
+      message: 'To export videos as MP4, FFmpeg needs to be installed.',
+      detail:
+        'FFmpeg is a free, open-source tool for video conversion. It will be downloaded automatically (~25MB) and stored in the app folder.',
+      buttons: ['Install FFmpeg', 'Export as WebM Instead'],
+      defaultId: 0,
+      cancelId: 1,
+    });
 
-        return result.response === 0 ? 'install' : 'webm';
-    }
+    return result.response === 0 ? 'install' : 'webm';
+  }
 
-    /**
-     * Install FFmpeg with progress window
-     */
-    async installFFmpegWithProgress(): Promise<ExportResult> {
-        // Create progress window
-        const progressWindow = new BrowserWindow({
-            width: 400,
-            height: 200,
-            modal: true,
-            parent: BrowserWindow.getFocusedWindow()!,
-            frame: false,
-            resizable: false,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, '../preload/index.js')
-            }
-        });
+  /**
+   * Install FFmpeg with progress window
+   */
+  async installFFmpegWithProgress(): Promise<ExportResult> {
+    // Create progress window
+    const progressWindow = new BrowserWindow({
+      width: 400,
+      height: 200,
+      modal: true,
+      parent: BrowserWindow.getFocusedWindow()!,
+      frame: false,
+      resizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, '../preload/index.js'),
+      },
+    });
 
-        // Load progress HTML
-        const progressHtml = `
+    // Load progress HTML
+    const progressHtml = `
             <!DOCTYPE html>
             <html>
             <head>
@@ -324,84 +329,90 @@ class VideoExportManager {
             </html>
         `;
 
-        await progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHtml)}`);
-        progressWindow.show();
+    await progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHtml)}`);
+    progressWindow.show();
 
-        try {
-            // Add progress listener
-            ipcMain.on('ffmpeg-download-progress', (_event: IpcMainEvent, progress: { percent: number; downloaded: number; total: number }) => {
-                if (!progressWindow.isDestroyed()) {
-                    progressWindow.webContents.send('ffmpeg-download-progress', progress);
-                }
-            });
+    try {
+      // Add progress listener
+      ipcMain.on(
+        'ffmpeg-download-progress',
+        (_event: IpcMainEvent, progress: { percent: number; downloaded: number; total: number }) => {
+          if (!progressWindow.isDestroyed()) {
+            progressWindow.webContents.send('ffmpeg-download-progress', progress);
+          }
+        },
+      );
 
-            await this.ffmpegManager.downloadFFmpeg((progress) => {
-                if (!progressWindow.isDestroyed()) {
-                    progressWindow.webContents.send('ffmpeg-download-progress', progress);
-                }
-            }, (phase) => {
-                if (!progressWindow.isDestroyed()) {
-                    // Update the progress window content based on phase
-                    if (phase === 'extracting') {
-                        progressWindow.webContents.executeJavaScript(`
+      await this.ffmpegManager.downloadFFmpeg(
+        (progress) => {
+          if (!progressWindow.isDestroyed()) {
+            progressWindow.webContents.send('ffmpeg-download-progress', progress);
+          }
+        },
+        (phase) => {
+          if (!progressWindow.isDestroyed()) {
+            // Update the progress window content based on phase
+            if (phase === 'extracting') {
+              progressWindow.webContents.executeJavaScript(`
                             document.querySelector('h2').textContent = 'Extracting FFmpeg...';
                             document.getElementById('status').textContent = 'Extracting files...';
                             document.getElementById('progress').style.width = '100%';
                         `);
-                    } else if (phase === 'verifying') {
-                        progressWindow.webContents.executeJavaScript(`
+            } else if (phase === 'verifying') {
+              progressWindow.webContents.executeJavaScript(`
                             document.querySelector('h2').textContent = 'Verifying FFmpeg...';
                             document.getElementById('status').textContent = 'Verifying installation...';
                         `);
-                    }
-                }
-            });
-
-            progressWindow.close();
-
-            dialog.showMessageBox({
-                type: 'info',
-                title: 'FFmpeg Installed',
-                message: 'FFmpeg has been installed successfully.',
-                buttons: ['OK']
-            });
-
-            return { success: true };
-        } catch (error: unknown) {
-            if (!progressWindow.isDestroyed()) {
-                progressWindow.close();
             }
+          }
+        },
+      );
 
-            dialog.showErrorBox(
-                'Installation Failed',
-                `Failed to install FFmpeg: ${errorMessage(error)}\n\nYou can still export as WebM.`
-            );
+      progressWindow.close();
 
-            return { success: false, error: errorMessage(error) };
-        }
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'FFmpeg Installed',
+        message: 'FFmpeg has been installed successfully.',
+        buttons: ['OK'],
+      });
+
+      return { success: true };
+    } catch (error: unknown) {
+      if (!progressWindow.isDestroyed()) {
+        progressWindow.close();
+      }
+
+      dialog.showErrorBox(
+        'Installation Failed',
+        `Failed to install FFmpeg: ${errorMessage(error)}\n\nYou can still export as WebM.`,
+      );
+
+      return { success: false, error: errorMessage(error) };
     }
+  }
 
-    /**
-     * Convert to MP4 with progress window
-     */
-    async convertToMP4WithProgress(inputPath: string, outputPath: string): Promise<ExportResult> {
-        // Create progress window
-        const progressWindow = new BrowserWindow({
-            width: 400,
-            height: 200,
-            modal: true,
-            parent: BrowserWindow.getFocusedWindow()!,
-            frame: false,
-            resizable: false,
-            webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-                preload: path.join(__dirname, '../preload/index.js')
-            }
-        });
+  /**
+   * Convert to MP4 with progress window
+   */
+  async convertToMP4WithProgress(inputPath: string, outputPath: string): Promise<ExportResult> {
+    // Create progress window
+    const progressWindow = new BrowserWindow({
+      width: 400,
+      height: 200,
+      modal: true,
+      parent: BrowserWindow.getFocusedWindow()!,
+      frame: false,
+      resizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, '../preload/index.js'),
+      },
+    });
 
-        // Load conversion progress HTML
-        const progressHtml = `
+    // Load conversion progress HTML
+    const progressHtml = `
             <!DOCTYPE html>
             <html>
             <head>
@@ -463,44 +474,41 @@ class VideoExportManager {
             </html>
         `;
 
-        await progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHtml)}`);
-        progressWindow.show();
+    await progressWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(progressHtml)}`);
+    progressWindow.show();
 
-        try {
-            const converter = new VideoConverter(this.ffmpegManager.getFFmpegPath()!);
-            const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
-                if (!progressWindow.isDestroyed()) {
-                    progressWindow.webContents.send('video-conversion-progress', progress);
-                }
-            });
-
-            progressWindow.close();
-            return result;
-        } catch (error: unknown) {
-            if (!progressWindow.isDestroyed()) {
-                progressWindow.close();
-            }
-
-            dialog.showErrorBox(
-                'Conversion Failed',
-                `Failed to convert video: ${errorMessage(error)}`
-            );
-
-            return { success: false, error: errorMessage(error) };
+    try {
+      const converter = new VideoConverter(this.ffmpegManager.getFFmpegPath()!);
+      const result = await converter.convertToMP4(inputPath, outputPath, (progress) => {
+        if (!progressWindow.isDestroyed()) {
+          progressWindow.webContents.send('video-conversion-progress', progress);
         }
-    }
+      });
 
-    /**
-     * Check if file exists
-     */
-    async fileExists(filePath: string): Promise<boolean> {
-        try {
-            await fsPromises.access(filePath);
-            return true;
-        } catch {
-            return false;
-        }
+      progressWindow.close();
+      return result;
+    } catch (error: unknown) {
+      if (!progressWindow.isDestroyed()) {
+        progressWindow.close();
+      }
+
+      dialog.showErrorBox('Conversion Failed', `Failed to convert video: ${errorMessage(error)}`);
+
+      return { success: false, error: errorMessage(error) };
     }
+  }
+
+  /**
+   * Check if file exists
+   */
+  async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await fsPromises.access(filePath);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 }
 
 // Singleton instance — side-effect: constructor registers IPC handlers

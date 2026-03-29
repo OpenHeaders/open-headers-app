@@ -38,6 +38,9 @@ jobs:
       - name: Install Electron system dependencies
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 libxss1 libasound2t64 libgbm1
 
+      - name: Lint
+        run: pnpm biome check .
+
       - name: Typecheck all packages
         run: pnpm turbo typecheck
 

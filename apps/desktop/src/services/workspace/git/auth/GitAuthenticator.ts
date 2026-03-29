@@ -3,19 +3,22 @@
  * Handles different authentication strategies for Git operations
  */
 
-import mainLogger from '../../../../utils/mainLogger';
-import TokenAuthStrategy from './TokenAuthStrategy';
-import SSHAuthStrategy from './SSHAuthStrategy';
-import BasicAuthStrategy from './BasicAuthStrategy';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
 import { errorMessage } from '../../../../types/common';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
+import mainLogger from '../../../../utils/mainLogger';
+import BasicAuthStrategy from './BasicAuthStrategy';
+import SSHAuthStrategy from './SSHAuthStrategy';
+import TokenAuthStrategy from './TokenAuthStrategy';
 
 const { createLogger } = mainLogger;
 
 const log = createLogger('GitAuthenticator');
 
 interface AuthStrategy {
-  setup: (url: string, authData: WorkspaceAuthData) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
+  setup: (
+    url: string,
+    authData: WorkspaceAuthData,
+  ) => Promise<{ effectiveUrl: string; env: NodeJS.ProcessEnv; cleanup?: () => Promise<void>; keyHash?: string }>;
   validate?: (authData: WorkspaceAuthData) => { valid: boolean; error?: string };
   cleanup?: (authResult: { cleanup?: () => Promise<void> } | null) => Promise<void>;
 }
@@ -36,7 +39,7 @@ class GitAuthenticator {
       token: new TokenAuthStrategy(),
       'ssh-key': new SSHAuthStrategy(sshDir),
       basic: new BasicAuthStrategy(),
-      none: null
+      none: null,
     };
   }
 
@@ -50,7 +53,7 @@ class GitAuthenticator {
       return {
         effectiveUrl: url,
         env: process.env,
-        type: 'none'
+        type: 'none',
       };
     }
 
@@ -63,7 +66,7 @@ class GitAuthenticator {
       const result = await strategy.setup(url, authData);
       return {
         ...result,
-        type: authType
+        type: authType,
       };
     } catch (error) {
       log.error(`${authType} authentication setup failed:`, error);
@@ -97,7 +100,7 @@ class GitAuthenticator {
     if (!strategy) {
       return {
         valid: false,
-        error: `Unknown authentication type: ${authType}`
+        error: `Unknown authentication type: ${authType}`,
       };
     }
 
@@ -123,6 +126,6 @@ class GitAuthenticator {
   }
 }
 
-export { GitAuthenticator };
 export type { AuthStrategy, SetupAuthResult };
+export { GitAuthenticator };
 export default GitAuthenticator;

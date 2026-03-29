@@ -7,19 +7,19 @@
 
 // Re-export shared types
 export type {
+  ConsoleArg,
+  ConsoleArgObject,
+  ConsoleRecord,
+  NavigationEntry,
+  NetworkRecord,
+  NetworkTimingData,
+  RecordingEvent,
+  RecordingEventData,
   RecordingMetadata,
   StorageCookieMetadata,
   StorageRecord,
-  ConsoleArgObject,
-  ConsoleArg,
-  ConsoleRecord,
-  NetworkTimingData,
-  NetworkRecord,
-  NavigationEntry,
-  RecordingEvent,
-  RecordingEventData,
-  WorkflowTag,
   WorkflowRecordingEntry,
+  WorkflowTag,
 } from '@openheaders/core/types';
 
 // ── Extension-specific recording types ────────────────────────────

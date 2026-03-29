@@ -1,4 +1,4 @@
-export { ProxyService, proxyService } from './ProxyService';
+export { DomainMatcher } from './domainMatcher';
 export { ProxyCache } from './ProxyCache';
 export { ProxyRuleStore } from './ProxyRuleStore';
-export { DomainMatcher } from './domainMatcher';
+export { ProxyService, proxyService } from './ProxyService';

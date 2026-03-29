@@ -1,33 +1,32 @@
-export {
-  WS_PORT,
-  WS_SERVER_URL,
-  PROTOCOL_NAME,
-  MESSAGE_TYPES,
-  RECORDING_STATES,
-} from './constants';
-
 export type {
   MessageType,
   RecordingStateType,
+} from './constants';
+export {
+  MESSAGE_TYPES,
+  PROTOCOL_NAME,
+  RECORDING_STATES,
+  WS_PORT,
+  WS_SERVER_URL,
 } from './constants';
 
 export type {
   BrowserInfoMessage,
   FocusAppMessage,
-  ToggleRuleMessage,
-  ToggleAllRulesMessage,
-  GetVideoRecordingStateMessage,
   GetRecordingHotkeyMessage,
-  SaveWorkflowMessage,
-  StartSyncRecordingMessage,
-  StopSyncRecordingMessage,
-  SourcesInitialMessage,
-  SourcesUpdatedMessage,
-  RulesUpdateMessage,
-  VideoRecordingStateChangedMessage,
-  RecordingHotkeyResponseMessage,
+  GetVideoRecordingStateMessage,
+  HeaderRuleFromApp,
   RecordingHotkeyChangedMessage,
   RecordingHotkeyPressedMessage,
-  HeaderRuleFromApp,
+  RecordingHotkeyResponseMessage,
   RulesData,
+  RulesUpdateMessage,
+  SaveWorkflowMessage,
+  SourcesInitialMessage,
+  SourcesUpdatedMessage,
+  StartSyncRecordingMessage,
+  StopSyncRecordingMessage,
+  ToggleAllRulesMessage,
+  ToggleRuleMessage,
+  VideoRecordingStateChangedMessage,
 } from './messages';

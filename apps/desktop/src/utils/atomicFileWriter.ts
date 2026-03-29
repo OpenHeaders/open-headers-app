@@ -9,11 +9,11 @@
  * - JSON validation before writes
  */
 
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
-import { createLogger } from './mainLogger';
 import { errorMessage, toErrno } from '../types/common';
+import { createLogger } from './mainLogger';
 
 const log = createLogger('AtomicFileWriter');
 
@@ -34,7 +34,7 @@ class AtomicFileWriter {
     this.lockFiles = new Map();
 
     // Clean up stale lock files on startup (runs async in background)
-    this.cleanupStaleLocks().catch(err => {
+    this.cleanupStaleLocks().catch((err) => {
       log.debug('Stale lock cleanup error (non-critical):', err.message);
     });
   }
@@ -91,11 +91,7 @@ class AtomicFileWriter {
    * Write data atomically to a file
    */
   async writeFile(filePath: string, content: string | Buffer, options: WriteOptions = {}): Promise<void> {
-    const {
-      validateJson = false,
-      maxRetries = 3,
-      retryDelay = 100
-    } = options;
+    const { validateJson = false, maxRetries = 3, retryDelay = 100 } = options;
 
     // Validate JSON if requested
     if (validateJson) {
@@ -123,8 +119,8 @@ class AtomicFileWriter {
 
           if (attempt < maxRetries - 1) {
             // Exponential backoff
-            const delay = retryDelay * Math.pow(2, attempt);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            const delay = retryDelay * 2 ** attempt;
+            await new Promise((resolve) => setTimeout(resolve, delay));
           }
         }
       }
@@ -146,7 +142,7 @@ class AtomicFileWriter {
     const queue = this.writeQueues.get(filePath)!;
     const newQueue = queue
       .then(() => writeOperation())
-      .catch(error => {
+      .catch((error) => {
         log.error(`Write failed for ${filePath}:`, error);
         throw error;
       })
@@ -193,7 +189,7 @@ class AtomicFileWriter {
           try {
             // On Windows, we can't always sync, but the rename is still atomic
             // Adding a small delay helps ensure write is complete
-            await new Promise(resolve => setTimeout(resolve, 10));
+            await new Promise((resolve) => setTimeout(resolve, 10));
           } catch (syncError: unknown) {
             log.debug(`Windows file sync skipped: ${errorMessage(syncError)}`);
           }
@@ -224,7 +220,7 @@ class AtomicFileWriter {
                 break;
               } else if (errCode === 'EBUSY' || errCode === 'EACCES') {
                 // File is in use, wait and retry
-                await new Promise(resolve => setTimeout(resolve, 50 * (i + 1)));
+                await new Promise((resolve) => setTimeout(resolve, 50 * (i + 1)));
               } else {
                 log.debug(`Could not remove existing file on Windows: ${errorMessage(unlinkError)}`);
                 break;
@@ -272,10 +268,10 @@ class AtomicFileWriter {
         const errCode = toErrno(error).code;
         if (errCode === 'EEXIST') {
           // Lock exists, wait and retry
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise((resolve) => setTimeout(resolve, 50));
         } else if (errCode === 'EPERM' && process.platform === 'win32') {
           // Windows permission error - file might be locked by another process
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } else {
           throw error;
         }
@@ -294,7 +290,7 @@ class AtomicFileWriter {
     }
 
     // Try one more time with a small delay
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     try {
       const fd = await fs.promises.open(lockPath, 'wx');
       await fd.close();
@@ -366,13 +362,11 @@ class AtomicFileWriter {
    */
   async writeJson(filePath: string, data: unknown, options: WriteOptions = {}): Promise<void> {
     const { pretty = true, ...writeOptions } = options;
-    const content = pretty
-      ? JSON.stringify(data, null, 2)
-      : JSON.stringify(data);
+    const content = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
 
     return this.writeFile(filePath, content, {
       ...writeOptions,
-      validateJson: true
+      validateJson: true,
     });
   }
 
@@ -402,11 +396,17 @@ process.on('exit', () => {
 });
 
 process.on('SIGINT', () => {
-  atomicWriter.cleanup().then(() => process.exit(0)).catch(() => process.exit(1));
+  atomicWriter
+    .cleanup()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
 });
 
 process.on('SIGTERM', () => {
-  atomicWriter.cleanup().then(() => process.exit(0)).catch(() => process.exit(1));
+  atomicWriter
+    .cleanup()
+    .then(() => process.exit(0))
+    .catch(() => process.exit(1));
 });
 
 export { AtomicFileWriter, atomicWriter };

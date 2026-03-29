@@ -1,15 +1,16 @@
-import React, { useEffect } from 'react';
 import { Layout } from 'antd';
+import type React from 'react';
+import { useEffect } from 'react';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { HeaderProvider } from '../context/HeaderContext';
 import { useTheme } from '../context/ThemeContext';
-import ErrorBoundary from '../components/ErrorBoundary';
-import Header from './components/Header';
-import RulesList from './components/RulesList';
-import Footer from './components/Footer';
-import ConnectionInfo from './components/ConnectionInfo';
+import { getBrowserAPI } from '../types/browser';
 import { runtime } from '../utils/browser-api';
 import { sendMessage } from '../utils/messaging';
-import { getBrowserAPI } from '../types/browser';
+import ConnectionInfo from './components/ConnectionInfo';
+import Footer from './components/Footer';
+import Header from './components/Header';
+import RulesList from './components/RulesList';
 
 const { Content } = Layout;
 
@@ -27,19 +28,37 @@ const AppContent: React.FC = () => {
 
       port.onDisconnect.addListener(() => {
         if (browserAPI.runtime.lastError) {
-          console.log(new Date().toISOString(), 'INFO ', '[Popup]', 'Popup: Port disconnected:', browserAPI.runtime.lastError.message);
+          console.log(
+            new Date().toISOString(),
+            'INFO ',
+            '[Popup]',
+            'Popup: Port disconnected:',
+            browserAPI.runtime.lastError.message,
+          );
         }
       });
 
       runtime.sendMessage({ type: 'popupOpen' }, (response: unknown) => {
         if (browserAPI.runtime.lastError) {
-          console.log(new Date().toISOString(), 'INFO ', '[Popup]', 'Popup: Background script not ready yet:', browserAPI.runtime.lastError.message);
+          console.log(
+            new Date().toISOString(),
+            'INFO ',
+            '[Popup]',
+            'Popup: Background script not ready yet:',
+            browserAPI.runtime.lastError.message,
+          );
         } else if (response) {
           console.log(new Date().toISOString(), 'INFO ', '[Popup]', 'Popup: Received response from background');
         }
       });
     } catch (error) {
-      console.log(new Date().toISOString(), 'INFO ', '[Popup]', 'Popup: Error connecting to background:', (error as Error).message);
+      console.log(
+        new Date().toISOString(),
+        'INFO ',
+        '[Popup]',
+        'Popup: Error connecting to background:',
+        (error as Error).message,
+      );
     }
 
     return () => {
@@ -62,22 +81,20 @@ const AppContent: React.FC = () => {
   };
 
   return (
-      <ErrorBoundary>
-        <HeaderProvider>
-          <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
-            <Header
-              onOpenSetupGuide={handleOpenSetupGuide}
-            />
-            <Content className="content">
-              <ConnectionInfo />
-              <div className="entries-list">
-                <RulesList />
-              </div>
-            </Content>
-            <Footer />
-          </Layout>
-        </HeaderProvider>
-      </ErrorBoundary>
+    <ErrorBoundary>
+      <HeaderProvider>
+        <Layout className="app-container" data-theme={isDarkMode ? 'dark' : 'light'}>
+          <Header onOpenSetupGuide={handleOpenSetupGuide} />
+          <Content className="content">
+            <ConnectionInfo />
+            <div className="entries-list">
+              <RulesList />
+            </div>
+          </Content>
+          <Footer />
+        </Layout>
+      </HeaderProvider>
+    </ErrorBoundary>
   );
 };
 

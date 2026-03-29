@@ -7,11 +7,11 @@
  * - Team workspace references
  */
 
-import path from 'path';
-import fs from 'fs';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
+import fs from 'fs';
+import path from 'path';
 import atomicWriter from '../../utils/atomicFileWriter';
+import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -57,9 +57,9 @@ class WorkspaceSettingsService {
           type: 'personal',
           description: 'Your default personal workspace',
           isDefault: true,
-          createdAt: new Date().toISOString()
-        }
-      ]
+          createdAt: new Date().toISOString(),
+        },
+      ],
     };
   }
 
@@ -100,9 +100,9 @@ class WorkspaceSettingsService {
       const defaultEnvPath = path.join(defaultWorkspaceDir, 'environments.json');
       const defaultEnv = {
         environments: {
-          Default: {}
+          Default: {},
         },
-        activeEnvironment: 'Default'
+        activeEnvironment: 'Default',
       };
       await atomicWriter.writeJson(defaultEnvPath, defaultEnv, { pretty: true });
 
@@ -139,7 +139,7 @@ class WorkspaceSettingsService {
         version: settings.version ?? this.defaultSettings.version,
         activeWorkspaceId: settings.activeWorkspaceId ?? this.defaultSettings.activeWorkspaceId,
         workspaces: settings.workspaces ?? this.defaultSettings.workspaces,
-        syncStatus: settings.syncStatus
+        syncStatus: settings.syncStatus,
       };
     } catch (error) {
       log.error('Failed to read workspace settings:', error);
@@ -153,7 +153,7 @@ class WorkspaceSettingsService {
   async saveSettings(settings: WorkspaceSettings): Promise<void> {
     try {
       // Ensure default workspace is never removed
-      const hasDefault = settings.workspaces.some(w => w.id === 'default-personal' && w.isDefault);
+      const hasDefault = settings.workspaces.some((w) => w.id === 'default-personal' && w.isDefault);
       if (!hasDefault) {
         settings.workspaces.unshift(this.defaultSettings.workspaces[0]);
       }
@@ -174,12 +174,11 @@ class WorkspaceSettingsService {
     const settings = await this.getSettings();
 
     // Check if workspace ID already exists
-    if (settings.workspaces.some(w => w.id === workspace.id)) {
+    if (settings.workspaces.some((w) => w.id === workspace.id)) {
       throw new Error(`Workspace with ID ${workspace.id} already exists`);
     }
 
     try {
-
       // Add workspace
       const newWorkspace: Workspace = {
         ...workspace, // Keep any additional properties
@@ -196,9 +195,9 @@ class WorkspaceSettingsService {
       const envPath = path.join(workspaceDir, 'environments.json');
       const defaultEnv = {
         environments: {
-          Default: {}
+          Default: {},
         },
-        activeEnvironment: 'Default'
+        activeEnvironment: 'Default',
       };
       await atomicWriter.writeJson(envPath, defaultEnv, { pretty: true });
 
@@ -225,7 +224,7 @@ class WorkspaceSettingsService {
       const settings = await this.getSettings();
 
       // Remove workspace from settings
-      settings.workspaces = settings.workspaces.filter(w => w.id !== workspaceId);
+      settings.workspaces = settings.workspaces.filter((w) => w.id !== workspaceId);
 
       // If active workspace was removed, switch to default
       if (settings.activeWorkspaceId === workspaceId) {
@@ -263,17 +262,16 @@ class WorkspaceSettingsService {
     const settings = await this.getSettings();
 
     // Find and update the workspace
-    const workspaceIndex = settings.workspaces.findIndex(w => w.id === workspaceId);
+    const workspaceIndex = settings.workspaces.findIndex((w) => w.id === workspaceId);
     if (workspaceIndex === -1) {
       throw new Error(`Workspace ${workspaceId} not found`);
     }
 
     try {
-
       settings.workspaces[workspaceIndex] = {
         ...settings.workspaces[workspaceIndex],
         ...updates,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
 
       await this.saveSettings(settings);
@@ -308,14 +306,14 @@ class WorkspaceSettingsService {
       return {
         activeWorkspaceId: settings.activeWorkspaceId,
         workspaces: settings.workspaces,
-        syncStatus: settings.syncStatus ?? {}
+        syncStatus: settings.syncStatus ?? {},
       };
     } catch (error) {
       log.error('Failed to load workspaces data:', error);
       return {
         activeWorkspaceId: 'default-personal',
         workspaces: [],
-        syncStatus: {}
+        syncStatus: {},
       };
     }
   }
@@ -335,7 +333,7 @@ class WorkspaceSettingsService {
       // Update or merge the status
       settings.syncStatus[workspaceId] = {
         ...settings.syncStatus[workspaceId],
-        ...status
+        ...status,
       };
 
       await this.saveSettings(settings);
@@ -348,7 +346,7 @@ class WorkspaceSettingsService {
   }
 }
 
-export { WorkspaceSettingsService };
-export type { WorkspaceSettings, WorkspacesData };
 export type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
+export type { WorkspaceSettings, WorkspacesData };
+export { WorkspaceSettingsService };
 export default WorkspaceSettingsService;

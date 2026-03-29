@@ -3,8 +3,8 @@
  * Tests for useEnvironmentTemplates hook — validates template resolution for strings, objects, and nested structures.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -112,10 +112,7 @@ describe('useEnvironmentTemplates', () => {
 
     it('returns string array items unchanged (only object values are resolved)', () => {
       const { result } = renderHook(() => useEnvironmentTemplates());
-      const resolved = result.current.resolveObjectTemplate([
-        '{{API_GATEWAY_URL}}',
-        'static-value',
-      ]);
+      const resolved = result.current.resolveObjectTemplate(['{{API_GATEWAY_URL}}', 'static-value']);
       expect(resolved).toEqual(['{{API_GATEWAY_URL}}', 'static-value']);
     });
 

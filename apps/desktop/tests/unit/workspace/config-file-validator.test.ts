@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock electron before importing the module
 vi.mock('electron', () => ({
   default: { app: { getPath: () => '/tmp/test' } },
-  app: { getPath: () => '/tmp/test' }
+  app: { getPath: () => '/tmp/test' },
 }));
 
 // Mock mainLogger
@@ -13,14 +13,14 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
-    })
-  }
+      debug: vi.fn(),
+    }),
+  },
 }));
 
 // Mock config/version
 vi.mock('../../../src/config/version', () => ({
-  DATA_FORMAT_VERSION: '3.0.0'
+  DATA_FORMAT_VERSION: '3.0.0',
 }));
 
 import { ConfigFileValidator } from '../../../src/services/workspace/config-file-validator';
@@ -37,7 +37,7 @@ describe('ConfigFileValidator', () => {
       const content = { version: '3.0.0', headers: [{ name: 'X-Test', value: 'val' }] };
       const schema = {
         version: { type: 'string', required: true },
-        headers: { type: 'array', required: true }
+        headers: { type: 'array', required: true },
       };
       const result = validator.validateAgainstSchema(content, schema, 'headers');
       expect(result.valid).toBe(true);
@@ -48,7 +48,7 @@ describe('ConfigFileValidator', () => {
       const content = { headers: [] };
       const schema = {
         version: { type: 'string', required: true },
-        headers: { type: 'array', required: true }
+        headers: { type: 'array', required: true },
       };
       const result = validator.validateAgainstSchema(content, schema, 'headers');
       expect(result.valid).toBe(false);
@@ -59,11 +59,11 @@ describe('ConfigFileValidator', () => {
       const content = { version: 123, headers: [] };
       const schema = {
         version: { type: 'string', required: true },
-        headers: { type: 'array', required: true }
+        headers: { type: 'array', required: true },
       };
       const result = validator.validateAgainstSchema(content, schema, 'headers');
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes("type string, got number"))).toBe(true);
+      expect(result.errors.some((e) => e.includes('type string, got number'))).toBe(true);
     });
   });
 
@@ -92,7 +92,9 @@ describe('ConfigFileValidator', () => {
 
     it('validates string minLength', () => {
       const errors = validator.validateField('name', 'ab', {
-        type: 'string', required: true, minLength: 3
+        type: 'string',
+        required: true,
+        minLength: 3,
       });
       expect(errors.length).toBe(1);
       expect(errors[0]).toContain('at least 3 characters');
@@ -100,7 +102,9 @@ describe('ConfigFileValidator', () => {
 
     it('validates string pattern', () => {
       const errors = validator.validateField('version', 'abc', {
-        type: 'string', required: true, pattern: '^\\d+\\.\\d+\\.\\d+$'
+        type: 'string',
+        required: true,
+        pattern: '^\\d+\\.\\d+\\.\\d+$',
       });
       expect(errors.length).toBe(1);
       expect(errors[0]).toContain('does not match required pattern');
@@ -108,7 +112,9 @@ describe('ConfigFileValidator', () => {
 
     it('validates array minLength', () => {
       const errors = validator.validateField('items', [], {
-        type: 'array', required: true, minLength: 1
+        type: 'array',
+        required: true,
+        minLength: 1,
       });
       expect(errors.length).toBe(1);
       expect(errors[0]).toContain('at least 1 items');
@@ -116,7 +122,9 @@ describe('ConfigFileValidator', () => {
 
     it('validates array maxLength', () => {
       const errors = validator.validateField('items', [1, 2, 3], {
-        type: 'array', required: true, maxLength: 2
+        type: 'array',
+        required: true,
+        maxLength: 2,
       });
       expect(errors.length).toBe(1);
       expect(errors[0]).toContain('at most 2 items');
@@ -125,58 +133,47 @@ describe('ConfigFileValidator', () => {
 
   describe('validateTypeSpecific()', () => {
     it('detects missing header name', () => {
-      const result = validator.validateTypeSpecific(
-        { headers: [{ value: 'x' }] }, 'headers'
-      );
+      const result = validator.validateTypeSpecific({ headers: [{ value: 'x' }] }, 'headers');
       expect(result.errors).toContain("Header at index 0 missing 'name' field");
     });
 
     it('detects missing header value (not empty string)', () => {
-      const result = validator.validateTypeSpecific(
-        { headers: [{ name: 'X-Test' }] }, 'headers'
-      );
+      const result = validator.validateTypeSpecific({ headers: [{ name: 'X-Test' }] }, 'headers');
       expect(result.errors).toContain("Header at index 0 missing 'value' field");
     });
 
     it('allows header with empty string value', () => {
-      const result = validator.validateTypeSpecific(
-        { headers: [{ name: 'X-Test', value: '' }] }, 'headers'
-      );
+      const result = validator.validateTypeSpecific({ headers: [{ name: 'X-Test', value: '' }] }, 'headers');
       expect(result.errors).toHaveLength(0);
     });
 
     it('detects duplicate environment names', () => {
       const result = validator.validateTypeSpecific(
-        { environments: [{ name: 'prod' }, { name: 'prod' }] }, 'environments'
+        { environments: [{ name: 'prod' }, { name: 'prod' }] },
+        'environments',
       );
       expect(result.errors).toContain('Duplicate environment name: prod');
     });
 
     it('detects missing environment name', () => {
-      const result = validator.validateTypeSpecific(
-        { environments: [{}] }, 'environments'
-      );
+      const result = validator.validateTypeSpecific({ environments: [{}] }, 'environments');
       expect(result.errors).toContain("Environment at index 0 missing 'name' field");
     });
 
     it('detects proxy rule missing pattern and url', () => {
-      const result = validator.validateTypeSpecific(
-        { rules: [{ target: 'http://target' }] }, 'proxy'
-      );
+      const result = validator.validateTypeSpecific({ rules: [{ target: 'http://target' }] }, 'proxy');
       expect(result.errors).toContain("Proxy rule at index 0 must have either 'pattern' or 'url'");
     });
 
     it('detects proxy rule missing target', () => {
-      const result = validator.validateTypeSpecific(
-        { rules: [{ pattern: '*.example.com' }] }, 'proxy'
-      );
+      const result = validator.validateTypeSpecific({ rules: [{ pattern: '*.example.com' }] }, 'proxy');
       expect(result.errors).toContain("Proxy rule at index 0 missing 'target' field");
     });
 
     it('validates metadata workspace ID format', () => {
       const result = validator.validateTypeSpecific(
         { workspaceId: 'invalid id!', workspaceName: 'Test', version: '1.0.0', createdAt: '' },
-        'metadata'
+        'metadata',
       );
       expect(result.errors).toContain('Invalid workspaceId format');
     });
@@ -184,7 +181,7 @@ describe('ConfigFileValidator', () => {
     it('accepts valid metadata workspace ID', () => {
       const result = validator.validateTypeSpecific(
         { workspaceId: 'my-workspace_1', workspaceName: 'Test', version: '1.0.0', createdAt: '' },
-        'metadata'
+        'metadata',
       );
       expect(result.errors).toHaveLength(0);
     });
@@ -192,9 +189,9 @@ describe('ConfigFileValidator', () => {
     it('warns on non-semver version in metadata', () => {
       const result = validator.validateTypeSpecific(
         { workspaceId: 'test', workspaceName: 'Test', version: 'v1', createdAt: '' },
-        'metadata'
+        'metadata',
       );
-      expect(result.warnings.some(w => w.includes('semver'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('semver'))).toBe(true);
     });
   });
 
@@ -214,7 +211,7 @@ describe('ConfigFileValidator', () => {
     it('creates default metadata config with custom workspace info', () => {
       const config = validator.createDefaultConfig('metadata', {
         workspaceId: 'ws-1',
-        workspaceName: 'My Team'
+        workspaceName: 'My Team',
       });
       expect(config.workspaceId).toBe('ws-1');
       expect(config.workspaceName).toBe('My Team');
@@ -264,7 +261,7 @@ describe('ConfigFileValidator', () => {
       const result = validator.mergeConfigs(base, override, 'environments');
       const envs = result.environments as Array<Record<string, unknown>>;
       expect(envs).toHaveLength(2);
-      expect(envs.find(e => e.name === 'prod')).toHaveProperty('url', 'new');
+      expect(envs.find((e) => e.name === 'prod')).toHaveProperty('url', 'new');
     });
 
     it('replaces proxy rules entirely', () => {

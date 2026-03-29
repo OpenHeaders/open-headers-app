@@ -1,13 +1,13 @@
-name: Release
+name: Release Desktop
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'desktop-v*'
 
 permissions:
-  contents: write  # This allows creating releases
-  packages: read   # This allows reading packages from GitHub Packages
+  contents: write
+  packages: read
 
 jobs:
   build:
@@ -22,46 +22,38 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: npm
-          cache-dependency-path: '**/package-lock.json'
+          cache: pnpm
 
-      # Install setuptools for Python 3.12+ compatibility (provides distutils for node-gyp)
       - name: Install Python setuptools (Windows)
         if: matrix.os == 'windows-latest'
         run: pip install setuptools
         shell: bash
 
-      # Install RPM tools on Linux runner only (using correct package name for Ubuntu)
       - name: Install RPM tools (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y rpm librpm-dev
-          echo "::debug::Installed RPM build tools"
           rpm --version
 
-      # Create cache directories for all platforms
       - name: Create Electron cache directories
         shell: bash
         run: |
           if [ "$RUNNER_OS" == "Linux" ]; then
-            mkdir -p ~/.cache/electron
-            mkdir -p ~/.cache/electron-builder
+            mkdir -p ~/.cache/electron ~/.cache/electron-builder
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            mkdir -p ~/Library/Caches/electron
-            mkdir -p ~/Library/Caches/electron-builder
-            mkdir -p ~/.electron
+            mkdir -p ~/Library/Caches/electron ~/Library/Caches/electron-builder ~/.electron
           elif [ "$RUNNER_OS" == "Windows" ]; then
-            mkdir -p ~/AppData/Local/electron/Cache
-            mkdir -p ~/AppData/Local/electron-builder/Cache
-            mkdir -p ~/.electron
+            mkdir -p ~/AppData/Local/electron/Cache ~/AppData/Local/electron-builder/Cache ~/.electron
           fi
 
-      # Cache Electron and electron-builder with platform-specific paths
       - name: Cache Electron
         uses: actions/cache@v4
         with:
@@ -73,77 +65,46 @@ jobs:
             ~/.electron
             ~/AppData/Local/electron/Cache
             ~/AppData/Local/electron-builder/Cache
-          key: ${{ runner.os }}-electron-cache-${{ hashFiles('package-lock.json') }}
+          key: ${{ runner.os }}-electron-cache-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-electron-cache-
 
-      # Cache Portable Git for Windows builds (avoids re-downloading 55MB + extracting 398MB)
       - name: Cache Portable Git
         if: matrix.os == 'windows-latest'
         uses: actions/cache@v4
         with:
-          path: build/windows/portable/PortableGit
-          key: portable-git-${{ hashFiles('scripts/build/download-portable-git.js') }}
+          path: apps/desktop/build/windows/portable/PortableGit
+          key: portable-git-${{ hashFiles('apps/desktop/scripts/build/download-portable-git.js') }}
 
-      # Prepare build directory
       - name: Prepare build directory
         run: |
-          if [ -d "dist" ]; then
-            rm -rf dist
-          fi
-          mkdir -p dist
+          rm -rf apps/desktop/dist
+          mkdir -p apps/desktop/dist
         shell: bash
 
-      # Install dependencies
       - name: Install dependencies
         run: |
-          # Use PAT if available for private packages, otherwise fall back to GITHUB_TOKEN
           if [ -n "${{ secrets.PACKAGES_PAT }}" ]; then
-            echo "Using PACKAGES_PAT for authentication"
             echo "@openheaders:registry=https://npm.pkg.github.com" >> ~/.npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.PACKAGES_PAT }}" >> ~/.npmrc
           else
-            echo "Using GITHUB_TOKEN for authentication (may not have package read permissions)"
             echo "@openheaders:registry=https://npm.pkg.github.com" >> ~/.npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
           fi
-
-          npm ci --include=optional
-
-          # Debug: Check if optional dependencies were installed
-          echo "=== Checking installed packages ==="
-          npm ls --depth=0 || true
-
-          # Check if Windows-specific module was installed
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            echo "=== Checking Windows-specific module ==="
-            npm ls @openheaders/windows-foreground || echo "Module not found in dependency tree"
-
-            echo "=== Checking node_modules directory ==="
-            if [ -d "node_modules/@openheaders" ]; then
-              echo "Found @openheaders directory:"
-              ls -la node_modules/@openheaders/ || true
-            else
-              echo "@openheaders directory not found in node_modules"
-            fi
-
-            if [ -d "node_modules/@openheaders/windows-foreground" ]; then
-              echo "Module directory contents:"
-              ls -la node_modules/@openheaders/windows-foreground/ || true
-            fi
-          fi
+          pnpm install --frozen-lockfile
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PACKAGES_PAT: ${{ secrets.PACKAGES_PAT }}
 
-      # Build application
-      - name: Build application
-        run: npm run build
+      - name: Build core package
+        run: pnpm --filter @openheaders/core build
+
+      - name: Build desktop application
+        run: pnpm --filter @openheaders/desktop build
         env:
           NODE_ENV: production
 
-      # macOS code signing (always — this is a release build)
       - name: Setup macOS code signing
         if: matrix.os == 'macos-latest'
         uses: apple-actions/import-codesign-certs@v3
@@ -152,73 +113,55 @@ jobs:
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
           keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
-      # Clean output directory
       - name: Clean electron-builder cache
         run: |
-          rm -rf dist
-          mkdir -p dist
+          rm -rf apps/desktop/dist
+          mkdir -p apps/desktop/dist
         shell: bash
 
-      # Detect if this is a beta build — skips Windows code signing
       - name: Detect beta build
         id: detect_beta
         run: |
           if [[ "${{ github.ref_name }}" =~ -beta[.0-9]*$ ]]; then
             echo "is_beta=true" >> $GITHUB_OUTPUT
-            echo "::notice::Detected beta build - skipping Windows code signing"
           else
             echo "is_beta=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
 
-      # Set package.json version to match the tag so artifact filenames align.
-      # This is transient — the change is never committed back to the repo.
       - name: Align package.json version with tag
-        run: node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='${GITHUB_REF_NAME/v/}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+        run: |
+          TAG="${GITHUB_REF_NAME/desktop-v/}"
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('apps/desktop/package.json'));p.version='$TAG';fs.writeFileSync('apps/desktop/package.json',JSON.stringify(p,null,2)+'\n')"
         shell: bash
 
-      # Build for macOS (signed + notarized)
       - name: Build macOS
         if: matrix.os == 'macos-latest'
-        run: |
-          npm run dist:mac
-        shell: bash
+        working-directory: apps/desktop
+        run: pnpm dist:mac
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build for Windows
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: |
-          echo "Building Windows (unsigned)"
-          npm run dist:win:unsigned
-        shell: bash
+        working-directory: apps/desktop
+        run: pnpm dist:win:unsigned
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Find the exact exe file name (only for production releases, not beta)
       - name: Find Windows Executable
         if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         id: find-exe
         run: |
-          $exeFile = Get-ChildItem -Path "dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
-
-          if ($null -eq $exeFile) {
-            Write-Error "No Setup.exe file found in dist directory"
-            exit 1
-          }
-
-          Write-Host "Found executable: $($exeFile.Name)"
-          Write-Host "Full path: $($exeFile.FullName)"
-
-          # Output the filename for the next step
+          $exeFile = Get-ChildItem -Path "apps/desktop/dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
+          if ($null -eq $exeFile) { Write-Error "No Setup.exe found"; exit 1 }
+          Write-Host "Found: $($exeFile.Name)"
           echo "EXE_FILENAME=$($exeFile.Name)" >> $env:GITHUB_OUTPUT
         shell: pwsh
 
-      # Sign Windows executables with SSL.com eSigner (only for production releases, not beta)
       - name: Sign Windows Executables
         if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         uses: sslcom/esigner-codesign@v1.3.1
@@ -228,7 +171,7 @@ jobs:
           password: ${{ secrets.ES_PASSWORD }}
           credential_id: ${{ secrets.CREDENTIAL_ID }}
           totp_secret: ${{ secrets.ES_TOTP_SECRET }}
-          file_path: dist/${{ steps.find-exe.outputs.EXE_FILENAME }}
+          file_path: apps/desktop/dist/${{ steps.find-exe.outputs.EXE_FILENAME }}
           malware_block: true
           override: true
           environment_name: PROD
@@ -236,125 +179,65 @@ jobs:
           jvm_max_memory: 1024M
           signing_method: v1
 
-      # Regenerate blockmap and update latest.yml after signing (signing changes the exe)
       - name: Update latest.yml and blockmap after signing
         if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         run: |
-          $exePath = "dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
+          $exePath = "apps/desktop/dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
           $blockmapPath = "$exePath.blockmap"
-          $latestYmlPath = "dist/latest.yml"
+          $latestYmlPath = "apps/desktop/dist/latest.yml"
 
-          Write-Host "=== Regenerating blockmap for signed exe ==="
-
-          # Find app-builder executable in node_modules
-          $appBuilder = "node_modules\app-builder-bin\win\x64\app-builder.exe"
+          $appBuilder = "apps/desktop/node_modules\app-builder-bin\win\x64\app-builder.exe"
           if (-not (Test-Path $appBuilder)) {
-            # Try alternative path
-            $appBuilder = Get-ChildItem -Path "node_modules" -Recurse -Filter "app-builder.exe" | Select-Object -First 1 -ExpandProperty FullName
+            $appBuilder = Get-ChildItem -Path "apps/desktop/node_modules" -Recurse -Filter "app-builder.exe" | Select-Object -First 1 -ExpandProperty FullName
           }
 
           if ($appBuilder -and (Test-Path $appBuilder)) {
-            Write-Host "Using app-builder at: $appBuilder"
             & $appBuilder blockmap --input $exePath --output $blockmapPath --compression gzip
-            Write-Host "Blockmap regenerated: $blockmapPath"
-          } else {
-            Write-Host "Warning: app-builder not found, skipping blockmap regeneration"
           }
 
-          # Compute new SHA512 hash (base64 encoded)
           $hash = Get-FileHash -Path $exePath -Algorithm SHA512
           $hashBytes = [byte[]]::new($hash.Hash.Length / 2)
           for ($i = 0; $i -lt $hash.Hash.Length; $i += 2) {
             $hashBytes[$i / 2] = [Convert]::ToByte($hash.Hash.Substring($i, 2), 16)
           }
           $base64Hash = [Convert]::ToBase64String($hashBytes)
-
-          # Get new file size
           $fileSize = (Get-Item $exePath).Length
 
-          Write-Host "Signed exe SHA512: $base64Hash"
-          Write-Host "Signed exe size: $fileSize"
-
-          # Read and update latest.yml
           $content = Get-Content $latestYmlPath -Raw
-
-          # Update sha512 (appears twice in the file)
           $content = $content -replace 'sha512: [A-Za-z0-9+/=]+', "sha512: $base64Hash"
-
-          # Update size
           $content = $content -replace 'size: \d+', "size: $fileSize"
-
-          # Write back
           Set-Content -Path $latestYmlPath -Value $content -NoNewline
-
-          Write-Host "=== Updated latest.yml ==="
-          Get-Content $latestYmlPath
         shell: pwsh
 
-      # Log that signing was skipped for beta
-      - name: Skip signing for beta
-        if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta == 'true'
-        run: echo "Skipping Windows code signing for beta build"
-
-      # Build for Linux
-      # Beta and production builds produce the same targets and architectures.
-      # No signing involved on Linux.
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'
+        working-directory: apps/desktop
         run: |
-          npm run dist:linux
+          pnpm dist:linux
 
-          # Verify RPM packages were built successfully
           if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-            echo "::warning::RPM packages not found in regular build, trying explicit RPM build..."
-            npm run dist:linux:rpm:x64
-            npm run dist:linux:rpm:arm64
-
-            # Check again after explicit build attempt
-            if [ $(find dist -name "*.rpm" -type f | wc -l) -eq 0 ]; then
-              echo "::error::Failed to build RPM packages even with explicit build"
-              exit 1
-            fi
-          else
-            echo "RPM packages successfully built in main Linux build:"
-            find dist -name "*.rpm" -type f | xargs ls -la
+            echo "::warning::RPM packages not found, trying explicit build..."
+            pnpm dist:linux:rpm:x64
+            pnpm dist:linux:rpm:arm64
           fi
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Organize artifacts into platform-specific directories to prevent conflicts
-      # without renaming files needed for electron-updater
-      - name: Organize artifacts
-        run: |
-          # Create platform-specific subdirectory
-          mkdir -p dist/${{ matrix.os }}
-
-          # Move files to platform-specific directories to avoid conflicts during download
-          # This preserves original filenames required by electron-updater
-          # Note: .blockmap files are required for differential updates
-          find dist -type f \( -name "*.yml" -o -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.blockmap" \) | while read file; do
-            filename=$(basename "$file")
-            # Only copy files, don't move, to avoid breaking electron-builder paths
-            cp "$file" "dist/${{ matrix.os }}/$filename"
-          done
-        shell: bash
-
-      # Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-artifacts
           path: |
-            dist/*.dmg
-            dist/*.exe
-            dist/*.zip
-            dist/*.blockmap
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
-            dist/*.yml
-            dist/install-open-headers.sh
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.zip
+            apps/desktop/dist/*.blockmap
+            apps/desktop/dist/*.AppImage
+            apps/desktop/dist/*.deb
+            apps/desktop/dist/*.rpm
+            apps/desktop/dist/*.yml
+            apps/desktop/dist/install-open-headers.sh
 
   release:
     needs: build
@@ -364,22 +247,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Determine release type based on tag pattern
-      # Beta tags create published prereleases, production tags create published releases
       - name: Determine release type
         id: release_type
         run: |
           TAG_NAME=${GITHUB_REF_NAME}
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-
           if [[ "$TAG_NAME" =~ -beta[.0-9]*$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "is_draft=false" >> $GITHUB_OUTPUT
-            echo "::notice::Detected beta release: $TAG_NAME - Creating published prerelease"
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
-            echo "is_draft=false" >> $GITHUB_OUTPUT
-            echo "::notice::Detected production release: $TAG_NAME - Creating published release"
           fi
 
       - name: Download artifacts
@@ -387,133 +263,71 @@ jobs:
         with:
           path: dist
 
-      # Process and deduplicate artifacts before release.
-      # electron-builder v25 always generates latest*.yml regardless of version string.
-      # allowPrerelease is the sole routing mechanism — no channel-specific yml files.
       - name: Process artifacts for release
         run: |
           mkdir -p processed_files
-          declare -A seen_files
 
-          # --- Windows ---
           if [ -d "dist/windows-latest-artifacts" ]; then
-            cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || echo "No exe files"
-            cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            if [ -f "dist/windows-latest-artifacts/latest.yml" ] && [ -z "${seen_files[latest.yml]}" ]; then
-              cp dist/windows-latest-artifacts/latest.yml processed_files/
-              seen_files["latest.yml"]=1
-            fi
+            cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || true
+            cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || true
+            cp dist/windows-latest-artifacts/latest.yml processed_files/ 2>/dev/null || true
           fi
 
-          # --- macOS ---
           if [ -d "dist/macos-latest-artifacts" ]; then
-            cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || echo "No dmg files"
-            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || echo "No zip files"
-            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || echo "No blockmap files"
-            if [ -f "dist/macos-latest-artifacts/latest-mac.yml" ] && [ -z "${seen_files[latest-mac.yml]}" ]; then
-              cp dist/macos-latest-artifacts/latest-mac.yml processed_files/
-              seen_files["latest-mac.yml"]=1
-            fi
+            cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || true
+            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || true
+            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || true
+            cp dist/macos-latest-artifacts/latest-mac.yml processed_files/ 2>/dev/null || true
           fi
 
-          # --- Linux ---
           if [ -d "dist/ubuntu-latest-artifacts" ]; then
-            cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/ 2>/dev/null || echo "No AppImage files"
-            cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || echo "No deb files"
-            cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || echo "Installation script not found"
-
-            echo "Copying RPM files to processed_files"
+            cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/ 2>/dev/null || true
+            cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || true
             find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
-
-            RPM_COUNT=$(find processed_files -name "*.rpm" 2>/dev/null | wc -l)
-            echo "Found $RPM_COUNT RPM files in processed_files directory"
-
-            if [ $RPM_COUNT -eq 0 ]; then
-              echo "::error::No RPM files found in artifacts"
-              exit 1
-            fi
-
-            for yml in latest-linux.yml latest-linux-arm64.yml; do
-              if [ -f "dist/ubuntu-latest-artifacts/$yml" ] && [ -z "${seen_files[$yml]}" ]; then
-                cp "dist/ubuntu-latest-artifacts/$yml" processed_files/
-                seen_files["$yml"]=1
-              fi
-            done
+            cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || true
+            cp dist/ubuntu-latest-artifacts/latest-linux.yml processed_files/ 2>/dev/null || true
+            cp dist/ubuntu-latest-artifacts/latest-linux-arm64.yml processed_files/ 2>/dev/null || true
           fi
 
           echo "Files prepared for release:"
           ls -la processed_files/
         shell: bash
 
-      - name: Generate Release Body with Downloads
+      - name: Generate Release Body
         id: generate_body
         run: |
-          VERSION=${GITHUB_REF_NAME/v/}
+          VERSION=${GITHUB_REF_NAME/desktop-v/}
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
 
-          # Add prerelease warning if applicable
           if [ "$IS_PRERELEASE" = "true" ]; then
-            cat > release_body.md << EOF
-          > ⚠️ **This is a beta build for early testing.**
-          > It may contain bugs. Please report any issues you encounter.
-
-          ## 📥 Download
-          Download the beta for your platform:
-          EOF
-          else
-            cat > release_body.md << EOF
-          ## 📥 Download
-          Download the latest version for your platform:
-          EOF
+            echo '> **This is a beta build for early testing.** It may contain bugs.' > release_body.md
+            echo '' >> release_body.md
           fi
 
           cat >> release_body.md << EOF
+          ## Downloads
 
           ### macOS
-          - [Intel (x64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg) (.dmg for macOS)
-          - [Apple Silicon (ARM64)](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg) (.dmg for macOS)
+          - [Intel (x64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
+          - [Apple Silicon (ARM64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg)
 
           ### Windows
-          - [Windows Installer](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe) (.exe for Windows)
+          - [Windows Installer](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe)
 
           ### Linux
-          - [AppImage x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x64.AppImage) (.AppImage for any Linux distro)
-          - [AppImage ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage) (.AppImage for any Linux distro)
-          - [Debian/Ubuntu x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb) (.deb for Debian/Ubuntu)
-          - [Debian/Ubuntu ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb) (.deb for Debian/Ubuntu)
-          - [Fedora/RHEL x64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm) (.rpm for Fedora/RHEL/CentOS)
-          - [Fedora/RHEL ARM64](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm) (.rpm for Fedora/RHEL/CentOS)
-
-          ### Other
-          - [Installation Script](https://github.com/OpenHeaders/open-headers-app/releases/download/$GITHUB_REF_NAME/install-open-headers.sh) (Helper script for Linux .AppImage installation)
-
-          ## 🚀 Installation & Startup
-
-          ### Windows
-          - **App Installation**: Run the installer (.exe) — the app is code-signed and trusted automatically
-          - **Startup**: Access from Start menu or desktop shortcut
-
-          ### macOS
-          - **Installation**: Click DMG and drag to Applications folder
-          - **Startup**: Launch from Applications or Spotlight
-
-          ### Linux
-          - **AppImage**: \`chmod +x OpenHeaders-*.AppImage && sudo ./install-open-headers.sh\`
-          - **DEB package**: \`sudo apt install ./open-headers_*.deb\`
-          - **RPM package**: \`sudo rpm -i open-headers-*.rpm\`
-          - **Startup for all**: Application menu or \`open-headers\` command
-
-          > **Note:** Following system reboot, the application launches automatically in background mode and resides in the system tray/menu bar.
-          > This default behavior can be configured through the application settings (Menu → Settings).
+          - [AppImage x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x64.AppImage)
+          - [AppImage ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage)
+          - [Debian/Ubuntu x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
+          - [Debian/Ubuntu ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
+          - [Fedora/RHEL x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm)
+          - [Fedora/RHEL ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
+          - [Install Script](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/install-open-headers.sh)
           EOF
 
-      # Create release using processed files
-      # Beta tags create published prereleases, production tags create published releases
       - name: Create Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          draft: ${{ steps.release_type.outputs.is_draft == 'true' }}
+          draft: false
           prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
           name: "${{ github.ref_name }}"
           files: processed_files/*

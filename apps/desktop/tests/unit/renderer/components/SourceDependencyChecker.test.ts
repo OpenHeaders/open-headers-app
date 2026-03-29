@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   checkSourceDependencies,
   isTemplateSource,
@@ -14,7 +14,12 @@ function makeSource(overrides: Partial<Source> = {}): Source {
 // ======================================================================
 describe('checkSourceDependencies', () => {
   it('returns empty array for source with no vars', () => {
-    expect(checkSourceDependencies(makeSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' }), {})).toEqual([]);
+    expect(
+      checkSourceDependencies(
+        makeSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json' }),
+        {},
+      ),
+    ).toEqual([]);
   });
 
   it('detects missing environment variable', () => {
@@ -23,34 +28,45 @@ describe('checkSourceDependencies', () => {
   });
 
   it('does not flag existing environment variable', () => {
-    const result = checkSourceDependencies(makeSource({ sourcePath: 'https://{{HOST}}/api' }), { HOST: 'auth.openheaders.io' });
+    const result = checkSourceDependencies(makeSource({ sourcePath: 'https://{{HOST}}/api' }), {
+      HOST: 'auth.openheaders.io',
+    });
     expect(result).not.toContain('env:HOST');
   });
 
   it('detects multiple missing variables', () => {
-    const result = checkSourceDependencies(makeSource({ sourcePath: '{{A}}', requestOptions: { headers: [{ key: 'h', value: '{{B}}' }] } }), {});
+    const result = checkSourceDependencies(
+      makeSource({ sourcePath: '{{A}}', requestOptions: { headers: [{ key: 'h', value: '{{B}}' }] } }),
+      {},
+    );
     expect(result).toContain('env:A');
     expect(result).toContain('env:B');
   });
 
   it('removes duplicate missing deps', () => {
     const result = checkSourceDependencies(makeSource({ sourcePath: '{{X}}' }), {});
-    expect(result.filter(d => d === 'env:X').length).toBe(1);
+    expect(result.filter((d) => d === 'env:X').length).toBe(1);
   });
 
   it('detects TOTP dependency when secret is missing', () => {
-    const result = checkSourceDependencies(makeSource({
-      sourcePath: 'https://api/[[TOTP_CODE]]',
-      requestOptions: { totpSecret: '' },
-    }), {});
+    const result = checkSourceDependencies(
+      makeSource({
+        sourcePath: 'https://api/[[TOTP_CODE]]',
+        requestOptions: { totpSecret: '' },
+      }),
+      {},
+    );
     expect(result).toContain('totp:secret');
   });
 
   it('does not flag TOTP when secret is present', () => {
-    const result = checkSourceDependencies(makeSource({
-      sourcePath: 'https://api/[[TOTP_CODE]]',
-      requestOptions: { totpSecret: 'JBSWY3DPEHPK3PXP' },
-    }), {});
+    const result = checkSourceDependencies(
+      makeSource({
+        sourcePath: 'https://api/[[TOTP_CODE]]',
+        requestOptions: { totpSecret: 'JBSWY3DPEHPK3PXP' },
+      }),
+      {},
+    );
     expect(result).not.toContain('totp:secret');
   });
 
@@ -77,8 +93,12 @@ describe('isTemplateSource', () => {
   });
 
   it('returns true when templates are in nested fields', () => {
-    expect(isTemplateSource(makeSource({
-      requestOptions: { headers: [{ key: 'auth', value: '{{TOKEN}}' }] },
-    }))).toBe(true);
+    expect(
+      isTemplateSource(
+        makeSource({
+          requestOptions: { headers: [{ key: 'auth', value: '{{TOKEN}}' }] },
+        }),
+      ),
+    ).toBe(true);
   });
 });

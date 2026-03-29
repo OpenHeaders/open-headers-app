@@ -3,9 +3,9 @@
  * Provides user-friendly error messages and recovery suggestions
  */
 
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage, toError } from '../../../../types/common';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
-import { toError, errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
@@ -22,10 +22,10 @@ const ERROR_TYPES = {
   TIMEOUT_ERROR: 'TIMEOUT_ERROR',
   INVALID_URL: 'INVALID_URL',
   GIT_NOT_FOUND: 'GIT_NOT_FOUND',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 } as const;
 
-type ErrorType = typeof ERROR_TYPES[keyof typeof ERROR_TYPES];
+type ErrorType = (typeof ERROR_TYPES)[keyof typeof ERROR_TYPES];
 
 interface ErrorPattern {
   type: ErrorType;
@@ -43,8 +43,8 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /could\s+not\s+read\s+from\s+remote\s+repository/i,
       /unauthorized/i,
       /403\s+forbidden/i,
-      /401\s+unauthorized/i
-    ]
+      /401\s+unauthorized/i,
+    ],
   },
   {
     type: ERROR_TYPES.NETWORK_ERROR,
@@ -55,8 +55,8 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /connection\s+timed\s+out/i,
       /operation\s+timed\s+out/i,
       /no\s+route\s+to\s+host/i,
-      /ssl\s+certificate\s+problem/i
-    ]
+      /ssl\s+certificate\s+problem/i,
+    ],
   },
   {
     type: ERROR_TYPES.REPOSITORY_ERROR,
@@ -66,8 +66,8 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /not\s+a\s+git\s+repository/i,
       /remote\s+origin\s+already\s+exists/i,
       /fatal:\s+bad\s+object/i,
-      /corrupted/i
-    ]
+      /corrupted/i,
+    ],
   },
   {
     type: ERROR_TYPES.BRANCH_ERROR,
@@ -77,8 +77,8 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /did\s+not\s+match\s+any\s+file/i,
       /pathspec.*did\s+not\s+match/i,
       /refspec.*does\s+not\s+match/i,
-      /invalid\s+branch\s+name/i
-    ]
+      /invalid\s+branch\s+name/i,
+    ],
   },
   {
     type: ERROR_TYPES.CONFLICT_ERROR,
@@ -88,8 +88,8 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /conflict.*automatic\s+merge/i,
       /unmerged\s+files/i,
       /you\s+have\s+unmerged\s+paths/i,
-      /fix\s+conflicts\s+and\s+then\s+commit/i
-    ]
+      /fix\s+conflicts\s+and\s+then\s+commit/i,
+    ],
   },
   {
     type: ERROR_TYPES.PERMISSION_ERROR,
@@ -99,25 +99,16 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /cannot\s+create\s+directory/i,
       /unable\s+to\s+create\s+file/i,
       /insufficient\s+permission/i,
-      /operation\s+not\s+permitted/i
-    ]
+      /operation\s+not\s+permitted/i,
+    ],
   },
   {
     type: ERROR_TYPES.TIMEOUT_ERROR,
-    patterns: [
-      /timeout/i,
-      /timed\s+out/i,
-      /operation\s+timed\s+out/i
-    ]
+    patterns: [/timeout/i, /timed\s+out/i, /operation\s+timed\s+out/i],
   },
   {
     type: ERROR_TYPES.INVALID_URL,
-    patterns: [
-      /invalid\s+url/i,
-      /malformed\s+url/i,
-      /url.*invalid/i,
-      /not\s+a\s+valid.*url/i
-    ]
+    patterns: [/invalid\s+url/i, /malformed\s+url/i, /url.*invalid/i, /not\s+a\s+valid.*url/i],
   },
   {
     type: ERROR_TYPES.GIT_NOT_FOUND,
@@ -125,9 +116,9 @@ const ERROR_PATTERNS: ErrorPattern[] = [
       /git.*not\s+found/i,
       /git.*not\s+recognized/i,
       /command\s+not\s+found.*git/i,
-      /'git'\s+is\s+not\s+recognized/i
-    ]
-  }
+      /'git'\s+is\s+not\s+recognized/i,
+    ],
+  },
 ];
 
 interface GitErrorContext {
@@ -198,7 +189,7 @@ class GitErrorHandler {
       recovery,
       retryable: this.isRetryable(errorType),
       requiresUserAction: this.requiresUserAction(errorType),
-      context
+      context,
     };
   }
 
@@ -233,35 +224,25 @@ class GitErrorHandler {
    */
   getFriendlyMessage(errorType: ErrorType, error: Error, context: GitErrorContext): string {
     const messages: Record<ErrorType, string> = {
-      [ERROR_TYPES.AUTH_ERROR]:
-        'Authentication failed. Please check your credentials and repository permissions.',
+      [ERROR_TYPES.AUTH_ERROR]: 'Authentication failed. Please check your credentials and repository permissions.',
 
-      [ERROR_TYPES.NETWORK_ERROR]:
-        'Network connection failed. Please check your internet connection and try again.',
+      [ERROR_TYPES.NETWORK_ERROR]: 'Network connection failed. Please check your internet connection and try again.',
 
-      [ERROR_TYPES.REPOSITORY_ERROR]:
-        'Repository not found or inaccessible. Please verify the URL is correct.',
+      [ERROR_TYPES.REPOSITORY_ERROR]: 'Repository not found or inaccessible. Please verify the URL is correct.',
 
-      [ERROR_TYPES.BRANCH_ERROR]:
-        `Branch '${String(context.branch ?? 'specified')}' not found in the repository.`,
+      [ERROR_TYPES.BRANCH_ERROR]: `Branch '${String(context.branch ?? 'specified')}' not found in the repository.`,
 
-      [ERROR_TYPES.CONFLICT_ERROR]:
-        'Git merge conflict detected. Manual resolution required.',
+      [ERROR_TYPES.CONFLICT_ERROR]: 'Git merge conflict detected. Manual resolution required.',
 
-      [ERROR_TYPES.PERMISSION_ERROR]:
-        'Permission denied. Please check file permissions and try again.',
+      [ERROR_TYPES.PERMISSION_ERROR]: 'Permission denied. Please check file permissions and try again.',
 
-      [ERROR_TYPES.TIMEOUT_ERROR]:
-        'Operation timed out. This might be due to a slow network or large repository.',
+      [ERROR_TYPES.TIMEOUT_ERROR]: 'Operation timed out. This might be due to a slow network or large repository.',
 
-      [ERROR_TYPES.INVALID_URL]:
-        'Invalid repository URL. Please check the URL format.',
+      [ERROR_TYPES.INVALID_URL]: 'Invalid repository URL. Please check the URL format.',
 
-      [ERROR_TYPES.GIT_NOT_FOUND]:
-        'Git is not installed or not found in PATH. Please install Git first.',
+      [ERROR_TYPES.GIT_NOT_FOUND]: 'Git is not installed or not found in PATH. Please install Git first.',
 
-      [ERROR_TYPES.UNKNOWN_ERROR]:
-        `An unexpected error occurred: ${error.message}`
+      [ERROR_TYPES.UNKNOWN_ERROR]: `An unexpected error occurred: ${error.message}`,
     };
 
     return messages[errorType] || messages[ERROR_TYPES.UNKNOWN_ERROR];
@@ -276,71 +257,71 @@ class GitErrorHandler {
         'Verify your access token or SSH key is correct',
         'Check if you have permission to access the repository',
         'For private repositories, ensure proper authentication is configured',
-        'Try regenerating your access token with appropriate permissions'
+        'Try regenerating your access token with appropriate permissions',
       ],
 
       [ERROR_TYPES.NETWORK_ERROR]: [
         'Check your internet connection',
         'Verify the repository URL is accessible',
-        'Check if you\'re behind a proxy or firewall',
-        'Try again in a few moments'
+        "Check if you're behind a proxy or firewall",
+        'Try again in a few moments',
       ],
 
       [ERROR_TYPES.REPOSITORY_ERROR]: [
         'Verify the repository URL is correct',
         'Check if the repository exists and is accessible',
         'Ensure you have the correct permissions',
-        'Try cloning the repository manually to verify access'
+        'Try cloning the repository manually to verify access',
       ],
 
       [ERROR_TYPES.BRANCH_ERROR]: [
         `Create the branch '${context.branch}' first`,
         'Use a different branch that exists',
         'Check available branches in the repository',
-        'Use the default branch (main/master)'
+        'Use the default branch (main/master)',
       ],
 
       [ERROR_TYPES.CONFLICT_ERROR]: [
         'Pull the latest changes from remote',
         'Resolve conflicts manually in affected files',
         'Consider using a merge tool',
-        'Commit resolved changes before proceeding'
+        'Commit resolved changes before proceeding',
       ],
 
       [ERROR_TYPES.PERMISSION_ERROR]: [
         'Run the application with appropriate permissions',
         'Check file and directory permissions',
         'Ensure the workspace directory is writable',
-        'Try running as administrator (if appropriate)'
+        'Try running as administrator (if appropriate)',
       ],
 
       [ERROR_TYPES.TIMEOUT_ERROR]: [
         'Check your network connection speed',
         'Try with a smaller repository or shallow clone',
         'Increase timeout settings if possible',
-        'Retry the operation'
+        'Retry the operation',
       ],
 
       [ERROR_TYPES.INVALID_URL]: [
         'Check the repository URL format',
         'Ensure the URL includes the protocol (https:// or git@)',
         'Remove any extra spaces or characters',
-        'Try copying the URL directly from the repository'
+        'Try copying the URL directly from the repository',
       ],
 
       [ERROR_TYPES.GIT_NOT_FOUND]: [
         'Install Git from https://git-scm.com',
         'Add Git to your system PATH',
         'Restart the application after installing Git',
-        'Verify Git installation by running "git --version"'
+        'Verify Git installation by running "git --version"',
       ],
 
       [ERROR_TYPES.UNKNOWN_ERROR]: [
         'Check the error message for specific details',
         'Try the operation again',
         'Check application logs for more information',
-        'Contact support if the issue persists'
-      ]
+        'Contact support if the issue persists',
+      ],
     };
 
     return suggestions[errorType] || suggestions[ERROR_TYPES.UNKNOWN_ERROR];
@@ -350,10 +331,7 @@ class GitErrorHandler {
    * Check if error is retryable
    */
   isRetryable(errorType: ErrorType): boolean {
-    const retryableTypes: ErrorType[] = [
-      ERROR_TYPES.NETWORK_ERROR,
-      ERROR_TYPES.TIMEOUT_ERROR
-    ];
+    const retryableTypes: ErrorType[] = [ERROR_TYPES.NETWORK_ERROR, ERROR_TYPES.TIMEOUT_ERROR];
 
     return retryableTypes.includes(errorType);
   }
@@ -367,7 +345,7 @@ class GitErrorHandler {
       ERROR_TYPES.CONFLICT_ERROR,
       ERROR_TYPES.PERMISSION_ERROR,
       ERROR_TYPES.GIT_NOT_FOUND,
-      ERROR_TYPES.INVALID_URL
+      ERROR_TYPES.INVALID_URL,
     ];
 
     return userActionTypes.includes(errorType);
@@ -395,15 +373,11 @@ class GitErrorHandler {
       const handled = this.handle(toError(error), context);
 
       // Re-throw as enhanced error
-      const enhancedError = this.createError(
-        handled.message,
-        handled.type,
-        {
-          original: errorMessage(error),
-          recovery: handled.recovery,
-          context: handled.context
-        }
-      );
+      const enhancedError = this.createError(handled.message, handled.type, {
+        original: errorMessage(error),
+        recovery: handled.recovery,
+        context: handled.context,
+      });
 
       throw enhancedError;
     }
@@ -440,13 +414,13 @@ class GitErrorHandler {
       message: handled.message,
       original: error.message,
       stack: error.stack,
-      context: handled.context
+      context: handled.context,
     });
 
     return handled;
   }
 }
 
-export { GitErrorHandler, ERROR_TYPES };
-export type { ErrorType, HandledError, EnhancedError };
+export type { EnhancedError, ErrorType, HandledError };
+export { ERROR_TYPES, GitErrorHandler };
 export default GitErrorHandler;

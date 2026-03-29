@@ -3,9 +3,9 @@
  * Provides import functionality and bulk actions
  */
 
-import React from 'react';
-import { Button, Space, Upload, Tooltip } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
+import { Button, Space, Tooltip, Upload } from 'antd';
+import React from 'react';
 
 import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '../shared';
 import type { WorkflowRecord } from './WorkflowTableColumns';
@@ -30,17 +30,13 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploa
     beforeUpload: (file: File) => {
       handleWorkflowImport(file, onImportSuccess, onImportError).catch(console.error);
       return false; // Prevent default upload behavior
-    }
+    },
   };
 
   return (
     <Upload {...uploadProps}>
       <Tooltip title="Import a session recording workflow from another user (.json)">
-        <Button 
-          type="primary"
-          icon={<UploadOutlined />}
-          size="middle"
-        >
+        <Button type="primary" icon={<UploadOutlined />} size="middle">
           Import Workflow
         </Button>
       </Tooltip>
@@ -67,21 +63,14 @@ export const WorkflowTableActions = ({
   onImportSuccess,
   onImportError,
   selectedWorkflows = [],
-  onBulkDelete
+  onBulkDelete,
 }: WorkflowTableActionsProps) => {
   return (
     <Space size="middle">
-      <WorkflowUpload 
-        onImportSuccess={onImportSuccess}
-        onImportError={onImportError}
-      />
-      
+      <WorkflowUpload onImportSuccess={onImportSuccess} onImportError={onImportError} />
+
       {selectedWorkflows.length > 0 && (
-        <Button 
-          danger 
-          size="middle"
-          onClick={() => onBulkDelete?.(selectedWorkflows)}
-        >
+        <Button danger size="middle" onClick={() => onBulkDelete?.(selectedWorkflows)}>
           Delete Selected ({selectedWorkflows.length})
         </Button>
       )}

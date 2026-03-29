@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock electron
 vi.mock('electron', () => ({
   default: { app: { getPath: () => '/tmp/test' } },
-  app: { getPath: () => '/tmp/test' }
+  app: { getPath: () => '/tmp/test' },
 }));
 
 // Mock mainLogger
@@ -13,9 +13,9 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
-    })
-  }
+      debug: vi.fn(),
+    }),
+  },
 }));
 
 import { ConfigFileDetector } from '../../../src/services/workspace/ConfigFileDetector';
@@ -61,7 +61,10 @@ describe('ConfigFileDetector', () => {
 
   describe('detectFileType()', () => {
     it('detects workspace-metadata type', () => {
-      const data = { workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890', workspaceName: 'OpenHeaders Staging Environment' };
+      const data = {
+        workspaceId: 'ws-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        workspaceName: 'OpenHeaders Staging Environment',
+      };
       expect(detector.detectFileType(data, 'metadata.json')).toBe('workspace-metadata');
     });
 
@@ -71,19 +74,30 @@ describe('ConfigFileDetector', () => {
     });
 
     it('detects environments type', () => {
-      expect(detector.detectFileType(makeConfigData({ environments: [{ name: 'Production' }] }), 'envs.json')).toBe('environments');
+      expect(detector.detectFileType(makeConfigData({ environments: [{ name: 'Production' }] }), 'envs.json')).toBe(
+        'environments',
+      );
     });
 
     it('detects proxy type when path contains "proxy"', () => {
-      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'proxy/rules.json')).toBe('proxy');
+      expect(
+        detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'proxy/rules.json'),
+      ).toBe('proxy');
     });
 
     it('detects rules type for rules array without "proxy" in path', () => {
-      expect(detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'config/rules.json')).toBe('rules');
+      expect(
+        detector.detectFileType(makeConfigData({ rules: [{ pattern: '*.openheaders.io' }] }), 'config/rules.json'),
+      ).toBe('rules');
     });
 
     it('detects combined type', () => {
-      expect(detector.detectFileType(makeConfigData({ sources: [{ url: 'https://auth.openheaders.io/oauth2/token' }] }), 'config.json')).toBe('combined');
+      expect(
+        detector.detectFileType(
+          makeConfigData({ sources: [{ url: 'https://auth.openheaders.io/oauth2/token' }] }),
+          'config.json',
+        ),
+      ).toBe('combined');
     });
 
     it('detects combined type with proxy field', () => {
@@ -103,38 +117,30 @@ describe('ConfigFileDetector', () => {
 
   describe('validateDetectedFiles()', () => {
     it('returns valid for workspace-metadata file', () => {
-      const files = [
-        { path: '/a', relativePath: 'a', type: 'workspace-metadata', valid: true }
-      ];
+      const files = [{ path: '/a', relativePath: 'a', type: 'workspace-metadata', valid: true }];
       const result = detector.validateDetectedFiles(files);
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
     it('returns valid for combined file', () => {
-      const files = [
-        { path: '/a', relativePath: 'a', type: 'combined', valid: true }
-      ];
+      const files = [{ path: '/a', relativePath: 'a', type: 'combined', valid: true }];
       const result = detector.validateDetectedFiles(files);
       expect(result.valid).toBe(true);
     });
 
     it('warns when no metadata or combined config', () => {
-      const files = [
-        { path: '/a', relativePath: 'a', type: 'headers', valid: true }
-      ];
+      const files = [{ path: '/a', relativePath: 'a', type: 'headers', valid: true }];
       const result = detector.validateDetectedFiles(files);
       expect(result.valid).toBe(true);
-      expect(result.warnings.some(w => w.includes('No workspace metadata'))).toBe(true);
+      expect(result.warnings.some((w) => w.includes('No workspace metadata'))).toBe(true);
     });
 
     it('returns invalid when files have errors', () => {
-      const files = [
-        { path: '/a', relativePath: 'a.json', type: 'unknown', valid: false, error: 'parse error' }
-      ];
+      const files = [{ path: '/a', relativePath: 'a.json', type: 'unknown', valid: false, error: 'parse error' }];
       const result = detector.validateDetectedFiles(files);
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.includes('a.json') && e.includes('parse error'))).toBe(true);
+      expect(result.errors.some((e) => e.includes('a.json') && e.includes('parse error'))).toBe(true);
     });
 
     it('handles empty file list', () => {

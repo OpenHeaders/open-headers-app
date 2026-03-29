@@ -5,8 +5,8 @@
  * and the browser extension (WS client).
  */
 
-import type { Source } from '../types/source';
 import type { HeaderEntry, SavedDataMap } from '../types/rules';
+import type { Source } from '../types/source';
 
 // ── Incoming messages (extension → desktop) ────────────────────────
 

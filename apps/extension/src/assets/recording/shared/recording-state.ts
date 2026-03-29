@@ -155,10 +155,10 @@ export class RecordingState {
       storageState: {
         localStorage: {},
         sessionStorage: {},
-        cookies: {}
+        cookies: {},
       },
       eventCount: 0,
-      lastCleanup: Date.now()
+      lastCleanup: Date.now(),
     };
 
     this.navigationHistory = [];
@@ -167,27 +167,39 @@ export class RecordingState {
     this.performance = {
       maxEventsPerPage: 10000,
       maxAccumulatedEvents: 50000,
-      cleanupInterval: 60000
+      cleanupInterval: 60000,
     };
   }
 
   isRealPageUrl(url: string): boolean {
-    return !!url &&
-           url !== '' &&
-           url !== 'about:blank' &&
-           !url.startsWith('chrome://') &&
-           !url.startsWith('edge://') &&
-           !url.startsWith('about:') &&
-           !url.startsWith('chrome-extension://');
+    return (
+      !!url &&
+      url !== '' &&
+      url !== 'about:blank' &&
+      !url.startsWith('chrome://') &&
+      !url.startsWith('edge://') &&
+      !url.startsWith('about:') &&
+      !url.startsWith('chrome-extension://')
+    );
   }
 
   detectFlowType(url: string): void {
-    if (!url || url === '' || url === 'about:blank' || url === 'chrome://newtab/' ||
-        url === 'edge://newtab/' || url === 'about:newtab') {
+    if (
+      !url ||
+      url === '' ||
+      url === 'about:blank' ||
+      url === 'chrome://newtab/' ||
+      url === 'edge://newtab/' ||
+      url === 'about:newtab'
+    ) {
       this.flowType = 'pre-nav';
       this.isPreNav = true;
-    } else if (this.redirectChain.length > 0 || url.includes('callback') ||
-               url.includes('oauth') || url.includes('auth')) {
+    } else if (
+      this.redirectChain.length > 0 ||
+      url.includes('callback') ||
+      url.includes('oauth') ||
+      url.includes('auth')
+    ) {
       this.flowType = 'oauth-redirect';
     } else {
       this.flowType = 'nav';
@@ -209,7 +221,7 @@ export class RecordingState {
       url,
       timestamp,
       relativeTime: timestamp - this.startTime,
-      flowType: this.flowType
+      flowType: this.flowType,
     });
     this.currentUrl = url;
   }
@@ -219,7 +231,7 @@ export class RecordingState {
       from,
       to,
       statusCode,
-      timestamp: Date.now() - this.startTime
+      timestamp: Date.now() - this.startTime,
     });
 
     if (to.includes('callback') || to.includes('oauth') || to.includes('auth')) {
@@ -231,18 +243,16 @@ export class RecordingState {
     this.performCleanupIfNeeded();
 
     if (pageData.events && this.accumulated.events.length < this.performance.maxAccumulatedEvents) {
-      const eventsToAdd = pageData.events.slice(0,
-        this.performance.maxAccumulatedEvents - this.accumulated.events.length
+      const eventsToAdd = pageData.events.slice(
+        0,
+        this.performance.maxAccumulatedEvents - this.accumulated.events.length,
       );
       this.accumulated.events.push(...eventsToAdd);
       this.accumulated.eventCount = this.accumulated.events.length;
     }
 
     if (pageData.console) {
-      this.accumulated.console = [
-        ...this.accumulated.console.slice(-900),
-        ...pageData.console.slice(-100)
-      ];
+      this.accumulated.console = [...this.accumulated.console.slice(-900), ...pageData.console.slice(-100)];
     }
 
     if (pageData.network) {
@@ -250,10 +260,7 @@ export class RecordingState {
     }
 
     if (pageData.storage) {
-      this.accumulated.storage = this.deduplicateStorageEvents([
-        ...this.accumulated.storage,
-        ...pageData.storage
-      ]);
+      this.accumulated.storage = this.deduplicateStorageEvents([...this.accumulated.storage, ...pageData.storage]);
     }
 
     if (pageData.storageState) {
@@ -270,8 +277,8 @@ export class RecordingState {
     this.accumulated.lastCleanup = now;
 
     if (this.accumulated.events.length > this.performance.maxEventsPerPage * 2) {
-      const snapshots = this.accumulated.events.filter(e => e.type === 2);
-      const nonSnapshots = this.accumulated.events.filter(e => e.type !== 2);
+      const snapshots = this.accumulated.events.filter((e) => e.type === 2);
+      const nonSnapshots = this.accumulated.events.filter((e) => e.type !== 2);
       const recentNonSnapshots = nonSnapshots.slice(-this.performance.maxEventsPerPage);
 
       this.accumulated.events = [...snapshots, ...recentNonSnapshots];
@@ -290,7 +297,7 @@ export class RecordingState {
       const event = events[i];
       const key = `${event.type}-${event.name}-${event.action}`;
 
-      if (!seen.has(key) || event.timestamp > (seen.get(key)!).timestamp) {
+      if (!seen.has(key) || event.timestamp > seen.get(key)!.timestamp) {
         seen.set(key, event);
       }
     }
@@ -310,8 +317,8 @@ export class RecordingState {
         duration: Date.now() - this.startTime,
         flowType: this.flowType,
         navigationCount: this.navigationHistory.length,
-        redirectCount: this.redirectChain.length
-      }
+        redirectCount: this.redirectChain.length,
+      },
     };
   }
 
@@ -323,7 +330,7 @@ export class RecordingState {
     const incrementalsBySnapshot = new Map<number, RrwebEvent[]>();
     let currentSnapshotTime = 0;
 
-    events.forEach(event => {
+    events.forEach((event) => {
       if (event.type === 2) {
         fullSnapshots.push(event);
         currentSnapshotTime = event.timestamp;
@@ -338,19 +345,19 @@ export class RecordingState {
       }
     });
 
-    fullSnapshots.forEach(snapshot => {
+    fullSnapshots.forEach((snapshot) => {
       compressed.push(snapshot);
 
       const incrementals = incrementalsBySnapshot.get(snapshot.timestamp) || [];
       let lastTime = snapshot.timestamp;
 
-      incrementals.forEach(event => {
-        const isMouseEvent = event.data && (
-          (event.data.source === 1) ||
-          (event.data.source === 6) ||
-          (event.data.source === 2) ||
-          (event.data.positions && event.data.positions.length > 0)
-        );
+      incrementals.forEach((event) => {
+        const isMouseEvent =
+          event.data &&
+          (event.data.source === 1 ||
+            event.data.source === 6 ||
+            event.data.source === 2 ||
+            (event.data.positions && event.data.positions.length > 0));
 
         const minInterval = isMouseEvent ? 8 : 16;
 
@@ -363,7 +370,10 @@ export class RecordingState {
 
     compressed.sort((a, b) => a.timestamp - b.timestamp);
 
-    logger.info('RecordingState', `Compressed ${events.length} events to ${compressed.length} (kept all ${fullSnapshots.length} snapshots)`);
+    logger.info(
+      'RecordingState',
+      `Compressed ${events.length} events to ${compressed.length} (kept all ${fullSnapshots.length} snapshots)`,
+    );
     return compressed;
   }
 
@@ -387,8 +397,8 @@ export class RecordingState {
         consoleCount: this.accumulated.console.length,
         networkCount: this.accumulated.network.length,
         storageCount: this.accumulated.storage.length,
-        storageState: this.accumulated.storageState
-      }
+        storageState: this.accumulated.storageState,
+      },
     };
 
     return JSON.stringify(essentialData);
@@ -441,14 +451,18 @@ export class RecordingState {
 
   getFormattedElapsedTime(): string {
     const elapsed = Math.floor(this.getElapsedTime() / 1000);
-    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const minutes = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0');
     const seconds = (elapsed % 60).toString().padStart(2, '0');
     return `${minutes}:${seconds}`;
   }
 
   getFormattedWidgetElapsedTime(): string {
     const elapsed = Math.floor(this.getWidgetElapsedTime() / 1000);
-    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const minutes = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0');
     const seconds = (elapsed % 60).toString().padStart(2, '0');
     return `${minutes}:${seconds}`;
   }

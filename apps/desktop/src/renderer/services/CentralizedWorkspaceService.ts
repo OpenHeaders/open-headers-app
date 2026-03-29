@@ -9,11 +9,11 @@
  *  - Exposes subscribe/notify for React hooks (same API as before)
  */
 
-import { createLogger } from '../utils/error-handling/logger';
-import type { Source, SourceUpdate, RefreshOptions } from '../../types/source';
-import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
 import type { ProxyRule } from '../../types/proxy';
-import type { RulesCollection, HeaderRule } from '../../types/rules';
+import type { HeaderRule, RulesCollection } from '../../types/rules';
+import type { RefreshOptions, Source, SourceUpdate } from '../../types/source';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
+import { createLogger } from '../utils/error-handling/logger';
 
 const log = createLogger('CentralizedWorkspaceService');
 
@@ -49,7 +49,7 @@ class CentralizedWorkspaceService {
       syncStatus: {},
       sources: [],
       rules: { header: [], request: [], response: [] },
-      proxyRules: []
+      proxyRules: [],
     };
 
     // Subscribe to state patches from main process
@@ -82,7 +82,11 @@ class CentralizedWorkspaceService {
   private notifyListeners(changedKeys: string[] = []): void {
     const state = this.getState();
     for (const listener of this.listeners) {
-      try { listener(state, changedKeys); } catch (e) { log.error('Listener error:', e); }
+      try {
+        listener(state, changedKeys);
+      } catch (e) {
+        log.error('Listener error:', e);
+      }
     }
   }
 
@@ -146,7 +150,7 @@ class CentralizedWorkspaceService {
     while (!this.isReady()) {
       if (Date.now() - start > timeout) throw new Error('Timeout waiting for workspace service');
       if (!this.state.loading && !this.initPromise) await this.initialize();
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
     }
     return true;
   }
@@ -216,7 +220,9 @@ class CentralizedWorkspaceService {
 
   // ── Workspace CRUD (IPC forwards) ──────────────────────────
 
-  async createWorkspace(workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType }): Promise<Workspace> {
+  async createWorkspace(
+    workspace: Partial<Workspace> & { id: string; name: string; type: WorkspaceType },
+  ): Promise<Workspace> {
     const result = await window.electronAPI.workspaceState.createWorkspace(workspace);
     if (!result.success) throw new Error(result.error ?? 'Failed to create workspace');
     return result.workspace!;

@@ -5,8 +5,8 @@
  * Validates version fetching and record opening IPC listener.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -14,7 +14,10 @@ import { renderHook, act } from '@testing-library/react';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 }));
 
@@ -71,15 +74,17 @@ describe('useAppInitialization', () => {
   it('fetches app version on mount', async () => {
     mockGetAppVersion.mockResolvedValue('2.12.0');
 
-    renderHook(() => useAppInitialization({
-      setAppVersion: mockSetAppVersion,
-      setActiveTab: mockSetActiveTab,
-      setCurrentRecord: mockSetCurrentRecord,
-    }));
+    renderHook(() =>
+      useAppInitialization({
+        setAppVersion: mockSetAppVersion,
+        setActiveTab: mockSetActiveTab,
+        setCurrentRecord: mockSetCurrentRecord,
+      }),
+    );
 
     // Wait for async version fetch
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(mockGetAppVersion).toHaveBeenCalled();
@@ -89,14 +94,16 @@ describe('useAppInitialization', () => {
   it('handles version fetch failure gracefully', async () => {
     mockGetAppVersion.mockRejectedValue(new Error('IPC error'));
 
-    renderHook(() => useAppInitialization({
-      setAppVersion: mockSetAppVersion,
-      setActiveTab: mockSetActiveTab,
-      setCurrentRecord: mockSetCurrentRecord,
-    }));
+    renderHook(() =>
+      useAppInitialization({
+        setAppVersion: mockSetAppVersion,
+        setActiveTab: mockSetActiveTab,
+        setCurrentRecord: mockSetCurrentRecord,
+      }),
+    );
 
     await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     // Should not throw, should not call setAppVersion
@@ -104,11 +111,13 @@ describe('useAppInitialization', () => {
   });
 
   it('registers record opening listener', () => {
-    renderHook(() => useAppInitialization({
-      setAppVersion: mockSetAppVersion,
-      setActiveTab: mockSetActiveTab,
-      setCurrentRecord: mockSetCurrentRecord,
-    }));
+    renderHook(() =>
+      useAppInitialization({
+        setAppVersion: mockSetAppVersion,
+        setActiveTab: mockSetActiveTab,
+        setCurrentRecord: mockSetCurrentRecord,
+      }),
+    );
 
     expect(capturedRecordCallback).not.toBeNull();
   });
@@ -118,15 +127,17 @@ describe('useAppInitialization', () => {
     mockLoadRecording.mockResolvedValue({ record: recordData });
     mockConvertNewRecordingFormat.mockReturnValue({ id: 'rec-1', events: [], converted: true });
 
-    renderHook(() => useAppInitialization({
-      setAppVersion: mockSetAppVersion,
-      setActiveTab: mockSetActiveTab,
-      setCurrentRecord: mockSetCurrentRecord,
-    }));
+    renderHook(() =>
+      useAppInitialization({
+        setAppVersion: mockSetAppVersion,
+        setActiveTab: mockSetActiveTab,
+        setCurrentRecord: mockSetCurrentRecord,
+      }),
+    );
 
     await act(async () => {
       capturedRecordCallback!({ recordId: 'rec-1' });
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(mockSetActiveTab).toHaveBeenCalledWith('record-viewer');
@@ -136,11 +147,13 @@ describe('useAppInitialization', () => {
   });
 
   it('unsubscribes record listener on unmount', () => {
-    const { unmount } = renderHook(() => useAppInitialization({
-      setAppVersion: mockSetAppVersion,
-      setActiveTab: mockSetActiveTab,
-      setCurrentRecord: mockSetCurrentRecord,
-    }));
+    const { unmount } = renderHook(() =>
+      useAppInitialization({
+        setAppVersion: mockSetAppVersion,
+        setActiveTab: mockSetActiveTab,
+        setCurrentRecord: mockSetCurrentRecord,
+      }),
+    );
 
     unmount();
 

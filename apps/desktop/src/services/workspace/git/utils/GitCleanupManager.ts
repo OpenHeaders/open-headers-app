@@ -3,11 +3,11 @@
  * Manages removal of temporary files, old repositories, and SSH keys
  */
 
+import child_process from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import child_process from 'child_process';
-import mainLogger from '../../../../utils/mainLogger';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { exec } = child_process;
@@ -75,13 +75,10 @@ class GitCleanupManager {
   /**
    * Perform full cleanup
    */
-  async performCleanup(options: { cleanTemp?: boolean; cleanOldRepos?: boolean; cleanSSHKeys?: boolean; force?: boolean } = {}): Promise<FullCleanupResult> {
-    const {
-      cleanTemp = true,
-      cleanOldRepos = true,
-      cleanSSHKeys = true,
-      force = false
-    } = options;
+  async performCleanup(
+    options: { cleanTemp?: boolean; cleanOldRepos?: boolean; cleanSSHKeys?: boolean; force?: boolean } = {},
+  ): Promise<FullCleanupResult> {
+    const { cleanTemp = true, cleanOldRepos = true, cleanSSHKeys = true, force = false } = options;
 
     log.info('Starting cleanup operation');
 
@@ -89,7 +86,7 @@ class GitCleanupManager {
       tempFiles: { cleaned: 0, freed: 0, errors: [] },
       oldRepos: { cleaned: 0, freed: 0, errors: [] },
       sshKeys: { cleaned: 0, errors: [] },
-      errors: []
+      errors: [],
     };
 
     try {
@@ -110,7 +107,6 @@ class GitCleanupManager {
 
       results.success = true;
       results.totalFreed = results.tempFiles.freed + results.oldRepos.freed;
-
     } catch (error) {
       log.error('Cleanup operation failed:', error);
       results.success = false;
@@ -130,7 +126,7 @@ class GitCleanupManager {
     const result: CleanupResult = {
       cleaned: 0,
       freed: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -163,7 +159,6 @@ class GitCleanupManager {
           result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
-
     } catch (error) {
       log.error('Failed to read temp directory:', error);
       result.errors.push(errorMessage(error));
@@ -181,7 +176,7 @@ class GitCleanupManager {
     const result: CleanupResult = {
       cleaned: 0,
       freed: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -216,7 +211,6 @@ class GitCleanupManager {
           result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
-
     } catch (error) {
       log.error('Failed to cleanup repositories:', error);
       result.errors.push(errorMessage(error));
@@ -233,7 +227,7 @@ class GitCleanupManager {
 
     const result: SSHCleanupResult = {
       cleaned: 0,
-      errors: []
+      errors: [],
     };
 
     try {
@@ -271,7 +265,6 @@ class GitCleanupManager {
           result.errors.push(`${file}: ${errorMessage(error)}`);
         }
       }
-
     } catch (error) {
       log.error('Failed to cleanup SSH keys:', error);
       result.errors.push(errorMessage(error));
@@ -366,14 +359,14 @@ class GitCleanupManager {
         path: this.tempDir,
         size: 0,
         fileCount: 0,
-        oldFileCount: 0
+        oldFileCount: 0,
       },
       sshDir: {
         path: this.sshDir,
         keyCount: 0,
-        oldKeyCount: 0
+        oldKeyCount: 0,
       },
-      totalSize: 0
+      totalSize: 0,
     };
 
     try {
@@ -411,7 +404,6 @@ class GitCleanupManager {
       }
 
       stats.totalSize = stats.tempDir.size;
-
     } catch (error) {
       log.error('Failed to get cleanup statistics:', error);
     }
@@ -495,6 +487,6 @@ class GitCleanupManager {
   }
 }
 
-export { GitCleanupManager, CLEANUP_POLICIES };
-export type { CleanupPaths, CleanupResult, SSHCleanupResult, FullCleanupResult, CleanupStats };
+export type { CleanupPaths, CleanupResult, CleanupStats, FullCleanupResult, SSHCleanupResult };
+export { CLEANUP_POLICIES, GitCleanupManager };
 export default GitCleanupManager;

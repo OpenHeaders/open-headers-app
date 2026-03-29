@@ -9,10 +9,10 @@
  * - Managing automatic backups
  */
 
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage, toErrno, toError } from '../../../../types/common';
+import type { EnvironmentMap, EnvironmentVariable } from '../../../../types/environment';
 import atomicWriter from '../../../../utils/atomicFileWriter';
-import type { EnvironmentVariable, EnvironmentMap } from '../../../../types/environment';
-import { toError, toErrno, errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
@@ -72,7 +72,11 @@ function countNonEmptyEnvValues(environments: EnvironmentMap | null | undefined)
 /**
  * Read a file with retry logic for transient errors using atomicWriter for proper coordination
  */
-async function readFileWithAtomicWriter(filePath: string, maxRetries = ENV_FILE_READ_MAX_RETRIES, retryDelay = ENV_FILE_READ_RETRY_DELAY): Promise<ReadFileResult> {
+async function readFileWithAtomicWriter(
+  filePath: string,
+  maxRetries = ENV_FILE_READ_MAX_RETRIES,
+  retryDelay = ENV_FILE_READ_RETRY_DELAY,
+): Promise<ReadFileResult> {
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -86,14 +90,13 @@ async function readFileWithAtomicWriter(filePath: string, maxRetries = ENV_FILE_
 
       // File exists and was read successfully
       return { exists: true, content };
-
     } catch (error) {
       lastError = toError(error);
 
       // For transient errors (EBUSY, EIO, EAGAIN, etc.), retry with exponential backoff
       if (attempt < maxRetries) {
         log.warn(`Retry ${attempt}/${maxRetries} reading ${filePath} via atomicWriter: ${errorMessage(error)}`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        await new Promise((resolve) => setTimeout(resolve, retryDelay * attempt));
       }
     }
   }
@@ -130,10 +133,15 @@ async function createBackupIfNeeded(fs: FsPromises, filePath: string): Promise<s
 /**
  * Clean up old backup files, keeping only the most recent ones
  */
-async function cleanupOldBackups(fs: FsPromises, workspacePath: string, pathModule: PathModule, maxBackups = 3): Promise<void> {
+async function cleanupOldBackups(
+  fs: FsPromises,
+  workspacePath: string,
+  pathModule: PathModule,
+  maxBackups = 3,
+): Promise<void> {
   try {
     const files = await fs.readdir(workspacePath);
-    const backupFiles = files.filter(f => f.includes('.backup-'));
+    const backupFiles = files.filter((f) => f.includes('.backup-'));
 
     // Group by original file name
     const backupGroups: Record<string, string[]> = {};
@@ -174,7 +182,7 @@ function extractVarData(varData: EnvironmentVariable): ExtractedVarData {
   return {
     value: varData.value ?? '',
     isSecret: varData.isSecret,
-    hasNonEmptyValue: !!varData.value
+    hasNonEmptyValue: !!varData.value,
   };
 }
 
@@ -200,21 +208,19 @@ function validateEnvironmentWrite(existingValueCount: number, newValueCount: num
     safe: lossPercentage < 50,
     lossPercentage,
     shouldBackup: lossPercentage > 50,
-    shouldBlock: false
+    shouldBlock: false,
   };
 }
 
+export type { ReadFileResult, WriteValidation };
 export {
+  cleanupOldBackups,
+  // Functions
+  countNonEmptyEnvValues,
+  createBackupIfNeeded,
   // Constants
   ENV_FILE_READ_MAX_RETRIES,
   ENV_FILE_READ_RETRY_DELAY,
-
-  // Functions
-  countNonEmptyEnvValues,
   readFileWithAtomicWriter,
-  createBackupIfNeeded,
-  cleanupOldBackups,
-  validateEnvironmentWrite
+  validateEnvironmentWrite,
 };
-
-export type { ReadFileResult, WriteValidation };

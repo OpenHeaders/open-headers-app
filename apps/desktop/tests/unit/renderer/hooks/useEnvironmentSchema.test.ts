@@ -3,8 +3,8 @@
  * Tests for useEnvironmentSchema hook — validates variable usage analysis and schema generation.
  */
 
-import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
@@ -120,7 +120,7 @@ describe('useEnvironmentSchema', () => {
           { name: 'OAUTH2_CLIENT_SECRET', isSecret: true },
           { name: 'API_GATEWAY_URL', isSecret: false },
           { name: 'UNUSED_LEGACY_VAR', isSecret: false },
-        ])
+        ]),
       );
     });
 
@@ -141,9 +141,7 @@ describe('useEnvironmentSchema', () => {
         'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
         'src-apikey-c3d4e5f6-a7b8-9012-cdef-123456789012',
       ]);
-      expect(schema.variableDefinitions.OAUTH2_CLIENT_ID.usedIn).toEqual([
-        'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-      ]);
+      expect(schema.variableDefinitions.OAUTH2_CLIENT_ID.usedIn).toEqual(['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890']);
     });
 
     it('adds example for URL-like variable names', () => {

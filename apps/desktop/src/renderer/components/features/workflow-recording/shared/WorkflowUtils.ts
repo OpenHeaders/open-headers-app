@@ -2,10 +2,10 @@
  * Utility functions for workflow operations
  */
 
-import React from 'react';
+import type React from 'react';
+import type { JsonObject } from '../../../../../types/common';
 import { showMessage } from '../../../../utils';
 import { createLogger } from '../../../../utils/error-handling/logger';
-import type { JsonObject } from '../../../../../types/common';
 
 const log = createLogger('WorkflowUtils');
 
@@ -40,7 +40,7 @@ export const deleteWorkflowRecording = async (recordingId: string) => {
       showMessage('error', 'Invalid recording ID');
       return false;
     }
-    
+
     if (!window.electronAPI?.deleteRecording) {
       log.warn('electronAPI.deleteRecording not available');
       showMessage('error', 'Delete functionality not available');
@@ -57,7 +57,6 @@ export const deleteWorkflowRecording = async (recordingId: string) => {
   }
 };
 
-
 /**
  * Applies navigation highlight to a workflow recording
  * @param {Function} applyHighlight - Highlight function from navigation context
@@ -65,7 +64,12 @@ export const deleteWorkflowRecording = async (recordingId: string) => {
  * @param {string} itemId - ID of the item to highlight
  * @param {number} delay - Delay before applying highlight (default: 500ms)
  */
-export const applyWorkflowRecordingHighlight = (applyHighlight: (target: string, id: string) => void, targetType: string, itemId: string, delay = 500) => {
+export const applyWorkflowRecordingHighlight = (
+  applyHighlight: (target: string, id: string) => void,
+  targetType: string,
+  itemId: string,
+  delay = 500,
+) => {
   setTimeout(() => {
     log.debug('Applying highlight for:', itemId);
     applyHighlight(targetType, itemId);
@@ -78,7 +82,11 @@ export const applyWorkflowRecordingHighlight = (applyHighlight: (target: string,
  * @param {Function} onSuccess - Success callback
  * @param {Function} onError - Error callback
  */
-export const handleWorkflowImport = async (file: File, onSuccess: ((data: JsonObject) => void) | null, onError: ((error: Error) => void) | null) => {
+export const handleWorkflowImport = async (
+  file: File,
+  onSuccess: ((data: JsonObject) => void) | null,
+  onError: ((error: Error) => void) | null,
+) => {
   try {
     if (!file || !(file instanceof File)) {
       const error = new Error('Invalid file provided for import');
@@ -87,12 +95,12 @@ export const handleWorkflowImport = async (file: File, onSuccess: ((data: JsonOb
       if (onError) onError(error);
       return;
     }
-    
+
     const fileName = file.name.toLowerCase();
     const isJson = fileName.endsWith('.json');
     const isHar = fileName.endsWith('.har');
     const isVideo = fileName.endsWith('.mp4') || fileName.endsWith('.webm') || fileName.endsWith('.avi');
-    
+
     if (!isJson && !isHar && !isVideo) {
       const error = new Error('Invalid file type. Supported formats: JSON, HAR, MP4, WebM, AVI');
       log.error(error.message);
@@ -100,54 +108,54 @@ export const handleWorkflowImport = async (file: File, onSuccess: ((data: JsonOb
       if (onError) onError(error);
       return;
     }
-    
+
     log.debug(`Importing workflow recording file: ${file.name} Type:`, { isJson, isHar, isVideo });
-    
+
     if (isVideo) {
       // Handle video import
       showMessage('error', 'Video import is not yet implemented. Please export recordings as JSON from the browser.');
       if (onError) onError(new Error('Video import not implemented'));
       return;
     }
-    
+
     if (isHar) {
       // Handle HAR import
       showMessage('error', 'HAR import is not yet implemented. Please export recordings as JSON from the browser.');
       if (onError) onError(new Error('HAR import not implemented'));
       return;
     }
-    
+
     // Handle JSON import
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const content = e.target?.result;
         const data = JSON.parse(content?.toString() ?? '');
-        
+
         // Extract tag and description from metadata if present
         let tag = null;
         let description = null;
-        
+
         if (data.metadata) {
           tag = data.metadata.tag || null;
           description = data.metadata.description || null;
         }
-        
+
         // Import the workflow recording data with tag and description
         if (!window.electronAPI?.saveUploadedRecording) {
           throw new Error('Save functionality not available');
         }
-        
+
         // Pass the recording data along with tag and description
         const recordingToSave = {
           ...data,
           tag,
-          description
+          description,
         };
-        
+
         await window.electronAPI.saveUploadedRecording(recordingToSave);
         showMessage('success', `Workflow recording imported from ${file.name}`);
-        
+
         if (onSuccess) onSuccess(data);
       } catch (error) {
         log.error('Error parsing imported file:', error);
@@ -171,12 +179,16 @@ export const handleWorkflowImport = async (file: File, onSuccess: ((data: JsonOb
  * @param {number} headerHeight - Height of the app header (default: 64px)
  * @returns {Function} Cleanup function
  */
-export const createStickyScrollHandler = (elementRef: React.RefObject<HTMLElement | null>, setIsSticky: (sticky: boolean) => void, headerHeight = 64) => {
+export const createStickyScrollHandler = (
+  elementRef: React.RefObject<HTMLElement | null>,
+  setIsSticky: (sticky: boolean) => void,
+  headerHeight = 64,
+) => {
   const handleScroll = () => {
     if (!elementRef?.current) return;
 
     const rect = elementRef.current.getBoundingClientRect();
-    
+
     // Element should be sticky when its top edge goes above the app header
     setIsSticky(rect.top <= headerHeight);
   };
@@ -185,18 +197,13 @@ export const createStickyScrollHandler = (elementRef: React.RefObject<HTMLElemen
   if (typeof window !== 'undefined') {
     window.addEventListener('scroll', handleScroll, { passive: true });
   }
-  
+
   // Also check for scrollable containers
-  const containers = [
-    '.content-container',
-    '.ant-tabs-content-holder', 
-    '.ant-tabs-content',
-    '.app-content'
-  ];
-  
+  const containers = ['.content-container', '.ant-tabs-content-holder', '.ant-tabs-content', '.app-content'];
+
   const containerElements: Element[] = [];
   if (typeof document !== 'undefined') {
-    containers.forEach(selector => {
+    containers.forEach((selector) => {
       const element = document.querySelector(selector);
       if (element) {
         element.addEventListener('scroll', handleScroll, { passive: true });
@@ -210,7 +217,7 @@ export const createStickyScrollHandler = (elementRef: React.RefObject<HTMLElemen
     if (typeof window !== 'undefined') {
       window.removeEventListener('scroll', handleScroll);
     }
-    containerElements.forEach(element => {
+    containerElements.forEach((element) => {
       if (element && element.removeEventListener) {
         element.removeEventListener('scroll', handleScroll);
       }

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  RULE_TYPES,
   createRule,
   createRulesStorage,
   exportForExtension,
   RULE_MESSAGE_TYPES,
+  RULE_TYPES,
   validateRule,
 } from '../../../../src/renderer/utils/data-structures/rulesStructure';
 import type { HeaderRule, PayloadRule, UrlRule } from '../../../../src/types/rules';

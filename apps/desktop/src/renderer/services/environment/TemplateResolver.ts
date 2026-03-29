@@ -2,6 +2,7 @@
  * TemplateResolver - Resolves variable templates in strings
  */
 import { createLogger } from '../../utils/error-handling/logger';
+
 const log = createLogger('TemplateResolver');
 
 class TemplateResolver {
@@ -15,41 +16,41 @@ class TemplateResolver {
   /**
    * Resolve template with variables
    */
-  resolveTemplate(template: string | null, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
+  resolveTemplate(
+    template: string | null,
+    variables: Record<string, string>,
+    options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {},
+  ) {
     if (!template || typeof template !== 'string') {
       return template;
     }
 
-    const { 
-      defaultValue = '', 
-      throwOnMissing = false,
-      logMissing = true 
-    } = options;
-    
+    const { defaultValue = '', throwOnMissing = false, logMissing = true } = options;
+
     const missingVars: string[] = [];
-    
+
     const resolved = template.replace(this.variablePattern, (match, varName) => {
-      if (variables.hasOwnProperty(varName)) {
+      if (Object.hasOwn(variables, varName)) {
         return variables[varName];
       }
-      
+
       missingVars.push(varName);
-      
+
       if (logMissing) {
         log.warn(`Variable '${varName}' not found in template resolution`);
       }
-      
+
       if (throwOnMissing) {
         throw new Error(`Variable '${varName}' not found`);
       }
-      
+
       return defaultValue;
     });
-    
+
     return {
       resolved,
       missingVars,
-      hasAllVars: missingVars.length === 0
+      hasAllVars: missingVars.length === 0,
     };
   }
 
@@ -63,14 +64,14 @@ class TemplateResolver {
 
     const variables = new Set<string>();
     let match;
-    
+
     // Reset regex lastIndex
     this.variablePattern.lastIndex = 0;
-    
+
     while ((match = this.variablePattern.exec(template)) !== null) {
       variables.add(match[1]);
     }
-    
+
     return Array.from(variables);
   }
 
@@ -81,7 +82,7 @@ class TemplateResolver {
     if (!template || typeof template !== 'string') {
       return false;
     }
-    
+
     // Reset regex lastIndex
     this.variablePattern.lastIndex = 0;
     return this.variablePattern.test(template);
@@ -90,13 +91,17 @@ class TemplateResolver {
   /**
    * Resolve template in an object recursively
    */
-  resolveObject(obj: unknown, variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}): unknown {
+  resolveObject(
+    obj: unknown,
+    variables: Record<string, string>,
+    options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {},
+  ): unknown {
     if (!obj || typeof obj !== 'object') {
       return this.resolveTemplate(obj as string, variables, options);
     }
 
     if (Array.isArray(obj)) {
-      return obj.map(item => this.resolveObject(item, variables, options));
+      return obj.map((item) => this.resolveObject(item, variables, options));
     }
 
     const resolved: Record<string, string | unknown> = {};
@@ -128,19 +133,22 @@ class TemplateResolver {
    */
   validateVariables(template: string | null, variables: Record<string, string>) {
     const required = this.extractVariables(template);
-    const missing = required.filter(varName => !variables.hasOwnProperty(varName as string));
-    
+    const missing = required.filter((varName) => !Object.hasOwn(variables, varName as string));
+
     return {
       isValid: missing.length === 0,
       missing,
-      required
+      required,
     };
   }
 
   /**
    * Create a resolver function with pre-bound variables
    */
-  createResolver(variables: Record<string, string>, options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {}) {
+  createResolver(
+    variables: Record<string, string>,
+    options: { defaultValue?: string; throwOnMissing?: boolean; logMissing?: boolean } = {},
+  ) {
     return (template: string | null) => this.resolveTemplate(template, variables, options);
   }
 }

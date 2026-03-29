@@ -5,9 +5,9 @@
  */
 
 import { useEffect } from 'react';
-import { convertNewRecordingFormat } from '../../utils/formatters/recordConverter';
+import type { RawRecordingRecord, Recording } from '../../../types/recording';
 import { createLogger } from '../../utils/error-handling/logger';
-import type { Recording, RawRecordingRecord } from '../../../types/recording';
+import { convertNewRecordingFormat } from '../../utils/formatters/recordConverter';
 
 const log = createLogger('useAppInitialization');
 
@@ -20,7 +20,11 @@ interface UseAppInitializationDeps {
 /**
  * Hook for managing app initialization effects
  */
-export function useAppInitialization({ setAppVersion, setActiveTab, setCurrentRecord }: UseAppInitializationDeps): void {
+export function useAppInitialization({
+  setAppVersion,
+  setActiveTab,
+  setCurrentRecord,
+}: UseAppInitializationDeps): void {
   useEffect(() => {
     const getAppVersion = async () => {
       try {

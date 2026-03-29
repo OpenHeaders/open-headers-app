@@ -1,4 +1,3 @@
-export { default as ConnectionsServer } from './ConnectionsServer';
+export { default as ConnectionsServer, default } from './ConnectionsServer';
 export * from './components';
 export * from './hooks';
-export { default } from './ConnectionsServer';

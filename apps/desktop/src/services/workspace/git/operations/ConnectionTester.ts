@@ -4,15 +4,15 @@
  */
 
 import electron from 'electron';
-import mainLogger from '../../../../utils/mainLogger';
-import { toError, errorMessage } from '../../../../types/common';
-import GitConnectionProgress from '../utils/GitConnectionProgress';
-import type { ProgressStep } from '../utils/GitConnectionProgress';
-import type { GitExecutor } from '../core/GitExecutor';
-import type GitAuthenticator from '../auth/GitAuthenticator';
-import type { ConfigFileDetector } from '../../ConfigFileDetector';
-import type { GitBranchManager } from '../repository/GitBranchManager';
+import { errorMessage, toError } from '../../../../types/common';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
+import mainLogger from '../../../../utils/mainLogger';
+import type { ConfigFileDetector } from '../../ConfigFileDetector';
+import type GitAuthenticator from '../auth/GitAuthenticator';
+import type { GitExecutor } from '../core/GitExecutor';
+import type { GitBranchManager } from '../repository/GitBranchManager';
+import type { ProgressStep } from '../utils/GitConnectionProgress';
+import GitConnectionProgress from '../utils/GitConnectionProgress';
 
 const { net } = electron;
 const { createLogger } = mainLogger;
@@ -99,7 +99,7 @@ class ConnectionTester {
       filePath,
       checkWriteAccess = false,
       isInvite = false,
-      onProgress
+      onProgress,
     } = options;
 
     const progress = new GitConnectionProgress(onProgress);
@@ -173,7 +173,9 @@ class ConnectionTester {
         } else {
           if (isInvite) {
             progress.error('Branch validation', `Branch '${branch}' not found - required for joining workspace`);
-            throw new Error(`Branch '${branch}' does not exist in the repository. Please contact the workspace administrator.`);
+            throw new Error(
+              `Branch '${branch}' does not exist in the repository. Please contact the workspace administrator.`,
+            );
           } else if (checkWriteAccess) {
             progress.warning('Branch validation', `Branch '${branch}' not found (will be created automatically)`);
           } else {
@@ -226,34 +228,32 @@ class ConnectionTester {
           repository: {
             url,
             defaultBranch: accessResult.defaultBranch || 'main',
-            isPrivate: accessResult.isPrivate ?? true
+            isPrivate: accessResult.isPrivate ?? true,
           },
           branch: {
             name: branch,
             exists: branchResult.exists,
             isDefault: branch === accessResult.defaultBranch,
-            alternatives: branchResult.alternatives
+            alternatives: branchResult.alternatives,
           },
           configuration: {
             hasConfig: configResult.hasConfig,
             configFiles: configResult.files,
-            configDir: configResult.configDir
+            configDir: configResult.configDir,
           },
-          warnings: this.collectWarnings(accessResult, branchResult, configResult)
+          warnings: this.collectWarnings(accessResult, branchResult, configResult),
         };
 
         progress.success('Connection test complete', 'All checks passed');
 
         return {
           ...result,
-          progressSteps: progress.getSummary()
+          progressSteps: progress.getSummary(),
         };
-
       } finally {
         // Cleanup authentication resources
         await this.authManager.cleanup(authType, authResult);
       }
-
     } catch (error) {
       log.error('Connection test failed:', error);
 
@@ -270,7 +270,7 @@ class ConnectionTester {
         error: errorMessage(error),
         errorType: this.classifyError(toError(error)),
         hint: this.getErrorHint(toError(error)),
-        progressSteps: progress.getSummary()
+        progressSteps: progress.getSummary(),
       };
     }
   }
@@ -280,10 +280,7 @@ class ConnectionTester {
    */
   async testRepositoryAccess(url: string, env: NodeJS.ProcessEnv): Promise<RepositoryAccessResult> {
     try {
-      const { stdout } = await this.executor.execute(
-        `ls-remote --heads "${url}"`,
-        { env, timeout: 30000 }
-      );
+      const { stdout } = await this.executor.execute(`ls-remote --heads "${url}"`, { env, timeout: 30000 });
 
       const branches = this.parseLsRemoteOutput(stdout);
       const defaultBranch = this.detectDefaultBranch(branches);
@@ -292,49 +289,49 @@ class ConnectionTester {
         accessible: true,
         branches,
         defaultBranch,
-        isPrivate: true
+        isPrivate: true,
       };
-
     } catch (error) {
       const isGitHub = url.includes('github.com');
       const hasToken = url.includes('@') && (url.includes('x-oauth-basic') || url.includes(':x-oauth-basic@'));
 
       if (isGitHub && hasToken) {
-        if (errorMessage(error).includes('Authentication failed') ||
-            errorMessage(error).includes('Invalid username or password') ||
-            errorMessage(error).includes('fatal: Authentication failed') ||
-            errorMessage(error).includes('remote: Invalid username or password')) {
+        if (
+          errorMessage(error).includes('Authentication failed') ||
+          errorMessage(error).includes('Invalid username or password') ||
+          errorMessage(error).includes('fatal: Authentication failed') ||
+          errorMessage(error).includes('remote: Invalid username or password')
+        ) {
           return {
             accessible: false,
-            error: 'Invalid GitHub access token. Please check your token has the required permissions.'
+            error: 'Invalid GitHub access token. Please check your token has the required permissions.',
           };
         }
       }
 
       if (errorMessage(error).includes('Authentication failed') && (!isGitHub || !hasToken)) {
         try {
-          const { stdout } = await this.executor.execute(
-            `ls-remote --heads "${this.stripAuth(url)}"`,
-            { timeout: 30000 }
-          );
+          const { stdout } = await this.executor.execute(`ls-remote --heads "${this.stripAuth(url)}"`, {
+            timeout: 30000,
+          });
 
           return {
             accessible: true,
             branches: this.parseLsRemoteOutput(stdout),
             defaultBranch: this.detectDefaultBranch(this.parseLsRemoteOutput(stdout)),
-            isPrivate: false
+            isPrivate: false,
           };
         } catch (publicError) {
           return {
             accessible: false,
-            error: 'Repository requires authentication'
+            error: 'Repository requires authentication',
           };
         }
       }
 
       return {
         accessible: false,
-        error: errorMessage(error)
+        error: errorMessage(error),
       };
     }
   }
@@ -342,41 +339,41 @@ class ConnectionTester {
   /**
    * Check if branch exists and get alternatives
    */
-  async checkBranch(url: string, branch: string, env: NodeJS.ProcessEnv): Promise<{ exists: boolean; alternatives: string[]; error?: string }> {
+  async checkBranch(
+    url: string,
+    branch: string,
+    env: NodeJS.ProcessEnv,
+  ): Promise<{ exists: boolean; alternatives: string[]; error?: string }> {
     try {
-      const { stdout } = await this.executor.execute(
-        `ls-remote --heads "${url}" "${branch}"`,
-        { env, timeout: 15000 }
-      );
+      const { stdout } = await this.executor.execute(`ls-remote --heads "${url}" "${branch}"`, { env, timeout: 15000 });
 
       const exists = stdout.trim().length > 0;
 
       if (!exists) {
-        const { stdout: allBranches } = await this.executor.execute(
-          `ls-remote --heads "${url}"`,
-          { env, timeout: 15000 }
-        );
+        const { stdout: allBranches } = await this.executor.execute(`ls-remote --heads "${url}"`, {
+          env,
+          timeout: 15000,
+        });
 
         const branches = this.parseLsRemoteOutput(allBranches);
         const alternatives = this.suggestAlternativeBranches(branch, branches);
 
         return {
           exists: false,
-          alternatives
+          alternatives,
         };
       }
 
       return {
         exists: true,
-        alternatives: []
+        alternatives: [],
       };
-
     } catch (error) {
       log.error('Failed to check branch:', error);
       return {
         exists: false,
         error: errorMessage(error),
-        alternatives: []
+        alternatives: [],
       };
     }
   }
@@ -384,22 +381,32 @@ class ConnectionTester {
   /**
    * Check for configuration files in repository
    */
-  async checkConfigFiles(url: string, branch: string, configDir?: string): Promise<{ hasConfig: boolean | null; requiresClone?: boolean; configDir: string; files: string[]; note?: string; error?: string }> {
+  async checkConfigFiles(
+    url: string,
+    branch: string,
+    configDir?: string,
+  ): Promise<{
+    hasConfig: boolean | null;
+    requiresClone?: boolean;
+    configDir: string;
+    files: string[];
+    note?: string;
+    error?: string;
+  }> {
     try {
       return {
         hasConfig: null,
         requiresClone: true,
         configDir: configDir || '.openheaders',
         files: [],
-        note: 'Configuration files can only be verified after cloning'
+        note: 'Configuration files can only be verified after cloning',
       };
-
     } catch (error) {
       return {
         hasConfig: false,
         error: errorMessage(error),
         configDir: configDir || '.openheaders',
-        files: []
+        files: [],
       };
     }
   }
@@ -411,8 +418,8 @@ class ConnectionTester {
     return output
       .trim()
       .split('\n')
-      .filter(line => line)
-      .map(line => {
+      .filter((line) => line)
+      .map((line) => {
         const parts = line.split('\t');
         if (parts.length >= 2) {
           return parts[1].replace('refs/heads/', '');
@@ -473,25 +480,23 @@ class ConnectionTester {
   classifyError(error: Error): string {
     const message = error.message.toLowerCase();
 
-    if (message.includes('permission denied') ||
-        message.includes('authentication') ||
-        message.includes('unauthorized')) {
+    if (
+      message.includes('permission denied') ||
+      message.includes('authentication') ||
+      message.includes('unauthorized')
+    ) {
       return 'AUTH_ERROR';
     }
 
-    if (message.includes('could not resolve host') ||
-        message.includes('network') ||
-        message.includes('timeout')) {
+    if (message.includes('could not resolve host') || message.includes('network') || message.includes('timeout')) {
       return 'NETWORK_ERROR';
     }
 
-    if (message.includes('repository not found') ||
-        message.includes('does not exist')) {
+    if (message.includes('repository not found') || message.includes('does not exist')) {
       return 'NOT_FOUND';
     }
 
-    if (message.includes('invalid') ||
-        message.includes('malformed')) {
+    if (message.includes('invalid') || message.includes('malformed')) {
       return 'INVALID_URL';
     }
 
@@ -525,7 +530,11 @@ class ConnectionTester {
   /**
    * Collect warnings from test results
    */
-  collectWarnings(accessResult: RepositoryAccessResult, branchResult: { exists: boolean; alternatives: string[]; name?: string }, configResult: { hasConfig: boolean | null; requiresClone?: boolean }): string[] {
+  collectWarnings(
+    accessResult: RepositoryAccessResult,
+    branchResult: { exists: boolean; alternatives: string[]; name?: string },
+    configResult: { hasConfig: boolean | null; requiresClone?: boolean },
+  ): string[] {
     const warnings: string[] = [];
 
     if (!branchResult.exists) {
@@ -568,7 +577,7 @@ class ConnectionTester {
       const patterns = [
         /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
         /^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/,
-        /^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/
+        /^https?:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
       ];
 
       for (const pattern of patterns) {
@@ -576,7 +585,7 @@ class ConnectionTester {
         if (match) {
           return {
             owner: match[1],
-            repo: match[2]
+            repo: match[2],
           };
         }
       }
@@ -590,13 +599,17 @@ class ConnectionTester {
   /**
    * Check if token has write access to a GitHub repository
    */
-  async checkGitHubWriteAccess(token: string, owner: string, repo: string): Promise<{ hasAccess: boolean; error?: string }> {
+  async checkGitHubWriteAccess(
+    token: string,
+    owner: string,
+    repo: string,
+  ): Promise<{ hasAccess: boolean; error?: string }> {
     return new Promise((resolve) => {
       const request = net.request({
         method: 'GET',
         protocol: 'https:',
         hostname: 'api.github.com',
-        path: `/repos/${owner}/${repo}`
+        path: `/repos/${owner}/${repo}`,
       });
 
       request.setHeader('Authorization', `token ${token}`);
@@ -608,7 +621,7 @@ class ConnectionTester {
         log.error('GitHub write access check timed out');
         resolve({
           hasAccess: false,
-          error: 'Timeout while checking repository permissions'
+          error: 'Timeout while checking repository permissions',
         });
       }, 10000);
 
@@ -625,7 +638,7 @@ class ConnectionTester {
             if (res.statusCode === 404) {
               resolve({
                 hasAccess: false,
-                error: `Repository ${owner}/${repo} not found or you don't have access to it.`
+                error: `Repository ${owner}/${repo} not found or you don't have access to it.`,
               });
               return;
             }
@@ -633,7 +646,7 @@ class ConnectionTester {
             if (res.statusCode === 403) {
               resolve({
                 hasAccess: false,
-                error: 'Access denied. Token may lack required permissions or rate limit exceeded.'
+                error: 'Access denied. Token may lack required permissions or rate limit exceeded.',
               });
               return;
             }
@@ -641,7 +654,7 @@ class ConnectionTester {
             if (res.statusCode !== 200) {
               resolve({
                 hasAccess: false,
-                error: `Failed to check repository access: HTTP ${res.statusCode}`
+                error: `Failed to check repository access: HTTP ${res.statusCode}`,
               });
               return;
             }
@@ -652,21 +665,23 @@ class ConnectionTester {
             if (!permissions) {
               resolve({
                 hasAccess: false,
-                error: 'Token only has read access to the repository. Write permissions are required to create and manage workspaces.'
+                error:
+                  'Token only has read access to the repository. Write permissions are required to create and manage workspaces.',
               });
             } else if (permissions.push === true || permissions.admin === true) {
               resolve({ hasAccess: true });
             } else {
               resolve({
                 hasAccess: false,
-                error: 'Token does not have write permissions to the repository. Please ensure the token has "repo" scope.'
+                error:
+                  'Token does not have write permissions to the repository. Please ensure the token has "repo" scope.',
               });
             }
           } catch (error) {
             log.error('Failed to parse GitHub API response:', error);
             resolve({
               hasAccess: false,
-              error: 'Failed to verify repository permissions'
+              error: 'Failed to verify repository permissions',
             });
           }
         });
@@ -677,7 +692,7 @@ class ConnectionTester {
         log.error('Failed to check GitHub write access:', error);
         resolve({
           hasAccess: false,
-          error: 'Network error while checking repository permissions'
+          error: 'Network error while checking repository permissions',
         });
       });
 
@@ -694,7 +709,7 @@ class ConnectionTester {
         method: 'GET',
         protocol: 'https:',
         hostname: 'api.github.com',
-        path: '/user'
+        path: '/user',
       });
 
       request.setHeader('Authorization', `token ${token}`);
@@ -719,17 +734,17 @@ class ConnectionTester {
           } else if (statusCode === 401) {
             resolve({
               valid: false,
-              error: 'Invalid GitHub access token. Please check your token is correct and not expired.'
+              error: 'Invalid GitHub access token. Please check your token is correct and not expired.',
             });
           } else if (statusCode === 403) {
             resolve({
               valid: false,
-              error: 'GitHub API rate limit exceeded or token lacks required permissions.'
+              error: 'GitHub API rate limit exceeded or token lacks required permissions.',
             });
           } else {
             resolve({
               valid: false,
-              error: `GitHub API returned unexpected status: ${statusCode}`
+              error: `GitHub API returned unexpected status: ${statusCode}`,
             });
           }
         });
@@ -746,6 +761,6 @@ class ConnectionTester {
   }
 }
 
-export { ConnectionTester };
 export type { ConnectionTestOptions, ConnectionTestResult };
+export { ConnectionTester };
 export default ConnectionTester;

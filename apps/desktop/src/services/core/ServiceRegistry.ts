@@ -41,7 +41,7 @@ class ServiceRegistry {
       initMethod,
       initialized: false,
       initPromise: null,
-      error: null
+      error: null,
     });
   }
 
@@ -61,7 +61,7 @@ class ServiceRegistry {
       initMethod: 'initialize',
       initialized: true,
       initPromise: null,
-      error: null
+      error: null,
     });
   }
 
@@ -84,7 +84,7 @@ class ServiceRegistry {
     const depths = this.getInitializationDepths();
 
     for (const group of depths) {
-      await Promise.all(group.map(name => this.initializeService(name)));
+      await Promise.all(group.map((name) => this.initializeService(name)));
     }
 
     this.initialized = true;
@@ -108,7 +108,7 @@ class ServiceRegistry {
         return 0;
       }
 
-      const maxDepDep = Math.max(...serviceInfo.dependencies.map(dep => getDepth(dep)));
+      const maxDepDep = Math.max(...serviceInfo.dependencies.map((dep) => getDepth(dep)));
       const depth = maxDepDep + 1;
       depthMap.set(name, depth);
       return depth;
@@ -122,7 +122,7 @@ class ServiceRegistry {
     const maxDepth = Math.max(...depthMap.values(), 0);
     const groups: string[][] = [];
     for (let d = 0; d <= maxDepth; d++) {
-      const group = this.initializationOrder.filter(name => depthMap.get(name) === d);
+      const group = this.initializationOrder.filter((name) => depthMap.get(name) === d);
       if (group.length > 0) groups.push(group);
     }
 
@@ -231,7 +231,7 @@ class ServiceRegistry {
       if (serviceInfo && serviceInfo.initialized) {
         try {
           const shutdownMethods = ['shutdown', 'destroy', 'close', 'stop'];
-          const shutdownMethod = shutdownMethods.find(method => hasMethod(serviceInfo.service, method));
+          const shutdownMethod = shutdownMethods.find((method) => hasMethod(serviceInfo.service, method));
 
           if (shutdownMethod && hasMethod(serviceInfo.service, shutdownMethod)) {
             await serviceInfo.service[shutdownMethod]();
@@ -254,7 +254,7 @@ class ServiceRegistry {
       status[name] = {
         initialized: info.initialized,
         error: info.error?.message || null,
-        dependencies: info.dependencies
+        dependencies: info.dependencies,
       };
     }
 

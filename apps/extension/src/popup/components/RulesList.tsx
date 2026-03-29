@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { AppstoreTwoTone, TagsTwoTone, ThunderboltTwoTone } from '@ant-design/icons';
 import { Tabs } from 'antd';
-import { TagsTwoTone, AppstoreTwoTone, ThunderboltTwoTone } from '@ant-design/icons';
-import HeaderTable from './HeaderTable';
-import ActiveRules from './ActiveRules';
-import TagManager from './TagManager';
+import type React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useHeader } from '../../hooks/useHeader';
 import { getBrowserAPI } from '../../types/browser';
+import ActiveRules from './ActiveRules';
+import HeaderTable from './HeaderTable';
+import TagManager from './TagManager';
 
 const RulesList: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -36,7 +37,9 @@ const RulesList: React.FC = () => {
     const handleTabUpdate = (_tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo, tab: chrome.tabs.Tab) => {
       if (changeInfo.status === 'complete' && tab.active) getCurrentTab();
     };
-    const handleTabActivated = () => { getCurrentTab(); };
+    const handleTabActivated = () => {
+      getCurrentTab();
+    };
 
     browserAPI.tabs.onUpdated.addListener(handleTabUpdate);
     browserAPI.tabs.onActivated.addListener(handleTabActivated);
@@ -62,17 +65,19 @@ const RulesList: React.FC = () => {
 
   const stats = useMemo(() => {
     const total = Object.keys(headerEntries).length;
-    const enabled = Object.values(headerEntries).filter(r => r.isEnabled !== false).length;
+    const enabled = Object.values(headerEntries).filter((r) => r.isEnabled !== false).length;
     const tags = new Set<string>();
-    Object.values(headerEntries).forEach(rule => { if (rule.tag) tags.add(rule.tag); });
-    const tagCount = tags.size + (Object.values(headerEntries).some(r => !r.tag) ? 1 : 0);
+    Object.values(headerEntries).forEach((rule) => {
+      if (rule.tag) tags.add(rule.tag);
+    });
+    const tagCount = tags.size + (Object.values(headerEntries).some((r) => !r.tag) ? 1 : 0);
 
     let activeOnCurrentTab = 0;
     if (currentTabDomain) {
-      activeOnCurrentTab = Object.values(headerEntries).filter(rule => {
+      activeOnCurrentTab = Object.values(headerEntries).filter((rule) => {
         if (rule.isEnabled === false) return false;
         if (!rule.domains || rule.domains.length === 0) return true;
-        return rule.domains.some(domain => {
+        return rule.domains.some((domain) => {
           if (domain === '*') return true;
           if (domain.startsWith('*.')) {
             const baseDomain = domain.substring(2);

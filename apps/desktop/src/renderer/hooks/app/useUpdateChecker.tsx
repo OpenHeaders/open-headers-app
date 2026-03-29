@@ -4,9 +4,10 @@
  * Provides update checking functionality with notification handling.
  */
 
-import React, { useRef } from 'react';
-import { notification } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
+import { notification } from 'antd';
+import type React from 'react';
+import { useRef } from 'react';
 
 export interface UpdateNotificationHandle {
   checkForUpdates: (isManual: boolean) => void;
@@ -35,13 +36,13 @@ export function useUpdateChecker(): UseUpdateCheckerReturn {
         description: 'Looking for new versions…',
         duration: 0,
         key: 'checking-updates',
-        icon: loadingIcon
+        icon: loadingIcon,
       });
     }
   };
 
   return {
     updateNotificationRef,
-    handleCheckForUpdates
+    handleCheckForUpdates,
   };
 }

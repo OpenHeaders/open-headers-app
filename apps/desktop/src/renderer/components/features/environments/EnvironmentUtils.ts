@@ -2,13 +2,13 @@
  * Utility functions for environment variable operations
  */
 
-import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
-import { showMessage } from '../../../utils/ui/messageUtil';
-import type { Source } from '../../../../types/source';
+import type { EnvironmentMap, EnvironmentVariables } from '../../../../types/environment';
 import type { HeaderRule } from '../../../../types/rules';
-import type { EnvironmentVariables, EnvironmentMap } from '../../../../types/environment';
-
+import type { Source } from '../../../../types/source';
 import { createLogger } from '../../../utils/error-handling/logger';
+import { showMessage } from '../../../utils/ui/messageUtil';
+import { VARIABLE_TEMPLATE_REGEX } from './EnvironmentTypes';
+
 const log = createLogger('EnvironmentUtils');
 
 /** Rules object containing header rules */
@@ -30,9 +30,9 @@ interface VariableUsageInfo {
  */
 export const extractVariables = (text: string): string[] => {
   if (!text || typeof text !== 'string') return [];
-  
+
   const matches = text.match(VARIABLE_TEMPLATE_REGEX) || [];
-  return matches.map(match => match.slice(2, -2)); // Remove {{ and }}
+  return matches.map((match) => match.slice(2, -2)); // Remove {{ and }}
 };
 
 /**
@@ -42,9 +42,13 @@ export const extractVariables = (text: string): string[] => {
  * @param {Object} rules - Rules object containing header rules
  * @returns {string[]} Array of missing variable names
  */
-export const checkMissingVariables = (sources: Source[], targetEnvironment: EnvironmentVariables, rules: RulesConfig | null = null): string[] => {
+export const checkMissingVariables = (
+  sources: Source[],
+  targetEnvironment: EnvironmentVariables,
+  rules: RulesConfig | null = null,
+): string[] => {
   const missingVars = new Set<string>();
-  
+
   if (!sources || !Array.isArray(sources)) {
     log.warn('Invalid sources provided to checkMissingVariables');
     return [];
@@ -54,31 +58,31 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Envi
     if (source.sourceType === 'http') {
       // Check URL for variables
       const urlVars = extractVariables(source.sourcePath || '');
-      urlVars.forEach(varName => {
+      urlVars.forEach((varName) => {
         if (!targetEnvironment[varName]) {
           missingVars.add(varName);
         }
       });
-      
+
       // Check headers
       if (source.requestOptions?.headers) {
         source.requestOptions.headers.forEach((header) => {
           const headerVars = extractVariables(header.value || '');
-          headerVars.forEach(varName => {
+          headerVars.forEach((varName) => {
             if (!targetEnvironment[varName]) {
               missingVars.add(varName);
             }
           });
         });
       }
-      
+
       // Check body and totpSecret
       const reqOpts = source.requestOptions;
       if (reqOpts) {
         for (const fieldValue of [reqOpts.body, reqOpts.totpSecret]) {
           if (fieldValue) {
             const fieldVars = extractVariables(fieldValue);
-            fieldVars.forEach(varName => {
+            fieldVars.forEach((varName) => {
               if (!targetEnvironment[varName]) {
                 missingVars.add(varName);
               }
@@ -91,18 +95,18 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Envi
       if (source.requestOptions?.queryParams) {
         source.requestOptions.queryParams.forEach((param) => {
           const paramVars = extractVariables(param.value || '');
-          paramVars.forEach(varName => {
+          paramVars.forEach((varName) => {
             if (!targetEnvironment[varName]) {
               missingVars.add(varName);
             }
           });
         });
       }
-      
+
       // Check JSON filter path
       if (source.jsonFilter?.enabled && source.jsonFilter?.path) {
         const filterVars = extractVariables(source.jsonFilter.path || '');
-        filterVars.forEach(varName => {
+        filterVars.forEach((varName) => {
           if (!targetEnvironment[varName]) {
             missingVars.add(varName);
           }
@@ -110,7 +114,7 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Envi
       }
     }
   });
-  
+
   // Check header rules for environment variables
   if (rules && rules.header && Array.isArray(rules.header)) {
     rules.header.forEach((rule: HeaderRule) => {
@@ -123,7 +127,7 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Envi
       }
     });
   }
-  
+
   return Array.from(missingVars);
 };
 
@@ -136,12 +140,12 @@ export const checkMissingVariables = (sources: Source[], targetEnvironment: Envi
 export const generateUniqueEnvironmentName = (baseName: string, existingEnvironments: EnvironmentMap): string => {
   let newName = `${baseName}-copy`;
   let counter = 1;
-  
+
   while (existingEnvironments[newName]) {
     newName = `${baseName}-copy-${counter}`;
     counter++;
   }
-  
+
   return newName;
 };
 
@@ -152,7 +156,7 @@ export const generateUniqueEnvironmentName = (baseName: string, existingEnvironm
  */
 export const sourceUsesVariables = (source: Source | null): boolean => {
   if (!source) return false;
-  
+
   const sourceStr = JSON.stringify(source);
   return sourceStr.includes('{{') && sourceStr.includes('}}');
 };
@@ -164,7 +168,7 @@ export const sourceUsesVariables = (source: Source | null): boolean => {
  */
 export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
   if (!sources || !Array.isArray(sources)) return [];
-  
+
   return sources.filter(sourceUsesVariables);
 };
 
@@ -176,15 +180,20 @@ export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
  * @param {Object} rules - Rules object for rule name lookup
  * @returns {Array} Array of formatted source info
  */
-export const formatVariableUsage = (varName: string, sourceIds: string[], sources: Source[], rules: RulesConfig | null = null): VariableUsageInfo[] => {
+export const formatVariableUsage = (
+  varName: string,
+  sourceIds: string[],
+  sources: Source[],
+  rules: RulesConfig | null = null,
+): VariableUsageInfo[] => {
   if (!sourceIds || !Array.isArray(sourceIds)) return [];
-  
-  return sourceIds.map(sourceId => {
+
+  return sourceIds.map((sourceId) => {
     // Check if this is a rule identifier
     if (sourceId.startsWith('rule-')) {
       const ruleId = sourceId.substring(5); // Remove 'rule-' prefix
       let ruleName = `Rule #${ruleId}`;
-      
+
       // Try to find the actual rule to get its name
       if (rules && rules.header) {
         const rule = rules.header.find((r: HeaderRule) => r.id === ruleId);
@@ -192,20 +201,20 @@ export const formatVariableUsage = (varName: string, sourceIds: string[], source
           ruleName = rule.headerName || `Header Rule #${ruleId}`;
         }
       }
-      
+
       return {
         sourceId: sourceId,
         sourceName: ruleName,
-        isRule: true
+        isRule: true,
       };
     }
-    
+
     // Regular source
     const source = sources.find((s: Source) => s.sourceId === sourceId);
     return {
       sourceId,
       sourceName: source?.sourceName || `Source ${sourceId}`,
-      isRule: false
+      isRule: false,
     };
   });
 };

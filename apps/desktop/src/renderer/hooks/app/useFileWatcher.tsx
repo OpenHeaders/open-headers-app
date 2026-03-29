@@ -6,6 +6,7 @@
 
 import { useEffect } from 'react';
 import { createLogger } from '../../utils/error-handling/logger';
+
 const log = createLogger('useFileWatcher');
 
 interface UseFileWatcherDeps {

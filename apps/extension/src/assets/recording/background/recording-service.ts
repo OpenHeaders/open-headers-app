@@ -8,14 +8,14 @@
  * - Uses atomic tryTransition to prevent TOCTOU races
  */
 
-import { RecordingStateMachine, RecordingStates } from '../shared/state-machine';
-import { RecordingState } from '../shared/recording-state';
-import { MESSAGE_TYPES } from '../shared/constants';
-import { tabs, downloads } from '../../../utils/browser-api';
-import { isWebSocketConnected, sendViaWebSocket, sendRecordingViaWebSocket } from '../../../background/websocket.js';
+import { isWebSocketConnected, sendRecordingViaWebSocket, sendViaWebSocket } from '../../../background/websocket.js';
+import type { IRecordingService, RecordingEvent } from '../../../types/recording';
+import { downloads, tabs } from '../../../utils/browser-api';
 import { DisplayDetector } from '../../../utils/display-detector';
 import { logger } from '../../../utils/logger';
-import type { RecordingEvent, IRecordingService } from '../../../types/recording';
+import { MESSAGE_TYPES } from '../shared/constants';
+import { RecordingState } from '../shared/recording-state';
+import { RecordingStateMachine, RecordingStates } from '../shared/state-machine';
 
 declare const browser: typeof chrome | undefined;
 
@@ -105,16 +105,18 @@ export class RecordingService implements IRecordingService {
           isRecording: state === RecordingStates.RECORDING || state === RecordingStates.PRE_NAVIGATION,
           isPreNav: state === RecordingStates.PRE_NAVIGATION,
           recordingId: recording?.recordId,
-          startTime: recording?.actualStartTime || recording?.startTime
-        }
+          startTime: recording?.actualStartTime || recording?.startTime,
+        },
       });
     } catch (error) {
       const err = error as Error;
       // Silently ignore expected errors (tab closed, context invalidated, etc.)
-      if (!err.message?.includes('tab') &&
-          !err.message?.includes('context') &&
-          !err.message?.includes('receiving end does not exist') &&
-          !err.message?.includes('Could not establish connection')) {
+      if (
+        !err.message?.includes('tab') &&
+        !err.message?.includes('context') &&
+        !err.message?.includes('receiving end does not exist') &&
+        !err.message?.includes('Could not establish connection')
+      ) {
         logger.info('RecordingService', `Could not notify tab ${tabId}:`, err.message);
       }
     }
@@ -142,10 +144,7 @@ export class RecordingService implements IRecordingService {
       });
       const isPreNavigation = this.isNewTabUrl(tab.url);
 
-      const recordingState = new RecordingState(
-        `recording_${Date.now()}`,
-        Date.now()
-      );
+      const recordingState = new RecordingState(`recording_${Date.now()}`, Date.now());
 
       recordingState.tabId = tabId;
       recordingState.currentUrl = tab.url || 'about:blank';
@@ -167,8 +166,8 @@ export class RecordingService implements IRecordingService {
           status: isPreNavigation ? 'pre_navigation' : 'active',
           isPreNavigation,
           title: tab.title,
-          tabId: tabId
-        }
+          tabId: tabId,
+        },
       });
 
       if (!isPreNavigation) {
@@ -179,8 +178,8 @@ export class RecordingService implements IRecordingService {
           data: {
             isInitial: true,
             title: tab.title,
-            transitionType: 'start_recording'
-          }
+            transitionType: 'start_recording',
+          },
         });
       }
 
@@ -216,12 +215,12 @@ export class RecordingService implements IRecordingService {
           windowId: tab.windowId,
           recordingId: recordingState.recordId,
           timestamp: Date.now(),
-          displayInfo: displayInfo
+          displayInfo: displayInfo,
         };
 
         const sent = sendViaWebSocket({
           type: 'startSyncRecording',
-          data: syncData
+          data: syncData,
         });
 
         if (sent) {
@@ -238,7 +237,7 @@ export class RecordingService implements IRecordingService {
             world: 'ISOLATED' as chrome.scripting.ExecutionWorld,
           });
 
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
           logger.debug('RecordingService', 'Content script injected, it will check recording state');
         } catch (error) {
           logger.info('RecordingService', 'Failed to inject content script:', (error as Error).message);
@@ -253,9 +252,8 @@ export class RecordingService implements IRecordingService {
         startTime: recordingState.startTime,
         status: isPreNavigation ? 'pre_navigation' : 'active',
         url: tab.url,
-        title: tab.title
+        title: tab.title,
       };
-
     } catch (error) {
       this.stateMachine.tryTransition(tabId, 'ERROR', { error: (error as Error).message });
       throw error;
@@ -309,8 +307,8 @@ export class RecordingService implements IRecordingService {
             finalUrl: tab.url,
             finalTitle: tab.title,
             duration: Date.now() - (recordingState.actualStartTime || recordingState.startTime),
-            totalEvents: this.recordingData.get(recordingState.recordId)?.length || 0
-          }
+            totalEvents: this.recordingData.get(recordingState.recordId)?.length || 0,
+          },
         });
       } catch (error) {
         logger.info('RecordingService', 'Could not add stop event:', error);
@@ -337,7 +335,7 @@ export class RecordingService implements IRecordingService {
         title: tabInfo.title,
         events: events,
         preNavTimeAdjustment: recordingState.preNavTimeAdjustment,
-        hasVideoSync: recordingState.hasVideoSync || false
+        hasVideoSync: recordingState.hasVideoSync || false,
       };
 
       if (recordingState.hasVideoSync && isWebSocketConnected()) {
@@ -345,8 +343,8 @@ export class RecordingService implements IRecordingService {
           type: 'stopSyncRecording',
           data: {
             recordingId: recordingState.recordId,
-            timestamp: Date.now()
-          }
+            timestamp: Date.now(),
+          },
         });
       }
 
@@ -391,18 +389,24 @@ export class RecordingService implements IRecordingService {
   private async sendStopToContentScript(tabId: number): Promise<void> {
     try {
       await new Promise<void>((resolve) => {
-        tabs.sendMessage(tabId, {
-          type: MESSAGE_TYPES.STOP_RECORDING,
-          action: 'stopRecording'
-        }, () => {
-          if (browserAPI.runtime.lastError) {
-            if (!browserAPI.runtime.lastError.message?.includes('tab was closed') &&
-                !browserAPI.runtime.lastError.message?.includes('context invalidated')) {
-              logger.info('RecordingService', 'Could not send stop message:', browserAPI.runtime.lastError.message);
+        tabs.sendMessage(
+          tabId,
+          {
+            type: MESSAGE_TYPES.STOP_RECORDING,
+            action: 'stopRecording',
+          },
+          () => {
+            if (browserAPI.runtime.lastError) {
+              if (
+                !browserAPI.runtime.lastError.message?.includes('tab was closed') &&
+                !browserAPI.runtime.lastError.message?.includes('context invalidated')
+              ) {
+                logger.info('RecordingService', 'Could not send stop message:', browserAPI.runtime.lastError.message);
+              }
             }
-          }
-          resolve();
-        });
+            resolve();
+          },
+        );
       });
     } catch (error) {
       const err = error as Error;
@@ -439,9 +443,14 @@ export class RecordingService implements IRecordingService {
     logger.info('RecordingService', 'Exporting recording:', recording.id);
 
     let viewport = { width: 1920, height: 1080 };
-    const rrwebEvents = recording.events.filter(e => e.type === 'rrweb');
+    const rrwebEvents = recording.events.filter((e) => e.type === 'rrweb');
     if (rrwebEvents.length > 0 && rrwebEvents[0].data) {
-      const firstEvent = rrwebEvents[0].data as { type?: number; data?: { node?: { childNodes?: unknown[] }; width?: number; height?: number }; width?: number; height?: number };
+      const firstEvent = rrwebEvents[0].data as {
+        type?: number;
+        data?: { node?: { childNodes?: unknown[] }; width?: number; height?: number };
+        width?: number;
+        height?: number;
+      };
       if (firstEvent.type === 2 && firstEvent.data?.node?.childNodes) {
         const meta = firstEvent.data;
         if (meta.width && meta.height) {
@@ -472,9 +481,9 @@ export class RecordingService implements IRecordingService {
             title: recording.title || 'Recording',
             tabId: recording.tabId,
             viewport: viewport,
-            userAgent: navigator.userAgent || 'Unknown'
-          }
-        }
+            userAgent: navigator.userAgent || 'Unknown',
+          },
+        },
       };
 
       const sent = sendRecordingViaWebSocket(recordingData);
@@ -486,23 +495,28 @@ export class RecordingService implements IRecordingService {
     }
 
     const json = JSON.stringify(recording, null, 2);
-    const dataUrl = 'data:application/json;base64,' + btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+    const dataUrl =
+      'data:application/json;base64,' +
+      btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
     const filename = `recording_${recording.id}_${new Date(recording.startTime).toISOString().replace(/[:.]/g, '-')}.json`;
 
     await new Promise<void>((resolve, reject) => {
-      downloads!.download({
-        url: dataUrl,
-        filename: filename,
-        saveAs: false
-      }, (downloadId: number) => {
-        if (browserAPI.runtime.lastError) {
-          logger.error('RecordingService', 'Download failed:', browserAPI.runtime.lastError);
-          reject(new Error(browserAPI.runtime.lastError.message));
-        } else {
-          logger.debug('RecordingService', 'Download started with ID:', downloadId);
-          resolve();
-        }
-      });
+      downloads!.download(
+        {
+          url: dataUrl,
+          filename: filename,
+          saveAs: false,
+        },
+        (downloadId: number) => {
+          if (browserAPI.runtime.lastError) {
+            logger.error('RecordingService', 'Download failed:', browserAPI.runtime.lastError);
+            reject(new Error(browserAPI.runtime.lastError.message));
+          } else {
+            logger.debug('RecordingService', 'Download started with ID:', downloadId);
+            resolve();
+          }
+        },
+      );
     });
   }
 
@@ -516,16 +530,18 @@ export class RecordingService implements IRecordingService {
         await browserAPI.action.setBadgeText({ tabId, text: '\u2022' });
         await browserAPI.action.setBadgeBackgroundColor({
           tabId,
-          color: '#EF4444'
+          color: '#EF4444',
         });
       } else {
         await browserAPI.action.setBadgeText({ tabId, text: '' });
       }
     } catch (error) {
       const err = error as Error;
-      if (!err.message?.includes('No tab with id') &&
-          !err.message?.includes('tab') &&
-          !err.message?.includes('Cannot access')) {
+      if (
+        !err.message?.includes('No tab with id') &&
+        !err.message?.includes('tab') &&
+        !err.message?.includes('Cannot access')
+      ) {
         logger.debug('RecordingService', 'Badge update skipped:', err.message);
       }
     }
@@ -554,10 +570,10 @@ export class RecordingService implements IRecordingService {
       metadata: {
         startTime: recordingState?.actualStartTime || recordingState?.startTime,
         recordingId: recordingState?.recordId,
-        isPreNavigation: tabState.state === RecordingStates.PRE_NAVIGATION
+        isPreNavigation: tabState.state === RecordingStates.PRE_NAVIGATION,
       },
-      shouldInjectScripts: tabState.state === RecordingStates.RECORDING ||
-                          tabState.state === RecordingStates.PRE_NAVIGATION
+      shouldInjectScripts:
+        tabState.state === RecordingStates.RECORDING || tabState.state === RecordingStates.PRE_NAVIGATION,
     };
   }
 
@@ -573,39 +589,46 @@ export class RecordingService implements IRecordingService {
           metadata: {
             startTime: recordingState.actualStartTime || recordingState.startTime,
             recordingId: recordingState.recordId,
-            isPreNavigation: false
-          }
-        }
+            isPreNavigation: false,
+          },
+        },
       };
     }
 
     return {
       shouldStartRecording: false,
-      state: { state: 'idle' }
+      state: { state: 'idle' },
     };
   }
 
   // ── Navigation handling ────────────────────────────────────────────
 
   isNewTabUrl(url: string | undefined): boolean {
-    return !url || url === '' || url === 'about:blank' ||
-           url === 'chrome://newtab/' || url === 'edge://newtab/' ||
-           url === 'about:newtab' || url.startsWith('chrome://') ||
-           url.startsWith('edge://');
+    return (
+      !url ||
+      url === '' ||
+      url === 'about:blank' ||
+      url === 'chrome://newtab/' ||
+      url === 'edge://newtab/' ||
+      url === 'about:newtab' ||
+      url.startsWith('chrome://') ||
+      url.startsWith('edge://')
+    );
   }
 
   async handleNavigation(tabId: number, url: string, _details: Record<string, unknown> = {}): Promise<void> {
     const tabState = this.stateMachine.getTabState(tabId);
     const recordingState = this.recordings.get(tabId);
 
-    if (recordingState && recordingState.lastNavigationUrl === url &&
-        Date.now() - (recordingState.lastNavigationTime || 0) < 100) {
+    if (
+      recordingState &&
+      recordingState.lastNavigationUrl === url &&
+      Date.now() - (recordingState.lastNavigationTime || 0) < 100
+    ) {
       return;
     }
 
-    if (tabState.state === RecordingStates.PRE_NAVIGATION &&
-        recordingState && !this.isNewTabUrl(url)) {
-
+    if (tabState.state === RecordingStates.PRE_NAVIGATION && recordingState && !this.isNewTabUrl(url)) {
       if (recordingState.preNavTimeAdjustment === undefined) {
         recordingState.preNavTimeAdjustment = Date.now() - recordingState.startTime;
       }
@@ -624,8 +647,8 @@ export class RecordingService implements IRecordingService {
           data: {
             recordingId: recordingState.recordId,
             state: 'recording',
-            timestamp: Date.now()
-          }
+            timestamp: Date.now(),
+          },
         });
       }
 
@@ -637,8 +660,8 @@ export class RecordingService implements IRecordingService {
           title: 'Navigation',
           transitionType: 'typed',
           isInitial: true,
-          fromPreNav: true
-        }
+          fromPreNav: true,
+        },
       });
 
       recordingState.lastNavigationUrl = url;
@@ -654,12 +677,12 @@ export class RecordingService implements IRecordingService {
           title: tab.title || 'Recording',
           windowId: tab.windowId,
           recordingId: recordingState.recordId,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         const sent = sendViaWebSocket({
           type: 'startSyncRecording',
-          data: syncData
+          data: syncData,
         });
 
         if (sent) {
@@ -672,13 +695,11 @@ export class RecordingService implements IRecordingService {
           target: { tabId },
           files: ['js/content/workflow-recorder/index.js'],
         });
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       } catch (error) {
         logger.info('RecordingService', 'Failed to inject content script:', (error as Error).message);
       }
-    } else if (tabState.state === RecordingStates.RECORDING &&
-               recordingState && !this.isNewTabUrl(url)) {
-
+    } else if (tabState.state === RecordingStates.RECORDING && recordingState && !this.isNewTabUrl(url)) {
       recordingState.addNavigation(url);
       recordingState.currentUrl = url;
 
@@ -689,8 +710,8 @@ export class RecordingService implements IRecordingService {
         data: {
           title: 'Navigation',
           transitionType: 'link',
-          isInitial: false
-        }
+          isInitial: false,
+        },
       });
 
       recordingState.lastNavigationUrl = url;
@@ -721,8 +742,8 @@ export class RecordingService implements IRecordingService {
             reason: 'tab_closed',
             finalUrl: recordingState.currentUrl,
             duration: Date.now() - (recordingState.actualStartTime || recordingState.startTime),
-            totalEvents: this.recordingData.get(recordingState.recordId)?.length || 0
-          }
+            totalEvents: this.recordingData.get(recordingState.recordId)?.length || 0,
+          },
         });
 
         const events = this.recordingData.get(recordingState.recordId) || [];
@@ -736,7 +757,7 @@ export class RecordingService implements IRecordingService {
           title: 'Recording (Tab Closed)',
           events: events,
           preNavTimeAdjustment: recordingState.preNavTimeAdjustment,
-          hasVideoSync: recordingState.hasVideoSync || false
+          hasVideoSync: recordingState.hasVideoSync || false,
         };
 
         if (recordingState.hasVideoSync && isWebSocketConnected()) {
@@ -744,8 +765,8 @@ export class RecordingService implements IRecordingService {
             type: 'stopSyncRecording',
             data: {
               recordingId: recordingState.recordId,
-              timestamp: Date.now()
-            }
+              timestamp: Date.now(),
+            },
           });
         }
 
@@ -767,5 +788,4 @@ export class RecordingService implements IRecordingService {
     }
     this.stateMachine.cleanupTab(tabId);
   }
-
 }

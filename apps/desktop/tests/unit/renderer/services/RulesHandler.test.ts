@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
+import { describe, expect, it, vi } from 'vitest';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies, RuleEntry } from '../../../../src/renderer/services/export-import/core/types';
+import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
 import type { HeaderRule } from '../../../../src/types/rules';
 
 // ---------------------------------------------------------------------------
@@ -71,7 +71,9 @@ describe('RulesHandler.validateRulesForExport', () => {
 
   it('rejects non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    const r = handler.validateRulesForExport({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
+    const r = handler.validateRulesForExport({ rules: { header: 'bad' } } as unknown as {
+      rules: Record<string, RuleEntry[]>;
+    });
     expect(r.success).toBe(false);
     expect(r.error).toContain('must be an array');
   });
@@ -194,8 +196,10 @@ describe('RulesHandler.analyzeRules', () => {
 
   it('warns about non-array rule type', () => {
     const handler = new RulesHandler(makeDeps());
-    const analysis = handler.analyzeRules({ rules: { header: 'bad' } } as unknown as { rules: Record<string, RuleEntry[]> });
-    expect(analysis.warnings.some(w => w.includes('not an array'))).toBe(true);
+    const analysis = handler.analyzeRules({ rules: { header: 'bad' } } as unknown as {
+      rules: Record<string, RuleEntry[]>;
+    });
+    expect(analysis.warnings.some((w) => w.includes('not an array'))).toBe(true);
   });
 
   it('detects duplicate IDs within a rule type', () => {
@@ -208,8 +212,8 @@ describe('RulesHandler.analyzeRules', () => {
         ],
       },
     });
-    expect(analysis.warnings.some(w => w.includes('Duplicate rule IDs'))).toBe(true);
-    expect(analysis.suggestions.some(s => s.includes('Fix duplicate'))).toBe(true);
+    expect(analysis.warnings.some((w) => w.includes('Duplicate rule IDs'))).toBe(true);
+    expect(analysis.suggestions.some((s) => s.includes('Fix duplicate'))).toBe(true);
   });
 
   it('detects unnamed rules', () => {
@@ -217,7 +221,7 @@ describe('RulesHandler.analyzeRules', () => {
     const analysis = handler.analyzeRules({
       rules: { header: [{ id: '1' }] },
     });
-    expect(analysis.warnings.some(w => w.includes('unnamed'))).toBe(true);
+    expect(analysis.warnings.some((w) => w.includes('unnamed'))).toBe(true);
   });
 
   it('warns about large rule sets (>100)', () => {
@@ -228,8 +232,8 @@ describe('RulesHandler.analyzeRules', () => {
       enabled: true,
     }));
     const analysis = handler.analyzeRules({ rules: { header: manyRules } });
-    expect(analysis.warnings.some(w => w.includes('Large number'))).toBe(true);
-    expect(analysis.suggestions.some(s => s.includes('organizing rules'))).toBe(true);
+    expect(analysis.warnings.some((w) => w.includes('Large number'))).toBe(true);
+    expect(analysis.suggestions.some((s) => s.includes('organizing rules'))).toBe(true);
   });
 
   it('warns about disabled rules', () => {
@@ -242,7 +246,7 @@ describe('RulesHandler.analyzeRules', () => {
         ],
       },
     });
-    expect(analysis.warnings.some(w => w.includes('disabled'))).toBe(true);
+    expect(analysis.warnings.some((w) => w.includes('disabled'))).toBe(true);
   });
 
   it('does not warn when all rules are enabled', () => {
@@ -250,7 +254,7 @@ describe('RulesHandler.analyzeRules', () => {
     const analysis = handler.analyzeRules({
       rules: { header: [{ id: '1', name: 'A', enabled: true }] },
     });
-    expect(analysis.warnings.some(w => w.includes('disabled'))).toBe(false);
+    expect(analysis.warnings.some((w) => w.includes('disabled'))).toBe(false);
   });
 });
 
@@ -297,8 +301,15 @@ describe('RulesHandler.importRules', () => {
     const handler = new RulesHandler(deps);
 
     const stats = await handler.importRules(
-      { rules: { header: [{ id: 'r1', name: 'Rule 1' }, { id: 'r2', name: 'Rule 2' }] } },
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+      {
+        rules: {
+          header: [
+            { id: 'r1', name: 'Rule 1' },
+            { id: 'r2', name: 'Rule 2' },
+          ],
+        },
+      },
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} },
     );
 
     expect(stats.imported.total).toBe(2);
@@ -315,7 +326,7 @@ describe('RulesHandler.importRules', () => {
 
     const stats = await handler.importRules(
       { rules: { header: [{ id: 'existing-rule' }, { id: 'new-rule' }] } },
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} },
     );
 
     expect(stats.imported.total).toBe(1);
@@ -339,7 +350,7 @@ describe('RulesHandler.importRules', () => {
 
     const stats = await handler.importRules(
       { rules: { header: [{ id: 'new-1' }] } },
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} },
     );
 
     expect(removeHeaderRule).toHaveBeenCalledTimes(2);
@@ -350,13 +361,15 @@ describe('RulesHandler.importRules', () => {
   });
 
   it('records errors when addHeaderRule fails', async () => {
-    const addHeaderRule = vi.fn(async () => { throw new Error('save failed'); });
+    const addHeaderRule = vi.fn(async () => {
+      throw new Error('save failed');
+    });
     const deps = makeDeps({ addHeaderRule });
     const handler = new RulesHandler(deps);
 
     const stats = await handler.importRules(
       { rules: { header: [{ id: 'r1' }] } },
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} },
     );
 
     expect(stats.imported.total).toBe(0);

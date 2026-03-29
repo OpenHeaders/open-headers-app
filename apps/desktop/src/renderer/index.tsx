@@ -1,43 +1,43 @@
 // Global console override to suppress iframe sandbox errors from rrweb
 // This MUST be before any other imports to catch all console messages
 (() => {
-    const originalError = console.error;
-    const originalWarn = console.warn;
-    const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  const originalLog = console.log;
 
-    const suppressPatterns = [
-        'Blocked script execution',
-        'sandboxed and the \'allow-scripts\'',
-        'file:///Applications/OpenHeaders.app',
-        '[Intervention]',
-        'Slow network is detected',
-        'Fallback font will be used',
-        'An iframe which has both allow-scripts and allow-same-origin',
-        'can escape its sandboxing'
-    ];
+  const suppressPatterns = [
+    'Blocked script execution',
+    "sandboxed and the 'allow-scripts'",
+    'file:///Applications/OpenHeaders.app',
+    '[Intervention]',
+    'Slow network is detected',
+    'Fallback font will be used',
+    'An iframe which has both allow-scripts and allow-same-origin',
+    'can escape its sandboxing',
+  ];
 
-    const shouldSuppress = (args: unknown[]) => {
-        const message = args[0]?.toString() || '';
-        return suppressPatterns.some(pattern => message.includes(pattern));
-    };
+  const shouldSuppress = (args: unknown[]) => {
+    const message = args[0]?.toString() || '';
+    return suppressPatterns.some((pattern) => message.includes(pattern));
+  };
 
-    console.error = function(...args: unknown[]) {
-        if (!shouldSuppress(args)) {
-            originalError.apply(console, args);
-        }
-    };
+  console.error = (...args: unknown[]) => {
+    if (!shouldSuppress(args)) {
+      originalError.apply(console, args);
+    }
+  };
 
-    console.warn = function(...args: unknown[]) {
-        if (!shouldSuppress(args)) {
-            originalWarn.apply(console, args);
-        }
-    };
+  console.warn = (...args: unknown[]) => {
+    if (!shouldSuppress(args)) {
+      originalWarn.apply(console, args);
+    }
+  };
 
-    console.log = function(...args: unknown[]) {
-        if (!shouldSuppress(args)) {
-            originalLog.apply(console, args);
-        }
-    };
+  console.log = (...args: unknown[]) => {
+    if (!shouldSuppress(args)) {
+      originalLog.apply(console, args);
+    }
+  };
 })();
 
 import React from 'react';
@@ -55,7 +55,7 @@ const root = createRoot(container);
 
 // Render the React application with React 18 API and optimized context structure
 root.render(
-    <AppProvider>
-        <AppComponent />
-    </AppProvider>
+  <AppProvider>
+    <AppComponent />
+  </AppProvider>,
 );

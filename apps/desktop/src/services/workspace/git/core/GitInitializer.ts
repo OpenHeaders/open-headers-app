@@ -3,10 +3,10 @@
  * Manages finding Git executable and setting up required directories
  */
 
+import child_process from 'child_process';
+import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import electron from 'electron';
-import child_process from 'child_process';
 import util from 'util';
 import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from './GitExecutor';
@@ -165,7 +165,7 @@ class GitInitializer {
       initialized: this.initialized,
       platform: process.platform,
       tempDir: this.tempDir,
-      sshDir: this.sshDir
+      sshDir: this.sshDir,
     };
   }
 
@@ -175,7 +175,7 @@ class GitInitializer {
   getPaths(): GitPaths {
     return {
       tempDir: this.tempDir,
-      sshDir: this.sshDir
+      sshDir: this.sshDir,
     };
   }
 
@@ -187,6 +187,6 @@ class GitInitializer {
   }
 }
 
-export { GitInitializer, COMMON_GIT_PATHS };
 export type { GitPaths, GitStatus };
+export { COMMON_GIT_PATHS, GitInitializer };
 export default GitInitializer;

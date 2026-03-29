@@ -3,24 +3,26 @@
  * Shows detailed progress information during recording processing
  */
 
-import React from 'react';
-import { Progress, Space, Spin } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
+import { Progress, Space, Spin } from 'antd';
+import React from 'react';
 
 interface ProcessingDetails {
-    eventCount?: number;
-    totalEvents?: number;
-    phase?: string;
-    resourcesFound?: number;
-    eventsProcessed?: number;
-    currentType?: string;
-    currentResource?: string;
-    completed?: number;
-    failed?: number;
-    total?: number;
-    error?: string;
+  eventCount?: number;
+  totalEvents?: number;
+  phase?: string;
+  resourcesFound?: number;
+  eventsProcessed?: number;
+  currentType?: string;
+  currentResource?: string;
+  completed?: number;
+  failed?: number;
+  total?: number;
+  error?: string;
 }
-interface ProcessingOverlayProps { processing: { stage?: string; progress?: number; details?: ProcessingDetails } | null; }
+interface ProcessingOverlayProps {
+  processing: { stage?: string; progress?: number; details?: ProcessingDetails } | null;
+}
 const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
   if (!processing) return null;
 
@@ -29,11 +31,11 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
   // Map resource types to user-friendly names
   const getResourceTypeDisplay = (type: string) => {
     const typeMap = {
-      'stylesheet': 'CSS stylesheets',
-      'font': 'Web fonts',
-      'script': 'JavaScript files',
-      'image': 'Images',
-      'other': 'Other resources'
+      stylesheet: 'CSS stylesheets',
+      font: 'Web fonts',
+      script: 'JavaScript files',
+      image: 'Images',
+      other: 'Other resources',
     };
     return typeMap[type as keyof typeof typeMap] || type;
   };
@@ -45,23 +47,22 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
         return (
           <div style={{ textAlign: 'center', width: '100%' }}>
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <div style={{ 
-                fontSize: '15px', 
-                fontWeight: 600, 
-                lineHeight: '1.3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}>
-                <Spin 
-                  indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />}
-                  spinning={true}
-                />
+              <div
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  lineHeight: '1.3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                }}
+              >
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />} spinning={true} />
                 Processing recording data and optimizing for playback
               </div>
-              <Progress 
-                percent={progress} 
+              <Progress
+                percent={progress}
                 strokeColor={{
                   '0%': '#108ee9',
                   '100%': '#87d068',
@@ -77,10 +78,12 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
                   {details.phase && (
                     <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
                       {details.phase === 'first-pass' && 'Pass 1: Collecting resource URLs...'}
-                      {details.phase === 'first-pass-complete' && `Found ${details.resourcesFound || 0} unique resources`}
+                      {details.phase === 'first-pass-complete' &&
+                        `Found ${details.resourcesFound || 0} unique resources`}
                       {details.phase === 'second-pass' && 'Pass 2: Normalizing URLs and optimizing...'}
                       {details.phase === 'complete' && 'Preprocessing complete!'}
-                      {!['first-pass', 'first-pass-complete', 'second-pass', 'complete'].includes(details.phase) && 'Preparing resources...'}
+                      {!['first-pass', 'first-pass-complete', 'second-pass', 'complete'].includes(details.phase) &&
+                        'Preparing resources...'}
                     </div>
                   )}
                   {details.eventsProcessed && (
@@ -94,31 +97,31 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
           </div>
         );
 
-      case 'prefetching':
+      case 'prefetching': {
         const resourceType = details.currentType ? getResourceTypeDisplay(details.currentType) : 'resources';
-        const fileName = details.currentResource ?
-          (details.currentResource.split('/').pop() ?? '').substring(0, 50) : '';
-        
+        const fileName = details.currentResource
+          ? (details.currentResource.split('/').pop() ?? '').substring(0, 50)
+          : '';
+
         return (
           <div style={{ textAlign: 'center', width: '100%' }}>
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
-              <div style={{ 
-                fontSize: '15px', 
-                fontWeight: 600, 
-                lineHeight: '1.3',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}>
-                <Spin 
-                  indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />}
-                  spinning={true}
-                />
+              <div
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  lineHeight: '1.3',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                }}
+              >
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />} spinning={true} />
                 Pre-fetching static resources and Caching them for instant playback
               </div>
-              <Progress 
-                percent={progress} 
+              <Progress
+                percent={progress}
                 strokeColor={{
                   '0%': '#108ee9',
                   '100%': '#87d068',
@@ -130,7 +133,8 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
                 {details.completed !== undefined ? (
                   <Space direction="vertical" size="small">
                     <div>
-                      <strong>{details.completed + (details.failed || 0)}</strong> of <strong>{details.total}</strong> resources processed
+                      <strong>{details.completed + (details.failed || 0)}</strong> of <strong>{details.total}</strong>{' '}
+                      resources processed
                     </div>
                     {((details.failed ?? 0) > 0 || (details.completed ?? 0) > 0) && (
                       <div style={{ fontSize: '13px' }}>
@@ -149,51 +153,47 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
                 )}
               </div>
               {details.currentType && (
-                <div style={{ 
-                  fontSize: '13px', 
-                  color: '#722ed1',
-                  marginTop: '8px',
-                  padding: '8px 16px',
-                  background: 'rgba(114, 46, 209, 0.08)',
-                  borderRadius: '6px',
-                  display: 'inline-block',
-                  maxWidth: '90%',
-                  wordBreak: 'break-word'
-                }}>
-                  <div style={{ fontWeight: 500 }}>
-                    Currently caching: {resourceType}
-                  </div>
-                  {fileName && (
-                    <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: '4px' }}>
-                      {fileName}
-                    </div>
-                  )}
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: '#722ed1',
+                    marginTop: '8px',
+                    padding: '8px 16px',
+                    background: 'rgba(114, 46, 209, 0.08)',
+                    borderRadius: '6px',
+                    display: 'inline-block',
+                    maxWidth: '90%',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  <div style={{ fontWeight: 500 }}>Currently caching: {resourceType}</div>
+                  {fileName && <div style={{ fontSize: '11px', color: '#8c8c8c', marginTop: '4px' }}>{fileName}</div>}
                 </div>
               )}
             </Space>
           </div>
         );
+      }
 
       case 'saving':
         return (
           <div style={{ textAlign: 'center' }}>
             <Space direction="vertical" size="small">
-              <div style={{ 
-                fontSize: '16px', 
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px'
-              }}>
-                <Spin 
-                  indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />}
-                  spinning={true}
-                />
+              <div
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                }}
+              >
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 18 }} spin />} spinning={true} />
                 Saving recording to disk...
               </div>
-              <Progress 
-                percent={progress} 
+              <Progress
+                percent={progress}
                 status="active"
                 strokeColor="#52c41a"
                 style={{ width: '100%', maxWidth: '300px', margin: '0 auto' }}
@@ -206,13 +206,9 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
       case 'error':
         return (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '14px', fontWeight: 500, color: '#ff4d4f' }}>
-              Processing failed
-            </div>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: '#ff4d4f' }}>Processing failed</div>
             {details.error && (
-              <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '4px' }}>
-                {details.error}
-              </div>
+              <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: '4px' }}>{details.error}</div>
             )}
           </div>
         );
@@ -240,15 +236,17 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
         zIndex: 10,
         backdropFilter: 'blur(3px)',
         borderRadius: '8px',
-        minHeight: '200px'
+        minHeight: '200px',
       }}
     >
-      <div style={{ 
-        padding: '20px',
-        textAlign: 'center',
-        width: '100%',
-        maxWidth: '600px'
-      }}>
+      <div
+        style={{
+          padding: '20px',
+          textAlign: 'center',
+          width: '100%',
+          maxWidth: '600px',
+        }}
+      >
         {content}
       </div>
     </div>

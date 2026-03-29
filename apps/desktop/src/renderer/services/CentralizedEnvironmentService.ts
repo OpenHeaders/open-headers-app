@@ -9,12 +9,9 @@
  *  - Dispatches local DOM events for renderer-internal UI updates
  */
 
-import { createLogger } from '../utils/error-handling/logger';
-import {
-  EnvironmentVariableManager,
-  TemplateResolver,
-} from './environment';
 import type { EnvironmentMap } from '../../types/environment';
+import { createLogger } from '../utils/error-handling/logger';
+import { EnvironmentVariableManager, TemplateResolver } from './environment';
 
 const log = createLogger('CentralizedEnvironmentService');
 
@@ -43,7 +40,7 @@ class CentralizedEnvironmentService {
       activeEnvironment: 'Default',
       isLoading: false,
       isReady: false,
-      error: null
+      error: null,
     };
 
     this.variableManager = new EnvironmentVariableManager();
@@ -73,20 +70,24 @@ class CentralizedEnvironmentService {
 
           // Dispatch DOM events for renderer-internal listeners (e.g. HeaderRules.tsx)
           if (changedKeys.includes('environments')) {
-            window.dispatchEvent(new CustomEvent('environment-variables-changed', {
-              detail: {
-                environment: this.state.activeEnvironment,
-                variables: this.state.environments[this.state.activeEnvironment] ?? {}
-              }
-            }));
+            window.dispatchEvent(
+              new CustomEvent('environment-variables-changed', {
+                detail: {
+                  environment: this.state.activeEnvironment,
+                  variables: this.state.environments[this.state.activeEnvironment] ?? {},
+                },
+              }),
+            );
           }
           if (changedKeys.includes('activeEnvironment')) {
-            window.dispatchEvent(new CustomEvent('environment-switched', {
-              detail: {
-                environment: this.state.activeEnvironment,
-                variables: this.state.environments[this.state.activeEnvironment] ?? {}
-              }
-            }));
+            window.dispatchEvent(
+              new CustomEvent('environment-switched', {
+                detail: {
+                  environment: this.state.activeEnvironment,
+                  variables: this.state.environments[this.state.activeEnvironment] ?? {},
+                },
+              }),
+            );
           }
 
           this.notifyListeners(changedKeys);
@@ -108,14 +109,18 @@ class CentralizedEnvironmentService {
   private notifyListeners(changedKeys: string[] = []): void {
     const state = this.getState();
     for (const listener of this.listeners) {
-      try { listener(state, changedKeys); } catch (e) { log.error('Listener error:', e); }
+      try {
+        listener(state, changedKeys);
+      } catch (e) {
+        log.error('Listener error:', e);
+      }
     }
   }
 
   getState(): EnvironmentServiceState {
     return {
       ...this.state,
-      environments: { ...this.state.environments }
+      environments: { ...this.state.environments },
     };
   }
 
@@ -154,7 +159,7 @@ class CentralizedEnvironmentService {
     const start = Date.now();
     while (!this.state.isReady) {
       if (Date.now() - start > timeout) throw new Error('Timeout waiting for environment service');
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
     }
     return true;
   }
@@ -183,21 +188,30 @@ class CentralizedEnvironmentService {
 
   async setVariable(name: string, value: string | null, isSecret = false): Promise<boolean> {
     const result = await window.electronAPI.workspaceState.setVariable(
-      name, value, this.state.activeEnvironment, isSecret
+      name,
+      value,
+      this.state.activeEnvironment,
+      isSecret,
     );
     if (!result.success) throw new Error(result.error ?? 'Failed to set variable');
     return true;
   }
 
-  async setVariableInEnvironment(name: string, value: string | null, environmentName: string, isSecret = false): Promise<boolean> {
-    const result = await window.electronAPI.workspaceState.setVariable(
-      name, value, environmentName, isSecret
-    );
+  async setVariableInEnvironment(
+    name: string,
+    value: string | null,
+    environmentName: string,
+    isSecret = false,
+  ): Promise<boolean> {
+    const result = await window.electronAPI.workspaceState.setVariable(name, value, environmentName, isSecret);
     if (!result.success) throw new Error(result.error ?? 'Failed to set variable');
     return true;
   }
 
-  async batchSetVariablesInEnvironment(environmentName: string, variables: Array<{ name: string; value: string | null; isSecret?: boolean }>): Promise<boolean> {
+  async batchSetVariablesInEnvironment(
+    environmentName: string,
+    variables: Array<{ name: string; value: string | null; isSecret?: boolean }>,
+  ): Promise<boolean> {
     const result = await window.electronAPI.workspaceState.batchSetVariables(environmentName, variables);
     if (!result.success) throw new Error(result.error ?? 'Failed to batch set variables');
     return true;
@@ -206,19 +220,16 @@ class CentralizedEnvironmentService {
   // ── Pure local operations (no IPC) ───────────────────────────
 
   getAllVariables(): Record<string, string> {
-    return this.variableManager.getAllVariables(
-      this.state.environments,
-      this.state.activeEnvironment
-    );
+    return this.variableManager.getAllVariables(this.state.environments, this.state.activeEnvironment);
   }
 
   resolveTemplate(template: string): string {
     const variables = this.getAllVariables();
     const result = this.templateResolver.resolveTemplate(template, variables, {
       logMissing: true,
-      defaultValue: ''
+      defaultValue: '',
     });
-    return typeof result === 'string' ? result : result?.resolved ?? '';
+    return typeof result === 'string' ? result : (result?.resolved ?? '');
   }
 
   // ── Workspace change handling ────────────────────────────────

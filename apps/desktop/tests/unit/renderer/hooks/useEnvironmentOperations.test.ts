@@ -3,8 +3,8 @@
  * Tests for useEnvironmentOperations hook — validates CRUD, switch, clone, and waitForEnvironments.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -168,13 +168,17 @@ describe('useEnvironmentOperations', () => {
       expect(cloned).toBe(true);
       expect(mockCreateEnvironment).toHaveBeenCalledWith('Staging — EU Region-Copy');
       expect(mockBatchSetVariables).toHaveBeenCalledWith('Staging — EU Region-Copy', [
-        { name: 'OAUTH2_CLIENT_ID', value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901', isSecret: false },
+        {
+          name: 'OAUTH2_CLIENT_ID',
+          value: 'oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901',
+          isSecret: false,
+        },
         { name: 'OAUTH2_CLIENT_SECRET', value: 'ohk_test_7fD48IqMzkXEbskuU2aer8fg', isSecret: true },
         { name: 'API_GATEWAY_URL', value: 'https://staging-eu.openheaders.io:8443/v2', isSecret: false },
       ]);
       expect(mockShowMessage).toHaveBeenCalledWith(
         'success',
-        "Environment 'Staging — EU Region' cloned to 'Staging — EU Region-Copy'"
+        "Environment 'Staging — EU Region' cloned to 'Staging — EU Region-Copy'",
       );
     });
 

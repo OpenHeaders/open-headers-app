@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Alert, Button, Space } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
+import { Alert, Button, Space } from 'antd';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import { useHeader } from '../../hooks/useHeader';
 import { storage } from '../../utils/browser-api';
 import { sendMessage } from '../../utils/messaging';
@@ -49,20 +50,24 @@ const ConnectionInfo: React.FC = () => {
         description={
           <div>
             {Object.keys(headerEntries).length > 0 && (
-              <div style={{ fontSize: 12, marginBottom: 6 }}>Your rules are still active using cached data.<br/>Reconnect to sync latest changes.</div>
+              <div style={{ fontSize: 12, marginBottom: 6 }}>
+                Your rules are still active using cached data.
+                <br />
+                Reconnect to sync latest changes.
+              </div>
             )}
             <Space size={6}>
               <Button
-              type="primary"
-              size="small"
-              icon={<DownloadOutlined />}
-              onClick={() => window.open('https://openheaders.io', '_blank')}
-            >
-              Download App
-            </Button>
-            <Button size="small" onClick={handleOpenWelcomePage}>
-              Setup Guide
-            </Button>
+                type="primary"
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={() => window.open('https://openheaders.io', '_blank')}
+              >
+                Download App
+              </Button>
+              <Button size="small" onClick={handleOpenWelcomePage}>
+                Setup Guide
+              </Button>
             </Space>
           </div>
         }

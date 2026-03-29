@@ -4,34 +4,71 @@
  * Right pane: Encoded JWT preview
  */
 
-import React, { useState, useEffect } from 'react';
-import { Modal, Row, Col, Input, Alert, Button, Space, Typography, Tag, Tooltip, message, Checkbox, Collapse, Select, Radio, Segmented, theme } from 'antd';
-import { CopyOutlined, CheckCircleOutlined, CloseCircleOutlined, WarningOutlined, KeyOutlined, LockOutlined, CaretRightOutlined, EyeInvisibleOutlined, CodeOutlined, FileTextOutlined } from '@ant-design/icons';
-import { 
-  decodeJWT, 
-  encodeJWT,
-  signJWT,
-  formatJSON, 
-  validateJSON, 
-  getJWTExpiration,
-  JWT_CLAIM_DESCRIPTIONS 
-} from '../../../utils/jwtUtils';
+import {
+  CaretRightOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CodeOutlined,
+  CopyOutlined,
+  EyeInvisibleOutlined,
+  FileTextOutlined,
+  KeyOutlined,
+  LockOutlined,
+  WarningOutlined,
+} from '@ant-design/icons';
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Collapse,
+  Input,
+  Modal,
+  message,
+  Radio,
+  Row,
+  Segmented,
+  Select,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+  theme,
+} from 'antd';
+import type React from 'react';
+import { useEffect, useState } from 'react';
 import type { JsonObject } from '../../../../types/common';
+import {
+  decodeJWT,
+  encodeJWT,
+  formatJSON,
+  getJWTExpiration,
+  JWT_CLAIM_DESCRIPTIONS,
+  signJWT,
+  validateJSON,
+} from '../../../utils/jwtUtils';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
 interface JWTEditorModalProps {
-    visible: boolean;
-    variableName: string;
-    initialValue: string;
-    isSecret: boolean;
-    onSave: (token: string, isSecret: boolean) => void;
-    onCancel: () => void;
+  visible: boolean;
+  variableName: string;
+  initialValue: string;
+  isSecret: boolean;
+  onSave: (token: string, isSecret: boolean) => void;
+  onCancel: () => void;
 }
 
-const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, initialValue, isSecret: initialIsSecret, onSave, onCancel }) => {
+const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
+  visible,
+  variableName,
+  initialValue,
+  isSecret: initialIsSecret,
+  onSave,
+  onCancel,
+}) => {
   const { token } = theme.useToken();
   const [decodedHeader, setDecodedHeader] = useState('');
   const [decodedPayload, setDecodedPayload] = useState('');
@@ -40,7 +77,12 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const [error, setError] = useState<string | null>(null);
   const [headerError, setHeaderError] = useState<string | null>(null);
   const [payloadError, setPayloadError] = useState<string | null>(null);
-  const [expirationInfo, setExpirationInfo] = useState<{ hasExpiration: boolean; isExpired?: boolean; expiresAt?: Date; expiresIn?: number } | null>(null);
+  const [expirationInfo, setExpirationInfo] = useState<{
+    hasExpiration: boolean;
+    isExpired?: boolean;
+    expiresAt?: Date;
+    expiresIn?: number;
+  } | null>(null);
   const [isModified, setIsModified] = useState(false);
   const [originalToken, setOriginalToken] = useState('');
   const [useSecretKey, setUseSecretKey] = useState(false);
@@ -77,7 +119,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
         setAlgorithm(decoded.header.alg || 'HS256');
         // Set variable type from props
         setVariableType(initialIsSecret ? 'secret' : 'default');
-        
+
         // Check expiration
         const expInfo = getJWTExpiration(decoded.payload);
         setExpirationInfo(expInfo);
@@ -100,7 +142,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const updateEncodedToken = async (headerObj: JsonObject, payloadObj: JsonObject) => {
     try {
       let newToken;
-      
+
       if (useSecretKey && secretKey) {
         // Sign with the provided secret
         newToken = await signJWT(headerObj, payloadObj, secretKey, algorithm);
@@ -111,7 +153,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
         newToken = encodeJWT(headerObj, payloadObj, signature);
         setEncodedToken(newToken);
       }
-      
+
       // Check if we're back to the original token
       setIsModified(newToken !== originalToken);
     } catch (err) {
@@ -130,7 +172,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const handleHeaderChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newHeader = e.target.value;
     setDecodedHeader(newHeader);
-    
+
     try {
       const headerObj = validateJSON(newHeader);
       const payloadObj = validateJSON(decodedPayload);
@@ -150,14 +192,14 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const handlePayloadChange = async (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newPayload = e.target.value;
     setDecodedPayload(newPayload);
-    
+
     try {
       const headerObj = validateJSON(decodedHeader);
       const payloadObj = validateJSON(newPayload);
       await updateEncodedToken(headerObj, payloadObj);
       setPayloadError(null);
       setError(null);
-      
+
       // Update expiration info
       const expInfo = getJWTExpiration(payloadObj);
       setExpirationInfo(expInfo);
@@ -174,7 +216,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const handleSecretKeyChange = async (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     const newSecret = e.target.value;
     setSecretKey(newSecret);
-    
+
     if (useSecretKey) {
       try {
         const headerObj = validateJSON(decodedHeader);
@@ -192,7 +234,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
   const handleUseSecretKeyToggle = async (checked: boolean) => {
     setUseSecretKey(checked);
     setSigningError(null);
-    
+
     try {
       const headerObj = validateJSON(decodedHeader);
       const payloadObj = validateJSON(decodedPayload);
@@ -207,13 +249,13 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
    */
   const handleAlgorithmChange = async (value: string) => {
     setAlgorithm(value);
-    
+
     // Update the header to reflect the new algorithm
     try {
       const headerObj = validateJSON(decodedHeader);
       headerObj.alg = value;
       setDecodedHeader(formatJSON(headerObj));
-      
+
       if (useSecretKey && secretKey) {
         const payloadObj = validateJSON(decodedPayload);
         await updateEncodedToken(headerObj, payloadObj);
@@ -250,7 +292,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
     const newToken = e.target.value;
     setEncodedInput(newToken);
     setEncodedInputError(null);
-    
+
     // Try to decode and update the decoded view
     try {
       const decoded = decodeJWT(newToken);
@@ -261,14 +303,14 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       setError(null);
       setHeaderError(null);
       setPayloadError(null);
-      
+
       // Update algorithm from header
       setAlgorithm(decoded.header.alg || 'HS256');
-      
+
       // Check expiration
       const expInfo = getJWTExpiration(decoded.payload);
       setExpirationInfo(expInfo);
-      
+
       // Mark as modified if different from original
       setIsModified(newToken !== originalToken);
     } catch (err) {
@@ -284,7 +326,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
    */
   const handleModeSwitch = (mode: string) => {
     setEditMode(mode);
-    
+
     // If switching to encoded mode, sync the encoded input with current encoded token
     if (mode === 'encoded') {
       setEncodedInput(encodedToken);
@@ -330,7 +372,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
     }
 
     const { isExpired, expiresAt } = expirationInfo;
-    
+
     return (
       <Alert
         message={
@@ -339,17 +381,13 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
               <>
                 <CloseCircleOutlined />
                 <Text strong>Token Expired</Text>
-                <Text type="secondary">
-                  Expired on {expiresAt?.toLocaleString()}
-                </Text>
+                <Text type="secondary">Expired on {expiresAt?.toLocaleString()}</Text>
               </>
             ) : (
               <>
                 <CheckCircleOutlined />
                 <Text strong>Token Valid</Text>
-                <Text type="secondary">
-                  Expires on {expiresAt?.toLocaleString()}
-                </Text>
+                <Text type="secondary">Expires on {expiresAt?.toLocaleString()}</Text>
               </>
             )}
           </Space>
@@ -369,17 +407,19 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       const payload = validateJSON(decodedPayload);
       const claimDescriptions = JWT_CLAIM_DESCRIPTIONS as Record<string, string>;
       const commonClaims = Object.keys(payload)
-        .filter(key => claimDescriptions[key])
-        .map(key => (
+        .filter((key) => claimDescriptions[key])
+        .map((key) => (
           <Tooltip key={key} title={claimDescriptions[key]}>
             <Tag color="blue">{key}</Tag>
           </Tooltip>
         ));
-      
+
       if (commonClaims.length > 0) {
         return (
           <div style={{ marginTop: 8, marginBottom: 24 }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>Claims: </Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Claims:{' '}
+            </Text>
             {commonClaims}
           </div>
         );
@@ -390,9 +430,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
     return null;
   };
 
-  const hasErrors = editMode === 'decoded' 
-    ? (headerError || payloadError || error)
-    : (encodedInputError || error);
+  const hasErrors = editMode === 'decoded' ? headerError || payloadError || error : encodedInputError || error;
 
   return (
     <Modal
@@ -410,16 +448,16 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
       okText="Save"
       okButtonProps={{
         disabled: !!hasErrors,
-        type: 'primary'
+        type: 'primary',
       }}
       centered
-      bodyStyle={{ 
+      bodyStyle={{
         height: 'calc(80vh - 110px)',
         overflow: 'hidden',
-        padding: '16px 24px'
+        padding: '16px 24px',
       }}
-      style={{ 
-        maxWidth: '1400px'
+      style={{
+        maxWidth: '1400px',
       }}
     >
       {error && (
@@ -438,7 +476,9 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
         <Col span={14} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Space>
-              <Title level={5} style={{ margin: 0 }}>Edit Mode:</Title>
+              <Title level={5} style={{ margin: 0 }}>
+                Edit Mode:
+              </Title>
               <Segmented
                 value={editMode}
                 onChange={handleModeSwitch}
@@ -446,25 +486,21 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                   {
                     label: 'Decoded',
                     value: 'decoded',
-                    icon: <CodeOutlined />
+                    icon: <CodeOutlined />,
                   },
                   {
                     label: 'Encoded',
                     value: 'encoded',
-                    icon: <FileTextOutlined />
-                  }
+                    icon: <FileTextOutlined />,
+                  },
                 ]}
               />
             </Space>
-            
+
             {/* Variable Type Selector */}
             <Space>
               <Text type="secondary">Env Var Type:</Text>
-              <Radio.Group 
-                value={variableType} 
-                onChange={(e) => setVariableType(e.target.value)}
-                size="small"
-              >
+              <Radio.Group value={variableType} onChange={(e) => setVariableType(e.target.value)} size="small">
                 <Radio.Button value="default">Default</Radio.Button>
                 <Radio.Button value="secret">
                   <Space size={4}>
@@ -475,92 +511,94 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
               </Radio.Group>
             </Space>
           </div>
-          
+
           {editMode === 'decoded' ? (
             <>
               {/* Header Editor - Collapsible */}
-              <Collapse 
-            defaultActiveKey={[]} 
-            style={{ marginBottom: 16 }}
-            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-            onChange={(keys) => setHeaderExpanded(keys.includes('1'))}
-          >
-            <Panel 
-              header={
-                <Space>
-                  <Text strong>Header</Text>
-                  {headerError && (
-                    <Text type="danger" style={{ fontSize: 12 }}>
-                      <WarningOutlined /> {headerError}
-                    </Text>
-                  )}
-                </Space>
-              } 
-              key="1"
-            >
-              <TextArea
-                value={decodedHeader}
-                onChange={handleHeaderChange}
-                onBlur={() => formatOnBlur('header')}
-                placeholder="JWT Header (JSON)"
-                autoSize={{ minRows: 3, maxRows: 6 }}
-                style={{ 
-                  fontFamily: 'monospace',
-                  borderColor: headerError ? '#ff4d4f' : undefined
-                }}
-              />
-            </Panel>
-          </Collapse>
+              <Collapse
+                defaultActiveKey={[]}
+                style={{ marginBottom: 16 }}
+                expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+                onChange={(keys) => setHeaderExpanded(keys.includes('1'))}
+              >
+                <Panel
+                  header={
+                    <Space>
+                      <Text strong>Header</Text>
+                      {headerError && (
+                        <Text type="danger" style={{ fontSize: 12 }}>
+                          <WarningOutlined /> {headerError}
+                        </Text>
+                      )}
+                    </Space>
+                  }
+                  key="1"
+                >
+                  <TextArea
+                    value={decodedHeader}
+                    onChange={handleHeaderChange}
+                    onBlur={() => formatOnBlur('header')}
+                    placeholder="JWT Header (JSON)"
+                    autoSize={{ minRows: 3, maxRows: 6 }}
+                    style={{
+                      fontFamily: 'monospace',
+                      borderColor: headerError ? '#ff4d4f' : undefined,
+                    }}
+                  />
+                </Panel>
+              </Collapse>
 
-          {/* Payload Editor - Collapsible but expanded by default */}
-          <Collapse 
-            defaultActiveKey={['payload']} 
-            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-          >
-            <Panel 
-              header={
-                <Space>
-                  <Text strong>Payload</Text>
-                  {payloadError && (
-                    <Text type="danger" style={{ fontSize: 12 }}>
-                      <WarningOutlined /> {payloadError}
-                    </Text>
-                  )}
-                </Space>
-              } 
-              key="payload"
-            >
-              <TextArea
-                value={decodedPayload}
-                onChange={handlePayloadChange}
-                onBlur={() => formatOnBlur('payload')}
-                placeholder="JWT Payload (JSON)"
-                style={{ 
-                  fontFamily: 'monospace',
-                  borderColor: payloadError ? '#ff4d4f' : undefined,
-                  height: headerExpanded ? 'calc(80vh - 480px)' : 'calc(80vh - 330px)',
-                  minHeight: '180px',
-                  maxHeight: '550px',
-                  resize: 'none'
-                }}
-              />
-            </Panel>
-          </Collapse>
+              {/* Payload Editor - Collapsible but expanded by default */}
+              <Collapse
+                defaultActiveKey={['payload']}
+                expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
+              >
+                <Panel
+                  header={
+                    <Space>
+                      <Text strong>Payload</Text>
+                      {payloadError && (
+                        <Text type="danger" style={{ fontSize: 12 }}>
+                          <WarningOutlined /> {payloadError}
+                        </Text>
+                      )}
+                    </Space>
+                  }
+                  key="payload"
+                >
+                  <TextArea
+                    value={decodedPayload}
+                    onChange={handlePayloadChange}
+                    onBlur={() => formatOnBlur('payload')}
+                    placeholder="JWT Payload (JSON)"
+                    style={{
+                      fontFamily: 'monospace',
+                      borderColor: payloadError ? '#ff4d4f' : undefined,
+                      height: headerExpanded ? 'calc(80vh - 480px)' : 'calc(80vh - 330px)',
+                      minHeight: '180px',
+                      maxHeight: '550px',
+                      resize: 'none',
+                    }}
+                  />
+                </Panel>
+              </Collapse>
             </>
           ) : (
             /* Encoded Mode - Direct JWT Input */
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Title level={5} style={{ marginBottom: 8 }}>Paste or Edit JWT Token</Title>
+              <Title level={5} style={{ marginBottom: 8 }}>
+                Paste or Edit JWT Token
+              </Title>
               <TextArea
                 value={encodedInput}
                 onChange={handleEncodedInputChange}
                 placeholder="Paste your complete JWT token here (header.payload.signature)"
-                style={{ 
+                style={{
                   flex: 1,
                   fontFamily: 'monospace',
                   fontSize: 12,
                   borderColor: encodedInputError ? '#ff4d4f' : undefined,
-                  minHeight: '200px'
+                  minHeight: '200px',
                 }}
               />
               {encodedInputError && (
@@ -588,50 +626,54 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
           {/* Fixed/Sticky Preview Section */}
           <div style={{ flexShrink: 0 }}>
             {/* Encoded JWT Preview Header - Sticky */}
-            <Space style={{ 
-              marginBottom: 8, 
-              width: '100%', 
-              justifyContent: 'space-between',
-              position: 'sticky',
-              top: 0,
-              backgroundColor: token.colorBgContainer,
-              zIndex: 1,
-              paddingTop: 0
-            }}>
-              <Title level={5} style={{ marginTop: 0, marginBottom: 0 }}>Encoded JWT (Preview)</Title>
+            <Space
+              style={{
+                marginBottom: 8,
+                width: '100%',
+                justifyContent: 'space-between',
+                position: 'sticky',
+                top: 0,
+                backgroundColor: token.colorBgContainer,
+                zIndex: 1,
+                paddingTop: 0,
+              }}
+            >
+              <Title level={5} style={{ marginTop: 0, marginBottom: 0 }}>
+                Encoded JWT (Preview)
+              </Title>
               <Tooltip title="Copy value of Encoded JWT">
-                <Button
-                  icon={<CopyOutlined />}
-                  onClick={copyToClipboard}
-                  size="small"
-                >
+                <Button icon={<CopyOutlined />} onClick={copyToClipboard} size="small">
                   Copy
                 </Button>
               </Tooltip>
             </Space>
-            
+
             {/* Preview Box - Fixed Height */}
-            <div style={{ 
-              height: '200px', 
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              border: `1px solid ${token.colorBorder}`,
-              borderRadius: 4,
-              padding: 8,
-              backgroundColor: token.colorFillAlter,
-              marginBottom: 8
-            }}>
+            <div
+              style={{
+                height: '200px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: 4,
+                padding: 8,
+                backgroundColor: token.colorFillAlter,
+                marginBottom: 8,
+              }}
+            >
               {(() => {
                 const displayToken = editMode === 'encoded' ? encodedInput : encodedToken;
                 if (displayToken) {
                   return (
-                    <div style={{ 
-                      fontFamily: 'monospace',
-                      fontSize: 12,
-                      wordWrap: 'break-word',
-                      wordBreak: 'break-all',
-                      lineHeight: 1.5
-                    }}>
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        wordWrap: 'break-word',
+                        wordBreak: 'break-all',
+                        lineHeight: 1.5,
+                      }}
+                    >
                       {(() => {
                         const parts = displayToken.split('.');
                         if (parts.length === 3) {
@@ -660,12 +702,16 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
             </div>
 
             {/* Token Structure - Inline */}
-            <div style={{ 
-              marginBottom: 16,
-              fontSize: 12,
-              fontFamily: 'monospace'
-            }}>
-              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>Token Structure:</Text>
+            <div
+              style={{
+                marginBottom: 16,
+                fontSize: 12,
+                fontFamily: 'monospace',
+              }}
+            >
+              <Text type="secondary" style={{ fontSize: 12, marginRight: 8 }}>
+                Token Structure:
+              </Text>
               <Text style={{ color: '#d4380d' }}>header</Text>
               <Text>.</Text>
               <Text style={{ color: '#389e0d' }}>payload</Text>
@@ -675,12 +721,14 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
           </div>
 
           {/* Scrollable Options Section */}
-          <div style={{ 
-            flex: 1, 
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            minHeight: 0
-          }}>
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              minHeight: 0,
+            }}
+          >
             {/* Expiration Status */}
             {renderExpirationStatus()}
 
@@ -688,24 +736,23 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
             {renderClaimsHelper() || <div style={{ marginBottom: 24 }} />}
 
             {/* Signature Section */}
-            <div style={{ 
-              padding: 12, 
-              border: `1px solid ${token.colorBorder}`, 
-              borderRadius: 4,
-              backgroundColor: token.colorFillQuaternary,
-              marginBottom: 16
-            }}>
+            <div
+              style={{
+                padding: 12,
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: 4,
+                backgroundColor: token.colorFillQuaternary,
+                marginBottom: 16,
+              }}
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Checkbox 
-                  checked={useSecretKey} 
-                  onChange={(e) => handleUseSecretKeyToggle(e.target.checked)}
-                >
+                <Checkbox checked={useSecretKey} onChange={(e) => handleUseSecretKeyToggle(e.target.checked)}>
                   <Space>
                     <KeyOutlined />
                     <Text strong>Sign with Secret Key (Optional)</Text>
                   </Space>
                 </Checkbox>
-                
+
                 {useSecretKey && (
                   <>
                     <Select
@@ -716,36 +763,56 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                     >
                       <Select.OptGroup label="HMAC (Symmetric)">
                         <Select.Option value="HS256">HS256 (HMAC with SHA-256)</Select.Option>
-                        <Select.Option value="HS384" disabled>HS384 (Coming Soon)</Select.Option>
-                        <Select.Option value="HS512" disabled>HS512 (Coming Soon)</Select.Option>
+                        <Select.Option value="HS384" disabled>
+                          HS384 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="HS512" disabled>
+                          HS512 (Coming Soon)
+                        </Select.Option>
                       </Select.OptGroup>
                       <Select.OptGroup label="RSA (Asymmetric)">
                         <Select.Option value="RS256">RS256 (RSA with SHA-256)</Select.Option>
-                        <Select.Option value="RS384" disabled>RS384 (Coming Soon)</Select.Option>
-                        <Select.Option value="RS512" disabled>RS512 (Coming Soon)</Select.Option>
+                        <Select.Option value="RS384" disabled>
+                          RS384 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="RS512" disabled>
+                          RS512 (Coming Soon)
+                        </Select.Option>
                       </Select.OptGroup>
                       <Select.OptGroup label="ECDSA">
-                        <Select.Option value="ES256" disabled>ES256 (Coming Soon)</Select.Option>
-                        <Select.Option value="ES384" disabled>ES384 (Coming Soon)</Select.Option>
-                        <Select.Option value="ES512" disabled>ES512 (Coming Soon)</Select.Option>
+                        <Select.Option value="ES256" disabled>
+                          ES256 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="ES384" disabled>
+                          ES384 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="ES512" disabled>
+                          ES512 (Coming Soon)
+                        </Select.Option>
                       </Select.OptGroup>
                       <Select.OptGroup label="RSA-PSS">
-                        <Select.Option value="PS256" disabled>PS256 (Coming Soon)</Select.Option>
-                        <Select.Option value="PS384" disabled>PS384 (Coming Soon)</Select.Option>
-                        <Select.Option value="PS512" disabled>PS512 (Coming Soon)</Select.Option>
+                        <Select.Option value="PS256" disabled>
+                          PS256 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="PS384" disabled>
+                          PS384 (Coming Soon)
+                        </Select.Option>
+                        <Select.Option value="PS512" disabled>
+                          PS512 (Coming Soon)
+                        </Select.Option>
                       </Select.OptGroup>
                     </Select>
-                    
+
                     {algorithm.startsWith('RS') ? (
                       <TextArea
                         placeholder="Enter RSA private key (PEM format)&#10;-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
                         value={secretKey}
                         onChange={handleSecretKeyChange}
                         autoSize={{ minRows: 4, maxRows: 8 }}
-                        style={{ 
+                        style={{
                           marginTop: 8,
                           fontFamily: 'monospace',
-                          fontSize: 12
+                          fontSize: 12,
                         }}
                       />
                     ) : (
@@ -757,7 +824,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                         style={{ marginTop: 8 }}
                       />
                     )}
-                    
+
                     {signingError && (
                       <Alert
                         message="Signing Error"
@@ -779,10 +846,11 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({ visible, variableName, 
                     )}
                   </>
                 )}
-                
+
                 {!useSecretKey && (
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    Without a secret key, the original signature will be preserved. The token may be rejected by servers if the payload was modified.
+                    Without a secret key, the original signature will be preserved. The token may be rejected by servers
+                    if the payload was modified.
                   </Text>
                 )}
               </Space>

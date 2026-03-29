@@ -5,9 +5,14 @@
  * Handles UI state management and delegates business logic to service classes.
  */
 
-import { useState, useCallback, useMemo } from 'react';
-import { createExportImportServices, validateDependencies, ExportService, ImportService } from '../services/export-import';
+import { useCallback, useMemo, useState } from 'react';
 import type { ExportImportDependencies, ExportOptions, ImportOptions } from '../services/export-import';
+import {
+  createExportImportServices,
+  type ExportService,
+  type ImportService,
+  validateDependencies,
+} from '../services/export-import';
 import { createLogger } from '../utils/error-handling/logger';
 
 const log = createLogger('useExportImport');
@@ -47,7 +52,7 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
 
   const [loading, setLoading] = useState<LoadingState>({
     export: false,
-    import: false
+    import: false,
   });
 
   const [exportModalVisible, setExportModalVisible] = useState(false);
@@ -90,66 +95,68 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
   }, []);
 
   // Export Handler
-  const handleExport = useCallback(async (exportOptions: ExportOptions): Promise<void> => {
-    if (!services.exportService) {
-      log.error('Cannot handle export: export service not available');
-      throw new Error('Export service is not available. Please check your configuration.');
-    }
-
-    setLoading(prev => ({ export: true, import: prev.import }));
-
-    try {
-      log.info('Starting export operation');
-      await services.exportService.execute(exportOptions);
-
-      // Close modal on successful export
-      setExportModalVisible(false);
-      log.info('Export operation completed successfully');
-
-    } catch (error) {
-      log.error('Export operation failed:', error);
-      throw error; // Re-throw to allow caller to handle
-    } finally {
-      setLoading(prev => ({ export: false, import: prev.import }));
-    }
-  }, [services.exportService]);
-
-  // Import Handler
-  const handleImport = useCallback(async (importOptions: ImportOptions): Promise<void> => {
-    if (!services.importService) {
-      log.error('Cannot handle import: import service not available');
-      throw new Error('Import service is not available. Please check your configuration.');
-    }
-
-    setLoading(prev => ({ export: prev.export, import: true }));
-
-    try {
-      log.info('Starting import operation', {
-        mode: importOptions.importMode,
-        isGitSync: importOptions.isGitSync
-      });
-
-      await services.importService.execute(importOptions);
-
-      // Close modal on successful import (unless it's a Git sync operation)
-      if (!importOptions.isGitSync) {
-        setImportModalVisible(false);
+  const handleExport = useCallback(
+    async (exportOptions: ExportOptions): Promise<void> => {
+      if (!services.exportService) {
+        log.error('Cannot handle export: export service not available');
+        throw new Error('Export service is not available. Please check your configuration.');
       }
 
-      log.info('Import operation completed successfully');
+      setLoading((prev) => ({ export: true, import: prev.import }));
 
-    } catch (error) {
-      log.error('Import operation failed:', error);
-      throw error; // Re-throw to allow caller to handle
-    } finally {
-      setLoading(prev => ({ export: prev.export, import: false }));
-    }
-  }, [services.importService]);
+      try {
+        log.info('Starting export operation');
+        await services.exportService.execute(exportOptions);
+
+        // Close modal on successful export
+        setExportModalVisible(false);
+        log.info('Export operation completed successfully');
+      } catch (error) {
+        log.error('Export operation failed:', error);
+        throw error; // Re-throw to allow caller to handle
+      } finally {
+        setLoading((prev) => ({ export: false, import: prev.import }));
+      }
+    },
+    [services.exportService],
+  );
+
+  // Import Handler
+  const handleImport = useCallback(
+    async (importOptions: ImportOptions): Promise<void> => {
+      if (!services.importService) {
+        log.error('Cannot handle import: import service not available');
+        throw new Error('Import service is not available. Please check your configuration.');
+      }
+
+      setLoading((prev) => ({ export: prev.export, import: true }));
+
+      try {
+        log.info('Starting import operation', {
+          mode: importOptions.importMode,
+          isGitSync: importOptions.isGitSync,
+        });
+
+        await services.importService.execute(importOptions);
+
+        // Close modal on successful import (unless it's a Git sync operation)
+        if (!importOptions.isGitSync) {
+          setImportModalVisible(false);
+        }
+
+        log.info('Import operation completed successfully');
+      } catch (error) {
+        log.error('Import operation failed:', error);
+        throw error; // Re-throw to allow caller to handle
+      } finally {
+        setLoading((prev) => ({ export: prev.export, import: false }));
+      }
+    },
+    [services.importService],
+  );
 
   const isServiceHealthy = useMemo(() => {
-    return dependencyValidation.success &&
-           services.exportService !== null &&
-           services.importService !== null;
+    return dependencyValidation.success && services.exportService !== null && services.importService !== null;
   }, [dependencyValidation.success, services.exportService, services.importService]);
 
   return {
@@ -167,6 +174,6 @@ export function useExportImport(dependencies: ExportImportDependencies): UseExpo
     handleImport,
     exportService: services.exportService,
     importService: services.importService,
-    dependencyValidation
+    dependencyValidation,
   };
 }

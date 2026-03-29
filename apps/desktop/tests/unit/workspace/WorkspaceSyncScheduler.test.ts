@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Workspace } from '../../../src/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
   default: {
     app: { getPath: () => '/tmp/test' },
-    BrowserWindow: { getAllWindows: () => [] }
+    BrowserWindow: { getAllWindows: () => [] },
   },
   app: { getPath: () => '/tmp/test' },
-  BrowserWindow: { getAllWindows: () => [] }
+  BrowserWindow: { getAllWindows: () => [] },
 }));
 
 // Mock mainLogger
@@ -18,22 +18,22 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
-    })
-  }
+      debug: vi.fn(),
+    }),
+  },
 }));
 
 // Mock atomicFileWriter
 vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
-    readJson: vi.fn().mockResolvedValue(null)
-  }
+    readJson: vi.fn().mockResolvedValue(null),
+  },
 }));
 
 // Mock config/version
 vi.mock('../../../src/config/version', () => ({
-  DATA_FORMAT_VERSION: '3.0.0'
+  DATA_FORMAT_VERSION: '3.0.0',
 }));
 
 // Mock EnvironmentSyncUtils
@@ -43,16 +43,18 @@ vi.mock('../../../src/services/workspace/git/utils/EnvironmentSyncUtils.js', () 
   createBackupIfNeeded: vi.fn().mockResolvedValue(undefined),
   cleanupOldBackups: vi.fn().mockResolvedValue(undefined),
   extractVarData: vi.fn().mockReturnValue({ value: '', isSecret: false, hasNonEmptyValue: false }),
-  validateEnvironmentWrite: vi.fn().mockReturnValue({ safe: true, shouldBackup: false, shouldBlock: false, lossPercentage: 0 }),
-  ENV_FILE_READ_MAX_RETRIES: 3
+  validateEnvironmentWrite: vi
+    .fn()
+    .mockReturnValue({ safe: true, shouldBackup: false, shouldBlock: false, lossPercentage: 0 }),
+  ENV_FILE_READ_MAX_RETRIES: 3,
 }));
 
-import { WorkspaceSyncScheduler } from '../../../src/services/workspace/WorkspaceSyncScheduler';
 import type {
   GitSyncServiceLike as GitSyncService,
-  WorkspaceSettingsServiceLike as WorkspaceSettingsServiceInterface,
   NetworkServiceLike as NetworkService,
+  WorkspaceSettingsServiceLike as WorkspaceSettingsServiceInterface,
 } from '../../../src/services/workspace/sync/types';
+import { WorkspaceSyncScheduler } from '../../../src/services/workspace/WorkspaceSyncScheduler';
 
 /** Helper to access private fields for test assertions. */
 function testable(s: WorkspaceSyncScheduler) {
@@ -79,7 +81,7 @@ function createMockGitSyncService() {
   return {
     getGitStatus: vi.fn().mockResolvedValue({ isInstalled: true }),
     syncWorkspace: vi.fn().mockResolvedValue({ success: true, data: null }),
-    testConnection: vi.fn().mockResolvedValue({ success: true })
+    testConnection: vi.fn().mockResolvedValue({ success: true }),
   };
 }
 
@@ -87,7 +89,7 @@ function createMockWorkspaceSettingsService() {
   return {
     getWorkspaces: vi.fn().mockResolvedValue([]),
     updateWorkspace: vi.fn().mockResolvedValue(undefined),
-    updateSyncStatus: vi.fn().mockResolvedValue(undefined)
+    updateSyncStatus: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -100,8 +102,8 @@ function createMockNetworkService(isOnline = true) {
     }),
     getState: vi.fn().mockReturnValue({ isOnline }),
     _emit(event: string, ...args: unknown[]) {
-      (listeners.get(event) || []).forEach(fn => fn(...args));
-    }
+      (listeners.get(event) || []).forEach((fn) => fn(...args));
+    },
   } satisfies NetworkService & { _emit: (event: string, ...args: unknown[]) => void };
 }
 
@@ -122,7 +124,7 @@ describe('WorkspaceSyncScheduler', () => {
       gitSync as unknown as GitSyncService,
       settingsService as unknown as WorkspaceSettingsServiceInterface,
       networkService as unknown as NetworkService,
-      { broadcaster } as ConstructorParameters<typeof WorkspaceSyncScheduler>[3]
+      { broadcaster } as ConstructorParameters<typeof WorkspaceSyncScheduler>[3],
     );
   });
 
@@ -185,9 +187,7 @@ describe('WorkspaceSyncScheduler', () => {
     });
 
     it('returns skipped:workspace_not_syncable for personal workspace', async () => {
-      settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', type: 'personal' })
-      ]);
+      settingsService.getWorkspaces.mockResolvedValue([testWorkspace({ id: 'ws-1', type: 'personal' })]);
       const result = await scheduler.performSync('ws-1');
       expect(result).toEqual({ outcome: 'skipped', reason: 'workspace_not_syncable' });
       expect(gitSync.syncWorkspace).not.toHaveBeenCalled();
@@ -196,7 +196,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('returns skipped:network_offline when network is offline', async () => {
       networkService.getState.mockReturnValue({ isOnline: false });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       const result = await scheduler.performSync('ws-1');
       expect(result).toEqual({ outcome: 'skipped', reason: 'network_offline' });
@@ -206,7 +206,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('returns skipped:git_not_installed when git is not installed', async () => {
       gitSync.getGitStatus.mockResolvedValue({ isInstalled: false });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       const result = await scheduler.performSync('ws-1');
       expect(result).toEqual({ outcome: 'skipped', reason: 'git_not_installed' });
@@ -216,7 +216,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('returns completed outcome on successful sync', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       const result = await scheduler.performSync('ws-1');
       expect(result).toEqual({ outcome: 'completed' });
@@ -232,8 +232,8 @@ describe('WorkspaceSyncScheduler', () => {
           gitBranch: 'develop',
           gitPath: 'custom/path.json',
           authType: 'token',
-          authData: { token: 'abc' }
-        })
+          authData: { token: 'abc' },
+        }),
       ]);
 
       await scheduler.performSync('ws-1');
@@ -245,45 +245,50 @@ describe('WorkspaceSyncScheduler', () => {
         branch: 'develop',
         path: 'custom/path.json',
         authType: 'token',
-        authData: { token: 'abc' }
+        authData: { token: 'abc' },
       });
     });
 
     it('uses default values for missing config fields', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/test/repo' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/test/repo' }),
       ]);
 
       await scheduler.performSync('ws-1');
 
-      expect(gitSync.syncWorkspace).toHaveBeenCalledWith(expect.objectContaining({
-        branch: 'main',
-        path: 'config/open-headers.json',
-        authType: 'none',
-        authData: {}
-      }));
+      expect(gitSync.syncWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          branch: 'main',
+          path: 'config/open-headers.json',
+          authType: 'none',
+          authData: {},
+        }),
+      );
     });
 
     it('broadcasts sync error on failure', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: false, error: 'auth failed' });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
 
       await scheduler.performSync('ws-1');
 
-      expect(broadcaster).toHaveBeenCalledWith('workspace-sync-completed', expect.objectContaining({
-        workspaceId: 'ws-1',
-        success: false,
-        error: 'auth failed'
-      }));
+      expect(broadcaster).toHaveBeenCalledWith(
+        'workspace-sync-completed',
+        expect.objectContaining({
+          workspaceId: 'ws-1',
+          success: false,
+          error: 'auth failed',
+        }),
+      );
     });
 
     it('clears syncInProgress flag after completion', async () => {
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       await scheduler.performSync('ws-1');
       expect(testable(scheduler).syncInProgress.get('ws-1')).toBe(false);
@@ -292,7 +297,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('clears syncInProgress flag even on error', async () => {
       gitSync.syncWorkspace.mockRejectedValue(new Error('network error'));
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       await scheduler.performSync('ws-1');
       expect(testable(scheduler).syncInProgress.get('ws-1')).toBe(false);
@@ -301,25 +306,39 @@ describe('WorkspaceSyncScheduler', () => {
     it('reads workspace from settings at call time, not from closure', async () => {
       // First call: workspace has token auth
       settingsService.getWorkspaces.mockResolvedValueOnce([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test', authType: 'token', authData: { token: 'old-token' } })
+        testWorkspace({
+          id: 'ws-1',
+          gitUrl: 'https://github.com/openheaders/test',
+          authType: 'token',
+          authData: { token: 'old-token' },
+        }),
       ]);
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       await scheduler.performSync('ws-1');
 
-      expect(gitSync.syncWorkspace).toHaveBeenCalledWith(expect.objectContaining({
-        authType: 'token',
-        authData: { token: 'old-token' }
-      }));
+      expect(gitSync.syncWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authType: 'token',
+          authData: { token: 'old-token' },
+        }),
+      );
 
       // Second call: workspace auth was rotated
       settingsService.getWorkspaces.mockResolvedValueOnce([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test', authType: 'token', authData: { token: 'new-token' } })
+        testWorkspace({
+          id: 'ws-1',
+          gitUrl: 'https://github.com/openheaders/test',
+          authType: 'token',
+          authData: { token: 'new-token' },
+        }),
       ]);
       await scheduler.performSync('ws-1');
 
-      expect(gitSync.syncWorkspace).toHaveBeenLastCalledWith(expect.objectContaining({
-        authData: { token: 'new-token' }
-      }));
+      expect(gitSync.syncWorkspace).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          authData: { token: 'new-token' },
+        }),
+      );
     });
   });
 
@@ -328,9 +347,7 @@ describe('WorkspaceSyncScheduler', () => {
       const stopSyncSpy = vi.spyOn(scheduler, 'stopSync');
       testable(scheduler).activeWorkspaceId = 'old-ws';
 
-      settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'new-ws', name: 'New', type: 'personal' })
-      ]);
+      settingsService.getWorkspaces.mockResolvedValue([testWorkspace({ id: 'new-ws', name: 'New', type: 'personal' })]);
 
       await scheduler.onWorkspaceSwitch('new-ws');
       expect(stopSyncSpy).toHaveBeenCalledWith('old-ws');
@@ -338,9 +355,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('starts sync for git workspace with autoSync', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'git-ws', name: 'Team', autoSync: true })
-      ]);
+      settingsService.getWorkspaces.mockResolvedValue([testWorkspace({ id: 'git-ws', name: 'Team', autoSync: true })]);
 
       await scheduler.onWorkspaceSwitch('git-ws');
       expect(startSyncSpy).toHaveBeenCalledWith('git-ws', { skipInitialSync: undefined });
@@ -349,7 +364,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('does not start sync for personal workspace', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' })
+        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' }),
       ]);
 
       await scheduler.onWorkspaceSwitch('personal');
@@ -358,9 +373,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('does not start sync when autoSync is false', async () => {
       const startSyncSpy = vi.spyOn(scheduler, 'startSync');
-      settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'git-ws', name: 'Team', autoSync: false })
-      ]);
+      settingsService.getWorkspaces.mockResolvedValue([testWorkspace({ id: 'git-ws', name: 'Team', autoSync: false })]);
 
       await scheduler.onWorkspaceSwitch('git-ws');
       expect(startSyncSpy).not.toHaveBeenCalled();
@@ -396,7 +409,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('returns error for non-git workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' })
+        testWorkspace({ id: 'personal', name: 'Personal', type: 'personal' }),
       ]);
       const result = await scheduler.manualSync('personal');
       expect(result.success).toBe(false);
@@ -405,7 +418,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('performs sync for git workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'git-ws', name: 'Team', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'git-ws', name: 'Team', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       const result = await scheduler.manualSync('git-ws');
@@ -415,7 +428,7 @@ describe('WorkspaceSyncScheduler', () => {
     it('returns error when network is offline', async () => {
       networkService.getState.mockReturnValue({ isOnline: false });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       const result = await scheduler.manualSync('ws-1');
       expect(result.success).toBe(false);
@@ -424,7 +437,7 @@ describe('WorkspaceSyncScheduler', () => {
 
     it('allows manual sync for team workspace', async () => {
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'team-ws', name: 'Team', type: 'team', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'team-ws', name: 'Team', type: 'team', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       const result = await scheduler.manualSync('team-ws');
@@ -489,14 +502,17 @@ describe('WorkspaceSyncScheduler', () => {
 
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       await scheduler.performSync('ws-1');
 
       // syncStatusOwner should have received the status update
-      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith('ws-1', expect.objectContaining({
-        syncing: false
-      }));
+      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith(
+        'ws-1',
+        expect.objectContaining({
+          syncing: false,
+        }),
+      );
 
       // WorkspaceSettingsService should NOT have been called for sync status
       expect(settingsService.updateSyncStatus).not.toHaveBeenCalled();
@@ -506,7 +522,7 @@ describe('WorkspaceSyncScheduler', () => {
       // Don't call setSyncStatusOwner — should fall back
       gitSync.syncWorkspace.mockResolvedValue({ success: true });
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       await scheduler.performSync('ws-1');
 
@@ -519,14 +535,17 @@ describe('WorkspaceSyncScheduler', () => {
 
       gitSync.syncWorkspace.mockRejectedValue(new Error('auth failed'));
       settingsService.getWorkspaces.mockResolvedValue([
-        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' })
+        testWorkspace({ id: 'ws-1', gitUrl: 'https://github.com/openheaders/test' }),
       ]);
       await scheduler.performSync('ws-1');
 
-      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith('ws-1', expect.objectContaining({
-        syncing: false,
-        error: 'auth failed'
-      }));
+      expect(syncStatusOwner.updateSyncStatus).toHaveBeenCalledWith(
+        'ws-1',
+        expect.objectContaining({
+          syncing: false,
+          error: 'auth failed',
+        }),
+      );
     });
   });
 });

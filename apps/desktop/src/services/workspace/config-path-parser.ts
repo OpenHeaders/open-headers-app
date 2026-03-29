@@ -53,7 +53,7 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
       type: 'single',
       primaryPath: 'config/open-headers.json',
       basePath: 'config',
-      isDefault: true
+      isDefault: true,
     };
   }
 
@@ -62,13 +62,16 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
 
   // Check if it's comma-separated (explicit multi-file)
   if (input.includes(',')) {
-    const paths = input.split(',').map(p => p.trim()).filter(p => p);
+    const paths = input
+      .split(',')
+      .map((p) => p.trim())
+      .filter((p) => p);
     if (paths.length === 2) {
       return {
         type: 'comma-separated',
         configPath: paths[0],
         envPath: paths[1],
-        basePath: path.dirname(paths[0]).replace(/\\/g, '/')
+        basePath: path.dirname(paths[0]).replace(/\\/g, '/'),
       };
     }
   }
@@ -90,8 +93,8 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
         `${folderPath}/config.json`,
         `${folderPath}/configuration.json`,
         `${folderPath}/open-headers-config.json`,
-        `${folderPath}/open-headers-env.json`
-      ]
+        `${folderPath}/open-headers-env.json`,
+      ],
     };
   }
 
@@ -111,7 +114,7 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
         // These will be checked in order
         primaryPath: `${input}.json`,
         multiFileConfig: `${input}-config*.json`,
-        multiFileEnv: `${input}-env*.json`
+        multiFileEnv: `${input}-env*.json`,
       };
     } else {
       // It's a folder without trailing slash
@@ -125,8 +128,8 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
           `${input}/config.json`,
           `${input}/configuration.json`,
           `${input}/open-headers-config.json`,
-          `${input}/open-headers-env.json`
-        ]
+          `${input}/open-headers-env.json`,
+        ],
       };
     }
   }
@@ -136,7 +139,7 @@ function parseConfigPath(userInput: string | null | undefined): ParsedPath {
     type: 'single',
     primaryPath: input,
     basePath: path.dirname(input).replace(/\\/g, '/'),
-    fileName: path.basename(input)
+    fileName: path.basename(input),
   };
 }
 
@@ -149,7 +152,7 @@ function getSearchPatterns(parsedPath: ParsedPath): SearchPatterns {
       return {
         configFiles: [parsedPath.configPath],
         envFiles: [parsedPath.envPath],
-        exactMatch: true
+        exactMatch: true,
       };
 
     case 'folder':
@@ -161,28 +164,23 @@ function getSearchPatterns(parsedPath: ParsedPath): SearchPatterns {
           `${parsedPath.folderPath}/open-headers-config*.json`,
           `${parsedPath.folderPath}/open-headers-conf*.json`,
           `${parsedPath.folderPath}/config_*.json`,
-          `${parsedPath.folderPath}/configuration_*.json`
+          `${parsedPath.folderPath}/configuration_*.json`,
         ],
         envFiles: [
           `${parsedPath.folderPath}/open-headers-env*.json`,
           `${parsedPath.folderPath}/open-headers-environment*.json`,
           `${parsedPath.folderPath}/env_*.json`,
           `${parsedPath.folderPath}/environment_*.json`,
-          `${parsedPath.folderPath}/environments.json`
+          `${parsedPath.folderPath}/environments.json`,
         ],
-        exactMatch: false
+        exactMatch: false,
       };
 
     case 'base-path':
       return {
-        configFiles: [
-          parsedPath.primaryPath,
-          parsedPath.multiFileConfig
-        ],
-        envFiles: [
-          parsedPath.multiFileEnv
-        ],
-        exactMatch: false
+        configFiles: [parsedPath.primaryPath, parsedPath.multiFileConfig],
+        envFiles: [parsedPath.multiFileEnv],
+        exactMatch: false,
       };
 
     case 'single':
@@ -190,7 +188,7 @@ function getSearchPatterns(parsedPath: ParsedPath): SearchPatterns {
       return {
         configFiles: [parsedPath.primaryPath],
         envFiles: [],
-        exactMatch: true
+        exactMatch: true,
       };
   }
 }
@@ -199,7 +197,7 @@ function getSearchPatterns(parsedPath: ParsedPath): SearchPatterns {
  * Generate helpful error message based on what was searched
  */
 function getPathErrorMessage(parsedPath: ParsedPath, foundFiles: string[] = []): string {
-  const jsonFiles = foundFiles.filter(f => f.endsWith('.json'));
+  const jsonFiles = foundFiles.filter((f) => f.endsWith('.json'));
 
   let message = 'Configuration file not found. ';
 
@@ -240,14 +238,14 @@ function getPathErrorMessage(parsedPath: ParsedPath, foundFiles: string[] = []):
 }
 
 export {
-  parseConfigPath,
-  getSearchPatterns,
   getPathErrorMessage,
-  ParsedPath,
-  ParsedPathSingle,
-  ParsedPathCommaSeparated,
-  ParsedPathFolder,
-  ParsedPathBasePath,
-  SearchPatterns
+  getSearchPatterns,
+  type ParsedPath,
+  type ParsedPathBasePath,
+  type ParsedPathCommaSeparated,
+  type ParsedPathFolder,
+  type ParsedPathSingle,
+  parseConfigPath,
+  type SearchPatterns,
 };
 export default { parseConfigPath, getSearchPatterns, getPathErrorMessage };

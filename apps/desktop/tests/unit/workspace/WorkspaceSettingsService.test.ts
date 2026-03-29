@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Workspace } from '../../../src/types/workspace';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceSettings } from '../../../src/services/workspace/WorkspaceSettingsService';
+import type { Workspace } from '../../../src/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
   default: { app: { getPath: () => '/tmp/test-userData' } },
-  app: { getPath: () => '/tmp/test-userData' }
+  app: { getPath: () => '/tmp/test-userData' },
 }));
 
 // Mock mainLogger
@@ -15,9 +15,9 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
-    })
-  }
+      debug: vi.fn(),
+    }),
+  },
 }));
 
 // Mock atomicFileWriter
@@ -26,13 +26,13 @@ const mockReadJson = vi.fn().mockResolvedValue(null);
 vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (filePath: string, data: object) => mockWriteJson(filePath, data),
-    readJson: (filePath: string) => mockReadJson(filePath)
-  }
+    readJson: (filePath: string) => mockReadJson(filePath),
+  },
 }));
 
 // Mock config/version
 vi.mock('../../../src/config/version', () => ({
-  DATA_FORMAT_VERSION: '3.0.0'
+  DATA_FORMAT_VERSION: '3.0.0',
 }));
 
 // Mock fs
@@ -41,14 +41,14 @@ vi.mock('fs', () => ({
     promises: {
       mkdir: vi.fn().mockResolvedValue(undefined),
       access: vi.fn().mockRejectedValue(new Error('ENOENT')),
-      rm: vi.fn().mockResolvedValue(undefined)
-    }
+      rm: vi.fn().mockResolvedValue(undefined),
+    },
   },
   promises: {
     mkdir: vi.fn().mockResolvedValue(undefined),
     access: vi.fn().mockRejectedValue(new Error('ENOENT')),
-    rm: vi.fn().mockResolvedValue(undefined)
-  }
+    rm: vi.fn().mockResolvedValue(undefined),
+  },
 }));
 
 import { WorkspaceSettingsService } from '../../../src/services/workspace/WorkspaceSettingsService';
@@ -93,8 +93,13 @@ describe('WorkspaceSettingsService', () => {
         activeWorkspaceId: 'ws-staging-env',
         workspaces: [
           { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true },
-          { id: 'ws-staging-env', name: 'OpenHeaders Staging', type: 'git', gitUrl: 'https://github.com/OpenHeaders/open-headers-app.git' }
-        ]
+          {
+            id: 'ws-staging-env',
+            name: 'OpenHeaders Staging',
+            type: 'git',
+            gitUrl: 'https://github.com/OpenHeaders/open-headers-app.git',
+          },
+        ],
       };
       mockReadJson.mockResolvedValueOnce(storedSettings);
       const settings = await service.getSettings();
@@ -114,9 +119,7 @@ describe('WorkspaceSettingsService', () => {
       const settings: WorkspaceSettings = {
         version: '3.0.0',
         activeWorkspaceId: 'ws-1',
-        workspaces: [
-          { id: 'ws-1', name: 'Team', type: 'git' }
-        ]
+        workspaces: [{ id: 'ws-1', name: 'Team', type: 'git' }],
       };
       await service.saveSettings(settings);
       // The first call arg should have default workspace prepended
@@ -128,9 +131,7 @@ describe('WorkspaceSettingsService', () => {
       const settings: WorkspaceSettings = {
         version: '3.0.0',
         activeWorkspaceId: 'default-personal',
-        workspaces: [
-          { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true }
-        ]
+        workspaces: [{ id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true }],
       };
       await service.saveSettings(settings);
       const savedSettings = mockWriteJson.mock.calls[0][1];
@@ -141,7 +142,9 @@ describe('WorkspaceSettingsService', () => {
 
   describe('removeWorkspace()', () => {
     it('prevents deletion of default workspace', async () => {
-      await expect(service.removeWorkspace('default-personal')).rejects.toThrow('Cannot delete the default personal workspace');
+      await expect(service.removeWorkspace('default-personal')).rejects.toThrow(
+        'Cannot delete the default personal workspace',
+      );
     });
 
     it('switches active workspace to default when removing active workspace', async () => {
@@ -150,8 +153,8 @@ describe('WorkspaceSettingsService', () => {
         activeWorkspaceId: 'ws-to-remove',
         workspaces: [
           { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true },
-          { id: 'ws-to-remove', name: 'Team', type: 'git' }
-        ]
+          { id: 'ws-to-remove', name: 'Team', type: 'git' },
+        ],
       });
       await service.removeWorkspace('ws-to-remove');
       const savedSettings = mockWriteJson.mock.calls[0][1];
@@ -167,12 +170,16 @@ describe('WorkspaceSettingsService', () => {
         activeWorkspaceId: 'default-personal',
         workspaces: [
           { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true },
-          { id: 'existing-ws', name: 'Existing', type: 'git' }
-        ]
+          { id: 'existing-ws', name: 'Existing', type: 'git' },
+        ],
       });
-      await expect(service.addWorkspace({
-        id: 'existing-ws', name: 'Dup', type: 'git'
-      })).rejects.toThrow('already exists');
+      await expect(
+        service.addWorkspace({
+          id: 'existing-ws',
+          name: 'Dup',
+          type: 'git',
+        }),
+      ).rejects.toThrow('already exists');
     });
   });
 
@@ -189,12 +196,9 @@ describe('WorkspaceSettingsService', () => {
       mockReadJson.mockResolvedValueOnce({
         version: '3.0.0',
         activeWorkspaceId: 'default-personal',
-        workspaces: [
-          { id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true }
-        ]
+        workspaces: [{ id: 'default-personal', name: 'Personal', type: 'personal', isDefault: true }],
       });
-      await expect(service.updateWorkspace('nonexistent', { name: 'New Name' }))
-        .rejects.toThrow('not found');
+      await expect(service.updateWorkspace('nonexistent', { name: 'New Name' })).rejects.toThrow('not found');
     });
   });
 
@@ -204,7 +208,7 @@ describe('WorkspaceSettingsService', () => {
         version: '3.0.0',
         activeWorkspaceId: 'ws-1',
         workspaces: [{ id: 'ws-a1b2c3d4', name: 'OpenHeaders Staging', type: 'git' }],
-        syncStatus: { 'ws-1': { syncing: false } }
+        syncStatus: { 'ws-1': { syncing: false } },
       });
       const data = await service.loadWorkspacesData();
       expect(data.activeWorkspaceId).toBe('ws-1');

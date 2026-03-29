@@ -3,8 +3,8 @@
  * Provides auto-highlight and auto-scroll toggle switches
  */
 
+import { Space, Switch, Tooltip, Typography } from 'antd';
 import React from 'react';
-import { Space, Switch, Typography, Tooltip } from 'antd';
 
 const { Text } = Typography;
 
@@ -28,41 +28,33 @@ const WorkflowViewerControls = ({
   autoHighlight,
   autoScroll,
   onAutoHighlightChange,
-  onAutoScrollChange
+  onAutoScrollChange,
 }: WorkflowViewerControlsProps) => {
   return (
     <Space style={{ marginRight: '16px' }}>
       <Tooltip title="Highlight table entries based on current record timestamp">
         <Space size="small">
-          <Switch
-            checked={autoHighlight}
-            onChange={onAutoHighlightChange}
-            size="small"
-          />
-          <Text style={{ fontSize: '12px', marginLeft: '4px' }}>
-            Auto Highlight
-          </Text>
+          <Switch checked={autoHighlight} onChange={onAutoHighlightChange} size="small" />
+          <Text style={{ fontSize: '12px', marginLeft: '4px' }}>Auto Highlight</Text>
         </Space>
       </Tooltip>
-      
+
       <Tooltip
-        title={!autoHighlight ?
-          "Auto Scroll is disabled when Auto Highlight is off" :
-          "Synchronize table view based on current record timestamp"
+        title={
+          !autoHighlight
+            ? 'Auto Scroll is disabled when Auto Highlight is off'
+            : 'Synchronize table view based on current record timestamp'
         }
       >
         <Space size="small">
-          <Switch
-            checked={autoScroll}
-            onChange={onAutoScrollChange}
-            disabled={!autoHighlight}
-            size="small"
-          />
-          <Text style={{ 
-            fontSize: '12px', 
-            opacity: !autoHighlight ? 0.5 : 1, 
-            marginLeft: '4px' 
-          }}>
+          <Switch checked={autoScroll} onChange={onAutoScrollChange} disabled={!autoHighlight} size="small" />
+          <Text
+            style={{
+              fontSize: '12px',
+              opacity: !autoHighlight ? 0.5 : 1,
+              marginLeft: '4px',
+            }}
+          >
             Auto Scroll
           </Text>
         </Space>

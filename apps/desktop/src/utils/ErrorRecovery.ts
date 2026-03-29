@@ -1,5 +1,6 @@
-import { createLogger } from './mainLogger';
 import electron from 'electron';
+import { createLogger } from './mainLogger';
+
 const { net, dialog } = electron;
 
 /**
@@ -13,10 +14,10 @@ const ErrorTypes = {
   RATE_LIMIT: 'rate_limit',
   SERVER_ERROR: 'server_error',
   RESOURCE_EXHAUSTED: 'resource_exhausted',
-  UNKNOWN: 'unknown'
+  UNKNOWN: 'unknown',
 } as const;
 
-type ErrorType = typeof ErrorTypes[keyof typeof ErrorTypes];
+type ErrorType = (typeof ErrorTypes)[keyof typeof ErrorTypes];
 
 interface RecoveryContext {
   operationId?: string;
@@ -28,7 +29,11 @@ interface RecoveryContext {
 
 type RetryFn = (() => Promise<unknown>) | null;
 
-type StrategyFn = (error: Error & { retryAfter?: number; code?: string }, context: RecoveryContext, retryFn: RetryFn) => Promise<unknown>;
+type StrategyFn = (
+  error: Error & { retryAfter?: number; code?: string },
+  context: RecoveryContext,
+  retryFn: RetryFn,
+) => Promise<unknown>;
 
 /**
  * Error Recovery System
@@ -58,60 +63,58 @@ class ErrorRecovery {
     const code = error.code?.toLowerCase() || '';
 
     // Network errors
-    if (code.includes('enotfound') ||
-        code.includes('etimedout') ||
-        code.includes('econnrefused') ||
-        code.includes('enetunreach') ||
-        message.includes('network') ||
-        message.includes('offline')) {
+    if (
+      code.includes('enotfound') ||
+      code.includes('etimedout') ||
+      code.includes('econnrefused') ||
+      code.includes('enetunreach') ||
+      message.includes('network') ||
+      message.includes('offline')
+    ) {
       return ErrorTypes.NETWORK;
     }
 
     // Authentication errors
-    if (code === '401' ||
-        code === '403' ||
-        message.includes('unauthorized') ||
-        message.includes('forbidden') ||
-        message.includes('authentication') ||
-        message.includes('permission')) {
+    if (
+      code === '401' ||
+      code === '403' ||
+      message.includes('unauthorized') ||
+      message.includes('forbidden') ||
+      message.includes('authentication') ||
+      message.includes('permission')
+    ) {
       return ErrorTypes.AUTH;
     }
 
     // Timeout errors
-    if (code.includes('timeout') ||
-        message.includes('timeout') ||
-        message.includes('timed out')) {
+    if (code.includes('timeout') || message.includes('timeout') || message.includes('timed out')) {
       return ErrorTypes.TIMEOUT;
     }
 
     // Rate limiting
-    if (code === '429' ||
-        message.includes('rate limit') ||
-        message.includes('too many requests')) {
+    if (code === '429' || message.includes('rate limit') || message.includes('too many requests')) {
       return ErrorTypes.RATE_LIMIT;
     }
 
     // Server errors
-    if (code === '500' ||
-        code === '502' ||
-        code === '503' ||
-        code === '504' ||
-        message.includes('server error') ||
-        message.includes('internal error')) {
+    if (
+      code === '500' ||
+      code === '502' ||
+      code === '503' ||
+      code === '504' ||
+      message.includes('server error') ||
+      message.includes('internal error')
+    ) {
       return ErrorTypes.SERVER_ERROR;
     }
 
     // Conflict errors
-    if (code === '409' ||
-        message.includes('conflict') ||
-        message.includes('already exists')) {
+    if (code === '409' || message.includes('conflict') || message.includes('already exists')) {
       return ErrorTypes.CONFLICT;
     }
 
     // Resource exhausted
-    if (message.includes('memory') ||
-        message.includes('disk space') ||
-        message.includes('quota')) {
+    if (message.includes('memory') || message.includes('disk space') || message.includes('quota')) {
       return ErrorTypes.RESOURCE_EXHAUSTED;
     }
 
@@ -149,7 +152,7 @@ class ErrorRecovery {
       [ErrorTypes.SERVER_ERROR]: this.handleServerError,
       [ErrorTypes.CONFLICT]: this.handleConflictError,
       [ErrorTypes.RESOURCE_EXHAUSTED]: this.handleResourceError,
-      [ErrorTypes.UNKNOWN]: this.handleUnknownError
+      [ErrorTypes.UNKNOWN]: this.handleUnknownError,
     };
 
     return strategies[errorType] || this.handleUnknownError;
@@ -195,7 +198,7 @@ class ErrorRecovery {
       title: 'Authentication Failed',
       message: 'Authentication failed. Please check your credentials.',
       buttons: ['Retry', 'Cancel'],
-      defaultId: 0
+      defaultId: 0,
     });
 
     if (response.response === 0 && retryFn) {
@@ -227,7 +230,11 @@ class ErrorRecovery {
   /**
    * Handle rate limit errors
    */
-  async handleRateLimitError(error: Error & { retryAfter?: number }, context: RecoveryContext, retryFn: RetryFn): Promise<unknown> {
+  async handleRateLimitError(
+    error: Error & { retryAfter?: number },
+    context: RecoveryContext,
+    retryFn: RetryFn,
+  ): Promise<unknown> {
     // Extract retry-after header if available
     const retryAfter = error.retryAfter || 60; // Default 60 seconds
 
@@ -284,7 +291,7 @@ class ErrorRecovery {
       title: 'Resources Low',
       message: 'System resources are low. Some operations may fail.',
       buttons: ['Continue', 'Cancel'],
-      defaultId: 0
+      defaultId: 0,
     });
 
     if (response.response === 0 && retryFn) {
@@ -325,10 +332,7 @@ class ErrorRecovery {
     const attempts = this.retryAttempts.get(operationId) || 0;
     this.retryAttempts.set(operationId, attempts + 1);
 
-    const delay = Math.min(
-      this.baseDelay * Math.pow(2, attempts),
-      this.maxDelay
-    );
+    const delay = Math.min(this.baseDelay * 2 ** attempts, this.maxDelay);
 
     // Add jitter to prevent thundering herd
     return delay + Math.random() * 1000;
@@ -377,13 +381,16 @@ class ErrorRecovery {
    * Sleep utility
    */
   sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Create a retry wrapper for a function
    */
-  withRetry<TArgs extends unknown[], TReturn>(fn: (...args: TArgs) => Promise<TReturn>, options: { maxRetries?: number; operationId?: string } = {}): (...args: TArgs) => Promise<TReturn> {
+  withRetry<TArgs extends unknown[], TReturn>(
+    fn: (...args: TArgs) => Promise<TReturn>,
+    options: { maxRetries?: number; operationId?: string } = {},
+  ): (...args: TArgs) => Promise<TReturn> {
     const { maxRetries = this.maxRetries, operationId = `op-${Date.now()}` } = options;
 
     return async (...args: TArgs): Promise<TReturn> => {
@@ -419,10 +426,8 @@ class ErrorRecovery {
 
 // Export singleton instance and types
 const errorRecovery = new ErrorRecovery();
-export {
-  ErrorRecovery as ErrorRecoveryClass,
-  ErrorTypes,
-};
+
+export { ErrorRecovery as ErrorRecoveryClass, ErrorTypes };
 export const withRetry = errorRecovery.withRetry.bind(errorRecovery);
 export const handle = errorRecovery.handle.bind(errorRecovery);
 
@@ -432,5 +437,5 @@ export default {
   ErrorRecovery: errorRecovery,
   ErrorTypes,
   withRetry: errorRecovery.withRetry.bind(errorRecovery),
-  handle: errorRecovery.handle.bind(errorRecovery)
+  handle: errorRecovery.handle.bind(errorRecovery),
 };

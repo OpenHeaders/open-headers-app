@@ -7,9 +7,9 @@
  * delegation.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
-import type { HttpRequestSpec, HttpRequestResult } from '../../../../src/types/http';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { HttpRequestResult, HttpRequestSpec } from '../../../../src/types/http';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -17,7 +17,10 @@ import type { HttpRequestSpec, HttpRequestResult } from '../../../../src/types/h
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 }));
 
@@ -108,10 +111,12 @@ describe('useHttp', () => {
 
   describe('testRequest', () => {
     it('returns TestResponseContent with status and body on success', async () => {
-      mockExecuteRequest.mockResolvedValue(makeResult({
-        body: '{"ok":true}',
-        duration: 150,
-      }));
+      mockExecuteRequest.mockResolvedValue(
+        makeResult({
+          body: '{"ok":true}',
+          duration: 150,
+        }),
+      );
 
       const { result } = renderHook(() => useHttp());
       const spec: HttpRequestSpec = {
@@ -141,13 +146,11 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
-        workspaceId: 'ws-test-1',
+          workspaceId: 'ws-test-1',
         });
       });
 
-      expect(mockExecuteRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ sourceId: 'test-src-1' })
-      );
+      expect(mockExecuteRequest).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 'test-src-1' }));
     });
 
     it('returns error on request failure', async () => {
@@ -161,7 +164,7 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
-        workspaceId: 'ws-test-1',
+          workspaceId: 'ws-test-1',
         });
       });
 
@@ -170,13 +173,15 @@ describe('useHttp', () => {
     });
 
     it('returns filtered body when JSON filter is applied', async () => {
-      mockExecuteRequest.mockResolvedValue(makeResult({
-        body: '{"data":{"value":42}}',
-        filteredBody: '42',
-        isFiltered: true,
-        filteredWith: 'data.value',
-        originalResponse: '{"data":{"value":42}}',
-      }));
+      mockExecuteRequest.mockResolvedValue(
+        makeResult({
+          body: '{"data":{"value":42}}',
+          filteredBody: '42',
+          isFiltered: true,
+          filteredWith: 'data.value',
+          originalResponse: '{"data":{"value":42}}',
+        }),
+      );
 
       const { result } = renderHook(() => useHttp());
 
@@ -186,7 +191,7 @@ describe('useHttp', () => {
           url: 'https://api.openheaders.io/test',
           method: 'GET',
           sourceId: 'src-1',
-        workspaceId: 'ws-test-1',
+          workspaceId: 'ws-test-1',
           jsonFilter: { enabled: true, path: 'data.value' },
         });
       });

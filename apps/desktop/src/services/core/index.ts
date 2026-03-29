@@ -1,3 +1,3 @@
-export { AppStateMachineImpl, AppStateMachine, AppStates, StateTransitions } from './AppStateMachine';
+export { AppStateMachine, AppStateMachineImpl, AppStates, StateTransitions } from './AppStateMachine';
 export { ServiceRegistry, serviceRegistry } from './ServiceRegistry';
 export { MainTimeManager, timeManager } from './TimeManager';

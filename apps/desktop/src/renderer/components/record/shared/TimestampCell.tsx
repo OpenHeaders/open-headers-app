@@ -11,83 +11,75 @@
  * @param {boolean} props.isCurrentEntry - Whether this is the current highlighted entry
  * @param {number} props.width - Minimum width for the cell
  */
-import React from 'react';
-import { Typography, Tooltip, theme } from 'antd';
+
 import { CaretRightOutlined } from '@ant-design/icons';
-import { formatRelativeTimeWithSmallMs, format24HTimeWithMs } from '../../../utils';
+import { Tooltip, Typography, theme } from 'antd';
+import React from 'react';
+import { format24HTimeWithMs, formatRelativeTimeWithSmallMs } from '../../../utils';
 
 const { Text } = Typography;
 
 interface TimestampCellProps {
-    timestamp: number;
-    record: { metadata?: { startTime: number }; startTime?: number };
-    isCurrentEntry?: boolean;
-    width?: number;
+  timestamp: number;
+  record: { metadata?: { startTime: number }; startTime?: number };
+  isCurrentEntry?: boolean;
+  width?: number;
 }
 
-const TimestampCell = ({
-    timestamp,
-    record,
-    isCurrentEntry = false,
-    width = 100
-}: TimestampCellProps) => {
-    const { token } = theme.useToken();
+const TimestampCell = ({ timestamp, record, isCurrentEntry = false, width = 100 }: TimestampCellProps) => {
+  const { token } = theme.useToken();
 
-    // Format relative time
-    const timeParts = formatRelativeTimeWithSmallMs(timestamp);
+  // Format relative time
+  const timeParts = formatRelativeTimeWithSmallMs(timestamp);
 
-    // Calculate absolute time
-    const absoluteTime = new Date((record.metadata?.startTime ?? 0) + timestamp);
-    const formattedAbsoluteTime = format24HTimeWithMs(absoluteTime);
+  // Calculate absolute time
+  const absoluteTime = new Date((record.metadata?.startTime ?? 0) + timestamp);
+  const formattedAbsoluteTime = format24HTimeWithMs(absoluteTime);
 
-    return (
-        <Tooltip
-            title={
-                <span>
-                    {formattedAbsoluteTime.date} {formattedAbsoluteTime.time}
-                    <span style={{ fontSize: '0.85em', opacity: 0.8 }}>
-                        {formattedAbsoluteTime.ms}
-                    </span>
-                </span>
-            }
+  return (
+    <Tooltip
+      title={
+        <span>
+          {formattedAbsoluteTime.date} {formattedAbsoluteTime.time}
+          <span style={{ fontSize: '0.85em', opacity: 0.8 }}>{formattedAbsoluteTime.ms}</span>
+        </span>
+      }
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          minWidth: `${width}px`,
+        }}
+      >
+        {/* Current entry indicator */}
+        <div style={{ width: '12px', flexShrink: 0 }}>
+          {isCurrentEntry && (
+            <CaretRightOutlined
+              style={{
+                color: token.colorPrimary,
+                fontSize: '10px',
+              }}
+            />
+          )}
+        </div>
+
+        {/* Time display */}
+        <Text
+          style={{
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            opacity: 0.8,
+            fontWeight: isCurrentEntry ? 600 : 400,
+          }}
         >
-            <div
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    minWidth: `${width}px`
-                }}
-            >
-                {/* Current entry indicator */}
-                <div style={{ width: '12px', flexShrink: 0 }}>
-                    {isCurrentEntry && (
-                        <CaretRightOutlined
-                            style={{
-                                color: token.colorPrimary,
-                                fontSize: '10px'
-                            }}
-                        />
-                    )}
-                </div>
-
-                {/* Time display */}
-                <Text
-                    style={{
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                        opacity: 0.8,
-                        fontWeight: isCurrentEntry ? 600 : 400
-                    }}
-                >
-                    {timeParts.main}
-                    <span style={{ fontSize: '0.85em', opacity: 0.7 }}>
-                        {timeParts.ms}
-                    </span>
-                </Text>
-            </div>
-        </Tooltip>
-    );
+          {timeParts.main}
+          <span style={{ fontSize: '0.85em', opacity: 0.7 }}>{timeParts.ms}</span>
+        </Text>
+      </div>
+    </Tooltip>
+  );
 };
 
 export default TimestampCell;

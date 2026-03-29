@@ -1,11 +1,10 @@
-import {useCallback} from 'react';
-import {useCentralizedWorkspace} from '../useCentralizedWorkspace';
-import {showMessage} from '../../utils';
-import type { Source, SourceUpdate, RefreshOptions } from '../../../types/source';
-
+import { useCallback } from 'react';
+import type { RefreshOptions, Source, SourceUpdate } from '../../../types/source';
+import { showMessage } from '../../utils';
 import { createLogger } from '../../utils/error-handling/logger';
-const log = createLogger('useSources');
+import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
 
+const log = createLogger('useSources');
 
 interface UseSourcesReturn {
   sources: Source[];
@@ -26,90 +25,114 @@ interface UseSourcesReturn {
 export function useSources(): UseSourcesReturn {
   const { sources, service, isWorkspaceSwitching } = useCentralizedWorkspace();
 
-  const addSource = useCallback(async (sourceData: Source): Promise<Source | null> => {
-    try {
-      return await service.addSource(sourceData);
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return null;
-    }
-  }, [service]);
-
-  const updateSource = useCallback(async (sourceId: string, updates: SourceUpdate): Promise<Source | null> => {
-    try {
-      return await service.updateSource(sourceId, updates);
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return null;
-    }
-  }, [service]);
-
-  const removeSource = useCallback(async (sourceId: string): Promise<boolean> => {
-    try {
-      await service.removeSource(sourceId);
-      showMessage('success', 'Source removed');
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const updateSourceContent = useCallback(async (sourceId: string, content: string): Promise<boolean> => {
-    try {
-      await service.updateSourceContent(sourceId, content);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const importSources = useCallback(async (newSources: Source[], replace: boolean = false): Promise<boolean> => {
-    try {
-      await service.importSources(newSources, replace);
-      showMessage('success', `Imported ${newSources.length} sources`);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const refreshSource = useCallback(async (sourceId: string): Promise<boolean> => {
-    try {
-      const result = await service.refreshSource(sourceId);
-      if (result) {
-        showMessage('success', 'Source refreshed');
+  const addSource = useCallback(
+    async (sourceData: Source): Promise<Source | null> => {
+      try {
+        return await service.addSource(sourceData);
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return null;
       }
-      return result;
-    } catch (error: unknown) {
-      showMessage('error', `Failed to refresh source: ${error instanceof Error ? error.message : String(error)}`);
-      return false;
-    }
-  }, [service]);
+    },
+    [service],
+  );
 
-  const updateRefreshOptions = useCallback(async (sourceId: string, options: RefreshOptions): Promise<boolean> => {
-    try {
-      await service.updateSource(sourceId, { refreshOptions: options });
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
+  const updateSource = useCallback(
+    async (sourceId: string, updates: SourceUpdate): Promise<Source | null> => {
+      try {
+        return await service.updateSource(sourceId, updates);
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return null;
+      }
+    },
+    [service],
+  );
+
+  const removeSource = useCallback(
+    async (sourceId: string): Promise<boolean> => {
+      try {
+        await service.removeSource(sourceId);
+        showMessage('success', 'Source removed');
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service],
+  );
+
+  const updateSourceContent = useCallback(
+    async (sourceId: string, content: string): Promise<boolean> => {
+      try {
+        await service.updateSourceContent(sourceId, content);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service],
+  );
+
+  const importSources = useCallback(
+    async (newSources: Source[], replace: boolean = false): Promise<boolean> => {
+      try {
+        await service.importSources(newSources, replace);
+        showMessage('success', `Imported ${newSources.length} sources`);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service],
+  );
+
+  const refreshSource = useCallback(
+    async (sourceId: string): Promise<boolean> => {
+      try {
+        const result = await service.refreshSource(sourceId);
+        if (result) {
+          showMessage('success', 'Source refreshed');
+        }
+        return result;
+      } catch (error: unknown) {
+        showMessage('error', `Failed to refresh source: ${error instanceof Error ? error.message : String(error)}`);
+        return false;
+      }
+    },
+    [service],
+  );
+
+  const updateRefreshOptions = useCallback(
+    async (sourceId: string, options: RefreshOptions): Promise<boolean> => {
+      try {
+        await service.updateSource(sourceId, { refreshOptions: options });
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service],
+  );
 
   const exportSources = useCallback((): Source[] => {
     return sources;
   }, [sources]);
 
-  const shouldSuppressBroadcast = useCallback((_sourcesToCheck: Source[]): boolean => {
-    if (isWorkspaceSwitching) {
-      log.debug('Suppressing broadcast during workspace switch');
-      return true;
-    }
-    return false;
-  }, [isWorkspaceSwitching]);
+  const shouldSuppressBroadcast = useCallback(
+    (_sourcesToCheck: Source[]): boolean => {
+      if (isWorkspaceSwitching) {
+        log.debug('Suppressing broadcast during workspace switch');
+        return true;
+      }
+      return false;
+    },
+    [isWorkspaceSwitching],
+  );
 
   return {
     sources,
@@ -121,6 +144,6 @@ export function useSources(): UseSourcesReturn {
     refreshSource,
     updateRefreshOptions,
     exportSources,
-    shouldSuppressBroadcast
+    shouldSuppressBroadcast,
   };
 }

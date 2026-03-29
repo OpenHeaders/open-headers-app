@@ -6,8 +6,8 @@
  * and export/import handler behaviour (success, failure, modal auto-close).
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks – must be declared before the hook is imported
@@ -37,10 +37,7 @@ vi.mock('../../../../src/renderer/services/export-import', () => ({
 
 // Now import the hook and the mocked modules so we can tweak per-test
 import { useExportImport } from '../../../../src/renderer/hooks/useExportImport';
-import {
-  createExportImportServices,
-  validateDependencies,
-} from '../../../../src/renderer/services/export-import';
+import { createExportImportServices, validateDependencies } from '../../../../src/renderer/services/export-import';
 import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
@@ -72,7 +69,13 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
 }
 
 function makeExportOptions(overrides: Record<string, unknown> = {}): ExportOptions {
-  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+  return {
+    selectedItems: {},
+    fileFormat: 'single',
+    environmentOption: 'none',
+    includeWorkspace: false,
+    ...overrides,
+  } as ExportOptions;
 }
 
 function makeImportOptions(overrides: Record<string, unknown> = {}): ImportOptions {
@@ -222,7 +225,11 @@ describe('useExportImport', () => {
 
   it('handleExport sets loading.export true during execution and false after', async () => {
     let resolveFn!: () => void;
-    mockExportExecute.mockReturnValue(new Promise<void>((r) => { resolveFn = r; }));
+    mockExportExecute.mockReturnValue(
+      new Promise<void>((r) => {
+        resolveFn = r;
+      }),
+    );
 
     const { result } = renderHook(() => useExportImport(makeDeps()));
 
@@ -299,7 +306,11 @@ describe('useExportImport', () => {
 
   it('handleImport sets loading.import true during execution and false after', async () => {
     let resolveFn!: () => void;
-    mockImportExecute.mockReturnValue(new Promise<void>((r) => { resolveFn = r; }));
+    mockImportExecute.mockReturnValue(
+      new Promise<void>((r) => {
+        resolveFn = r;
+      }),
+    );
 
     const { result } = renderHook(() => useExportImport(makeDeps()));
 
@@ -388,8 +399,16 @@ describe('useExportImport', () => {
   it('allows concurrent export and import with independent loading states', async () => {
     let resolveExport!: () => void;
     let resolveImport!: () => void;
-    mockExportExecute.mockReturnValue(new Promise<void>((r) => { resolveExport = r; }));
-    mockImportExecute.mockReturnValue(new Promise<void>((r) => { resolveImport = r; }));
+    mockExportExecute.mockReturnValue(
+      new Promise<void>((r) => {
+        resolveExport = r;
+      }),
+    );
+    mockImportExecute.mockReturnValue(
+      new Promise<void>((r) => {
+        resolveImport = r;
+      }),
+    );
 
     const { result } = renderHook(() => useExportImport(makeDeps()));
 

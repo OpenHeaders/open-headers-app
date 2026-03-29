@@ -6,12 +6,11 @@
  * WorkspaceStateService via IPC) — never direct file I/O.
  */
 
+import type { HeaderRule, RulesCollection } from '../../../../types/rules';
+import { createLogger } from '../../../utils/error-handling/logger';
 import { IMPORT_MODES } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, RuleEntry } from '../core/types';
-import type { RulesCollection } from '../../../../types/rules';
-import type { HeaderRule } from '../../../../types/rules';
 
-import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('RulesHandler');
 
 /** Export options for rules */
@@ -85,7 +84,7 @@ export class RulesHandler {
 
       return {
         rules: { header: rules.header, request: rules.request, response: rules.response },
-        rulesMetadata: { totalRules, lastUpdated: new Date().toISOString() }
+        rulesMetadata: { totalRules, lastUpdated: new Date().toISOString() },
       };
     } catch (error) {
       log.error('Failed to export rules:', error);
@@ -101,7 +100,7 @@ export class RulesHandler {
     const stats: ImportStats = {
       imported: { total: 0 },
       skipped: { total: 0 },
-      errors: []
+      errors: [],
     };
 
     // Initialize counters for each rule type
@@ -115,7 +114,10 @@ export class RulesHandler {
       return stats;
     }
 
-    const totalRulesToImport = Object.values(rulesToImport.rules).reduce((sum: number, rules: RuleEntry[]) => sum + rules.length, 0);
+    const totalRulesToImport = Object.values(rulesToImport.rules).reduce(
+      (sum: number, rules: RuleEntry[]) => sum + rules.length,
+      0,
+    );
     log.info(`Starting import of ${totalRulesToImport} rules in ${options.importMode} mode`);
 
     try {
@@ -125,16 +127,12 @@ export class RulesHandler {
       }
 
       // Build a set of existing rule IDs for merge duplicate detection
-      const existingIds = new Set(this.dependencies.rules.header.map(r => r.id));
+      const existingIds = new Set(this.dependencies.rules.header.map((r) => r.id));
 
       // Process header rules via WorkspaceStateService
       const headerRules = rulesToImport.rules[RULE_TYPES.HEADER];
       if (Array.isArray(headerRules) && headerRules.length > 0) {
-        const typeStats = await this._importHeaderRules(
-          headerRules,
-          existingIds,
-          options
-        );
+        const typeStats = await this._importHeaderRules(headerRules, existingIds, options);
         stats.imported[RULE_TYPES.HEADER] = typeStats.imported;
         stats.skipped[RULE_TYPES.HEADER] = typeStats.skipped;
         stats.imported.total += typeStats.imported;
@@ -145,7 +143,9 @@ export class RulesHandler {
       // TODO: request/response rule types can be added here when their
       // CRUD methods are available on WorkspaceStateService.
 
-      log.info(`Rules import completed: ${stats.imported.total} imported, ${stats.skipped.total} skipped, ${stats.errors.length} errors`);
+      log.info(
+        `Rules import completed: ${stats.imported.total} imported, ${stats.skipped.total} skipped, ${stats.errors.length} errors`,
+      );
       return stats;
     } catch (error) {
       log.error('Failed to import rules:', error);
@@ -159,7 +159,7 @@ export class RulesHandler {
   private async _importHeaderRules(
     rulesToImport: RuleEntry[],
     existingIds: Set<string>,
-    options: ImportOptions
+    options: ImportOptions,
   ): Promise<TypeImportStats> {
     const stats: TypeImportStats = { imported: 0, skipped: 0, errors: [] };
 
@@ -174,8 +174,8 @@ export class RulesHandler {
 
         // Ensure a valid ID
         const ruleToAdd: Partial<HeaderRule> = {
-          ...rule as unknown as Partial<HeaderRule>,
-          id: rule.id || this._generateRuleId()
+          ...(rule as unknown as Partial<HeaderRule>),
+          id: rule.id || this._generateRuleId(),
         };
 
         await this.dependencies.addHeaderRule(ruleToAdd);
@@ -185,7 +185,7 @@ export class RulesHandler {
         stats.errors.push({
           ruleType: RULE_TYPES.HEADER,
           ruleId: rule.id || 'unknown',
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -261,7 +261,7 @@ export class RulesHandler {
     const stats: { total: number; byType: Record<string, number>; metadata: RulesData['rulesMetadata'] } = {
       total: 0,
       byType: {},
-      metadata: rulesData.rulesMetadata || rulesData.metadata
+      metadata: rulesData.rulesMetadata || rulesData.metadata,
     };
 
     Object.entries(rulesData.rules).forEach(([ruleType, rules]) => {
@@ -294,10 +294,10 @@ export class RulesHandler {
       }
 
       totalRules += rules.length;
-      enabledRules += rules.filter(rule => rule.enabled !== false).length;
+      enabledRules += rules.filter((rule) => rule.enabled !== false).length;
 
       // Check for duplicate IDs within type
-      const ids = rules.map(rule => rule.id);
+      const ids = rules.map((rule) => rule.id);
       const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
       if (duplicateIds.length > 0) {
         warnings.push(`Duplicate rule IDs found in ${ruleType}: ${duplicateIds.join(', ')}`);
@@ -305,7 +305,7 @@ export class RulesHandler {
       }
 
       // Check for rules without names
-      const unnamedRules = rules.filter(rule => !rule.name);
+      const unnamedRules = rules.filter((rule) => !rule.name);
       if (unnamedRules.length > 0) {
         warnings.push(`${unnamedRules.length} unnamed rule(s) in ${ruleType}`);
         suggestions.push(`Add names to rules in ${ruleType} for better organization`);

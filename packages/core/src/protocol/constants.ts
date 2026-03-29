@@ -25,7 +25,7 @@ export const MESSAGE_TYPES = {
   RECORDING_DATA: 'RECORDING_DATA',
 } as const;
 
-export type MessageType = typeof MESSAGE_TYPES[keyof typeof MESSAGE_TYPES];
+export type MessageType = (typeof MESSAGE_TYPES)[keyof typeof MESSAGE_TYPES];
 
 export const RECORDING_STATES = {
   IDLE: 'idle',
@@ -33,4 +33,4 @@ export const RECORDING_STATES = {
   STOPPING: 'stopping',
 } as const;
 
-export type RecordingStateType = typeof RECORDING_STATES[keyof typeof RECORDING_STATES];
+export type RecordingStateType = (typeof RECORDING_STATES)[keyof typeof RECORDING_STATES];

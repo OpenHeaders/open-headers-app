@@ -6,14 +6,11 @@
  * component trees that wrap children in <WebSocketProvider> don't break.
  */
 
-import React, { createContext } from 'react';
+import type React from 'react';
+import { createContext } from 'react';
 
 const WebSocketContext = createContext({});
 
 export function WebSocketProvider({ children }: { children: React.ReactNode }) {
-    return (
-        <WebSocketContext.Provider value={{}}>
-            {children}
-        </WebSocketContext.Provider>
-    );
+  return <WebSocketContext.Provider value={{}}>{children}</WebSocketContext.Provider>;
 }

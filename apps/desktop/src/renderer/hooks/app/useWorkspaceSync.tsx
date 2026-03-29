@@ -5,8 +5,9 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
+import { showMessage } from '../../utils/ui/messageUtil';
+
 const log = createLogger('useWorkspaceSync');
 
 // Delay before showing notification — coalesces rapid-fire events into one
@@ -27,7 +28,7 @@ export function useWorkspaceSync({ activeWorkspaceId }: UseWorkspaceSyncDeps): v
     const unsubscribe = window.electronAPI.onWorkspaceDataUpdated((updateData) => {
       log.info('Received workspace data update notification:', {
         workspaceId: updateData.workspaceId,
-        timestamp: updateData.timestamp
+        timestamp: updateData.timestamp,
       });
 
       if (updateData.workspaceId !== activeWorkspaceId) {

@@ -6,8 +6,8 @@
  * and broadcast suppression during workspace switch.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
@@ -16,7 +16,10 @@ import type { Source } from '../../../../src/types/source';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 }));
 
@@ -35,8 +38,19 @@ const mockSetState = vi.fn();
 const mockGetState = vi.fn();
 
 const mockSources: Source[] = [
-  { sourceId: 'src-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json', sourceContent: '{"api_key":"ohk_live_4eC39HqLyjWDarjtT1zdp7dc"}' },
-  { sourceId: 'src-2', sourceType: 'http', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token', sourceMethod: 'GET', sourceName: 'Production OAuth Token' },
+  {
+    sourceId: 'src-1',
+    sourceType: 'file',
+    sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/staging.json',
+    sourceContent: '{"api_key":"ohk_live_4eC39HqLyjWDarjtT1zdp7dc"}',
+  },
+  {
+    sourceId: 'src-2',
+    sourceType: 'http',
+    sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
+    sourceMethod: 'GET',
+    sourceName: 'Production OAuth Token',
+  },
   { sourceId: 'src-3', sourceType: 'env', sourcePath: 'OPENHEADERS_API_KEY', sourceName: 'API Key from Environment' },
 ];
 
@@ -88,11 +102,19 @@ describe('useSources', () => {
 
       let added: unknown = null;
       await act(async () => {
-        added = await result.current.addSource({ sourceId: 'new-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json' });
+        added = await result.current.addSource({
+          sourceId: 'new-1',
+          sourceType: 'file',
+          sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json',
+        });
       });
 
       expect(added).toEqual({ sourceId: 'new-1', sourceType: 'file' });
-      expect(mockAddSource).toHaveBeenCalledWith({ sourceId: 'new-1', sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json' });
+      expect(mockAddSource).toHaveBeenCalledWith({
+        sourceId: 'new-1',
+        sourceType: 'file',
+        sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/dev.json',
+      });
     });
 
     it('returns null and shows error on failure', async () => {
@@ -118,11 +140,15 @@ describe('useSources', () => {
 
       let updated: unknown = null;
       await act(async () => {
-        updated = await result.current.updateSource('src-1', { sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/updated.json' });
+        updated = await result.current.updateSource('src-1', {
+          sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/updated.json',
+        });
       });
 
       expect(updated).toEqual({ sourceId: 'src-1', sourceType: 'file' });
-      expect(mockUpdateSource).toHaveBeenCalledWith('src-1', { sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/updated.json' });
+      expect(mockUpdateSource).toHaveBeenCalledWith('src-1', {
+        sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/updated.json',
+      });
     });
 
     it('returns null on error', async () => {
@@ -230,7 +256,13 @@ describe('useSources', () => {
 
   describe('importSources', () => {
     it('delegates import to service via IPC (merge by default)', async () => {
-      const newSources = [{ sourceId: 'new-1', sourceType: 'file' as const, sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/imported.json' }];
+      const newSources = [
+        {
+          sourceId: 'new-1',
+          sourceType: 'file' as const,
+          sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/imported.json',
+        },
+      ];
 
       const { result } = renderHook(() => useSources());
 
@@ -279,7 +311,7 @@ describe('useSources', () => {
 
       expect(updated).toBe(true);
       expect(mockUpdateSource).toHaveBeenCalledWith('src-2', {
-        refreshOptions: { enabled: true, interval: 60 }
+        refreshOptions: { enabled: true, interval: 60 },
       });
     });
   });

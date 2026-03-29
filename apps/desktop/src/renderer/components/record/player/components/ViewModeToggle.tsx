@@ -10,49 +10,49 @@
  * @param {boolean} props.hasVideo - Whether the recording has video
  */
 
-import React from 'react';
+import { FileOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { Segmented, Tooltip } from 'antd';
-import { VideoCameraOutlined, FileOutlined } from '@ant-design/icons';
+import React from 'react';
 
 interface ViewModeToggleProps {
-    viewMode: string;
-    onViewModeChange: (mode: string) => void;
-    hasVideo: boolean;
+  viewMode: string;
+  onViewModeChange: (mode: string) => void;
+  hasVideo: boolean;
 }
 
 const ViewModeToggle = ({ viewMode, onViewModeChange, hasVideo }: ViewModeToggleProps) => {
-    const videoOption = {
-        label: 'Video',
-        value: 'video',
-        icon: <VideoCameraOutlined />,
-        disabled: !hasVideo
-    };
+  const videoOption = {
+    label: 'Video',
+    value: 'video',
+    icon: <VideoCameraOutlined />,
+    disabled: !hasVideo,
+  };
 
-    const segmentedControl = (
-        <Segmented
-            value={viewMode}
-            onChange={onViewModeChange}
-            size={"middle" as const}
-            options={[
-                {
-                    label: 'Session',
-                    value: 'dom',
-                    icon: <FileOutlined />
-                },
-                videoOption
-            ]}
-        />
+  const segmentedControl = (
+    <Segmented
+      value={viewMode}
+      onChange={onViewModeChange}
+      size={'middle' as const}
+      options={[
+        {
+          label: 'Session',
+          value: 'dom',
+          icon: <FileOutlined />,
+        },
+        videoOption,
+      ]}
+    />
+  );
+
+  if (!hasVideo) {
+    return (
+      <Tooltip title="Video missing for this recording. Enable in settings for future workflow recordings.">
+        {segmentedControl}
+      </Tooltip>
     );
+  }
 
-    if (!hasVideo) {
-        return (
-            <Tooltip title="Video missing for this recording. Enable in settings for future workflow recordings.">
-                {segmentedControl}
-            </Tooltip>
-        );
-    }
-
-    return segmentedControl;
+  return segmentedControl;
 };
 
 export default ViewModeToggle;

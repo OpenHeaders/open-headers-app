@@ -1,15 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
-import type { JsonObject } from '../../../../src/types/common';
+import { describe, expect, it, vi } from 'vitest';
 import {
-  validateVariableExists,
   resolveAllVariables,
-  validateUrlField,
+  validateAllHttpFields,
   validateHttpHeaders,
+  validateJsonFilterPath,
   validateQueryParameters,
   validateRequestBody,
-  validateJsonFilterPath,
-  validateAllHttpFields,
+  validateUrlField,
+  validateVariableExists,
 } from '../../../../src/renderer/components/sources/http-options/HttpValidation';
+import type { JsonObject } from '../../../../src/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -31,16 +31,17 @@ interface FormFields {
   jsonFilter?: { enabled: boolean; path?: string };
 }
 
-const makeForm = (opts: FormFields = {}) => ({
-  getFieldValue: (key: string | string[]) => {
-    if (typeof key === 'string') return opts[key as keyof FormFields];
-    let val: unknown = opts;
-    for (const k of key) {
-      val = (val as JsonObject)?.[k];
-    }
-    return val;
-  },
-}) as unknown as import('antd').FormInstance;
+const makeForm = (opts: FormFields = {}) =>
+  ({
+    getFieldValue: (key: string | string[]) => {
+      if (typeof key === 'string') return opts[key as keyof FormFields];
+      let val: unknown = opts;
+      for (const k of key) {
+        val = (val as JsonObject)?.[k];
+      }
+      return val;
+    },
+  }) as unknown as import('antd').FormInstance;
 
 // ======================================================================
 // validateVariableExists

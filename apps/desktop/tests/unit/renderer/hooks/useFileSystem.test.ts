@@ -5,8 +5,8 @@
  * Validates file operations, watcher tracking, and dialog handling.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -67,7 +67,7 @@ describe('useFileSystem', () => {
       await expect(
         act(async () => {
           await result.current.readFile('/missing');
-        })
+        }),
       ).rejects.toThrow('Error reading file: ENOENT');
     });
   });
@@ -97,7 +97,7 @@ describe('useFileSystem', () => {
       await expect(
         act(async () => {
           await result.current.writeFile('/readonly', 'x');
-        })
+        }),
       ).rejects.toThrow('Error writing to file: EACCES');
     });
   });

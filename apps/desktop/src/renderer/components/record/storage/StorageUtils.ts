@@ -1,6 +1,6 @@
 /**
  * Storage Utilities
- * 
+ *
  * Utilities for storage action types, colors, and formatting
  * Extracted from RecordStorageTab for reusability
  */
@@ -11,16 +11,20 @@
  * @returns {string} Ant Design color name
  */
 export const getActionColor = (action: string) => {
-    if (!action || typeof action !== 'string') {
-        return 'default';
-    }
-    
-    switch (action) {
-        case 'set': return 'green';
-        case 'remove': return 'red';
-        case 'clear': return 'orange';
-        default: return 'default';
-    }
+  if (!action || typeof action !== 'string') {
+    return 'default';
+  }
+
+  switch (action) {
+    case 'set':
+      return 'green';
+    case 'remove':
+      return 'red';
+    case 'clear':
+      return 'orange';
+    default:
+      return 'default';
+  }
 };
 
 /**
@@ -29,16 +33,20 @@ export const getActionColor = (action: string) => {
  * @returns {string} Ant Design color name
  */
 export const getTypeColor = (type: string) => {
-    if (!type || typeof type !== 'string') {
-        return 'default';
-    }
-    
-    switch (type) {
-        case 'localStorage': return 'blue';
-        case 'sessionStorage': return 'green';
-        case 'cookie': return 'orange';
-        default: return 'default';
-    }
+  if (!type || typeof type !== 'string') {
+    return 'default';
+  }
+
+  switch (type) {
+    case 'localStorage':
+      return 'blue';
+    case 'sessionStorage':
+      return 'green';
+    case 'cookie':
+      return 'orange';
+    default:
+      return 'default';
+  }
 };
 
 /**
@@ -47,21 +55,21 @@ export const getTypeColor = (type: string) => {
  * @returns {string} Formatted value string
  */
 export const formatValue = (value: unknown) => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'object') {
-        try {
-            return JSON.stringify(value, null, 2);
-        } catch (error) {
-            console.warn('Failed to stringify object:', error);
-            return '[Object]';
-        }
-    }
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'object') {
     try {
-        return String(value);
+      return JSON.stringify(value, null, 2);
     } catch (error) {
-        console.warn('Failed to convert value to string:', error);
-        return '[Invalid Value]';
+      console.warn('Failed to stringify object:', error);
+      return '[Object]';
     }
+  }
+  try {
+    return String(value);
+  } catch (error) {
+    console.warn('Failed to convert value to string:', error);
+    return '[Invalid Value]';
+  }
 };
 
 /**
@@ -70,12 +78,12 @@ export const formatValue = (value: unknown) => {
  * @returns {string} Tooltip description
  */
 export const getActionTooltip = (action: string) => {
-    const tooltips = {
-        'set': 'Storage value was created or updated',
-        'remove': 'Storage value was deleted',
-        'clear': 'All storage entries were deleted at once'
-    };
-    return tooltips[action as keyof typeof tooltips] || 'Storage action';
+  const tooltips = {
+    set: 'Storage value was created or updated',
+    remove: 'Storage value was deleted',
+    clear: 'All storage entries were deleted at once',
+  };
+  return tooltips[action as keyof typeof tooltips] || 'Storage action';
 };
 
 /**
@@ -84,10 +92,10 @@ export const getActionTooltip = (action: string) => {
  * @returns {string} Tooltip description
  */
 export const getTypeTooltip = (type: string) => {
-    const tooltips = {
-        'localStorage': 'Persistent storage that survives browser restarts',
-        'sessionStorage': 'Temporary storage cleared when the tab closes',
-        'cookie': 'Small data sent with HTTP requests'
-    };
-    return tooltips[type as keyof typeof tooltips] || 'Storage type';
+  const tooltips = {
+    localStorage: 'Persistent storage that survives browser restarts',
+    sessionStorage: 'Temporary storage cleared when the tab closes',
+    cookie: 'Small data sent with HTTP requests',
+  };
+  return tooltips[type as keyof typeof tooltips] || 'Storage type';
 };

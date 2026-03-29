@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -10,11 +10,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-const TemplateResolver = (
-  await import(
-    '../../../../src/renderer/services/environment/TemplateResolver'
-  )
-).default;
+const TemplateResolver = (await import('../../../../src/renderer/services/environment/TemplateResolver')).default;
 
 type ResolveResult = { resolved: string; missingVars: string[]; hasAllVars: boolean };
 
@@ -60,19 +56,15 @@ describe('TemplateResolver', () => {
     });
 
     it('resolves enterprise URL template', () => {
-      const result = asResult(resolver.resolveTemplate(
-        '{{API_URL}}/v2/workspaces/{{TENANT_ID}}/config',
-        ENTERPRISE_VARS,
-      ));
+      const result = asResult(
+        resolver.resolveTemplate('{{API_URL}}/v2/workspaces/{{TENANT_ID}}/config', ENTERPRISE_VARS),
+      );
       expect(result.resolved).toBe('https://api.openheaders.io/v2/workspaces/org-openheaders-prod/config');
       expect(result.hasAllVars).toBe(true);
     });
 
     it('resolves enterprise auth header template', () => {
-      const result = asResult(resolver.resolveTemplate(
-        '{{BEARER_TOKEN}}',
-        ENTERPRISE_VARS,
-      ));
+      const result = asResult(resolver.resolveTemplate('{{BEARER_TOKEN}}', ENTERPRISE_VARS));
       expect(result.resolved).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig');
     });
 
@@ -98,9 +90,9 @@ describe('TemplateResolver', () => {
     });
 
     it('throws on missing when throwOnMissing is true', () => {
-      expect(() =>
-        resolver.resolveTemplate('{{MISSING_VAR}}', {}, { throwOnMissing: true }),
-      ).toThrow("Variable 'MISSING_VAR' not found");
+      expect(() => resolver.resolveTemplate('{{MISSING_VAR}}', {}, { throwOnMissing: true })).toThrow(
+        "Variable 'MISSING_VAR' not found",
+      );
     });
 
     it('returns null as-is for null template', () => {
@@ -228,18 +220,15 @@ describe('TemplateResolver', () => {
     });
 
     it('handles nested objects', () => {
-      const result = resolver.resolveObject(
-        { outer: { inner: '{{ENVIRONMENT}}' } },
-        ENTERPRISE_VARS,
-      ) as Record<string, Record<string, string>>;
+      const result = resolver.resolveObject({ outer: { inner: '{{ENVIRONMENT}}' } }, ENTERPRISE_VARS) as Record<
+        string,
+        Record<string, string>
+      >;
       expect(result.outer.inner).toBe('production');
     });
 
     it('handles arrays', () => {
-      const result = resolver.resolveObject(
-        ['{{API_URL}}', '{{AUTH_URL}}'],
-        ENTERPRISE_VARS,
-      ) as unknown[];
+      const result = resolver.resolveObject(['{{API_URL}}', '{{AUTH_URL}}'], ENTERPRISE_VARS) as unknown[];
       expect(result).toHaveLength(2);
     });
 
@@ -328,10 +317,7 @@ describe('TemplateResolver', () => {
     });
 
     it('pre-bound resolver uses provided options', () => {
-      const resolve = resolver.createResolver(
-        { name: 'OpenHeaders' },
-        { defaultValue: 'MISSING' },
-      );
+      const resolve = resolver.createResolver({ name: 'OpenHeaders' }, { defaultValue: 'MISSING' });
       const result = asResult(resolve('{{name}} — {{env}}'));
       expect(result.resolved).toBe('OpenHeaders — MISSING');
     });

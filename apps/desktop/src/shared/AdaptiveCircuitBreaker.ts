@@ -19,7 +19,7 @@ interface CircuitBreakerOptions {
 const CircuitState = {
   CLOSED: 'CLOSED',
   OPEN: 'OPEN',
-  HALF_OPEN: 'HALF_OPEN'
+  HALF_OPEN: 'HALF_OPEN',
 };
 
 class AdaptiveCircuitBreaker {
@@ -82,7 +82,7 @@ class AdaptiveCircuitBreaker {
       consecutiveOpenings: 0,
       currentTimeout: this.baseTimeout,
       manualBypasses: 0,
-      timeoutHistory: []
+      timeoutHistory: [],
     };
   }
 
@@ -202,8 +202,8 @@ class AdaptiveCircuitBreaker {
           this.resetTimeout = this.baseTimeout;
         } else {
           this.resetTimeout = Math.min(
-            this.baseTimeout * Math.pow(this.backoffMultiplier, this.consecutiveOpenings),
-            this.maxTimeout
+            this.baseTimeout * this.backoffMultiplier ** this.consecutiveOpenings,
+            this.maxTimeout,
           );
         }
 
@@ -219,10 +219,7 @@ class AdaptiveCircuitBreaker {
         }
 
         const backoffLevel = Math.floor((this.totalFailuresInCycle - 1) / this.failureThreshold);
-        const baseBackoff = Math.min(
-          this.baseTimeout * Math.pow(this.backoffMultiplier, backoffLevel),
-          this.maxTimeout
-        );
+        const baseBackoff = Math.min(this.baseTimeout * this.backoffMultiplier ** backoffLevel, this.maxTimeout);
 
         const jitter = baseBackoff * this.timeoutJitter * (Math.random() - 0.5);
         this.resetTimeout = Math.round(baseBackoff + jitter);
@@ -233,7 +230,7 @@ class AdaptiveCircuitBreaker {
         this.metrics.timeoutHistory.push({
           timestamp: this._now(),
           timeout: this.resetTimeout,
-          opening: this.consecutiveOpenings
+          opening: this.consecutiveOpenings,
         });
 
         if (this.metrics.timeoutHistory.length > 10) {
@@ -263,13 +260,11 @@ class AdaptiveCircuitBreaker {
         baseTimeout: this.baseTimeout,
         maxTimeout: this.maxTimeout,
         multiplier: this.backoffMultiplier,
-        timeUntilNextAttempt: this.nextAttemptTime ?
-          Math.max(0, this.nextAttemptTime - this._now()) : 0,
-        timeUntilNextAttemptMs: this.nextAttemptTime ?
-          Math.max(0, this.nextAttemptTime - this._now()) : 0
+        timeUntilNextAttempt: this.nextAttemptTime ? Math.max(0, this.nextAttemptTime - this._now()) : 0,
+        timeUntilNextAttemptMs: this.nextAttemptTime ? Math.max(0, this.nextAttemptTime - this._now()) : 0,
       },
       lastSuccessTime: this.lastSuccessTime,
-      manualBypassActive: this.manualBypassActive
+      manualBypassActive: this.manualBypassActive,
     };
   }
 
@@ -312,7 +307,7 @@ class AdaptiveCircuitBreakerManager {
       baseTimeout: 30000,
       maxTimeout: 3600000,
       backoffMultiplier: 2,
-      ...defaultOptions
+      ...defaultOptions,
     };
   }
 
@@ -324,7 +319,11 @@ class AdaptiveCircuitBreakerManager {
     return this.breakers.get(name)!;
   }
 
-  async execute<T>(name: string, fn: () => Promise<T>, options: { bypassIfOpen?: boolean; reason?: string } = {}): Promise<T> {
+  async execute<T>(
+    name: string,
+    fn: () => Promise<T>,
+    options: { bypassIfOpen?: boolean; reason?: string } = {},
+  ): Promise<T> {
     const breaker = this.getBreaker(name);
     return breaker.execute(fn, options);
   }
@@ -348,9 +347,5 @@ class AdaptiveCircuitBreakerManager {
 type BreakerStatus = ReturnType<AdaptiveCircuitBreaker['getStatus']>;
 type BreakerStatusMap = ReturnType<AdaptiveCircuitBreakerManager['getAllStatus']>;
 
-export {
-  AdaptiveCircuitBreaker,
-  AdaptiveCircuitBreakerManager,
-  CircuitState
-};
 export type { BreakerStatus, BreakerStatusMap, CircuitBreakerOptions };
+export { AdaptiveCircuitBreaker, AdaptiveCircuitBreakerManager, CircuitState };

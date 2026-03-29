@@ -1,4 +1,5 @@
-import React, { createContext } from 'react';
+import type React from 'react';
+import { createContext } from 'react';
 import { useSources as useCentralizedSources } from '../../hooks/useCentralizedWorkspace';
 
 // Create and export the context
@@ -11,9 +12,5 @@ export { useSources } from '../../hooks/useCentralizedWorkspace';
 export const SourceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const sourceState = useCentralizedSources();
 
-  return (
-      <SourceContext.Provider value={sourceState}>
-        {children}
-      </SourceContext.Provider>
-  );
+  return <SourceContext.Provider value={sourceState}>{children}</SourceContext.Provider>;
 };

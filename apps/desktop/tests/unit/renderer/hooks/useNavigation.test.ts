@@ -10,8 +10,8 @@
  * callback directly.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -26,7 +26,11 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-import { useNavigation, type NavigationIntent, type SettingsAction } from '../../../../src/renderer/hooks/app/useNavigation';
+import {
+  type NavigationIntent,
+  type SettingsAction,
+  useNavigation,
+} from '../../../../src/renderer/hooks/app/useNavigation';
 
 // ---------------------------------------------------------------------------
 // Test constants (mirror the real app constants)
@@ -190,13 +194,15 @@ describe('useNavigation', () => {
     triggerNavigation({ tab: 'rules', subTab: 'headers', action: 'edit', itemId: 'r1' });
 
     expect(deps.setActiveTab).toHaveBeenCalledWith('rules');
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      tab: 'rules',
-      subTab: 'headers',
-      target: TARGETS.RULES_HEADERS,
-      action: ACTIONS.EDIT,
-      itemId: 'r1',
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tab: 'rules',
+        subTab: 'headers',
+        target: TARGETS.RULES_HEADERS,
+        action: ACTIONS.EDIT,
+        itemId: 'r1',
+      }),
+    );
   });
 
   it('maps rules/payload to RULES_PAYLOAD target', () => {
@@ -205,10 +211,12 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'payload', itemId: 'p1' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_PAYLOAD,
-      action: ACTIONS.HIGHLIGHT, // itemId without action defaults to HIGHLIGHT
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_PAYLOAD,
+        action: ACTIONS.HIGHLIGHT, // itemId without action defaults to HIGHLIGHT
+      }),
+    );
   });
 
   it('maps rules/url to RULES_URL target', () => {
@@ -217,10 +225,12 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'url', action: 'create' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_URL,
-      action: ACTIONS.CREATE,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_URL,
+        action: ACTIONS.CREATE,
+      }),
+    );
   });
 
   it('maps rules/query-params to RULES_URL target (alias)', () => {
@@ -229,11 +239,13 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'query-params', action: 'edit' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_URL,
-      // subTab is rewritten to 'url'
-      subTab: 'url',
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_URL,
+        // subTab is rewritten to 'url'
+        subTab: 'url',
+      }),
+    );
   });
 
   it('maps rules/scripts to RULES_SCRIPTS target', () => {
@@ -242,10 +254,12 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'scripts', action: 'view' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_SCRIPTS,
-      action: ACTIONS.VIEW,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_SCRIPTS,
+        action: ACTIONS.VIEW,
+      }),
+    );
   });
 
   it('maps rules/inject to RULES_SCRIPTS target (alias)', () => {
@@ -254,10 +268,12 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'inject', action: 'delete' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_SCRIPTS,
-      subTab: 'scripts',
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_SCRIPTS,
+        subTab: 'scripts',
+      }),
+    );
   });
 
   it('maps rules/block to RULES_MORE target', () => {
@@ -266,11 +282,13 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'block', action: 'toggle' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_MORE,
-      subTab: 'more',
-      action: ACTIONS.TOGGLE,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_MORE,
+        subTab: 'more',
+        action: ACTIONS.TOGGLE,
+      }),
+    );
   });
 
   it('maps rules/redirect to RULES_MORE target', () => {
@@ -279,11 +297,13 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'redirect', action: 'duplicate' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RULES_MORE,
-      subTab: 'more',
-      action: ACTIONS.DUPLICATE,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RULES_MORE,
+        subTab: 'more',
+        action: ACTIONS.DUPLICATE,
+      }),
+    );
   });
 
   it('does not navigate when rules subTab is unrecognized', () => {
@@ -304,9 +324,11 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'record-viewer', subTab: 'any', itemId: 'rec-1' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      target: TARGETS.RECORDS,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        target: TARGETS.RECORDS,
+      }),
+    );
   });
 
   // ---- Action mapping ----
@@ -317,9 +339,11 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'headers', action: 'unknownAction' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      action: ACTIONS.HIGHLIGHT,
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: ACTIONS.HIGHLIGHT,
+      }),
+    );
   });
 
   it('defaults to HIGHLIGHT when itemId is provided without action', () => {
@@ -328,10 +352,12 @@ describe('useNavigation', () => {
 
     triggerNavigation({ tab: 'rules', subTab: 'headers', itemId: 'rule-42' });
 
-    expect(deps.navigate).toHaveBeenCalledWith(expect.objectContaining({
-      action: ACTIONS.HIGHLIGHT,
-      itemId: 'rule-42',
-    }));
+    expect(deps.navigate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: ACTIONS.HIGHLIGHT,
+        itemId: 'rule-42',
+      }),
+    );
   });
 
   // ---- Settings navigation ----

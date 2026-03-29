@@ -1,25 +1,26 @@
-import { describe, it, expect } from 'vitest';
-import type { JsonObject } from '../../../../src/types/common';
+import { describe, expect, it } from 'vitest';
 import {
-  validateUrlField,
+  validateAllHttpFields,
   validateEnvironmentVariables,
-  validateTotpPlaceholders,
   validateHttpHeaders,
+  validateJsonFilterPath,
   validateQueryParameters,
   validateRequestBody,
-  validateJsonFilterPath,
+  validateTotpPlaceholders,
   validateTotpSecret,
-  validateAllHttpFields,
+  validateUrlField,
 } from '../../../../src/renderer/components/sources/source-form/SourceFormValidation';
+import type { JsonObject } from '../../../../src/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) => ({
-  environmentsReady: ready,
-  activeEnvironment: activeEnv,
-  getAllVariables: () => vars,
-}) as Parameters<typeof validateUrlField>[3];
+const makeEnvContext = (vars = {}, activeEnv = 'default', ready = true) =>
+  ({
+    environmentsReady: ready,
+    activeEnvironment: activeEnv,
+    getAllVariables: () => vars,
+  }) as Parameters<typeof validateUrlField>[3];
 
 interface FormFields {
   requestOptions?: {
@@ -31,16 +32,17 @@ interface FormFields {
   jsonFilter?: { enabled: boolean; path?: string };
 }
 
-const makeForm = (fields: FormFields = {}) => ({
-  getFieldValue: (key: string | string[]) => {
-    if (typeof key === 'string') return fields[key as keyof FormFields];
-    let val: unknown = fields;
-    for (const k of key) {
-      val = (val as JsonObject)?.[k];
-    }
-    return val;
-  },
-}) as unknown as import('antd').FormInstance;
+const makeForm = (fields: FormFields = {}) =>
+  ({
+    getFieldValue: (key: string | string[]) => {
+      if (typeof key === 'string') return fields[key as keyof FormFields];
+      let val: unknown = fields;
+      for (const k of key) {
+        val = (val as JsonObject)?.[k];
+      }
+      return val;
+    },
+  }) as unknown as import('antd').FormInstance;
 
 // ======================================================================
 // validateUrlField (SourceFormValidation)
@@ -61,47 +63,40 @@ describe('SourceFormValidation.validateUrlField', () => {
 
   it('resolves for valid URL without vars', async () => {
     await expect(
-      validateUrlField({}, 'https://auth.openheaders.io/api', 'http', makeEnvContext(), makeForm())
+      validateUrlField({}, 'https://auth.openheaders.io/api', 'http', makeEnvContext(), makeForm()),
     ).resolves.toBeUndefined();
   });
 
   it('resolves for URL with existing env var', async () => {
     const ctx = makeEnvContext({ HOST: 'auth.openheaders.io' });
-    await expect(
-      validateUrlField({}, 'https://{{HOST}}/api', 'http', ctx, makeForm())
-    ).resolves.toBeUndefined();
+    await expect(validateUrlField({}, 'https://{{HOST}}/api', 'http', ctx, makeForm())).resolves.toBeUndefined();
   });
 
   it('rejects for missing env var', async () => {
     const ctx = makeEnvContext({});
-    await expect(
-      validateUrlField({}, 'https://{{MISSING}}/api', 'http', ctx, makeForm())
-    ).rejects.toThrow('MISSING');
+    await expect(validateUrlField({}, 'https://{{MISSING}}/api', 'http', ctx, makeForm())).rejects.toThrow('MISSING');
   });
 
   it('rejects when TOTP placeholder used without secret', async () => {
     const ctx = makeEnvContext({});
     const form = makeForm({ requestOptions: { totpSecret: '' } });
-    await expect(
-      validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form)
-    ).rejects.toThrow('TOTP');
+    await expect(validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form)).rejects.toThrow(
+      'TOTP',
+    );
   });
 
   it('resolves when TOTP placeholder used with secret', async () => {
     const ctx = makeEnvContext({});
     const form = makeForm({ requestOptions: { totpSecret: 'JBSWY3DPEHPK3PXP' } });
     await expect(
-      validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form)
+      validateUrlField({}, 'https://api.openheaders.io/[[TOTP_CODE]]', 'http', ctx, form),
     ).resolves.toBeUndefined();
   });
 
   it('rejects for invalid URL format', async () => {
     const ctx = makeEnvContext({});
-    await expect(
-      validateUrlField({}, ':::invalid', 'http', ctx, makeForm())
-    ).rejects.toThrow('Invalid URL');
+    await expect(validateUrlField({}, ':::invalid', 'http', ctx, makeForm())).rejects.toThrow('Invalid URL');
   });
-
 });
 
 // ======================================================================
@@ -230,10 +225,7 @@ describe('SourceFormValidation.validateJsonFilterPath', () => {
   });
 
   it('returns error when filter path has missing var', () => {
-    const result = validateJsonFilterPath(
-      { jsonFilter: { enabled: true, path: '{{ROOT}}.items' } },
-      makeEnvContext()
-    );
+    const result = validateJsonFilterPath({ jsonFilter: { enabled: true, path: '{{ROOT}}.items' } }, makeEnvContext());
     expect(result).not.toBeNull();
     expect(result!.message).toContain('ROOT');
   });

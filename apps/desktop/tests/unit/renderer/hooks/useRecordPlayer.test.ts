@@ -6,34 +6,41 @@
  * and initial loading state.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the rrweb-player script loading
 vi.stubGlobal('rrwebPlayer', undefined);
 
+import type { ProxyStatus, RecordData } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
 import { useRecordPlayer } from '../../../../src/renderer/hooks/useRecordPlayer';
 import type { Recording, RRWebEvent } from '../../../../src/types/recording';
-import type { RecordData, ProxyStatus } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
 
 function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
-    return {
-        running: false, port: 59212, rulesCount: 0, sourcesCount: 0,
-        cacheEnabled: false, cacheSize: 0, strictSSL: true, trustedCertificates: 0, certificateExceptions: 0,
-        stats: { requestsProcessed: 0, cacheHits: 0, cacheMisses: 0, errors: 0 },
-        ...overrides,
-    };
+  return {
+    running: false,
+    port: 59212,
+    rulesCount: 0,
+    sourcesCount: 0,
+    cacheEnabled: false,
+    cacheSize: 0,
+    strictSSL: true,
+    trustedCertificates: 0,
+    certificateExceptions: 0,
+    stats: { requestsProcessed: 0, cacheHits: 0, cacheMisses: 0, errors: 0 },
+    ...overrides,
+  };
 }
 
 function makeRecording(overrides: Record<string, unknown> = {}): Recording {
-    return {
-        metadata: { startTime: 0 },
-        events: [],
-        console: [],
-        network: [],
-        storage: [],
-        ...overrides,
-    } as Recording;
+  return {
+    metadata: { startTime: 0 },
+    events: [],
+    console: [],
+    network: [],
+    storage: [],
+    ...overrides,
+  } as Recording;
 }
 
 describe('useRecordPlayer', () => {
@@ -56,10 +63,7 @@ describe('useRecordPlayer', () => {
 
       let processed!: RecordData;
       await act(async () => {
-        processed = await result.current.processRecordForProxy(
-          record,
-          makeProxyStatus({ running: false })
-        );
+        processed = await result.current.processRecordForProxy(record, makeProxyStatus({ running: false }));
       });
 
       expect(processed).toEqual(record);
@@ -71,10 +75,7 @@ describe('useRecordPlayer', () => {
 
       let processed!: RecordData;
       await act(async () => {
-        processed = await result.current.processRecordForProxy(
-          record,
-          makeProxyStatus({ running: true })
-        );
+        processed = await result.current.processRecordForProxy(record, makeProxyStatus({ running: true }));
       });
 
       expect(processed.url).toBe('http://localhost:59212/https://example.com/style.css');
@@ -86,10 +87,7 @@ describe('useRecordPlayer', () => {
 
       let processed!: RecordData;
       await act(async () => {
-        processed = await result.current.processRecordForProxy(
-          record,
-          makeProxyStatus({ running: true })
-        );
+        processed = await result.current.processRecordForProxy(record, makeProxyStatus({ running: true }));
       });
 
       // Should not add another proxy prefix
@@ -102,30 +100,23 @@ describe('useRecordPlayer', () => {
 
       let processed!: RecordData;
       await act(async () => {
-        processed = await result.current.processRecordForProxy(
-          record,
-          makeProxyStatus({ running: true })
-        );
+        processed = await result.current.processRecordForProxy(record, makeProxyStatus({ running: true }));
       });
 
-      expect((processed as unknown as Record<string, unknown>).src).toBe('http://localhost:59212/https://cdn.example.com/lib.js');
+      expect((processed as unknown as Record<string, unknown>).src).toBe(
+        'http://localhost:59212/https://cdn.example.com/lib.js',
+      );
     });
 
     it('rewrites nested URLs in events array', async () => {
       const { result } = renderHook(() => useRecordPlayer());
       const record = makeRecording({
-        events: [
-          { data: { href: 'https://example.com/a.css' } },
-          { data: { src: 'https://cdn.example.com/b.js' } },
-        ],
+        events: [{ data: { href: 'https://example.com/a.css' } }, { data: { src: 'https://cdn.example.com/b.js' } }],
       });
 
       let processed!: RecordData;
       await act(async () => {
-        processed = await result.current.processRecordForProxy(
-          record,
-          makeProxyStatus({ running: true, port: 8080 })
-        );
+        processed = await result.current.processRecordForProxy(record, makeProxyStatus({ running: true, port: 8080 }));
       });
 
       const events = processed.events as { data: { href?: string; src?: string } }[];

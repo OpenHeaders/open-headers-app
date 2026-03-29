@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the logger before importing the module under test
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -10,11 +10,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-const {
-  AdaptiveCircuitBreaker,
-  AdaptiveCircuitBreakerManager,
-  CircuitState,
-} = await import(
+const { AdaptiveCircuitBreaker, AdaptiveCircuitBreakerManager, CircuitState } = await import(
   '../../../../src/renderer/utils/error-handling/AdaptiveCircuitBreaker'
 );
 
@@ -122,9 +118,7 @@ describe('AdaptiveCircuitBreaker', () => {
     });
 
     it('execute rejects when OPEN', async () => {
-      await expect(cb.execute(() => Promise.resolve('x'))).rejects.toThrow(
-        'Circuit breaker test is OPEN'
-      );
+      await expect(cb.execute(() => Promise.resolve('x'))).rejects.toThrow('Circuit breaker test is OPEN');
     });
   });
 
@@ -190,9 +184,7 @@ describe('AdaptiveCircuitBreaker', () => {
     });
 
     it('rethrows errors from the function', async () => {
-      await expect(
-        cb.execute(() => Promise.reject(new Error('boom')))
-      ).rejects.toThrow('boom');
+      await expect(cb.execute(() => Promise.reject(new Error('boom')))).rejects.toThrow('boom');
     });
 
     it('calls onSuccess on successful execution', async () => {
@@ -251,7 +243,7 @@ describe('AdaptiveCircuitBreaker', () => {
         cb.execute(() => Promise.reject(new Error('bypass fail')), {
           bypassIfOpen: true,
           reason: 'manual',
-        })
+        }),
       ).rejects.toThrow('bypass fail');
       expect(cb.state).toBe(CircuitState.OPEN);
     });

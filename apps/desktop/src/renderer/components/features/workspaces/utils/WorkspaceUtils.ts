@@ -1,28 +1,28 @@
+import type { AuthType, WorkspaceAuthData, WorkspaceType } from '../../../../../types/workspace';
 import { AUTH_TYPES, PROVIDER_ICONS } from '../constants';
-import type { WorkspaceType, WorkspaceAuthData, AuthType } from '../../../../../types/workspace';
 
 /** Form values from workspace creation/edit forms */
 export interface WorkspaceFormValues {
-    name?: string;
-    description?: string;
-    type?: WorkspaceType;
-    gitUrl?: string;
-    gitBranch?: string;
-    gitPath?: string;
-    authType?: AuthType;
-    autoSync?: boolean;
-    gitToken?: string;
-    tokenType?: string;
-    sshKeySource?: string;
-    sshKey?: string;
-    sshKeyPath?: string;
-    sshPassphrase?: string;
-    gitUsername?: string;
-    gitPassword?: string;
-    environmentOption?: string;
-    fileFormat?: string;
-    initialCommit?: { files: Record<string, string>; message: string };
-    inviteMetadata?: { invitedBy?: string; inviteId?: string; joinedAt?: string };
+  name?: string;
+  description?: string;
+  type?: WorkspaceType;
+  gitUrl?: string;
+  gitBranch?: string;
+  gitPath?: string;
+  authType?: AuthType;
+  autoSync?: boolean;
+  gitToken?: string;
+  tokenType?: string;
+  sshKeySource?: string;
+  sshKey?: string;
+  sshKeyPath?: string;
+  sshPassphrase?: string;
+  gitUsername?: string;
+  gitPassword?: string;
+  environmentOption?: string;
+  fileFormat?: string;
+  initialCommit?: { files: Record<string, string>; message: string };
+  inviteMetadata?: { invitedBy?: string; inviteId?: string; joinedAt?: string };
 }
 
 /**
@@ -35,15 +35,15 @@ export interface WorkspaceFormValues {
  * @returns {string} Human-readable relative time string
  */
 export const getTimeAgo = (date: Date) => {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-    if (seconds < 10) return 'Just now';
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 10) return 'Just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 };
 
 /**
@@ -52,8 +52,8 @@ export const getTimeAgo = (date: Date) => {
  * @returns {string} Repository name
  */
 export const extractRepoName = (url: string) => {
-    if (!url) return '';
-    return (url.split('/').pop() ?? '').replace('.git', '');
+  if (!url) return '';
+  return (url.split('/').pop() ?? '').replace('.git', '');
 };
 
 /**
@@ -62,19 +62,19 @@ export const extractRepoName = (url: string) => {
  * @returns {string} Icon component name
  */
 export const getProviderIcon = (url: string) => {
-    if (!url) return PROVIDER_ICONS.generic;
-    
-    if (url.includes('github.com')) {
-        return PROVIDER_ICONS.github;
-    } else if (url.includes('gitlab')) {
-        return PROVIDER_ICONS.gitlab;
-    } else if (url.includes('bitbucket')) {
-        return PROVIDER_ICONS.bitbucket;
-    } else if (url.includes('azure')) {
-        return PROVIDER_ICONS.azure;
-    }
-    
-    return PROVIDER_ICONS.generic;
+  if (!url) return PROVIDER_ICONS.generic;
+
+  if (url.includes('github.com')) {
+    return PROVIDER_ICONS.github;
+  } else if (url.includes('gitlab')) {
+    return PROVIDER_ICONS.gitlab;
+  } else if (url.includes('bitbucket')) {
+    return PROVIDER_ICONS.bitbucket;
+  } else if (url.includes('azure')) {
+    return PROVIDER_ICONS.azure;
+  }
+
+  return PROVIDER_ICONS.generic;
 };
 
 /**
@@ -92,40 +92,40 @@ export const getProviderIcon = (url: string) => {
  * @returns {Object} Prepared authentication data
  */
 export const prepareAuthData = async (values: WorkspaceFormValues, authType: string): Promise<WorkspaceAuthData> => {
-    switch (authType) {
-        case AUTH_TYPES.TOKEN:
-            return {
-                token: values.gitToken,
-                tokenType: values.tokenType || 'auto'
-            };
+  switch (authType) {
+    case AUTH_TYPES.TOKEN:
+      return {
+        token: values.gitToken,
+        tokenType: values.tokenType || 'auto',
+      };
 
-        case AUTH_TYPES.SSH_KEY: {
-            let sshKeyContent = '';
-            if (values.sshKeySource === 'file' && values.sshKeyPath) {
-                try {
-                    sshKeyContent = String(await window.electronAPI.readFile(values.sshKeyPath, 'utf-8'));
-                } catch (error) {
-                    throw new Error(`Failed to read SSH key file: ${error instanceof Error ? error.message : String(error)}`);
-                }
-            } else {
-                sshKeyContent = values.sshKey || '';
-            }
-
-            return {
-                sshKey: sshKeyContent,
-                sshPassphrase: values.sshPassphrase
-            };
+    case AUTH_TYPES.SSH_KEY: {
+      let sshKeyContent = '';
+      if (values.sshKeySource === 'file' && values.sshKeyPath) {
+        try {
+          sshKeyContent = String(await window.electronAPI.readFile(values.sshKeyPath, 'utf-8'));
+        } catch (error) {
+          throw new Error(`Failed to read SSH key file: ${error instanceof Error ? error.message : String(error)}`);
         }
+      } else {
+        sshKeyContent = values.sshKey || '';
+      }
 
-        case AUTH_TYPES.BASIC:
-            return {
-                username: values.gitUsername,
-                password: values.gitPassword
-            };
-
-        default:
-            return {};
+      return {
+        sshKey: sshKeyContent,
+        sshPassphrase: values.sshPassphrase,
+      };
     }
+
+    case AUTH_TYPES.BASIC:
+      return {
+        username: values.gitUsername,
+        password: values.gitPassword,
+      };
+
+    default:
+      return {};
+  }
 };
 
 /**
@@ -140,47 +140,55 @@ export const prepareAuthData = async (values: WorkspaceFormValues, authType: str
  * @param {Object} authData - Prepared authentication data
  * @returns {Object} Prepared workspace object with sensitive fields removed
  */
-export const prepareWorkspaceData = (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null, authData: WorkspaceAuthData) => {
-    // Extract form-only fields that shouldn't be stored on the workspace
-    const {
-        gitToken: _gitToken,
-        tokenType: _tokenType,
-        sshKey: _sshKey,
-        sshKeyPath: _sshKeyPath,
-        sshPassphrase: _sshPassphrase,
-        gitUsername: _gitUsername,
-        gitPassword: _gitPassword,
-        ...rest
-    } = values;
+export const prepareWorkspaceData = (
+  values: WorkspaceFormValues,
+  editingWorkspace: { id?: string } | null,
+  authData: WorkspaceAuthData,
+) => {
+  // Extract form-only fields that shouldn't be stored on the workspace
+  const {
+    gitToken: _gitToken,
+    tokenType: _tokenType,
+    sshKey: _sshKey,
+    sshKeyPath: _sshKeyPath,
+    sshPassphrase: _sshPassphrase,
+    gitUsername: _gitUsername,
+    gitPassword: _gitPassword,
+    ...rest
+  } = values;
 
-    return {
-        ...rest,
-        id: editingWorkspace?.id || Date.now().toString(),
-        type: values.gitUrl ? 'git' as const : 'personal' as const,
-        authData: values.gitUrl ? authData : undefined,
-        sshKeySource: values.authType === AUTH_TYPES.SSH_KEY ? values.sshKeySource : undefined
-    };
+  return {
+    ...rest,
+    id: editingWorkspace?.id || Date.now().toString(),
+    type: values.gitUrl ? ('git' as const) : ('personal' as const),
+    authData: values.gitUrl ? authData : undefined,
+    sshKeySource: values.authType === AUTH_TYPES.SSH_KEY ? values.sshKeySource : undefined,
+  };
 };
-
 
 /**
  * Formats validation details for display
  * @param {Object} validationDetails - Validation details from API
  * @returns {string[]} Array of formatted validation items
  */
-export const formatValidationDetails = (validationDetails: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number }) => {
-    const items = [];
-    if (validationDetails.sourceCount > 0) {
-        items.push(`${validationDetails.sourceCount} sources`);
-    }
-    if (validationDetails.ruleCount > 0) {
-        items.push(`${validationDetails.ruleCount} rules`);
-    }
-    if (validationDetails.proxyRuleCount > 0) {
-        items.push(`${validationDetails.proxyRuleCount} proxy rules`);
-    }
-    if (validationDetails.variableCount > 0) {
-        items.push(`${validationDetails.variableCount} environment variables`);
-    }
-    return items;
+export const formatValidationDetails = (validationDetails: {
+  sourceCount: number;
+  ruleCount: number;
+  proxyRuleCount: number;
+  variableCount: number;
+}) => {
+  const items = [];
+  if (validationDetails.sourceCount > 0) {
+    items.push(`${validationDetails.sourceCount} sources`);
+  }
+  if (validationDetails.ruleCount > 0) {
+    items.push(`${validationDetails.ruleCount} rules`);
+  }
+  if (validationDetails.proxyRuleCount > 0) {
+    items.push(`${validationDetails.proxyRuleCount} proxy rules`);
+  }
+  if (validationDetails.variableCount > 0) {
+    items.push(`${validationDetails.variableCount} environment variables`);
+  }
+  return items;
 };

@@ -5,8 +5,8 @@
  * Validates header rule CRUD and toggle operations.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -138,7 +138,9 @@ describe('useHeaderRules', () => {
       });
 
       expect(toggled).toBe(true);
-      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-b2c3d4e5-f6a7-8901-bcde-f12345678901', { isEnabled: true });
+      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-b2c3d4e5-f6a7-8901-bcde-f12345678901', {
+        isEnabled: true,
+      });
     });
 
     it('disables a rule', async () => {
@@ -148,7 +150,9 @@ describe('useHeaderRules', () => {
         await result.current.toggleRule('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890', false);
       });
 
-      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890', { isEnabled: false });
+      expect(mockUpdateHeaderRule).toHaveBeenCalledWith('rule-a1b2c3d4-e5f6-7890-abcd-ef1234567890', {
+        isEnabled: false,
+      });
     });
 
     it('returns false on error', async () => {

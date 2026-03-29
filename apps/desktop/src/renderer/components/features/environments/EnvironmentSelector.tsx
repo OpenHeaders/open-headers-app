@@ -3,21 +3,22 @@
  * Handles environment switching with missing variable warnings
  */
 
-import React, { useState } from 'react';
-import { Row, Col, Space, Select, Button, Dropdown, Modal, Typography, Tag } from 'antd';
-import type { MenuProps } from 'antd';
-import type { Source } from '../../../../types/source';
 import {
-  PlusOutlined,
-  DeleteOutlined,
   CopyOutlined,
+  DeleteOutlined,
+  PlusOutlined,
   SettingOutlined,
+  ShareAltOutlined,
   WarningOutlined,
-  ShareAltOutlined
 } from '@ant-design/icons';
-import { checkMissingVariables } from './EnvironmentUtils';
-import EnvironmentShareModal from '../../modals/EnvironmentShareModal';
+import type { MenuProps } from 'antd';
+import { Button, Col, Dropdown, Modal, Row, Select, Space, Tag, Typography } from 'antd';
+import type React from 'react';
+import { useState } from 'react';
 import type { EnvironmentVariable } from '../../../../types/environment';
+import type { Source } from '../../../../types/source';
+import EnvironmentShareModal from '../../modals/EnvironmentShareModal';
+import { checkMissingVariables } from './EnvironmentUtils';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -50,7 +51,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
   onCopyEnvironment,
   onDeleteEnvironment,
   onAddVariable,
-  theme
+  theme,
 }) => {
   const [shareModalVisible, setShareModalVisible] = useState(false);
   /**
@@ -60,14 +61,16 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
   const handleEnvironmentSwitch = (targetEnv: string) => {
     const targetVars = environments[targetEnv] || {};
     const missingVars = checkMissingVariables(sources, targetVars);
-    
+
     if (missingVars.length > 0) {
       Modal.confirm({
         title: 'Missing Variables Warning',
         icon: <WarningOutlined style={{ color: theme.colorWarning }} />,
         content: (
           <div>
-            <p>The following variables are used in your sources but are not defined in the '{targetEnv}' environment:</p>
+            <p>
+              The following variables are used in your sources but are not defined in the '{targetEnv}' environment:
+            </p>
             <div style={{ marginTop: 8, marginBottom: 16 }}>
               {missingVars.map((varName: string) => (
                 <Tag key={varName} color="error" style={{ marginBottom: 4 }}>
@@ -81,7 +84,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
         okText: 'Switch Anyway',
         cancelText: 'Cancel',
         okButtonProps: { danger: true },
-        onOk: () => onEnvironmentSwitch(targetEnv)
+        onOk: () => onEnvironmentSwitch(targetEnv),
       });
     } else {
       onEnvironmentSwitch(targetEnv);
@@ -97,7 +100,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
       content: `Are you sure you want to delete '${activeEnvironment}' environment?`,
       onOk: () => onDeleteEnvironment(activeEnvironment),
       okText: 'Delete',
-      okButtonProps: { danger: true }
+      okButtonProps: { danger: true },
     });
   };
 
@@ -108,7 +111,6 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
     setShareModalVisible(true);
   };
 
-
   /**
    * Generates dropdown menu items for environment management
    */
@@ -118,20 +120,20 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
         key: 'new',
         icon: <PlusOutlined />,
         label: 'New Environment',
-        onClick: onCreateEnvironment
+        onClick: onCreateEnvironment,
       },
       {
         key: 'clone',
         icon: <CopyOutlined />,
         label: 'Clone Current',
-        onClick: () => onCopyEnvironment(activeEnvironment)
+        onClick: () => onCopyEnvironment(activeEnvironment),
       },
       {
         key: 'share',
         icon: <ShareAltOutlined />,
         label: 'Share Environment',
-        onClick: handleShareEnvironment
-      }
+        onClick: handleShareEnvironment,
+      },
     ];
 
     // Add delete option for non-default environments
@@ -143,8 +145,8 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
           icon: <DeleteOutlined />,
           label: 'Delete Current',
           danger: true,
-          onClick: handleDeleteEnvironment
-        }
+          onClick: handleDeleteEnvironment,
+        },
       );
     }
 
@@ -157,12 +159,8 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
         <Col flex="auto">
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
             <Text type="secondary">Active Environment</Text>
-            <Select
-              value={activeEnvironment}
-              onChange={handleEnvironmentSwitch}
-              style={{ width: 200 }}
-            >
-              {Object.keys(environments).map(env => {
+            <Select value={activeEnvironment} onChange={handleEnvironmentSwitch} style={{ width: 200 }}>
+              {Object.keys(environments).map((env) => {
                 const varCount = Object.keys(environments[env] || {}).length;
                 return (
                   <Option key={env} value={env}>
@@ -180,25 +178,16 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
         </Col>
         <Col>
           <Space>
-            <Dropdown
-              menu={{ items: getDropdownItems() }}
-              trigger={['click']}
-            >
-              <Button icon={<SettingOutlined />}>
-                Manage Environment
-              </Button>
+            <Dropdown menu={{ items: getDropdownItems() }} trigger={['click']}>
+              <Button icon={<SettingOutlined />}>Manage Environment</Button>
             </Dropdown>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={onAddVariable}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={onAddVariable}>
               Add Variable
             </Button>
           </Space>
         </Col>
       </Row>
-      
+
       <EnvironmentShareModal
         visible={shareModalVisible}
         environmentName={activeEnvironment}

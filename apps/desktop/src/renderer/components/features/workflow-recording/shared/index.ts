@@ -3,5 +3,5 @@
  * Exports shared utilities and types
  */
 
-export * from './WorkflowUtils';
 export * from './WorkflowTypes';
+export * from './WorkflowUtils';

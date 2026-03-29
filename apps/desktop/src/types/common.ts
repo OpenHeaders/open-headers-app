@@ -5,7 +5,7 @@
  * that don't belong to a single domain.
  */
 
-import type { IpcMainInvokeEvent, IpcMainEvent } from 'electron';
+import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 
 // ── IPC handler signatures ──────────────────────────────────────────
 // IPC handlers receive the Electron event as first param.

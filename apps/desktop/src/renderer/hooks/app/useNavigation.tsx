@@ -7,6 +7,7 @@
 
 import { useEffect } from 'react';
 import { createLogger } from '../../utils/error-handling/logger';
+
 const log = createLogger('useNavigation');
 
 interface NavigationRequest {
@@ -51,7 +52,7 @@ export function useNavigation({
   TARGETS,
   setSettingsInitialTab,
   setSettingsVisible,
-  setSettingsAction
+  setSettingsAction,
 }: UseNavigationDeps): void {
   useEffect(() => {
     const unsubscribe = window.electronAPI.onNavigateTo((navigation: NavigationRequest) => {
@@ -86,7 +87,7 @@ export function useNavigation({
               subTab: navigation.subTab,
               target: target,
               action: action,
-              itemId: navigation.itemId
+              itemId: navigation.itemId,
             });
           }
         }
@@ -142,13 +143,20 @@ function mapNavigationToTarget(navigation: NavigationRequest, TARGETS: Record<st
 function mapNavigationAction(navigation: NavigationRequest, ACTIONS: Record<string, string>): string | undefined {
   if (navigation.action) {
     switch (navigation.action) {
-      case 'edit': return ACTIONS.EDIT;
-      case 'delete': return ACTIONS.DELETE;
-      case 'toggle': return ACTIONS.TOGGLE;
-      case 'view': return ACTIONS.VIEW;
-      case 'create': return ACTIONS.CREATE;
-      case 'duplicate': return ACTIONS.DUPLICATE;
-      default: return ACTIONS.HIGHLIGHT;
+      case 'edit':
+        return ACTIONS.EDIT;
+      case 'delete':
+        return ACTIONS.DELETE;
+      case 'toggle':
+        return ACTIONS.TOGGLE;
+      case 'view':
+        return ACTIONS.VIEW;
+      case 'create':
+        return ACTIONS.CREATE;
+      case 'duplicate':
+        return ACTIONS.DUPLICATE;
+      default:
+        return ACTIONS.HIGHLIGHT;
     }
   } else if (navigation.itemId) {
     return ACTIONS.HIGHLIGHT;
@@ -164,7 +172,7 @@ function handleSettingsNavigation(
   navigation: NavigationRequest,
   setSettingsInitialTab: (tab: string | null) => void,
   setSettingsVisible: (visible: boolean) => void,
-  setSettingsAction: (action: SettingsAction) => void
+  setSettingsAction: (action: SettingsAction) => void,
 ): void {
   // Handle settings tab navigation
   if (navigation.settingsTab === 'workflows') {
@@ -181,16 +189,16 @@ function handleSettingsNavigation(
   if (navigation.action === 'toggleVideoRecording' && navigation.value !== undefined) {
     setSettingsAction({
       action: navigation.action,
-      value: navigation.value === 'true' || navigation.value === true
+      value: navigation.value === 'true' || navigation.value === true,
     });
   } else if (navigation.action === 'editHotkey') {
     setSettingsAction({
-      action: navigation.action
+      action: navigation.action,
     });
   } else if (navigation.action === 'toggleRecordingHotkey' && navigation.value !== undefined) {
     setSettingsAction({
       action: navigation.action,
-      value: navigation.value === 'true' || navigation.value === true
+      value: navigation.value === 'true' || navigation.value === true,
     });
   }
 }
@@ -206,7 +214,7 @@ function handleTabFocus(navigation: NavigationRequest): void {
     }
 
     const tabButtons = document.querySelectorAll('.ant-tabs-tab');
-    tabButtons.forEach(button => {
+    tabButtons.forEach((button) => {
       const tabKey = button.getAttribute('data-node-key');
       if (tabKey === navigation.tab) {
         if (!button.classList.contains('ant-tabs-tab-active')) {

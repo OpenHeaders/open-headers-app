@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock CentralizedEnvironmentService (transitively imported via EnvironmentsHandler)
 vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
@@ -7,9 +7,14 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
   }),
 }));
 
-import { ExportService } from '../../../../src/renderer/services/export-import/core/ExportService';
 import { FILE_FORMATS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies, ExportOptions, ExportData, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
+import { ExportService } from '../../../../src/renderer/services/export-import/core/ExportService';
+import type {
+  ExportData,
+  ExportImportDependencies,
+  ExportOptions,
+  WorkspaceData,
+} from '../../../../src/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,60 +52,73 @@ describe('ExportService._validateExportOptions', () => {
   it('throws for null options', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportOptions(null as unknown as ExportOptions))
-      .toThrow('Export options must be provided');
+    expect(() => service._validateExportOptions(null as unknown as ExportOptions)).toThrow(
+      'Export options must be provided',
+    );
   });
 
   it('throws for non-object options', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportOptions('str' as unknown as ExportOptions))
-      .toThrow('Export options must be provided');
+    expect(() => service._validateExportOptions('str' as unknown as ExportOptions)).toThrow(
+      'Export options must be provided',
+    );
   });
 
   it('throws when selectedItems is missing', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportOptions({} as unknown as ExportOptions))
-      .toThrow('Selected items must be specified');
+    expect(() => service._validateExportOptions({} as unknown as ExportOptions)).toThrow(
+      'Selected items must be specified',
+    );
   });
 
   it('throws when no items are selected', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportOptions({
-      selectedItems: { sources: false, rules: false },
-    })).toThrow('At least one data type');
+    expect(() =>
+      service._validateExportOptions({
+        selectedItems: { sources: false, rules: false },
+      }),
+    ).toThrow('At least one data type');
   });
 
   it('throws for invalid file format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportOptions({
-      selectedItems: { sources: true },
-      fileFormat: 'invalid-format',
-    })).toThrow('Invalid file format');
+    expect(() =>
+      service._validateExportOptions({
+        selectedItems: { sources: true },
+        fileFormat: 'invalid-format',
+      }),
+    ).toThrow('Invalid file format');
   });
 
   it('accepts valid options with single format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportOptions({
-      selectedItems: { sources: true },
-      fileFormat: FILE_FORMATS.SINGLE,
-    })).not.toThrow();
+    expect(() =>
+      service._validateExportOptions({
+        selectedItems: { sources: true },
+        fileFormat: FILE_FORMATS.SINGLE,
+      }),
+    ).not.toThrow();
   });
 
   it('accepts valid options with separate format', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportOptions({
-      selectedItems: { sources: true },
-      fileFormat: FILE_FORMATS.SEPARATE,
-    })).not.toThrow();
+    expect(() =>
+      service._validateExportOptions({
+        selectedItems: { sources: true },
+        fileFormat: FILE_FORMATS.SEPARATE,
+      }),
+    ).not.toThrow();
   });
 
   it('accepts valid options without fileFormat (optional)', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportOptions({
-      selectedItems: { rules: true },
-    })).not.toThrow();
+    expect(() =>
+      service._validateExportOptions({
+        selectedItems: { rules: true },
+      }),
+    ).not.toThrow();
   });
 });
 
@@ -128,24 +146,28 @@ describe('ExportService._countExportItems', () => {
   it('counts rules across types', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing numbers to test runtime counting logic
-    expect(service._countExportItems({
-      rules: {
-        header: [1, 2],
-        payload: [3],
-        url: [],
-      },
-    } as unknown as ExportData)).toBe(3);
+    expect(
+      service._countExportItems({
+        rules: {
+          header: [1, 2],
+          payload: [3],
+          url: [],
+        },
+      } as unknown as ExportData),
+    ).toBe(3);
   });
 
   it('counts environment variables', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing numbers to test runtime counting logic
-    expect(service._countExportItems({
-      environments: {
-        dev: { A: 1, B: 2 },
-        staging: { C: 3 },
-      },
-    } as unknown as ExportData)).toBe(3);
+    expect(
+      service._countExportItems({
+        environments: {
+          dev: { A: 1, B: 2 },
+          staging: { C: 3 },
+        },
+      } as unknown as ExportData),
+    ).toBe(3);
   });
 
   it('counts workspace as 1', () => {
@@ -188,9 +210,11 @@ describe('ExportService._countExportItems', () => {
     const service = new ExportService(makeDeps());
     // Arrays inside environments should not be counted
     // intentionally passing invalid input to test runtime validation
-    expect(service._countExportItems({
-      environments: { dev: [1, 2] },
-    } as unknown as ExportData)).toBe(0);
+    expect(
+      service._countExportItems({
+        environments: { dev: [1, 2] },
+      } as unknown as ExportData),
+    ).toBe(0);
   });
 });
 
@@ -278,7 +302,13 @@ describe('ExportService.getExportStatistics', () => {
     const service = new ExportService(makeDeps());
     const stats = service.getExportStatistics({
       version: '3.2.0',
-      sources: [{ sourceType: 'http', sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token' }],
+      sources: [
+        {
+          sourceType: 'http',
+          sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+          sourcePath: 'https://auth.openheaders.internal:8443/oauth2/token',
+        },
+      ],
     } as unknown as ExportData);
     expect(stats.dataTypes.sources).toBeDefined();
     expect(stats.dataTypes.sources!.total).toBe(1);
@@ -338,7 +368,7 @@ describe('ExportService.getExportStatistics', () => {
       workspace: { name: 'W', type: 'git' },
     } as unknown as ExportData);
     expect(Object.keys(stats.dataTypes)).toEqual(
-      expect.arrayContaining(['sources', 'proxyRules', 'rules', 'environments', 'workspace'])
+      expect.arrayContaining(['sources', 'proxyRules', 'rules', 'environments', 'workspace']),
     );
     expect(stats.totalItems).toBe(5); // 1+1+1+1+1
   });
@@ -350,65 +380,76 @@ describe('ExportService.getExportStatistics', () => {
 describe('ExportService._validateExportData', () => {
   it('does not throw for empty export data with no selections', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportData(
-      { version: '3.0.0' } as ExportData,
-      { selectedItems: {} } as ExportOptions
-    )).not.toThrow();
+    expect(() =>
+      service._validateExportData({ version: '3.0.0' } as ExportData, { selectedItems: {} } as ExportOptions),
+    ).not.toThrow();
   });
 
   it('throws when sources validation fails', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportData(
-      { sources: 'not-array' } as unknown as ExportData,
-      { selectedItems: { sources: true } } as ExportOptions
-    )).toThrow('Sources validation failed');
+    expect(() =>
+      service._validateExportData(
+        { sources: 'not-array' } as unknown as ExportData,
+        { selectedItems: { sources: true } } as ExportOptions,
+      ),
+    ).toThrow('Sources validation failed');
   });
 
   it('throws when proxy rules validation fails', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportData(
-      { proxyRules: 'not-array' } as unknown as ExportData,
-      { selectedItems: { proxyRules: true } } as ExportOptions
-    )).toThrow('Proxy rules validation failed');
+    expect(() =>
+      service._validateExportData(
+        { proxyRules: 'not-array' } as unknown as ExportData,
+        { selectedItems: { proxyRules: true } } as ExportOptions,
+      ),
+    ).toThrow('Proxy rules validation failed');
   });
 
   it('throws when rules validation fails', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportData(
-      { rules: 'not-object' } as unknown as ExportData,
-      { selectedItems: { rules: true } } as ExportOptions
-    )).toThrow('Rules validation failed');
+    expect(() =>
+      service._validateExportData(
+        { rules: 'not-object' } as unknown as ExportData,
+        { selectedItems: { rules: true } } as ExportOptions,
+      ),
+    ).toThrow('Rules validation failed');
   });
 
   it('throws when environment schema validation fails', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation
-    expect(() => service._validateExportData(
-      { environmentSchema: 'bad' } as unknown as ExportData,
-      { selectedItems: {} } as ExportOptions
-    )).toThrow('Environments validation failed');
+    expect(() =>
+      service._validateExportData(
+        { environmentSchema: 'bad' } as unknown as ExportData,
+        { selectedItems: {} } as ExportOptions,
+      ),
+    ).toThrow('Environments validation failed');
   });
 
   it('throws when workspace validation fails', () => {
     const service = new ExportService(makeDeps());
     // intentionally passing invalid input to test runtime validation — missing name
-    expect(() => service._validateExportData(
-      { workspace: { type: 'git' } } as unknown as ExportData,
-      { selectedItems: {} } as ExportOptions
-    )).toThrow('Workspace validation failed');
+    expect(() =>
+      service._validateExportData(
+        { workspace: { type: 'git' } } as unknown as ExportData,
+        { selectedItems: {} } as ExportOptions,
+      ),
+    ).toThrow('Workspace validation failed');
   });
 
   it('does not throw for valid data', () => {
     const service = new ExportService(makeDeps());
-    expect(() => service._validateExportData(
-      {
-        sources: [{ sourceId: 's1', sourceType: 'file', sourcePath: '/a' }],
-        workspace: { name: 'WS', type: 'git' },
-      } as unknown as ExportData,
-      { selectedItems: { sources: true } } as ExportOptions
-    )).not.toThrow();
+    expect(() =>
+      service._validateExportData(
+        {
+          sources: [{ sourceId: 's1', sourceType: 'file', sourcePath: '/a' }],
+          workspace: { name: 'WS', type: 'git' },
+        } as unknown as ExportData,
+        { selectedItems: { sources: true } } as ExportOptions,
+      ),
+    ).not.toThrow();
   });
 });

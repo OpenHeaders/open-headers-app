@@ -1,19 +1,19 @@
-import React from 'react';
-import { Layout, Typography, Button, Space, Dropdown, Tag } from 'antd';
-import type { MenuProps } from 'antd';
-import type { GlobalToken } from 'antd/es/theme/interface';
 import {
-    SettingOutlined,
-    ExportOutlined,
-    ImportOutlined,
-    DownOutlined,
-    MenuOutlined,
-    QuestionCircleOutlined,
-    DownloadOutlined,
-    MinusOutlined,
-    BorderOutlined,
-    CloseOutlined
+  BorderOutlined,
+  CloseOutlined,
+  DownloadOutlined,
+  DownOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  MenuOutlined,
+  MinusOutlined,
+  QuestionCircleOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
+import { Button, Dropdown, Layout, Space, Tag, Typography } from 'antd';
+import type { GlobalToken } from 'antd/es/theme/interface';
+import React from 'react';
 
 const { Header } = Layout;
 const { Title } = Typography;
@@ -33,42 +33,42 @@ export function AppHeader({
   onCheckForUpdates,
   onOpenSettings,
   onOpenAbout,
-  theme
+  theme,
 }: AppHeaderProps) {
   const actionsMenuItems: NonNullable<MenuProps['items']> = [
     {
       key: 'export',
       icon: <ExportOutlined />,
       label: 'Export',
-      onClick: onExport
+      onClick: onExport,
     },
     {
       key: 'import',
       icon: <ImportOutlined />,
       label: 'Import',
-      onClick: onImport
+      onClick: onImport,
     },
     {
-      type: 'divider' as const
+      type: 'divider' as const,
     },
     {
       key: 'check-updates',
       icon: <DownloadOutlined />,
       label: 'Check for Updates',
-      onClick: onCheckForUpdates
+      onClick: onCheckForUpdates,
     },
     {
       key: 'settings',
       icon: <SettingOutlined />,
       label: 'Settings',
-      onClick: onOpenSettings
+      onClick: onOpenSettings,
     },
     {
       key: 'about',
       icon: <QuestionCircleOutlined />,
       label: 'About',
-      onClick: onOpenAbout
-    }
+      onClick: onOpenAbout,
+    },
   ];
 
   return (
@@ -86,27 +86,27 @@ export function AppHeader({
             Menu <DownOutlined />
           </Button>
         </Dropdown>
-        
+
         {/* Window controls only for Windows/Linux (not macOS) */}
         {window.electronAPI?.platform !== 'darwin' && (
           <div className="window-controls">
-            <Button 
-              type="text" 
-              size="small" 
+            <Button
+              type="text"
+              size="small"
               icon={<MinusOutlined />}
               onClick={() => window.electronAPI?.minimizeWindow?.()}
               className="window-control-btn"
             />
-            <Button 
-              type="text" 
-              size="small" 
+            <Button
+              type="text"
+              size="small"
               icon={<BorderOutlined />}
               onClick={() => window.electronAPI?.maximizeWindow?.()}
               className="window-control-btn"
             />
-            <Button 
-              type="text" 
-              size="small" 
+            <Button
+              type="text"
+              size="small"
               icon={<CloseOutlined />}
               onClick={() => window.electronAPI?.closeWindow?.()}
               className="window-control-btn window-close-btn"

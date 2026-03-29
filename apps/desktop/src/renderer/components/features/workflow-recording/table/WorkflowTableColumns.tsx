@@ -3,31 +3,25 @@
  * Configures columns for displaying workflow recording data with actions
  */
 
-import React, { useState, useEffect } from 'react';
-import { Button, Space, Popconfirm, Tag, Tooltip, Progress, Spin, Input } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { 
-  PlayCircleOutlined, 
-  DeleteOutlined, 
-  ShareAltOutlined,
-  ClockCircleOutlined,
-  GlobalOutlined,
-  FileOutlined,
-  VideoCameraOutlined,
-  LoadingOutlined,
-  EditOutlined,
-  CheckOutlined,
-  CloseOutlined,
-  EyeOutlined
-} from '@ant-design/icons';
-
 import {
-  formatFileSize,
-  formatDuration,
-  formatTimestamp,
-  formatTimeAgo
-} from '../../../../utils';
-import type { WorkflowRecordingEntry, PreprocessProgressDetails } from '../../../../../types/recording';
+  CheckOutlined,
+  ClockCircleOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  FileOutlined,
+  GlobalOutlined,
+  LoadingOutlined,
+  PlayCircleOutlined,
+  ShareAltOutlined,
+  VideoCameraOutlined,
+} from '@ant-design/icons';
+import { Button, Input, Popconfirm, Progress, Space, Spin, Tag, Tooltip } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import React, { useEffect, useState } from 'react';
+import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '../../../../../types/recording';
+import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '../../../../utils';
 
 /**
  * Component that displays timestamp with live updating relative time
@@ -70,7 +64,14 @@ interface EditableCellProps {
   isTag?: boolean;
 }
 
-const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxLength, isTag = false }: EditableCellProps) => {
+const EditableCell = ({
+  value,
+  onSave,
+  placeholder,
+  maxLength = 100,
+  displayMaxLength,
+  isTag = false,
+}: EditableCellProps) => {
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(value || '');
 
@@ -96,33 +97,24 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
           style={{ width: 150 }}
           autoFocus
         />
-        <Button
-          icon={<CheckOutlined />}
-          size="small"
-          type="text"
-          onClick={handleSave}
-        />
-        <Button
-          icon={<CloseOutlined />}
-          size="small"
-          type="text"
-          onClick={handleCancel}
-        />
+        <Button icon={<CheckOutlined />} size="small" type="text" onClick={handleSave} />
+        <Button icon={<CloseOutlined />} size="small" type="text" onClick={handleCancel} />
       </Space>
     );
   }
 
   // Truncate display value if displayMaxLength is provided
-  const displayValue = displayMaxLength && value && value.length > displayMaxLength
-    ? `${value.substring(0, displayMaxLength)}...`
-    : value;
+  const displayValue =
+    displayMaxLength && value && value.length > displayMaxLength ? `${value.substring(0, displayMaxLength)}...` : value;
 
   return (
     <Space>
       {value ? (
         isTag ? (
           <Tooltip title={displayMaxLength && value.length > displayMaxLength ? value : undefined}>
-            <Tag color="blue" style={{ margin: 0 }}>{displayValue}</Tag>
+            <Tag color="blue" style={{ margin: 0 }}>
+              {displayValue}
+            </Tag>
           </Tooltip>
         ) : (
           <Tooltip title={displayMaxLength && value.length > displayMaxLength ? value : undefined}>
@@ -132,12 +124,7 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
       ) : (
         <span style={{ color: '#999' }}>-</span>
       )}
-      <Button
-        icon={<EditOutlined />}
-        size="small"
-        type="text"
-        onClick={() => setEditing(true)}
-      />
+      <Button icon={<EditOutlined />} size="small" type="text" onClick={() => setEditing(true)} />
     </Space>
   );
 };
@@ -147,7 +134,15 @@ const EditableCell = ({ value, onSave, placeholder, maxLength = 100, displayMaxL
  */
 export type WorkflowRecord = WorkflowRecordingEntry;
 
-const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: WorkflowRecord; onDelete: (id: string) => void; isProcessing: boolean }) => {
+const DeleteActionButton = ({
+  record,
+  onDelete,
+  isProcessing,
+}: {
+  record: WorkflowRecord;
+  onDelete: (id: string) => void;
+  isProcessing: boolean;
+}) => {
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   return (
@@ -164,17 +159,12 @@ const DeleteActionButton = ({ record, onDelete, isProcessing }: { record: Workfl
         }
       }}
     >
-      <Tooltip 
-        title={isProcessing ? "Recording is being processed..." : "Delete workflow recording"}
+      <Tooltip
+        title={isProcessing ? 'Recording is being processed...' : 'Delete workflow recording'}
         open={tooltipOpen}
         onOpenChange={setTooltipOpen}
       >
-        <Button
-          danger
-          size="small"
-          icon={<DeleteOutlined />}
-          disabled={isProcessing}
-        />
+        <Button danger size="small" icon={<DeleteOutlined />} disabled={isProcessing} />
       </Tooltip>
     </Popconfirm>
   );
@@ -197,15 +187,22 @@ interface MetadataAction {
   recordTag?: WorkflowRecordingEntry['tag'];
 }
 
-export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) => void, onDelete: (id: string) => void, onExport: (record: WorkflowRecordingEntry) => void, onUpdateMetadata: (id: string, data: MetadataAction) => void, processingRecords: Record<string, { stage?: string; progress?: number; details?: PreprocessProgressDetails }> = {}): ColumnsType<WorkflowRecordingEntry> => [
+export const createWorkflowColumns = (
+  onView: (record: WorkflowRecordingEntry) => void,
+  onDelete: (id: string) => void,
+  onExport: (record: WorkflowRecordingEntry) => void,
+  onUpdateMetadata: (id: string, data: MetadataAction) => void,
+  processingRecords: Record<string, { stage?: string; progress?: number; details?: PreprocessProgressDetails }> = {},
+): ColumnsType<WorkflowRecordingEntry> => [
   {
     title: 'Timestamp',
     dataIndex: 'timestamp',
     key: 'timestamp',
     render: (timestamp: string) => <TimestampCell timestamp={timestamp} />,
-    sorter: (a: WorkflowRecord, b: WorkflowRecord) => new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime(),
+    sorter: (a: WorkflowRecord, b: WorkflowRecord) =>
+      new Date(b.timestamp ?? 0).getTime() - new Date(a.timestamp ?? 0).getTime(),
     defaultSortOrder: 'ascend' as const,
-    width: 200
+    width: 200,
   },
   {
     title: 'URL',
@@ -214,24 +211,22 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
     render: (url: string, record: WorkflowRecord) => {
       const displayUrl = url || record.metadata?.url || record.metadata?.initialUrl || 'Unknown';
       let truncatedUrl = displayUrl;
-      
+
       // If URL is longer than 43 characters (20 + 3 for "..." + 20), truncate it
       if (displayUrl.length > 43) {
         truncatedUrl = `${displayUrl.substring(0, 20)}...${displayUrl.substring(displayUrl.length - 20)}`;
       }
-      
+
       return (
         <Tooltip title={displayUrl}>
           <Space>
             <GlobalOutlined />
-            <span style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {truncatedUrl}
-            </span>
+            <span style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{truncatedUrl}</span>
           </Space>
         </Tooltip>
       );
     },
-    ellipsis: true
+    ellipsis: true,
   },
   {
     title: 'Type',
@@ -252,14 +247,14 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
         )}
       </Space>
     ),
-    width: 140
+    width: 140,
   },
   {
     title: 'Duration',
     dataIndex: 'duration',
     key: 'duration',
     render: (duration: number) => formatDuration(duration),
-    width: 100
+    width: 100,
   },
   {
     title: 'Tag',
@@ -271,12 +266,11 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
         if (!tag) return { name: '', url: '' };
         return { name: tag.name || '', url: tag.url || '' };
       };
-      
+
       const tagData = getTagData(tag);
-      const displayName = tagData.name && tagData.name.length > 15 
-        ? `${tagData.name.substring(0, 15)}...` 
-        : tagData.name;
-      
+      const displayName =
+        tagData.name && tagData.name.length > 15 ? `${tagData.name.substring(0, 15)}...` : tagData.name;
+
       return (
         <Space>
           {tagData.name ? (
@@ -290,7 +284,9 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
               </Tooltip>
             ) : (
               <Tooltip title={tagData.name.length > 15 ? tagData.name : undefined}>
-                <Tag color="blue" style={{ margin: 0 }}>{displayName}</Tag>
+                <Tag color="blue" style={{ margin: 0 }}>
+                  {displayName}
+                </Tag>
               </Tooltip>
             )
           ) : (
@@ -301,17 +297,19 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
               icon={<EditOutlined />}
               size="small"
               type="text"
-              onClick={() => onUpdateMetadata(record.id, { 
-                _action: 'editTag',
-                currentTag: tag,
-                recordUrl: record.url
-              })}
+              onClick={() =>
+                onUpdateMetadata(record.id, {
+                  _action: 'editTag',
+                  currentTag: tag,
+                  recordUrl: record.url,
+                })
+              }
             />
           </Tooltip>
         </Space>
       );
     },
-    width: 120
+    width: 120,
   },
   {
     title: 'Description',
@@ -319,10 +317,8 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
     key: 'description',
     render: (description: string, record: WorkflowRecord) => {
       // Truncate display value
-      const displayValue = description && description.length > 15
-        ? `${description.substring(0, 15)}...`
-        : description;
-      
+      const displayValue = description && description.length > 15 ? `${description.substring(0, 15)}...` : description;
+
       return (
         <Space>
           {description ? (
@@ -338,12 +334,14 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
                 icon={<EyeOutlined />}
                 size="small"
                 type="text"
-                onClick={() => onUpdateMetadata(record.id, { 
-                  _action: 'viewDescription',
-                  currentDescription: description,
-                  recordUrl: record.url,
-                  recordTag: record.tag
-                })}
+                onClick={() =>
+                  onUpdateMetadata(record.id, {
+                    _action: 'viewDescription',
+                    currentDescription: description,
+                    recordUrl: record.url,
+                    recordTag: record.tag,
+                  })
+                }
               />
             </Tooltip>
           )}
@@ -352,36 +350,34 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
               icon={<EditOutlined />}
               size="small"
               type="text"
-              onClick={() => onUpdateMetadata(record.id, { 
-                _action: 'editDescription',
-                currentDescription: description,
-                recordUrl: record.url,
-                recordTag: record.tag
-              })}
+              onClick={() =>
+                onUpdateMetadata(record.id, {
+                  _action: 'editDescription',
+                  currentDescription: description,
+                  recordUrl: record.url,
+                  recordTag: record.tag,
+                })
+              }
             />
           </Tooltip>
         </Space>
       );
     },
-    width: 120
+    width: 120,
   },
   {
     title: 'Size',
     dataIndex: 'size',
     key: 'size',
     render: (size: number) => formatFileSize(size),
-    width: 100
+    width: 100,
   },
   {
     title: 'Events',
     dataIndex: 'eventCount',
     key: 'eventCount',
-    render: (count: number) => (
-      <Tag>
-        {count?.toLocaleString() || 0} events
-      </Tag>
-    ),
-    width: 120
+    render: (count: number) => <Tag>{count?.toLocaleString() || 0} events</Tag>,
+    width: 120,
   },
   {
     title: 'Source',
@@ -400,17 +396,17 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
         )}
       </Tag>
     ),
-    width: 120
+    width: 120,
   },
   {
     title: 'Actions',
     key: 'actions',
     render: (_: unknown, record: WorkflowRecord) => {
       const isProcessing = !!processingRecords[record.id];
-      
+
       return (
         <Space size="small">
-          <Tooltip title={isProcessing ? "Recording is being processed..." : "View workflow recording"}>
+          <Tooltip title={isProcessing ? 'Recording is being processed...' : 'View workflow recording'}>
             <Button
               type="primary"
               size="small"
@@ -421,25 +417,16 @@ export const createWorkflowColumns = (onView: (record: WorkflowRecordingEntry) =
               Play
             </Button>
           </Tooltip>
-          <Tooltip title={isProcessing ? "Recording is being processed..." : "Export recording file"}>
-            <Button
-              size="small"
-              icon={<ShareAltOutlined />}
-              onClick={() => onExport(record)}
-              disabled={isProcessing}
-            >
+          <Tooltip title={isProcessing ? 'Recording is being processed...' : 'Export recording file'}>
+            <Button size="small" icon={<ShareAltOutlined />} onClick={() => onExport(record)} disabled={isProcessing}>
               Share
             </Button>
           </Tooltip>
-          <DeleteActionButton 
-            record={record}
-            onDelete={onDelete}
-            isProcessing={isProcessing}
-          />
+          <DeleteActionButton record={record} onDelete={onDelete} isProcessing={isProcessing} />
         </Space>
       );
     },
     width: 140,
-    fixed: 'right'
-  }
+    fixed: 'right',
+  },
 ];

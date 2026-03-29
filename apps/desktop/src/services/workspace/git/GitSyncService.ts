@@ -3,43 +3,36 @@
  * Orchestrates all Git-related functionality through modular components
  */
 
-import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../utils/mainLogger';
-
-// Core modules
-import GitInitializer from './core/GitInitializer';
-import type { GitStatus } from './core/GitInitializer';
-
-// Auth modules
-import GitAuthenticator from './auth/GitAuthenticator';
-
-// Repository modules
-import GitRepositoryManager from './repository/GitRepositoryManager';
-import GitBranchManager from './repository/GitBranchManager';
-import type { BranchResult } from './repository/GitBranchManager';
-import SparseCheckoutManager from './repository/SparseCheckoutManager';
-
-// Operation modules
-import TeamWorkspaceSyncer, { SYNC_STATUS } from './operations/TeamWorkspaceSyncer';
-import type { SyncOptions, SyncResult } from './operations/TeamWorkspaceSyncer';
-import ConnectionTester from './operations/ConnectionTester';
-import type { ConnectionTestOptions, ConnectionTestResult } from './operations/ConnectionTester';
-import CommitManager from './operations/CommitManager';
-import type { CommitOptions, CommitResult } from './operations/CommitManager';
-
-// Utility modules
-import GitCleanupManager from './utils/GitCleanupManager';
-import { GitErrorHandler } from './utils/GitErrorHandler';
+import path from 'path';
+import { errorMessage, toError } from '../../../types/common';
 import type { WorkspaceAuthData } from '../../../types/workspace';
-
+import mainLogger from '../../../utils/mainLogger';
 // Config modules
 import { ConfigFileDetector } from '../ConfigFileDetector';
 import { ConfigFileValidator } from '../config-file-validator';
-import { toError, errorMessage } from '../../../types/common';
-
 // Legacy support
 import { GitAutoInstaller } from '../git-auto-installer';
+// Auth modules
+import GitAuthenticator from './auth/GitAuthenticator';
+import type { GitStatus } from './core/GitInitializer';
+// Core modules
+import GitInitializer from './core/GitInitializer';
+import type { CommitOptions, CommitResult } from './operations/CommitManager';
+import CommitManager from './operations/CommitManager';
+import type { ConnectionTestOptions, ConnectionTestResult } from './operations/ConnectionTester';
+import ConnectionTester from './operations/ConnectionTester';
+import type { SyncOptions, SyncResult } from './operations/TeamWorkspaceSyncer';
+// Operation modules
+import TeamWorkspaceSyncer, { SYNC_STATUS } from './operations/TeamWorkspaceSyncer';
+import type { BranchResult } from './repository/GitBranchManager';
+import GitBranchManager from './repository/GitBranchManager';
+// Repository modules
+import GitRepositoryManager from './repository/GitRepositoryManager';
+import SparseCheckoutManager from './repository/SparseCheckoutManager';
+// Utility modules
+import GitCleanupManager from './utils/GitCleanupManager';
+import { GitErrorHandler } from './utils/GitErrorHandler';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -148,7 +141,7 @@ class GitSyncService {
         sparseCheckoutManager: this.sparseCheckoutManager,
         commitManager: this.commitManager,
         configDetector: this.configDetector,
-        configValidator: this.configValidator
+        configValidator: this.configValidator,
       };
 
       this.teamWorkspaceSyncer = new TeamWorkspaceSyncer(dependencies);
@@ -158,7 +151,6 @@ class GitSyncService {
 
       this.initialized = true;
       log.info('GitSyncService initialized successfully');
-
     } catch (error) {
       log.error('GitSyncService initialization failed:', error);
       throw error;
@@ -184,7 +176,7 @@ class GitSyncService {
         platform: process.platform,
         tempDir: '',
         sshDir: '',
-        error: errorMessage(error)
+        error: errorMessage(error),
       };
     }
   }
@@ -210,7 +202,10 @@ class GitSyncService {
     try {
       const repoDir = this.getWorkspaceRepoDir(options.workspaceId);
 
-      const repoExists = await fsPromises.access(path.join(repoDir, '.git')).then(() => true, () => false);
+      const repoExists = await fsPromises.access(path.join(repoDir, '.git')).then(
+        () => true,
+        () => false,
+      );
 
       if (!repoExists) {
         log.info(`Repository not found for workspace ${options.workspaceId}, cloning...`);
@@ -221,7 +216,7 @@ class GitSyncService {
           branch: options.branch || 'main',
           authType: options.authType || 'none',
           authData: options.authData || {},
-          depth: 10
+          depth: 10,
         });
 
         if (!cloneResult.success) {
@@ -233,7 +228,7 @@ class GitSyncService {
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'syncWorkspace',
-        ...options
+        ...options,
       });
       return {
         success: false,
@@ -255,14 +250,13 @@ class GitSyncService {
         await fsPromises.mkdir(tempDir, { recursive: true });
 
         try {
-          let targetBranch = options.branch || 'main';
+          const targetBranch = options.branch || 'main';
           let needsNewBranch = false;
 
           try {
-            const { stdout } = await this.executor!.execute(
-              `ls-remote --heads "${options.url}" "${targetBranch}"`,
-              { timeout: 15000 }
-            );
+            const { stdout } = await this.executor!.execute(`ls-remote --heads "${options.url}" "${targetBranch}"`, {
+              timeout: 15000,
+            });
             needsNewBranch = !stdout.trim();
           } catch (error) {
             log.warn('Failed to check branch existence, will try to clone anyway:', error);
@@ -276,7 +270,7 @@ class GitSyncService {
               targetDir: tempDir,
               authType: options.authType || 'none',
               authData: options.authData || {},
-              depth: 0
+              depth: 0,
             });
           } else {
             cloneResult = await this.repositoryManager!.cloneRepository({
@@ -285,7 +279,7 @@ class GitSyncService {
               branch: targetBranch,
               authType: options.authType || 'none',
               authData: options.authData || {},
-              depth: 1
+              depth: 1,
             });
           }
 
@@ -311,7 +305,7 @@ class GitSyncService {
             files,
             message: options.message,
             author: options.author,
-            email: options.email
+            email: options.email,
           });
 
           const pushResult = await this.repositoryManager!.pushRepository({
@@ -319,7 +313,7 @@ class GitSyncService {
             branch: targetBranch,
             authType: options.authType || 'none',
             authData: options.authData || {},
-            setUpstream: needsNewBranch
+            setUpstream: needsNewBranch,
           });
 
           if (!pushResult.success) {
@@ -327,13 +321,12 @@ class GitSyncService {
           }
 
           setTimeout(() => {
-            this.cleanupManager!.cleanupDirectory(tempDir).catch(err => {
+            this.cleanupManager!.cleanupDirectory(tempDir).catch((err) => {
               log.error('Failed to cleanup temp directory:', err);
             });
           }, 5000);
 
           return commitResult;
-
         } catch (error) {
           await this.cleanupManager!.cleanupDirectory(tempDir).catch(() => {});
           throw error;
@@ -344,11 +337,10 @@ class GitSyncService {
         throw new Error('repoDir is required for backend commit format');
       }
       return await this.commitManager!.commitConfiguration({ ...options, repoDir: options.repoDir });
-
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'commitConfiguration',
-        ...options
+        ...options,
       });
       throw new Error(handled.message);
     }
@@ -365,7 +357,7 @@ class GitSyncService {
     } catch (error) {
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'createBranch',
-        ...options
+        ...options,
       });
       throw new Error(handled.message);
     }
@@ -387,7 +379,7 @@ class GitSyncService {
           branch,
           authType,
           authData,
-          depth: 1
+          depth: 1,
         });
 
         await this.branchManager!.createBranch(tempDir, testBranch);
@@ -396,37 +388,34 @@ class GitSyncService {
           repoDir: tempDir,
           branch: testBranch,
           authType,
-          authData
+          authData,
         });
 
-        await this.executor!.execute(
-          `push origin --delete ${testBranch}`,
-          { cwd: tempDir }
-        ).catch(() => {});
+        await this.executor!.execute(`push origin --delete ${testBranch}`, { cwd: tempDir }).catch(() => {});
 
         return {
           success: true,
-          hasWriteAccess: true
+          hasWriteAccess: true,
         };
-
       } finally {
         await this.cleanupManager!.cleanupDirectory(tempDir);
       }
-
     } catch (error) {
-      if (errorMessage(error).includes('permission') ||
-          errorMessage(error).includes('forbidden') ||
-          errorMessage(error).includes('unauthorized')) {
+      if (
+        errorMessage(error).includes('permission') ||
+        errorMessage(error).includes('forbidden') ||
+        errorMessage(error).includes('unauthorized')
+      ) {
         return {
           success: true,
           hasWriteAccess: false,
-          message: 'Read-only access'
+          message: 'Read-only access',
         };
       }
 
       const handled = this.errorHandler.handle(toError(error), {
         operation: 'checkWritePermissions',
-        ...options
+        ...options,
       });
       throw new Error(handled.message);
     }
@@ -446,7 +435,10 @@ class GitSyncService {
           const dirPath = path.join(tempDir, file);
           try {
             const gitConfigPath = path.join(dirPath, '.git', 'config');
-            const configExists = await fsPromises.access(gitConfigPath).then(() => true).catch(() => false);
+            const configExists = await fsPromises
+              .access(gitConfigPath)
+              .then(() => true)
+              .catch(() => false);
 
             if (configExists) {
               const config = await fsPromises.readFile(gitConfigPath, 'utf8');

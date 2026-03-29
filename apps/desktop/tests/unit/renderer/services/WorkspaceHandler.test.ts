@@ -1,9 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import type {
+  ExportImportDependencies,
+  ExportOptions,
+  WorkspaceData,
+} from '../../../../src/renderer/services/export-import/core/types';
 import { WorkspaceHandler } from '../../../../src/renderer/services/export-import/handlers/WorkspaceHandler';
-import type { ExportImportDependencies, ExportOptions, WorkspaceData } from '../../../../src/renderer/services/export-import/core/types';
 
 function makeExportOpts(overrides: Record<string, unknown> = {}): ExportOptions {
-  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+  return {
+    selectedItems: {},
+    fileFormat: 'single',
+    environmentOption: 'none',
+    includeWorkspace: false,
+    ...overrides,
+  } as ExportOptions;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,14 +107,12 @@ describe('WorkspaceHandler._sanitizeWorkspaceAuthData', () => {
 describe('WorkspaceHandler._validateAndSanitizeWorkspaceAuthData', () => {
   it('throws for null input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => handler._validateAndSanitizeWorkspaceAuthData(null as never))
-      .toThrow('must be an object');
+    expect(() => handler._validateAndSanitizeWorkspaceAuthData(null as never)).toThrow('must be an object');
   });
 
   it('throws for non-object input', () => {
     const handler = new WorkspaceHandler(makeDeps());
-    expect(() => handler._validateAndSanitizeWorkspaceAuthData('str' as never))
-      .toThrow('must be an object');
+    expect(() => handler._validateAndSanitizeWorkspaceAuthData('str' as never)).toThrow('must be an object');
   });
 
   it('accepts valid token auth data', () => {
@@ -265,29 +273,35 @@ describe('WorkspaceHandler.validateWorkspaceForExport', () => {
 describe('WorkspaceHandler.exportWorkspace', () => {
   it('returns null when includeWorkspace is false', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace(makeExportOpts({
-      includeWorkspace: false,
-      currentWorkspace: validWorkspace(),
-    }));
+    const result = await handler.exportWorkspace(
+      makeExportOpts({
+        includeWorkspace: false,
+        currentWorkspace: validWorkspace(),
+      }),
+    );
     expect(result).toBeNull();
   });
 
   it('returns null when currentWorkspace is null', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace(makeExportOpts({
-      includeWorkspace: true,
-      currentWorkspace: null,
-    }));
+    const result = await handler.exportWorkspace(
+      makeExportOpts({
+        includeWorkspace: true,
+        currentWorkspace: null,
+      }),
+    );
     expect(result).toBeNull();
   });
 
   it('exports workspace data with defaults applied', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace(makeExportOpts({
-      includeWorkspace: true,
-      includeCredentials: false,
-      currentWorkspace: validWorkspace(),
-    }));
+    const result = await handler.exportWorkspace(
+      makeExportOpts({
+        includeWorkspace: true,
+        includeCredentials: false,
+        currentWorkspace: validWorkspace(),
+      }),
+    );
 
     expect(result).toEqual({
       name: 'OpenHeaders — Staging Environment',
@@ -303,13 +317,15 @@ describe('WorkspaceHandler.exportWorkspace', () => {
 
   it('includes credentials when requested', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace(makeExportOpts({
-      includeWorkspace: true,
-      includeCredentials: true,
-      currentWorkspace: validWorkspace({
-        authData: { token: 'glpat-a1b2c3d4e5f6g7h8i9j0', tokenType: 'gitlab' },
+    const result = await handler.exportWorkspace(
+      makeExportOpts({
+        includeWorkspace: true,
+        includeCredentials: true,
+        currentWorkspace: validWorkspace({
+          authData: { token: 'glpat-a1b2c3d4e5f6g7h8i9j0', tokenType: 'gitlab' },
+        }),
       }),
-    }));
+    );
 
     expect(result!.authData).toEqual({
       token: 'glpat-a1b2c3d4e5f6g7h8i9j0',
@@ -319,13 +335,15 @@ describe('WorkspaceHandler.exportWorkspace', () => {
 
   it('omits credentials when not requested even if present', async () => {
     const handler = new WorkspaceHandler(makeDeps());
-    const result = await handler.exportWorkspace(makeExportOpts({
-      includeWorkspace: true,
-      includeCredentials: false,
-      currentWorkspace: validWorkspace({
-        authData: { token: 'glpat-secret-token' },
+    const result = await handler.exportWorkspace(
+      makeExportOpts({
+        includeWorkspace: true,
+        includeCredentials: false,
+        currentWorkspace: validWorkspace({
+          authData: { token: 'glpat-secret-token' },
+        }),
       }),
-    }));
+    );
 
     expect(result!.authData).toBeUndefined();
   });
@@ -352,9 +370,11 @@ describe('WorkspaceHandler.importWorkspace', () => {
   });
 
   it('records error when createWorkspace throws', async () => {
-    const handler = new WorkspaceHandler(makeDeps({
-      createWorkspace: vi.fn().mockRejectedValue(new Error('db fail')),
-    }));
+    const handler = new WorkspaceHandler(
+      makeDeps({
+        createWorkspace: vi.fn().mockRejectedValue(new Error('db fail')),
+      }),
+    );
 
     const stats = await handler.importWorkspace(validWorkspace(), {});
     expect(stats.createdWorkspace).toBeNull();

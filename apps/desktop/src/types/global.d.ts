@@ -12,14 +12,21 @@ import type { NetworkInterfaceInfo } from 'os';
 import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
 import type { ProxyRule, CacheStats, CacheEntry } from './proxy';
 import type { HeaderRule, RulesStorage } from './rules';
-import type { Workspace, WorkspaceAuthData, CommitInfo, TeamWorkspaceInvite, WorkspaceDataUpdatedData, WorkspaceSyncCompletedData, CliWorkspaceJoinedData } from './workspace';
+import type {
+  Workspace,
+  WorkspaceAuthData,
+  CommitInfo,
+  TeamWorkspaceInvite,
+  WorkspaceDataUpdatedData,
+  WorkspaceSyncCompletedData,
+  CliWorkspaceJoinedData,
+} from './workspace';
 import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from './environment';
 import type { RecordingData } from '../services/websocket/utils/recordingPreprocessor';
 import type { RefreshStatusInfo, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
 import type { WorkspaceStateAPI } from '../preload/api/workspaceStateAPI';
 
 declare global {
-
   /** Network state data sent via IPC from main process */
   interface NetworkStateSyncData {
     state: {
@@ -227,7 +234,9 @@ declare global {
     deleteDirectory: (dirPath: string) => Promise<{ success: boolean; error?: string }>;
 
     // Settings
-    saveSettings: (settings: Record<string, string | boolean | number | null | undefined>) => Promise<{ success: boolean; message?: string }>;
+    saveSettings: (
+      settings: Record<string, string | boolean | number | null | undefined>,
+    ) => Promise<{ success: boolean; message?: string }>;
     getSettings: () => Promise<Partial<AppSettings>>;
     setAutoLaunch: (enable: boolean) => Promise<{ success: boolean; message?: string }>;
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
@@ -237,7 +246,13 @@ declare global {
     getAppVersion: () => Promise<string>;
     showItemInFolder: (filePath: string) => Promise<void>;
     openAppPath: (pathKey: string) => Promise<{ success: boolean; error?: string }>;
-    requestScreenRecordingPermission: () => Promise<{ success: boolean; hasPermission?: boolean; platform: string; needsManualGrant?: boolean; error?: string }>;
+    requestScreenRecordingPermission: () => Promise<{
+      success: boolean;
+      hasPermission?: boolean;
+      platform: string;
+      needsManualGrant?: boolean;
+      error?: string;
+    }>;
 
     // Network
     getNetworkState: () => Promise<{
@@ -254,9 +269,9 @@ declare global {
     }>;
     // HTTP request execution (main-process owned)
     httpRequest: {
-        executeRequest: (spec: HttpRequestSpec) => Promise<HttpRequestResult>;
-        getTotpCooldown: (workspaceId: string, sourceId: string) => Promise<TotpCooldownInfo>;
-        generateTotpPreview: (secret: string) => Promise<string>;
+      executeRequest: (spec: HttpRequestSpec) => Promise<HttpRequestResult>;
+      getTotpCooldown: (workspaceId: string, sourceId: string) => Promise<TotpCooldownInfo>;
+      generateTotpPreview: (secret: string) => Promise<string>;
     };
 
     // Shortcuts
@@ -268,7 +283,9 @@ declare global {
     loadRecording: (recordId: string) => Promise<RecordingData>;
     saveUploadedRecording: (recordData: RecordingData) => Promise<{ success: boolean; recordId?: string }>;
     deleteRecording: (recordId: string) => Promise<{ success: boolean }>;
-    updateRecordingMetadata: (data: RecordingMetadataUpdateRequest) => Promise<{ success: boolean; metadata?: RecordingMetadataEvent }>;
+    updateRecordingMetadata: (
+      data: RecordingMetadataUpdateRequest,
+    ) => Promise<{ success: boolean; metadata?: RecordingMetadataEvent }>;
 
     // Proxy
     proxyStart: (port: number) => Promise<{ success: boolean; port?: number; error?: string }>;
@@ -317,14 +334,60 @@ declare global {
     }>;
 
     // Git
-    testGitConnection: (config: { url?: string; branch?: string; authType?: string; filePath?: string; authData?: WorkspaceAuthData; checkWriteAccess?: boolean; isInvite?: boolean }) => Promise<{ success: boolean; error?: string; message?: string; branches?: string[]; configFileValid?: boolean; validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number }; readAccess?: boolean; writeAccess?: boolean; warning?: string; hint?: string; debugHint?: string }>;
+    testGitConnection: (config: {
+      url?: string;
+      branch?: string;
+      authType?: string;
+      filePath?: string;
+      authData?: WorkspaceAuthData;
+      checkWriteAccess?: boolean;
+      isInvite?: boolean;
+    }) => Promise<{
+      success: boolean;
+      error?: string;
+      message?: string;
+      branches?: string[];
+      configFileValid?: boolean;
+      validationDetails?: { sourceCount: number; ruleCount: number; proxyRuleCount: number; variableCount: number };
+      readAccess?: boolean;
+      writeAccess?: boolean;
+      warning?: string;
+      hint?: string;
+      debugHint?: string;
+    }>;
     getGitStatus: () => Promise<{ isInstalled: boolean; version?: string; error?: string; user?: { name?: string } }>;
     installGit: () => Promise<{ success: boolean; message?: string; error?: string }>;
     syncGitWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
     cleanupGitRepo: (gitUrl: string) => Promise<{ success: boolean; error?: string }>;
-    commitConfiguration: (config: { url?: string; branch?: string; path?: string; files?: Record<string, string>; message?: string; authType?: string; authData?: WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; commitHash?: string; commitInfo?: CommitInfo; files?: string[]; noChanges?: boolean; message?: string }>;
-    createBranch: (config: { url?: string; branch?: string; authType?: string; authData?: WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; message?: string }>;
-    checkWritePermissions: (config: { url?: string; branch?: string; authType?: string; authData?: WorkspaceAuthData }) => Promise<{ success: boolean; error?: string; details?: { canPush?: boolean; reason?: string } }>;
+    commitConfiguration: (config: {
+      url?: string;
+      branch?: string;
+      path?: string;
+      files?: Record<string, string>;
+      message?: string;
+      authType?: string;
+      authData?: WorkspaceAuthData;
+    }) => Promise<{
+      success: boolean;
+      error?: string;
+      commitHash?: string;
+      commitInfo?: CommitInfo;
+      files?: string[];
+      noChanges?: boolean;
+      message?: string;
+    }>;
+    createBranch: (config: {
+      url?: string;
+      branch?: string;
+      authType?: string;
+      authData?: WorkspaceAuthData;
+    }) => Promise<{ success: boolean; error?: string; message?: string }>;
+    checkWritePermissions: (config: {
+      url?: string;
+      branch?: string;
+      authType?: string;
+      authData?: WorkspaceAuthData;
+    }) => Promise<{ success: boolean; error?: string; details?: { canPush?: boolean; reason?: string } }>;
 
     // CLI API
     cliApiStatus: () => Promise<{
@@ -343,16 +406,36 @@ declare global {
 
     // Workspace
     initializeWorkspaceSync: (workspaceId: string) => Promise<{ success: boolean; message?: string; error?: string }>;
-    syncWorkspace: (workspaceId: string, options: { silent?: boolean }) => Promise<{ success: boolean; error?: string }>;
-    generateTeamWorkspaceInvite: (workspaceData: Partial<Workspace> & { includeAuthData?: boolean }) => Promise<{ success: boolean; inviteData?: TeamWorkspaceInvite; links?: { appLink: string; webLink: string }; error?: string }>;
-    generateEnvironmentConfigLink: (environmentData: { environments?: EnvironmentMap; environmentSchema?: EnvironmentSchema; includeValues?: boolean }) => Promise<{ success: boolean; envConfigData?: EnvironmentConfigData; links?: { appLink: string; webLink: string; dataSize: number }; error?: string }>;
+    syncWorkspace: (
+      workspaceId: string,
+      options: { silent?: boolean },
+    ) => Promise<{ success: boolean; error?: string }>;
+    generateTeamWorkspaceInvite: (workspaceData: Partial<Workspace> & { includeAuthData?: boolean }) => Promise<{
+      success: boolean;
+      inviteData?: TeamWorkspaceInvite;
+      links?: { appLink: string; webLink: string };
+      error?: string;
+    }>;
+    generateEnvironmentConfigLink: (environmentData: {
+      environments?: EnvironmentMap;
+      environmentSchema?: EnvironmentSchema;
+      includeValues?: boolean;
+    }) => Promise<{
+      success: boolean;
+      envConfigData?: EnvironmentConfigData;
+      links?: { appLink: string; webLink: string; dataSize: number };
+      error?: string;
+    }>;
 
     // Video
     checkFFmpeg: () => Promise<{ available: boolean } | boolean>;
     downloadFFmpeg: () => Promise<{ success: boolean; error?: string }>;
     convertVideo: (inputPath: string, outputPath: string) => Promise<{ success: boolean; error?: string }>;
     sendVideoRecordingStarted: (channel: string, result: { success: boolean; error?: string }) => void;
-    sendVideoRecordingStopped: (channel: string, result: { success: boolean; error?: string } | { success: boolean }) => void;
+    sendVideoRecordingStopped: (
+      channel: string,
+      result: { success: boolean; error?: string } | { success: boolean },
+    ) => void;
 
     // Window management
     showMainWindow: () => void;
@@ -376,57 +459,63 @@ declare global {
 
     // Source refresh (main-process owned lifecycle)
     sourceRefresh: {
-        manualRefresh: (sourceId: string) => Promise<{ success: boolean; error?: string }>;
-        updateSource: (source: Source) => Promise<void>;
-        getRefreshStatus: (sourceId: string) => Promise<RefreshStatusInfo>;
-        getTimeUntilRefresh: (sourceId: string) => Promise<number>;
-        onStatusChanged: (callback: (data: StatusChangedPayload) => void) => (() => void);
-        onScheduleUpdated: (callback: (data: ScheduleUpdatedPayload) => void) => (() => void);
+      manualRefresh: (sourceId: string) => Promise<{ success: boolean; error?: string }>;
+      updateSource: (source: Source) => Promise<void>;
+      getRefreshStatus: (sourceId: string) => Promise<RefreshStatusInfo>;
+      getTimeUntilRefresh: (sourceId: string) => Promise<number>;
+      onStatusChanged: (callback: (data: StatusChangedPayload) => void) => () => void;
+      onScheduleUpdated: (callback: (data: ScheduleUpdatedPayload) => void) => () => void;
     };
 
     // Event listeners (return cleanup function)
-    onNavigateTo: (callback: (data: NavigationData) => void) => (() => void);
-    onShowApp: (callback: () => void) => (() => void);
-    onHideApp: (callback: () => void) => (() => void);
-    onQuitApp: (callback: () => void) => (() => void);
-    onTriggerUpdateCheck: (callback: () => void) => (() => void);
-    onSystemSuspend: (callback: () => void) => (() => void);
-    onSystemResume: (callback: () => void) => (() => void);
-    onNetworkStateSync: (callback: (data: NetworkStateSyncData) => void) => (() => void);
-    onRecordingReceived: (callback: (data: RecordingMetadataEvent) => void) => (() => void);
-    onRecordingProgress: (callback: (data: RecordingProgressEvent) => void) => (() => void);
-    onRecordingProcessing: (callback: (data: RecordingProcessingEvent) => void) => (() => void);
-    onRecordingDeleted: (callback: (data: { recordId: string }) => void) => (() => void);
-    onRecordingMetadataUpdated: (callback: (data: { recordId: string; updates: RecordingMetadataUpdateRequest['updates']; metadata?: RecordingMetadataEvent }) => void) => (() => void);
-    onOpenRecordRecording: (callback: (data: { recordId: string }) => void) => (() => void);
-    onStartVideoRecording: (callback: (data: VideoRecordingEvent) => void) => (() => void);
-    onStopVideoRecording: (callback: (data: VideoRecordingEvent) => void) => (() => void);
-    onVideoConversionProgress: (callback: (data: VideoConversionProgressEvent) => void) => (() => void);
-    onFFmpegDownloadProgress: (callback: (data: FFmpegDownloadProgressEvent) => void) => (() => void);
-    onFFmpegInstallStatus: (callback: (data: FFmpegInstallStatusEvent) => void) => (() => void);
-    onGitConnectionProgress: (callback: (data: GitProgressEvent) => void) => (() => void);
-    onGitCommitProgress: (callback: (data: GitProgressEvent) => void) => (() => void);
-    onGitInstallProgress: (callback: (data: GitProgressEvent) => void) => (() => void);
-    onFileChanged: (callback: (sourceId: string, content: string) => void) => (() => void);
-    onWorkspaceDataUpdated: (callback: (data: WorkspaceDataUpdatedData) => void) => (() => void);
-    onWorkspaceSyncProgress: (callback: (data: WorkspaceSyncCompletedData) => void) => (() => void);
-    onWorkspaceSyncCompleted: (callback: (data: WorkspaceSyncCompletedData) => void) => (() => void);
-    onWorkspaceSyncStarted: (callback: (data: WorkspaceSyncCompletedData) => void) => (() => void);
-    onCliWorkspaceJoined: (callback: (data: CliWorkspaceJoinedData) => void) => (() => void);
-    onEnvironmentsStructureChanged: (callback: (data: EnvironmentChangeEvent) => void) => (() => void);
-    onEnvironmentVariablesChanged: (callback: (data: EnvironmentChangeEvent) => void) => (() => void);
-    onWsConnectionStatusChanged: (callback: (data: WsConnectionStatusEvent) => void) => (() => void);
-    onUpdateAvailable: (callback: (data: UpdateInfoEvent) => void) => (() => void);
-    onUpdateNotAvailable: (callback: (data: UpdateInfoEvent) => void) => (() => void);
-    onUpdateDownloaded: (callback: (data: UpdateInfoEvent) => void) => (() => void);
-    onUpdateAlreadyDownloaded: (callback: (data: UpdateInfoEvent) => void) => (() => void);
-    onUpdateError: (callback: (data: { message: string; error?: string }) => void) => (() => void);
-    onUpdateProgress: (callback: (data: UpdateProgressEvent) => void) => (() => void);
-    onUpdateCheckAlreadyInProgress: (callback: () => void) => (() => void);
-    onClearUpdateCheckingNotification: (callback: () => void) => (() => void);
-    onProcessTeamWorkspaceInvite?: (callback: (data: Partial<TeamWorkspaceInvite>) => void) => (() => void);
-    onShowErrorMessage?: (callback: (data: { title?: string; message: string }) => void) => (() => void);
-    onProcessEnvironmentConfigImport?: (callback: (data: Partial<EnvironmentConfigData>) => void) => (() => void);
+    onNavigateTo: (callback: (data: NavigationData) => void) => () => void;
+    onShowApp: (callback: () => void) => () => void;
+    onHideApp: (callback: () => void) => () => void;
+    onQuitApp: (callback: () => void) => () => void;
+    onTriggerUpdateCheck: (callback: () => void) => () => void;
+    onSystemSuspend: (callback: () => void) => () => void;
+    onSystemResume: (callback: () => void) => () => void;
+    onNetworkStateSync: (callback: (data: NetworkStateSyncData) => void) => () => void;
+    onRecordingReceived: (callback: (data: RecordingMetadataEvent) => void) => () => void;
+    onRecordingProgress: (callback: (data: RecordingProgressEvent) => void) => () => void;
+    onRecordingProcessing: (callback: (data: RecordingProcessingEvent) => void) => () => void;
+    onRecordingDeleted: (callback: (data: { recordId: string }) => void) => () => void;
+    onRecordingMetadataUpdated: (
+      callback: (data: {
+        recordId: string;
+        updates: RecordingMetadataUpdateRequest['updates'];
+        metadata?: RecordingMetadataEvent;
+      }) => void,
+    ) => () => void;
+    onOpenRecordRecording: (callback: (data: { recordId: string }) => void) => () => void;
+    onStartVideoRecording: (callback: (data: VideoRecordingEvent) => void) => () => void;
+    onStopVideoRecording: (callback: (data: VideoRecordingEvent) => void) => () => void;
+    onVideoConversionProgress: (callback: (data: VideoConversionProgressEvent) => void) => () => void;
+    onFFmpegDownloadProgress: (callback: (data: FFmpegDownloadProgressEvent) => void) => () => void;
+    onFFmpegInstallStatus: (callback: (data: FFmpegInstallStatusEvent) => void) => () => void;
+    onGitConnectionProgress: (callback: (data: GitProgressEvent) => void) => () => void;
+    onGitCommitProgress: (callback: (data: GitProgressEvent) => void) => () => void;
+    onGitInstallProgress: (callback: (data: GitProgressEvent) => void) => () => void;
+    onFileChanged: (callback: (sourceId: string, content: string) => void) => () => void;
+    onWorkspaceDataUpdated: (callback: (data: WorkspaceDataUpdatedData) => void) => () => void;
+    onWorkspaceSyncProgress: (callback: (data: WorkspaceSyncCompletedData) => void) => () => void;
+    onWorkspaceSyncCompleted: (callback: (data: WorkspaceSyncCompletedData) => void) => () => void;
+    onWorkspaceSyncStarted: (callback: (data: WorkspaceSyncCompletedData) => void) => () => void;
+    onCliWorkspaceJoined: (callback: (data: CliWorkspaceJoinedData) => void) => () => void;
+    onEnvironmentsStructureChanged: (callback: (data: EnvironmentChangeEvent) => void) => () => void;
+    onEnvironmentVariablesChanged: (callback: (data: EnvironmentChangeEvent) => void) => () => void;
+    onWsConnectionStatusChanged: (callback: (data: WsConnectionStatusEvent) => void) => () => void;
+    onUpdateAvailable: (callback: (data: UpdateInfoEvent) => void) => () => void;
+    onUpdateNotAvailable: (callback: (data: UpdateInfoEvent) => void) => () => void;
+    onUpdateDownloaded: (callback: (data: UpdateInfoEvent) => void) => () => void;
+    onUpdateAlreadyDownloaded: (callback: (data: UpdateInfoEvent) => void) => () => void;
+    onUpdateError: (callback: (data: { message: string; error?: string }) => void) => () => void;
+    onUpdateProgress: (callback: (data: UpdateProgressEvent) => void) => () => void;
+    onUpdateCheckAlreadyInProgress: (callback: () => void) => () => void;
+    onClearUpdateCheckingNotification: (callback: () => void) => () => void;
+    onProcessTeamWorkspaceInvite?: (callback: (data: Partial<TeamWorkspaceInvite>) => void) => () => void;
+    onShowErrorMessage?: (callback: (data: { title?: string; message: string }) => void) => () => void;
+    onProcessEnvironmentConfigImport?: (callback: (data: Partial<EnvironmentConfigData>) => void) => () => void;
 
     // Renderer lifecycle
     signalRendererReady?: () => void;
@@ -438,7 +527,12 @@ declare global {
   }
 
   interface RRWebPlayerConstructor {
-    new (options: { target: HTMLElement; data: { events: unknown[] }; width?: number; height?: number }): {
+    new (options: {
+      target: HTMLElement;
+      data: { events: unknown[] };
+      width?: number;
+      height?: number;
+    }): {
       destroy(): void;
       play(): void;
       pause(): void;
@@ -459,5 +553,3 @@ declare global {
     rrwebPlayer?: RRWebPlayerModule | RRWebPlayerConstructor;
   }
 }
-
-export {};

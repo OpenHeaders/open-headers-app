@@ -3,8 +3,8 @@
  * Tests for useEnvironmentCore hook — validates state subscription and service exposure.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -173,11 +173,14 @@ describe('useEnvironmentCore', () => {
     const { result } = renderHook(() => useEnvironmentCore());
 
     act(() => {
-      mockSubscriber!({
-        ...defaultState,
-        error: 'Failed to load environments for workspace ws-a1b2c3d4',
-        isReady: true,
-      }, ['error', 'isReady']);
+      mockSubscriber!(
+        {
+          ...defaultState,
+          error: 'Failed to load environments for workspace ws-a1b2c3d4',
+          isReady: true,
+        },
+        ['error', 'isReady'],
+      );
     });
 
     expect(result.current.isReady).toBe(true);

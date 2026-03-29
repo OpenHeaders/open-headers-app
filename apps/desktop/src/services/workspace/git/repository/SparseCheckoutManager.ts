@@ -6,7 +6,7 @@
 import fs from 'fs';
 import path from 'path';
 import mainLogger from '../../../../utils/mainLogger';
-import { GitExecutor } from '../core/GitExecutor';
+import type { GitExecutor } from '../core/GitExecutor';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -40,16 +40,10 @@ class SparseCheckoutManager {
 
     try {
       // Enable sparse checkout
-      await this.executor.execute(
-        'config core.sparseCheckout true',
-        { cwd: repoDir }
-      );
+      await this.executor.execute('config core.sparseCheckout true', { cwd: repoDir });
 
       // Initialize sparse checkout (cone mode for better performance)
-      await this.executor.execute(
-        'sparse-checkout init --cone',
-        { cwd: repoDir }
-      );
+      await this.executor.execute('sparse-checkout init --cone', { cwd: repoDir });
 
       // Set initial patterns if provided
       if (patterns.length > 0) {
@@ -59,7 +53,7 @@ class SparseCheckoutManager {
       return {
         success: true,
         enabled: true,
-        patterns
+        patterns,
       };
     } catch (error) {
       log.error('Failed to initialize sparse checkout:', error);
@@ -82,21 +76,15 @@ class SparseCheckoutManager {
       this.validatePatterns(patterns);
 
       // Set patterns using sparse-checkout command
-      const patternsStr = patterns.map(p => `"${p}"`).join(' ');
-      await this.executor.execute(
-        `sparse-checkout set ${patternsStr}`,
-        { cwd: repoDir }
-      );
+      const patternsStr = patterns.map((p) => `"${p}"`).join(' ');
+      await this.executor.execute(`sparse-checkout set ${patternsStr}`, { cwd: repoDir });
 
       // Apply changes
-      await this.executor.execute(
-        'read-tree -m -u HEAD',
-        { cwd: repoDir }
-      );
+      await this.executor.execute('read-tree -m -u HEAD', { cwd: repoDir });
 
       return {
         success: true,
-        patterns
+        patterns,
       };
     } catch (error) {
       log.error('Failed to set sparse checkout patterns:', error);
@@ -136,7 +124,7 @@ class SparseCheckoutManager {
       const currentPatterns = await this.getPatterns(repoDir);
 
       // Remove specified patterns
-      const newPatterns = currentPatterns.filter(p => !patterns.includes(p));
+      const newPatterns = currentPatterns.filter((p) => !patterns.includes(p));
 
       if (newPatterns.length === 0) {
         throw new Error('Cannot remove all patterns. Use disable() instead.');
@@ -155,15 +143,12 @@ class SparseCheckoutManager {
    */
   async getPatterns(repoDir: string): Promise<string[]> {
     try {
-      const { stdout } = await this.executor.execute(
-        'sparse-checkout list',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('sparse-checkout list', { cwd: repoDir });
 
       return stdout
         .trim()
         .split('\n')
-        .filter(line => line.length > 0);
+        .filter((line) => line.length > 0);
     } catch (error) {
       log.error('Failed to get sparse checkout patterns:', error);
       return [];
@@ -175,10 +160,7 @@ class SparseCheckoutManager {
    */
   async isEnabled(repoDir: string): Promise<boolean> {
     try {
-      const { stdout } = await this.executor.execute(
-        'config --get core.sparseCheckout',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('config --get core.sparseCheckout', { cwd: repoDir });
       return stdout.trim() === 'true';
     } catch (error) {
       return false;
@@ -193,14 +175,11 @@ class SparseCheckoutManager {
 
     try {
       // Disable sparse checkout
-      await this.executor.execute(
-        'sparse-checkout disable',
-        { cwd: repoDir }
-      );
+      await this.executor.execute('sparse-checkout disable', { cwd: repoDir });
 
       return {
         success: true,
-        enabled: false
+        enabled: false,
       };
     } catch (error) {
       log.error('Failed to disable sparse checkout:', error);
@@ -282,7 +261,7 @@ class SparseCheckoutManager {
         return {
           enabled: false,
           patterns: [],
-          mode: 'none'
+          mode: 'none',
         };
       }
 
@@ -291,10 +270,7 @@ class SparseCheckoutManager {
       // Check if using cone mode
       let mode = 'legacy';
       try {
-        const { stdout } = await this.executor.execute(
-          'config --get core.sparseCheckoutCone',
-          { cwd: repoDir }
-        );
+        const { stdout } = await this.executor.execute('config --get core.sparseCheckoutCone', { cwd: repoDir });
         if (stdout.trim() === 'true') {
           mode = 'cone';
         }
@@ -305,7 +281,7 @@ class SparseCheckoutManager {
       return {
         enabled,
         patterns,
-        mode
+        mode,
       };
     } catch (error) {
       log.error('Failed to get sparse checkout status:', error);
@@ -339,6 +315,6 @@ class SparseCheckoutManager {
   }
 }
 
-export { SparseCheckoutManager };
 export type { SparseCheckoutResult, SparseCheckoutStatus };
+export { SparseCheckoutManager };
 export default SparseCheckoutManager;

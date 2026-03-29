@@ -1,17 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
+  checkRuleActivation,
   extractEnvironmentVariables,
-  hasEnvironmentVariables,
   extractVariablesFromRule,
   findMissingVariables,
-  validateEnvironmentVariables,
-  validateRuleEnvironmentVariables,
-  resolveEnvironmentVariables,
-  resolveRuleEnvironmentVariables,
-  checkRuleActivation,
   formatMissingVariables,
   getResolvedPreview,
+  hasEnvironmentVariables,
+  resolveEnvironmentVariables,
+  resolveRuleEnvironmentVariables,
+  validateEnvironmentVariables,
+  validateRuleEnvironmentVariables,
 } from '../../../../src/renderer/utils/validation/environment-variables';
 
 // ---------------------------------------------------------------------------
@@ -37,15 +37,16 @@ describe('extractEnvironmentVariables', () => {
   });
 
   it('extracts multiple variables from connection string template', () => {
-    expect(
-      extractEnvironmentVariables('postgresql://admin@{{DATABASE_HOST}}:{{DATABASE_PORT}}/prod')
-    ).toEqual(['DATABASE_HOST', 'DATABASE_PORT']);
+    expect(extractEnvironmentVariables('postgresql://admin@{{DATABASE_HOST}}:{{DATABASE_PORT}}/prod')).toEqual([
+      'DATABASE_HOST',
+      'DATABASE_PORT',
+    ]);
   });
 
   it('deduplicates variables used multiple times', () => {
-    expect(
-      extractEnvironmentVariables('{{OAUTH2_CLIENT_ID}} and id={{OAUTH2_CLIENT_ID}}')
-    ).toEqual(['OAUTH2_CLIENT_ID']);
+    expect(extractEnvironmentVariables('{{OAUTH2_CLIENT_ID}} and id={{OAUTH2_CLIENT_ID}}')).toEqual([
+      'OAUTH2_CLIENT_ID',
+    ]);
   });
 
   it('trims whitespace inside braces', () => {
@@ -73,9 +74,10 @@ describe('extractEnvironmentVariables', () => {
   });
 
   it('extracts from complex URL template with port', () => {
-    expect(
-      extractEnvironmentVariables('https://{{STAGING_DOMAIN}}:8443/{{API_VERSION}}/resources')
-    ).toEqual(['STAGING_DOMAIN', 'API_VERSION']);
+    expect(extractEnvironmentVariables('https://{{STAGING_DOMAIN}}:8443/{{API_VERSION}}/resources')).toEqual([
+      'STAGING_DOMAIN',
+      'API_VERSION',
+    ]);
   });
 });
 
@@ -109,9 +111,7 @@ describe('hasEnvironmentVariables', () => {
 // ======================================================================
 describe('extractVariablesFromRule', () => {
   it('extracts from headerName with enterprise pattern', () => {
-    expect(
-      extractVariablesFromRule({ headerName: 'X-{{HEADER_PREFIX}}-Auth' })
-    ).toEqual(['HEADER_PREFIX']);
+    expect(extractVariablesFromRule({ headerName: 'X-{{HEADER_PREFIX}}-Auth' })).toEqual(['HEADER_PREFIX']);
   });
 
   it('extracts from headerValue for static rules with JWT', () => {
@@ -120,7 +120,7 @@ describe('extractVariablesFromRule', () => {
         headerName: 'Authorization',
         headerValue: 'Bearer {{BEARER_TOKEN}}',
         isDynamic: false,
-      })
+      }),
     ).toEqual(['BEARER_TOKEN']);
   });
 
@@ -129,7 +129,7 @@ describe('extractVariablesFromRule', () => {
       extractVariablesFromRule({
         headerValue: 'Bearer {{BEARER_TOKEN}}',
         isDynamic: true,
-      })
+      }),
     ).toEqual([]);
   });
 
@@ -139,7 +139,7 @@ describe('extractVariablesFromRule', () => {
         isDynamic: true,
         prefix: 'Bearer {{OAUTH2_CLIENT_ID}}',
         suffix: '{{API_SUFFIX}}',
-      })
+      }),
     ).toEqual(['OAUTH2_CLIENT_ID', 'API_SUFFIX']);
   });
 
@@ -147,7 +147,7 @@ describe('extractVariablesFromRule', () => {
     expect(
       extractVariablesFromRule({
         domains: ['{{STAGING_DOMAIN}}', '{{PROD_DOMAIN}}:8443'],
-      })
+      }),
     ).toEqual(['STAGING_DOMAIN', 'PROD_DOMAIN']);
   });
 
@@ -158,7 +158,7 @@ describe('extractVariablesFromRule', () => {
         headerValue: '{{OAUTH2_CLIENT_ID}}',
         isDynamic: false,
         domains: ['{{OAUTH2_CLIENT_ID}}.example.com'],
-      })
+      }),
     ).toEqual(['OAUTH2_CLIENT_ID']);
   });
 
@@ -183,15 +183,17 @@ describe('extractVariablesFromRule', () => {
 describe('findMissingVariables', () => {
   it('returns missing enterprise variables', () => {
     expect(
-      findMissingVariables(
-        ['OAUTH2_CLIENT_ID', 'MISSING_SECRET', 'API_GATEWAY_URL'],
-        { OAUTH2_CLIENT_ID: 'oidc-client-abc', API_GATEWAY_URL: 'https://gw.openheaders.io' }
-      )
+      findMissingVariables(['OAUTH2_CLIENT_ID', 'MISSING_SECRET', 'API_GATEWAY_URL'], {
+        OAUTH2_CLIENT_ID: 'oidc-client-abc',
+        API_GATEWAY_URL: 'https://gw.openheaders.io',
+      }),
     ).toEqual(['MISSING_SECRET']);
   });
 
   it('considers empty string as missing', () => {
-    expect(findMissingVariables(['OAUTH2_CLIENT_SECRET'], { OAUTH2_CLIENT_SECRET: '' })).toEqual(['OAUTH2_CLIENT_SECRET']);
+    expect(findMissingVariables(['OAUTH2_CLIENT_SECRET'], { OAUTH2_CLIENT_SECRET: '' })).toEqual([
+      'OAUTH2_CLIENT_SECRET',
+    ]);
   });
 
   it('considers null as missing', () => {
@@ -203,9 +205,7 @@ describe('findMissingVariables', () => {
   });
 
   it('returns empty array when all present', () => {
-    expect(
-      findMissingVariables(['OAUTH2_CLIENT_ID', 'API_GATEWAY_URL'], enterpriseVars)
-    ).toEqual([]);
+    expect(findMissingVariables(['OAUTH2_CLIENT_ID', 'API_GATEWAY_URL'], enterpriseVars)).toEqual([]);
   });
 
   it('returns requiredVars when availableVars is null', () => {
@@ -224,7 +224,7 @@ describe('validateEnvironmentVariables', () => {
   it('returns valid when all enterprise vars available', () => {
     const result = validateEnvironmentVariables(
       '{{API_GATEWAY_URL}}/oauth2/token?client_id={{OAUTH2_CLIENT_ID}}',
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result).toEqual({
       isValid: true,
@@ -235,10 +235,7 @@ describe('validateEnvironmentVariables', () => {
   });
 
   it('returns invalid when enterprise vars missing', () => {
-    const result = validateEnvironmentVariables(
-      'Bearer {{MISSING_JWT_TOKEN}}',
-      enterpriseVars
-    );
+    const result = validateEnvironmentVariables('Bearer {{MISSING_JWT_TOKEN}}', enterpriseVars);
     expect(result).toEqual({
       isValid: false,
       missingVars: ['MISSING_JWT_TOKEN'],
@@ -260,7 +257,7 @@ describe('validateEnvironmentVariables', () => {
   it('validates connection string template', () => {
     const result = validateEnvironmentVariables(
       'postgresql://admin@{{DATABASE_HOST}}:{{DATABASE_PORT}}/production',
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.isValid).toBe(true);
     expect(result.usedVars).toEqual(['DATABASE_HOST', 'DATABASE_PORT']);
@@ -279,7 +276,7 @@ describe('validateRuleEnvironmentVariables', () => {
         isDynamic: false,
         domains: ['{{STAGING_DOMAIN}}', 'api.openheaders.io'],
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.isValid).toBe(true);
     expect(result.totalVarsUsed).toBe(2);
@@ -293,7 +290,7 @@ describe('validateRuleEnvironmentVariables', () => {
         headerValue: '{{MISSING_API_KEY}}',
         isDynamic: false,
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.isValid).toBe(false);
     expect(result.missingVars).toContain('MISSING_API_KEY');
@@ -306,7 +303,7 @@ describe('validateRuleEnvironmentVariables', () => {
         prefix: 'Bearer {{BEARER_TOKEN}}',
         suffix: ' {{OAUTH2_CLIENT_ID}}',
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.isValid).toBe(true);
     expect(result.totalVarsUsed).toBe(2);
@@ -320,7 +317,7 @@ describe('validateRuleEnvironmentVariables', () => {
         isDynamic: false,
         domains: ['{{MISSING_VAR}}.example.com'],
       },
-      {}
+      {},
     );
     expect(result.missingVars).toEqual(['MISSING_VAR']);
   });
@@ -331,13 +328,9 @@ describe('validateRuleEnvironmentVariables', () => {
         headerName: 'X-Client-ID',
         headerValue: '{{OAUTH2_CLIENT_ID}}',
         isDynamic: false,
-        domains: [
-          '*.openheaders.io',
-          '{{STAGING_DOMAIN}}:8443',
-          'api.partner-service.io',
-        ],
+        domains: ['*.openheaders.io', '{{STAGING_DOMAIN}}:8443', 'api.partner-service.io'],
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.isValid).toBe(true);
     expect(result.totalVarsUsed).toBe(2); // OAUTH2_CLIENT_ID + STAGING_DOMAIN
@@ -349,17 +342,14 @@ describe('validateRuleEnvironmentVariables', () => {
 // ======================================================================
 describe('resolveEnvironmentVariables', () => {
   it('replaces enterprise variables with values', () => {
-    expect(
-      resolveEnvironmentVariables('Bearer {{BEARER_TOKEN}}', enterpriseVars)
-    ).toBe('Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig');
+    expect(resolveEnvironmentVariables('Bearer {{BEARER_TOKEN}}', enterpriseVars)).toBe(
+      'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
+    );
   });
 
   it('replaces multiple variables in connection string', () => {
     expect(
-      resolveEnvironmentVariables(
-        'postgresql://admin@{{DATABASE_HOST}}:{{DATABASE_PORT}}/production',
-        enterpriseVars
-      )
+      resolveEnvironmentVariables('postgresql://admin@{{DATABASE_HOST}}:{{DATABASE_PORT}}/production', enterpriseVars),
     ).toBe('postgresql://admin@db.openheaders.io:5432/production');
   });
 
@@ -398,10 +388,10 @@ describe('resolveEnvironmentVariables', () => {
   it('resolves full enterprise URL template', () => {
     const result = resolveEnvironmentVariables(
       '{{API_GATEWAY_URL}}/oauth2/token?client_id={{OAUTH2_CLIENT_ID}}',
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result).toBe(
-      'https://gateway.openheaders.io:8443/v2/oauth2/token?client_id=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+      'https://gateway.openheaders.io:8443/v2/oauth2/token?client_id=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     );
   });
 });
@@ -420,7 +410,7 @@ describe('resolveRuleEnvironmentVariables', () => {
     const resolved = resolveRuleEnvironmentVariables(rule, enterpriseVars);
     expect(resolved.headerName).toBe('Authorization');
     expect(resolved.headerValue).toBe(
-      'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig'
+      'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
     );
     expect(resolved.domains).toEqual(['staging-eu.openheaders.io', 'api.openheaders.io']);
   });
@@ -433,7 +423,7 @@ describe('resolveRuleEnvironmentVariables', () => {
     };
     const resolved = resolveRuleEnvironmentVariables(rule, enterpriseVars);
     expect(resolved.prefix).toBe(
-      'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig'
+      'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
     );
     expect(resolved.suffix).toBe(' (client=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890)');
   });
@@ -467,7 +457,7 @@ describe('checkRuleActivation', () => {
         headerValue: 'Bearer {{BEARER_TOKEN}}',
         isDynamic: false,
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.shouldApply).toBe(true);
     expect(result.activationState).toBe('active');
@@ -482,7 +472,7 @@ describe('checkRuleActivation', () => {
         headerValue: '{{MISSING_WEBHOOK_SECRET}}',
         isDynamic: false,
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.shouldApply).toBe(false);
     expect(result.activationState).toBe('waiting_for_deps');
@@ -498,7 +488,7 @@ describe('checkRuleActivation', () => {
         isDynamic: false,
         domains: ['{{STAGING_DOMAIN}}:8443'],
       },
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.shouldApply).toBe(true);
     expect(result.activationState).toBe('active');
@@ -518,16 +508,12 @@ describe('formatMissingVariables', () => {
   });
 
   it('formats single missing enterprise variable', () => {
-    expect(formatMissingVariables(['OAUTH2_CLIENT_SECRET'])).toBe(
-      'Missing variable: {{OAUTH2_CLIENT_SECRET}}'
-    );
+    expect(formatMissingVariables(['OAUTH2_CLIENT_SECRET'])).toBe('Missing variable: {{OAUTH2_CLIENT_SECRET}}');
   });
 
   it('formats multiple missing enterprise variables', () => {
     const result = formatMissingVariables(['OAUTH2_CLIENT_SECRET', 'DATABASE_HOST', 'REDIS_URL']);
-    expect(result).toBe(
-      'Missing variables: {{OAUTH2_CLIENT_SECRET}}, {{DATABASE_HOST}}, {{REDIS_URL}}'
-    );
+    expect(result).toBe('Missing variables: {{OAUTH2_CLIENT_SECRET}}, {{DATABASE_HOST}}, {{REDIS_URL}}');
   });
 });
 
@@ -547,20 +533,17 @@ describe('getResolvedPreview', () => {
   it('returns resolved enterprise URL with no missing vars', () => {
     const result = getResolvedPreview(
       '{{API_GATEWAY_URL}}/oauth2/token?client_id={{OAUTH2_CLIENT_ID}}',
-      enterpriseVars
+      enterpriseVars,
     );
     expect(result.text).toBe(
-      'https://gateway.openheaders.io:8443/v2/oauth2/token?client_id=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+      'https://gateway.openheaders.io:8443/v2/oauth2/token?client_id=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     );
     expect(result.hasMissing).toBe(false);
     expect(result.missingCount).toBe(0);
   });
 
   it('reports missing vars in enterprise preview', () => {
-    const result = getResolvedPreview(
-      'Bearer {{BEARER_TOKEN}} scope={{MISSING_SCOPE}}',
-      enterpriseVars
-    );
+    const result = getResolvedPreview('Bearer {{BEARER_TOKEN}} scope={{MISSING_SCOPE}}', enterpriseVars);
     expect(result.hasMissing).toBe(true);
     expect(result.missingCount).toBe(1);
     expect(result.missingVars).toEqual(['MISSING_SCOPE']);

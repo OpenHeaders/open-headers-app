@@ -5,9 +5,9 @@
 
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger';
-import { GitExecutor } from '../core/GitExecutor';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
+import type { GitExecutor } from '../core/GitExecutor';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -71,16 +71,7 @@ class CommitManager {
    * Commit configuration changes
    */
   async commitConfiguration(options: CommitOptions): Promise<CommitResult> {
-    const {
-      repoDir,
-      files,
-      workspaceId,
-      workspaceName,
-      configPaths,
-      message,
-      author = null,
-      email = null
-    } = options;
+    const { repoDir, files, workspaceId, workspaceName, configPaths, message, author = null, email = null } = options;
 
     log.info(`Committing configuration${workspaceName ? ` for workspace: ${workspaceName}` : ''}`);
 
@@ -96,7 +87,9 @@ class CommitManager {
     const isWorkspaceMode = configPaths && workspaceId && workspaceName;
 
     if (!isDirectFileMode && !isWorkspaceMode) {
-      const error = new Error('Invalid options: either provide files for direct commit or configPaths with workspaceId and workspaceName');
+      const error = new Error(
+        'Invalid options: either provide files for direct commit or configPaths with workspaceId and workspaceName',
+      );
       log.error('Invalid commit configuration options:', error);
       throw error;
     }
@@ -129,7 +122,7 @@ class CommitManager {
           success: true,
           commitHash: commitResult.hash,
           message: commitMessage,
-          files: Object.keys(files!).length
+          files: Object.keys(files!).length,
         };
       }
 
@@ -138,7 +131,7 @@ class CommitManager {
         // Create configuration files
         await this.createConfigurationFiles(repoDir, configPaths!, {
           workspaceId: workspaceId!,
-          workspaceName: workspaceName!
+          workspaceName: workspaceName!,
         });
 
         // Stage configuration files
@@ -152,13 +145,12 @@ class CommitManager {
           success: true,
           commitHash: commitResult.hash,
           message: commitMessage,
-          files: Object.keys(configPaths!).length
+          files: Object.keys(configPaths!).length,
         };
       }
 
       // Should never reach here due to validation above
       throw new Error('Unexpected state in commitConfiguration');
-
     } catch (error) {
       log.error('Failed to commit configuration:', error);
       throw error;
@@ -168,12 +160,12 @@ class CommitManager {
   /**
    * Auto-commit changes
    */
-  async autoCommit(options: { repoDir: string; message?: string | null; includeUntracked?: boolean }): Promise<CommitResult> {
-    const {
-      repoDir,
-      message = null,
-      includeUntracked = true
-    } = options;
+  async autoCommit(options: {
+    repoDir: string;
+    message?: string | null;
+    includeUntracked?: boolean;
+  }): Promise<CommitResult> {
+    const { repoDir, message = null, includeUntracked = true } = options;
 
     log.info('Auto-committing changes');
 
@@ -185,7 +177,7 @@ class CommitManager {
         return {
           success: true,
           committed: false,
-          message: 'No changes to commit'
+          message: 'No changes to commit',
         };
       }
 
@@ -214,10 +206,9 @@ class CommitManager {
         changes: {
           modified: status.modified.length,
           added: status.added.length,
-          deleted: status.deleted.length
-        }
+          deleted: status.deleted.length,
+        },
       };
-
     } catch (error) {
       log.error('Auto-commit failed:', error);
       throw error;
@@ -230,22 +221,15 @@ class CommitManager {
   async createCommit(repoDir: string, message: string): Promise<CommitInfo> {
     try {
       // Create commit
-      await this.executor.execute(
-        `commit -m "${this.escapeMessage(message)}"`,
-        { cwd: repoDir }
-      );
+      await this.executor.execute(`commit -m "${this.escapeMessage(message)}"`, { cwd: repoDir });
 
       // Get commit hash
-      const { stdout: hash } = await this.executor.execute(
-        'rev-parse HEAD',
-        { cwd: repoDir }
-      );
+      const { stdout: hash } = await this.executor.execute('rev-parse HEAD', { cwd: repoDir });
 
       return {
         hash: hash.trim(),
-        message
+        message,
       };
-
     } catch (error) {
       if (errorMessage(error).includes('nothing to commit')) {
         throw new Error('No changes staged for commit');
@@ -271,10 +255,7 @@ class CommitManager {
    */
   async stageFile(repoDir: string, filePath: string): Promise<void> {
     try {
-      await this.executor.execute(
-        `add "${filePath}"`,
-        { cwd: repoDir }
-      );
+      await this.executor.execute(`add "${filePath}"`, { cwd: repoDir });
     } catch (error) {
       log.error(`Failed to stage file ${filePath}:`, error);
       throw error;
@@ -285,10 +266,7 @@ class CommitManager {
    * Get repository status
    */
   async getStatus(repoDir: string): Promise<RepoStatus> {
-    const { stdout } = await this.executor.execute(
-      'status --porcelain',
-      { cwd: repoDir }
-    );
+    const { stdout } = await this.executor.execute('status --porcelain', { cwd: repoDir });
 
     const status: RepoStatus = {
       hasChanges: false,
@@ -296,10 +274,13 @@ class CommitManager {
       added: [],
       deleted: [],
       renamed: [],
-      untracked: []
+      untracked: [],
     };
 
-    const lines = stdout.trim().split('\n').filter(line => line);
+    const lines = stdout
+      .trim()
+      .split('\n')
+      .filter((line) => line);
 
     for (const line of lines) {
       status.hasChanges = true;
@@ -325,7 +306,11 @@ class CommitManager {
   /**
    * Create configuration files
    */
-  async createConfigurationFiles(repoDir: string, configPaths: Record<string, string>, metadata: { workspaceId: string; workspaceName: string }): Promise<void> {
+  async createConfigurationFiles(
+    repoDir: string,
+    configPaths: Record<string, string>,
+    metadata: { workspaceId: string; workspaceName: string },
+  ): Promise<void> {
     // Create directories
     const dirs = new Set<string>();
     for (const filePath of Object.values(configPaths)) {
@@ -342,19 +327,19 @@ class CommitManager {
     const defaults = {
       headers: {
         version: '1.0.0',
-        headers: []
+        headers: [],
       },
       environments: {
         version: '1.0.0',
-        environments: []
+        environments: [],
       },
       proxy: {
         version: '1.0.0',
-        rules: []
+        rules: [],
       },
       rules: {
         version: '1.0.0',
-        rules: []
+        rules: [],
       },
       metadata: {
         workspaceId: metadata.workspaceId,
@@ -366,8 +351,8 @@ class CommitManager {
             acc[key] = path.relative(repoDir, String(configPaths[key])).replace(/\\/g, '/');
           }
           return acc;
-        }, {})
-      }
+        }, {}),
+      },
     };
 
     // Write configuration files
@@ -376,11 +361,7 @@ class CommitManager {
       if (filePath && defaultContent) {
         const exists = await this.fileExists(String(filePath));
         if (!exists) {
-          await fsPromises.writeFile(
-            String(filePath),
-            JSON.stringify(defaultContent, null, 2),
-            'utf8'
-          );
+          await fsPromises.writeFile(String(filePath), JSON.stringify(defaultContent, null, 2), 'utf8');
           log.info(`Created ${key} configuration at: ${filePath}`);
         }
       }
@@ -393,46 +374,27 @@ class CommitManager {
   async ensureGitUser(repoDir: string, author: string | null, email: string | null): Promise<void> {
     try {
       // Check if user is already configured
-      const { stdout: currentUser } = await this.executor.execute(
-        'config user.name',
-        { cwd: repoDir }
-      );
+      const { stdout: currentUser } = await this.executor.execute('config user.name', { cwd: repoDir });
 
-      const { stdout: currentEmail } = await this.executor.execute(
-        'config user.email',
-        { cwd: repoDir }
-      );
+      const { stdout: currentEmail } = await this.executor.execute('config user.email', { cwd: repoDir });
 
       // Set user if not configured
       if (!currentUser.trim() && author) {
-        await this.executor.execute(
-          `config user.name "${author}"`,
-          { cwd: repoDir }
-        );
+        await this.executor.execute(`config user.name "${author}"`, { cwd: repoDir });
       }
 
       if (!currentEmail.trim() && email) {
-        await this.executor.execute(
-          `config user.email "${email}"`,
-          { cwd: repoDir }
-        );
+        await this.executor.execute(`config user.email "${email}"`, { cwd: repoDir });
       }
 
       // Use defaults if still not set
       if (!currentUser.trim() && !author) {
-        await this.executor.execute(
-          'config user.name "OpenHeaders User"',
-          { cwd: repoDir }
-        );
+        await this.executor.execute('config user.name "OpenHeaders User"', { cwd: repoDir });
       }
 
       if (!currentEmail.trim() && !email) {
-        await this.executor.execute(
-          'config user.email "user@openheaders.io"',
-          { cwd: repoDir }
-        );
+        await this.executor.execute('config user.email "user@openheaders.io"', { cwd: repoDir });
       }
-
     } catch (error) {
       log.warn('Failed to configure Git user:', error);
     }
@@ -446,7 +408,7 @@ class CommitManager {
       create: `feat: Create workspace configuration for ${workspaceName}`,
       update: `feat: Update workspace configuration for ${workspaceName}`,
       sync: `sync: Synchronize workspace ${workspaceName}`,
-      'auto-sync': `chore: Auto-sync workspace ${workspaceName}`
+      'auto-sync': `chore: Auto-sync workspace ${workspaceName}`,
     };
 
     return templates[action] || `chore: Update workspace ${workspaceName}`;
@@ -496,13 +458,15 @@ class CommitManager {
    */
   async getHistory(repoDir: string, limit = 10): Promise<CommitHistoryEntry[]> {
     try {
-      const { stdout } = await this.executor.execute(
-        `log -${limit} --pretty=format:"%H|%an|%ae|%at|%s"`,
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute(`log -${limit} --pretty=format:"%H|%an|%ae|%at|%s"`, {
+        cwd: repoDir,
+      });
 
       const commits: CommitHistoryEntry[] = [];
-      const lines = stdout.trim().split('\n').filter(line => line);
+      const lines = stdout
+        .trim()
+        .split('\n')
+        .filter((line) => line);
 
       for (const line of lines) {
         const [hash, author, email, timestamp, message] = line.split('|');
@@ -511,12 +475,11 @@ class CommitManager {
           author,
           email,
           date: new Date(parseInt(timestamp) * 1000),
-          message
+          message,
         });
       }
 
       return commits;
-
     } catch (error) {
       log.error('Failed to get commit history:', error);
       return [];
@@ -532,6 +495,6 @@ class CommitManager {
   }
 }
 
+export type { CommitHistoryEntry, CommitInfo, CommitOptions, CommitResult, RepoStatus };
 export { CommitManager };
-export type { CommitOptions, CommitResult, RepoStatus, CommitInfo, CommitHistoryEntry };
 export default CommitManager;

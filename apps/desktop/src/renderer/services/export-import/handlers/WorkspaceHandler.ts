@@ -1,17 +1,17 @@
 /**
  * Workspace Handler for Export/Import Operations
- * 
+ *
  * This module handles the export and import of workspace configurations,
  * including Git integration, authentication data, and workspace creation.
  */
 
-import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
-import { isWorkspaceNameDuplicate, generateUniqueName } from '../utilities/DuplicateDetection';
-import { DEFAULTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, WorkspaceData, ExportOptions } from '../core/types';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
-
 import { createLogger } from '../../../utils/error-handling/logger';
+import { DEFAULTS } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, ExportOptions, WorkspaceData } from '../core/types';
+import { generateUniqueName, isWorkspaceNameDuplicate } from '../utilities/DuplicateDetection';
+import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
+
 const log = createLogger('WorkspaceHandler');
 
 /** Options for workspace import operations */
@@ -40,7 +40,7 @@ export class WorkspaceHandler {
    */
   async exportWorkspace(options: ExportOptions) {
     const { includeWorkspace, includeCredentials, currentWorkspace } = options;
-    
+
     if (!includeWorkspace || !currentWorkspace) {
       log.debug('Workspace not selected for export or no current workspace');
       return null;
@@ -55,9 +55,9 @@ export class WorkspaceHandler {
         gitBranch: currentWorkspace.gitBranch || DEFAULTS.WORKSPACE_BRANCH,
         gitPath: currentWorkspace.gitPath || DEFAULTS.WORKSPACE_PATH,
         authType: currentWorkspace.authType || DEFAULTS.AUTH_TYPE,
-        autoSync: currentWorkspace.autoSync !== false
+        autoSync: currentWorkspace.autoSync !== false,
       };
-      
+
       // Only include credentials if explicitly requested
       if (includeCredentials && currentWorkspace.authData) {
         workspaceData.authData = this._sanitizeWorkspaceAuthData(currentWorkspace.authData);
@@ -80,7 +80,7 @@ export class WorkspaceHandler {
   async importWorkspace(workspaceInfo: WorkspaceData | null, options: WorkspaceImportOptions) {
     const stats: { createdWorkspace: WorkspaceData | null; errors: Array<{ workspace: string; error: string }> } = {
       createdWorkspace: null,
-      errors: []
+      errors: [],
     };
 
     if (!workspaceInfo) {
@@ -95,7 +95,7 @@ export class WorkspaceHandler {
       log.error('Failed to import workspace:', error);
       stats.errors.push({
         workspace: workspaceInfo.name,
-        error: error.message
+        error: error.message,
       });
       return stats;
     }
@@ -116,7 +116,7 @@ export class WorkspaceHandler {
       log.error('Failed to import workspace:', error);
       stats.errors.push({
         workspace: workspaceInfo.name,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
       return stats;
     }
@@ -137,12 +137,12 @@ export class WorkspaceHandler {
     if (isWorkspaceNameDuplicate(workspaceName, workspaces)) {
       workspaceName = generateUniqueName(
         workspaceInfo.name,
-        workspaces.map(w => w.name),
-        'Imported'
+        workspaces.map((w) => w.name),
+        'Imported',
       );
       log.info(`Workspace name '${workspaceInfo.name}' already exists, using '${workspaceName}'`);
     }
-    
+
     // Prepare workspace object
     const workspace: WorkspaceData = {
       id: this._generateWorkspaceId(),
@@ -154,7 +154,7 @@ export class WorkspaceHandler {
       gitPath: workspaceInfo.gitPath || DEFAULTS.WORKSPACE_PATH,
       authType: workspaceInfo.authType || DEFAULTS.AUTH_TYPE,
       autoSync: workspaceInfo.autoSync !== false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
 
     // Include auth data if provided and credentials are allowed
@@ -164,7 +164,7 @@ export class WorkspaceHandler {
 
     // Create the workspace using the dependency function
     const createdWorkspace = await createWorkspace(workspace);
-    
+
     if (!createdWorkspace) {
       throw new Error('Workspace creation function returned null');
     }
@@ -202,7 +202,7 @@ export class WorkspaceHandler {
     if (options.isGitSync) {
       return true;
     }
-    
+
     // For manual imports, respect the includeCredentials option
     return options.includeCredentials === true;
   }
@@ -263,8 +263,8 @@ export class WorkspaceHandler {
    */
   getWorkspaceStatistics(workspaceData: WorkspaceData | null) {
     if (!workspaceData) {
-      return { 
-        hasWorkspace: false 
+      return {
+        hasWorkspace: false,
       };
     }
 
@@ -275,7 +275,7 @@ export class WorkspaceHandler {
       hasGitUrl: !!workspaceData.gitUrl,
       hasAuthData: !!workspaceData.authData,
       authType: workspaceData.authType,
-      autoSync: workspaceData.autoSync
+      autoSync: workspaceData.autoSync,
     };
   }
 
@@ -291,8 +291,4 @@ export class WorkspaceHandler {
 
     return validateWorkspaceConfig(workspaceData);
   }
-
-
-
-
 }

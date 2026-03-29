@@ -65,8 +65,11 @@ function formatData(data: unknown): string {
   if (data === null || data === undefined) return String(data);
   if (data instanceof Error) return `${data.name}: ${data.message}`;
   if (typeof data === 'object') {
-    try { return JSON.stringify(data); }
-    catch { return String(data); }
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
   }
   return String(data);
 }
@@ -135,5 +138,5 @@ function getLogDirectory(): string {
 }
 
 // Export for use in main process
-export { createLogger, setGlobalLogLevel, getLogDirectory, MainLogger };
+export { createLogger, getLogDirectory, MainLogger, setGlobalLogLevel };
 export default { createLogger, setGlobalLogLevel, getLogDirectory };

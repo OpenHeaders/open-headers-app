@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the logger before importing the module
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -10,9 +10,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-const timeManagerModule = await import(
-  '../../../../src/renderer/services/TimeManager'
-);
+const timeManagerModule = await import('../../../../src/renderer/services/TimeManager');
 const timeManager = timeManagerModule.default || timeManagerModule;
 
 describe('Renderer TimeManager', () => {
@@ -161,9 +159,7 @@ describe('Renderer TimeManager', () => {
       timeManager.addListener(badCb);
       timeManager.addListener(goodCb);
 
-      expect(() =>
-        timeManager.notifyListeners([{ type: 'timezone_change' }])
-      ).not.toThrow();
+      expect(() => timeManager.notifyListeners([{ type: 'timezone_change' }])).not.toThrow();
       expect(goodCb).toHaveBeenCalled();
     });
 
@@ -202,7 +198,7 @@ describe('Renderer TimeManager', () => {
             type: timeManager.EventType.SYSTEM_WAKE,
             source: 'os_event',
           }),
-        ])
+        ]),
       );
 
       if (timeManager.osWakeEventTimeout) {
@@ -293,16 +289,18 @@ describe('Renderer TimeManager', () => {
   describe('getStatistics()', () => {
     it('returns full stats object shape', () => {
       const stats = timeManager.getStatistics();
-      expect(stats).toEqual(expect.objectContaining({
-        timeJumps: expect.any(Number),
-        timezoneChanges: expect.any(Number),
-        dstChanges: expect.any(Number),
-        systemWakes: expect.any(Number),
-        startTime: expect.any(Number),
-        uptime: expect.any(Number),
-        currentTimezone: expect.any(String),
-        currentOffset: expect.any(Number),
-      }));
+      expect(stats).toEqual(
+        expect.objectContaining({
+          timeJumps: expect.any(Number),
+          timezoneChanges: expect.any(Number),
+          dstChanges: expect.any(Number),
+          systemWakes: expect.any(Number),
+          startTime: expect.any(Number),
+          uptime: expect.any(Number),
+          currentTimezone: expect.any(String),
+          currentOffset: expect.any(Number),
+        }),
+      );
       expect(stats.uptime).toBeGreaterThanOrEqual(0);
       expect(stats.currentTimezone.length).toBeGreaterThan(0);
     });

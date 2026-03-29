@@ -1,26 +1,26 @@
-import React from 'react';
 import { Layout, theme } from 'antd';
-import { AppHeader } from './AppHeader';
-import { AppFooter } from './AppFooter';
-import { AppTabs } from './AppTabs';
-import SettingsModal from '../modals/settings';
+import type React from 'react';
+import type { EnvironmentConfigData } from '../../../types/environment';
+import type { Recording } from '../../../types/recording';
+import type { AppSettings } from '../../../types/settings';
+import type { Source } from '../../../types/source';
+import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
+import type { ExportOptions, ImportOptions } from '../../services/export-import/core/types';
+import TrayMenu from '../features/TrayMenu';
 import AboutModal from '../modals/AboutModal';
 import ExportModal from '../modals/export-config';
 import ImportModal from '../modals/import-config/ImportModal';
-import UpdateNotification from '../modals/update-notification';
-import TrayMenu from '../features/TrayMenu';
-import { DebugWorkspaceSync } from '../status/DebugWorkspaceSync';
-import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
-import { DebugSourceInfo } from '../status/DebugSourceInfo';
-import { DebugNetworkState } from '../status/DebugNetworkState';
-import type { AppSettings } from '../../../types/settings';
-import type { EnvironmentConfigData } from '../../../types/environment';
-import type { Source } from '../../../types/source';
-import type { Recording } from '../../../types/recording';
-import type { UpdateNotificationHandle } from '../../hooks/app/useUpdateChecker';
+import SettingsModal from '../modals/settings';
 import type { InitialAction } from '../modals/settings/SettingsModal';
+import UpdateNotification from '../modals/update-notification';
 import type { NewSourceData } from '../sources/source-form';
-import type { ExportOptions, ImportOptions } from '../../services/export-import/core/types';
+import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
+import { DebugNetworkState } from '../status/DebugNetworkState';
+import { DebugSourceInfo } from '../status/DebugSourceInfo';
+import { DebugWorkspaceSync } from '../status/DebugWorkspaceSync';
+import { AppFooter } from './AppFooter';
+import { AppHeader } from './AppHeader';
+import { AppTabs } from './AppTabs';
 
 interface AppLayoutProps {
   isReady: boolean;
@@ -103,7 +103,7 @@ export function AppLayout({
   onHandleExport,
   onHandleImport,
   preloadedEnvData,
-  updateNotificationRef
+  updateNotificationRef,
 }: AppLayoutProps) {
   const { token } = theme.useToken();
 
@@ -118,7 +118,10 @@ export function AppLayout({
         theme={token}
       />
 
-      <Content className={`app-content ${typeof window !== 'undefined' && window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`} style={{ background: token.colorBgContainer }}>
+      <Content
+        className={`app-content ${typeof window !== 'undefined' && window.electronAPI?.platform ? `platform-${window.electronAPI.platform}` : ''}`}
+        style={{ background: token.colorBgContainer }}
+      >
         <AppTabs
           isReady={isReady}
           activeTab={activeTab}
@@ -163,17 +166,9 @@ export function AppLayout({
         initialAction={settingsAction ?? undefined}
       />
 
-      <AboutModal
-        open={aboutModalVisible}
-        onClose={onAboutCancel}
-        appVersion={appVersion}
-      />
+      <AboutModal open={aboutModalVisible} onClose={onAboutCancel} appVersion={appVersion} />
 
-      <ExportModal
-        visible={exportModalVisible}
-        onCancel={onExportModalCancel}
-        onExport={onHandleExport}
-      />
+      <ExportModal visible={exportModalVisible} onCancel={onExportModalCancel} onExport={onHandleExport} />
 
       <ImportModal
         visible={importModalVisible}

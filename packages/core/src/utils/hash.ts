@@ -5,8 +5,8 @@
  * to avoid redundant updates.
  */
 
-import type { Source } from '../types/source';
 import type { SavedDataMap } from '../types/rules';
+import type { Source } from '../types/source';
 
 function fnv1a(str: string): number {
   let hash = 0x811c9dc5;
@@ -45,9 +45,19 @@ export function generateSavedDataHash(savedData: SavedDataMap): string {
   for (let i = 0; i < keys.length; i++) {
     const id = keys[i];
     const e = savedData[id];
-    combined += id + '\0' + e.headerName + '\0' + e.headerValue + '\0'
-      + (e.isDynamic ? '1' : '0') + '\0' + (e.sourceId || '') + '\0'
-      + (e.sourceMissing ? '1' : '0') + '\x01';
+    combined +=
+      id +
+      '\0' +
+      e.headerName +
+      '\0' +
+      e.headerValue +
+      '\0' +
+      (e.isDynamic ? '1' : '0') +
+      '\0' +
+      (e.sourceId || '') +
+      '\0' +
+      (e.sourceMissing ? '1' : '0') +
+      '\x01';
   }
 
   return fnv1a(combined).toString(36);

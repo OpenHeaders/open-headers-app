@@ -1,9 +1,9 @@
 /**
  * Proxy Components Package Index
- * 
+ *
  * Central export point for the fully modular proxy components package.
  * Provides a clean API for consuming proxy functionality throughout the application.
- * 
+ *
  * Package Structure:
  * - components/: Modular UI components with fine-grained sub-components
  *   - ProxyServerControls: Server start/stop and configuration
@@ -18,17 +18,12 @@
  * - ProxyServer: Main orchestrating component
  */
 
-// Main component (primary export)
-export { default as ProxyServer } from './ProxyServer';
-
 // All modular components
 export * from './components';
-
 // Custom hooks
 export * from './hooks';
-
+// Main component (primary export)
+// Default export for convenience
+export { default as ProxyServer, default } from './ProxyServer';
 // Utilities
 export * from './utils';
-
-// Default export for convenience
-export { default } from './ProxyServer';

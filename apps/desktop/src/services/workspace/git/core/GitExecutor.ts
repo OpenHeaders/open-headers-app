@@ -5,8 +5,8 @@
 
 import child_process from 'child_process';
 import util from 'util';
-import mainLogger from '../../../../utils/mainLogger';
 import { toError } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { exec } = child_process;
 const { promisify } = util;
@@ -18,9 +18,9 @@ const log = createLogger('GitExecutor');
 
 // Command timeout constants
 const COMMAND_TIMEOUT = {
-  SHORT: 15000,    // 15 seconds
-  MEDIUM: 30000,   // 30 seconds
-  LONG: 60000      // 60 seconds
+  SHORT: 15000, // 15 seconds
+  MEDIUM: 30000, // 30 seconds
+  LONG: 60000, // 60 seconds
 } as const;
 
 const MAX_BUFFER_SIZE = 10 * 1024 * 1024; // 10MB
@@ -80,13 +80,15 @@ class GitExecutor {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
       ...options.env,
-      GIT_TERMINAL_PROMPT: '0',  // Prevents Git from prompting in terminal
-      GIT_ASKPASS: '',           // Disables GUI password prompts
-      SSH_ASKPASS: '',           // Disables SSH password prompts
+      GIT_TERMINAL_PROMPT: '0', // Prevents Git from prompting in terminal
+      GIT_ASKPASS: '', // Disables GUI password prompts
+      SSH_ASKPASS: '', // Disables SSH password prompts
       // Only set SSH command options if not already provided
-      ...(options.env?.GIT_SSH_COMMAND ? {} : {
-        GIT_SSH_COMMAND: 'ssh -o BatchMode=yes -o StrictHostKeyChecking=no'
-      })
+      ...(options.env?.GIT_SSH_COMMAND
+        ? {}
+        : {
+            GIT_SSH_COMMAND: 'ssh -o BatchMode=yes -o StrictHostKeyChecking=no',
+          }),
     };
 
     const execOptions = {
@@ -94,7 +96,7 @@ class GitExecutor {
       maxBuffer: options.maxBuffer || MAX_BUFFER_SIZE,
       env,
       cwd: options.cwd,
-      ...options
+      ...options,
     };
 
     log.debug(`Executing: ${this.redactCredentials(fullCommand)}`, { cwd: execOptions.cwd });
@@ -128,7 +130,7 @@ class GitExecutor {
     } else if (error.message.includes('Repository not found')) {
       enhancedError.type = 'REPO_NOT_FOUND';
       enhancedError.friendlyMessage = 'Repository not found. Please check the URL and permissions.';
-    } else if (error.message.includes('couldn\'t find remote ref')) {
+    } else if (error.message.includes("couldn't find remote ref")) {
       enhancedError.type = 'BRANCH_NOT_FOUND';
       enhancedError.friendlyMessage = 'Branch not found in the repository.';
     }
@@ -156,6 +158,6 @@ class GitExecutor {
   }
 }
 
-export { GitExecutor, COMMAND_TIMEOUT };
-export type { ExecuteOptions, ExecuteResult, EnhancedError };
+export type { EnhancedError, ExecuteOptions, ExecuteResult };
+export { COMMAND_TIMEOUT, GitExecutor };
 export default GitExecutor;

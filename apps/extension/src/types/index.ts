@@ -1,7 +1,8 @@
 /**
  * Re-export all shared types
  */
-export * from './header';
-export * from './websocket';
-export * from './recording';
+
 export * from './browser';
+export * from './header';
+export * from './recording';
+export * from './websocket';

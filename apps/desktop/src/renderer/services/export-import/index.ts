@@ -1,6 +1,6 @@
 /**
  * Export/Import System - Main Entry Point
- * 
+ *
  * This module provides convenient access to all export/import functionality
  * through a clean, organized API.
  */
@@ -8,27 +8,33 @@
 // Core Services
 import { ExportService } from './core/ExportService';
 import { ImportService } from './core/ImportService';
-export { ExportService, ImportService };
-
-// Shared types
-export type { ExportImportDependencies, ExportData, ImportData, ExportOptions, ImportOptions, RuleEntry, RulesStorage, EnvironmentVariable } from './core/types';
 
 // Configuration and Constants
 export * from './core/ExportImportConfig';
 
-// Handlers
-export { SourcesHandler } from './handlers/SourcesHandler';
+// Shared types
+export type {
+  EnvironmentVariable,
+  ExportData,
+  ExportImportDependencies,
+  ExportOptions,
+  ImportData,
+  ImportOptions,
+  RuleEntry,
+  RulesStorage,
+} from './core/types';
+export { EnvironmentsHandler } from './handlers/EnvironmentsHandler';
 export { ProxyRulesHandler } from './handlers/ProxyRulesHandler';
 export { RulesHandler } from './handlers/RulesHandler';
-export { EnvironmentsHandler } from './handlers/EnvironmentsHandler';
+// Handlers
+export { SourcesHandler } from './handlers/SourcesHandler';
 export { WorkspaceHandler } from './handlers/WorkspaceHandler';
-
-// Utilities
-export * from './utilities/ValidationUtils';
+export * from './utilities/DuplicateDetection';
 export * from './utilities/FileOperations';
 export * from './utilities/MessageGeneration';
-export * from './utilities/DuplicateDetection';
-
+// Utilities
+export * from './utilities/ValidationUtils';
+export { ExportService, ImportService };
 
 /**
  * Creates both export and import services with shared dependencies
@@ -40,7 +46,7 @@ import type { ExportImportDependencies } from './core/types';
 export function createExportImportServices(dependencies: ExportImportDependencies) {
   return {
     exportService: new ExportService(dependencies),
-    importService: new ImportService(dependencies)
+    importService: new ImportService(dependencies),
   };
 }
 
@@ -61,20 +67,20 @@ export function validateDependencies(dependencies: ExportImportDependencies) {
     'environments',
     'createEnvironment',
     'setVariable',
-    'generateEnvironmentSchema'
+    'generateEnvironmentSchema',
   ];
 
-  const missing = required.filter(dep => !dependencies[dep]);
+  const missing = required.filter((dep) => !dependencies[dep]);
 
   // Allow appVersion to be empty string during initial load
-  if (!Object.prototype.hasOwnProperty.call(dependencies, 'appVersion')) {
+  if (!Object.hasOwn(dependencies, 'appVersion')) {
     missing.push('appVersion');
   }
-  
+
   if (missing.length > 0) {
     return {
       success: false,
-      error: `Missing required dependencies: ${missing.join(', ')}`
+      error: `Missing required dependencies: ${missing.join(', ')}`,
     };
   }
 

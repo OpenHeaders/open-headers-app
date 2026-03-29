@@ -1,7 +1,7 @@
 import React from 'react';
-import { useConnectionsServer } from './hooks';
-import { ConnectionsServerStatus, ConnectionsClientTable } from './components';
 import { useSettings } from '../../contexts';
+import { ConnectionsClientTable, ConnectionsServerStatus } from './components';
+import { useConnectionsServer } from './hooks';
 
 /**
  * ConnectionsServer - WebSocket connections management component
@@ -12,20 +12,19 @@ import { useSettings } from '../../contexts';
  * @param {boolean} props.active - Whether this tab is currently visible
  * @returns {JSX.Element} Connections management interface
  */
-interface ConnectionsServerProps { active: boolean; }
+interface ConnectionsServerProps {
+  active: boolean;
+}
 const ConnectionsServer = ({ active }: ConnectionsServerProps) => {
-    const { status } = useConnectionsServer({ active });
-    const { settings } = useSettings();
+  const { status } = useConnectionsServer({ active });
+  const { settings } = useSettings();
 
-    return (
-        <div style={{ padding: '24px' }}>
-            <ConnectionsServerStatus
-                status={status}
-                tutorialMode={settings?.tutorialMode}
-            />
-            <ConnectionsClientTable status={status} />
-        </div>
-    );
+  return (
+    <div style={{ padding: '24px' }}>
+      <ConnectionsServerStatus status={status} tutorialMode={settings?.tutorialMode} />
+      <ConnectionsClientTable status={status} />
+    </div>
+  );
 };
 
 export default ConnectionsServer;

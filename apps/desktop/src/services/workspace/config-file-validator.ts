@@ -5,8 +5,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../utils/mainLogger';
 import type { JsonObject } from '../../types/common';
+import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileValidator');
@@ -52,27 +52,27 @@ interface MetadataOptions {
 const SCHEMAS: Record<string, SchemaDefinition> = {
   headers: {
     version: { type: 'string', required: true },
-    headers: { type: 'array', required: true }
+    headers: { type: 'array', required: true },
   },
   environments: {
     version: { type: 'string', required: true },
-    environments: { type: 'array', required: true }
+    environments: { type: 'array', required: true },
   },
   proxy: {
     version: { type: 'string', required: true },
-    rules: { type: 'array', required: true }
+    rules: { type: 'array', required: true },
   },
   rules: {
     version: { type: 'string', required: true },
-    rules: { type: 'array', required: true }
+    rules: { type: 'array', required: true },
   },
   metadata: {
     workspaceId: { type: 'string', required: true },
     workspaceName: { type: 'string', required: true },
     version: { type: 'string', required: true },
     createdAt: { type: 'string', required: true },
-    configPaths: { type: 'object', required: false }
-  }
+    configPaths: { type: 'object', required: false },
+  },
 };
 
 class ConfigFileValidator {
@@ -84,7 +84,7 @@ class ConfigFileValidator {
       valid: true,
       errors: [],
       warnings: [],
-      validatedFiles: []
+      validatedFiles: [],
     };
 
     for (const [type, filePath] of Object.entries(configPaths)) {
@@ -97,17 +97,16 @@ class ConfigFileValidator {
           result.validatedFiles!.push({
             type,
             path: filePath,
-            relativePath: path.relative(repoDir, filePath)
+            relativePath: path.relative(repoDir, filePath),
           });
         } else {
           result.valid = false;
-          result.errors.push(...validation.errors.map(err => `${type}: ${err}`));
+          result.errors.push(...validation.errors.map((err) => `${type}: ${err}`));
         }
 
         if (validation.warnings) {
-          result.warnings!.push(...validation.warnings.map(warn => `${type}: ${warn}`));
+          result.warnings!.push(...validation.warnings.map((warn) => `${type}: ${warn}`));
         }
-
       } catch (error: unknown) {
         result.valid = false;
         const errMsg = error instanceof Error ? error.message : String(error);
@@ -128,7 +127,7 @@ class ConfigFileValidator {
       if (!exists) {
         return {
           valid: false,
-          errors: [`File not found: ${filePath}`]
+          errors: [`File not found: ${filePath}`],
         };
       }
 
@@ -137,7 +136,7 @@ class ConfigFileValidator {
       if (!content) {
         return {
           valid: false,
-          errors: ['Invalid JSON format']
+          errors: ['Invalid JSON format'],
         };
       }
 
@@ -147,19 +146,18 @@ class ConfigFileValidator {
         return {
           valid: true,
           errors: [],
-          warnings: [`No schema defined for type: ${type}`]
+          warnings: [`No schema defined for type: ${type}`],
         };
       }
 
       // Validate against schema
       return this.validateAgainstSchema(content, schema, type);
-
     } catch (error: unknown) {
       log.error(`Failed to validate ${type} file:`, error);
       const errMsg = error instanceof Error ? error.message : String(error);
       return {
         valid: false,
-        errors: [errMsg]
+        errors: [errMsg],
       };
     }
   }
@@ -173,12 +171,12 @@ class ConfigFileValidator {
 
     // Check required fields
     for (const [field, definition] of Object.entries(schema)) {
-      if (definition.required && !Object.prototype.hasOwnProperty.call(content, field)) {
+      if (definition.required && !Object.hasOwn(content, field)) {
         errors.push(`Missing required field: ${field}`);
         continue;
       }
 
-      if (Object.prototype.hasOwnProperty.call(content, field)) {
+      if (Object.hasOwn(content, field)) {
         const value = content[field];
         const fieldErrors = this.validateField(field, value, definition);
         errors.push(...fieldErrors);
@@ -193,7 +191,7 @@ class ConfigFileValidator {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 
@@ -340,27 +338,27 @@ class ConfigFileValidator {
     const defaults: Record<string, ConfigContent> = {
       headers: {
         version: DATA_FORMAT_VERSION,
-        headers: []
+        headers: [],
       },
       environments: {
         version: DATA_FORMAT_VERSION,
-        environments: []
+        environments: [],
       },
       proxy: {
         version: DATA_FORMAT_VERSION,
-        rules: []
+        rules: [],
       },
       rules: {
         version: DATA_FORMAT_VERSION,
-        rules: []
+        rules: [],
       },
       metadata: {
         workspaceId: metadata.workspaceId || 'default',
         workspaceName: metadata.workspaceName || 'Default Workspace',
         version: DATA_FORMAT_VERSION,
         createdAt: new Date().toISOString(),
-        configPaths: {}
-      }
+        configPaths: {},
+      },
     };
 
     return defaults[type] || { version: DATA_FORMAT_VERSION };
@@ -420,8 +418,14 @@ class ConfigFileValidator {
         break;
 
       case 'metadata': {
-        const baseConfigPaths = typeof base.configPaths === 'object' && base.configPaths && !Array.isArray(base.configPaths) ? base.configPaths : {};
-        const overrideConfigPaths = typeof override.configPaths === 'object' && override.configPaths && !Array.isArray(override.configPaths) ? override.configPaths : {};
+        const baseConfigPaths =
+          typeof base.configPaths === 'object' && base.configPaths && !Array.isArray(base.configPaths)
+            ? base.configPaths
+            : {};
+        const overrideConfigPaths =
+          typeof override.configPaths === 'object' && override.configPaths && !Array.isArray(override.configPaths)
+            ? override.configPaths
+            : {};
         merged.configPaths = { ...baseConfigPaths, ...overrideConfigPaths };
         break;
       }
@@ -431,5 +435,5 @@ class ConfigFileValidator {
   }
 }
 
-export { ConfigFileValidator, ValidationResult, ConfigPaths, ConfigContent, SCHEMAS };
+export { type ConfigContent, ConfigFileValidator, type ConfigPaths, SCHEMAS, type ValidationResult };
 export default ConfigFileValidator;

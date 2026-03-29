@@ -5,8 +5,8 @@
  * Validates that it correctly composes all sub-hooks into a unified API.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Enterprise-like mock data

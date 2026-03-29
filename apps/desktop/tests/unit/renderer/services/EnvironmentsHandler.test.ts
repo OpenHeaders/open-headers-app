@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock CentralizedEnvironmentService before importing EnvironmentsHandler
 vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
@@ -7,10 +7,14 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
   }),
 }));
 
-import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies, EnvironmentVariable, EnvironmentSchema } from '../../../../src/renderer/services/export-import/core/types';
 import type { Mock } from 'vitest';
+import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type {
+  EnvironmentSchema,
+  EnvironmentVariable,
+  ExportImportDependencies,
+} from '../../../../src/renderer/services/export-import/core/types';
+import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic helpers
@@ -26,7 +30,10 @@ function makeEnterpriseEnvironments(): Record<string, Record<string, Environment
       OAUTH2_CLIENT_ID: envVar('oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890'),
       OAUTH2_CLIENT_SECRET: envVar('ohk_live_4eC39HqLyjWDarjtT1zdp7dc', true),
       API_GATEWAY_URL: envVar('https://gateway.openheaders.io:8443/v2'),
-      DATABASE_CONNECTION_STRING: envVar('postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/prod?sslmode=require', true),
+      DATABASE_CONNECTION_STRING: envVar(
+        'postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/prod?sslmode=require',
+        true,
+      ),
     },
     'Staging — EU Region': {
       OAUTH2_CLIENT_ID: envVar('oidc-client-staging-b2c3d4e5-f6a7-8901-bcde-f12345678901'),
@@ -36,7 +43,10 @@ function makeEnterpriseEnvironments(): Record<string, Record<string, Environment
       OAUTH2_CLIENT_ID: envVar('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012'),
       OAUTH2_CLIENT_SECRET: envVar('sk_prod_9hF60KrOalZGdumwW4cgt0hi', true),
       REDIS_URL: envVar('rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0', true),
-      BEARER_TOKEN: envVar('Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig', true),
+      BEARER_TOKEN: envVar(
+        'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIn0.sig',
+        true,
+      ),
     },
   };
 }
@@ -56,9 +66,19 @@ function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImpo
     setVariable: vi.fn(),
     generateEnvironmentSchema: vi.fn(() => ({
       environments: {
-        Default: { variables: [{ name: 'OAUTH2_CLIENT_ID', isSecret: false }, { name: 'OAUTH2_CLIENT_SECRET', isSecret: true }] },
+        Default: {
+          variables: [
+            { name: 'OAUTH2_CLIENT_ID', isSecret: false },
+            { name: 'OAUTH2_CLIENT_SECRET', isSecret: true },
+          ],
+        },
         'Staging — EU Region': { variables: [{ name: 'OAUTH2_CLIENT_ID', isSecret: false }] },
-        Production: { variables: [{ name: 'OAUTH2_CLIENT_ID', isSecret: false }, { name: 'REDIS_URL', isSecret: true }] },
+        Production: {
+          variables: [
+            { name: 'OAUTH2_CLIENT_ID', isSecret: false },
+            { name: 'REDIS_URL', isSecret: true },
+          ],
+        },
       },
       variableDefinitions: {
         OAUTH2_CLIENT_ID: { isSecret: false, usedIn: ['src-gateway'] },
@@ -158,7 +178,9 @@ describe('EnvironmentsHandler._exportFullEnvironments', () => {
     const result = handler._exportFullEnvironments(fullSchema, ['Default', 'Production']);
     expect(Object.keys(result.environments)).toEqual(['Default', 'Production']);
     expect(result.environments.Default.OAUTH2_CLIENT_ID.value).toBe('oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
-    expect(result.environments.Production.REDIS_URL.value).toBe('rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0');
+    expect(result.environments.Production.REDIS_URL.value).toBe(
+      'rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0',
+    );
     expect(Object.keys(result.environmentSchema.environments)).toEqual(['Default', 'Production']);
   });
 
@@ -216,12 +238,18 @@ describe('EnvironmentsHandler.exportEnvironments', () => {
 
   it('throws wrapped error when generateEnvironmentSchema fails', async () => {
     const handler = new EnvironmentsHandler(
-      makeDeps({ generateEnvironmentSchema: vi.fn(() => { throw new Error('schema generation failed'); }) })
+      makeDeps({
+        generateEnvironmentSchema: vi.fn(() => {
+          throw new Error('schema generation failed');
+        }),
+      }),
     );
-    await expect(handler.exportEnvironments({
-      environmentOption: 'schema',
-      selectedEnvironments: [],
-    })).rejects.toThrow('Failed to export environments: schema generation failed');
+    await expect(
+      handler.exportEnvironments({
+        environmentOption: 'schema',
+        selectedEnvironments: [],
+      }),
+    ).rejects.toThrow('Failed to export environments: schema generation failed');
   });
 });
 
@@ -341,10 +369,7 @@ describe('EnvironmentsHandler.validateEnvironmentsForExport', () => {
 describe('EnvironmentsHandler.importEnvironments', () => {
   it('returns empty stats when no environment data selected', async () => {
     const handler = new EnvironmentsHandler(makeDeps());
-    const stats = await handler.importEnvironments(
-      {},
-      { selectedItems: { environments: false } }
-    );
+    const stats = await handler.importEnvironments({}, { selectedItems: { environments: false } });
     expect(stats).toEqual({
       environmentsImported: 0,
       variablesCreated: 0,
@@ -354,10 +379,7 @@ describe('EnvironmentsHandler.importEnvironments', () => {
 
   it('returns empty stats when selected but no data present', async () => {
     const handler = new EnvironmentsHandler(makeDeps());
-    const stats = await handler.importEnvironments(
-      {},
-      { selectedItems: { environments: true } }
-    );
+    const stats = await handler.importEnvironments({}, { selectedItems: { environments: true } });
     expect(stats.environmentsImported).toBe(0);
     expect(stats.variablesCreated).toBe(0);
   });
@@ -369,9 +391,7 @@ describe('EnvironmentsHandler.importEnvironments', () => {
 describe('EnvironmentsHandler._importFullEnvironments', () => {
   it('creates new environments and batch-sets enterprise variables', async () => {
     const createEnvironment = vi.fn();
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment }));
     handler._batchCreateVariables = vi.fn();
 
     const importData = {
@@ -381,10 +401,10 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
       },
     };
 
-    const stats = await handler._importFullEnvironments(
-      importData,
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
-    );
+    const stats = await handler._importFullEnvironments(importData, {
+      importMode: IMPORT_MODES.REPLACE,
+      selectedItems: {},
+    });
 
     expect(createEnvironment).toHaveBeenCalledWith('Production');
     expect(stats.environmentsImported).toBe(1);
@@ -393,9 +413,7 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
 
   it('skips duplicate variables in merge mode', async () => {
     const existingEnvs = makeEnterpriseEnvironments();
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: existingEnvs, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: existingEnvs, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
@@ -405,16 +423,14 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
           NEW_WEBHOOK_URL: envVar('https://hooks.openheaders.io/webhook'), // new — should import
         },
       },
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
+      { importMode: IMPORT_MODES.MERGE, selectedItems: {} },
     );
 
     expect(stats.variablesCreated).toBe(1);
   });
 
   it('filters environments by selectedEnvironments', async () => {
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn();
 
     const importData = {
@@ -423,23 +439,25 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
       Production: { C: envVar('3') },
     };
 
-    const stats = await handler._importFullEnvironments(
-      importData,
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {}, selectedEnvironments: ['Default', 'Production'] }
-    );
+    const stats = await handler._importFullEnvironments(importData, {
+      importMode: IMPORT_MODES.REPLACE,
+      selectedItems: {},
+      selectedEnvironments: ['Default', 'Production'],
+    });
 
     expect(stats.environmentsImported).toBe(2);
   });
 
   it('handles old format (direct string values)', async () => {
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
-      { Default: { API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' } } as unknown as Record<string, Record<string, EnvironmentVariable>>,
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+      { Default: { API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' } } as unknown as Record<
+        string,
+        Record<string, EnvironmentVariable>
+      >,
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} },
     );
 
     expect(stats.variablesCreated).toBe(1);
@@ -449,14 +467,12 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
   });
 
   it('handles new format (object with value/isSecret)', async () => {
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn();
 
     const stats = await handler._importFullEnvironments(
       { Production: { BEARER_TOKEN: envVar('Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig', true) } },
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} },
     );
 
     expect(stats.variablesCreated).toBe(1);
@@ -469,14 +485,12 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
   });
 
   it('records errors when batch create fails', async () => {
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn().mockRejectedValue(new Error('storage write failed'));
 
     const stats = await handler._importFullEnvironments(
       { Production: { KEY: envVar('value') } },
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
+      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} },
     );
 
     expect(stats.errors).toHaveLength(1);
@@ -485,16 +499,14 @@ describe('EnvironmentsHandler._importFullEnvironments', () => {
   });
 
   it('imports multiple environments with many variables', async () => {
-    const handler = new EnvironmentsHandler(
-      makeDeps({ environments: {}, createEnvironment: vi.fn() })
-    );
+    const handler = new EnvironmentsHandler(makeDeps({ environments: {}, createEnvironment: vi.fn() }));
     handler._batchCreateVariables = vi.fn();
 
     const importData = makeEnterpriseEnvironments();
-    const stats = await handler._importFullEnvironments(
-      importData,
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
-    );
+    const stats = await handler._importFullEnvironments(importData, {
+      importMode: IMPORT_MODES.REPLACE,
+      selectedItems: {},
+    });
 
     expect(stats.environmentsImported).toBe(3);
     expect(stats.variablesCreated).toBe(10);

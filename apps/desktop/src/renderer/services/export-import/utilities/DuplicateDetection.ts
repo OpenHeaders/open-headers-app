@@ -1,10 +1,10 @@
 /**
  * Duplicate Detection Utilities for Export/Import Operations
- * 
+ *
  * This module provides comprehensive duplicate detection algorithms for different data types
  * during import operations. It handles complex comparison logic for sources, proxy rules,
  * application rules, environment variables, and workspace configurations.
- * 
+ *
  * Key features:
  * - Content-based duplicate detection (not just ID-based)
  * - Type-specific comparison algorithms
@@ -12,8 +12,8 @@
  * - Configurable duplicate detection strategies
  */
 
-import type { Source } from '../../../../types/source';
 import type { ProxyRule } from '../../../../types/proxy';
+import type { Source } from '../../../../types/source';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 
@@ -54,10 +54,10 @@ interface WorkspaceName {
 
 /**
  * Checks if a source already exists in the current sources list
- * 
- * Sources are considered duplicates if they have the same type, name, and 
+ *
+ * Sources are considered duplicates if they have the same type, name, and
  * type-specific identifying property (filePath for files, varName for env vars, url for http).
- * 
+ *
  * @param {Object} source - Source to check for duplicates
  * @param {Array} currentSources - Array of existing sources
  * @returns {boolean} - True if source is a duplicate
@@ -90,10 +90,10 @@ export function isSourceDuplicate(source: ImportSource | null, currentSources: I
 
 /**
  * Checks if a proxy rule already exists
- * 
+ *
  * Proxy rules are considered duplicates if they have the same URL pattern
  * and identical header configurations (including dynamic headers).
- * 
+ *
  * @param {Object} rule - Proxy rule to check
  * @param {Array} existingRules - Array of existing proxy rules
  * @returns {boolean} - True if rule is a duplicate
@@ -103,7 +103,7 @@ export function isProxyRuleDuplicate(rule: ProxyRule | null, existingRules: Prox
     return false;
   }
 
-  return existingRules.some(existingRule => {
+  return existingRules.some((existingRule) => {
     // Check by ID first
     if (existingRule.id === rule.id) return true;
 
@@ -141,17 +141,19 @@ export function areHeadersEqual(header1: ImportHeader, header2: ImportHeader) {
   }
 
   // For dynamic headers, compare source configuration
-  return header1.sourceId === header2.sourceId &&
-         (header1.prefix || '') === (header2.prefix || '') &&
-         (header1.suffix || '') === (header2.suffix || '');
+  return (
+    header1.sourceId === header2.sourceId &&
+    (header1.prefix || '') === (header2.prefix || '') &&
+    (header1.suffix || '') === (header2.suffix || '')
+  );
 }
 
 /**
  * Checks if a rule already exists in a rules collection
- * 
+ *
  * Rules are first checked by ID for exact matches, then by content comparison
  * for rules without IDs. Content comparison varies by rule action type.
- * 
+ *
  * @param {Object} rule - Rule to check
  * @param {Array} existingRules - Array of existing rules of the same type
  * @returns {boolean} - True if rule is a duplicate
@@ -180,10 +182,8 @@ export function isRuleDuplicate(rule: ImportRule | null, existingRules: ImportRu
  */
 export function areRulesContentEqual(rule1: ImportRule, rule2: ImportRule) {
   // Compare basic properties
-  const basicPropsEqual = 
-    rule1.name === rule2.name &&
-    rule1.enabled === rule2.enabled &&
-    rule1.pattern === rule2.pattern;
+  const basicPropsEqual =
+    rule1.name === rule2.name && rule1.enabled === rule2.enabled && rule1.pattern === rule2.pattern;
 
   if (!basicPropsEqual) {
     return false;
@@ -214,7 +214,10 @@ export function areRulesContentEqual(rule1: ImportRule, rule2: ImportRule) {
  * @param {Array} headers2 - Second header array
  * @returns {boolean} - True if header modifications are equal
  */
-export function areHeaderModificationsEqual(headers1: ImportHeader[] | undefined, headers2: ImportHeader[] | undefined) {
+export function areHeaderModificationsEqual(
+  headers1: ImportHeader[] | undefined,
+  headers2: ImportHeader[] | undefined,
+) {
   if (!Array.isArray(headers1) || !Array.isArray(headers2)) {
     return headers1 === headers2;
   }
@@ -242,7 +245,11 @@ export function areHeaderModificationsEqual(headers1: ImportHeader[] | undefined
  * @param {Object} environments - Current environments object
  * @returns {boolean} - True if variable already exists with a non-empty value
  */
-export function isEnvironmentVariableDuplicate(varName: string, envName: string, environments: EnvironmentCollection | null) {
+export function isEnvironmentVariableDuplicate(
+  varName: string,
+  envName: string,
+  environments: EnvironmentCollection | null,
+) {
   if (!varName || !envName || !environments) {
     return false;
   }
@@ -268,7 +275,7 @@ export function isWorkspaceNameDuplicate(workspaceName: string, existingWorkspac
     return false;
   }
 
-  return existingWorkspaces.some(workspace => workspace.name === workspaceName);
+  return existingWorkspaces.some((workspace) => workspace.name === workspaceName);
 }
 
 /**
@@ -294,7 +301,6 @@ export function generateUniqueName(baseName: string, existingNames: string[], su
   return candidateName;
 }
 
-
 /**
  * Creates a duplicate detection strategy for different data types
  * @param {string} dataType - Type of data ('sources', 'rules', 'proxyRules', etc.)
@@ -315,32 +321,37 @@ export function createDuplicateDetector(dataType: string) {
 
 /**
  * Batch duplicate detection for large datasets
- * 
+ *
  * Processes items in batches to prevent UI blocking during large import operations.
  * Uses setTimeout(0) to yield control between batches.
- * 
+ *
  * @param {Array} itemsToImport - Items to check for duplicates
  * @param {Array} existingItems - Existing items to compare against
  * @param {Function} duplicateDetector - Duplicate detection function
  * @param {number} batchSize - Size of batches to process (default: 50)
  * @returns {Promise<Array>} - Array of duplicate detection results
  */
-export async function batchDuplicateDetection<T>(itemsToImport: T[], existingItems: T[], duplicateDetector: (item: T, existing: T[]) => boolean, batchSize: number = 50) {
+export async function batchDuplicateDetection<T>(
+  itemsToImport: T[],
+  existingItems: T[],
+  duplicateDetector: (item: T, existing: T[]) => boolean,
+  batchSize: number = 50,
+) {
   const results = [];
 
   for (let i = 0; i < itemsToImport.length; i += batchSize) {
     const batch = itemsToImport.slice(i, i + batchSize);
-    
+
     const batchResults = batch.map((item: T) => ({
       item,
-      isDuplicate: duplicateDetector(item, existingItems)
+      isDuplicate: duplicateDetector(item, existingItems),
     }));
 
     results.push(...batchResults);
 
     // Yield control to prevent blocking the UI
     if (i + batchSize < itemsToImport.length) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 

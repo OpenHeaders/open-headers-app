@@ -12,14 +12,14 @@
  * - Update checking functionality
  */
 
-import React from 'react';
+import type React from 'react';
+import type { Recording } from '../../../types/recording';
+import type { InitialAction } from '../../components/modals/settings/SettingsModal';
 import { useAppInitialization } from './useAppInitialization';
 import { useFileWatcher } from './useFileWatcher';
-import { useNavigation, NavigationIntent } from './useNavigation';
-import type { InitialAction } from '../../components/modals/settings/SettingsModal';
+import { type NavigationIntent, useNavigation } from './useNavigation';
+import { type UpdateNotificationHandle, useUpdateChecker } from './useUpdateChecker';
 import { useWorkspaceSync } from './useWorkspaceSync';
-import { useUpdateChecker, UpdateNotificationHandle } from './useUpdateChecker';
-import type { Recording } from '../../../types/recording';
 
 interface UseAppEffectsDeps {
   setAppVersion: (version: string) => void;
@@ -60,7 +60,7 @@ export function useAppEffects({
   TARGETS,
   setSettingsInitialTab,
   setSettingsVisible,
-  setSettingsAction
+  setSettingsAction,
 }: UseAppEffectsDeps): UseAppEffectsReturn {
   // Initialize app and handle record opening
   useAppInitialization({ setAppVersion, setActiveTab, setCurrentRecord });
@@ -76,7 +76,7 @@ export function useAppEffects({
     TARGETS,
     setSettingsInitialTab,
     setSettingsVisible,
-    setSettingsAction
+    setSettingsAction,
   });
 
   // Handle workspace synchronization
@@ -88,6 +88,6 @@ export function useAppEffects({
   return {
     updateNotificationRef,
     handleCheckForUpdates,
-    clearAllHighlights
+    clearAllHighlights,
   };
 }

@@ -86,7 +86,7 @@ export class DisplayDetector {
           return;
         }
 
-        const standardDisplays: DisplayInfo[] = displays.map(display => ({
+        const standardDisplays: DisplayInfo[] = displays.map((display) => ({
           id: display.id,
           name: display.name || `Display ${display.id}`,
           isPrimary: display.isPrimary || false,
@@ -94,15 +94,17 @@ export class DisplayDetector {
             left: display.bounds.left,
             top: display.bounds.top,
             width: display.bounds.width,
-            height: display.bounds.height
+            height: display.bounds.height,
           },
-          workArea: display.workArea ? {
-            left: display.workArea.left,
-            top: display.workArea.top,
-            width: display.workArea.width,
-            height: display.workArea.height
-          } : display.bounds,
-          scaleFactor: display.displayZoomFactor || 1.0
+          workArea: display.workArea
+            ? {
+                left: display.workArea.left,
+                top: display.workArea.top,
+                width: display.workArea.width,
+                height: display.workArea.height,
+              }
+            : display.bounds,
+          scaleFactor: display.displayZoomFactor || 1.0,
         }));
 
         resolve(standardDisplays);
@@ -114,27 +116,29 @@ export class DisplayDetector {
    * Get displays using basic Screen API (fallback)
    */
   async getDisplaysFromScreenAPI(): Promise<DisplayInfo[]> {
-    const isPrimary = (window.screenX === 0 || window.screenX === undefined) &&
-                     (window.screenY === 0 || window.screenY === undefined);
+    const isPrimary =
+      (window.screenX === 0 || window.screenX === undefined) && (window.screenY === 0 || window.screenY === undefined);
 
-    return [{
-      id: 'screen-0',
-      name: isPrimary ? 'Primary Display' : 'Display',
-      isPrimary: isPrimary,
-      bounds: {
-        left: (window.screen as unknown as { availLeft?: number }).availLeft || 0,
-        top: (window.screen as unknown as { availTop?: number }).availTop || 0,
-        width: window.screen.width,
-        height: window.screen.height
+    return [
+      {
+        id: 'screen-0',
+        name: isPrimary ? 'Primary Display' : 'Display',
+        isPrimary: isPrimary,
+        bounds: {
+          left: (window.screen as unknown as { availLeft?: number }).availLeft || 0,
+          top: (window.screen as unknown as { availTop?: number }).availTop || 0,
+          width: window.screen.width,
+          height: window.screen.height,
+        },
+        workArea: {
+          left: (window.screen as unknown as { availLeft?: number }).availLeft || 0,
+          top: (window.screen as unknown as { availTop?: number }).availTop || 0,
+          width: window.screen.availWidth,
+          height: window.screen.availHeight,
+        },
+        scaleFactor: window.devicePixelRatio || 1.0,
       },
-      workArea: {
-        left: (window.screen as unknown as { availLeft?: number }).availLeft || 0,
-        top: (window.screen as unknown as { availTop?: number }).availTop || 0,
-        width: window.screen.availWidth,
-        height: window.screen.availHeight
-      },
-      scaleFactor: window.devicePixelRatio || 1.0
-    }];
+    ];
   }
 
   /**
@@ -158,10 +162,12 @@ export class DisplayDetector {
     // Find which display contains this window position
     for (const display of this.displays) {
       const bounds = display.bounds;
-      if (windowLeft >= bounds.left &&
-          windowLeft < (bounds.left + bounds.width) &&
-          windowTop >= bounds.top &&
-          windowTop < (bounds.top + bounds.height)) {
+      if (
+        windowLeft >= bounds.left &&
+        windowLeft < bounds.left + bounds.width &&
+        windowTop >= bounds.top &&
+        windowTop < bounds.top + bounds.height
+      ) {
         this.currentDisplay = display;
         return display;
       }
@@ -175,10 +181,7 @@ export class DisplayDetector {
       const bounds = display.bounds;
       const centerX = bounds.left + bounds.width / 2;
       const centerY = bounds.top + bounds.height / 2;
-      const distance = Math.sqrt(
-        Math.pow(windowLeft - centerX, 2) +
-        Math.pow(windowTop - centerY, 2)
-      );
+      const distance = Math.sqrt((windowLeft - centerX) ** 2 + (windowTop - centerY) ** 2);
 
       if (distance < minDistance) {
         minDistance = distance;
@@ -206,12 +209,14 @@ export class DisplayDetector {
         width: browserWindow.width,
         height: browserWindow.height,
         state: browserWindow.state,
-        focused: browserWindow.focused
+        focused: browserWindow.focused,
       },
-      relativePosition: currentDisplay ? {
-        x: (browserWindow.left ?? 0) - currentDisplay.bounds.left,
-        y: (browserWindow.top ?? 0) - currentDisplay.bounds.top
-      } : null
+      relativePosition: currentDisplay
+        ? {
+            x: (browserWindow.left ?? 0) - currentDisplay.bounds.left,
+            y: (browserWindow.top ?? 0) - currentDisplay.bounds.top,
+          }
+        : null,
     };
   }
 }

@@ -1,4 +1,5 @@
-import React, { createContext } from 'react';
+import type React from 'react';
+import { createContext } from 'react';
 import { useCentralizedEnvironments } from '../../hooks/useCentralizedEnvironments';
 
 // Create and export the context
@@ -11,9 +12,5 @@ export { useCentralizedEnvironments as useEnvironments } from '../../hooks/useCe
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const environmentState = useCentralizedEnvironments();
 
-  return (
-      <EnvironmentContext.Provider value={environmentState}>
-        {children}
-      </EnvironmentContext.Provider>
-  );
+  return <EnvironmentContext.Provider value={environmentState}>{children}</EnvironmentContext.Provider>;
 };

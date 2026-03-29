@@ -3,9 +3,9 @@
  * Manages branch creation, switching, merging, and deletion
  */
 
-import mainLogger from '../../../../utils/mainLogger';
-import { GitExecutor } from '../core/GitExecutor';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
+import type { GitExecutor } from '../core/GitExecutor';
 
 const { createLogger } = mainLogger;
 
@@ -53,22 +53,16 @@ class GitBranchManager {
     try {
       if (baseBranch) {
         // Create from specific branch
-        await this.executor.execute(
-          `checkout -b ${branchName} ${baseBranch}`,
-          { cwd: repoDir }
-        );
+        await this.executor.execute(`checkout -b ${branchName} ${baseBranch}`, { cwd: repoDir });
       } else {
         // Create from current HEAD
-        await this.executor.execute(
-          `checkout -b ${branchName}`,
-          { cwd: repoDir }
-        );
+        await this.executor.execute(`checkout -b ${branchName}`, { cwd: repoDir });
       }
 
       return {
         success: true,
         branch: branchName,
-        message: `Created branch '${branchName}'`
+        message: `Created branch '${branchName}'`,
       };
     } catch (error) {
       if (errorMessage(error).includes('already exists')) {
@@ -85,15 +79,12 @@ class GitBranchManager {
     log.info(`Switching to branch '${branchName}' in ${repoDir}`);
 
     try {
-      await this.executor.execute(
-        `checkout ${branchName}`,
-        { cwd: repoDir }
-      );
+      await this.executor.execute(`checkout ${branchName}`, { cwd: repoDir });
 
       return {
         success: true,
         branch: branchName,
-        message: `Switched to branch '${branchName}'`
+        message: `Switched to branch '${branchName}'`,
       };
     } catch (error) {
       if (errorMessage(error).includes('did not match any file')) {
@@ -111,7 +102,7 @@ class GitBranchManager {
       const localBranches = await this.getLocalBranches(repoDir);
       const result: BranchListResult = {
         current: localBranches.current,
-        local: localBranches.branches
+        local: localBranches.branches,
       };
 
       if (includeRemote) {
@@ -130,10 +121,7 @@ class GitBranchManager {
    * Get local branches
    */
   async getLocalBranches(repoDir: string): Promise<{ branches: string[]; current: string | null }> {
-    const { stdout } = await this.executor.execute(
-      'branch',
-      { cwd: repoDir }
-    );
+    const { stdout } = await this.executor.execute('branch', { cwd: repoDir });
 
     const branches: string[] = [];
     let current: string | null = null;
@@ -156,16 +144,13 @@ class GitBranchManager {
    * Get remote branches
    */
   async getRemoteBranches(repoDir: string): Promise<string[]> {
-    const { stdout } = await this.executor.execute(
-      'branch -r',
-      { cwd: repoDir }
-    );
+    const { stdout } = await this.executor.execute('branch -r', { cwd: repoDir });
 
     return stdout
       .trim()
       .split('\n')
-      .map(line => line.trim())
-      .filter(branch => branch && !branch.includes('HEAD'));
+      .map((line) => line.trim())
+      .filter((branch) => branch && !branch.includes('HEAD'));
   }
 
   /**
@@ -176,15 +161,12 @@ class GitBranchManager {
 
     try {
       const deleteFlag = force ? '-D' : '-d';
-      await this.executor.execute(
-        `branch ${deleteFlag} ${branchName}`,
-        { cwd: repoDir }
-      );
+      await this.executor.execute(`branch ${deleteFlag} ${branchName}`, { cwd: repoDir });
 
       return {
         success: true,
         branch: branchName,
-        message: `Deleted branch '${branchName}'`
+        message: `Deleted branch '${branchName}'`,
       };
     } catch (error) {
       if (errorMessage(error).includes('not fully merged')) {
@@ -211,10 +193,10 @@ class GitBranchManager {
    */
   async remoteBranchExists(repoDir: string, branchName: string, remote = 'origin'): Promise<boolean> {
     try {
-      const { stdout } = await this.executor.execute(
-        `ls-remote --heads ${remote} ${branchName}`,
-        { cwd: repoDir, timeout: 15000 }
-      );
+      const { stdout } = await this.executor.execute(`ls-remote --heads ${remote} ${branchName}`, {
+        cwd: repoDir,
+        timeout: 15000,
+      });
       return stdout.trim().length > 0;
     } catch (error) {
       return false;
@@ -247,7 +229,7 @@ class GitBranchManager {
       // Get commit info for branch
       const { stdout: commitInfo } = await this.executor.execute(
         `log ${branchName} -1 --pretty=format:"%H|%an|%ae|%at|%s"`,
-        { cwd: repoDir }
+        { cwd: repoDir },
       );
 
       const [hash, author, email, timestamp, message] = commitInfo.split('|');
@@ -257,7 +239,7 @@ class GitBranchManager {
       try {
         const { stdout: upstreamInfo } = await this.executor.execute(
           `rev-parse --abbrev-ref ${branchName}@{upstream}`,
-          { cwd: repoDir }
+          { cwd: repoDir },
         );
         upstream = upstreamInfo.trim();
       } catch (error) {
@@ -271,9 +253,12 @@ class GitBranchManager {
         try {
           const { stdout: counts } = await this.executor.execute(
             `rev-list --left-right --count ${branchName}...${upstream}`,
-            { cwd: repoDir }
+            { cwd: repoDir },
           );
-          const [a, b] = counts.trim().split('\t').map(n => parseInt(n) || 0);
+          const [a, b] = counts
+            .trim()
+            .split('\t')
+            .map((n) => parseInt(n) || 0);
           ahead = a;
           behind = b;
         } catch (error) {
@@ -288,11 +273,11 @@ class GitBranchManager {
           author,
           email,
           date: new Date(parseInt(timestamp) * 1000),
-          message
+          message,
         },
         upstream,
         ahead,
-        behind
+        behind,
       };
     } catch (error) {
       log.error(`Failed to get info for branch '${branchName}':`, error);
@@ -301,6 +286,6 @@ class GitBranchManager {
   }
 }
 
+export type { BranchInfo, BranchListResult, BranchResult };
 export { GitBranchManager };
-export type { BranchResult, BranchListResult, BranchInfo };
 export default GitBranchManager;

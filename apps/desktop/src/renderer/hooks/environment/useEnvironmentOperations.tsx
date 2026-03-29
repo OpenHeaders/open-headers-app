@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
-import { useEnvironmentCore } from './useEnvironmentCore';
 import type { EnvironmentVariable } from '../../../types/environment';
-import { showMessage } from '../../utils/ui/messageUtil';
 import { createLogger } from '../../utils/error-handling/logger';
+import { showMessage } from '../../utils/ui/messageUtil';
+import { useEnvironmentCore } from './useEnvironmentCore';
+
 const log = createLogger('useEnvironmentOperations');
 
 interface UseEnvironmentOperationsReturn {
@@ -21,75 +22,90 @@ interface UseEnvironmentOperationsReturn {
 export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
   const { service, environments, activeEnvironment } = useEnvironmentCore();
 
-  const createEnvironment = useCallback(async (name: string): Promise<boolean> => {
-    try {
-      await service.createEnvironment(name);
-      showMessage('success', `Environment '${name}' created`);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const deleteEnvironment = useCallback(async (name: string): Promise<boolean> => {
-    try {
-      await service.deleteEnvironment(name);
-      showMessage('success', `Environment '${name}' deleted`);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const switchEnvironment = useCallback(async (name: string): Promise<boolean> => {
-    try {
-      await service.switchEnvironment(name);
-      showMessage('success', `Switched to '${name}' environment`);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service]);
-
-  const cloneEnvironment = useCallback(async (sourceEnv: string, newName: string): Promise<boolean> => {
-    try {
-      const sourceVars = environments[sourceEnv];
-      if (!sourceVars) {
-        throw new Error(`Source environment '${sourceEnv}' does not exist`);
+  const createEnvironment = useCallback(
+    async (name: string): Promise<boolean> => {
+      try {
+        await service.createEnvironment(name);
+        showMessage('success', `Environment '${name}' created`);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
       }
+    },
+    [service],
+  );
 
-      await service.createEnvironment(newName);
-
-      // Batch copy all variables (single save + single IPC event)
-      const variablesToSet = Object.entries(sourceVars).map(([varName, variable]: [string, EnvironmentVariable]) => ({
-        name: varName,
-        value: variable.value ?? null,
-        isSecret: variable.isSecret
-      }));
-
-      if (variablesToSet.length > 0) {
-        await service.batchSetVariablesInEnvironment(newName, variablesToSet);
+  const deleteEnvironment = useCallback(
+    async (name: string): Promise<boolean> => {
+      try {
+        await service.deleteEnvironment(name);
+        showMessage('success', `Environment '${name}' deleted`);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
       }
+    },
+    [service],
+  );
 
-      showMessage('success', `Environment '${sourceEnv}' cloned to '${newName}'`);
-      return true;
-    } catch (error: unknown) {
-      showMessage('error', error instanceof Error ? error.message : String(error));
-      return false;
-    }
-  }, [service, environments]);
+  const switchEnvironment = useCallback(
+    async (name: string): Promise<boolean> => {
+      try {
+        await service.switchEnvironment(name);
+        showMessage('success', `Switched to '${name}' environment`);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service],
+  );
 
-  const waitForEnvironments = useCallback(async (timeout: number = 5000): Promise<boolean> => {
-    try {
-      return await service.waitForReady(timeout);
-    } catch (error) {
-      log.error('Failed to wait for environments:', error);
-      return false;
-    }
-  }, [service]);
+  const cloneEnvironment = useCallback(
+    async (sourceEnv: string, newName: string): Promise<boolean> => {
+      try {
+        const sourceVars = environments[sourceEnv];
+        if (!sourceVars) {
+          throw new Error(`Source environment '${sourceEnv}' does not exist`);
+        }
+
+        await service.createEnvironment(newName);
+
+        // Batch copy all variables (single save + single IPC event)
+        const variablesToSet = Object.entries(sourceVars).map(([varName, variable]: [string, EnvironmentVariable]) => ({
+          name: varName,
+          value: variable.value ?? null,
+          isSecret: variable.isSecret,
+        }));
+
+        if (variablesToSet.length > 0) {
+          await service.batchSetVariablesInEnvironment(newName, variablesToSet);
+        }
+
+        showMessage('success', `Environment '${sourceEnv}' cloned to '${newName}'`);
+        return true;
+      } catch (error: unknown) {
+        showMessage('error', error instanceof Error ? error.message : String(error));
+        return false;
+      }
+    },
+    [service, environments],
+  );
+
+  const waitForEnvironments = useCallback(
+    async (timeout: number = 5000): Promise<boolean> => {
+      try {
+        return await service.waitForReady(timeout);
+      } catch (error) {
+        log.error('Failed to wait for environments:', error);
+        return false;
+      }
+    },
+    [service],
+  );
 
   return {
     environments,
@@ -98,6 +114,6 @@ export function useEnvironmentOperations(): UseEnvironmentOperationsReturn {
     deleteEnvironment,
     switchEnvironment,
     cloneEnvironment,
-    waitForEnvironments
+    waitForEnvironments,
   };
 }

@@ -9,5 +9,5 @@ export { useAppEffects } from './useAppEffects';
 export { useAppInitialization } from './useAppInitialization';
 export { useFileWatcher } from './useFileWatcher';
 export { useNavigation } from './useNavigation';
-export { useWorkspaceSync } from './useWorkspaceSync';
 export { useUpdateChecker } from './useUpdateChecker';
+export { useWorkspaceSync } from './useWorkspaceSync';

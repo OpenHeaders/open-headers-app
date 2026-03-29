@@ -8,8 +8,8 @@
 // Re-export shared types
 export type {
   HeaderEntry,
-  SavedDataMap,
   HeaderValueValidation,
+  SavedDataMap,
 } from '@openheaders/core/types';
 
 /** A fully resolved entry — safe to create a DNR rule */
@@ -21,10 +21,7 @@ export interface ResolvedEntry {
 }
 
 /** Reasons a header may use a placeholder value */
-export type PlaceholderReason =
-  | 'source_not_found'
-  | 'empty_source'
-  | 'empty_value';
+export type PlaceholderReason = 'source_not_found' | 'empty_source' | 'empty_value';
 
 /** Information about a header using a placeholder */
 export interface PlaceholderInfo {
@@ -35,9 +32,7 @@ export interface PlaceholderInfo {
 }
 
 /** Result of processing a single HeaderEntry */
-export type EntryResult =
-  | { resolved: true; entry: ResolvedEntry }
-  | { resolved: false; placeholder: PlaceholderInfo };
+export type EntryResult = { resolved: true; entry: ResolvedEntry } | { resolved: false; placeholder: PlaceholderInfo };
 
 /** A header rule suitable for chrome.declarativeNetRequest */
 export interface HeaderDnrRule {

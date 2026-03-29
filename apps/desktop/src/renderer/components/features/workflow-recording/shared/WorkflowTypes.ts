@@ -2,7 +2,6 @@
  * Type definitions and constants for workflow recording functionality
  */
 
-
 /**
  * Default pagination configuration for workflow recordings table
  */
@@ -10,7 +9,7 @@ export const DEFAULT_PAGINATION = {
   defaultPageSize: 10,
   showSizeChanger: true,
   pageSizeOptions: ['10', '20', '50', '100'],
-  showTotal: (total: number) => `Total ${total} workflow recordings`
+  showTotal: (total: number) => `Total ${total} workflow recordings`,
 };
 
 /**
@@ -19,6 +18,5 @@ export const DEFAULT_PAGINATION = {
 export const SUPPORTED_FILE_TYPES = {
   JSON: '.json',
   HAR: '.har',
-  VIDEO: '.mp4,.webm,.avi'
+  VIDEO: '.mp4,.webm,.avi',
 };
-

@@ -1,15 +1,15 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  formatDuration,
-  formatTimestamp,
-  formatConsoleArg,
+  format24HTimeWithMs,
   formatBytes,
+  formatConsoleArg,
+  formatDuration,
   formatFileSize,
   formatMilliseconds,
   formatRelativeTime,
   formatRelativeTimeWithSmallMs,
-  format24HTimeWithMs,
   formatTimeAgo,
+  formatTimestamp,
 } from '../../../../src/renderer/utils/formatters/recordFormatters';
 
 // ======================================================================
@@ -69,9 +69,7 @@ describe('formatConsoleArg', () => {
   });
 
   it('formats Error type', () => {
-    expect(formatConsoleArg({ __type: 'Error', message: 'oops' })).toBe(
-      'Error: oops'
-    );
+    expect(formatConsoleArg({ __type: 'Error', message: 'oops' })).toBe('Error: oops');
   });
 
   it('formats HTMLElement type', () => {
@@ -81,7 +79,7 @@ describe('formatConsoleArg', () => {
         tagName: 'div',
         id: 'main',
         className: 'container',
-      })
+      }),
     ).toBe('<div#main.container>');
   });
 
@@ -92,14 +90,12 @@ describe('formatConsoleArg', () => {
         tagName: 'span',
         id: '',
         className: '',
-      })
+      }),
     ).toBe('<span>');
   });
 
   it('formats Function type', () => {
-    expect(
-      formatConsoleArg({ __type: 'Function', name: 'myFunc' })
-    ).toBe('ƒ myFunc()');
+    expect(formatConsoleArg({ __type: 'Function', name: 'myFunc' })).toBe('ƒ myFunc()');
   });
 
   it('formats plain objects as JSON', () => {

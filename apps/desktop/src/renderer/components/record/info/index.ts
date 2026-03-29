@@ -1,6 +1,6 @@
 /**
  * Info and utility components
- * 
+ *
  * Components for displaying record information
  */
 

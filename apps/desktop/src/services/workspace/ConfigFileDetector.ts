@@ -5,8 +5,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../utils/mainLogger';
 import type { ConfigData } from '../../utils/configValidator';
+import mainLogger from '../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
@@ -42,7 +42,7 @@ const CONFIG_PATTERNS: string[] = [
 
   // Workspace specific
   '.openheaders/workspaces/*/metadata.json',
-  'workspaces/*/metadata.json'
+  'workspaces/*/metadata.json',
 ];
 
 class ConfigFileDetector {
@@ -60,8 +60,9 @@ class ConfigFileDetector {
     }
 
     // Remove duplicates
-    const uniqueFiles = Array.from(new Set(detectedFiles.map(f => f.path)))
-      .map(filePath => detectedFiles.find(f => f.path === filePath)!);
+    const uniqueFiles = Array.from(new Set(detectedFiles.map((f) => f.path))).map(
+      (filePath) => detectedFiles.find((f) => f.path === filePath)!,
+    );
 
     log.info(`Found ${uniqueFiles.length} configuration files`);
     return uniqueFiles;
@@ -76,17 +77,14 @@ class ConfigFileDetector {
     // Handle wildcards in pattern
     if (pattern.includes('*')) {
       const parts = pattern.split('/');
-      const wildcardIndex = parts.findIndex(p => p.includes('*'));
+      const wildcardIndex = parts.findIndex((p) => p.includes('*'));
 
       if (wildcardIndex >= 0) {
         const basePath = parts.slice(0, wildcardIndex).join('/');
         const remainingPattern = parts.slice(wildcardIndex + 1).join('/');
 
         try {
-          const dirs = await this.findDirectories(
-            path.join(baseDir, basePath),
-            parts[wildcardIndex]
-          );
+          const dirs = await this.findDirectories(path.join(baseDir, basePath), parts[wildcardIndex]);
 
           for (const dir of dirs) {
             const filePath = path.join(dir, remainingPattern);
@@ -137,9 +135,7 @@ class ConfigFileDetector {
    */
   matchPattern(name: string, pattern: string): boolean {
     // Simple wildcard matching
-    const regex = new RegExp(
-      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
-    );
+    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
     return regex.test(name);
   }
 
@@ -161,7 +157,7 @@ class ConfigFileDetector {
         relativePath,
         type,
         valid: true,
-        data
+        data,
       };
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -170,7 +166,7 @@ class ConfigFileDetector {
         relativePath,
         type: 'unknown',
         valid: false,
-        error: errMsg
+        error: errMsg,
       };
     }
   }
@@ -229,7 +225,7 @@ class ConfigFileDetector {
    */
   async findWorkspaceConfigs(repoDir: string): Promise<DetectedFile[]> {
     const configs = await this.detectConfigFiles(repoDir);
-    return configs.filter(config => config.type === 'workspace-metadata');
+    return configs.filter((config) => config.type === 'workspace-metadata');
   }
 
   /**
@@ -239,21 +235,21 @@ class ConfigFileDetector {
     const result: DetectionValidationResult = {
       valid: true,
       errors: [],
-      warnings: []
+      warnings: [],
     };
 
     // Check for required files
-    const types = configFiles.map(f => f.type);
+    const types = configFiles.map((f) => f.type);
 
     if (!types.includes('workspace-metadata') && !types.includes('combined')) {
       result.warnings.push('No workspace metadata or combined configuration found');
     }
 
     // Check for invalid files
-    const invalidFiles = configFiles.filter(f => !f.valid);
+    const invalidFiles = configFiles.filter((f) => !f.valid);
     if (invalidFiles.length > 0) {
       result.valid = false;
-      invalidFiles.forEach(file => {
+      invalidFiles.forEach((file) => {
         result.errors.push(`Invalid file ${file.relativePath}: ${file.error}`);
       });
     }
@@ -262,5 +258,5 @@ class ConfigFileDetector {
   }
 }
 
-export { ConfigFileDetector, DetectedFile, DetectionValidationResult, CONFIG_PATTERNS };
+export { CONFIG_PATTERNS, ConfigFileDetector, type DetectedFile, type DetectionValidationResult };
 export default ConfigFileDetector;

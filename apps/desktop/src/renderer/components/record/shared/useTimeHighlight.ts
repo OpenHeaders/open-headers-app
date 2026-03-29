@@ -4,54 +4,50 @@
  */
 
 interface TimestampedEntry {
-    timestamp: number;
+  timestamp: number;
 }
 
-export const useTimeHighlight = (
-    viewMode: string,
-    activeTime: number,
-    autoHighlight = false,
-) => {
-    const isCurrentEntry = <T extends TimestampedEntry>(entry: T, allEntries: T[]) => {
-        if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
-            return false;
-        }
+export const useTimeHighlight = (viewMode: string, activeTime: number, autoHighlight = false) => {
+  const isCurrentEntry = <T extends TimestampedEntry>(entry: T, allEntries: T[]) => {
+    if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
+      return false;
+    }
 
-        const activeEntries = allEntries.filter(item => item.timestamp <= activeTime);
+    const activeEntries = allEntries.filter((item) => item.timestamp <= activeTime);
 
-        if (activeEntries.length === 0) {
-            return false;
-        }
+    if (activeEntries.length === 0) {
+      return false;
+    }
 
-        const lastActiveEntry = activeEntries[activeEntries.length - 1];
-        return entry.timestamp === lastActiveEntry.timestamp;
-    };
+    const lastActiveEntry = activeEntries[activeEntries.length - 1];
+    return entry.timestamp === lastActiveEntry.timestamp;
+  };
 
-    const getRowClassName = <T extends TimestampedEntry>(entry: T, allEntries: T[], baseClass = '') => {
-        const classes = baseClass ? [baseClass] : [];
+  const getRowClassName = <T extends TimestampedEntry>(entry: T, allEntries: T[], baseClass = '') => {
+    const classes = baseClass ? [baseClass] : [];
 
-        if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
-            return classes.join(' ');
-        }
+    if (!autoHighlight || viewMode !== 'tabs' || activeTime < 0) {
+      return classes.join(' ');
+    }
 
-        if (entry.timestamp <= activeTime) {
-            classes.push('entry-active');
+    if (entry.timestamp <= activeTime) {
+      classes.push('entry-active');
 
-            if (isCurrentEntry(entry, allEntries)) {
-                classes.push('entry-current');
-            }
-        } else {
-            classes.push('entry-future');
-        }
+      if (isCurrentEntry(entry, allEntries)) {
+        classes.push('entry-current');
+      }
+    } else {
+      classes.push('entry-future');
+    }
 
-        return classes.join(' ');
-    };
+    return classes.join(' ');
+  };
 
-    const isHighlightingActive = autoHighlight && viewMode === 'tabs' && activeTime >= 0;
+  const isHighlightingActive = autoHighlight && viewMode === 'tabs' && activeTime >= 0;
 
-    return {
-        isCurrentEntry,
-        getRowClassName,
-        isHighlightingActive
-    };
+  return {
+    isCurrentEntry,
+    getRowClassName,
+    isHighlightingActive,
+  };
 };

@@ -2,15 +2,15 @@ export { broadcastToRenderers } from './SyncBroadcaster';
 export { checkForDataChanges } from './SyncChangeDetector';
 export { importSyncedData } from './SyncDataImporter';
 export type {
-    SyncConfig,
-    SyncResult,
-    SyncData,
-    SyncStatus,
-    SchedulerOptions,
-    BroadcasterFn,
-    GitSyncServiceLike,
-    WorkspaceSettingsServiceLike,
-    NetworkServiceLike,
-    SyncStatusOwnerLike,
+  BroadcasterFn,
+  GitSyncServiceLike,
+  NetworkServiceLike,
+  SchedulerOptions,
+  SyncConfig,
+  SyncData,
+  SyncResult,
+  SyncStatus,
+  SyncStatusOwnerLike,
+  WorkspaceSettingsServiceLike,
 } from './types';
 export { SYNC_CONSTANTS } from './types';

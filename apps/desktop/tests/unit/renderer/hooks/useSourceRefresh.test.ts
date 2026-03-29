@@ -6,8 +6,8 @@
  * via IPC, and initial HTTP fetches to HttpRequestService via IPC.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HttpRequestResult } from '../../../../src/types/http';
 
 // ---------------------------------------------------------------------------
@@ -29,7 +29,7 @@ vi.mock('../../../../src/renderer/utils', () => ({
 
 import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSourceRefresh';
 import { showMessage } from '../../../../src/renderer/utils';
-import type { Source, NewSourceData } from '../../../../src/types/source';
+import type { NewSourceData, Source } from '../../../../src/types/source';
 
 const mockExecuteRequest = vi.fn<() => Promise<HttpRequestResult>>();
 const mockManualRefresh = vi.fn<() => Promise<{ success: boolean; error?: string }>>();
@@ -216,7 +216,7 @@ describe('useSourceRefresh', () => {
         expect.objectContaining({
           url: 'https://auth.openheaders.io/oauth2/token',
           method: 'GET',
-        })
+        }),
       );
       expect(deps.addSource).toHaveBeenCalledWith(
         expect.objectContaining({

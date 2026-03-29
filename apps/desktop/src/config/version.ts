@@ -27,21 +27,16 @@ const SUPPORTED_DATA_VERSIONS: string[] = ['1.0.0', '2.0.0', '3.0.0'];
  * Check if a version is compatible with current data format (same major version)
  */
 function isVersionCompatible(version: string): boolean {
-    if (!version) return false;
-    const currentMajor = DATA_FORMAT_VERSION.split('.')[0];
-    return version.startsWith(`${currentMajor}.`);
+  if (!version) return false;
+  const currentMajor = DATA_FORMAT_VERSION.split('.')[0];
+  return version.startsWith(`${currentMajor}.`);
 }
 
-export {
-    APP_VERSION,
-    DATA_FORMAT_VERSION,
-    SUPPORTED_DATA_VERSIONS,
-    isVersionCompatible
-};
+export { APP_VERSION, DATA_FORMAT_VERSION, isVersionCompatible, SUPPORTED_DATA_VERSIONS };
 
 export default {
-    APP_VERSION,
-    DATA_FORMAT_VERSION,
-    SUPPORTED_DATA_VERSIONS,
-    isVersionCompatible
+  APP_VERSION,
+  DATA_FORMAT_VERSION,
+  SUPPORTED_DATA_VERSIONS,
+  isVersionCompatible,
 };

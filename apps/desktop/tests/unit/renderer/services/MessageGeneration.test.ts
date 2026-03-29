@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 // Mock the version module before importing MessageGeneration
 vi.mock('../../../../src/config/version.esm', () => ({
@@ -7,24 +7,35 @@ vi.mock('../../../../src/config/version.esm', () => ({
   SUPPORTED_DATA_VERSIONS: ['1.0.0', '2.0.0', '3.0.0'],
 }));
 
+import { SUCCESS_MESSAGES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import type {
+  ExportData,
+  ExportOptions,
+  ImportData,
+  ImportOptions,
+} from '../../../../src/renderer/services/export-import/core/types';
 import {
+  generateEnvironmentVariablesMessage,
+  generateErrorMessage,
   generateExportSuccessMessage,
   generateImportSuccessMessage,
   generateImportSummary,
   generateImportWarnings,
-  generateEnvironmentVariablesMessage,
-  generateErrorMessage,
   generateProgressMessage,
 } from '../../../../src/renderer/services/export-import/utilities/MessageGeneration';
-import { SUCCESS_MESSAGES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportData, ExportOptions, ImportData, ImportOptions } from '../../../../src/renderer/services/export-import/core/types';
 
 function makeExportData(overrides: Record<string, unknown> = {}): ExportData {
   return { version: '3.0.0', ...overrides } as ExportData;
 }
 
 function makeExportOptions(overrides: Partial<ExportOptions> = {}): ExportOptions {
-  return { selectedItems: {}, fileFormat: 'single', environmentOption: 'none', includeWorkspace: false, ...overrides } as ExportOptions;
+  return {
+    selectedItems: {},
+    fileFormat: 'single',
+    environmentOption: 'none',
+    includeWorkspace: false,
+    ...overrides,
+  } as ExportOptions;
 }
 
 function makeImportData(overrides: Record<string, unknown> = {}): ImportData {
@@ -42,10 +53,12 @@ describe('generateExportSuccessMessage', () => {
   it('includes source count in message', () => {
     const msg = generateExportSuccessMessage(
       makeExportOptions({ selectedItems: { sources: true } }),
-      makeExportData({ sources: [
-        { sourceId: 'a1b2c3d4', sourceType: 'http' },
-        { sourceId: 'b2c3d4e5', sourceType: 'file' },
-      ] }),
+      makeExportData({
+        sources: [
+          { sourceId: 'a1b2c3d4', sourceType: 'http' },
+          { sourceId: 'b2c3d4e5', sourceType: 'file' },
+        ],
+      }),
       ['/Users/jane.doe/Documents/OpenHeaders/export.json'],
     );
     expect(msg).toContain('2 source(s)');
@@ -71,20 +84,16 @@ describe('generateExportSuccessMessage', () => {
   });
 
   it('includes environment schema description', () => {
-    const msg = generateExportSuccessMessage(
-      makeExportOptions({ environmentOption: 'schema' }),
-      makeExportData(),
-      ['/path'],
-    );
+    const msg = generateExportSuccessMessage(makeExportOptions({ environmentOption: 'schema' }), makeExportData(), [
+      '/path',
+    ]);
     expect(msg).toContain('environment schema');
   });
 
   it('includes environment values description', () => {
-    const msg = generateExportSuccessMessage(
-      makeExportOptions({ environmentOption: 'values' }),
-      makeExportData(),
-      ['/path'],
-    );
+    const msg = generateExportSuccessMessage(makeExportOptions({ environmentOption: 'values' }), makeExportData(), [
+      '/path',
+    ]);
     expect(msg).toContain('environments with values');
   });
 
@@ -117,11 +126,7 @@ describe('generateExportSuccessMessage', () => {
   });
 
   it('defaults to "configuration" when nothing selected', () => {
-    const msg = generateExportSuccessMessage(
-      makeExportOptions(),
-      makeExportData(),
-      ['/path'],
-    );
+    const msg = generateExportSuccessMessage(makeExportOptions(), makeExportData(), ['/path']);
     expect(msg).toContain('configuration');
   });
 
@@ -380,20 +385,16 @@ describe('generateErrorMessage', () => {
   });
 
   it('includes all context fields', () => {
-    const msg = generateErrorMessage(
-      new Error('Parse failed'),
-      'import',
-      { fileName: 'openheaders-config.json', dataType: 'sources', step: 'parse' },
-    );
+    const msg = generateErrorMessage(new Error('Parse failed'), 'import', {
+      fileName: 'openheaders-config.json',
+      dataType: 'sources',
+      step: 'parse',
+    });
     expect(msg).toBe('Error importing data (file: openheaders-config.json, type: sources, step: parse): Parse failed');
   });
 
   it('includes partial context fields', () => {
-    const msg = generateErrorMessage(
-      new Error('err'),
-      'export',
-      { fileName: 'config.json' },
-    );
+    const msg = generateErrorMessage(new Error('err'), 'export', { fileName: 'config.json' });
     expect(msg).toContain('file: config.json');
     expect(msg).not.toContain('type:');
     expect(msg).not.toContain('step:');
@@ -410,9 +411,7 @@ describe('generateErrorMessage', () => {
 // ---------------------------------------------------------------------------
 describe('generateProgressMessage', () => {
   it('generates progress with percentage', () => {
-    expect(generateProgressMessage('Importing', 50, 100, 'sources')).toBe(
-      'Importing sources: 50/100 (50%)',
-    );
+    expect(generateProgressMessage('Importing', 50, 100, 'sources')).toBe('Importing sources: 50/100 (50%)');
   });
 
   it('handles zero total (0%)', () => {
@@ -428,14 +427,10 @@ describe('generateProgressMessage', () => {
   });
 
   it('shows 100% at completion', () => {
-    expect(generateProgressMessage('Importing', 50, 50, 'sources')).toBe(
-      'Importing sources: 50/50 (100%)',
-    );
+    expect(generateProgressMessage('Importing', 50, 50, 'sources')).toBe('Importing sources: 50/50 (100%)');
   });
 
   it('handles enterprise-scale numbers', () => {
-    expect(generateProgressMessage('Syncing', 75, 150, 'proxy rules')).toBe(
-      'Syncing proxy rules: 75/150 (50%)',
-    );
+    expect(generateProgressMessage('Syncing', 75, 150, 'proxy rules')).toBe('Syncing proxy rules: 75/150 (50%)');
   });
 });

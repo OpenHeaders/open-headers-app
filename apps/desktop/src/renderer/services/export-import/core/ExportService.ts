@@ -1,27 +1,27 @@
 /**
  * Export Service - Core export orchestration
- * 
+ *
  * This service coordinates the export process across all data types,
  * handles file operations, and provides comprehensive error handling.
  */
 
-import { SourcesHandler } from '../handlers/SourcesHandler';
+import type { Source } from '../../../../types/source';
+import { createLogger } from '../../../utils/error-handling/logger';
+import { showMessage } from '../../../utils/ui/messageUtil';
+import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
 import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
 import { RulesHandler } from '../handlers/RulesHandler';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
+import { SourcesHandler } from '../handlers/SourcesHandler';
 import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
-import { 
-  generateTimestampedFilename, 
-  handleSingleFileExport, 
-  handleMultiFileExport 
+import {
+  generateTimestampedFilename,
+  handleMultiFileExport,
+  handleSingleFileExport,
 } from '../utilities/FileOperations';
 import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
-import { showMessage } from '../../../utils/ui/messageUtil';
-import { FILE_FORMATS, DEFAULTS } from './ExportImportConfig';
-import type { ExportImportDependencies, ExportData, ExportOptions, RuleEntry } from './types';
-import type { Source } from '../../../../types/source';
+import { DEFAULTS, FILE_FORMATS } from './ExportImportConfig';
+import type { ExportData, ExportImportDependencies, ExportOptions, RuleEntry } from './types';
 
-import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('ExportService');
 
 /**
@@ -74,11 +74,10 @@ export class ExportService {
       showMessage('success', successMessage);
 
       const duration = Date.now() - startTime;
-      log.info(`Export completed successfully in ${duration}ms`, { 
+      log.info(`Export completed successfully in ${duration}ms`, {
         files: writtenFiles.length,
-        size: this._calculateExportSize(exportData)
+        size: this._calculateExportSize(exportData),
       });
-
     } catch (error) {
       log.error('Export process failed:', error);
       showMessage('error', `Export failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -96,7 +95,7 @@ export class ExportService {
     const { selectedItems, appVersion } = exportOptions;
 
     const exportData: ExportData = {
-      version: appVersion || DEFAULTS.APP_VERSION
+      version: appVersion || DEFAULTS.APP_VERSION,
     };
 
     log.debug('Gathering export data for selected items:', selectedItems);
@@ -163,10 +162,10 @@ export class ExportService {
    */
   async _handleSingleFileExport(exportData: ExportData) {
     const filename = generateTimestampedFilename('open-headers-config', '', 'json');
-    
+
     const filePath = await handleSingleFileExport({
       filename,
-      data: exportData
+      data: exportData,
     });
 
     return [filePath];
@@ -181,7 +180,7 @@ export class ExportService {
    */
   async _handleSeparateFilesExport(exportData: ExportData, exportOptions: ExportOptions) {
     const { environmentOption } = exportOptions;
-    
+
     // Separate environment data for separate file
     let environmentData: Partial<ExportData> | null = null;
     const mainData: ExportData = { ...exportData };
@@ -206,7 +205,7 @@ export class ExportService {
       mainFilename,
       environmentFilename: envFilename,
       mainData,
-      environmentData: environmentData ?? undefined
+      environmentData: environmentData ?? undefined,
     });
   }
 
@@ -228,7 +227,7 @@ export class ExportService {
     }
 
     // Check if at least one item is selected
-    const hasSelection = Object.values(selectedItems).some(selected => selected === true);
+    const hasSelection = Object.values(selectedItems).some((selected) => selected === true);
     if (!hasSelection) {
       throw new Error('At least one data type must be selected for export');
     }
@@ -273,9 +272,9 @@ export class ExportService {
     }
 
     if (exportData.environmentSchema || exportData.environments) {
-      const envData = { 
-        environmentSchema: exportData.environmentSchema, 
-        environments: exportData.environments 
+      const envData = {
+        environmentSchema: exportData.environmentSchema,
+        environments: exportData.environments,
       };
       const validation = this.environmentsHandler.validateEnvironmentsForExport(envData);
       if (!validation.success) {
@@ -313,10 +312,17 @@ export class ExportService {
     }
 
     if (exportData.rules && typeof exportData.rules === 'object' && !Array.isArray(exportData.rules)) {
-      count += Object.values(exportData.rules).reduce((sum, rules) => sum + (Array.isArray(rules) ? rules.length : 0), 0);
+      count += Object.values(exportData.rules).reduce(
+        (sum, rules) => sum + (Array.isArray(rules) ? rules.length : 0),
+        0,
+      );
     }
 
-    if (exportData.environments && typeof exportData.environments === 'object' && !Array.isArray(exportData.environments)) {
+    if (
+      exportData.environments &&
+      typeof exportData.environments === 'object' &&
+      !Array.isArray(exportData.environments)
+    ) {
       count += Object.values(exportData.environments).reduce((sum, env) => {
         if (env && typeof env === 'object' && !Array.isArray(env)) {
           return sum + Object.keys(env).length;
@@ -342,10 +348,10 @@ export class ExportService {
     try {
       const jsonString = JSON.stringify(exportData);
       const bytes = new Blob([jsonString]).size;
-      
+
       if (bytes < 1024) return `${bytes} bytes`;
       if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-      return `${Math.round(bytes / (1024 * 1024) * 100) / 100} MB`;
+      return `${Math.round((bytes / (1024 * 1024)) * 100) / 100} MB`;
     } catch (error) {
       return 'unknown size';
     }
@@ -359,7 +365,7 @@ export class ExportService {
    */
   _sanitizeOptionsForLogging(exportOptions: ExportOptions) {
     const sanitized = { ...exportOptions };
-    
+
     // Remove potentially sensitive workspace data
     if (sanitized.currentWorkspace && sanitized.currentWorkspace.authData) {
       const { authData: _redacted, ...rest } = sanitized.currentWorkspace;
@@ -385,7 +391,7 @@ export class ExportService {
         rules?: ReturnType<RulesHandler['getRulesStatistics']>;
         environments?: ReturnType<EnvironmentsHandler['getEnvironmentStatistics']>;
         workspace?: ReturnType<WorkspaceHandler['getWorkspaceStatistics']>;
-      }
+      },
     };
 
     if (exportData.sources) {
@@ -402,9 +408,9 @@ export class ExportService {
     }
 
     if (exportData.environmentSchema || exportData.environments) {
-      const envData = { 
-        environmentSchema: exportData.environmentSchema, 
-        environments: exportData.environments 
+      const envData = {
+        environmentSchema: exportData.environmentSchema,
+        environments: exportData.environments,
       };
       stats.dataTypes.environments = this.environmentsHandler.getEnvironmentStatistics(envData);
     }
@@ -415,5 +421,4 @@ export class ExportService {
 
     return stats;
   }
-
 }

@@ -1,6 +1,6 @@
 import React from 'react';
-import { useCliServer } from './hooks';
 import { CliServerControls, CliServerLogs } from './components';
+import { useCliServer } from './hooks';
 
 /**
  * CliServer - Main CLI API server management component
@@ -12,59 +12,63 @@ import { CliServerControls, CliServerLogs } from './components';
  * @param {boolean} props.active - Whether this tab is currently visible
  * @returns {JSX.Element} CLI server management interface
  */
-interface CliServerProps { active: boolean; }
+interface CliServerProps {
+  active: boolean;
+}
 const CliServer = ({ active }: CliServerProps) => {
-    const {
-        // State
-        status,
-        logs,
-        allLogs,
-        loading,
-        settings,
+  const {
+    // State
+    status,
+    logs,
+    allLogs,
+    loading,
+    settings,
 
-        // Filter state
-        filterMethod,
-        filterEndpoint,
-        filterStatus,
+    // Filter state
+    filterMethod,
+    filterEndpoint,
+    filterStatus,
 
-        // Actions
-        updatePort,
-        toggleServer,
-        regenerateToken,
-        clearLogs,
-        exportLogs,
-        setFilters,
-        clearFilters,
-        loadLogs
-    } = useCliServer({ active });
+    // Actions
+    updatePort,
+    toggleServer,
+    regenerateToken,
+    clearLogs,
+    exportLogs,
+    setFilters,
+    clearFilters,
+    loadLogs,
+  } = useCliServer({ active });
 
-    return (
-        <div style={{ padding: '24px' }}>
-            <CliServerControls
-                status={status}
-                loading={loading}
-                tutorialMode={settings?.tutorialMode}
-                onToggleServer={toggleServer}
-                onUpdatePort={(port) => { if (port !== null) updatePort(port); }}
-                onRegenerateToken={regenerateToken}
-            />
+  return (
+    <div style={{ padding: '24px' }}>
+      <CliServerControls
+        status={status}
+        loading={loading}
+        tutorialMode={settings?.tutorialMode}
+        onToggleServer={toggleServer}
+        onUpdatePort={(port) => {
+          if (port !== null) updatePort(port);
+        }}
+        onRegenerateToken={regenerateToken}
+      />
 
-            {(status.running || allLogs.length > 0) && (
-                <CliServerLogs
-                    logs={logs}
-                    allLogs={allLogs}
-                    filterMethod={filterMethod}
-                    filterEndpoint={filterEndpoint}
-                    filterStatus={filterStatus}
-                    onSetFilters={setFilters}
-                    onClearFilters={clearFilters}
-                    onClearLogs={clearLogs}
-                    onExportLogs={exportLogs}
-                    onRefresh={loadLogs}
-                />
-            )}
-        </div>
-    );
+      {(status.running || allLogs.length > 0) && (
+        <CliServerLogs
+          logs={logs}
+          allLogs={allLogs}
+          filterMethod={filterMethod}
+          filterEndpoint={filterEndpoint}
+          filterStatus={filterStatus}
+          onSetFilters={setFilters}
+          onClearFilters={clearFilters}
+          onClearLogs={clearLogs}
+          onExportLogs={exportLogs}
+          onRefresh={loadLogs}
+        />
+      )}
+    </div>
+  );
 };
 
 export default CliServer;

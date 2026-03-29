@@ -1,15 +1,15 @@
 /**
  * Player Components Module
- * 
+ *
  * Exports for record player components, hooks, and utilities
  */
 
-// Main component - exported for external use
-export { default as RecordPlayer } from './RecordPlayer';
+export { usePlayerManager } from './hooks/usePlayerManager';
 
 // Hooks - exported for external use
 export { useVideoLoader } from './hooks/useVideoLoader';
-export { usePlayerManager } from './hooks/usePlayerManager';
+// Main component - exported for external use
+export { default as RecordPlayer } from './RecordPlayer';
 
 // Utilities - exported for external use
 export * from './utils/playerUtils';

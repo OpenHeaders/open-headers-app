@@ -15,7 +15,7 @@ class Mutex {
   }
 
   async acquire(): Promise<() => void> {
-    return new Promise<() => void>(resolve => {
+    return new Promise<() => void>((resolve) => {
       const tryAcquire = () => {
         if (!this.locked) {
           this.locked = true;
@@ -61,7 +61,7 @@ class Semaphore {
   }
 
   async acquire(): Promise<() => void> {
-    return new Promise<() => void>(resolve => {
+    return new Promise<() => void>((resolve) => {
       const tryAcquire = () => {
         if (this.current < this.maxConcurrent) {
           this.current++;
@@ -97,7 +97,7 @@ class Semaphore {
       current: this.current,
       max: this.maxConcurrent,
       queued: this.queue.length,
-      available: this.maxConcurrent - this.current
+      available: this.maxConcurrent - this.current,
     };
   }
 }
@@ -200,15 +200,14 @@ class RequestDeduplicator {
         return existingPromise as Promise<T>;
       }
 
-      const requestPromise = requestFn()
-        .finally(async () => {
-          const cleanupRelease = await this.mutex.acquire();
-          try {
-            this.pendingRequests.delete(key);
-          } finally {
-            cleanupRelease();
-          }
-        });
+      const requestPromise = requestFn().finally(async () => {
+        const cleanupRelease = await this.mutex.acquire();
+        try {
+          this.pendingRequests.delete(key);
+        } finally {
+          cleanupRelease();
+        }
+      });
 
       this.pendingRequests.set(key, requestPromise);
       release();
@@ -224,4 +223,4 @@ class RequestDeduplicator {
   }
 }
 
-export { Mutex, Semaphore, ConcurrentMap, ConcurrentSet, RequestDeduplicator };
+export { ConcurrentMap, ConcurrentSet, Mutex, RequestDeduplicator, Semaphore };

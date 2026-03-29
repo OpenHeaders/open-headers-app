@@ -1,9 +1,9 @@
+import electron from 'electron';
 import fs from 'fs';
 import path from 'path';
-import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
 import { errorMessage } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
+import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -11,6 +11,7 @@ const { createLogger } = mainLogger;
 const fsPromises = fs.promises;
 
 import type { ProxyRule } from '../../types/proxy';
+
 export type { ProxyRule } from '../../types/proxy';
 
 class ProxyRuleStore {
@@ -65,20 +66,20 @@ class ProxyRuleStore {
   }
 
   async saveRule(rule: ProxyRule): Promise<void> {
-    const existingIndex = this.rules.findIndex(r => r.id === rule.id);
+    const existingIndex = this.rules.findIndex((r) => r.id === rule.id);
     if (existingIndex >= 0) {
       this.rules[existingIndex] = rule;
     } else {
       this.rules.push({
         ...rule,
-        id: rule.id || Date.now().toString()
+        id: rule.id || Date.now().toString(),
       });
     }
     await this.save();
   }
 
   async deleteRule(ruleId: string): Promise<void> {
-    this.rules = this.rules.filter(r => r.id !== ruleId);
+    this.rules = this.rules.filter((r) => r.id !== ruleId);
     await this.save();
   }
 

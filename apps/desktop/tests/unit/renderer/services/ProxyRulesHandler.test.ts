@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { ProxyRulesHandler } from '../../../../src/renderer/services/export-import/handlers/ProxyRulesHandler';
+import { describe, expect, it, vi } from 'vitest';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import { ProxyRulesHandler } from '../../../../src/renderer/services/export-import/handlers/ProxyRulesHandler';
 import type { ProxyRule } from '../../../../src/types/proxy';
 
 // ---------------------------------------------------------------------------
@@ -120,15 +120,9 @@ describe('ProxyRulesHandler.getProxyRulesStatistics', () => {
 
   it('counts total, domains, and headers', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const stats = handler.getProxyRulesStatistics([
-      validStaticProxyRule(),
-      validDynamicProxyRule(),
-    ]);
+    const stats = handler.getProxyRulesStatistics([validStaticProxyRule(), validDynamicProxyRule()]);
     expect(stats.total).toBe(2);
-    expect(stats.patterns).toEqual([
-      '*.openheaders.io, api.partner-service.io:8443',
-      '*.openheaders.io',
-    ]);
+    expect(stats.patterns).toEqual(['*.openheaders.io, api.partner-service.io:8443', '*.openheaders.io']);
     expect(stats.withHeaders).toBe(2);
     expect(stats.totalHeaders).toBe(2);
     expect(stats.averageHeadersPerRule).toBe(1);
@@ -188,16 +182,14 @@ describe('ProxyRulesHandler.analyzeProxyRules', () => {
       { id: '1', domains: ['api.com'], headerName: 'X' },
       { id: '2', domains: ['api.com'], headerName: 'Y' },
     ]);
-    expect(result.warnings.some(w => w.includes('api.com'))).toBe(true);
-    expect(result.suggestions.some(s => s.includes('consolidating'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('api.com'))).toBe(true);
+    expect(result.suggestions.some((s) => s.includes('consolidating'))).toBe(true);
   });
 
   it('warns about rules without domain restrictions', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const result = handler.analyzeProxyRules([
-      { id: '1', headerName: 'X' },
-    ]);
-    expect(result.warnings.some(w => w.includes('no domain restrictions'))).toBe(true);
+    const result = handler.analyzeProxyRules([{ id: '1', headerName: 'X' }]);
+    expect(result.warnings.some((w) => w.includes('no domain restrictions'))).toBe(true);
   });
 
   it('warns about rules without header names', () => {
@@ -206,15 +198,13 @@ describe('ProxyRulesHandler.analyzeProxyRules', () => {
       { id: '1', domains: ['a.com'] },
       { id: '2', domains: ['b.com'] },
     ]);
-    expect(result.warnings.some(w => w.includes('no header name'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('no header name'))).toBe(true);
   });
 
   it('does not warn when all rules have header names', () => {
     const handler = new ProxyRulesHandler(makeDeps());
-    const result = handler.analyzeProxyRules([
-      { id: '1', domains: ['a.com'], headerName: 'X' },
-    ]);
-    expect(result.warnings.some(w => w.includes('no header name'))).toBe(false);
+    const result = handler.analyzeProxyRules([{ id: '1', domains: ['a.com'], headerName: 'X' }]);
+    expect(result.warnings.some((w) => w.includes('no header name'))).toBe(false);
   });
 });
 
@@ -252,10 +242,7 @@ describe('ProxyRulesHandler.exportProxyRules', () => {
   it('exports all valid enterprise rules when multiple exist', async () => {
     vi.stubGlobal('window', {
       electronAPI: {
-        proxyGetRules: vi.fn().mockResolvedValue([
-          validStaticProxyRule(),
-          validDynamicProxyRule(),
-        ]),
+        proxyGetRules: vi.fn().mockResolvedValue([validStaticProxyRule(), validDynamicProxyRule()]),
       },
       dispatchEvent: vi.fn(),
     });
@@ -292,10 +279,7 @@ describe('ProxyRulesHandler.importProxyRules', () => {
     vi.spyOn(handler, '_importSingleProxyRule').mockResolvedValue({ imported: true });
 
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
-    const stats = await handler.importProxyRules(
-      [validStaticProxyRule()],
-      { importMode: IMPORT_MODES.REPLACE }
-    );
+    const stats = await handler.importProxyRules([validStaticProxyRule()], { importMode: IMPORT_MODES.REPLACE });
 
     expect(clearSpy).toHaveBeenCalled();
     expect(stats.imported).toBe(1);
@@ -307,10 +291,7 @@ describe('ProxyRulesHandler.importProxyRules', () => {
     vi.spyOn(handler, '_importSingleProxyRule').mockRejectedValue(new Error('save fail'));
 
     vi.stubGlobal('window', { dispatchEvent: vi.fn() });
-    const stats = await handler.importProxyRules(
-      [validStaticProxyRule()],
-      { importMode: IMPORT_MODES.MERGE }
-    );
+    const stats = await handler.importProxyRules([validStaticProxyRule()], { importMode: IMPORT_MODES.MERGE });
 
     expect(stats.errors).toHaveLength(1);
     expect(stats.errors[0].error).toBe('save fail');

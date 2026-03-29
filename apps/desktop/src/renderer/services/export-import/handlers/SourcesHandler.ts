@@ -1,17 +1,17 @@
 /**
  * Sources Handler for Export/Import Operations
- * 
+ *
  * This module handles the export and import of source configurations,
  * including duplicate detection and validation specific to sources.
  */
 
-import { isSourceDuplicate } from '../utilities/DuplicateDetection';
-import { validateSource } from '../utilities/ValidationUtils';
+import type { Source } from '../../../../types/source';
+import { createLogger } from '../../../utils/error-handling/logger';
 import { IMPORT_MODES } from '../core/ExportImportConfig';
 import type { ExportImportDependencies, ExportOptions } from '../core/types';
-import type { Source } from '../../../../types/source';
+import { isSourceDuplicate } from '../utilities/DuplicateDetection';
+import { validateSource } from '../utilities/ValidationUtils';
 
-import { createLogger } from '../../../utils/error-handling/logger';
 const log = createLogger('SourcesHandler');
 
 /**
@@ -50,8 +50,10 @@ export class SourcesHandler {
         }
         return true;
       });
-      
-      log.info(`Exporting ${validSources.length} valid sources (filtered ${sources.length - validSources.length} invalid)`);
+
+      log.info(
+        `Exporting ${validSources.length} valid sources (filtered ${sources.length - validSources.length} invalid)`,
+      );
       return validSources;
     } catch (error) {
       log.error('Failed to export sources:', error);
@@ -65,11 +67,14 @@ export class SourcesHandler {
    * @param {Object} options - Import options
    * @returns {Promise<Object>} - Import statistics
    */
-  async importSources(sourcesToImport: Source[] | undefined, options: { importMode?: string; selectedItems?: Record<string, boolean> }) {
+  async importSources(
+    sourcesToImport: Source[] | undefined,
+    options: { importMode?: string; selectedItems?: Record<string, boolean> },
+  ) {
     const stats: { imported: number; skipped: number; errors: Array<{ source: string; error: string }> } = {
       imported: 0,
       skipped: 0,
-      errors: []
+      errors: [],
     };
 
     if (!Array.isArray(sourcesToImport) || sourcesToImport.length === 0) {
@@ -97,12 +102,14 @@ export class SourcesHandler {
         log.error(`Failed to import source ${source.sourceId}:`, error);
         stats.errors.push({
           source: source.sourceId,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
 
-    log.info(`Sources import completed: ${stats.imported} imported, ${stats.skipped} skipped, ${stats.errors.length} errors`);
+    log.info(
+      `Sources import completed: ${stats.imported} imported, ${stats.skipped} skipped, ${stats.errors.length} errors`,
+    );
     return stats;
   }
 
@@ -124,7 +131,7 @@ export class SourcesHandler {
     if (options.importMode === IMPORT_MODES.MERGE) {
       const currentSources = this._getCurrentSources();
       const isDuplicate = isSourceDuplicate(source, currentSources);
-      
+
       if (isDuplicate) {
         log.debug(`Skipping duplicate source: ${source.sourceId}`);
         return { skipped: true };
@@ -174,7 +181,7 @@ export class SourcesHandler {
     const currentSources = this._getCurrentSources();
     const { removeSource } = this.dependencies;
     log.info(`Clearing ${currentSources.length} existing sources`);
-    
+
     for (const source of currentSources) {
       const sourceId = source.sourceId;
       try {
@@ -194,7 +201,7 @@ export class SourcesHandler {
     if (!Array.isArray(sources)) {
       return {
         success: false,
-        error: 'Sources must be an array'
+        error: 'Sources must be an array',
       };
     }
 
@@ -209,7 +216,7 @@ export class SourcesHandler {
     if (errors.length > 0) {
       return {
         success: false,
-        error: errors.join('; ')
+        error: errors.join('; '),
       };
     }
 
@@ -228,10 +235,10 @@ export class SourcesHandler {
 
     const stats: { total: number; byType: Record<string, number> } = {
       total: sources.length,
-      byType: {}
+      byType: {},
     };
 
-    sources.forEach(source => {
+    sources.forEach((source) => {
       const type = source.sourceType || 'unknown';
       stats.byType[type] = (stats.byType[type] || 0) + 1;
     });

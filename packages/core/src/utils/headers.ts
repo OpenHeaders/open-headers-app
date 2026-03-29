@@ -9,22 +9,54 @@ import type { HeaderNameValidation, HeaderValueValidation } from '../types/rules
 
 // Headers that cannot be modified by extensions
 const FORBIDDEN_REQUEST_HEADERS = new Set([
-  'host', 'content-length', 'connection', 'keep-alive', 'upgrade',
-  'te', 'trailer', 'transfer-encoding',
-  'accept-charset', 'accept-encoding', 'access-control-request-headers',
-  'access-control-request-method', 'date', 'dnt', 'expect', 'origin',
-  'permissions-policy', 'tk', 'upgrade-insecure-requests',
-  'proxy-authorization', 'proxy-connection',
-  'sec-fetch-dest', 'sec-fetch-mode', 'sec-fetch-site', 'sec-fetch-user',
-  'sec-ch-ua', 'sec-ch-ua-mobile', 'sec-ch-ua-platform',
-  'x-devtools-emulate-network-conditions-client-id', 'x-devtools-request-id',
+  'host',
+  'content-length',
+  'connection',
+  'keep-alive',
+  'upgrade',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'accept-charset',
+  'accept-encoding',
+  'access-control-request-headers',
+  'access-control-request-method',
+  'date',
+  'dnt',
+  'expect',
+  'origin',
+  'permissions-policy',
+  'tk',
+  'upgrade-insecure-requests',
+  'proxy-authorization',
+  'proxy-connection',
+  'sec-fetch-dest',
+  'sec-fetch-mode',
+  'sec-fetch-site',
+  'sec-fetch-user',
+  'sec-ch-ua',
+  'sec-ch-ua-mobile',
+  'sec-ch-ua-platform',
+  'x-devtools-emulate-network-conditions-client-id',
+  'x-devtools-request-id',
 ]);
 
 const FORBIDDEN_RESPONSE_HEADERS = new Set([
-  'alt-svc', 'clear-site-data', 'connection', 'content-length',
-  'content-encoding', 'content-range', 'date', 'expect-ct',
-  'keep-alive', 'public-key-pins', 'strict-transport-security',
-  'trailer', 'transfer-encoding', 'upgrade', 'vary',
+  'alt-svc',
+  'clear-site-data',
+  'connection',
+  'content-length',
+  'content-encoding',
+  'content-range',
+  'date',
+  'expect-ct',
+  'keep-alive',
+  'public-key-pins',
+  'strict-transport-security',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'vary',
 ]);
 
 /**
@@ -54,10 +86,13 @@ export function validateHeaderName(name: string, isResponse = false): HeaderName
 
   const validHeaderNameRegex = /^[!#$%&'*+\-.0-9A-Z^_`a-z|~]+$/;
   if (!validHeaderNameRegex.test(trimmedName)) {
-    return { valid: false, message: 'Header name contains invalid characters. Only letters, numbers, and -_.~!#$%&\'*+^`| are allowed' };
+    return {
+      valid: false,
+      message: "Header name contains invalid characters. Only letters, numbers, and -_.~!#$%&'*+^`| are allowed",
+    };
   }
 
-  let warning: string | undefined = undefined;
+  let warning: string | undefined;
   if (lowerName === 'referrer') {
     warning = 'Note: The correct spelling is "Referer" (single r)';
   }
@@ -104,7 +139,11 @@ export function validateHeaderValue(value: string, headerName = ''): HeaderValue
   }
 
   if (/[\x80-\xFF]/.test(value)) {
-    return { valid: true, warning: 'Header value contains non-ASCII characters that may cause compatibility issues', message: '' };
+    return {
+      valid: true,
+      warning: 'Header value contains non-ASCII characters that may cause compatibility issues',
+      message: '',
+    };
   }
 
   return { valid: true, message: '' };
@@ -138,6 +177,6 @@ export function normalizeHeaderName(headerName: string): string {
   return headerName
     .trim()
     .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join('-');
 }

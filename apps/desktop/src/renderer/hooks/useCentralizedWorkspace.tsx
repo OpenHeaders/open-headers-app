@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getCentralizedWorkspaceService, type WorkspaceServiceState } from '../services/CentralizedWorkspaceService';
 import { useCentralizedEnvironments } from './useCentralizedEnvironments';
 
 // Re-export hooks from workspace module
-export { useWorkspaces, useSources, useHeaderRules, useProxyRules } from './workspace';
+export { useHeaderRules, useProxyRules, useSources, useWorkspaces } from './workspace';
 
 /**
  * Main hook for accessing all workspace functionality
@@ -15,7 +15,7 @@ export function useCentralizedWorkspace() {
   useEffect(() => {
     // Hydrate from main process on first mount
     if (!service.getState().initialized) {
-      service.initialize().catch(e => {
+      service.initialize().catch((e) => {
         console.error('Failed to initialize workspace service:', e);
       });
     }
@@ -23,13 +23,15 @@ export function useCentralizedWorkspace() {
     const unsubscribe = service.subscribe((newState: WorkspaceServiceState) => {
       setState(newState);
     });
-    return () => { unsubscribe(); };
+    return () => {
+      unsubscribe();
+    };
   }, [service]);
 
   return {
     ...state,
     service,
-    isReady: state.initialized && !state.loading
+    isReady: state.initialized && !state.loading,
   };
 }
 

@@ -1,6 +1,6 @@
 /**
  * Storage-related components
- * 
+ *
  * Components for displaying and managing storage changes in recordings
  */
 

@@ -1,26 +1,20 @@
 // Main utils index - exports all utilities for convenience
 
+// Data structure utilities
+export * from './data-structures';
 // Error handling utilities
 export {
   CircuitBreaker,
+  ConcurrentMap,
+  ConcurrentSet,
   createLogger,
   Mutex,
   Semaphore,
-  ConcurrentMap,
-  ConcurrentSet
 } from './error-handling';
-
-// UI utilities
-export {
-  MessageProvider
-} from './ui';
-export * from './ui/messageUtil';
-
-// Validation utilities
-export * from './validation';
-
 // Formatter utilities
 export * from './formatters';
-
-// Data structure utilities
-export * from './data-structures';
+// UI utilities
+export { MessageProvider } from './ui';
+export * from './ui/messageUtil';
+// Validation utilities
+export * from './validation';

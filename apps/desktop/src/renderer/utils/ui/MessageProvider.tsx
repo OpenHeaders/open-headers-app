@@ -1,11 +1,14 @@
-import React, { createContext, useContext } from 'react';
 import { message } from 'antd';
+import type React from 'react';
+import { createContext, useContext } from 'react';
 import { createLogger } from '../error-handling/logger';
 
 const log = createLogger('MessageProvider');
 
 // Create a context for the message API
-const MessageContext = createContext<{ showMessage: (type: string, content: React.ReactNode, duration?: number) => void } | null>(null);
+const MessageContext = createContext<{
+  showMessage: (type: string, content: React.ReactNode, duration?: number) => void;
+} | null>(null);
 
 // Set of recent messages to prevent duplicates
 const recentMessages = new Set();
@@ -13,68 +16,70 @@ const recentMessages = new Set();
 /**
  * MessageProvider component that provides a global message API
  */
-interface MessageProviderProps { children: React.ReactNode; }
+interface MessageProviderProps {
+  children: React.ReactNode;
+}
 export const MessageProvider = ({ children }: MessageProviderProps) => {
-    // Get message API from Ant Design
-    const [messageApi, contextHolder] = message.useMessage();
+  // Get message API from Ant Design
+  const [messageApi, contextHolder] = message.useMessage();
 
-    // Export the message API through context
-    const showMessage = (type: string, content: React.ReactNode, duration = 3) => {
-        // Create a message key for deduplication
-        const messageKey = `${type}:${String(content)}`;
+  // Export the message API through context
+  const showMessage = (type: string, content: React.ReactNode, duration = 3) => {
+    // Create a message key for deduplication
+    const messageKey = `${type}:${String(content)}`;
 
-        // Skip if duplicate
-        if (recentMessages.has(messageKey)) {
-            log.debug(`Skipping duplicate message: ${String(content)}`);
-            return;
-        }
+    // Skip if duplicate
+    if (recentMessages.has(messageKey)) {
+      log.debug(`Skipping duplicate message: ${String(content)}`);
+      return;
+    }
 
-        // Log message attempt
-        log.debug(`Showing ${type} message: ${String(content)}`);
+    // Log message attempt
+    log.debug(`Showing ${type} message: ${String(content)}`);
 
-        // Add to recent messages set
-        recentMessages.add(messageKey);
+    // Add to recent messages set
+    recentMessages.add(messageKey);
 
-        // Remove from tracking after 2 seconds
-        setTimeout(() => {
-            recentMessages.delete(messageKey);
-        }, 2000);
+    // Remove from tracking after 2 seconds
+    setTimeout(() => {
+      recentMessages.delete(messageKey);
+    }, 2000);
 
-        // Show the message using the Ant Design message API
-        switch (type) {
-            case 'success':
-                messageApi.success(content, duration);
-                break;
-            case 'error':
-                messageApi.error(content, duration);
-                break;
-            case 'warning':
-                messageApi.warning(content, duration);
-                break;
-            case 'info':
-                messageApi.info(content, duration);
-                break;
-            default:
-                messageApi.info(content, duration);
-        }
-    };
+    // Show the message using the Ant Design message API
+    switch (type) {
+      case 'success':
+        messageApi.success(content, duration);
+        break;
+      case 'error':
+        messageApi.error(content, duration);
+        break;
+      case 'warning':
+        messageApi.warning(content, duration);
+        break;
+      case 'info':
+        messageApi.info(content, duration);
+        break;
+      default:
+        messageApi.info(content, duration);
+    }
+  };
 
-    return (
-        <MessageContext.Provider value={{ showMessage }}>
-            {/* This is the key part - renders the message container in the component tree */}
-            {contextHolder}
-            {children}
-        </MessageContext.Provider>
-    );
+  return (
+    <MessageContext.Provider value={{ showMessage }}>
+      {/* This is the key part - renders the message container in the component tree */}
+      {contextHolder}
+      {children}
+    </MessageContext.Provider>
+  );
 };
 
 /**
  * Hook to use the message API
  */
 export const useAppMessage = () => {
-    const context = useContext(MessageContext);
-    if (!context) {
-        throw new Error('useAppMessage must be used within a MessageProvider');
-    }
-    return context;
+  const context = useContext(MessageContext);
+  if (!context) {
+    throw new Error('useAppMessage must be used within a MessageProvider');
+  }
+  return context;
 };

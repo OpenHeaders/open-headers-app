@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Shared backing store for the mock
 const syncStore: Record<string, unknown> = {};
@@ -18,8 +18,8 @@ vi.mock('../../src/utils/browser-api', () => {
   };
 });
 
-import { setChunkedData, getChunkedData } from '../../src/utils/storage-chunking';
 import { storage } from '../../src/utils/browser-api';
+import { getChunkedData, setChunkedData } from '../../src/utils/storage-chunking';
 
 function clearStore(): void {
   for (const key of Object.keys(syncStore)) {
@@ -45,22 +45,18 @@ function setupStorageMocks(): void {
     },
   );
 
-  vi.mocked(storage.sync.set).mockImplementation(
-    (items: Record<string, unknown>, callback?: () => void) => {
-      Object.assign(syncStore, items);
-      callback?.();
-    },
-  );
+  vi.mocked(storage.sync.set).mockImplementation((items: Record<string, unknown>, callback?: () => void) => {
+    Object.assign(syncStore, items);
+    callback?.();
+  });
 
-  vi.mocked(storage.sync.remove).mockImplementation(
-    (keys: string | string[], callback?: () => void) => {
-      const keyArray = Array.isArray(keys) ? keys : [keys];
-      for (const k of keyArray) {
-        delete syncStore[k];
-      }
-      callback?.();
-    },
-  );
+  vi.mocked(storage.sync.remove).mockImplementation((keys: string | string[], callback?: () => void) => {
+    const keyArray = Array.isArray(keys) ? keys : [keys];
+    for (const k of keyArray) {
+      delete syncStore[k];
+    }
+    callback?.();
+  });
 }
 
 // Factory for small data under 7000 bytes
@@ -294,9 +290,9 @@ describe('storage-chunking', () => {
 
     it('round-trips data with special characters through chunking', () => {
       const data: Record<string, unknown> = {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhY21lIn0.stub-sig',
+        Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJhY21lIn0.stub-sig',
         'X-Request-Id': 'req_7f3a2b1c-d4e5-6789-abcd-ef0123456789',
-        'notes': 'Contains special chars: <>&"\' and unicode: \u00fc\u00f6\u00e4\u00df',
+        notes: 'Contains special chars: <>&"\' and unicode: \u00fc\u00f6\u00e4\u00df',
       };
 
       setChunkedData('specialRoundTrip', data);

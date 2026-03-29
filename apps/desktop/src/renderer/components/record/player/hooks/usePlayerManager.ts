@@ -15,11 +15,16 @@
  * @returns {Object} Player state and refs
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { calculateViewportScale } from '../utils/playerUtils';
-import { createLogger } from '../../../../utils/error-handling/logger';
-import type { Recording, RRWebPlayerInstance, RRWebPlayerConstructor, RRWebEvent } from '../../../../../types/recording';
+import { useEffect, useRef, useState } from 'react';
 import type { ProxyStatus } from '../../../../../types/proxy';
+import type {
+  Recording,
+  RRWebEvent,
+  RRWebPlayerConstructor,
+  RRWebPlayerInstance,
+} from '../../../../../types/recording';
+import { createLogger } from '../../../../utils/error-handling/logger';
+import { calculateViewportScale } from '../utils/playerUtils';
 
 const log = createLogger('usePlayerManager');
 
@@ -27,161 +32,161 @@ export type RecordData = Recording;
 export type { ProxyStatus, RRWebPlayerConstructor };
 
 export const usePlayerManager = (
-    record: Recording | null,
-    rrwebPlayer: RRWebPlayerConstructor | null,
-    viewMode: string,
-    autoHighlight: boolean,
-    processRecordForProxy: (record: Recording, proxyStatus: ProxyStatus) => Promise<Recording>,
-    createConsoleOverrides: () => (() => void),
-    onPlaybackTimeChange: ((time: number) => void) | null,
-    onPlayingStateChange: ((playing: boolean) => void) | null
+  record: Recording | null,
+  rrwebPlayer: RRWebPlayerConstructor | null,
+  viewMode: string,
+  autoHighlight: boolean,
+  processRecordForProxy: (record: Recording, proxyStatus: ProxyStatus) => Promise<Recording>,
+  createConsoleOverrides: () => () => void,
+  onPlaybackTimeChange: ((time: number) => void) | null,
+  onPlayingStateChange: ((playing: boolean) => void) | null,
 ) => {
-    const [player, setPlayer] = useState<RRWebPlayerInstance | null>(null);
-    const playerContainerRef = useRef<HTMLDivElement | null>(null);
-    const isInitializingRef = useRef(false);
-    const recordIdRef = useRef<string | null>(null);
-    const lastPlaybackTimeRef = useRef(0);
-    const wasPlayingRef = useRef(false);
-    const autoHighlightKeyRef = useRef(autoHighlight);
-    const previousViewModeRef = useRef('dom');
+  const [player, setPlayer] = useState<RRWebPlayerInstance | null>(null);
+  const playerContainerRef = useRef<HTMLDivElement | null>(null);
+  const isInitializingRef = useRef(false);
+  const recordIdRef = useRef<string | null>(null);
+  const lastPlaybackTimeRef = useRef(0);
+  const wasPlayingRef = useRef(false);
+  const autoHighlightKeyRef = useRef(autoHighlight);
+  const previousViewModeRef = useRef('dom');
 
-    const callbacksRef = useRef({ onPlaybackTimeChange, onPlayingStateChange });
-    callbacksRef.current = { onPlaybackTimeChange, onPlayingStateChange };
+  const callbacksRef = useRef({ onPlaybackTimeChange, onPlayingStateChange });
+  callbacksRef.current = { onPlaybackTimeChange, onPlayingStateChange };
 
-    // Clean up player when switching to video mode
-    useEffect(() => {
-        if (viewMode === 'video' && previousViewModeRef.current === 'dom' && player) {
-            log.debug('Destroying player when switching to video mode');
-            if (typeof player['$destroy'] === 'function') {
-                // $destroy is a Svelte component method
-                player['$destroy']();
-            }
-            setPlayer(null);
+  // Clean up player when switching to video mode
+  useEffect(() => {
+    if (viewMode === 'video' && previousViewModeRef.current === 'dom' && player) {
+      log.debug('Destroying player when switching to video mode');
+      if (typeof player['$destroy'] === 'function') {
+        // $destroy is a Svelte component method
+        player['$destroy']();
+      }
+      setPlayer(null);
+    }
+    previousViewModeRef.current = viewMode;
+  }, [viewMode, player]);
+
+  // Initialize player effect
+  useEffect(() => {
+    const initializePlayer = async () => {
+      if (!record || !playerContainerRef.current || !rrwebPlayer) return;
+
+      // Skip initialization if we're not in DOM view mode
+      if (viewMode !== 'dom') return;
+
+      // Skip if we're already initializing
+      if (isInitializingRef.current) return;
+
+      // Check if this is the same record and auto-highlight hasn't changed
+      const isSameRecord = recordIdRef.current === record.metadata.recordId;
+      const autoHighlightChanged = autoHighlightKeyRef.current !== autoHighlight;
+
+      log.debug('RecordPlayer init check:', {
+        isSameRecord,
+        autoHighlightChanged,
+        currentAutoHighlight: autoHighlight,
+        previousAutoHighlight: autoHighlightKeyRef.current,
+        recordId: record.metadata.recordId,
+        previousRecordId: recordIdRef.current,
+        viewMode: viewMode,
+      });
+
+      // Always re-initialize when switching back to DOM mode, or when record/autoHighlight changes
+      if (isSameRecord && !autoHighlightChanged && player) return;
+
+      // Store current playback state before destroying
+      if (player && autoHighlightChanged) {
+        log.debug('Storing playback state before reload due to autoHighlight change');
+        try {
+          const replayer = player.getReplayer();
+          if (replayer) {
+            lastPlaybackTimeRef.current = replayer.getCurrentTime();
+            const metadata = replayer.getMetaData();
+            wasPlayingRef.current = metadata?.playing || false;
+            log.debug('Stored state:', { time: lastPlaybackTimeRef.current, playing: wasPlayingRef.current });
+          }
+        } catch (e) {
+          log.warn('Could not get current playback state:', e);
         }
-        previousViewModeRef.current = viewMode;
-    }, [viewMode, player]);
+      }
 
-    // Initialize player effect
-    useEffect(() => {
-        const initializePlayer = async () => {
-            if (!record || !playerContainerRef.current || !rrwebPlayer) return;
+      isInitializingRef.current = true;
+      recordIdRef.current = record.metadata.recordId ?? null;
+      autoHighlightKeyRef.current = autoHighlight;
 
-            // Skip initialization if we're not in DOM view mode
-            if (viewMode !== 'dom') return;
+      try {
+        log.info('Starting player initialization');
 
-            // Skip if we're already initializing
-            if (isInitializingRef.current) return;
+        // Check if proxy is running
+        const proxyStatus = await window.electronAPI.proxyStatus();
+        log.info('Proxy status check:', {
+          running: proxyStatus.running,
+          port: proxyStatus.port,
+          rulesCount: proxyStatus.rulesCount,
+          sourcesCount: proxyStatus.sourcesCount,
+        });
 
-            // Check if this is the same record and auto-highlight hasn't changed
-            const isSameRecord = recordIdRef.current === record.metadata.recordId;
-            const autoHighlightChanged = autoHighlightKeyRef.current !== autoHighlight;
+        // Set up console overrides
+        const restoreConsole = createConsoleOverrides();
 
-            log.debug('RecordPlayer init check:', {
-                isSameRecord,
-                autoHighlightChanged,
-                currentAutoHighlight: autoHighlight,
-                previousAutoHighlight: autoHighlightKeyRef.current,
-                recordId: record.metadata.recordId,
-                previousRecordId: recordIdRef.current,
-                viewMode: viewMode
-            });
+        // Override window.onerror to catch errors before they reach console
+        const originalOnError = window.onerror;
+        window.onerror = (message, source, lineno, colno, error) => {
+          const suppressPatterns = [
+            'Blocked script execution',
+            "sandboxed and the 'allow-scripts'",
+            '[Intervention]',
+            'Slow network is detected',
+            'An iframe which has both allow-scripts',
+          ];
 
-            // Always re-initialize when switching back to DOM mode, or when record/autoHighlight changes
-            if (isSameRecord && !autoHighlightChanged && player) return;
+          if (suppressPatterns.some((pattern) => typeof message === 'string' && message?.includes(pattern))) {
+            return true; // Prevent default error handling
+          }
 
-            // Store current playback state before destroying
-            if (player && autoHighlightChanged) {
-                log.debug('Storing playback state before reload due to autoHighlight change');
-                try {
-                    const replayer = player.getReplayer();
-                    if (replayer) {
-                        lastPlaybackTimeRef.current = replayer.getCurrentTime();
-                        const metadata = replayer.getMetaData();
-                        wasPlayingRef.current = metadata?.playing || false;
-                        log.debug('Stored state:', { time: lastPlaybackTimeRef.current, playing: wasPlayingRef.current });
-                    }
-                } catch (e) {
-                    log.warn('Could not get current playback state:', e);
+          if (originalOnError) {
+            return originalOnError.call(window, message, source, lineno, colno, error);
+          }
+          return false;
+        };
+
+        // Intercept iframe creation to fix sandbox issues and inject console overrides
+        const originalCreateElement = document.createElement;
+        const iframeRefs: HTMLIFrameElement[] = [];
+
+        // Monkey-patch createElement to intercept iframe creation for sandboxing
+        (document as { createElement: (tagName: string) => HTMLElement }).createElement = (tagName: string) => {
+          const element = (originalCreateElement as (tagName: string) => HTMLElement).call(document, tagName);
+
+          if (tagName.toLowerCase() === 'iframe') {
+            const iframeElement = element as HTMLIFrameElement;
+            // Store reference for cleanup
+            iframeRefs.push(iframeElement);
+
+            // Override setAttribute to intercept sandbox attribute
+            const originalSetAttribute = element.setAttribute;
+            element.setAttribute = function (name, value) {
+              if (name === 'sandbox') {
+                // Always add allow-scripts to prevent errors
+                const sandboxValues = value.split(' ').filter(Boolean);
+                if (!sandboxValues.includes('allow-scripts')) {
+                  sandboxValues.push('allow-scripts');
                 }
-            }
+                // Don't add allow-same-origin if allow-scripts is present
+                // This prevents the security warning
+                value = sandboxValues.join(' ');
+              }
+              return originalSetAttribute.call(this, name, value);
+            };
 
-            isInitializingRef.current = true;
-            recordIdRef.current = record.metadata.recordId ?? null;
-            autoHighlightKeyRef.current = autoHighlight;
-
-            try {
-                log.info('Starting player initialization');
-
-                // Check if proxy is running
-                const proxyStatus = await window.electronAPI.proxyStatus();
-                log.info('Proxy status check:', {
-                    running: proxyStatus.running,
-                    port: proxyStatus.port,
-                    rulesCount: proxyStatus.rulesCount,
-                    sourcesCount: proxyStatus.sourcesCount
-                });
-
-                // Set up console overrides
-                const restoreConsole = createConsoleOverrides();
-
-                // Override window.onerror to catch errors before they reach console
-                const originalOnError = window.onerror;
-                window.onerror = function(message, source, lineno, colno, error) {
-                    const suppressPatterns = [
-                        'Blocked script execution',
-                        'sandboxed and the \'allow-scripts\'',
-                        '[Intervention]',
-                        'Slow network is detected',
-                        'An iframe which has both allow-scripts'
-                    ];
-                    
-                    if (suppressPatterns.some(pattern => typeof message === 'string' && message?.includes(pattern))) {
-                        return true; // Prevent default error handling
-                    }
-                    
-                    if (originalOnError) {
-                        return originalOnError.call(window, message, source, lineno, colno, error);
-                    }
-                    return false;
-                };
-
-                // Intercept iframe creation to fix sandbox issues and inject console overrides
-                const originalCreateElement = document.createElement;
-                const iframeRefs: HTMLIFrameElement[] = [];
-                
-                // Monkey-patch createElement to intercept iframe creation for sandboxing
-                (document as { createElement: (tagName: string) => HTMLElement }).createElement = function(tagName: string) {
-                    const element = (originalCreateElement as (tagName: string) => HTMLElement).call(document, tagName);
-                    
-                    if (tagName.toLowerCase() === 'iframe') {
-                        const iframeElement = element as HTMLIFrameElement;
-                        // Store reference for cleanup
-                        iframeRefs.push(iframeElement);
-                        
-                        // Override setAttribute to intercept sandbox attribute
-                        const originalSetAttribute = element.setAttribute;
-                        element.setAttribute = function(name, value) {
-                            if (name === 'sandbox') {
-                                // Always add allow-scripts to prevent errors
-                                const sandboxValues = value.split(' ').filter(Boolean);
-                                if (!sandboxValues.includes('allow-scripts')) {
-                                    sandboxValues.push('allow-scripts');
-                                }
-                                // Don't add allow-same-origin if allow-scripts is present
-                                // This prevents the security warning
-                                value = sandboxValues.join(' ');
-                            }
-                            return originalSetAttribute.call(this, name, value);
-                        };
-                        
-                        // When iframe loads, inject console overrides into it
-                        iframeElement.addEventListener('load', () => {
-                            try {
-                                const iframeWindow = iframeElement.contentWindow;
-                                if (iframeWindow && iframeElement.contentDocument) {
-                                    // Inject styles to prevent font loading warnings
-                                    const style = iframeElement.contentDocument.createElement('style');
-                                    style.textContent = `
+            // When iframe loads, inject console overrides into it
+            iframeElement.addEventListener('load', () => {
+              try {
+                const iframeWindow = iframeElement.contentWindow;
+                if (iframeWindow && iframeElement.contentDocument) {
+                  // Inject styles to prevent font loading warnings
+                  const style = iframeElement.contentDocument.createElement('style');
+                  style.textContent = `
                                         @font-face {
                                             font-display: optional !important;
                                         }
@@ -189,13 +194,13 @@ export const usePlayerManager = (
                                             font-display: optional !important;
                                         }
                                     `;
-                                    if (iframeElement.contentDocument.head) {
-                                        iframeElement.contentDocument.head.appendChild(style);
-                                    }
+                  if (iframeElement.contentDocument.head) {
+                    iframeElement.contentDocument.head.appendChild(style);
+                  }
 
-                                    // Inject console overrides into iframe
-                                    const script = iframeElement.contentDocument.createElement('script');
-                                    script.textContent = `
+                  // Inject console overrides into iframe
+                  const script = iframeElement.contentDocument.createElement('script');
+                  script.textContent = `
                                         (() => {
                                             const originalError = console.error;
                                             const originalWarn = console.warn;
@@ -236,223 +241,231 @@ export const usePlayerManager = (
                                             };
                                         })();
                                     `;
-                                    if (iframeElement.contentDocument.head) {
-                                        iframeElement.contentDocument.head.appendChild(script);
-                                    } else if (iframeElement.contentDocument.body) {
-                                        iframeElement.contentDocument.body.appendChild(script);
-                                    }
-                                }
-                            } catch (e) {
-                                // Ignore errors if we can't access iframe content
-                            }
-                        });
-                    }
-                    
-                    return element;
-                };
-
-                // Clear previous player
-                if (player) {
-                    log.debug('Destroying previous player');
-                    if (typeof player['$destroy'] === 'function') {
-                        // $destroy is a Svelte component method
-                        player['$destroy']();
-                    }
-                    if (player._restoreCreateElement) {
-                        player._restoreCreateElement();
-                    }
+                  if (iframeElement.contentDocument.head) {
+                    iframeElement.contentDocument.head.appendChild(script);
+                  } else if (iframeElement.contentDocument.body) {
+                    iframeElement.contentDocument.body.appendChild(script);
+                  }
                 }
-                playerContainerRef.current.innerHTML = '';
-                log.debug('Creating new player instance');
+              } catch (e) {
+                // Ignore errors if we can't access iframe content
+              }
+            });
+          }
 
-                // Get viewport dimensions and calculate scale
-                const { width, height } = record.metadata.viewport || { width: 1024, height: 768 };
-                const containerWidth = playerContainerRef.current.offsetWidth;
-                const containerHeight = 450;
-                const scale = calculateViewportScale(record.metadata.viewport ?? { width: 1024, height: 768 }, containerWidth, containerHeight);
-
-                // Process the recording through proxy if running
-                // Note: The recording should already be preprocessed when saved
-                let processedRecord = await processRecordForProxy(record, proxyStatus);
-                
-                log.info('Creating player instance');
-
-                // Create player with processed record
-                const newPlayer = new rrwebPlayer({
-                    target: playerContainerRef.current,
-                    props: {
-                        events: processedRecord.events,
-                        width: width * scale,
-                        height: height * scale,
-                        autoPlay: false,
-                        showController: true,
-                        mouseTail: true,
-                        triggerFocus: true,
-                        UNSAFE_replayCanvas: false,
-                        skipInactive: true,
-                        showDebug: false,
-                        blockClass: 'oh-block',
-                        liveMode: false,
-                        // Add these for better performance:
-                        speed: 1,
-                        unpackFn: null,
-                        showWarning: false,
-                        insertStyleRules: [],
-                        // Prevent iframe issues
-                        pauseAnimation: false,
-                        // Disable iframe creation to prevent sandbox errors
-                        useVirtualDom: false,
-                        // Add error handling for missing nodes
-                        plugins: [
-                            {
-                                handler: (event: RRWebEvent) => {
-                                    if (event.type === 3 && event.data) { // Incremental snapshot
-                                        try {
-                                            return event;
-                                        } catch (e) {
-                                            log.warn('Skipping problematic mutation:', e);
-                                            return null;
-                                        }
-                                    }
-                                    return event;
-                                }
-                            },
-                            {
-                                handler: (event: RRWebEvent) => {
-                                    if (event.type === 2) { // Full snapshot
-                                        return event;
-                                    }
-
-                                    if (event.type === 3 && event.data?.source === 0) { // DOM mutation
-                                        if (event.data.adds) {
-                                            event.data.adds = event.data.adds.filter(add => {
-                                                if (add.node?.tagName === 'script' &&
-                                                    add.node?.textContent?.includes('Blocked script execution')) {
-                                                    return false;
-                                                }
-                                                return true;
-                                            });
-                                        }
-                                    }
-
-                                    return event;
-                                }
-                            }
-                        ]
-                    }
-                });
-
-                setPlayer(newPlayer);
-
-                // Restore function for cleanup
-                newPlayer._restoreConsole = restoreConsole;
-                newPlayer._restoreCreateElement = () => {
-                    document.createElement = originalCreateElement;
-                    window.onerror = originalOnError;
-                    // Clean up iframe references
-                    iframeRefs.forEach(iframe => {
-                        if (iframe.parentNode) {
-                            iframe.parentNode.removeChild(iframe);
-                        }
-                    });
-                };
-
-                // Store event handlers so we can remove them later
-                newPlayer._eventHandlers = {
-                    timeUpdate: null,
-                    stateUpdate: null
-                };
-
-                // Restore playback position if this was a reload due to autoHighlight change
-                if (autoHighlightChanged && lastPlaybackTimeRef.current > 0) {
-                    setTimeout(() => {
-                        try {
-                            const replayer = newPlayer.getReplayer();
-                            if (replayer) {
-                                replayer.pause();
-                                replayer.play(lastPlaybackTimeRef.current);
-                                if (!wasPlayingRef.current) {
-                                    setTimeout(() => replayer.pause(), 50);
-                                }
-                            }
-                        } catch (e) {
-                            log.warn('Could not restore playback position:', e);
-                        }
-                    }, 100);
-                }
-
-                log.info('Player initialization complete');
-
-            } catch (error) {
-                log.error('Failed to initialize player:', error);
-            } finally {
-                isInitializingRef.current = false;
-            }
+          return element;
         };
 
-        initializePlayer().catch(error => {
-            log.error('Failed to initialize player:', error);
+        // Clear previous player
+        if (player) {
+          log.debug('Destroying previous player');
+          if (typeof player['$destroy'] === 'function') {
+            // $destroy is a Svelte component method
+            player['$destroy']();
+          }
+          if (player._restoreCreateElement) {
+            player._restoreCreateElement();
+          }
+        }
+        playerContainerRef.current.innerHTML = '';
+        log.debug('Creating new player instance');
+
+        // Get viewport dimensions and calculate scale
+        const { width, height } = record.metadata.viewport || { width: 1024, height: 768 };
+        const containerWidth = playerContainerRef.current.offsetWidth;
+        const containerHeight = 450;
+        const scale = calculateViewportScale(
+          record.metadata.viewport ?? { width: 1024, height: 768 },
+          containerWidth,
+          containerHeight,
+        );
+
+        // Process the recording through proxy if running
+        // Note: The recording should already be preprocessed when saved
+        const processedRecord = await processRecordForProxy(record, proxyStatus);
+
+        log.info('Creating player instance');
+
+        // Create player with processed record
+        const newPlayer = new rrwebPlayer({
+          target: playerContainerRef.current,
+          props: {
+            events: processedRecord.events,
+            width: width * scale,
+            height: height * scale,
+            autoPlay: false,
+            showController: true,
+            mouseTail: true,
+            triggerFocus: true,
+            UNSAFE_replayCanvas: false,
+            skipInactive: true,
+            showDebug: false,
+            blockClass: 'oh-block',
+            liveMode: false,
+            // Add these for better performance:
+            speed: 1,
+            unpackFn: null,
+            showWarning: false,
+            insertStyleRules: [],
+            // Prevent iframe issues
+            pauseAnimation: false,
+            // Disable iframe creation to prevent sandbox errors
+            useVirtualDom: false,
+            // Add error handling for missing nodes
+            plugins: [
+              {
+                handler: (event: RRWebEvent) => {
+                  if (event.type === 3 && event.data) {
+                    // Incremental snapshot
+                    try {
+                      return event;
+                    } catch (e) {
+                      log.warn('Skipping problematic mutation:', e);
+                      return null;
+                    }
+                  }
+                  return event;
+                },
+              },
+              {
+                handler: (event: RRWebEvent) => {
+                  if (event.type === 2) {
+                    // Full snapshot
+                    return event;
+                  }
+
+                  if (event.type === 3 && event.data?.source === 0) {
+                    // DOM mutation
+                    if (event.data.adds) {
+                      event.data.adds = event.data.adds.filter((add) => {
+                        if (
+                          add.node?.tagName === 'script' &&
+                          add.node?.textContent?.includes('Blocked script execution')
+                        ) {
+                          return false;
+                        }
+                        return true;
+                      });
+                    }
+                  }
+
+                  return event;
+                },
+              },
+            ],
+          },
         });
-    }, [record?.metadata?.recordId, rrwebPlayer, autoHighlight, processRecordForProxy, createConsoleOverrides, viewMode]);
 
-    // Set up event listeners only when autoHighlight is enabled
-    useEffect(() => {
-        if (!player || typeof player.addEventListener !== 'function' || !autoHighlight) return;
+        setPlayer(newPlayer);
 
-        // Initialize tracking variables
-        let lastTime: number | null = null;
-
-        const timeUpdateHandler = (event: { payload: unknown }) => {
-            const time = event.payload as number;
-
-            // Only update if time changed by at least 1000ms
-            if (lastTime === null || Math.abs(time - lastTime) >= 1000) {
-                lastTime = time;
-                if (callbacksRef.current.onPlaybackTimeChange) {
-                    callbacksRef.current.onPlaybackTimeChange(time);
-                }
+        // Restore function for cleanup
+        newPlayer._restoreConsole = restoreConsole;
+        newPlayer._restoreCreateElement = () => {
+          document.createElement = originalCreateElement;
+          window.onerror = originalOnError;
+          // Clean up iframe references
+          iframeRefs.forEach((iframe) => {
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
             }
+          });
         };
 
-        const stateUpdateHandler = (event: { payload: unknown }) => {
-            const state = event.payload as { playing?: boolean } | null;
-            if (state && typeof state.playing === 'boolean' && callbacksRef.current.onPlayingStateChange) {
-                callbacksRef.current.onPlayingStateChange(state.playing);
+        // Store event handlers so we can remove them later
+        newPlayer._eventHandlers = {
+          timeUpdate: null,
+          stateUpdate: null,
+        };
+
+        // Restore playback position if this was a reload due to autoHighlight change
+        if (autoHighlightChanged && lastPlaybackTimeRef.current > 0) {
+          setTimeout(() => {
+            try {
+              const replayer = newPlayer.getReplayer();
+              if (replayer) {
+                replayer.pause();
+                replayer.play(lastPlaybackTimeRef.current);
+                if (!wasPlayingRef.current) {
+                  setTimeout(() => replayer.pause(), 50);
+                }
+              }
+            } catch (e) {
+              log.warn('Could not restore playback position:', e);
             }
-        };
+          }, 100);
+        }
 
-        // Add event listeners only when autoHighlight is true
-        player.addEventListener('ui-update-current-time', timeUpdateHandler);
-        player.addEventListener('ui-update-player-state', stateUpdateHandler);
-
-        // Store reference to handlers for cleanup purposes
-        player._eventHandlers = {
-            timeUpdate: timeUpdateHandler,
-            stateUpdate: stateUpdateHandler
-        };
-    }, [player, autoHighlight]);
-
-    // Cleanup effect
-    useEffect(() => {
-        return () => {
-            if (player) {
-                if (typeof player['$destroy'] === 'function') {
-                    // $destroy is a Svelte component method
-                    player['$destroy']();
-                }
-                if (player._restoreConsole) {
-                    player._restoreConsole();
-                }
-                if (player._restoreCreateElement) {
-                    player._restoreCreateElement();
-                }
-            }
-            recordIdRef.current = null;
-        };
-    }, [player]);
-
-    return {
-        player,
-        playerContainerRef
+        log.info('Player initialization complete');
+      } catch (error) {
+        log.error('Failed to initialize player:', error);
+      } finally {
+        isInitializingRef.current = false;
+      }
     };
+
+    initializePlayer().catch((error) => {
+      log.error('Failed to initialize player:', error);
+    });
+  }, [record?.metadata?.recordId, rrwebPlayer, autoHighlight, processRecordForProxy, createConsoleOverrides, viewMode]);
+
+  // Set up event listeners only when autoHighlight is enabled
+  useEffect(() => {
+    if (!player || typeof player.addEventListener !== 'function' || !autoHighlight) return;
+
+    // Initialize tracking variables
+    let lastTime: number | null = null;
+
+    const timeUpdateHandler = (event: { payload: unknown }) => {
+      const time = event.payload as number;
+
+      // Only update if time changed by at least 1000ms
+      if (lastTime === null || Math.abs(time - lastTime) >= 1000) {
+        lastTime = time;
+        if (callbacksRef.current.onPlaybackTimeChange) {
+          callbacksRef.current.onPlaybackTimeChange(time);
+        }
+      }
+    };
+
+    const stateUpdateHandler = (event: { payload: unknown }) => {
+      const state = event.payload as { playing?: boolean } | null;
+      if (state && typeof state.playing === 'boolean' && callbacksRef.current.onPlayingStateChange) {
+        callbacksRef.current.onPlayingStateChange(state.playing);
+      }
+    };
+
+    // Add event listeners only when autoHighlight is true
+    player.addEventListener('ui-update-current-time', timeUpdateHandler);
+    player.addEventListener('ui-update-player-state', stateUpdateHandler);
+
+    // Store reference to handlers for cleanup purposes
+    player._eventHandlers = {
+      timeUpdate: timeUpdateHandler,
+      stateUpdate: stateUpdateHandler,
+    };
+  }, [player, autoHighlight]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (player) {
+        if (typeof player['$destroy'] === 'function') {
+          // $destroy is a Svelte component method
+          player['$destroy']();
+        }
+        if (player._restoreConsole) {
+          player._restoreConsole();
+        }
+        if (player._restoreCreateElement) {
+          player._restoreCreateElement();
+        }
+      }
+      recordIdRef.current = null;
+    };
+  }, [player]);
+
+  return {
+    player,
+    playerContainerRef,
+  };
 };

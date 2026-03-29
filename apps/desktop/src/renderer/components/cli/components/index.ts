@@ -7,6 +7,6 @@
 export * from './sections';
 
 export {
-    CliServerControls,
-    CliServerLogs
+  CliServerControls,
+  CliServerLogs,
 } from './sections';

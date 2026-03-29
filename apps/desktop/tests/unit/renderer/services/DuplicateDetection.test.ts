@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { Source } from '../../../../src/types/source';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
@@ -20,17 +20,17 @@ function makeEnterpriseEnvSource(varName = 'OAUTH2_ACCESS_TOKEN'): ImportSource 
 }
 
 import {
-  isSourceDuplicate,
-  isProxyRuleDuplicate,
-  areHeadersEqual,
-  isRuleDuplicate,
-  areRulesContentEqual,
   areHeaderModificationsEqual,
-  isEnvironmentVariableDuplicate,
-  isWorkspaceNameDuplicate,
-  generateUniqueName,
-  createDuplicateDetector,
+  areHeadersEqual,
+  areRulesContentEqual,
   batchDuplicateDetection,
+  createDuplicateDetector,
+  generateUniqueName,
+  isEnvironmentVariableDuplicate,
+  isProxyRuleDuplicate,
+  isRuleDuplicate,
+  isSourceDuplicate,
+  isWorkspaceNameDuplicate,
 } from '../../../../src/renderer/services/export-import/utilities/DuplicateDetection';
 
 // ---------------------------------------------------------------------------
@@ -51,7 +51,10 @@ describe('isSourceDuplicate', () => {
   });
 
   it('does not flag different file sources', () => {
-    const source = makeImportSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/production.json' });
+    const source = makeImportSource({
+      sourceType: 'file',
+      sourcePath: '/Users/jane.doe/Documents/OpenHeaders/tokens/production.json',
+    });
     expect(isSourceDuplicate(source, [makeEnterpriseFileSource()])).toBe(false);
   });
 
@@ -119,24 +122,30 @@ describe('areHeadersEqual', () => {
   });
 
   it('returns false for different header names', () => {
-    expect(areHeadersEqual(
-      { name: 'Authorization', isDynamic: false, value: 'abc' },
-      { name: 'X-API-Key', isDynamic: false, value: 'abc' },
-    )).toBe(false);
+    expect(
+      areHeadersEqual(
+        { name: 'Authorization', isDynamic: false, value: 'abc' },
+        { name: 'X-API-Key', isDynamic: false, value: 'abc' },
+      ),
+    ).toBe(false);
   });
 
   it('returns false when isDynamic differs', () => {
-    expect(areHeadersEqual(
-      { name: 'Authorization', isDynamic: false, value: 'abc' },
-      { name: 'Authorization', isDynamic: true, sourceId: 's1' },
-    )).toBe(false);
+    expect(
+      areHeadersEqual(
+        { name: 'Authorization', isDynamic: false, value: 'abc' },
+        { name: 'Authorization', isDynamic: true, sourceId: 's1' },
+      ),
+    ).toBe(false);
   });
 
   it('returns false for different static values', () => {
-    expect(areHeadersEqual(
-      { name: 'Authorization', isDynamic: false, value: 'Bearer token-a' },
-      { name: 'Authorization', isDynamic: false, value: 'Bearer token-b' },
-    )).toBe(false);
+    expect(
+      areHeadersEqual(
+        { name: 'Authorization', isDynamic: false, value: 'Bearer token-a' },
+        { name: 'Authorization', isDynamic: false, value: 'Bearer token-b' },
+      ),
+    ).toBe(false);
   });
 
   it('returns true for identical dynamic headers with enterprise source', () => {
@@ -157,17 +166,21 @@ describe('areHeadersEqual', () => {
   });
 
   it('returns false for different sourceId in dynamic headers', () => {
-    expect(areHeadersEqual(
-      { name: 'Authorization', isDynamic: true, sourceId: 'src-prod-1' },
-      { name: 'Authorization', isDynamic: true, sourceId: 'src-staging-2' },
-    )).toBe(false);
+    expect(
+      areHeadersEqual(
+        { name: 'Authorization', isDynamic: true, sourceId: 'src-prod-1' },
+        { name: 'Authorization', isDynamic: true, sourceId: 'src-staging-2' },
+      ),
+    ).toBe(false);
   });
 
   it('returns false for different prefix in dynamic headers', () => {
-    expect(areHeadersEqual(
-      { name: 'Authorization', isDynamic: true, sourceId: 's1', prefix: 'Bearer ' },
-      { name: 'Authorization', isDynamic: true, sourceId: 's1', prefix: 'Token ' },
-    )).toBe(false);
+    expect(
+      areHeadersEqual(
+        { name: 'Authorization', isDynamic: true, sourceId: 's1', prefix: 'Bearer ' },
+        { name: 'Authorization', isDynamic: true, sourceId: 's1', prefix: 'Token ' },
+      ),
+    ).toBe(false);
   });
 });
 
@@ -200,48 +213,56 @@ describe('isProxyRuleDuplicate', () => {
       headerValue: 'Bearer token123',
       domains: ['*.openheaders.io', 'api.partner-service.io'],
     };
-    const existing = [{
-      id: 'pr-old-id',
-      headerName: 'Authorization',
-      headerValue: 'Bearer token123',
-      domains: ['api.partner-service.io', '*.openheaders.io'], // reversed order
-    }];
+    const existing = [
+      {
+        id: 'pr-old-id',
+        headerName: 'Authorization',
+        headerValue: 'Bearer token123',
+        domains: ['api.partner-service.io', '*.openheaders.io'], // reversed order
+      },
+    ];
     expect(isProxyRuleDuplicate(rule, existing)).toBe(true);
   });
 
   it('does not match rules with different header names', () => {
-    expect(isProxyRuleDuplicate(
-      { id: '1', headerName: 'X-API-Key', headerValue: 'v1' },
-      [{ id: '2', headerName: 'Authorization', headerValue: 'v1' }],
-    )).toBe(false);
+    expect(
+      isProxyRuleDuplicate({ id: '1', headerName: 'X-API-Key', headerValue: 'v1' }, [
+        { id: '2', headerName: 'Authorization', headerValue: 'v1' },
+      ]),
+    ).toBe(false);
   });
 
   it('does not match rules with different domains', () => {
-    expect(isProxyRuleDuplicate(
-      { id: '1', headerName: 'Authorization', headerValue: 'v1', domains: ['a.openheaders.io'] },
-      [{ id: '2', headerName: 'Authorization', headerValue: 'v1', domains: ['b.openheaders.io'] }],
-    )).toBe(false);
+    expect(
+      isProxyRuleDuplicate({ id: '1', headerName: 'Authorization', headerValue: 'v1', domains: ['a.openheaders.io'] }, [
+        { id: '2', headerName: 'Authorization', headerValue: 'v1', domains: ['b.openheaders.io'] },
+      ]),
+    ).toBe(false);
   });
 
   it('matches rules with same headers and no domains (both undefined)', () => {
-    expect(isProxyRuleDuplicate(
-      { id: '1', headerName: 'X-Key', headerValue: 'v1' },
-      [{ id: '2', headerName: 'X-Key', headerValue: 'v1' }],
-    )).toBe(true);
+    expect(
+      isProxyRuleDuplicate({ id: '1', headerName: 'X-Key', headerValue: 'v1' }, [
+        { id: '2', headerName: 'X-Key', headerValue: 'v1' },
+      ]),
+    ).toBe(true);
   });
 
   it('does not match rules with different values', () => {
-    expect(isProxyRuleDuplicate(
-      { id: '1', headerName: 'Authorization', headerValue: 'Bearer a' },
-      [{ id: '2', headerName: 'Authorization', headerValue: 'Bearer b' }],
-    )).toBe(false);
+    expect(
+      isProxyRuleDuplicate({ id: '1', headerName: 'Authorization', headerValue: 'Bearer a' }, [
+        { id: '2', headerName: 'Authorization', headerValue: 'Bearer b' },
+      ]),
+    ).toBe(false);
   });
 
   it('returns false for empty existing list', () => {
-    expect(isProxyRuleDuplicate(
-      { id: '1', headerName: 'Authorization', headerValue: 'v1', domains: ['*.openheaders.io'] },
-      [],
-    )).toBe(false);
+    expect(
+      isProxyRuleDuplicate(
+        { id: '1', headerName: 'Authorization', headerValue: 'v1', domains: ['*.openheaders.io'] },
+        [],
+      ),
+    ).toBe(false);
   });
 });
 
@@ -258,10 +279,7 @@ describe('isRuleDuplicate', () => {
   });
 
   it('detects duplicate by id', () => {
-    expect(isRuleDuplicate(
-      { id: 'rule-a1b2c3d4' },
-      [{ id: 'rule-a1b2c3d4' }],
-    )).toBe(true);
+    expect(isRuleDuplicate({ id: 'rule-a1b2c3d4' }, [{ id: 'rule-a1b2c3d4' }])).toBe(true);
   });
 
   it('does not match different ids', () => {
@@ -274,51 +292,53 @@ describe('isRuleDuplicate', () => {
   });
 
   it('content comparison detects different names', () => {
-    expect(isRuleDuplicate(
-      { name: 'Rule A', enabled: true, pattern: '*.openheaders.io', action: 'block' },
-      [{ name: 'Rule B', enabled: true, pattern: '*.openheaders.io', action: 'block' }],
-    )).toBe(false);
+    expect(
+      isRuleDuplicate({ name: 'Rule A', enabled: true, pattern: '*.openheaders.io', action: 'block' }, [
+        { name: 'Rule B', enabled: true, pattern: '*.openheaders.io', action: 'block' },
+      ]),
+    ).toBe(false);
   });
 
   it('content comparison detects different enabled state', () => {
-    expect(isRuleDuplicate(
-      { name: 'Rule', enabled: true, pattern: '*', action: 'block' },
-      [{ name: 'Rule', enabled: false, pattern: '*', action: 'block' }],
-    )).toBe(false);
+    expect(
+      isRuleDuplicate({ name: 'Rule', enabled: true, pattern: '*', action: 'block' }, [
+        { name: 'Rule', enabled: false, pattern: '*', action: 'block' },
+      ]),
+    ).toBe(false);
   });
 });
 
 describe('areRulesContentEqual', () => {
   it('returns false for different actions', () => {
     const base = { name: 'R', enabled: true, pattern: '*.openheaders.io' };
-    expect(areRulesContentEqual(
-      { ...base, action: 'block' },
-      { ...base, action: 'redirect' },
-    )).toBe(false);
+    expect(areRulesContentEqual({ ...base, action: 'block' }, { ...base, action: 'redirect' })).toBe(false);
   });
 
   it('compares redirect URLs', () => {
     const base = { name: 'R', enabled: true, pattern: '*', action: 'redirect' };
-    expect(areRulesContentEqual(
-      { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
-      { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
-    )).toBe(true);
+    expect(
+      areRulesContentEqual(
+        { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
+        { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
+      ),
+    ).toBe(true);
   });
 
   it('compares redirect URLs - different', () => {
     const base = { name: 'R', enabled: true, pattern: '*', action: 'redirect' };
-    expect(areRulesContentEqual(
-      { ...base, redirectUrl: 'https://api.openheaders.io/v1' },
-      { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
-    )).toBe(false);
+    expect(
+      areRulesContentEqual(
+        { ...base, redirectUrl: 'https://api.openheaders.io/v1' },
+        { ...base, redirectUrl: 'https://api.openheaders.io/v2' },
+      ),
+    ).toBe(false);
   });
 
   it('compares payloads for modify-payload', () => {
     const base = { name: 'R', enabled: true, pattern: '*', action: 'modify-payload' };
-    expect(areRulesContentEqual(
-      { ...base, payload: '{"key":"value"}' },
-      { ...base, payload: '{"key":"value"}' },
-    )).toBe(true);
+    expect(areRulesContentEqual({ ...base, payload: '{"key":"value"}' }, { ...base, payload: '{"key":"value"}' })).toBe(
+      true,
+    );
   });
 
   it('block rules with same basics are equal', () => {
@@ -329,10 +349,7 @@ describe('areRulesContentEqual', () => {
   it('modify-headers compares headers', () => {
     const headers = [{ name: 'Authorization', isDynamic: false, value: 'Bearer token' }];
     const base = { name: 'R', enabled: true, pattern: '*', action: 'modify-headers' };
-    expect(areRulesContentEqual(
-      { ...base, headers },
-      { ...base, headers: [...headers] },
-    )).toBe(true);
+    expect(areRulesContentEqual({ ...base, headers }, { ...base, headers: [...headers] })).toBe(true);
   });
 
   it('unknown action falls back to JSON comparison', () => {
@@ -341,10 +358,12 @@ describe('areRulesContentEqual', () => {
   });
 
   it('returns false for different patterns', () => {
-    expect(areRulesContentEqual(
-      { name: 'R', enabled: true, pattern: '*.openheaders.io', action: 'block' },
-      { name: 'R', enabled: true, pattern: '*.partner.io', action: 'block' },
-    )).toBe(false);
+    expect(
+      areRulesContentEqual(
+        { name: 'R', enabled: true, pattern: '*.openheaders.io', action: 'block' },
+        { name: 'R', enabled: true, pattern: '*.partner.io', action: 'block' },
+      ),
+    ).toBe(false);
   });
 });
 
@@ -361,10 +380,7 @@ describe('areHeaderModificationsEqual', () => {
   });
 
   it('returns false for different lengths', () => {
-    expect(areHeaderModificationsEqual(
-      [{ name: 'Authorization', isDynamic: false, value: '1' }],
-      [],
-    )).toBe(false);
+    expect(areHeaderModificationsEqual([{ name: 'Authorization', isDynamic: false, value: '1' }], [])).toBe(false);
   });
 
   it('sorts by name for comparison (order-independent)', () => {
@@ -380,10 +396,12 @@ describe('areHeaderModificationsEqual', () => {
   });
 
   it('returns false for same names but different values', () => {
-    expect(areHeaderModificationsEqual(
-      [{ name: 'Authorization', isDynamic: false, value: 'Bearer a' }],
-      [{ name: 'Authorization', isDynamic: false, value: 'Bearer b' }],
-    )).toBe(false);
+    expect(
+      areHeaderModificationsEqual(
+        [{ name: 'Authorization', isDynamic: false, value: 'Bearer a' }],
+        [{ name: 'Authorization', isDynamic: false, value: 'Bearer b' }],
+      ),
+    ).toBe(false);
   });
 
   it('compares enterprise-like header arrays', () => {
@@ -429,34 +447,44 @@ describe('isEnvironmentVariableDuplicate', () => {
   });
 
   it('returns true for existing non-empty string value', () => {
-    expect(isEnvironmentVariableDuplicate('API_KEY', 'Production', {
-      Production: { API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' },
-    })).toBe(true);
+    expect(
+      isEnvironmentVariableDuplicate('API_KEY', 'Production', {
+        Production: { API_KEY: 'ohk_live_4eC39HqLyjWDarjtT1zdp7dc' },
+      }),
+    ).toBe(true);
   });
 
   it('handles object-form variables with enterprise JWT value', () => {
-    expect(isEnvironmentVariableDuplicate('BEARER_TOKEN', 'Production', {
-      Production: { BEARER_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig' } },
-    })).toBe(true);
+    expect(
+      isEnvironmentVariableDuplicate('BEARER_TOKEN', 'Production', {
+        Production: { BEARER_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig' } },
+      }),
+    ).toBe(true);
   });
 
   it('returns false for object-form variable with empty value (schema placeholder)', () => {
-    expect(isEnvironmentVariableDuplicate('OAUTH2_CLIENT_SECRET', 'Production', {
-      Production: { OAUTH2_CLIENT_SECRET: { value: '' } },
-    })).toBe(false);
+    expect(
+      isEnvironmentVariableDuplicate('OAUTH2_CLIENT_SECRET', 'Production', {
+        Production: { OAUTH2_CLIENT_SECRET: { value: '' } },
+      }),
+    ).toBe(false);
   });
 
   it('returns false for object-form variable with null value', () => {
-    expect(isEnvironmentVariableDuplicate('API_KEY', 'Staging', {
-      Staging: { API_KEY: { value: null } },
-    })).toBe(false);
+    expect(
+      isEnvironmentVariableDuplicate('API_KEY', 'Staging', {
+        Staging: { API_KEY: { value: null } },
+      }),
+    ).toBe(false);
   });
 
   it('checks the correct environment (not all)', () => {
-    expect(isEnvironmentVariableDuplicate('API_KEY', 'Staging', {
-      Production: { API_KEY: 'filled' },
-      Staging: { API_KEY: '' }, // schema placeholder
-    })).toBe(false);
+    expect(
+      isEnvironmentVariableDuplicate('API_KEY', 'Staging', {
+        Production: { API_KEY: 'filled' },
+        Staging: { API_KEY: '' }, // schema placeholder
+      }),
+    ).toBe(false);
   });
 });
 
@@ -473,17 +501,21 @@ describe('isWorkspaceNameDuplicate', () => {
   });
 
   it('detects matching enterprise workspace name', () => {
-    expect(isWorkspaceNameDuplicate(
-      'OpenHeaders — Production',
-      [{ name: 'OpenHeaders — Staging' }, { name: 'OpenHeaders — Production' }],
-    )).toBe(true);
+    expect(
+      isWorkspaceNameDuplicate('OpenHeaders — Production', [
+        { name: 'OpenHeaders — Staging' },
+        { name: 'OpenHeaders — Production' },
+      ]),
+    ).toBe(true);
   });
 
   it('returns false when no match', () => {
-    expect(isWorkspaceNameDuplicate(
-      'OpenHeaders — QA',
-      [{ name: 'OpenHeaders — Production' }, { name: 'OpenHeaders — Staging' }],
-    )).toBe(false);
+    expect(
+      isWorkspaceNameDuplicate('OpenHeaders — QA', [
+        { name: 'OpenHeaders — Production' },
+        { name: 'OpenHeaders — Staging' },
+      ]),
+    ).toBe(false);
   });
 
   it('is case-sensitive', () => {
@@ -534,7 +566,12 @@ describe('createDuplicateDetector', () => {
 
   it('creates detector for proxyRules', () => {
     const detect = createDuplicateDetector('proxyRules');
-    const rule = { id: 'pr-1', headerName: 'Authorization', headerValue: 'Bearer token', domains: ['*.openheaders.io'] };
+    const rule = {
+      id: 'pr-1',
+      headerName: 'Authorization',
+      headerValue: 'Bearer token',
+      domains: ['*.openheaders.io'],
+    };
     expect(detect(rule as never, [{ ...rule }] as never)).toBe(true);
   });
 
@@ -554,10 +591,7 @@ describe('createDuplicateDetector', () => {
 // ---------------------------------------------------------------------------
 describe('batchDuplicateDetection', () => {
   it('returns results for each item with correct shape', async () => {
-    const items = [
-      makeEnterpriseFileSource('/path/a'),
-      makeEnterpriseFileSource('/path/b'),
-    ];
+    const items = [makeEnterpriseFileSource('/path/a'), makeEnterpriseFileSource('/path/b')];
     const existing = [makeEnterpriseFileSource('/path/a')];
     const detector = createDuplicateDetector('sources');
 
@@ -577,11 +611,15 @@ describe('batchDuplicateDetection', () => {
   });
 
   it('processes large dataset in batches without error', async () => {
-    const items = Array.from({ length: 120 }, (_, i) => makeImportSource({
-      sourceType: 'file',
-      sourcePath: `/Users/jane.doe/Documents/OpenHeaders/file-${i}.json`,
-    }));
-    const existing = [makeImportSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/file-0.json' })];
+    const items = Array.from({ length: 120 }, (_, i) =>
+      makeImportSource({
+        sourceType: 'file',
+        sourcePath: `/Users/jane.doe/Documents/OpenHeaders/file-${i}.json`,
+      }),
+    );
+    const existing = [
+      makeImportSource({ sourceType: 'file', sourcePath: '/Users/jane.doe/Documents/OpenHeaders/file-0.json' }),
+    ];
     const detector = createDuplicateDetector('sources');
 
     const results = await batchDuplicateDetection(
@@ -597,13 +635,15 @@ describe('batchDuplicateDetection', () => {
   });
 
   it('respects custom batch size', async () => {
-    const items = Array.from({ length: 10 }, (_, i) => makeImportSource({
-      sourceType: 'http',
-      sourcePath: `https://api.openheaders.io/source-${i}`,
-    }));
+    const items = Array.from({ length: 10 }, (_, i) =>
+      makeImportSource({
+        sourceType: 'http',
+        sourcePath: `https://api.openheaders.io/source-${i}`,
+      }),
+    );
     const results = await batchDuplicateDetection(items, [], () => false, 3);
     expect(results).toHaveLength(10);
     // All should be non-duplicates since existing is empty
-    expect(results.every(r => r.isDuplicate === false)).toBe(true);
+    expect(results.every((r) => r.isDuplicate === false)).toBe(true);
   });
 });

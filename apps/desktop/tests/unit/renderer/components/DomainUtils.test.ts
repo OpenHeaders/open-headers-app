@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-  removeDomain,
   addDomains,
+  calculateInputWidth,
   createTagCloseHandler,
   createTagEditHandlers,
   formatDomainCount,
-  calculateInputWidth,
+  removeDomain,
   validateDomainArray,
 } from '../../../../src/renderer/components/features/domain-tags/DomainUtils';
 
@@ -14,10 +14,12 @@ import {
 // ======================================================================
 describe('removeDomain', () => {
   it('removes specified enterprise domain', () => {
-    expect(removeDomain(
-      ['*.openheaders.io', 'api.partner-service.io:8443', 'localhost:3000'],
-      'api.partner-service.io:8443',
-    )).toEqual(['*.openheaders.io', 'localhost:3000']);
+    expect(
+      removeDomain(
+        ['*.openheaders.io', 'api.partner-service.io:8443', 'localhost:3000'],
+        'api.partner-service.io:8443',
+      ),
+    ).toEqual(['*.openheaders.io', 'localhost:3000']);
   });
 
   it('returns same array when domain not found', () => {
@@ -32,10 +34,9 @@ describe('removeDomain', () => {
   });
 
   it('removes all occurrences of duplicate domain', () => {
-    expect(removeDomain(
-      ['openheaders.io', 'openheaders.io', 'staging.openheaders.io'],
-      'openheaders.io',
-    )).toEqual(['staging.openheaders.io']);
+    expect(removeDomain(['openheaders.io', 'openheaders.io', 'staging.openheaders.io'], 'openheaders.io')).toEqual([
+      'staging.openheaders.io',
+    ]);
   });
 
   it('handles empty source array', () => {
@@ -59,17 +60,14 @@ describe('addDomains', () => {
   });
 
   it('removes duplicates when adding', () => {
-    expect(addDomains(
-      ['openheaders.io'],
-      ['openheaders.io', 'staging.openheaders.io'],
-    )).toEqual(['openheaders.io', 'staging.openheaders.io']);
+    expect(addDomains(['openheaders.io'], ['openheaders.io', 'staging.openheaders.io'])).toEqual([
+      'openheaders.io',
+      'staging.openheaders.io',
+    ]);
   });
 
   it('handles single string domain', () => {
-    expect(addDomains(['openheaders.io'], '*.openheaders.io')).toEqual([
-      'openheaders.io',
-      '*.openheaders.io',
-    ]);
+    expect(addDomains(['openheaders.io'], '*.openheaders.io')).toEqual(['openheaders.io', '*.openheaders.io']);
   });
 
   it('handles empty current array', () => {
@@ -263,11 +261,7 @@ describe('calculateInputWidth', () => {
 // ======================================================================
 describe('validateDomainArray', () => {
   it('returns valid with full shape for clean enterprise array', () => {
-    const result = validateDomainArray([
-      '*.openheaders.io',
-      'api.partner-service.io:8443',
-      'localhost:3000',
-    ]);
+    const result = validateDomainArray(['*.openheaders.io', 'api.partner-service.io:8443', 'localhost:3000']);
     expect(result).toEqual({
       valid: true,
       issues: [],
@@ -277,11 +271,7 @@ describe('validateDomainArray', () => {
   });
 
   it('detects duplicates with correct count', () => {
-    const result = validateDomainArray([
-      'openheaders.io',
-      'openheaders.io',
-      'staging.openheaders.io',
-    ]);
+    const result = validateDomainArray(['openheaders.io', 'openheaders.io', 'staging.openheaders.io']);
     expect(result).toEqual({
       valid: false,
       issues: ['duplicates'],

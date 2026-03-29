@@ -5,11 +5,11 @@
 
 import fs from 'fs';
 import path from 'path';
-import mainLogger from '../../../../utils/mainLogger';
-import { GitExecutor } from '../core/GitExecutor';
-import { GitAuthenticator } from '../auth/GitAuthenticator';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
 import { errorMessage, toErrno } from '../../../../types/common';
+import type { WorkspaceAuthData } from '../../../../types/workspace';
+import mainLogger from '../../../../utils/mainLogger';
+import type { GitAuthenticator } from '../auth/GitAuthenticator';
+import type { GitExecutor } from '../core/GitExecutor';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -105,7 +105,7 @@ class GitRepositoryManager {
       depth = 1,
       sparse = false,
       sparsePatterns = [],
-      progressCallback = () => {}
+      progressCallback = () => {},
     } = options;
 
     log.info(`Cloning repository: ${url} to ${targetDir}`);
@@ -143,7 +143,7 @@ class GitRepositoryManager {
       const result = await this.executor.execute(cloneCommand, {
         env,
         timeout: 300000, // 5 minutes for clone
-        maxBuffer: 50 * 1024 * 1024 // 50MB
+        maxBuffer: 50 * 1024 * 1024, // 50MB
       });
 
       log.info('Clone completed successfully');
@@ -157,10 +157,7 @@ class GitRepositoryManager {
       let actualBranch = branch;
       if (!options.branch) {
         try {
-          const { stdout } = await this.executor.execute(
-            'rev-parse --abbrev-ref HEAD',
-            { cwd: targetDir, env }
-          );
+          const { stdout } = await this.executor.execute('rev-parse --abbrev-ref HEAD', { cwd: targetDir, env });
           actualBranch = stdout.trim();
         } catch (error) {
           log.warn('Could not determine cloned branch:', error);
@@ -170,9 +167,8 @@ class GitRepositoryManager {
       return {
         success: true,
         directory: targetDir,
-        branch: actualBranch
+        branch: actualBranch,
       };
-
     } catch (error) {
       log.error('Clone failed:', error);
 
@@ -190,13 +186,7 @@ class GitRepositoryManager {
    * Pull changes from remote repository
    */
   async pullRepository(options: PullOptions): Promise<OperationResult> {
-    const {
-      repoDir,
-      branch = 'main',
-      authType = 'none',
-      authData = {},
-      progressCallback = () => {}
-    } = options;
+    const { repoDir, branch = 'main', authType = 'none', authData = {}, progressCallback = () => {} } = options;
 
     log.info(`Pulling changes in: ${repoDir}, branch: ${branch}`);
     progressCallback({ phase: 'pull', message: 'Checking repository status...' });
@@ -211,10 +201,11 @@ class GitRepositoryManager {
     try {
       // Check if branch exists on remote
       log.info(`[pullRepository] Checking if branch '${branch}' exists on remote`);
-      const { stdout: remoteBranches } = await this.executor.execute(
-        'ls-remote --heads origin',
-        { cwd: repoDir, env, timeout: 15000 }
-      );
+      const { stdout: remoteBranches } = await this.executor.execute('ls-remote --heads origin', {
+        cwd: repoDir,
+        env,
+        timeout: 15000,
+      });
 
       const branchExists = remoteBranches.includes(`refs/heads/${branch}`);
       log.info(`[pullRepository] Branch '${branch}' exists on remote: ${branchExists}`);
@@ -232,7 +223,7 @@ class GitRepositoryManager {
           return {
             success: true,
             changes: false,
-            message: 'Created new branch in empty repository'
+            message: 'Created new branch in empty repository',
           };
         } else {
           // Get default branch and create new branch from it
@@ -242,18 +233,18 @@ class GitRepositoryManager {
           await this.executor.execute(`fetch origin ${defaultBranch}:${defaultBranch}`, {
             cwd: repoDir,
             env,
-            timeout: 30000
+            timeout: 30000,
           });
 
           await this.executor.execute(`checkout -b ${branch} origin/${defaultBranch}`, {
             cwd: repoDir,
-            env
+            env,
           });
 
           return {
             success: true,
             changes: true,
-            message: `Created branch '${branch}' from '${defaultBranch}'`
+            message: `Created branch '${branch}' from '${defaultBranch}'`,
           };
         }
       }
@@ -265,14 +256,14 @@ class GitRepositoryManager {
       await this.executor.execute(`fetch origin ${branch}`, {
         cwd: repoDir,
         env,
-        timeout: 30000
+        timeout: 30000,
       });
 
       // Check if we need to pull
-      const { stdout: status } = await this.executor.execute(
-        `rev-list HEAD...origin/${branch} --count`,
-        { cwd: repoDir, env }
-      );
+      const { stdout: status } = await this.executor.execute(`rev-list HEAD...origin/${branch} --count`, {
+        cwd: repoDir,
+        env,
+      });
 
       const behind = parseInt(status.trim()) || 0;
 
@@ -281,7 +272,7 @@ class GitRepositoryManager {
         return {
           success: true,
           changes: false,
-          message: 'Already up to date'
+          message: 'Already up to date',
         };
       }
 
@@ -291,15 +282,14 @@ class GitRepositoryManager {
       await this.executor.execute(`pull origin ${branch}`, {
         cwd: repoDir,
         env,
-        timeout: 60000
+        timeout: 60000,
       });
 
       return {
         success: true,
         changes: true,
-        message: `Pulled ${behind} new commits`
+        message: `Pulled ${behind} new commits`,
       };
-
     } catch (error) {
       log.error('Pull failed:', error);
       throw error;
@@ -319,7 +309,7 @@ class GitRepositoryManager {
       authData = {},
       force = false,
       setUpstream = false,
-      progressCallback = () => {}
+      progressCallback = () => {},
     } = options;
 
     log.info(`Pushing changes from: ${repoDir}, branch: ${branch}`);
@@ -339,10 +329,10 @@ class GitRepositoryManager {
       // If setUpstream is true, this is a new branch and origin/branch won't exist
       if (!setUpstream) {
         try {
-          const { stdout: unpushed } = await this.executor.execute(
-            `rev-list origin/${branch}..HEAD --count`,
-            { cwd: repoDir, env }
-          );
+          const { stdout: unpushed } = await this.executor.execute(`rev-list origin/${branch}..HEAD --count`, {
+            cwd: repoDir,
+            env,
+          });
           unpushedCount = parseInt(unpushed.trim()) || 0;
 
           if (unpushedCount === 0 && !force) {
@@ -350,7 +340,7 @@ class GitRepositoryManager {
             return {
               success: true,
               pushed: false,
-              message: 'No changes to push'
+              message: 'No changes to push',
             };
           }
         } catch (error) {
@@ -362,10 +352,7 @@ class GitRepositoryManager {
       } else {
         // For new branches, count all commits
         try {
-          const { stdout: allCommits } = await this.executor.execute(
-            `rev-list HEAD --count`,
-            { cwd: repoDir, env }
-          );
+          const { stdout: allCommits } = await this.executor.execute(`rev-list HEAD --count`, { cwd: repoDir, env });
           unpushedCount = parseInt(allCommits.trim()) || 1;
         } catch (error) {
           unpushedCount = 1; // Default to 1
@@ -388,13 +375,13 @@ class GitRepositoryManager {
       // Execute push
       progressCallback({
         phase: 'push',
-        message: `Pushing ${unpushedCount} commits...`
+        message: `Pushing ${unpushedCount} commits...`,
       });
 
       await this.executor.execute(pushCommand, {
         cwd: repoDir,
         env,
-        timeout: 120000 // 2 minutes for push
+        timeout: 120000, // 2 minutes for push
       });
 
       // Add delay after push to allow GitHub to process the new branch
@@ -402,18 +389,17 @@ class GitRepositoryManager {
         log.info('Waiting for GitHub to process new branch...');
         progressCallback({
           phase: 'push',
-          message: 'Waiting for remote to process new branch...'
+          message: 'Waiting for remote to process new branch...',
         });
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second delay
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // 5 second delay
       }
 
       return {
         success: true,
         pushed: true,
         message: `Pushed ${unpushedCount} commits`,
-        commits: unpushedCount
+        commits: unpushedCount,
       };
-
     } catch (error) {
       log.error('Push failed:', error);
       throw error;
@@ -428,22 +414,15 @@ class GitRepositoryManager {
   async getStatus(repoDir: string): Promise<RepositoryStatus> {
     try {
       // Get current branch
-      const { stdout: branch } = await this.executor.execute(
-        'rev-parse --abbrev-ref HEAD',
-        { cwd: repoDir }
-      );
+      const { stdout: branch } = await this.executor.execute('rev-parse --abbrev-ref HEAD', { cwd: repoDir });
 
       // Get status
-      const { stdout: status } = await this.executor.execute(
-        'status --porcelain',
-        { cwd: repoDir }
-      );
+      const { stdout: status } = await this.executor.execute('status --porcelain', { cwd: repoDir });
 
       // Get last commit
-      const { stdout: lastCommit } = await this.executor.execute(
-        'log -1 --pretty=format:"%H|%an|%ae|%at|%s"',
-        { cwd: repoDir }
-      );
+      const { stdout: lastCommit } = await this.executor.execute('log -1 --pretty=format:"%H|%an|%ae|%at|%s"', {
+        cwd: repoDir,
+      });
 
       const [hash, author, email, timestamp, message] = lastCommit.split('|');
 
@@ -456,10 +435,9 @@ class GitRepositoryManager {
           author,
           email,
           date: new Date(parseInt(timestamp) * 1000),
-          message
-        }
+          message,
+        },
       };
-
     } catch (error) {
       log.error('Failed to get repository status:', error);
       throw error;
@@ -475,10 +453,13 @@ class GitRepositoryManager {
       added: [],
       deleted: [],
       renamed: [],
-      untracked: []
+      untracked: [],
     };
 
-    const lines = status.trim().split('\n').filter(line => line);
+    const lines = status
+      .trim()
+      .split('\n')
+      .filter((line) => line);
 
     for (const line of lines) {
       const statusCode = line.substring(0, 2);
@@ -497,27 +478,32 @@ class GitRepositoryManager {
   /**
    * Setup sparse checkout
    */
-  async setupSparseCheckout(repoDir: string, patterns: string[], env: NodeJS.ProcessEnv, progressCallback: (progress: GitProgress) => void): Promise<void> {
+  async setupSparseCheckout(
+    repoDir: string,
+    patterns: string[],
+    env: NodeJS.ProcessEnv,
+    progressCallback: (progress: GitProgress) => void,
+  ): Promise<void> {
     log.info('Setting up sparse checkout with patterns:', patterns);
     progressCallback({ phase: 'sparse', message: 'Configuring sparse checkout...' });
 
     // Enable sparse checkout
     await this.executor.execute('sparse-checkout init --cone', {
       cwd: repoDir,
-      env
+      env,
     });
 
     // Set patterns
     const patternsStr = patterns.join(' ');
     await this.executor.execute(`sparse-checkout set ${patternsStr}`, {
       cwd: repoDir,
-      env
+      env,
     });
 
     // Checkout files
     await this.executor.execute('checkout', {
       cwd: repoDir,
-      env
+      env,
     });
   }
 
@@ -526,17 +512,11 @@ class GitRepositoryManager {
    */
   async getDefaultBranch(repoDir: string, env: NodeJS.ProcessEnv): Promise<string> {
     try {
-      const { stdout } = await this.executor.execute(
-        'symbolic-ref refs/remotes/origin/HEAD',
-        { cwd: repoDir, env }
-      );
+      const { stdout } = await this.executor.execute('symbolic-ref refs/remotes/origin/HEAD', { cwd: repoDir, env });
       return stdout.trim().replace('refs/remotes/origin/', '');
     } catch (error) {
       // Fallback to common defaults
-      const { stdout: branches } = await this.executor.execute(
-        'ls-remote --heads origin',
-        { cwd: repoDir, env }
-      );
+      const { stdout: branches } = await this.executor.execute('ls-remote --heads origin', { cwd: repoDir, env });
 
       if (branches.includes('refs/heads/main')) return 'main';
       if (branches.includes('refs/heads/master')) return 'master';
@@ -582,10 +562,7 @@ class GitRepositoryManager {
    */
   async getRepositoryUrl(repoDir: string): Promise<string | null> {
     try {
-      const { stdout } = await this.executor.execute(
-        'config --get remote.origin.url',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('config --get remote.origin.url', { cwd: repoDir });
       return stdout.trim();
     } catch (error) {
       log.error('Failed to get repository URL:', error);
@@ -594,6 +571,6 @@ class GitRepositoryManager {
   }
 }
 
+export type { CloneOptions, OperationResult, PullOptions, PushOptions, RepositoryStatus, StatusChanges };
 export { GitRepositoryManager };
-export type { CloneOptions, PullOptions, PushOptions, OperationResult, RepositoryStatus, StatusChanges };
 export default GitRepositoryManager;

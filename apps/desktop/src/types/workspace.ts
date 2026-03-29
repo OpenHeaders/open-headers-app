@@ -11,7 +11,7 @@ export type WorkspaceType = 'personal' | 'team' | 'git';
 
 /** Whether a workspace is git-backed and supports sync operations. */
 export function isSyncableWorkspace(workspace: { type: WorkspaceType }): boolean {
-    return workspace.type === 'git' || workspace.type === 'team';
+  return workspace.type === 'git' || workspace.type === 'team';
 }
 
 export type AuthType = 'none' | 'token' | 'ssh' | 'ssh-key' | 'basic';

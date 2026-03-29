@@ -49,19 +49,22 @@ export class AppLauncher {
     try {
       // Send message to background script to use its WebSocket connection
       return new Promise<boolean>((resolve) => {
-        this.runtime.sendMessage({
-          type: 'focusApp',
-          navigation: data
-        }, (response: { success?: boolean } | undefined) => {
-          // Check for errors
-          const lastError = this.runtime.lastError;
-          if (lastError) {
-            logger.info('AppLauncher', 'Could not send focusApp via background:', lastError.message);
-            resolve(false);
-          } else {
-            resolve(response?.success || false);
-          }
-        });
+        this.runtime.sendMessage(
+          {
+            type: 'focusApp',
+            navigation: data,
+          },
+          (response: { success?: boolean } | undefined) => {
+            // Check for errors
+            const lastError = this.runtime.lastError;
+            if (lastError) {
+              logger.info('AppLauncher', 'Could not send focusApp via background:', lastError.message);
+              resolve(false);
+            } else {
+              resolve(response?.success || false);
+            }
+          },
+        );
       });
     } catch (e) {
       logger.info('AppLauncher', 'Failed to communicate with background script:', e);

@@ -29,7 +29,7 @@ export function decodeJWT(token: string) {
     return {
       header,
       payload,
-      signature: parts[2]
+      signature: parts[2],
     };
   } catch (error) {
     throw new Error(`Failed to decode JWT: ${errorMessage(error)}`);
@@ -46,15 +46,9 @@ export function decodeJWT(token: string) {
 export function encodeJWT(header: JsonObject, payload: JsonObject, signature = '') {
   try {
     // Base64URL encode header and payload
-    const encodedHeader = btoa(JSON.stringify(header))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    
-    const encodedPayload = btoa(JSON.stringify(payload))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
+    const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     // Return JWT with original signature (or empty if not provided)
     return `${encodedHeader}.${encodedPayload}.${signature}`;
@@ -75,24 +69,18 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
   try {
     // Ensure algorithm in header matches
     const finalHeader = { ...header, alg: algorithm, typ: 'JWT' };
-    
+
     // Base64URL encode header and payload
-    const encodedHeader = btoa(JSON.stringify(finalHeader))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    
-    const encodedPayload = btoa(JSON.stringify(payload))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
+    const encodedHeader = btoa(JSON.stringify(finalHeader)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
     const dataToSign = `${encodedHeader}.${encodedPayload}`;
-    
+
     // Create signature based on algorithm
     let signature = '';
     const encoder = new TextEncoder();
-    
+
     if (algorithm === 'HS256') {
       // Use Web Crypto API for HMAC-SHA256
       const key = await crypto.subtle.importKey(
@@ -100,21 +88,16 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
         encoder.encode(secret),
         { name: 'HMAC', hash: 'SHA-256' },
         false,
-        ['sign']
+        ['sign'],
       );
-      
-      const signatureBuffer = await crypto.subtle.sign(
-        'HMAC',
-        key,
-        encoder.encode(dataToSign)
-      );
-      
+
+      const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(dataToSign));
+
       // Convert to base64url
       signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=/g, '');
-        
     } else if (algorithm === 'RS256') {
       // RSA signing with SHA-256
       // Parse the PEM private key
@@ -122,39 +105,34 @@ export async function signJWT(header: JsonObject, payload: JsonObject, secret: s
         .replace(/-----BEGIN (RSA )?PRIVATE KEY-----/g, '')
         .replace(/-----END (RSA )?PRIVATE KEY-----/g, '')
         .replace(/\s/g, '');
-      
+
       // Convert base64 to ArrayBuffer
       const binaryDer = atob(pemContents);
       const binaryDerArray = new Uint8Array(binaryDer.length);
       for (let i = 0; i < binaryDer.length; i++) {
         binaryDerArray[i] = binaryDer.charCodeAt(i);
       }
-      
+
       // Import the private key
       const key = await crypto.subtle.importKey(
         'pkcs8',
         binaryDerArray.buffer,
         {
           name: 'RSASSA-PKCS1-v1_5',
-          hash: 'SHA-256'
+          hash: 'SHA-256',
         },
         false,
-        ['sign']
+        ['sign'],
       );
-      
+
       // Sign the data
-      const signatureBuffer = await crypto.subtle.sign(
-        'RSASSA-PKCS1-v1_5',
-        key,
-        encoder.encode(dataToSign)
-      );
-      
+      const signatureBuffer = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, encoder.encode(dataToSign));
+
       // Convert to base64url
       signature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=/g, '');
-        
     } else {
       throw new Error(`Algorithm ${algorithm} not supported. Only HS256 and RS256 are currently supported.`);
     }
@@ -185,10 +163,9 @@ export function isJWT(value: string) {
   try {
     const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
     const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-    
+
     // Check if header has typical JWT fields
-    return header && typeof header === 'object' && 
-           (header.alg || header.typ === 'JWT');
+    return header && typeof header === 'object' && (header.alg || header.typ === 'JWT');
   } catch {
     return false;
   }
@@ -230,12 +207,12 @@ export function getJWTExpiration(payload: JsonObject) {
   const now = Date.now();
   const isExpired = exp < now;
   const expiresAt = new Date(exp);
-  
+
   return {
     hasExpiration: true,
     isExpired,
     expiresAt,
-    expiresIn: exp - now
+    expiresIn: exp - now,
   };
 }
 
@@ -255,5 +232,5 @@ export const JWT_CLAIM_DESCRIPTIONS = {
   name: 'Name',
   role: 'Role',
   scope: 'Scope',
-  permissions: 'Permissions'
+  permissions: 'Permissions',
 };

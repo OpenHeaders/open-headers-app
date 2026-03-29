@@ -1,8 +1,10 @@
 /**
  * EnvironmentVariableManager - Manages environment variables and operations
  */
-import { createLogger } from '../../utils/error-handling/logger';
+
 import type { EnvironmentVariable, EnvironmentVariables } from '../../../types/environment';
+import { createLogger } from '../../utils/error-handling/logger';
+
 const log = createLogger('EnvironmentVariableManager');
 
 type EnvStore = Record<string, EnvironmentVariables>;
@@ -21,7 +23,13 @@ class EnvironmentVariableManager {
     return result;
   }
 
-  setVariable(environments: EnvStore, environmentName: string, name: string, value: string | null, isSecret = false): EnvStore {
+  setVariable(
+    environments: EnvStore,
+    environmentName: string,
+    name: string,
+    value: string | null,
+    isSecret = false,
+  ): EnvStore {
     const updatedEnvironments: EnvStore = JSON.parse(JSON.stringify(environments));
 
     if (!updatedEnvironments[environmentName]) {
@@ -35,11 +43,11 @@ class EnvironmentVariableManager {
       updatedEnvironments[environmentName][name] = {
         value,
         isSecret,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
       log.debug(`Set variable ${name} in environment ${environmentName}:`, {
         value: isSecret ? '(secret)' : value,
-        isSecret
+        isSecret,
       });
     }
 
@@ -53,7 +61,7 @@ class EnvironmentVariableManager {
 
     const updatedEnvironments = {
       ...environments,
-      [name]: {}
+      [name]: {},
     };
 
     log.info(`Created environment: ${name}`);
@@ -112,7 +120,7 @@ class EnvironmentVariableManager {
     const variables: EnvironmentVariables = {};
 
     switch (format) {
-      case 'json':
+      case 'json': {
         const parsed = JSON.parse(data) as Record<string, EnvironmentVariable | string>;
         Object.entries(parsed).forEach(([key, value]) => {
           if (typeof value === 'object' && value !== null && 'value' in value) {
@@ -121,14 +129,15 @@ class EnvironmentVariableManager {
             variables[key] = {
               value: String(value),
               isSecret: false,
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             };
           }
         });
         break;
+      }
 
       case 'env':
-        data.split('\n').forEach(line => {
+        data.split('\n').forEach((line) => {
           const trimmed = line.trim();
           if (trimmed && !trimmed.startsWith('#')) {
             const [key, ...valueParts] = trimmed.split('=');
@@ -136,7 +145,7 @@ class EnvironmentVariableManager {
               variables[key.trim()] = {
                 value: valueParts.join('=').trim(),
                 isSecret: false,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
               };
             }
           }

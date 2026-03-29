@@ -3,20 +3,20 @@
  * Handles both auto-sync and manual sync operations
  */
 
-import path from 'path';
 import fs from 'fs';
-import mainLogger from '../../../../utils/mainLogger';
-import type { GitExecutor } from '../core/GitExecutor';
-import type { GitRepositoryManager, RepositoryStatus } from '../repository/GitRepositoryManager';
-import type { Source } from '../../../../types/source';
-import type { WorkspaceAuthData, CommitInfo } from '../../../../types/workspace';
-import type { RulesCollection } from '../../../../types/rules';
-import type { ProxyRule } from '../../../../types/proxy';
-import type { EnvironmentSchema, EnvironmentMap } from '../../../../types/environment';
-import type { GitBranchManager } from '../repository/GitBranchManager';
-import type { CommitManager } from './CommitManager';
-import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
 import { glob } from 'glob';
+import path from 'path';
+import type { EnvironmentMap, EnvironmentSchema } from '../../../../types/environment';
+import type { ProxyRule } from '../../../../types/proxy';
+import type { RulesCollection } from '../../../../types/rules';
+import type { Source } from '../../../../types/source';
+import type { CommitInfo, WorkspaceAuthData } from '../../../../types/workspace';
+import mainLogger from '../../../../utils/mainLogger';
+import type { ConfigFileValidator, ConfigPaths } from '../../config-file-validator';
+import type { GitExecutor } from '../core/GitExecutor';
+import type { GitBranchManager } from '../repository/GitBranchManager';
+import type { GitRepositoryManager, RepositoryStatus } from '../repository/GitRepositoryManager';
+import type { CommitManager } from './CommitManager';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -26,14 +26,16 @@ const log = createLogger('TeamWorkspaceSyncer');
 /** Network/timeout errors that self-resolve — expected during Power Nap / brief network windows. */
 function isTransientNetworkError(message: string): boolean {
   const lower = message.toLowerCase();
-  return lower.includes('ssl connection timeout') ||
-      lower.includes('connection reset') ||
-      lower.includes('connection refused') ||
-      lower.includes('timed out') ||
-      lower.includes('network is unreachable') ||
-      lower.includes('could not resolve host') ||
-      lower.includes('err_connection') ||
-      lower.includes('unable to access');
+  return (
+    lower.includes('ssl connection timeout') ||
+    lower.includes('connection reset') ||
+    lower.includes('connection refused') ||
+    lower.includes('timed out') ||
+    lower.includes('network is unreachable') ||
+    lower.includes('could not resolve host') ||
+    lower.includes('err_connection') ||
+    lower.includes('unable to access')
+  );
 }
 
 // Sync status constants
@@ -42,10 +44,10 @@ const SYNC_STATUS = {
   NEEDS_PULL: 'needs_pull',
   NEEDS_PUSH: 'needs_push',
   CONFLICT: 'conflict',
-  ERROR: 'error'
+  ERROR: 'error',
 } as const;
 
-type SyncStatusType = typeof SYNC_STATUS[keyof typeof SYNC_STATUS];
+type SyncStatusType = (typeof SYNC_STATUS)[keyof typeof SYNC_STATUS];
 
 interface SyncDependencies {
   repositoryManager: GitRepositoryManager;
@@ -114,7 +116,11 @@ interface SyncResult {
 /** Actionable sync status — always one of the four deterministic states.
  *  Infrastructure failures (network, auth) throw instead of returning here. */
 interface SyncStatusResult {
-  status: typeof SYNC_STATUS.UP_TO_DATE | typeof SYNC_STATUS.NEEDS_PULL | typeof SYNC_STATUS.NEEDS_PUSH | typeof SYNC_STATUS.CONFLICT;
+  status:
+    | typeof SYNC_STATUS.UP_TO_DATE
+    | typeof SYNC_STATUS.NEEDS_PULL
+    | typeof SYNC_STATUS.NEEDS_PUSH
+    | typeof SYNC_STATUS.CONFLICT;
   localCommit: string;
   remoteCommit: string;
   ahead?: number;
@@ -184,7 +190,7 @@ class TeamWorkspaceSyncer {
       authType = 'none',
       authData = {},
       autoResolve = false,
-      progressCallback = () => {}
+      progressCallback = () => {},
     } = options;
 
     log.info(`Syncing workspace: ${workspaceName} (${workspaceId})`);
@@ -193,7 +199,7 @@ class TeamWorkspaceSyncer {
       // Step 1: Check sync status
       progressCallback({
         phase: 'status',
-        message: 'Checking sync status...'
+        message: 'Checking sync status...',
       });
 
       const status = await this.checkSyncStatus(repoDir, branch);
@@ -208,28 +214,42 @@ class TeamWorkspaceSyncer {
           status: status.status,
           message: 'Workspace is up to date',
           changes: false,
-          data: configData
+          data: configData,
         };
       } else {
         switch (status.status) {
           case SYNC_STATUS.NEEDS_PULL:
             result = await this.handlePull({
-              repoDir, branch, authType, authData,
-              status, progressCallback, path: options.path
+              repoDir,
+              branch,
+              authType,
+              authData,
+              status,
+              progressCallback,
+              path: options.path,
             });
             break;
 
           case SYNC_STATUS.NEEDS_PUSH:
             result = await this.handlePush({
-              repoDir, branch, authType, authData,
-              status, progressCallback
+              repoDir,
+              branch,
+              authType,
+              authData,
+              status,
+              progressCallback,
             });
             break;
 
           case SYNC_STATUS.CONFLICT:
             result = await this.handleConflict({
-              repoDir, branch, authType, authData,
-              status, autoResolve, progressCallback
+              repoDir,
+              branch,
+              authType,
+              authData,
+              status,
+              autoResolve,
+              progressCallback,
             });
             break;
 
@@ -250,7 +270,6 @@ class TeamWorkspaceSyncer {
       }
 
       return result;
-
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       if (isTransientNetworkError(errMsg)) {
@@ -262,7 +281,7 @@ class TeamWorkspaceSyncer {
         success: false,
         status: SYNC_STATUS.ERROR,
         message: errMsg,
-        error: errMsg
+        error: errMsg,
       };
     }
   }
@@ -271,12 +290,7 @@ class TeamWorkspaceSyncer {
    * Perform auto-sync for workspace
    */
   async autoSync(options: SyncOptions & { repoDir: string; commitChanges?: boolean }): Promise<SyncResult> {
-    const {
-      workspaceId,
-      repoDir,
-      commitChanges = true,
-      progressCallback = () => {}
-    } = options;
+    const { workspaceId, repoDir, commitChanges = true, progressCallback = () => {} } = options;
 
     log.info(`Auto-syncing workspace: ${workspaceId}`);
 
@@ -287,28 +301,27 @@ class TeamWorkspaceSyncer {
       if (hasLocalChanges && commitChanges) {
         progressCallback({
           phase: 'commit',
-          message: 'Committing local changes...'
+          message: 'Committing local changes...',
         });
 
         // Auto-commit local changes
         await this.commitManager.autoCommit({
           repoDir,
-          message: `Auto-sync: Update configuration (${new Date().toISOString()})`
+          message: `Auto-sync: Update configuration (${new Date().toISOString()})`,
         });
       }
 
       // Step 2: Perform sync
       const syncResult = await this.syncWorkspace({
         ...options,
-        autoResolve: true // Auto-resolve conflicts in auto-sync
+        autoResolve: true, // Auto-resolve conflicts in auto-sync
       });
 
       return {
         ...syncResult,
         autoSync: true,
-        localChangesCommitted: hasLocalChanges && commitChanges
+        localChangesCommitted: hasLocalChanges && commitChanges,
       };
-
     } catch (error) {
       log.error('Auto-sync failed:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -317,7 +330,7 @@ class TeamWorkspaceSyncer {
         status: SYNC_STATUS.ERROR,
         message: `Auto-sync failed: ${errMsg}`,
         error: errMsg,
-        autoSync: true
+        autoSync: true,
       };
     }
   }
@@ -337,16 +350,19 @@ class TeamWorkspaceSyncer {
 
     while (fetchAttempts < maxAttempts) {
       try {
-        await this.executor.execute(
-          `fetch origin ${branch}`,
-          { cwd: repoDir, timeout: 15000 }
-        );
+        await this.executor.execute(`fetch origin ${branch}`, { cwd: repoDir, timeout: 15000 });
         break; // Success, exit retry loop
       } catch (fetchError) {
         fetchAttempts++;
-        if (fetchError instanceof Error && fetchError.message.includes("couldn't find remote ref") && fetchAttempts < maxAttempts) {
-          log.warn(`Branch ${branch} not found on remote (attempt ${fetchAttempts}/${maxAttempts}), retrying in ${retryDelay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, retryDelay));
+        if (
+          fetchError instanceof Error &&
+          fetchError.message.includes("couldn't find remote ref") &&
+          fetchAttempts < maxAttempts
+        ) {
+          log.warn(
+            `Branch ${branch} not found on remote (attempt ${fetchAttempts}/${maxAttempts}), retrying in ${retryDelay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
         } else {
           throw fetchError;
         }
@@ -354,15 +370,9 @@ class TeamWorkspaceSyncer {
     }
 
     // Get local and remote commit hashes
-    const { stdout: localCommit } = await this.executor.execute(
-      'rev-parse HEAD',
-      { cwd: repoDir }
-    );
+    const { stdout: localCommit } = await this.executor.execute('rev-parse HEAD', { cwd: repoDir });
 
-    const { stdout: remoteCommit } = await this.executor.execute(
-      `rev-parse origin/${branch}`,
-      { cwd: repoDir }
-    );
+    const { stdout: remoteCommit } = await this.executor.execute(`rev-parse origin/${branch}`, { cwd: repoDir });
 
     const localHash = localCommit.trim();
     const remoteHash = remoteCommit.trim();
@@ -372,15 +382,12 @@ class TeamWorkspaceSyncer {
       return {
         status: SYNC_STATUS.UP_TO_DATE,
         localCommit: localHash,
-        remoteCommit: remoteHash
+        remoteCommit: remoteHash,
       };
     }
 
     // Check merge base
-    const { stdout: mergeBase } = await this.executor.execute(
-      `merge-base HEAD origin/${branch}`,
-      { cwd: repoDir }
-    );
+    const { stdout: mergeBase } = await this.executor.execute(`merge-base HEAD origin/${branch}`, { cwd: repoDir });
 
     const baseHash = mergeBase.trim();
 
@@ -391,7 +398,7 @@ class TeamWorkspaceSyncer {
         status: SYNC_STATUS.NEEDS_PULL,
         localCommit: localHash,
         remoteCommit: remoteHash,
-        behind: await this.getCommitCount(repoDir, `HEAD..origin/${branch}`)
+        behind: await this.getCommitCount(repoDir, `HEAD..origin/${branch}`),
       };
     } else if (baseHash === remoteHash) {
       // Local is ahead of remote
@@ -399,7 +406,7 @@ class TeamWorkspaceSyncer {
         status: SYNC_STATUS.NEEDS_PUSH,
         localCommit: localHash,
         remoteCommit: remoteHash,
-        ahead: await this.getCommitCount(repoDir, `origin/${branch}..HEAD`)
+        ahead: await this.getCommitCount(repoDir, `origin/${branch}..HEAD`),
       };
     } else {
       // Diverged - potential conflict
@@ -408,7 +415,7 @@ class TeamWorkspaceSyncer {
         localCommit: localHash,
         remoteCommit: remoteHash,
         ahead: await this.getCommitCount(repoDir, `origin/${branch}..HEAD`),
-        behind: await this.getCommitCount(repoDir, `HEAD..origin/${branch}`)
+        behind: await this.getCommitCount(repoDir, `HEAD..origin/${branch}`),
       };
     }
   }
@@ -421,7 +428,7 @@ class TeamWorkspaceSyncer {
 
     progressCallback({
       phase: 'pull',
-      message: `Pulling ${status.behind} new commits...`
+      message: `Pulling ${status.behind} new commits...`,
     });
 
     const pullResult = await this.repositoryManager.pullRepository({
@@ -434,7 +441,7 @@ class TeamWorkspaceSyncer {
     // Validate configuration after pull
     progressCallback({
       phase: 'validate',
-      message: 'Validating updated configuration...'
+      message: 'Validating updated configuration...',
     });
 
     const validation = await this.validateWorkspaceConfig(repoDir);
@@ -450,7 +457,7 @@ class TeamWorkspaceSyncer {
       pulled: status.behind,
       configValid: validation.valid,
       configErrors: validation.errors,
-      data: configData
+      data: configData,
     };
   }
 
@@ -462,7 +469,7 @@ class TeamWorkspaceSyncer {
 
     progressCallback({
       phase: 'push',
-      message: `Pushing ${status.ahead} commits...`
+      message: `Pushing ${status.ahead} commits...`,
     });
 
     const pushResult = await this.repositoryManager.pushRepository({
@@ -477,7 +484,7 @@ class TeamWorkspaceSyncer {
       status: SYNC_STATUS.UP_TO_DATE,
       message: pushResult.message || 'Push completed',
       changes: true,
-      pushed: status.ahead
+      pushed: status.ahead,
     };
   }
 
@@ -489,15 +496,7 @@ class TeamWorkspaceSyncer {
    * sync attempt starts from a known-good state.
    */
   async handleConflict(options: HandleConflictOptions): Promise<SyncResult> {
-    const {
-      repoDir,
-      branch,
-      authType,
-      authData,
-      status,
-      autoResolve,
-      progressCallback
-    } = options;
+    const { repoDir, branch, authType, authData, status, autoResolve, progressCallback } = options;
 
     log.warn(`Conflict detected: ${status.ahead} ahead, ${status.behind} behind`);
 
@@ -508,14 +507,14 @@ class TeamWorkspaceSyncer {
         message: 'Manual conflict resolution required',
         ahead: status.ahead,
         behind: status.behind,
-        requiresManualResolution: true
+        requiresManualResolution: true,
       };
     }
 
     // Auto-resolve by rebasing local changes on top of remote
     progressCallback({
       phase: 'resolve',
-      message: 'Auto-resolving conflicts...'
+      message: 'Auto-resolving conflicts...',
     });
 
     let stashed = false;
@@ -526,7 +525,7 @@ class TeamWorkspaceSyncer {
 
       if (hasChanges) {
         await this.executor.execute('stash push -m "Auto-sync stash"', {
-          cwd: repoDir
+          cwd: repoDir,
         });
         stashed = true;
       }
@@ -535,7 +534,7 @@ class TeamWorkspaceSyncer {
       await this.executor.execute(`pull --rebase origin ${branch}`, {
         cwd: repoDir,
         env: authData.env ?? process.env,
-        timeout: 60000
+        timeout: 60000,
       });
 
       // Restore stashed changes
@@ -552,10 +551,11 @@ class TeamWorkspaceSyncer {
           return {
             success: false,
             status: SYNC_STATUS.CONFLICT,
-            message: 'Rebase succeeded but local changes conflict with updated code. Your changes are preserved in git stash.',
+            message:
+              'Rebase succeeded but local changes conflict with updated code. Your changes are preserved in git stash.',
             changes: true,
             resolved: false,
-            requiresManualResolution: true
+            requiresManualResolution: true,
           };
         }
       }
@@ -573,27 +573,28 @@ class TeamWorkspaceSyncer {
         status: SYNC_STATUS.UP_TO_DATE,
         message: 'Conflicts resolved automatically',
         changes: true,
-        resolved: true
+        resolved: true,
       };
-
     } catch (error) {
       log.error('Auto-resolve failed, restoring repo to clean state:', error);
 
       // Abort any in-progress rebase to restore the repo to pre-rebase state
-      await this.executor.execute('rebase --abort', { cwd: repoDir })
-          .catch(abortErr => log.debug('rebase --abort (may be no-op):', abortErr));
+      await this.executor
+        .execute('rebase --abort', { cwd: repoDir })
+        .catch((abortErr) => log.debug('rebase --abort (may be no-op):', abortErr));
 
       // Restore stashed changes if we stashed them
       if (stashed) {
-        await this.executor.execute('stash pop', { cwd: repoDir })
-            .catch(popErr => log.warn('Failed to restore stash after abort:', popErr));
+        await this.executor
+          .execute('stash pop', { cwd: repoDir })
+          .catch((popErr) => log.warn('Failed to restore stash after abort:', popErr));
       }
 
       return {
         success: false,
         status: SYNC_STATUS.CONFLICT,
         message: `Auto-resolve failed: ${error instanceof Error ? error.message : String(error)}`,
-        requiresManualResolution: true
+        requiresManualResolution: true,
       };
     }
   }
@@ -603,10 +604,7 @@ class TeamWorkspaceSyncer {
    */
   async hasLocalChanges(repoDir: string): Promise<boolean> {
     try {
-      const { stdout } = await this.executor.execute(
-        'status --porcelain',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('status --porcelain', { cwd: repoDir });
       return stdout.trim().length > 0;
     } catch (error) {
       return false;
@@ -618,10 +616,7 @@ class TeamWorkspaceSyncer {
    */
   async getCommitCount(repoDir: string, range: string): Promise<number> {
     try {
-      const { stdout } = await this.executor.execute(
-        `rev-list --count ${range}`,
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute(`rev-list --count ${range}`, { cwd: repoDir });
       return parseInt(stdout.trim()) || 0;
     } catch (error) {
       return 0;
@@ -635,10 +630,7 @@ class TeamWorkspaceSyncer {
    */
   async getHeadCommitInfo(repoDir: string): Promise<CommitInfo> {
     try {
-      const { stdout } = await this.executor.execute(
-        'log -1 --pretty=format:%H%n%s%n%an%n%aI',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('log -1 --pretty=format:%H%n%s%n%an%n%aI', { cwd: repoDir });
       const [commitHash, message, author, date] = stdout.trim().split('\n');
       return { commitHash, message, author, date };
     } catch (error) {
@@ -658,7 +650,7 @@ class TeamWorkspaceSyncer {
       if (!metadataPath) {
         return {
           valid: false,
-          errors: ['Workspace metadata not found']
+          errors: ['Workspace metadata not found'],
         };
       }
 
@@ -672,11 +664,10 @@ class TeamWorkspaceSyncer {
       }
 
       return await this.configValidator.validateAll(configPaths, repoDir);
-
     } catch (error) {
       return {
         valid: false,
-        errors: [error instanceof Error ? error.message : String(error)]
+        errors: [error instanceof Error ? error.message : String(error)],
       };
     }
   }
@@ -688,7 +679,7 @@ class TeamWorkspaceSyncer {
     const possiblePaths = [
       '.openheaders/workspaces/*/metadata.json',
       '.config/openheaders/workspaces/*/metadata.json',
-      'workspaces/*/metadata.json'
+      'workspaces/*/metadata.json',
     ];
 
     for (const pattern of possiblePaths) {
@@ -719,11 +710,11 @@ class TeamWorkspaceSyncer {
         hasLocalChanges: status.hasChanges,
         lastCommit: status.lastCommit,
         lastSync,
-        changes: status.changes
+        changes: status.changes,
       };
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -733,10 +724,7 @@ class TeamWorkspaceSyncer {
    */
   async getLastSyncTime(repoDir: string): Promise<Date | null> {
     try {
-      const { stdout } = await this.executor.execute(
-        'log -1 --grep="sync" --pretty=format:"%at"',
-        { cwd: repoDir }
-      );
+      const { stdout } = await this.executor.execute('log -1 --grep="sync" --pretty=format:"%at"', { cwd: repoDir });
 
       if (stdout.trim()) {
         return new Date(parseInt(stdout.trim()) * 1000);
@@ -756,12 +744,7 @@ class TeamWorkspaceSyncer {
       log.info(`Loading workspace config from ${repoDir}/${configPath}`);
 
       // Look for config files in the specified path
-      const possibleFiles = [
-        'open-headers-config.json',
-        'open-headers.json',
-        'config.json',
-        'openheaders.json'
-      ];
+      const possibleFiles = ['open-headers-config.json', 'open-headers.json', 'config.json', 'openheaders.json'];
 
       let configData: ConfigFileJson | null = null;
 
@@ -795,10 +778,11 @@ class TeamWorkspaceSyncer {
       };
 
       const totalRules = rules.header.length + rules.request.length + rules.response.length;
-      log.info(`Loaded config with ${result.sources.length} sources, ${totalRules} rules, ${result.proxyRules.length} proxy rules`);
+      log.info(
+        `Loaded config with ${result.sources.length} sources, ${totalRules} rules, ${result.proxyRules.length} proxy rules`,
+      );
 
       return result;
-
     } catch (error) {
       log.error('Failed to load workspace config:', error);
       return null;
@@ -806,6 +790,14 @@ class TeamWorkspaceSyncer {
   }
 }
 
-export { TeamWorkspaceSyncer, SYNC_STATUS, isTransientNetworkError };
-export type { SyncDependencies, SyncOptions, SyncResult, SyncStatusResult, SyncStatusType, SyncProgressInfo, WorkspaceConfigData };
+export type {
+  SyncDependencies,
+  SyncOptions,
+  SyncProgressInfo,
+  SyncResult,
+  SyncStatusResult,
+  SyncStatusType,
+  WorkspaceConfigData,
+};
+export { isTransientNetworkError, SYNC_STATUS, TeamWorkspaceSyncer };
 export default TeamWorkspaceSyncer;

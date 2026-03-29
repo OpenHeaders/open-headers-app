@@ -29,7 +29,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
       if (tab) break;
     } catch (e) {
       if ((e as Error).message.includes('Tabs cannot be edited right now')) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         retries--;
       } else {
         throw e;
@@ -50,11 +50,10 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
     'data:',
     'blob:',
     'chrome-devtools://',
-    'https://ntp.msn.com/edge/ntp'
+    'https://ntp.msn.com/edge/ntp',
   ];
 
-  const isRestrictedPage = !tab.url || tab.url === '' ||
-    restrictedUrls.some(prefix => tab!.url!.startsWith(prefix));
+  const isRestrictedPage = !tab.url || tab.url === '' || restrictedUrls.some((prefix) => tab!.url!.startsWith(prefix));
 
   if (isRestrictedPage) {
     const recordId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -64,7 +63,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
       tabId: tab.id,
       recordId: recordId,
       targetUrl: null,
-      useWidget: useWidget
+      useWidget: useWidget,
     });
 
     return { success: true, recordId, preNavigation: true };
@@ -79,7 +78,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
       type: MESSAGE_TYPES.START_RECORDING,
       tabId: tab.id,
       recordId: recordId,
-      useWidget: useWidget
+      useWidget: useWidget,
     });
   } catch (e) {
     throw new Error('Failed to start workflow in background');
@@ -96,7 +95,7 @@ export async function stopRecording(): Promise<{ success: boolean }> {
   // It will notify the content script as part of its stop flow.
   await browserAPI.runtime.sendMessage({
     type: 'STOP_RECORDING',
-    tabId: tab.id
+    tabId: tab.id,
   });
 
   return { success: true };
@@ -110,7 +109,7 @@ export async function getRecordingState(): Promise<RecordingStateResult> {
     try {
       const response = await browserAPI.runtime.sendMessage({
         action: 'GET_TAB_RECORDING_STATE',
-        tabId: tab.id
+        tabId: tab.id,
       });
 
       console.log(new Date().toISOString(), 'INFO ', '[Recording]', '[Recording] Background state response:', response);
@@ -124,12 +123,24 @@ export async function getRecordingState(): Promise<RecordingStateResult> {
 
     try {
       const response = await browserAPI.tabs.sendMessage(tab.id!, {
-        type: MESSAGE_TYPES.GET_RECORDING_STATE
+        type: MESSAGE_TYPES.GET_RECORDING_STATE,
       });
-      console.log(new Date().toISOString(), 'INFO ', '[Recording]', '[Recording] Content script state response:', response);
+      console.log(
+        new Date().toISOString(),
+        'INFO ',
+        '[Recording]',
+        '[Recording] Content script state response:',
+        response,
+      );
       return (response as RecordingStateResult) || { isRecording: false };
     } catch (e) {
-      console.log(new Date().toISOString(), 'INFO ', '[Recording]', '[Recording] Content script state check failed:', e);
+      console.log(
+        new Date().toISOString(),
+        'INFO ',
+        '[Recording]',
+        '[Recording] Content script state check failed:',
+        e,
+      );
       return { isRecording: false };
     }
   } catch (error) {

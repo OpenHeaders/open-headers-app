@@ -1,10 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import type { StorageRecord, RawRecordingRecord } from '../../../../src/types/recording';
+import { describe, expect, it } from 'vitest';
 import {
   convertNewRecordingFormat,
-  processStorageEvents,
   convertStorageForTable,
+  processStorageEvents,
 } from '../../../../src/renderer/utils/formatters/recordConverter';
+import type { RawRecordingRecord, StorageRecord } from '../../../../src/types/recording';
 
 // ======================================================================
 // extractDomain (internal, tested indirectly via processStorageEvents)
@@ -176,7 +176,12 @@ describe('convertNewRecordingFormat', () => {
       ],
     } as unknown as RawRecordingRecord;
     const result = convertNewRecordingFormat(record) as Record<string, unknown>;
-    const navHistory = result.navigationHistory as Array<{ timestamp: number; url: string; title: string; transitionType: string }>;
+    const navHistory = result.navigationHistory as Array<{
+      timestamp: number;
+      url: string;
+      title: string;
+      transitionType: string;
+    }>;
     expect(navHistory).toHaveLength(1);
     expect(navHistory[0]).toEqual({
       timestamp: 200,
@@ -276,7 +281,15 @@ describe('convertNewRecordingFormat', () => {
   it('preserves existing metadata on the record', () => {
     const record = {
       startTime: 0,
-      metadata: { recordId: 'custom', startTime: 0, endTime: 100, duration: 100, url: '', viewport: { width: 1920, height: 1080 }, userAgent: 'test' },
+      metadata: {
+        recordId: 'custom',
+        startTime: 0,
+        endTime: 100,
+        duration: 100,
+        url: '',
+        viewport: { width: 1920, height: 1080 },
+        userAgent: 'test',
+      },
       events: [],
     } as unknown as RawRecordingRecord;
     const result = convertNewRecordingFormat(record);

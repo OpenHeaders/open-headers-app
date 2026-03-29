@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { SourcesHandler } from '../../../../src/renderer/services/export-import/handlers/SourcesHandler';
+import { describe, expect, it, vi } from 'vitest';
 import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import { SourcesHandler } from '../../../../src/renderer/services/export-import/handlers/SourcesHandler';
 import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
@@ -94,11 +94,7 @@ describe('SourcesHandler.validateSourcesForExport', () => {
 
   it('accepts mixed enterprise source types', () => {
     const handler = new SourcesHandler(makeDeps());
-    const r = handler.validateSourcesForExport([
-      validSource(),
-      makeFileSource(),
-      makeEnvSource(),
-    ]);
+    const r = handler.validateSourcesForExport([validSource(), makeFileSource(), makeEnvSource()]);
     expect(r.success).toBe(true);
   });
 
@@ -134,7 +130,10 @@ describe('SourcesHandler.getSourcesStatistics', () => {
       validSource(),
       makeFileSource(),
       makeEnvSource(),
-      validSource({ sourceId: 'd4e5f6a7-b890-1234-abcd-567890123456', sourcePath: 'https://api.openheaders.io:8443/v2/config' }),
+      validSource({
+        sourceId: 'd4e5f6a7-b890-1234-abcd-567890123456',
+        sourcePath: 'https://api.openheaders.io:8443/v2/config',
+      }),
     ]);
     expect(stats).toEqual({
       total: 4,
@@ -160,9 +159,7 @@ describe('SourcesHandler.exportSources', () => {
   });
 
   it('returns valid sources, filtering invalid ones', async () => {
-    const handler = new SourcesHandler(
-      makeDeps({ sources: [validSource(), { bad: true } as unknown as Source] })
-    );
+    const handler = new SourcesHandler(makeDeps({ sources: [validSource(), { bad: true } as unknown as Source] }));
     const result = await handler.exportSources({ selectedItems: { sources: true } });
     expect(result).toHaveLength(1);
     expect(result![0].sourceId).toBe('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
@@ -205,10 +202,7 @@ describe('SourcesHandler.importSources', () => {
     const clearSpy = vi.spyOn(handler, '_clearExistingSources').mockResolvedValue(undefined);
     vi.spyOn(handler, '_importSingleSource').mockResolvedValue({ imported: true });
 
-    await handler.importSources(
-      [validSource()],
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
-    );
+    await handler.importSources([validSource()], { importMode: IMPORT_MODES.REPLACE, selectedItems: {} });
 
     expect(clearSpy).toHaveBeenCalled();
   });
@@ -217,10 +211,7 @@ describe('SourcesHandler.importSources', () => {
     const handler = new SourcesHandler(makeDeps());
     vi.spyOn(handler, '_importSingleSource').mockRejectedValue(new Error('fail'));
 
-    const stats = await handler.importSources(
-      [validSource()],
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
-    );
+    const stats = await handler.importSources([validSource()], { importMode: IMPORT_MODES.MERGE, selectedItems: {} });
     expect(stats.errors).toHaveLength(1);
     expect(stats.errors[0].error).toBe('fail');
   });
@@ -232,14 +223,10 @@ describe('SourcesHandler.importSources', () => {
       .mockResolvedValueOnce({ skipped: true })
       .mockResolvedValueOnce({ imported: true });
 
-    const stats = await handler.importSources(
-      [
-        validSource(),
-        makeFileSource(),
-        makeEnvSource(),
-      ],
-      { importMode: IMPORT_MODES.MERGE, selectedItems: {} }
-    );
+    const stats = await handler.importSources([validSource(), makeFileSource(), makeEnvSource()], {
+      importMode: IMPORT_MODES.MERGE,
+      selectedItems: {},
+    });
     expect(stats).toEqual({
       imported: 2,
       skipped: 1,
@@ -250,16 +237,18 @@ describe('SourcesHandler.importSources', () => {
   it('imports enterprise sources in replace mode clearing existing first', async () => {
     const existingSources = [validSource(), makeFileSource()];
     const removeSource = vi.fn().mockResolvedValue(true);
-    const handler = new SourcesHandler(makeDeps({
-      exportSources: () => existingSources,
-      removeSource,
-    }));
+    const handler = new SourcesHandler(
+      makeDeps({
+        exportSources: () => existingSources,
+        removeSource,
+      }),
+    );
     vi.spyOn(handler, '_importSingleSource').mockResolvedValue({ imported: true });
 
-    const stats = await handler.importSources(
-      [makeEnvSource()],
-      { importMode: IMPORT_MODES.REPLACE, selectedItems: {} }
-    );
+    const stats = await handler.importSources([makeEnvSource()], {
+      importMode: IMPORT_MODES.REPLACE,
+      selectedItems: {},
+    });
 
     expect(removeSource).toHaveBeenCalledTimes(2);
     expect(removeSource).toHaveBeenCalledWith('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
@@ -279,9 +268,13 @@ describe('SourcesHandler._getCurrentSources', () => {
   });
 
   it('returns empty array when exportSources throws', () => {
-    const handler = new SourcesHandler(makeDeps({
-      exportSources: () => { throw new Error('boom'); },
-    }));
+    const handler = new SourcesHandler(
+      makeDeps({
+        exportSources: () => {
+          throw new Error('boom');
+        },
+      }),
+    );
     expect(handler._getCurrentSources()).toEqual([]);
   });
 

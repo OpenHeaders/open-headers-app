@@ -1,8 +1,8 @@
 import { exec } from 'child_process';
-import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs';
 import electron from 'electron';
+import fs from 'fs';
+import path from 'path';
+import { promisify } from 'util';
 import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
@@ -77,7 +77,7 @@ class GitAutoInstaller {
         this.log.error('Portable Git not found in production build');
         return {
           success: false,
-          error: 'Portable Git not found. Please reinstall the application.'
+          error: 'Portable Git not found. Please reinstall the application.',
         };
       }
     }
@@ -93,7 +93,7 @@ class GitAutoInstaller {
       this.log.error('Portable Git not found in development. Run: npm run download-portable-git');
       return {
         success: false,
-        error: 'Portable Git not found. Run: npm run download-portable-git'
+        error: 'Portable Git not found. Run: npm run download-portable-git',
       };
     }
   }
@@ -124,7 +124,9 @@ class GitAutoInstaller {
         await runCommand('touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress');
 
         // Find the Command Line Tools package
-        const { stdout } = await runCommand('softwareupdate -l | grep "\\*.*Command Line" | tail -n 1 | awk -F"*" \'{print $2}\' | sed -e \'s/^ *//\' | tr -d \'\\n\'');
+        const { stdout } = await runCommand(
+          "softwareupdate -l | grep \"\\*.*Command Line\" | tail -n 1 | awk -F\"*\" '{print $2}' | sed -e 's/^ *//' | tr -d '\\n'",
+        );
 
         if (stdout) {
           // Install the package
@@ -146,7 +148,7 @@ class GitAutoInstaller {
       this.log.error('Failed to install Git on macOS:', error);
       return {
         success: false,
-        error: errMsg
+        error: errMsg,
       };
     }
   }
@@ -208,7 +210,7 @@ class GitAutoInstaller {
         default:
           return {
             success: false,
-            error: `Unsupported Linux distribution: ${distro.id}`
+            error: `Unsupported Linux distribution: ${distro.id}`,
           };
       }
 
@@ -254,13 +256,13 @@ class GitAutoInstaller {
       if (errMsg.includes('sudo') || errMsg.includes('permission')) {
         return {
           success: false,
-          error: 'Git installation requires administrator privileges. Please run: sudo ' + installCommand
+          error: 'Git installation requires administrator privileges. Please run: sudo ' + installCommand,
         };
       }
 
       return {
         success: false,
-        error: errMsg
+        error: errMsg,
       };
     }
   }
@@ -271,7 +273,7 @@ class GitAutoInstaller {
       const lines = stdout.split('\n');
       const distroInfo: DistroInfo = {};
 
-      lines.forEach(line => {
+      lines.forEach((line) => {
         const [key, value] = line.split('=');
         if (key && value) {
           distroInfo[key.toLowerCase()] = value.replace(/"/g, '');
@@ -340,7 +342,7 @@ class GitAutoInstaller {
       default:
         result = {
           success: false,
-          error: `Unsupported platform: ${process.platform}`
+          error: `Unsupported platform: ${process.platform}`,
         };
     }
 
@@ -390,5 +392,5 @@ class GitAutoInstaller {
   }
 }
 
-export { GitAutoInstaller, InstallResult, GitCheckResult, DistroInfo };
+export { type DistroInfo, GitAutoInstaller, type GitCheckResult, type InstallResult };
 export default GitAutoInstaller;

@@ -1,7 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import {
-  calculateViewportScale,
-} from '../../../../src/renderer/components/record/player/utils/playerUtils';
+import { describe, expect, it } from 'vitest';
+import { calculateViewportScale } from '../../../../src/renderer/components/record/player/utils/playerUtils';
 
 // ======================================================================
 // calculateViewportScale

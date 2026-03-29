@@ -31,47 +31,47 @@ const FLAG_NAME = '.restart-hidden';
 const MAX_AGE_MS = 60_000;
 
 function getFlagPath(): string {
-    return path.join(app.getPath('userData'), FLAG_NAME);
+  return path.join(app.getPath('userData'), FLAG_NAME);
 }
 
 export function writeRestartHiddenFlag(): void {
-    try {
-        fs.writeFileSync(getFlagPath(), Date.now().toString(), 'utf8');
-        log.info('Wrote .restart-hidden flag');
-    } catch (err) {
-        log.error('Failed to write .restart-hidden flag:', err);
-    }
+  try {
+    fs.writeFileSync(getFlagPath(), Date.now().toString(), 'utf8');
+    log.info('Wrote .restart-hidden flag');
+  } catch (err) {
+    log.error('Failed to write .restart-hidden flag:', err);
+  }
 }
 
 export function consumeRestartHiddenFlag(): boolean {
-    const flagPath = getFlagPath();
+  const flagPath = getFlagPath();
+  try {
+    const content = fs.readFileSync(flagPath, 'utf8');
+
+    // Delete the flag — best-effort; if it fails the staleness guard
+    // will prevent it from being honoured on a subsequent launch.
     try {
-        const content = fs.readFileSync(flagPath, 'utf8');
-
-        // Delete the flag — best-effort; if it fails the staleness guard
-        // will prevent it from being honoured on a subsequent launch.
-        try {
-            fs.unlinkSync(flagPath);
-        } catch (unlinkErr) {
-            log.warn('Failed to delete .restart-hidden flag (will expire via staleness guard):', unlinkErr);
-        }
-
-        const timestamp = parseInt(content, 10);
-        if (isNaN(timestamp)) {
-            log.warn('Stale .restart-hidden flag (invalid content), ignoring');
-            return false;
-        }
-
-        const age = Date.now() - timestamp;
-        if (age > MAX_AGE_MS) {
-            log.warn(`Stale .restart-hidden flag (${Math.round(age / 1000)}s old), ignoring`);
-            return false;
-        }
-
-        log.info('Consumed .restart-hidden flag, will keep window hidden');
-        return true;
-    } catch {
-        // File doesn't exist — normal case
-        return false;
+      fs.unlinkSync(flagPath);
+    } catch (unlinkErr) {
+      log.warn('Failed to delete .restart-hidden flag (will expire via staleness guard):', unlinkErr);
     }
+
+    const timestamp = parseInt(content, 10);
+    if (isNaN(timestamp)) {
+      log.warn('Stale .restart-hidden flag (invalid content), ignoring');
+      return false;
+    }
+
+    const age = Date.now() - timestamp;
+    if (age > MAX_AGE_MS) {
+      log.warn(`Stale .restart-hidden flag (${Math.round(age / 1000)}s old), ignoring`);
+      return false;
+    }
+
+    log.info('Consumed .restart-hidden flag, will keep window hidden');
+    return true;
+  } catch {
+    // File doesn't exist — normal case
+    return false;
+  }
 }

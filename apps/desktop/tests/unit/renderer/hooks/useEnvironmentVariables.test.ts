@@ -3,8 +3,8 @@
  * Tests for useEnvironmentVariables hook — validates variable CRUD, environment targeting, and metadata.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -12,7 +12,10 @@ import { renderHook, act } from '@testing-library/react';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 }));
 
@@ -77,13 +80,15 @@ describe('useEnvironmentVariables', () => {
 
     it('returns variable from specified enterprise environment', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
-      expect(result.current.getVariable('OAUTH2_CLIENT_SECRET', 'Staging — EU Region')).toBe('ohk_test_7fD48IqMzkXEbskuU2aer8fg');
+      expect(result.current.getVariable('OAUTH2_CLIENT_SECRET', 'Staging — EU Region')).toBe(
+        'ohk_test_7fD48IqMzkXEbskuU2aer8fg',
+      );
     });
 
     it('returns connection string with special characters', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
       expect(result.current.getVariable('DATABASE_CONNECTION_STRING', 'Production')).toBe(
-        'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full'
+        'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full',
       );
     });
 
@@ -165,19 +170,14 @@ describe('useEnvironmentVariables', () => {
       const { result } = renderHook(() => useEnvironmentVariables());
 
       await act(async () => {
-        await result.current.setVariable(
-          'STRIPE_WEBHOOK_SECRET',
-          'whsec_a1b2c3d4e5f6g7h8i9j0',
-          'Production',
-          true
-        );
+        await result.current.setVariable('STRIPE_WEBHOOK_SECRET', 'whsec_a1b2c3d4e5f6g7h8i9j0', 'Production', true);
       });
 
       expect(mockSetVariableInEnvironment).toHaveBeenCalledWith(
         'STRIPE_WEBHOOK_SECRET',
         'whsec_a1b2c3d4e5f6g7h8i9j0',
         'Production',
-        true
+        true,
       );
       expect(mockSetVariable).not.toHaveBeenCalled();
     });

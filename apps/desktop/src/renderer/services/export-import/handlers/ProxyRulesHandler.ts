@@ -5,13 +5,13 @@
  * including complex duplicate detection based on URL patterns and headers.
  */
 
-import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
-import type { ExportImportDependencies, ExportOptions } from '../core/types';
-import { validateProxyRule } from '../utilities/ValidationUtils';
-import { IMPORT_MODES, EVENTS } from '../core/ExportImportConfig';
 import type { ProxyRule } from '../../../../types/proxy';
-
 import { createLogger } from '../../../utils/error-handling/logger';
+import { EVENTS, IMPORT_MODES } from '../core/ExportImportConfig';
+import type { ExportImportDependencies, ExportOptions } from '../core/types';
+import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
+import { validateProxyRule } from '../utilities/ValidationUtils';
+
 const log = createLogger('ProxyRulesHandler');
 
 /**
@@ -42,7 +42,7 @@ export class ProxyRulesHandler {
       const proxyRules = await window.electronAPI.proxyGetRules();
 
       // Filter out invalid proxy rules before export
-      const validProxyRules = proxyRules.filter(rule => {
+      const validProxyRules = proxyRules.filter((rule) => {
         const validation = validateProxyRule(rule);
         if (!validation.success) {
           log.warn(`Filtering out invalid proxy rule during export: ${validation.error}`, rule);
@@ -51,7 +51,9 @@ export class ProxyRulesHandler {
         return true;
       });
 
-      log.info(`Exporting ${validProxyRules.length} valid proxy rules (filtered ${proxyRules.length - validProxyRules.length} invalid)`);
+      log.info(
+        `Exporting ${validProxyRules.length} valid proxy rules (filtered ${proxyRules.length - validProxyRules.length} invalid)`,
+      );
       return validProxyRules;
     } catch (error) {
       log.error('Failed to export proxy rules:', error);
@@ -69,7 +71,7 @@ export class ProxyRulesHandler {
     const stats: { imported: number; skipped: number; errors: Array<{ pattern: string; error: string }> } = {
       imported: 0,
       skipped: 0,
-      errors: []
+      errors: [],
     };
 
     if (!Array.isArray(rulesToImport) || rulesToImport.length === 0) {
@@ -103,7 +105,7 @@ export class ProxyRulesHandler {
         log.error(`Failed to import proxy rule ${rule.id}:`, error);
         stats.errors.push({
           pattern: rule.name || rule.id,
-          error: error instanceof Error ? error.message : String(error)
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -113,7 +115,9 @@ export class ProxyRulesHandler {
       this._emitProxyRulesUpdatedEvent(stats);
     }
 
-    log.info(`Proxy rules import completed: ${stats.imported} imported, ${stats.skipped} skipped, ${stats.errors.length} errors`);
+    log.info(
+      `Proxy rules import completed: ${stats.imported} imported, ${stats.skipped} skipped, ${stats.errors.length} errors`,
+    );
     return stats;
   }
 
@@ -194,7 +198,9 @@ export class ProxyRulesHandler {
         }
       }
     } catch (error) {
-      throw new Error(`Failed to clear existing proxy rules: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to clear existing proxy rules: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -205,13 +211,15 @@ export class ProxyRulesHandler {
    */
   _emitProxyRulesUpdatedEvent(stats: { imported: number; skipped: number }) {
     try {
-      window.dispatchEvent(new CustomEvent(EVENTS.PROXY_RULES_UPDATED, {
-        detail: {
-          imported: stats.imported,
-          skipped: stats.skipped,
-          source: 'import'
-        }
-      }));
+      window.dispatchEvent(
+        new CustomEvent(EVENTS.PROXY_RULES_UPDATED, {
+          detail: {
+            imported: stats.imported,
+            skipped: stats.skipped,
+            source: 'import',
+          },
+        }),
+      );
     } catch (error) {
       log.warn('Failed to emit proxy rules updated event:', error);
     }
@@ -226,7 +234,7 @@ export class ProxyRulesHandler {
     if (!Array.isArray(rules)) {
       return {
         success: false,
-        error: 'Proxy rules must be an array'
+        error: 'Proxy rules must be an array',
       };
     }
 
@@ -241,7 +249,7 @@ export class ProxyRulesHandler {
     if (errors.length > 0) {
       return {
         success: false,
-        error: errors.join('; ')
+        error: errors.join('; '),
       };
     }
 
@@ -260,18 +268,24 @@ export class ProxyRulesHandler {
         withHeaders: 0,
         patterns: [],
         totalHeaders: 0,
-        averageHeadersPerRule: 0
+        averageHeadersPerRule: 0,
       };
     }
 
-    const stats: { total: number; withHeaders: number; patterns: string[]; totalHeaders: number; averageHeadersPerRule?: number } = {
+    const stats: {
+      total: number;
+      withHeaders: number;
+      patterns: string[];
+      totalHeaders: number;
+      averageHeadersPerRule?: number;
+    } = {
       total: rules.length,
       withHeaders: 0,
       patterns: [] as string[],
-      totalHeaders: 0
+      totalHeaders: 0,
     };
 
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       if (rule.domains && rule.domains.length > 0) {
         stats.patterns.push(rule.domains.join(', '));
       }
@@ -282,9 +296,8 @@ export class ProxyRulesHandler {
       }
     });
 
-    stats.averageHeadersPerRule = stats.withHeaders > 0
-      ? Math.round(stats.totalHeaders / stats.withHeaders * 100) / 100
-      : 0;
+    stats.averageHeadersPerRule =
+      stats.withHeaders > 0 ? Math.round((stats.totalHeaders / stats.withHeaders) * 100) / 100 : 0;
 
     return stats;
   }
@@ -304,7 +317,7 @@ export class ProxyRulesHandler {
     const patternCounts: Record<string, number> = {};
 
     // Check for duplicate domain patterns
-    rules.forEach(rule => {
+    rules.forEach((rule) => {
       const key = rule.domains?.join(',') || rule.name || rule.id;
       patternCounts[key] = (patternCounts[key] || 0) + 1;
     });
@@ -325,7 +338,7 @@ export class ProxyRulesHandler {
     });
 
     // Check for rules without header names
-    const rulesWithoutHeaders = rules.filter(rule => !rule.headerName);
+    const rulesWithoutHeaders = rules.filter((rule) => !rule.headerName);
     if (rulesWithoutHeaders.length > 0) {
       warnings.push(`${rulesWithoutHeaders.length} rule(s) have no header name configured`);
       suggestions.push('Rules without header names may not have any effect');
@@ -333,5 +346,4 @@ export class ProxyRulesHandler {
 
     return { warnings, suggestions };
   }
-
 }

@@ -1,9 +1,9 @@
 import {
   useEnvironmentCore,
   useEnvironmentOperations,
-  useEnvironmentVariables,
+  useEnvironmentSchema,
   useEnvironmentTemplates,
-  useEnvironmentSchema
+  useEnvironmentVariables,
 } from './environment';
 
 /**
@@ -48,7 +48,7 @@ export function useCentralizedEnvironments() {
     generateEnvironmentSchema: schema.generateEnvironmentSchema,
 
     // Direct service access if needed
-    service: core.service
+    service: core.service,
   };
 }
 

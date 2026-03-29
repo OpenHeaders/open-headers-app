@@ -5,8 +5,8 @@
  * Validates workspace CRUD, sync, delete guard, and clone logic.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Workspace } from '../../../../src/types/workspace';
 
 // ---------------------------------------------------------------------------
@@ -15,7 +15,10 @@ import type { Workspace } from '../../../../src/types/workspace';
 
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
-    info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
 }));
 
@@ -36,7 +39,12 @@ const mockSyncWorkspace = vi.fn();
 const mockState = {
   workspaces: [
     { id: 'ws-a1b2c3d4-e5f6-7890', name: 'OpenHeaders — Development', type: 'personal' },
-    { id: 'ws-b2c3d4e5-f6a7-8901', name: 'OpenHeaders — Staging (GitLab)', type: 'git', gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git' },
+    {
+      id: 'ws-b2c3d4e5-f6a7-8901',
+      name: 'OpenHeaders — Staging (GitLab)',
+      type: 'git',
+      gitUrl: 'https://gitlab.openheaders.io/platform/shared-headers.git',
+    },
     { id: 'default-personal', name: 'Default', type: 'personal' },
   ],
   syncStatus: {},
@@ -117,7 +125,7 @@ describe('useWorkspaces', () => {
       });
 
       expect(mockCreateWorkspace).toHaveBeenCalledWith(
-        expect.objectContaining({ name: 'No ID', id: expect.any(String) })
+        expect.objectContaining({ name: 'No ID', id: expect.any(String) }),
       );
     });
 
@@ -289,7 +297,7 @@ describe('useWorkspaces', () => {
       mockCreateWorkspace.mockImplementation((data: Partial<Workspace>) => ({
         ...data,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }));
 
       const { result } = renderHook(() => useWorkspaces());
@@ -303,10 +311,12 @@ describe('useWorkspaces', () => {
       expect(cloned!.type).toBe('personal');
       expect(cloned!.name).toBe('OpenHeaders — Staging (GitLab) (Personal Copy)');
       expect(cloned!.clonedFrom).toBe('ws-b2c3d4e5-f6a7-8901');
-      expect(mockCreateWorkspace).toHaveBeenCalledWith(expect.objectContaining({
-        type: 'personal',
-        name: 'OpenHeaders — Staging (GitLab) (Personal Copy)'
-      }));
+      expect(mockCreateWorkspace).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'personal',
+          name: 'OpenHeaders — Staging (GitLab) (Personal Copy)',
+        }),
+      );
       expect(mockCopyWorkspaceData).toHaveBeenCalledWith('ws-b2c3d4e5-f6a7-8901', expect.stringContaining('personal-'));
       expect(mockSwitchWorkspace).toHaveBeenCalledWith(expect.stringContaining('personal-'));
       expect(mockShowMessage).toHaveBeenCalledWith('success', expect.stringContaining('personal copy'));

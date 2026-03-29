@@ -72,7 +72,7 @@ class DomainMatcher {
       return true; // No domains means match all
     }
 
-    return domains.some(domain => this.matches(targetUrl, domain));
+    return domains.some((domain) => DomainMatcher.matches(targetUrl, domain));
   }
 }
 

@@ -1,11 +1,10 @@
 export {
+  generateSavedDataHash,
+  generateSourcesHash,
+} from './hash';
+export {
+  normalizeHeaderName,
+  sanitizeHeaderValue,
   validateHeaderName,
   validateHeaderValue,
-  sanitizeHeaderValue,
-  normalizeHeaderName,
 } from './headers';
-
-export {
-  generateSourcesHash,
-  generateSavedDataHash,
-} from './hash';

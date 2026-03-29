@@ -1,15 +1,16 @@
-import React, { useCallback, useRef } from 'react';
-import { FixedSizeList as List } from 'react-window';
 import { Table } from 'antd';
+import type React from 'react';
+import { useCallback, useRef } from 'react';
+import { FixedSizeList as List } from 'react-window';
 import './VirtualizedTables.css';
 
 /**
  * VirtualizedSimpleTable Component
- * 
+ *
  * A high-performance table component using react-window for efficient rendering
  * of large datasets while maintaining Ant Design styling and functionality.
  * Designed for simple data display with basic interaction patterns.
- * 
+ *
  * Features:
  * - Virtualized rendering for optimal performance with large datasets
  * - Full Ant Design table styling compatibility
@@ -17,18 +18,18 @@ import './VirtualizedTables.css';
  * - Custom row rendering with event handlers
  * - Automatic fallback to standard Ant Design table for empty states
  * - Responsive design with proper scrolling behavior
- * 
+ *
  * Performance:
  * - Only renders visible rows in viewport
  * - Efficient memory usage regardless of dataset size
  * - Smooth scrolling with configurable overscan
  * - Fixed row heights for optimal performance
- * 
+ *
  * Use Cases:
  * - Simple data tables with basic CRUD operations
  * - Source management interfaces
  * - Any table with >50 items that needs virtualization
- * 
+ *
  * @component
  * @since 3.0.0
  */
@@ -64,8 +65,7 @@ interface VirtualizedSimpleTableProps<T extends object = object> {
   scroll?: { x?: number; y?: number };
 }
 
-const getField = (record: object, key: string): unknown =>
-  (record as Record<string, unknown>)[key];
+const getField = (record: object, key: string): unknown => (record as Record<string, unknown>)[key];
 
 function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableProps<T>) {
   const {
@@ -80,76 +80,82 @@ function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableP
     scroll: _scroll,
   } = props;
   // Row renderer for react-window virtualization
-  const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const record = dataSource[index];
-    const key: React.Key = typeof rowKey === 'function' ? rowKey(record) : String(getField(record, rowKey));
+  const Row = useCallback(
+    ({ index, style }: { index: number; style: React.CSSProperties }) => {
+      const record = dataSource[index];
+      const key: React.Key = typeof rowKey === 'function' ? rowKey(record) : String(getField(record, rowKey));
 
-    // Get row props if onRow is provided
-    const rowProps: RowEventHandlers = onRow ? onRow(record, index) : {};
+      // Get row props if onRow is provided
+      const rowProps: RowEventHandlers = onRow ? onRow(record, index) : {};
 
-    // Check if row is selected
-    const isSelected = rowSelection?.selectedRowKeys?.includes(key);
-    
-    return (
-      <div
-        style={{
-          ...style,
-          display: 'flex',
-          alignItems: 'center',
-          borderBottom: '1px solid #f0f0f0',
-        }}
-        className={`virtual-table-row ${isSelected ? 'selected' : ''} ${rowProps.className || ''}`}
-        onClick={rowProps.onClick}
-        onDoubleClick={rowProps.onDoubleClick}
-      >
-        {/* Selection checkbox */}
-        {rowSelection && (
-          <div className="virtual-table-cell selection-cell" style={{ width: 60 }}>
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                const currentKeys = rowSelection.selectedRowKeys || [];
-                let newKeys;
-                
-                if (checked) {
-                  newKeys = [...currentKeys, key];
-                } else {
-                  newKeys = currentKeys.filter((k: React.Key) => k !== key);
-                }
-                
-                rowSelection.onChange?.(newKeys, dataSource.filter((item) => {
-                  const itemKey = typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey));
-                  return newKeys.includes(itemKey);
-                }));
-              }}
-            />
-          </div>
-        )}
-        
-        {/* Render cells */}
-        {columns.map((column, colIndex: number) => {
-          const value = column.dataIndex ? getField(record, column.dataIndex) : undefined;
-          const cellContent = column.render ? column.render(value, record, index) : String(value ?? '');
-          
-          return (
-            <div
-              key={column.key || column.dataIndex || colIndex}
-              className="virtual-table-cell"
-              style={{
-                width: column.width || 150,
-                textAlign: column.align || 'left',
-                padding: '0 16px',
-              }}
-            >
-              {cellContent}
+      // Check if row is selected
+      const isSelected = rowSelection?.selectedRowKeys?.includes(key);
+
+      return (
+        <div
+          style={{
+            ...style,
+            display: 'flex',
+            alignItems: 'center',
+            borderBottom: '1px solid #f0f0f0',
+          }}
+          className={`virtual-table-row ${isSelected ? 'selected' : ''} ${rowProps.className || ''}`}
+          onClick={rowProps.onClick}
+          onDoubleClick={rowProps.onDoubleClick}
+        >
+          {/* Selection checkbox */}
+          {rowSelection && (
+            <div className="virtual-table-cell selection-cell" style={{ width: 60 }}>
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  const currentKeys = rowSelection.selectedRowKeys || [];
+                  let newKeys;
+
+                  if (checked) {
+                    newKeys = [...currentKeys, key];
+                  } else {
+                    newKeys = currentKeys.filter((k: React.Key) => k !== key);
+                  }
+
+                  rowSelection.onChange?.(
+                    newKeys,
+                    dataSource.filter((item) => {
+                      const itemKey = typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey));
+                      return newKeys.includes(itemKey);
+                    }),
+                  );
+                }}
+              />
             </div>
-          );
-        })}
-      </div>
-    );
-  }, [dataSource, columns, rowKey, onRow, rowSelection]);
+          )}
+
+          {/* Render cells */}
+          {columns.map((column, colIndex: number) => {
+            const value = column.dataIndex ? getField(record, column.dataIndex) : undefined;
+            const cellContent = column.render ? column.render(value, record, index) : String(value ?? '');
+
+            return (
+              <div
+                key={column.key || column.dataIndex || colIndex}
+                className="virtual-table-cell"
+                style={{
+                  width: column.width || 150,
+                  textAlign: column.align || 'left',
+                  padding: '0 16px',
+                }}
+              >
+                {cellContent}
+              </div>
+            );
+          })}
+        </div>
+      );
+    },
+    [dataSource, columns, rowKey, onRow, rowSelection],
+  );
 
   // Header renderer
   const renderHeader = () => (
@@ -161,14 +167,16 @@ function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableP
             checked={(rowSelection?.selectedRowKeys?.length ?? 0) === dataSource.length}
             ref={(checkbox) => {
               if (checkbox) {
-                checkbox.indeterminate = (rowSelection?.selectedRowKeys?.length ?? 0) > 0 && (rowSelection?.selectedRowKeys?.length ?? 0) < dataSource.length;
+                checkbox.indeterminate =
+                  (rowSelection?.selectedRowKeys?.length ?? 0) > 0 &&
+                  (rowSelection?.selectedRowKeys?.length ?? 0) < dataSource.length;
               }
             }}
             onChange={(e) => {
               const checked = e.target.checked;
               if (checked) {
                 const allKeys = dataSource.map((item) =>
-                  typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey))
+                  typeof rowKey === 'function' ? rowKey(item) : String(getField(item, rowKey)),
                 );
                 rowSelection.onChange?.(allKeys, dataSource);
               } else {
@@ -200,14 +208,13 @@ function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableP
   // Empty state — only show column headers, so we just need title/key/width
   if (!dataSource || dataSource.length === 0) {
     const emptyColumns = columns.map(({ key, dataIndex, title, width, align }) => ({
-      key, dataIndex, title, width, align,
+      key,
+      dataIndex,
+      title,
+      width,
+      align,
     }));
-    return (
-      <Table
-        columns={emptyColumns}
-        dataSource={[]}
-      />
-    );
+    return <Table columns={emptyColumns} dataSource={[]} />;
   }
 
   return (

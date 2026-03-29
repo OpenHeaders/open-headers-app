@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   getTypeFromRecord,
-  getUniqueTypes,
-  getUniqueStatusGroups,
   getUniqueMethods,
+  getUniqueStatusGroups,
+  getUniqueTypes,
 } from '../../../../src/renderer/components/record/network/NetworkTypeUtils';
 import type { NetworkRecord } from '../../../../src/types/recording';
 
@@ -76,7 +76,10 @@ describe('getTypeFromRecord', () => {
   });
 
   it('identifies JSON by mime type for fetch/xhr', () => {
-    const req = makeNetRecord({ type: 'fetch', responseHeaders: { 'content-type': 'application/json; charset=utf-8' } });
+    const req = makeNetRecord({
+      type: 'fetch',
+      responseHeaders: { 'content-type': 'application/json; charset=utf-8' },
+    });
     expect(getTypeFromRecord(req)).toBe('json');
   });
 

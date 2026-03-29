@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  getFormInitialValues,
-  getFieldsWithTemplateVariables,
-  generateTempSourceId,
   createTestSourceId,
   debounceValidation,
+  generateTempSourceId,
+  getFieldsWithTemplateVariables,
+  getFormInitialValues,
 } from '../../../../src/renderer/components/sources/source-form/SourceFormUtils';
 
 // ======================================================================

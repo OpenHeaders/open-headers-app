@@ -3,8 +3,9 @@
  * Supports different input types based on the data being edited
  */
 
-import React, { forwardRef } from 'react';
 import { Form, Input, Radio } from 'antd';
+import type React from 'react';
+import { forwardRef } from 'react';
 import { VARIABLE_NAME_RULES } from './EnvironmentTypes';
 import SecretInput from './SecretInput';
 
@@ -13,23 +14,18 @@ const { TextArea } = Input;
 /**
  * Dynamic value input that switches between TextArea and SecretInput based on isSecret
  */
-const DynamicValueInput = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>((props, ref) => {
-  const form = Form.useFormInstance();
-  const isSecret = Form.useWatch('isSecret', form);
-  
-  if (isSecret) {
-    return <SecretInput ref={ref} useGlobalPreference="edit" showButton={true} {...props} />;
-  }
-  
-  return (
-    <TextArea
-      ref={ref}
-      placeholder="Enter value"
-      autoSize={{ minRows: 1, maxRows: 14 }}
-      {...props}
-    />
-  );
-});
+const DynamicValueInput = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+  (props, ref) => {
+    const form = Form.useFormInstance();
+    const isSecret = Form.useWatch('isSecret', form);
+
+    if (isSecret) {
+      return <SecretInput ref={ref} useGlobalPreference="edit" showButton={true} {...props} />;
+    }
+
+    return <TextArea ref={ref} placeholder="Enter value" autoSize={{ minRows: 1, maxRows: 14 }} {...props} />;
+  },
+);
 
 /**
  * EditableCell component for inline editing in the variables table
@@ -81,12 +77,7 @@ const EditableCell = ({
           </Radio.Group>
         );
       default:
-        return (
-          <TextArea
-            placeholder="Enter value"
-            autoSize={{ minRows: 1, maxRows: 14 }}
-          />
-        );
+        return <TextArea placeholder="Enter value" autoSize={{ minRows: 1, maxRows: 14 }} />;
     }
   };
 
@@ -95,7 +86,7 @@ const EditableCell = ({
    */
   const getValidationRules = () => {
     const rules = [];
-    
+
     // All fields except isSecret are required
     if (dataIndex !== 'isSecret') {
       rules.push({
@@ -103,23 +94,19 @@ const EditableCell = ({
         message: `Please Input ${title}!`,
       });
     }
-    
+
     // Variable name has specific pattern requirements
     if (dataIndex === 'name') {
       rules.push(VARIABLE_NAME_RULES[1]); // Pattern rule
     }
-    
+
     return rules;
   };
 
   return (
     <td {...restProps}>
       {editing ? (
-        <Form.Item
-          name={dataIndex}
-          style={{ margin: 0 }}
-          rules={getValidationRules()}
-        >
+        <Form.Item name={dataIndex} style={{ margin: 0 }} rules={getValidationRules()}>
           {renderInputNode()}
         </Form.Item>
       ) : (

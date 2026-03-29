@@ -1,11 +1,11 @@
+import { useMemo } from 'react';
+import type { WorkspaceContextType } from '../services/WorkspaceServiceAdapter';
+import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
+import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+import { useGitActions } from './git';
+import { useSyncOperations } from './sync';
 import { useWorkspaceCreation } from './useWorkspaceCreation';
 import { useWorkspaceOperations } from './workspace';
-import { useSyncOperations } from './sync';
-import { useGitActions } from './git';
-import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
-import type { WorkspaceContextType } from '../services/WorkspaceServiceAdapter';
-import { useMemo } from 'react';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
 
 /**
  * Main orchestrator hook for workspace actions
@@ -14,103 +14,103 @@ import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
  * while maintaining backward compatibility for other operations.
  */
 export const useWorkspaceActions = (workspaceContext: WorkspaceContextType) => {
-    // Create service adapters for new architecture (using singleton pattern)
-    const services = useMemo(() => {
-        return WorkspaceServiceAdapterFactory.create({
-            workspaceContext
-        });
-    }, [workspaceContext]);
-
-    // Use new workspace creation hook
-    const workspaceCreation = useWorkspaceCreation(services);
-
-    // Keep existing hooks for backward compatibility
-    const gitActions = useGitActions();
-    const workspaceOps = useWorkspaceOperations(workspaceContext);
-    const syncOps = useSyncOperations({
-        syncWorkspace: workspaceContext.syncWorkspace!,
-        switchWorkspace: workspaceContext.switchWorkspace!
+  // Create service adapters for new architecture (using singleton pattern)
+  const services = useMemo(() => {
+    return WorkspaceServiceAdapterFactory.create({
+      workspaceContext,
     });
+  }, [workspaceContext]);
 
-    /**
-     * Enhanced save workspace that uses new state machine architecture
-     */
-    const handleSaveWorkspace = async (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null) => {
-        // Use new architecture for new workspaces
-        if (!editingWorkspace) {
-            return await workspaceCreation.createWorkspace(values);
-        }
+  // Use new workspace creation hook
+  const workspaceCreation = useWorkspaceCreation(services);
 
-        // Use old architecture for editing existing workspaces
-        const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
+  // Keep existing hooks for backward compatibility
+  const gitActions = useGitActions();
+  const workspaceOps = useWorkspaceOperations(workspaceContext);
+  const syncOps = useSyncOperations({
+    syncWorkspace: workspaceContext.syncWorkspace!,
+    switchWorkspace: workspaceContext.switchWorkspace!,
+  });
 
-        if (saveResult.success && saveResult.result) {
-            const workspaceId = editingWorkspace?.id || Date.now().toString();
-            const workspace = {
-                ...values,
-                id: workspaceId,
-                type: values.gitUrl ? 'git' as const : 'personal' as const
-            };
-            const switchTarget = { id: workspaceId };
+  /**
+   * Enhanced save workspace that uses new state machine architecture
+   */
+  const handleSaveWorkspace = async (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null) => {
+    // Use new architecture for new workspaces
+    if (!editingWorkspace) {
+      return await workspaceCreation.createWorkspace(values);
+    }
 
-            // Handle sync operations for updated workspaces
-            if (workspace.type === 'git') {
-                const syncListeners = syncOps.setupSyncListeners();
-                await syncOps.handleWorkspaceSwitch(switchTarget, workspace, syncListeners);
-            } else {
-                await syncOps.handleWorkspaceSwitch(switchTarget, workspace, null);
-            }
-        }
+    // Use old architecture for editing existing workspaces
+    const saveResult = await workspaceOps.handleSaveWorkspace(values, editingWorkspace);
 
-        return saveResult.success;
-    };
+    if (saveResult.success && saveResult.result) {
+      const workspaceId = editingWorkspace?.id || Date.now().toString();
+      const workspace = {
+        ...values,
+        id: workspaceId,
+        type: values.gitUrl ? ('git' as const) : ('personal' as const),
+      };
+      const switchTarget = { id: workspaceId };
 
-    // Combine all actions and state
-    return {
-        // New workspace creation state (preferred)
-        creationState: workspaceCreation.state,
-        creationProgress: workspaceCreation.progress,
-        creationError: workspaceCreation.error,
-        isCreating: workspaceCreation.isLoading,
-        creationCompleted: workspaceCreation.isCompleted,
-        canRetryCreation: workspaceCreation.canRetry,
-        canAbortCreation: workspaceCreation.canAbort,
+      // Handle sync operations for updated workspaces
+      if (workspace.type === 'git') {
+        const syncListeners = syncOps.setupSyncListeners();
+        await syncOps.handleWorkspaceSwitch(switchTarget, workspace, syncListeners);
+      } else {
+        await syncOps.handleWorkspaceSwitch(switchTarget, workspace, null);
+      }
+    }
 
-        // Git actions state (backward compatibility)
-        gitStatus: gitActions.gitStatus,
-        checkingGitStatus: gitActions.checkingGitStatus,
-        installingGit: gitActions.installingGit,
-        gitInstallProgress: gitActions.gitInstallProgress,
-        testingConnection: gitActions.testingConnection,
-        connectionTested: gitActions.connectionTested,
-        connectionProgress: gitActions.connectionProgress,
-        showProgressModal: gitActions.showProgressModal,
+    return saveResult.success;
+  };
 
-        // Workspace operations state
-        loading: workspaceOps.loading,
+  // Combine all actions and state
+  return {
+    // New workspace creation state (preferred)
+    creationState: workspaceCreation.state,
+    creationProgress: workspaceCreation.progress,
+    creationError: workspaceCreation.error,
+    isCreating: workspaceCreation.isLoading,
+    creationCompleted: workspaceCreation.isCompleted,
+    canRetryCreation: workspaceCreation.canRetry,
+    canAbortCreation: workspaceCreation.canAbort,
 
-        // Actions - new architecture
-        createWorkspace: workspaceCreation.createWorkspace,
-        abortCreation: workspaceCreation.abortCreation,
-        resetCreation: workspaceCreation.resetCreation,
-        retryCreation: workspaceCreation.retryCreation,
+    // Git actions state (backward compatibility)
+    gitStatus: gitActions.gitStatus,
+    checkingGitStatus: gitActions.checkingGitStatus,
+    installingGit: gitActions.installingGit,
+    gitInstallProgress: gitActions.gitInstallProgress,
+    testingConnection: gitActions.testingConnection,
+    connectionTested: gitActions.connectionTested,
+    connectionProgress: gitActions.connectionProgress,
+    showProgressModal: gitActions.showProgressModal,
 
-        // Actions - backward compatibility
-        checkGitStatus: gitActions.checkGitStatus,
-        handleInstallGit: gitActions.handleInstallGit,
-        handleTestConnection: gitActions.handleTestConnection,
-        resetConnectionTest: gitActions.resetConnectionTest,
+    // Workspace operations state
+    loading: workspaceOps.loading,
 
-        // Workspace operations
-        handleSaveWorkspace,
-        handleDeleteWorkspace: workspaceOps.handleDeleteWorkspace,
-        handleCloneToPersonal: workspaceOps.handleCloneToPersonal,
-        handleBrowseSSHKey: workspaceOps.handleBrowseSSHKey,
+    // Actions - new architecture
+    createWorkspace: workspaceCreation.createWorkspace,
+    abortCreation: workspaceCreation.abortCreation,
+    resetCreation: workspaceCreation.resetCreation,
+    retryCreation: workspaceCreation.retryCreation,
 
-        // Sync operations
-        handleSyncWorkspace: syncOps.handleSyncWorkspace,
+    // Actions - backward compatibility
+    checkGitStatus: gitActions.checkGitStatus,
+    handleInstallGit: gitActions.handleInstallGit,
+    handleTestConnection: gitActions.handleTestConnection,
+    resetConnectionTest: gitActions.resetConnectionTest,
 
-        // Utilities
-        setShowProgressModal: gitActions.setShowProgressModal
-    };
+    // Workspace operations
+    handleSaveWorkspace,
+    handleDeleteWorkspace: workspaceOps.handleDeleteWorkspace,
+    handleCloneToPersonal: workspaceOps.handleCloneToPersonal,
+    handleBrowseSSHKey: workspaceOps.handleBrowseSSHKey,
+
+    // Sync operations
+    handleSyncWorkspace: syncOps.handleSyncWorkspace,
+
+    // Utilities
+    setShowProgressModal: gitActions.setShowProgressModal,
+  };
 };

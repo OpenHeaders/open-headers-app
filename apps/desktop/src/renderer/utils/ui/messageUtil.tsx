@@ -1,7 +1,8 @@
 // We're changing our approach to use the hook pattern
-import React, { useEffect } from 'react';
-import { useAppMessage } from './MessageProvider';
+import type React from 'react';
+import { useEffect } from 'react';
 import { createLogger } from '../error-handling/logger';
+import { useAppMessage } from './MessageProvider';
 
 const log = createLogger('messageUtil');
 
@@ -16,9 +17,9 @@ type ShowMessageFn = (type: MessageType, content: MessageContent, duration?: num
 
 // These functions will be used outside of React components
 let globalShowMessage: ShowMessageFn = (type: MessageType, content: MessageContent, duration?: number) => {
-    log.debug(`Message API not initialized yet: ${type} - ${String(content)}`);
-    // Default implementation that just logs
-    log.debug(`This message will not be displayed to user: ${String(content)}`);
+  log.debug(`Message API not initialized yet: ${type} - ${String(content)}`);
+  // Default implementation that just logs
+  log.debug(`This message will not be displayed to user: ${String(content)}`);
 };
 
 /**
@@ -26,12 +27,12 @@ let globalShowMessage: ShowMessageFn = (type: MessageType, content: MessageConte
  * This should be called once in a component that has access to the MessageProvider
  */
 export const initializeMessageApi = (showMessage: ShowMessageFn) => {
-    if (typeof showMessage === 'function') {
-        globalShowMessage = showMessage;
-        log.info('Message API initialized');
-    } else {
-        log.error('Failed to initialize Message API: showMessage is not a function');
-    }
+  if (typeof showMessage === 'function') {
+    globalShowMessage = showMessage;
+    log.info('Message API initialized');
+  } else {
+    log.error('Failed to initialize Message API: showMessage is not a function');
+  }
 };
 
 /**
@@ -39,30 +40,30 @@ export const initializeMessageApi = (showMessage: ShowMessageFn) => {
  * Place this once in your application
  */
 export const MessageInitializer = () => {
-    const { showMessage } = useAppMessage();
+  const { showMessage } = useAppMessage();
 
-    // Initialize the global message functions
-    useEffect(() => {
-        initializeMessageApi(showMessage);
-        return () => {
-            // Reset to default implementation when component unmounts
-            globalShowMessage = (type: MessageType, content: MessageContent, duration?: number) => {
-                log.debug(`Message API reset: ${type} - ${content}`);
-            };
-        };
-    }, [showMessage]);
+  // Initialize the global message functions
+  useEffect(() => {
+    initializeMessageApi(showMessage);
+    return () => {
+      // Reset to default implementation when component unmounts
+      globalShowMessage = (type: MessageType, content: MessageContent, duration?: number) => {
+        log.debug(`Message API reset: ${type} - ${content}`);
+      };
+    };
+  }, [showMessage]);
 
-    // This component doesn't render anything
-    return null;
+  // This component doesn't render anything
+  return null;
 };
 
 // Exported functions that can be used anywhere in the application
 export const showMessage = (type: MessageType, content: MessageContent, duration = 3) => {
-    if (typeof globalShowMessage !== 'function') {
-        // Message API not properly initialized
-        return;
-    }
-    globalShowMessage(type, content, duration);
+  if (typeof globalShowMessage !== 'function') {
+    // Message API not properly initialized
+    return;
+  }
+  globalShowMessage(type, content, duration);
 };
 
 export const successMessage = (content: MessageContent, duration?: number) => showMessage('success', content, duration);

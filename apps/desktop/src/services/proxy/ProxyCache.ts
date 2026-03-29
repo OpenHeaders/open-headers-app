@@ -1,10 +1,10 @@
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
-import atomicWriter from '../../utils/atomicFileWriter';
+import fs from 'fs';
+import path from 'path';
 import { errorMessage, toErrno } from '../../types/common';
+import atomicWriter from '../../utils/atomicFileWriter';
+import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
@@ -84,7 +84,7 @@ class ProxyCache {
     // For static files, don't include auth header in cache key
     const staticFileRegex = /\.(woff2?|ttf|otf|eot|png|jpg|jpeg|gif|webp|svg|ico|css|js|mjs)(\?|$)/i;
     const isStaticFile = staticFileRegex.test(normalizedUrl);
-    const authHeader = isStaticFile ? '' : (headers.authorization || '');
+    const authHeader = isStaticFile ? '' : headers.authorization || '';
 
     const keyData = `${normalizedUrl}|${authHeader}`;
     return crypto.createHash('sha256').update(keyData).digest('hex');
@@ -121,7 +121,7 @@ class ProxyCache {
         data,
         headers: metadata.headers,
         contentType: metadata.contentType,
-        statusCode: metadata.statusCode
+        statusCode: metadata.statusCode,
       };
     } catch (error: unknown) {
       this.log.error('Error reading from cache:', error);
@@ -130,7 +130,11 @@ class ProxyCache {
     }
   }
 
-  async set(url: string, data: Buffer, options: { headers?: Record<string, string>; contentType?: string; statusCode?: number } = {}): Promise<void> {
+  async set(
+    url: string,
+    data: Buffer,
+    options: { headers?: Record<string, string>; contentType?: string; statusCode?: number } = {},
+  ): Promise<void> {
     const { headers = {}, contentType = '', statusCode = 200 } = options;
     const key = this.getCacheKey(url, headers);
 
@@ -148,7 +152,7 @@ class ProxyCache {
         size: data.length,
         headers: this.sanitizeHeaders(headers),
         contentType,
-        statusCode
+        statusCode,
       };
 
       this.metadata.set(key, metadata);
@@ -161,13 +165,7 @@ class ProxyCache {
   }
 
   sanitizeHeaders(headers: Record<string, string>): Record<string, string> {
-    const relevantHeaders = [
-      'content-type',
-      'content-encoding',
-      'cache-control',
-      'etag',
-      'last-modified'
-    ];
+    const relevantHeaders = ['content-type', 'content-encoding', 'cache-control', 'etag', 'last-modified'];
 
     const sanitized: Record<string, string> = {};
     for (const [key, value] of Object.entries(headers)) {
@@ -236,11 +234,13 @@ class ProxyCache {
       totalSize,
       totalEntries,
       maxCacheSize: this.maxCacheSize,
-      usage: (totalSize / this.maxCacheSize) * 100
+      usage: (totalSize / this.maxCacheSize) * 100,
     };
   }
 
-  async getCacheEntries(): Promise<Array<{ key: string; url: string; size: number; timestamp: number; lastAccessed: number; contentType: string }>> {
+  async getCacheEntries(): Promise<
+    Array<{ key: string; url: string; size: number; timestamp: number; lastAccessed: number; contentType: string }>
+  > {
     const entries = [];
     for (const [key, metadata] of this.metadata.entries()) {
       entries.push({
@@ -249,7 +249,7 @@ class ProxyCache {
         size: metadata.size,
         timestamp: metadata.timestamp,
         lastAccessed: metadata.lastAccessed,
-        contentType: metadata.contentType
+        contentType: metadata.contentType,
       });
     }
     return entries.sort((a, b) => b.lastAccessed - a.lastAccessed);

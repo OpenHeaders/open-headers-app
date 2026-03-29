@@ -26,7 +26,7 @@ class GitConnectionProgress {
       step,
       status, // 'running', 'success', 'error', 'warning'
       details,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
 
     this.steps.push(update);
@@ -51,13 +51,13 @@ class GitConnectionProgress {
   }
 
   getLastError(): ProgressStep | null {
-    const errors = this.steps.filter(s => s.status === 'error');
+    const errors = this.steps.filter((s) => s.status === 'error');
     return errors.length > 0 ? errors[errors.length - 1] : null;
   }
 
   getSummary(): ProgressStep[] {
     const grouped: Record<string, ProgressStep> = {};
-    this.steps.forEach(step => {
+    this.steps.forEach((step) => {
       if (!grouped[step.step]) {
         grouped[step.step] = step;
       } else if (step.status !== 'running') {
@@ -69,6 +69,6 @@ class GitConnectionProgress {
   }
 }
 
+export type { OnProgressCallback, ProgressStep };
 export { GitConnectionProgress };
-export type { ProgressStep, OnProgressCallback };
 export default GitConnectionProgress;

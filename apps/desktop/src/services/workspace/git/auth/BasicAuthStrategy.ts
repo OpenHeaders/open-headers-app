@@ -2,8 +2,8 @@
  * BasicAuthStrategy - Handles basic username/password authentication for Git operations
  */
 
-import mainLogger from '../../../../utils/mainLogger';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
@@ -40,7 +40,7 @@ class BasicAuthStrategy {
 
     return {
       effectiveUrl,
-      env: process.env
+      env: process.env,
     };
   }
 
@@ -51,14 +51,14 @@ class BasicAuthStrategy {
     if (!authData.username) {
       return {
         valid: false,
-        error: 'Username is required'
+        error: 'Username is required',
       };
     }
 
     if (!authData.password) {
       return {
         valid: false,
-        error: 'Password is required'
+        error: 'Password is required',
       };
     }
 
@@ -97,6 +97,6 @@ class BasicAuthStrategy {
   }
 }
 
-export { BasicAuthStrategy };
 export type { AuthData, AuthResult, ValidationResult };
+export { BasicAuthStrategy };
 export default BasicAuthStrategy;

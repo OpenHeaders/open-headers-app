@@ -13,7 +13,7 @@ export const NewMessageTypes = {
   QUERY_RECORDING_STATE: 'QUERY_RECORDING_STATE',
   RECORDING_STATE_CHANGED: 'RECORDING_STATE_CHANGED',
   CONTENT_SCRIPT_READY: 'CONTENT_SCRIPT_READY',
-  RECORDING_DATA: 'RECORDING_DATA'
+  RECORDING_DATA: 'RECORDING_DATA',
 } as const;
 
 interface UIMessage {
@@ -90,24 +90,24 @@ export function adaptUIMessage(message: UIMessage): AdaptedMessage | null {
         type: NewMessageTypes.START_RECORDING,
         payload: {
           tabId: message.tabId,
-          useWidget: message.useWidget
-        }
+          useWidget: message.useWidget,
+        },
       };
 
     case MESSAGE_TYPES.STOP_RECORDING:
       return {
         type: NewMessageTypes.STOP_RECORDING,
         payload: {
-          tabId: message.tabId
-        }
+          tabId: message.tabId,
+        },
       };
 
     case MESSAGE_TYPES.CHECK_RECORDING_STATUS:
       return {
         type: NewMessageTypes.GET_RECORDING_STATE,
         payload: {
-          tabId: message.tabId
-        }
+          tabId: message.tabId,
+        },
       };
 
     case MESSAGE_TYPES.UPDATE_RECORDING_WIDGET:
@@ -127,19 +127,19 @@ export function adaptCoreResponse(response: CoreResponse, originalMessageType: s
       return {
         success: response.success,
         recordId: response.recording?.id,
-        isPreNav: response.recording?.status === 'pre_navigation'
+        isPreNav: response.recording?.status === 'pre_navigation',
       };
 
     case MESSAGE_TYPES.STOP_RECORDING:
       return {
         success: response.success,
-        recording: response.recording
+        recording: response.recording,
       };
 
     case MESSAGE_TYPES.CHECK_RECORDING_STATUS:
       return {
         isRecording: response.isRecording,
-        recordId: response.recordingId
+        recordId: response.recordingId,
       };
 
     default:
@@ -167,7 +167,7 @@ export function adaptRecordingData(newRecording: NewRecording | null): AdaptedRe
     storage: [],
     navigationHistory: [],
     flowType: newRecording.status === 'pre_navigation' ? 'pre-nav' : 'nav',
-    duration: newRecording.endTime ? newRecording.endTime - newRecording.startTime : 0
+    duration: newRecording.endTime ? newRecording.endTime - newRecording.startTime : 0,
   };
 
   if (newRecording.events) {
@@ -180,21 +180,21 @@ export function adaptRecordingData(newRecording: NewRecording | null): AdaptedRe
         case 'console':
           adaptedRecording.console.push({
             timestamp: event.timestamp,
-            ...event.data
+            ...event.data,
           });
           break;
 
         case 'network':
           adaptedRecording.network.push({
             timestamp: event.timestamp,
-            ...event.data
+            ...event.data,
           });
           break;
 
         case 'storage':
           adaptedRecording.storage.push({
             timestamp: event.timestamp,
-            ...event.data
+            ...event.data,
           });
           break;
 
@@ -202,7 +202,7 @@ export function adaptRecordingData(newRecording: NewRecording | null): AdaptedRe
           adaptedRecording.navigationHistory.push({
             url: event.url,
             timestamp: event.timestamp,
-            ...event.data
+            ...event.data,
           });
           break;
       }
@@ -228,7 +228,7 @@ export function adaptInjectedEvent(event: InjectedEvent): AdaptedMessage {
       type: event.type,
       data: event.data as Record<string, unknown>,
       timestamp: event.timestamp || Date.now(),
-      url: window.location.href
-    }
+      url: window.location.href,
+    },
   };
 }

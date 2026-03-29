@@ -8,22 +8,22 @@ interface UseEnvReturn {
  * Custom hook for environment variable operations
  */
 export function useEnv(): UseEnvReturn {
-    /**
-     * Get environment variable value
-     */
-    const getVariable = useCallback(async (name: string): Promise<string> => {
-        try {
-            if (!name) {
-                throw new Error('Environment variable name is required');
-            }
+  /**
+   * Get environment variable value
+   */
+  const getVariable = useCallback(async (name: string): Promise<string> => {
+    try {
+      if (!name) {
+        throw new Error('Environment variable name is required');
+      }
 
-            return await window.electronAPI.getEnvVariable(name);
-        } catch (error: unknown) {
-            throw new Error(`Error getting environment variable: ${error instanceof Error ? error.message : String(error)}`);
-        }
-    }, []);
+      return await window.electronAPI.getEnvVariable(name);
+    } catch (error: unknown) {
+      throw new Error(`Error getting environment variable: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }, []);
 
-    return {
-        getVariable
-    };
+  return {
+    getVariable,
+  };
 }

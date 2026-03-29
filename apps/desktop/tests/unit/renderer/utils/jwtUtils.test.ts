@@ -1,22 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   decodeJWT,
   encodeJWT,
-  isJWT,
   formatJSON,
-  validateJSON,
   getJWTExpiration,
+  isJWT,
   JWT_CLAIM_DESCRIPTIONS,
+  validateJSON,
 } from '../../../../src/renderer/utils/jwtUtils';
 import type { JsonObject } from '../../../../src/types/common';
 
 // Helper: build a minimal valid JWT from header + payload objects
 function buildJWT(header: object, payload: object, sig = 'fakesig'): string {
-  const encode = (obj: object) =>
-    btoa(JSON.stringify(obj))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
+  const encode = (obj: object) => btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   return `${encode(header)}.${encode(payload)}.${sig}`;
 }
 
@@ -153,10 +149,7 @@ describe('jwtUtils', () => {
     });
 
     it('produces base64url output (no +, /, or =)', () => {
-      const token = encodeJWT(
-        { alg: 'HS256' },
-        { longvalue: 'a'.repeat(200) },
-      );
+      const token = encodeJWT({ alg: 'HS256' }, { longvalue: 'a'.repeat(200) });
       const parts = token.split('.');
       expect(parts[0]).not.toMatch(/[+/=]/);
       expect(parts[1]).not.toMatch(/[+/=]/);
@@ -371,25 +364,29 @@ describe('jwtUtils', () => {
   // ------------------------------------------------------------------
   describe('JWT_CLAIM_DESCRIPTIONS', () => {
     it('has all standard RFC 7519 claims', () => {
-      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(expect.objectContaining({
-        iss: 'Issuer',
-        sub: 'Subject',
-        aud: 'Audience',
-        exp: 'Expiration Time',
-        nbf: 'Not Before',
-        iat: 'Issued At',
-        jti: 'JWT ID',
-      }));
+      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(
+        expect.objectContaining({
+          iss: 'Issuer',
+          sub: 'Subject',
+          aud: 'Audience',
+          exp: 'Expiration Time',
+          nbf: 'Not Before',
+          iat: 'Issued At',
+          jti: 'JWT ID',
+        }),
+      );
     });
 
     it('has common custom claims', () => {
-      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(expect.objectContaining({
-        email: 'Email',
-        name: 'Name',
-        role: 'Role',
-        scope: 'Scope',
-        permissions: 'Permissions',
-      }));
+      expect(JWT_CLAIM_DESCRIPTIONS).toEqual(
+        expect.objectContaining({
+          email: 'Email',
+          name: 'Name',
+          role: 'Role',
+          scope: 'Scope',
+          permissions: 'Permissions',
+        }),
+      );
     });
 
     it('contains exactly the expected number of claims', () => {

@@ -32,14 +32,14 @@ export type EnvironmentMap = Record<string, EnvironmentVariables>;
  * without affecting the source.
  */
 export function cloneEnvironmentMap(env: EnvironmentMap): EnvironmentMap {
-    const clone: EnvironmentMap = {};
-    for (const [envName, vars] of Object.entries(env)) {
-        clone[envName] = {};
-        for (const [varName, varData] of Object.entries(vars)) {
-            clone[envName][varName] = { ...varData };
-        }
+  const clone: EnvironmentMap = {};
+  for (const [envName, vars] of Object.entries(env)) {
+    clone[envName] = {};
+    for (const [varName, varData] of Object.entries(vars)) {
+      clone[envName][varName] = { ...varData };
     }
-    return clone;
+  }
+  return clone;
 }
 
 // ── Persisted file shape (environments.json) ────────────────────────

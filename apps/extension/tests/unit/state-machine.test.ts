@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RecordingStateMachine, RecordingStates } from '../../src/assets/recording/shared/state-machine';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecordingState } from '../../src/assets/recording/shared/recording-state';
+import { RecordingStateMachine, RecordingStates } from '../../src/assets/recording/shared/state-machine';
 
 vi.mock('../../src/utils/logger', () => ({
-    logger: {
-        info: vi.fn(),
-        debug: vi.fn(),
-        warn: vi.fn(),
-        error: vi.fn(),
-    },
+  logger: {
+    info: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
 }));
 
 const TAB_ID_PRIMARY = 101;
@@ -19,10 +19,7 @@ function makeStateMachine(): RecordingStateMachine {
   return new RecordingStateMachine();
 }
 
-function makeRecording(overrides: {
-  recordId?: string;
-  startTime?: number;
-} = {}): RecordingState {
+function makeRecording(overrides: { recordId?: string; startTime?: number } = {}): RecordingState {
   return new RecordingState(
     overrides.recordId ?? 'rec_b7e4d2a1-c3f5-4890-9abc-def012345678',
     overrides.startTime ?? 1700000000000,

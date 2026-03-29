@@ -5,31 +5,27 @@
  * extension-specific callback types.
  */
 
-// Re-export shared source types
-export type {
-  Source,
-  SourceType,
-  ActivationState,
-  SourceMethod,
-  SourceHeader,
-  SourceQueryParam,
-  SourceRequestOptions,
-  JsonFilter,
-  RefreshType,
-  RefreshOptions,
-  RefreshStatus,
-} from '@openheaders/core/types';
-
 // Re-export protocol message types
 export type {
   HeaderRuleFromApp,
   RulesData,
 } from '@openheaders/core/protocol';
-
+// Re-export shared source types
 // Re-export additional rule types used by the extension
 export type {
-  MatchType,
+  ActivationState,
   ContentType,
+  JsonFilter,
+  MatchType,
+  RefreshOptions,
+  RefreshStatus,
+  RefreshType,
+  Source,
+  SourceHeader,
+  SourceMethod,
+  SourceQueryParam,
+  SourceRequestOptions,
+  SourceType,
   UrlRuleAction,
 } from '@openheaders/core/types';
 

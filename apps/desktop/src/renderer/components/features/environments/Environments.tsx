@@ -4,22 +4,20 @@
  * with support for multiple environments and variable usage tracking
  */
 
-import React, { useState, useEffect } from 'react';
-import { Card, Space, Form, theme } from 'antd';
 import { EnvironmentOutlined } from '@ant-design/icons';
-
-import { useEnvironments, useSources, useSettings } from '../../../contexts';
-import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
-import { showMessage } from '../../../utils/ui/messageUtil';
+import { Card, Form, Space, theme } from 'antd';
+import React, { useEffect, useState } from 'react';
 import type { HeaderRule } from '../../../../types/rules';
-
-import EnvironmentSelector from './EnvironmentSelector';
-import VariableTable from './VariableTable';
-import { CreateEnvironmentModal, AddVariableModal } from './EnvironmentModals';
-import { MissingVariablesAlert, TutorialInfo, VariableUsageSummary } from './EnvironmentInfo';
-import { generateUniqueEnvironmentName } from './EnvironmentUtils';
-
+import { useEnvironments, useSettings, useSources } from '../../../contexts';
+import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
 import { createLogger } from '../../../utils/error-handling/logger';
+import { showMessage } from '../../../utils/ui/messageUtil';
+import { MissingVariablesAlert, TutorialInfo, VariableUsageSummary } from './EnvironmentInfo';
+import { AddVariableModal, CreateEnvironmentModal } from './EnvironmentModals';
+import EnvironmentSelector from './EnvironmentSelector';
+import { generateUniqueEnvironmentName } from './EnvironmentUtils';
+import VariableTable from './VariableTable';
+
 const log = createLogger('Environments');
 
 /**
@@ -28,7 +26,7 @@ const log = createLogger('Environments');
  */
 const Environments = () => {
   const { token } = theme.useToken();
-  
+
   // Context hooks
   const {
     environments,
@@ -41,7 +39,7 @@ const Environments = () => {
     deleteVariable,
     getAllVariablesWithMetadata,
     findVariableUsage,
-    cloneEnvironment
+    cloneEnvironment,
   } = useEnvironments();
 
   const { sources } = useSources();
@@ -67,7 +65,7 @@ const Environments = () => {
   useEffect(() => {
     // Get usage from sources
     const usage = findVariableUsage(sources);
-    
+
     // Add usage from header rules
     if (headerRules.length > 0) {
       headerRules.forEach((rule: HeaderRule) => {
@@ -85,13 +83,13 @@ const Environments = () => {
         }
       });
     }
-    
+
     log.debug('Variable usage found (sources + rules):', usage);
     setVariableUsage(usage);
 
     // Find missing variables in current environment
     const variablesMetadata = getAllVariablesWithMetadata();
-    const missing = Object.keys(usage).filter(varName => !variablesMetadata[varName]);
+    const missing = Object.keys(usage).filter((varName) => !variablesMetadata[varName]);
     setMissingVariables(missing);
   }, [sources, headerRules, getAllVariablesWithMetadata, findVariableUsage]);
 
@@ -103,9 +101,10 @@ const Environments = () => {
       const customEvent = event as CustomEvent;
       const { requiredVariables } = customEvent.detail;
       if (requiredVariables && requiredVariables.length > 0) {
-        showMessage('info',
+        showMessage(
+          'info',
           `Team workspace requires ${requiredVariables.length} environment variable(s). ` +
-          `Please configure them in the Environments tab.`
+            `Please configure them in the Environments tab.`,
         );
       }
     };
@@ -184,7 +183,7 @@ const Environments = () => {
   const handleCopyEnvironment = async (fromEnv: string) => {
     const newName = generateUniqueEnvironmentName(fromEnv, environments);
     const success = await cloneEnvironment(fromEnv, newName);
-    
+
     if (success) {
       showMessage('success', `Environment '${newName}' created with all variables from '${fromEnv}'`);
     }

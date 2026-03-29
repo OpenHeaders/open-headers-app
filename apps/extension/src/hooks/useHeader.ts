@@ -1,6 +1,6 @@
 import { useContext } from 'react';
-import { HeaderContext } from '../context/HeaderContext';
 import type { HeaderContextValue } from '../context/HeaderContext';
+import { HeaderContext } from '../context/HeaderContext';
 
 /**
  * Custom hook to access the header context

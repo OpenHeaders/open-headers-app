@@ -16,13 +16,16 @@ let _timeManagerLoading = false;
 function getTimeManager() {
   if (!_timeManager && !_timeManagerLoading) {
     _timeManagerLoading = true;
-    import('../../services/TimeManager').then(mod => {
-      _timeManager = mod.default;
-    }).catch(() => {
-      // TimeManager not available yet, use Date directly
-    }).finally(() => {
-      _timeManagerLoading = false;
-    });
+    import('../../services/TimeManager')
+      .then((mod) => {
+        _timeManager = mod.default;
+      })
+      .catch(() => {
+        // TimeManager not available yet, use Date directly
+      })
+      .finally(() => {
+        _timeManagerLoading = false;
+      });
   }
   return _timeManager;
 }
@@ -61,8 +64,11 @@ function formatData(data: unknown): string {
   if (data === null || data === undefined) return String(data);
   if (data instanceof Error) return `${data.name}: ${data.message}`;
   if (typeof data === 'object') {
-    try { return JSON.stringify(data); }
-    catch { return String(data); }
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return String(data);
+    }
   }
   return String(data);
 }

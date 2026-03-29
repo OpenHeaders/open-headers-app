@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  extractBaseDomain,
+  isWildcardDomain,
   validateDomain,
   validateDomainBatch,
-  isWildcardDomain,
-  extractBaseDomain,
 } from '../../../../src/renderer/components/features/domain-tags/DomainValidation';
 
 // ======================================================================
@@ -170,25 +170,13 @@ describe('validateDomain', () => {
 // ======================================================================
 describe('validateDomainBatch', () => {
   it('returns all valid for good enterprise domains', () => {
-    const result = validateDomainBatch([
-      'openheaders.io',
-      '*.openheaders.io',
-      'localhost:3000',
-    ]);
-    expect(result.valid).toEqual([
-      'openheaders.io',
-      '*.openheaders.io',
-      'localhost:3000',
-    ]);
+    const result = validateDomainBatch(['openheaders.io', '*.openheaders.io', 'localhost:3000']);
+    expect(result.valid).toEqual(['openheaders.io', '*.openheaders.io', 'localhost:3000']);
     expect(result.invalid).toEqual([]);
   });
 
   it('separates valid and invalid domains', () => {
-    const result = validateDomainBatch([
-      'openheaders.io',
-      'invalid..domain',
-      '*.staging.openheaders.io',
-    ]);
+    const result = validateDomainBatch(['openheaders.io', 'invalid..domain', '*.staging.openheaders.io']);
     expect(result.valid).toEqual(['openheaders.io', '*.staging.openheaders.io']);
     expect(result.invalid).toHaveLength(1);
     expect(result.invalid[0]).toEqual({
@@ -210,13 +198,7 @@ describe('validateDomainBatch', () => {
   });
 
   it('correctly categorizes mixed valid/invalid/empty batch', () => {
-    const result = validateDomainBatch([
-      '',
-      'openheaders.io',
-      'invalid..x',
-      '*.openheaders.io',
-      '   ',
-    ]);
+    const result = validateDomainBatch(['', 'openheaders.io', 'invalid..x', '*.openheaders.io', '   ']);
     expect(result.valid).toHaveLength(2);
     expect(result.invalid).toHaveLength(3);
   });

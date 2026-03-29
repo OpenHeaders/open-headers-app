@@ -6,7 +6,7 @@
  * individually: EnvironmentVariableManager, plus pure
  * state-management patterns that mirror CES behaviour.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnvironmentVariable } from '../../../../src/types/environment';
 
 // Mock logger for all sub-module imports
@@ -73,7 +73,8 @@ function makeEnterpriseEnvironments() {
     'QA — Integration Tests': {},
     'Pre-production': {
       BEARER_TOKEN: {
-        value: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIiwiaWF0IjoxNzE2MDAwMDAwfQ.signature',
+        value:
+          'Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIiwiaWF0IjoxNzE2MDAwMDAwfQ.signature',
         isSecret: true,
         updatedAt: '2026-02-15T12:00:00.000Z',
       },
@@ -95,7 +96,8 @@ function makeEnterpriseEnvironments() {
         updatedAt: '2026-01-10T16:30:00.000Z',
       },
       DATABASE_CONNECTION_STRING: {
-        value: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
+        value:
+          'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
         isSecret: true,
         updatedAt: '2026-01-10T16:30:00.000Z',
       },
@@ -133,7 +135,8 @@ describe('EnvironmentVariableManager', () => {
         OAUTH2_CLIENT_ID: 'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
         OAUTH2_CLIENT_SECRET: 'sk_prod_9hF60KrOalZGdumwW4cgt0hi',
         API_GATEWAY_URL: 'https://api.openheaders.io/v2',
-        DATABASE_CONNECTION_STRING: 'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
+        DATABASE_CONNECTION_STRING:
+          'postgresql://prod_user:Pr0d$ecret!@db.openheaders.io:5432/production?sslmode=verify-full&connect_timeout=10',
         REDIS_URL: 'rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0',
       });
     });
@@ -173,12 +176,7 @@ describe('EnvironmentVariableManager', () => {
   describe('setVariable()', () => {
     it('adds a new enterprise variable with full shape', () => {
       const envs = { Default: {} };
-      const result = vm.setVariable(
-        envs,
-        'Default',
-        'STRIPE_WEBHOOK_SECRET',
-        'whsec_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6'
-      );
+      const result = vm.setVariable(envs, 'Default', 'STRIPE_WEBHOOK_SECRET', 'whsec_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6');
       expect(result.Default.STRIPE_WEBHOOK_SECRET).toEqual({
         value: 'whsec_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6',
         isSecret: false,
@@ -215,8 +213,9 @@ describe('EnvironmentVariableManager', () => {
 
     it('throws when environment does not exist', () => {
       const envs = { Default: {} };
-      expect(() => vm.setVariable(envs, 'NonExistent', 'VAR', 'val'))
-        .toThrow("Environment 'NonExistent' does not exist");
+      expect(() => vm.setVariable(envs, 'NonExistent', 'VAR', 'val')).toThrow(
+        "Environment 'NonExistent' does not exist",
+      );
     });
 
     it('does not mutate the original environments object', () => {
@@ -263,8 +262,7 @@ describe('EnvironmentVariableManager', () => {
 
     it('throws when environment already exists', () => {
       const envs = makeEnterpriseEnvironments();
-      expect(() => vm.createEnvironment(envs, 'Production'))
-        .toThrow("Environment 'Production' already exists");
+      expect(() => vm.createEnvironment(envs, 'Production')).toThrow("Environment 'Production' already exists");
     });
   });
 
@@ -273,18 +271,12 @@ describe('EnvironmentVariableManager', () => {
       const envs = makeEnterpriseEnvironments();
       const result = vm.deleteEnvironment(envs, 'QA — Integration Tests');
       expect(result['QA — Integration Tests']).toBeUndefined();
-      expect(Object.keys(result)).toEqual([
-        'Default',
-        'Staging — EU Region',
-        'Pre-production',
-        'Production',
-      ]);
+      expect(Object.keys(result)).toEqual(['Default', 'Staging — EU Region', 'Pre-production', 'Production']);
     });
 
     it('throws when trying to delete Default', () => {
       const envs = makeEnterpriseEnvironments();
-      expect(() => vm.deleteEnvironment(envs, 'Default'))
-        .toThrow('Cannot delete Default environment');
+      expect(() => vm.deleteEnvironment(envs, 'Default')).toThrow('Cannot delete Default environment');
     });
   });
 
@@ -296,8 +288,7 @@ describe('EnvironmentVariableManager', () => {
 
     it('throws for non-existent environment', () => {
       const envs = makeEnterpriseEnvironments();
-      expect(() => vm.validateEnvironmentExists(envs, 'Missing'))
-        .toThrow("Environment 'Missing' does not exist");
+      expect(() => vm.validateEnvironmentExists(envs, 'Missing')).toThrow("Environment 'Missing' does not exist");
     });
   });
 
@@ -336,7 +327,9 @@ describe('EnvironmentVariableManager', () => {
       const envs = makeEnterpriseEnvironments();
       const result = vm.exportEnvironment(envs, 'Default', 'env');
       expect(result).toContain('OAUTH2_CLIENT_ID=oidc-client-a1b2c3d4-e5f6-7890-abcd-ef1234567890');
-      expect(result).toContain('DATABASE_CONNECTION_STRING=postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/production?sslmode=require');
+      expect(result).toContain(
+        'DATABASE_CONNECTION_STRING=postgresql://admin:P@ss=w0rd&special@db.openheaders.internal:5432/production?sslmode=require',
+      );
       expect(result).toContain('API_GATEWAY_URL=https://gateway.openheaders.io:8443/v2');
     });
 
@@ -349,14 +342,12 @@ describe('EnvironmentVariableManager', () => {
 
     it('throws for unsupported format', () => {
       const envs = makeEnterpriseEnvironments();
-      expect(() => vm.exportEnvironment(envs, 'Default', 'yaml'))
-        .toThrow('Unsupported export format: yaml');
+      expect(() => vm.exportEnvironment(envs, 'Default', 'yaml')).toThrow('Unsupported export format: yaml');
     });
 
     it('throws for non-existent environment', () => {
       const envs = makeEnterpriseEnvironments();
-      expect(() => vm.exportEnvironment(envs, 'Missing', 'json'))
-        .toThrow("Environment 'Missing' does not exist");
+      expect(() => vm.exportEnvironment(envs, 'Missing', 'json')).toThrow("Environment 'Missing' does not exist");
     });
 
     it('exports empty environment as empty string in env format', () => {
@@ -369,7 +360,11 @@ describe('EnvironmentVariableManager', () => {
   describe('importEnvironment()', () => {
     it('imports JSON format with full variable objects', () => {
       const data = JSON.stringify({
-        OAUTH2_TOKEN: { value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature', isSecret: true, updatedAt: '2026-01-15T10:00:00.000Z' },
+        OAUTH2_TOKEN: {
+          value: 'Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature',
+          isSecret: true,
+          updatedAt: '2026-01-15T10:00:00.000Z',
+        },
         ENDPOINT_URL: { value: 'https://api.openheaders.io/v2/resources', isSecret: false },
       });
       const result = vm.importEnvironment(data, 'json');
@@ -423,8 +418,7 @@ describe('EnvironmentVariableManager', () => {
     });
 
     it('throws for unsupported format', () => {
-      expect(() => vm.importEnvironment('data', 'xml'))
-        .toThrow('Unsupported import format: xml');
+      expect(() => vm.importEnvironment('data', 'xml')).toThrow('Unsupported import format: xml');
     });
 
     it('throws for invalid JSON', () => {
@@ -460,8 +454,12 @@ describe('CES state management patterns', () => {
       }
 
       // Original variables preserved
-      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012');
-      expect(updatedEnvironments.Production.REDIS_URL.value).toBe('rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0');
+      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe(
+        'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
+      );
+      expect(updatedEnvironments.Production.REDIS_URL.value).toBe(
+        'rediss://default:r3d!s_p@ss@redis.openheaders.io:6380/0',
+      );
       // New variables added
       expect(updatedEnvironments.Production.NEW_API_TOKEN.value).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.new-payload.sig');
       expect(updatedEnvironments.Production.NEW_API_TOKEN.isSecret).toBe(true);
@@ -487,7 +485,9 @@ describe('CES state management patterns', () => {
 
       expect(updatedEnvironments.Production.REDIS_URL).toBeUndefined();
       expect(updatedEnvironments.Production.DATABASE_CONNECTION_STRING).toBeUndefined();
-      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe('oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012');
+      expect(updatedEnvironments.Production.OAUTH2_CLIENT_ID.value).toBe(
+        'oidc-client-prod-c3d4e5f6-a7b8-9012-cdef-123456789012',
+      );
       expect(Object.keys(updatedEnvironments.Production)).toHaveLength(3);
     });
 
@@ -506,7 +506,9 @@ describe('CES state management patterns', () => {
       };
 
       const wasActive = state.activeEnvironment === 'Staging — EU Region';
-      const updatedEnvs: Record<string, (typeof state.environments)[keyof typeof state.environments]> = { ...state.environments };
+      const updatedEnvs: Record<string, (typeof state.environments)[keyof typeof state.environments]> = {
+        ...state.environments,
+      };
       delete updatedEnvs['Staging — EU Region'];
 
       const updates: { environments: typeof updatedEnvs; activeEnvironment?: string } = { environments: updatedEnvs };
@@ -552,7 +554,8 @@ describe('CES state management patterns', () => {
 
   describe('resolveTemplate pattern', () => {
     it('returns string result directly', () => {
-      const getResult = (): string | { resolved: string; missing: string[] } => 'https://api.openheaders.io/v2/resources';
+      const getResult = (): string | { resolved: string; missing: string[] } =>
+        'https://api.openheaders.io/v2/resources';
       const result = getResult();
       const output = typeof result === 'string' ? result : result.resolved;
       expect(output).toBe('https://api.openheaders.io/v2/resources');
@@ -567,5 +570,4 @@ describe('CES state management patterns', () => {
       expect(output).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.payload.signature');
     });
   });
-
 });

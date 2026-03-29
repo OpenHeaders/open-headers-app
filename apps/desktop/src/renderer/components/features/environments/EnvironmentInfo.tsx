@@ -3,10 +3,10 @@
  * Displays warnings, tutorial info, and usage summaries
  */
 
+import { Alert, Divider, Space, Tag, Typography } from 'antd';
 import React from 'react';
-import { Alert, Space, Tag, Typography, Divider } from 'antd';
-import { getSourcesUsingVariables } from './EnvironmentUtils';
 import type { Source } from '../../../../types/source';
+import { getSourcesUsingVariables } from './EnvironmentUtils';
 
 const { Text } = Typography;
 
@@ -15,7 +15,9 @@ const { Text } = Typography;
  * @param {Object} props - Component props
  * @param {Array} props.missingVariables - Array of missing variable names
  */
-interface MissingVariablesAlertProps { missingVariables: string[]; }
+interface MissingVariablesAlertProps {
+  missingVariables: string[];
+}
 export const MissingVariablesAlert = ({ missingVariables }: MissingVariablesAlertProps) => {
   if (!missingVariables || missingVariables.length === 0) return null;
 
@@ -34,7 +36,9 @@ export const MissingVariablesAlert = ({ missingVariables }: MissingVariablesAler
  * @param {Object} props - Component props
  * @param {boolean} props.showTutorial - Whether to show tutorial mode
  */
-interface TutorialInfoProps { showTutorial: boolean; }
+interface TutorialInfoProps {
+  showTutorial: boolean;
+}
 export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
   if (!showTutorial) return null;
 
@@ -43,7 +47,9 @@ export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
       message={
         <Space>
           <span>Use</span>
-          <Tag color="purple" style={{ margin: 0 }}>{'{{VARIABLE_NAME}}'}</Tag>
+          <Tag color="purple" style={{ margin: 0 }}>
+            {'{{VARIABLE_NAME}}'}
+          </Tag>
           <span>in Rules + Sources</span>
           <span>[URL, headers, query params, body, options (response json filter, totp authentication)]</span>
         </Space>
@@ -61,22 +67,22 @@ export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
  * @param {Object} props - Component props
  * @param {Array} props.sources - Array of source configurations
  */
-interface VariableUsageSummaryProps { sources: Source[]; }
+interface VariableUsageSummaryProps {
+  sources: Source[];
+}
 export const VariableUsageSummary = ({ sources }: VariableUsageSummaryProps) => {
   const sourcesUsingVariables = getSourcesUsingVariables(sources);
-  
+
   if (!sourcesUsingVariables || sourcesUsingVariables.length === 0) return null;
 
   return (
     <>
       <Divider />
       <div>
-        <Text type="secondary">
-          Template sources using environment variables:
-        </Text>
+        <Text type="secondary">Template sources using environment variables:</Text>
         <div style={{ marginTop: 8 }}>
           <Space wrap>
-            {sourcesUsingVariables.map(source => (
+            {sourcesUsingVariables.map((source) => (
               <Tag key={source.sourceId} color="purple">
                 {source.sourceTag || `Source #${source.sourceId}`}
               </Tag>

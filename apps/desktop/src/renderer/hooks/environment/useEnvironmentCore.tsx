@@ -1,6 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getCentralizedEnvironmentService, CentralizedEnvironmentService } from '../../services/CentralizedEnvironmentService';
+import { useEffect, useMemo, useState } from 'react';
 import type { EnvironmentServiceState } from '../../services/CentralizedEnvironmentService';
+import {
+  type CentralizedEnvironmentService,
+  getCentralizedEnvironmentService,
+} from '../../services/CentralizedEnvironmentService';
 
 interface UseEnvironmentCoreReturn extends EnvironmentServiceState {
   service: CentralizedEnvironmentService;
@@ -22,13 +25,15 @@ export function useEnvironmentCore(): UseEnvironmentCoreReturn {
     const unsubscribe = service.subscribe((newState) => {
       setState(newState);
     });
-    return () => { unsubscribe(); };
+    return () => {
+      unsubscribe();
+    };
   }, [service]);
 
   // Initialize environment service on first mount
   useEffect(() => {
     if (!state.isReady && !state.isLoading) {
-      service.initialize().catch(e => {
+      service.initialize().catch((e) => {
         console.error('Failed to initialize environment service:', e);
       });
     }
@@ -36,6 +41,6 @@ export function useEnvironmentCore(): UseEnvironmentCoreReturn {
 
   return {
     ...state,
-    service
+    service,
   };
 }

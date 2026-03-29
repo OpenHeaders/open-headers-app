@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  extractVariables,
   checkMissingVariables,
-  generateUniqueEnvironmentName,
-  sourceUsesVariables,
-  getSourcesUsingVariables,
+  extractVariables,
   formatVariableUsage,
+  generateUniqueEnvironmentName,
+  getSourcesUsingVariables,
+  sourceUsesVariables,
 } from '../../../../src/renderer/components/features/environments/EnvironmentUtils';
-import type { Source } from '../../../../src/types/source';
 import type { EnvironmentVariables } from '../../../../src/types/environment';
+import type { Source } from '../../../../src/types/source';
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic factory
@@ -63,7 +63,11 @@ describe('extractVariables', () => {
 
   it('extracts from connection string template', () => {
     expect(extractVariables('postgresql://{{DB_USER}}:{{DB_PASS}}@{{DB_HOST}}:{{DB_PORT}}/{{DB_NAME}}')).toEqual([
-      'DB_USER', 'DB_PASS', 'DB_HOST', 'DB_PORT', 'DB_NAME',
+      'DB_USER',
+      'DB_PASS',
+      'DB_HOST',
+      'DB_PORT',
+      'DB_NAME',
     ]);
   });
 });
@@ -73,12 +77,14 @@ describe('extractVariables', () => {
 // ======================================================================
 describe('checkMissingVariables', () => {
   it('returns empty when all variables exist in enterprise env', () => {
-    const sources = [makeSource({
-      sourcePath: '{{API_GATEWAY_URL}}/oauth2/token',
-      requestOptions: {
-        headers: [{ key: 'X-Client-ID', value: '{{OAUTH2_CLIENT_ID}}' }],
-      },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: '{{API_GATEWAY_URL}}/oauth2/token',
+        requestOptions: {
+          headers: [{ key: 'X-Client-ID', value: '{{OAUTH2_CLIENT_ID}}' }],
+        },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toEqual([]);
   });
 
@@ -89,54 +95,66 @@ describe('checkMissingVariables', () => {
   });
 
   it('detects missing header variable', () => {
-    const sources = [makeSource({
-      sourcePath: 'https://api.openheaders.io',
-      requestOptions: {
-        headers: [{ key: 'Authorization', value: 'Bearer {{MISSING_TOKEN}}' }],
-      },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: 'https://api.openheaders.io',
+        requestOptions: {
+          headers: [{ key: 'Authorization', value: 'Bearer {{MISSING_TOKEN}}' }],
+        },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toContain('MISSING_TOKEN');
   });
 
   it('detects missing body variable', () => {
-    const sources = [makeSource({
-      sourcePath: 'https://auth.openheaders.io/oauth2/token',
-      requestOptions: { body: '{"client_secret": "{{MISSING_SECRET}}"}' },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: 'https://auth.openheaders.io/oauth2/token',
+        requestOptions: { body: '{"client_secret": "{{MISSING_SECRET}}"}' },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toContain('MISSING_SECRET');
   });
 
   it('detects missing totpSecret variable', () => {
-    const sources = [makeSource({
-      sourcePath: 'https://api.openheaders.io',
-      requestOptions: { totpSecret: '{{MISSING_TOTP}}' },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: 'https://api.openheaders.io',
+        requestOptions: { totpSecret: '{{MISSING_TOTP}}' },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toContain('MISSING_TOTP');
   });
 
   it('detects missing query param variable', () => {
-    const sources = [makeSource({
-      sourcePath: 'https://api.openheaders.io',
-      requestOptions: {
-        queryParams: [{ key: 'api_key', value: '{{MISSING_API_KEY}}' }],
-      },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: 'https://api.openheaders.io',
+        requestOptions: {
+          queryParams: [{ key: 'api_key', value: '{{MISSING_API_KEY}}' }],
+        },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toContain('MISSING_API_KEY');
   });
 
   it('detects missing JSON filter path variable', () => {
-    const sources = [makeSource({
-      sourcePath: 'https://api.openheaders.io',
-      jsonFilter: { enabled: true, path: '{{MISSING_FILTER}}' },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: 'https://api.openheaders.io',
+        jsonFilter: { enabled: true, path: '{{MISSING_FILTER}}' },
+      }),
+    ];
     expect(checkMissingVariables(sources, makeEnterpriseVars())).toContain('MISSING_FILTER');
   });
 
   it('skips non-http sources', () => {
-    const sources = [makeSource({
-      sourceType: 'file',
-      sourcePath: '{{API_GATEWAY_URL}}',
-    })];
+    const sources = [
+      makeSource({
+        sourceType: 'file',
+        sourcePath: '{{API_GATEWAY_URL}}',
+      }),
+    ];
     expect(checkMissingVariables(sources, {})).toEqual([]);
   });
 
@@ -146,7 +164,7 @@ describe('checkMissingVariables', () => {
       makeSource({ sourceId: 'src-2', sourcePath: '{{SHARED_VAR}}/b' }),
     ];
     const result = checkMissingVariables(sources, {});
-    expect(result.filter(v => v === 'SHARED_VAR')).toHaveLength(1);
+    expect(result.filter((v) => v === 'SHARED_VAR')).toHaveLength(1);
   });
 
   it('checks rules for env vars', () => {
@@ -167,16 +185,18 @@ describe('checkMissingVariables', () => {
   });
 
   it('handles source with all variable fields populated', () => {
-    const sources = [makeSource({
-      sourcePath: '{{API_GATEWAY_URL}}/token',
-      requestOptions: {
-        headers: [{ key: 'X-Client', value: '{{OAUTH2_CLIENT_ID}}' }],
-        queryParams: [{ key: 'scope', value: '{{MISSING_SCOPE}}' }],
-        body: '{"secret": "{{OAUTH2_CLIENT_SECRET}}"}',
-        totpSecret: '{{TOTP_SECRET}}',
-      },
-      jsonFilter: { enabled: true, path: '{{JSON_FILTER_PATH}}' },
-    })];
+    const sources = [
+      makeSource({
+        sourcePath: '{{API_GATEWAY_URL}}/token',
+        requestOptions: {
+          headers: [{ key: 'X-Client', value: '{{OAUTH2_CLIENT_ID}}' }],
+          queryParams: [{ key: 'scope', value: '{{MISSING_SCOPE}}' }],
+          body: '{"secret": "{{OAUTH2_CLIENT_SECRET}}"}',
+          totpSecret: '{{TOTP_SECRET}}',
+        },
+        jsonFilter: { enabled: true, path: '{{JSON_FILTER_PATH}}' },
+      }),
+    ];
     const result = checkMissingVariables(sources, makeEnterpriseVars());
     expect(result).toEqual(['MISSING_SCOPE']);
   });
@@ -213,37 +233,57 @@ describe('sourceUsesVariables', () => {
   });
 
   it('returns false for source without variables', () => {
-    expect(sourceUsesVariables(makeSource({
-      sourcePath: 'https://api.openheaders.io/v2/resources',
-    }))).toBe(false);
+    expect(
+      sourceUsesVariables(
+        makeSource({
+          sourcePath: 'https://api.openheaders.io/v2/resources',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('returns true for source with URL variable', () => {
-    expect(sourceUsesVariables(makeSource({
-      sourcePath: '{{API_GATEWAY_URL}}/resources',
-    }))).toBe(true);
+    expect(
+      sourceUsesVariables(
+        makeSource({
+          sourcePath: '{{API_GATEWAY_URL}}/resources',
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('detects variables in nested request options', () => {
-    expect(sourceUsesVariables(makeSource({
-      sourcePath: 'https://api.openheaders.io',
-      requestOptions: {
-        headers: [{ key: 'Authorization', value: 'Bearer {{OAUTH2_ACCESS_TOKEN}}' }],
-      },
-    }))).toBe(true);
+    expect(
+      sourceUsesVariables(
+        makeSource({
+          sourcePath: 'https://api.openheaders.io',
+          requestOptions: {
+            headers: [{ key: 'Authorization', value: 'Bearer {{OAUTH2_ACCESS_TOKEN}}' }],
+          },
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('detects variables in body', () => {
-    expect(sourceUsesVariables(makeSource({
-      sourcePath: 'https://auth.openheaders.io/token',
-      requestOptions: { body: '{"secret": "{{CLIENT_SECRET}}"}' },
-    }))).toBe(true);
+    expect(
+      sourceUsesVariables(
+        makeSource({
+          sourcePath: 'https://auth.openheaders.io/token',
+          requestOptions: { body: '{"secret": "{{CLIENT_SECRET}}"}' },
+        }),
+      ),
+    ).toBe(true);
   });
 
   it('detects variables in TOTP secret', () => {
-    expect(sourceUsesVariables(makeSource({
-      requestOptions: { totpSecret: '{{TOTP_SECRET}}' },
-    }))).toBe(true);
+    expect(
+      sourceUsesVariables(
+        makeSource({
+          requestOptions: { totpSecret: '{{TOTP_SECRET}}' },
+        }),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -263,7 +303,7 @@ describe('getSourcesUsingVariables', () => {
     ];
     const result = getSourcesUsingVariables(sources);
     expect(result).toHaveLength(2);
-    expect(result.map(s => s.sourceId)).toEqual(['src-1', 'src-3']);
+    expect(result.map((s) => s.sourceId)).toEqual(['src-1', 'src-3']);
   });
 });
 
@@ -276,16 +316,20 @@ describe('formatVariableUsage', () => {
   });
 
   it('formats regular source with enterprise source name', () => {
-    const sources = [makeSource({
-      sourceId: 'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-      sourceName: 'Production API Gateway Token',
-    })];
+    const sources = [
+      makeSource({
+        sourceId: 'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        sourceName: 'Production API Gateway Token',
+      }),
+    ];
     const result = formatVariableUsage('OAUTH2_CLIENT_ID', ['src-a1b2c3d4-e5f6-7890-abcd-ef1234567890'], sources);
-    expect(result).toEqual([{
-      sourceId: 'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-      sourceName: 'Production API Gateway Token',
-      isRule: false,
-    }]);
+    expect(result).toEqual([
+      {
+        sourceId: 'src-a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        sourceName: 'Production API Gateway Token',
+        isRule: false,
+      },
+    ]);
   });
 
   it('formats rule identifier with header name', () => {
@@ -293,11 +337,13 @@ describe('formatVariableUsage', () => {
       header: [{ id: 'r-abc123', headerName: 'X-OpenHeaders-Auth' }],
     } as Parameters<typeof formatVariableUsage>[3];
     const result = formatVariableUsage('OAUTH2_ACCESS_TOKEN', ['rule-r-abc123'], [], rules);
-    expect(result).toEqual([{
-      sourceId: 'rule-r-abc123',
-      sourceName: 'X-OpenHeaders-Auth',
-      isRule: true,
-    }]);
+    expect(result).toEqual([
+      {
+        sourceId: 'rule-r-abc123',
+        sourceName: 'X-OpenHeaders-Auth',
+        isRule: true,
+      },
+    ]);
   });
 
   it('uses fallback name for unknown rule', () => {

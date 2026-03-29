@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the logger before importing the module
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
@@ -10,13 +10,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-const {
-  Mutex,
-  Semaphore,
-  ConcurrentMap,
-  ConcurrentSet,
-  RequestDeduplicator,
-} = await import(
+const { Mutex, Semaphore, ConcurrentMap, ConcurrentSet, RequestDeduplicator } = await import(
   '../../../../src/renderer/utils/error-handling/ConcurrencyControl'
 );
 
@@ -70,7 +64,7 @@ describe('Mutex', () => {
     await expect(
       mutex.withLock(() => {
         throw new Error('fail');
-      })
+      }),
     ).rejects.toThrow('fail');
     expect(mutex.locked).toBe(false);
   });
@@ -142,7 +136,7 @@ describe('Semaphore', () => {
     await expect(
       sem.withPermit(() => {
         throw new Error('err');
-      })
+      }),
     ).rejects.toThrow('err');
     expect(sem.current).toBe(0);
   });
@@ -300,10 +294,7 @@ describe('RequestDeduplicator', () => {
       return Promise.resolve(callCount);
     };
 
-    const [r1, r2] = await Promise.all([
-      dedup.execute('key-a', fn),
-      dedup.execute('key-b', fn),
-    ]);
+    const [r1, r2] = await Promise.all([dedup.execute('key-a', fn), dedup.execute('key-b', fn)]);
 
     expect(callCount).toBe(2);
   });
@@ -323,9 +314,7 @@ describe('RequestDeduplicator', () => {
   });
 
   it('propagates errors', async () => {
-    await expect(
-      dedup.execute('err', () => Promise.reject(new Error('oops')))
-    ).rejects.toThrow('oops');
+    await expect(dedup.execute('err', () => Promise.reject(new Error('oops')))).rejects.toThrow('oops');
   });
 
   it('getPendingCount returns 0 when idle', async () => {

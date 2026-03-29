@@ -6,22 +6,22 @@
  */
 
 import electron from 'electron';
-import type { WorkspaceBroadcastData, BroadcasterFn } from './types';
+import type { BroadcasterFn, WorkspaceBroadcastData } from './types';
 
 export function broadcastToRenderers(
-    channel: string,
-    data: WorkspaceBroadcastData,
-    broadcaster: BroadcasterFn | null = null
+  channel: string,
+  data: WorkspaceBroadcastData,
+  broadcaster: BroadcasterFn | null = null,
 ): void {
-    if (broadcaster) {
-        broadcaster(channel, data);
-        return;
-    }
+  if (broadcaster) {
+    broadcaster(channel, data);
+    return;
+  }
 
-    const { BrowserWindow } = electron;
-    for (const win of BrowserWindow.getAllWindows()) {
-        if (win && !win.isDestroyed()) {
-            win.webContents.send(channel, data);
-        }
+  const { BrowserWindow } = electron;
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(channel, data);
     }
+  }
 }

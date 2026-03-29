@@ -1,8 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   formatBytes,
-  truncateValue,
   truncateDomain,
+  truncateValue,
 } from '../../../../src/renderer/components/proxy/utils/formatUtils';
 
 // ======================================================================

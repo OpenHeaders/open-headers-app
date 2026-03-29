@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
+  DEFAULTS,
+  ERROR_MESSAGES,
+  EVENTS,
+  FILE_FILTERS,
   FILE_FORMATS,
   IMPORT_MODES,
-  FILE_FILTERS,
-  DEFAULTS,
-  EVENTS,
-  ERROR_MESSAGES,
   SUCCESS_MESSAGES,
   VALIDATION_RULES,
 } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
@@ -30,9 +30,7 @@ describe('ExportImportConfig constants', () => {
 
   describe('FILE_FILTERS', () => {
     it('contains JSON filter with correct extensions', () => {
-      expect(FILE_FILTERS.JSON).toEqual(expect.arrayContaining([
-        expect.objectContaining({ extensions: ['json'] }),
-      ]));
+      expect(FILE_FILTERS.JSON).toEqual(expect.arrayContaining([expect.objectContaining({ extensions: ['json'] })]));
     });
   });
 
@@ -60,7 +58,7 @@ describe('ExportImportConfig constants', () => {
     });
 
     it('event names are non-empty strings', () => {
-      Object.values(EVENTS).forEach(value => {
+      Object.values(EVENTS).forEach((value) => {
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
       });

@@ -1,29 +1,38 @@
 /**
  * CircuitBreakerIndicator Component
- * 
+ *
  * Displays the circuit breaker state for HTTP sources with auto-refresh.
  * Shows when auto-refresh is paused due to repeated failures and allows
  * users to understand the current state and manually retry if needed.
  */
 
-import React from 'react';
-import { Tooltip, Tag, Badge } from 'antd';
-import { 
-  ExclamationCircleOutlined, 
-  ClockCircleOutlined,
+import {
   CheckCircleOutlined,
-  WarningOutlined 
+  ClockCircleOutlined,
+  ExclamationCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
+import { Badge, Tag, Tooltip } from 'antd';
+import React from 'react';
 
 /**
  * CircuitBreakerIndicator - Shows circuit breaker state in the UI
- * 
+ *
  * @param {Object} props
  * @param {Object} props.circuitBreaker - Circuit breaker status from RefreshManager
  * @param {boolean} props.showDetails - Whether to show detailed information
  * @returns {JSX.Element|null} Circuit breaker indicator or null if not applicable
  */
-interface CircuitBreakerIndicatorProps { circuitBreaker: { state: string; isOpen: boolean; timeUntilNextAttempt?: number; consecutiveOpenings?: number; failureCount: number } | null; showDetails?: boolean; }
+interface CircuitBreakerIndicatorProps {
+  circuitBreaker: {
+    state: string;
+    isOpen: boolean;
+    timeUntilNextAttempt?: number;
+    consecutiveOpenings?: number;
+    failureCount: number;
+  } | null;
+  showDetails?: boolean;
+}
 const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: CircuitBreakerIndicatorProps) => {
   if (!circuitBreaker) {
     return null;
@@ -45,14 +54,14 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
             color: 'warning',
             icon: <WarningOutlined />,
             text: `${failureCount} failure${failureCount > 1 ? 's' : ''}`,
-            tooltip: `Circuit breaker has recorded ${failureCount} failure${failureCount > 1 ? 's' : ''}. Will open after ${3 - failureCount} more.`
+            tooltip: `Circuit breaker has recorded ${failureCount} failure${failureCount > 1 ? 's' : ''}. Will open after ${3 - failureCount} more.`,
           };
         }
         return {
           color: 'success',
           icon: <CheckCircleOutlined />,
           text: 'Healthy',
-          tooltip: 'Auto-refresh is working normally'
+          tooltip: 'Auto-refresh is working normally',
         };
 
       case 'OPEN':
@@ -61,10 +70,8 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
           icon: <ExclamationCircleOutlined />,
           text: timeUntilNextAttempt ? `Paused (${timeUntilNextAttempt})` : 'Paused',
           tooltip: `Auto-refresh temporarily disabled after ${consecutiveOpenings ?? 0} consecutive failure${(consecutiveOpenings ?? 0) > 1 ? 's' : ''}. ${
-            timeUntilNextAttempt 
-              ? `Will retry in ${timeUntilNextAttempt}.` 
-              : 'Retrying soon.'
-          } You can still refresh manually.`
+            timeUntilNextAttempt ? `Will retry in ${timeUntilNextAttempt}.` : 'Retrying soon.'
+          } You can still refresh manually.`,
         };
 
       case 'HALF_OPEN':
@@ -72,7 +79,7 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
           color: 'warning',
           icon: <ClockCircleOutlined spin />,
           text: 'Testing...',
-          tooltip: 'Testing if the service has recovered'
+          tooltip: 'Testing if the service has recovered',
         };
 
       default:
@@ -89,8 +96,8 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
   if (!showDetails) {
     return (
       <Tooltip title={display.tooltip}>
-        <Badge 
-          status={display.color === 'error' ? 'error' : display.color === 'warning' ? 'warning' : 'success'} 
+        <Badge
+          status={display.color === 'error' ? 'error' : display.color === 'warning' ? 'warning' : 'success'}
           text={display.text}
         />
       </Tooltip>
@@ -101,22 +108,20 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
   return (
     <div className="circuit-breaker-indicator" style={{ marginTop: 8 }}>
       <Tooltip title={display.tooltip}>
-        <Tag 
-          color={display.color} 
-          icon={display.icon}
-          style={{ fontSize: '12px' }}
-        >
+        <Tag color={display.color} icon={display.icon} style={{ fontSize: '12px' }}>
           Auto-refresh: {display.text}
         </Tag>
       </Tooltip>
-      
+
       {state === 'OPEN' && (consecutiveOpenings ?? 0) > 1 && (
-        <div style={{ 
-          fontSize: '11px', 
-          color: '#666', 
-          marginTop: 4,
-          marginLeft: 20 
-        }}>
+        <div
+          style={{
+            fontSize: '11px',
+            color: '#666',
+            marginTop: 4,
+            marginLeft: 20,
+          }}
+        >
           {getBackoffExplanation(consecutiveOpenings ?? 0)}
         </div>
       )}
@@ -129,7 +134,7 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
  */
 function getBackoffExplanation(openings: number) {
   if (openings <= 1) return null;
-  
+
   const examples = [
     { openings: 2, text: 'Wait time doubled to 1 minute' },
     { openings: 3, text: 'Wait time increased to 2 minutes' },
@@ -137,10 +142,10 @@ function getBackoffExplanation(openings: number) {
     { openings: 5, text: 'Wait time increased to 8 minutes' },
     { openings: 6, text: 'Wait time increased to 16 minutes' },
     { openings: 7, text: 'Wait time increased to 32 minutes' },
-    { openings: 8, text: 'Wait time capped at 1 hour' }
+    { openings: 8, text: 'Wait time capped at 1 hour' },
   ];
-  
-  const match = examples.find(e => e.openings === openings);
+
+  const match = examples.find((e) => e.openings === openings);
   return match ? match.text : `Wait time increased (${openings} consecutive failures)`;
 }
 
@@ -148,7 +153,9 @@ function getBackoffExplanation(openings: number) {
  * CircuitBreakerStatus - Inline status for source tables
  * Shows a compact indicator that can be used in table cells
  */
-interface CircuitBreakerStatusProps { refreshStatus: { circuitBreaker?: { isOpen: boolean; timeUntilNextAttempt?: number } } | null; }
+interface CircuitBreakerStatusProps {
+  refreshStatus: { circuitBreaker?: { isOpen: boolean; timeUntilNextAttempt?: number } } | null;
+}
 export const CircuitBreakerStatus = ({ refreshStatus }: CircuitBreakerStatusProps) => {
   if (!refreshStatus?.circuitBreaker || !refreshStatus.circuitBreaker.isOpen) {
     return null;
@@ -157,15 +164,17 @@ export const CircuitBreakerStatus = ({ refreshStatus }: CircuitBreakerStatusProp
   const { timeUntilNextAttempt } = refreshStatus.circuitBreaker;
 
   return (
-    <Tooltip 
+    <Tooltip
       title="Auto-refresh is temporarily paused due to repeated failures. Click refresh to try manually."
       placement="top"
     >
-      <span style={{ 
-        color: '#ff4d4f', 
-        fontSize: '11px',
-        marginLeft: 8 
-      }}>
+      <span
+        style={{
+          color: '#ff4d4f',
+          fontSize: '11px',
+          marginLeft: 8,
+        }}
+      >
         <ExclamationCircleOutlined style={{ marginRight: 4 }} />
         Auto-refresh paused
         {timeUntilNextAttempt && ` (${timeUntilNextAttempt})`}

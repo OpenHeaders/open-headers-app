@@ -3,20 +3,16 @@
  * Handles workflow record display, playback, and interactions
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Spin } from 'antd';
-
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { Recording } from '../../../../../types/recording';
 import { useSettings } from '../../../../contexts';
 import { useRecordPlayer } from '../../../../hooks/useRecordPlayer';
-import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
-import type { Recording } from '../../../../../types/recording';
 import { RecordPlayer } from '../../../record';
+import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
 import WorkflowViewerTabs from './WorkflowViewerTabs';
-import {
-  createAutoScrollHandler,
-  createHighlightHandlers
-} from './WorkflowViewerUtils';
-import { VIEW_MODES, AUTO_SCROLL_CONFIG, TAB_KEYS } from './WorkflowViewerTypes';
+import { AUTO_SCROLL_CONFIG, TAB_KEYS, VIEW_MODES } from './WorkflowViewerTypes';
+import { createAutoScrollHandler, createHighlightHandlers } from './WorkflowViewerUtils';
 import '../../../../styles/RecordViewer.css';
 
 /**
@@ -32,28 +28,28 @@ import '../../../../styles/RecordViewer.css';
  * @returns {React.ReactNode} Rendered workflow viewer
  */
 interface WorkflowViewerProps {
-    record: Recording | null;
-    onRecordChange?: (record: Recording | null) => void;
-    viewMode: string;
-    playbackTime?: number;
-    onPlaybackTimeChange?: (time: number) => void;
-    autoHighlight?: boolean;
-    onAutoHighlightChange?: (autoHighlight: boolean) => void;
-    showAllWorkflowsButton?: boolean;
-    onShowAllWorkflows?: () => void;
+  record: Recording | null;
+  onRecordChange?: (record: Recording | null) => void;
+  viewMode: string;
+  playbackTime?: number;
+  onPlaybackTimeChange?: (time: number) => void;
+  autoHighlight?: boolean;
+  onAutoHighlightChange?: (autoHighlight: boolean) => void;
+  showAllWorkflowsButton?: boolean;
+  onShowAllWorkflows?: () => void;
 }
 
 const WorkflowViewer = ({
-                          record: externalRecord,
-                          onRecordChange,
-                          viewMode,
-                          playbackTime,
-                          onPlaybackTimeChange,
-                          autoHighlight: externalAutoHighlight,
-                          onAutoHighlightChange: externalOnAutoHighlightChange,
-                          showAllWorkflowsButton,
-                          onShowAllWorkflows
-                        }: WorkflowViewerProps) => {
+  record: externalRecord,
+  onRecordChange,
+  viewMode,
+  playbackTime,
+  onPlaybackTimeChange,
+  autoHighlight: externalAutoHighlight,
+  onAutoHighlightChange: externalOnAutoHighlightChange,
+  showAllWorkflowsButton,
+  onShowAllWorkflows,
+}: WorkflowViewerProps) => {
   const { settings } = useSettings();
 
   // Internal state
@@ -70,14 +66,14 @@ const WorkflowViewer = ({
 
   // Auto-highlight state management
   const [internalAutoHighlight, setInternalAutoHighlight] = useState(
-      settings?.autoHighlightTableEntries !== undefined ? settings.autoHighlightTableEntries : false
+    settings?.autoHighlightTableEntries !== undefined ? settings.autoHighlightTableEntries : false,
   );
   const autoHighlight = externalAutoHighlight !== undefined ? externalAutoHighlight : internalAutoHighlight;
   const setAutoHighlight = externalOnAutoHighlightChange || setInternalAutoHighlight;
 
   // Auto-scroll state
   const [autoScroll, setAutoScroll] = useState(
-      settings?.autoScrollTableEntries !== undefined ? settings.autoScrollTableEntries : false
+    settings?.autoScrollTableEntries !== undefined ? settings.autoScrollTableEntries : false,
   );
 
   // Record management
@@ -99,7 +95,7 @@ const WorkflowViewer = ({
     loading: playerLoading,
     error: playerError,
     processRecordForProxy,
-    createConsoleOverrides
+    createConsoleOverrides,
   } = useRecordPlayer();
 
   // Auto-scroll handler
@@ -168,20 +164,21 @@ const WorkflowViewer = ({
         scrollTimeoutRef.current = null;
       }
 
-
       lastActiveTimeRef.current = -1;
       isScrollingRef.current = false;
     };
   }, []);
 
-
   // Playback handlers
-  const handlePlaybackTimeChange = useCallback((time: number) => {
-    setCurrentTime(time);
-    if (onPlaybackTimeChange) {
-      onPlaybackTimeChange(time);
-    }
-  }, [onPlaybackTimeChange]);
+  const handlePlaybackTimeChange = useCallback(
+    (time: number) => {
+      setCurrentTime(time);
+      if (onPlaybackTimeChange) {
+        onPlaybackTimeChange(time);
+      }
+    },
+    [onPlaybackTimeChange],
+  );
 
   const handlePlayingStateChange = useCallback(() => {
     // Handle playing state changes if needed
@@ -198,18 +195,18 @@ const WorkflowViewer = ({
 
   if (!rrwebPlayer && !playerError) {
     return (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <Spin size="large" />
-          <p style={{ marginTop: '20px' }}>Loading record player...</p>
-        </div>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <Spin size="large" />
+        <p style={{ marginTop: '20px' }}>Loading record player...</p>
+      </div>
     );
   }
 
   if (playerError) {
     return (
-        <div style={{ textAlign: 'center', padding: '40px' }}>
-          <p>Failed to load record player: {playerError}</p>
-        </div>
+      <div style={{ textAlign: 'center', padding: '40px' }}>
+        <p>Failed to load record player: {playerError}</p>
+      </div>
     );
   }
 
@@ -217,32 +214,32 @@ const WorkflowViewer = ({
   switch (viewMode) {
     case VIEW_MODES.INFO:
       return (
-          <RecordPlayer
-              record={record as RecordData}
-              rrwebPlayer={rrwebPlayer}
-              loading={playerLoading}
-              onPlaybackTimeChange={handlePlaybackTimeChange}
-              processRecordForProxy={processRecordForProxy}
-              createConsoleOverrides={createConsoleOverrides}
-              onPlayingStateChange={handlePlayingStateChange}
-              autoHighlight={autoHighlight}
-              showAllWorkflowsButton={showAllWorkflowsButton}
-              onShowAllWorkflows={onShowAllWorkflows}
-          />
+        <RecordPlayer
+          record={record as RecordData}
+          rrwebPlayer={rrwebPlayer}
+          loading={playerLoading}
+          onPlaybackTimeChange={handlePlaybackTimeChange}
+          processRecordForProxy={processRecordForProxy}
+          createConsoleOverrides={createConsoleOverrides}
+          onPlayingStateChange={handlePlayingStateChange}
+          autoHighlight={autoHighlight}
+          showAllWorkflowsButton={showAllWorkflowsButton}
+          onShowAllWorkflows={onShowAllWorkflows}
+        />
       );
 
     case VIEW_MODES.TABS:
       return (
-          <WorkflowViewerTabs
-              record={record as RecordData}
-              viewMode={viewMode}
-              activeTime={activeTime}
-              autoHighlight={autoHighlight}
-              autoScroll={autoScroll}
-              onAutoHighlightChange={handleAutoHighlightChange}
-              onAutoScrollChange={setAutoScroll}
-              onTabChange={handleTabChange}
-          />
+        <WorkflowViewerTabs
+          record={record as RecordData}
+          viewMode={viewMode}
+          activeTime={activeTime}
+          autoHighlight={autoHighlight}
+          autoScroll={autoScroll}
+          onAutoHighlightChange={handleAutoHighlightChange}
+          onAutoScrollChange={setAutoScroll}
+          onTabChange={handleTabChange}
+        />
       );
 
     default:

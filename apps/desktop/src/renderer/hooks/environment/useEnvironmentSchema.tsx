@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
-import { useEnvironmentCore } from './useEnvironmentCore';
 import type { EnvironmentVariable } from '../../../types/environment';
 import type { Source } from '../../../types/source';
 import type { EnvironmentSchema } from '../../services/export-import/core/types';
-
+import { useEnvironmentCore } from './useEnvironmentCore';
 
 interface VariableUsage {
   [varName: string]: string[];
@@ -86,53 +85,56 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
     return usage;
   }, []);
 
-  const generateEnvironmentSchema = useCallback((sources: Source[]): EnvironmentSchema => {
-    const variableUsage = findVariableUsage(sources);
-    const schema: EnvironmentSchema = {
-      environments: {},
-      variableDefinitions: {}
-    };
-
-    // Build environment structure
-    Object.entries(environments).forEach(([envName, envVars]: [string, Record<string, EnvironmentVariable>]) => {
-      schema.environments[envName] = {
-        variables: Object.keys(envVars).map(varName => {
-          const variable = envVars[varName];
-          return {
-            name: varName,
-            isSecret: variable.isSecret || false
-          };
-        })
+  const generateEnvironmentSchema = useCallback(
+    (sources: Source[]): EnvironmentSchema => {
+      const variableUsage = findVariableUsage(sources);
+      const schema: EnvironmentSchema = {
+        environments: {},
+        variableDefinitions: {},
       };
-    });
 
-    // Build variable definitions
-    Object.entries(variableUsage).forEach(([varName, usedIn]) => {
-      let isSecret = false;
-      Object.values(environments).forEach((envVars: Record<string, EnvironmentVariable>) => {
-        const variable = envVars[varName];
-        if (variable && variable.isSecret) {
-          isSecret = true;
+      // Build environment structure
+      Object.entries(environments).forEach(([envName, envVars]: [string, Record<string, EnvironmentVariable>]) => {
+        schema.environments[envName] = {
+          variables: Object.keys(envVars).map((varName) => {
+            const variable = envVars[varName];
+            return {
+              name: varName,
+              isSecret: variable.isSecret || false,
+            };
+          }),
+        };
+      });
+
+      // Build variable definitions
+      Object.entries(variableUsage).forEach(([varName, usedIn]) => {
+        let isSecret = false;
+        Object.values(environments).forEach((envVars: Record<string, EnvironmentVariable>) => {
+          const variable = envVars[varName];
+          if (variable && variable.isSecret) {
+            isSecret = true;
+          }
+        });
+
+        schema.variableDefinitions[varName] = {
+          description: '',
+          isSecret,
+          usedIn,
+        };
+
+        // Add example if we can infer from name
+        if (varName.includes('URL') || varName.includes('ENDPOINT')) {
+          schema.variableDefinitions[varName].example = 'https://api.example.com';
         }
       });
 
-      schema.variableDefinitions[varName] = {
-        description: '',
-        isSecret,
-        usedIn
-      };
-
-      // Add example if we can infer from name
-      if (varName.includes('URL') || varName.includes('ENDPOINT')) {
-        schema.variableDefinitions[varName].example = 'https://api.example.com';
-      }
-    });
-
-    return schema;
-  }, [environments, findVariableUsage]);
+      return schema;
+    },
+    [environments, findVariableUsage],
+  );
 
   return {
     findVariableUsage,
-    generateEnvironmentSchema
+    generateEnvironmentSchema,
   };
 }

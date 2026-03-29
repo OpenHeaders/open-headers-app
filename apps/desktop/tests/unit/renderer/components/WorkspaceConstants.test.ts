@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   AUTH_TYPES,
-  SSH_KEY_SOURCES,
-  WORKSPACE_TYPES,
-  TOKEN_TYPES,
   DEFAULT_VALUES,
-  TIMING,
   PROVIDER_ICONS,
+  SSH_KEY_SOURCES,
+  TIMING,
+  TOKEN_TYPES,
+  WORKSPACE_TYPES,
 } from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
 // ======================================================================
@@ -49,21 +49,21 @@ describe('TOKEN_TYPES', () => {
   it('is an array of objects with value and label', () => {
     expect(Array.isArray(TOKEN_TYPES)).toBe(true);
     expect(TOKEN_TYPES.length).toBeGreaterThan(0);
-    TOKEN_TYPES.forEach(t => {
+    TOKEN_TYPES.forEach((t) => {
       expect(t).toHaveProperty('value');
       expect(t).toHaveProperty('label');
     });
   });
 
   it('includes auto-detect option', () => {
-    expect(TOKEN_TYPES.some(t => t.value === 'auto')).toBe(true);
+    expect(TOKEN_TYPES.some((t) => t.value === 'auto')).toBe(true);
   });
 
   it('includes major providers', () => {
-    expect(TOKEN_TYPES.some(t => t.value === 'github')).toBe(true);
-    expect(TOKEN_TYPES.some(t => t.value === 'gitlab')).toBe(true);
-    expect(TOKEN_TYPES.some(t => t.value === 'bitbucket')).toBe(true);
-    expect(TOKEN_TYPES.some(t => t.value === 'azure')).toBe(true);
+    expect(TOKEN_TYPES.some((t) => t.value === 'github')).toBe(true);
+    expect(TOKEN_TYPES.some((t) => t.value === 'gitlab')).toBe(true);
+    expect(TOKEN_TYPES.some((t) => t.value === 'bitbucket')).toBe(true);
+    expect(TOKEN_TYPES.some((t) => t.value === 'azure')).toBe(true);
   });
 });
 

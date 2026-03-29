@@ -25,7 +25,7 @@ export const createAutoScrollHandler = () => {
         '.ant-table-tbody tr.entry-current',
         'tbody .ant-table-row.entry-current',
         'tbody tr.entry-current',
-        '.entry-current'
+        '.entry-current',
       ];
 
       for (const selector of selectors) {
@@ -49,7 +49,7 @@ export const createAutoScrollHandler = () => {
             '.ant-table-tbody .ant-table-row',
             '.ant-table-tbody tr',
             'tbody .ant-table-row',
-            'tbody tr'
+            'tbody tr',
           ];
 
           let rows: Element[] = [];
@@ -65,11 +65,11 @@ export const createAutoScrollHandler = () => {
           if (currentIndex !== -1) {
             // Calculate approximate scroll position
             const rowHeight = (currentEntry as HTMLElement).offsetHeight;
-            const scrollTop = currentIndex * rowHeight - (scrollContainer.clientHeight / 2) + (rowHeight / 2);
+            const scrollTop = currentIndex * rowHeight - scrollContainer.clientHeight / 2 + rowHeight / 2;
 
             scrollContainer.scrollTo({
               top: Math.max(0, scrollTop),
-              behavior: 'smooth'
+              behavior: 'smooth',
             });
           }
         }
@@ -83,14 +83,16 @@ export const createAutoScrollHandler = () => {
   };
 };
 
-
 /**
  * Creates handlers for auto-highlight and auto-scroll functionality
  * @param {Function} setAutoHighlight - Function to set auto-highlight state
  * @param {Function} setAutoScroll - Function to set auto-scroll state
  * @returns {Object} Handler functions
  */
-export const createHighlightHandlers = (setAutoHighlight: (value: boolean) => void, setAutoScroll: (value: boolean) => void) => {
+export const createHighlightHandlers = (
+  setAutoHighlight: (value: boolean) => void,
+  setAutoScroll: (value: boolean) => void,
+) => {
   const handleAutoHighlightChange = (checked: boolean) => {
     setAutoHighlight(checked);
     // If auto-highlight is turned off, also turn off auto-scroll
@@ -100,6 +102,6 @@ export const createHighlightHandlers = (setAutoHighlight: (value: boolean) => vo
   };
 
   return {
-    handleAutoHighlightChange
+    handleAutoHighlightChange,
   };
 };

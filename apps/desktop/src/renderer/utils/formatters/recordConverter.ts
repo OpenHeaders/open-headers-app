@@ -1,13 +1,13 @@
 import type {
   CookieAttributes,
-  StorageRecord,
-  RecordingEventData,
-  RecordingEvent,
-  RawRecordingRecord,
-  RecordingMetadata,
-  NetworkRecord,
   NavigationEntry,
+  NetworkRecord,
   NetworkTimingData,
+  RawRecordingRecord,
+  RecordingEvent,
+  RecordingEventData,
+  RecordingMetadata,
+  StorageRecord,
 } from '../../../types/recording';
 
 interface ParsedCookie {
@@ -37,10 +37,14 @@ function extractDomain(url: string | null | undefined): string | null {
  */
 function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[] {
   if (!cookieStr) return [];
-  
+
   // Check if this looks like multiple cookies (no path/domain/etc attributes)
-  if (!cookieStr.includes('path=') && !cookieStr.includes('max-age=') && 
-      !cookieStr.includes('expires=') && cookieStr.includes('; ')) {
+  if (
+    !cookieStr.includes('path=') &&
+    !cookieStr.includes('max-age=') &&
+    !cookieStr.includes('expires=') &&
+    cookieStr.includes('; ')
+  ) {
     // Multiple cookies format: "name1=value1; name2=value2"
     const cookies: ParsedCookie[] = [];
     const pairs = cookieStr.split('; ');
@@ -51,40 +55,42 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
           name: pair.substring(0, eqIndex).trim(),
           value: pair.substring(eqIndex + 1),
           isDeleted: false,
-          attributes: {}
+          attributes: {},
         });
       }
     });
     return cookies;
   }
-  
+
   // Single cookie with attributes
   const parts = cookieStr.split(';').map((s: string) => s.trim());
   if (parts.length === 0) return [];
-  
+
   // First part is the cookie name=value
   const firstPart = parts[0];
   const eqIndex = firstPart.indexOf('=');
-  
+
   // Edge case: cookie without value (just name) or empty string
   if (eqIndex < 0) {
     // Cookie without value - treat as deletion
-    return [{
-      name: firstPart.trim(),
-      value: '',
-      isDeleted: true,
-      attributes: {}
-    }];
+    return [
+      {
+        name: firstPart.trim(),
+        value: '',
+        isDeleted: true,
+        attributes: {},
+      },
+    ];
   }
-  
+
   if (eqIndex === 0) {
     // Cookie starting with = is invalid
     return [];
   }
-  
+
   const cookieName = firstPart.substring(0, eqIndex).trim();
   const cookieValue = firstPart.substring(eqIndex + 1); // Don't trim cookie values, they might have intentional spaces
-  
+
   const attributes: CookieAttributes = {};
   let cookieDomain: string | null = null;
 
@@ -95,32 +101,48 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
       const attrName = part.substring(0, attrEqIndex).trim().toLowerCase();
       const attrValue = part.substring(attrEqIndex + 1).trim();
       switch (attrName) {
-        case 'domain': attributes.domain = attrValue; cookieDomain = attrValue; break;
-        case 'path': attributes.path = attrValue; break;
-        case 'samesite': attributes.samesite = attrValue; break;
-        case 'max-age': attributes['max-age'] = attrValue; break;
-        case 'expires': attributes.expires = attrValue; break;
+        case 'domain':
+          attributes.domain = attrValue;
+          cookieDomain = attrValue;
+          break;
+        case 'path':
+          attributes.path = attrValue;
+          break;
+        case 'samesite':
+          attributes.samesite = attrValue;
+          break;
+        case 'max-age':
+          attributes['max-age'] = attrValue;
+          break;
+        case 'expires':
+          attributes.expires = attrValue;
+          break;
       }
     } else {
       const attrName = part.trim().toLowerCase();
       switch (attrName) {
-        case 'httponly': attributes.httponly = true; break;
-        case 'secure': attributes.secure = true; break;
+        case 'httponly':
+          attributes.httponly = true;
+          break;
+        case 'secure':
+          attributes.secure = true;
+          break;
       }
     }
   }
-  
+
   // Check if this is a deletion (max-age=0, expires in the past, or empty value with max-age)
-  const isDeleted = attributes['max-age'] === '0' || 
-                    (cookieValue === '' && attributes.hasOwnProperty('max-age'));
-  
-  return [{
-    name: cookieName,
-    value: cookieValue,
-    isDeleted: isDeleted,
-    attributes: attributes,
-    domain: cookieDomain
-  }];
+  const isDeleted = attributes['max-age'] === '0' || (cookieValue === '' && Object.hasOwn(attributes, 'max-age'));
+
+  return [
+    {
+      name: cookieName,
+      value: cookieValue,
+      isDeleted: isDeleted,
+      attributes: attributes,
+      domain: cookieDomain,
+    },
+  ];
 }
 
 /**
@@ -144,7 +166,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
   const storage: StorageRecord[] = [];
   const rrwebEvents: RecordingEventData[] = [];
   const navigationHistory: NavigationEntry[] = [];
-  
+
   // Get the actual start time (considering pre-navigation adjustment)
   // If preNavTimeAdjustment exists, events are already adjusted, so we use the raw startTime
   const startTime = record.startTime;
@@ -153,14 +175,14 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
   record.events.forEach((event: RecordingEvent) => {
     // Calculate relative timestamp
     const relativeTimestamp = event.timestamp - (startTime ?? 0);
-    
+
     switch (event.type) {
       case 'console':
         consoleRecords.push({
           timestamp: relativeTimestamp,
           level: event.data.level,
           args: event.data.args,
-          stack: event.data.stack
+          stack: event.data.stack,
         });
         break;
 
@@ -169,7 +191,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
         if (event.data.type === 'request') {
           // Construct full URL if data.url is relative
           let fullUrl = event.data.url;
-          
+
           // If URL is relative (starts with /), try to construct full URL
           if (fullUrl && fullUrl.startsWith('/') && event.url) {
             try {
@@ -189,7 +211,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
               }
             }
           }
-          
+
           networkRecords.push({
             id: event.data.requestId,
             timestamp: relativeTimestamp,
@@ -202,7 +224,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             timing: event.data.timing,
           });
         } else if (event.data.type === 'response') {
-          const request = networkRecords.find(req => req.id === event.data.requestId);
+          const request = networkRecords.find((req) => req.id === event.data.requestId);
           if (request) {
             request.status = event.data.status;
             request.statusText = event.data.statusText;
@@ -239,12 +261,15 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
               sessionStorage: event.data.sessionStorage,
               cookies: event.data.cookies,
             },
-            url: event.url
+            url: event.url,
           });
         } else {
-          const storageType = event.data.type === 'local' ? 'localStorage' :
-                            event.data.type === 'session' ? 'sessionStorage' :
-                            (event.data.type || 'unknown');
+          const storageType =
+            event.data.type === 'local'
+              ? 'localStorage'
+              : event.data.type === 'session'
+                ? 'sessionStorage'
+                : event.data.type || 'unknown';
 
           storage.push({
             timestamp: relativeTimestamp,
@@ -257,7 +282,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             newValue: event.data.newValue,
             domain: event.data.domain || extractDomain(event.url) || 'unknown',
             path: event.data.path || '/',
-            url: event.url
+            url: event.url,
           });
         }
         break;
@@ -267,7 +292,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
           timestamp: relativeTimestamp,
           url: event.url,
           title: event.data?.title,
-          transitionType: event.data?.transitionType
+          transitionType: event.data?.transitionType,
         });
         break;
 
@@ -283,7 +308,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
         break;
 
       default:
-        // Unknown event type - silently ignore
+      // Unknown event type - silently ignore
     }
   });
 
@@ -293,12 +318,12 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
     duration: record.endTime ? record.endTime - (record.startTime ?? 0) : 0,
     url: record.url || navigationHistory[0]?.url || '',
     viewport: record.viewport || { width: 1920, height: 1080 },
-    userAgent: record.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown')
+    userAgent: record.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Unknown'),
   };
 
   const recordWithOriginalEvents: RawRecordingRecord = {
     ...record,
-    _originalEvents: record.events
+    _originalEvents: record.events,
   };
 
   return {
@@ -308,7 +333,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
     console: consoleRecords,
     network: networkRecords,
     storage: processStorageEvents(storage, recordWithOriginalEvents),
-    navigationHistory
+    navigationHistory,
   };
 }
 
@@ -325,39 +350,39 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
     if (item.type === 'initial' && item.data) {
       // Process initial storage snapshot
       const { localStorage, sessionStorage, cookies } = item.data;
-      
+
       // Add localStorage entries
       Object.entries(localStorage || {}).forEach(([key, value]) => {
         processedStorage.push({
           timestamp: item.timestamp,
           type: 'localStorage',
-          action: 'set',  // Use 'set' for initial values
+          action: 'set', // Use 'set' for initial values
           key,
           name: key,
           value,
-          oldValue: undefined,  // No old value for initial state
+          oldValue: undefined, // No old value for initial state
           domain: extractDomain(itemUrl) || 'unknown',
           url: itemUrl,
-          metadata: { initial: true }
+          metadata: { initial: true },
         });
       });
-      
+
       // Add sessionStorage entries
       Object.entries(sessionStorage || {}).forEach(([key, value]) => {
         processedStorage.push({
           timestamp: item.timestamp,
           type: 'sessionStorage',
-          action: 'set',  // Use 'set' for initial values
+          action: 'set', // Use 'set' for initial values
           key,
           name: key,
           value,
-          oldValue: undefined,  // No old value for initial state
+          oldValue: undefined, // No old value for initial state
           domain: extractDomain(itemUrl) || 'unknown',
           url: itemUrl,
-          metadata: { initial: true }
+          metadata: { initial: true },
         });
       });
-      
+
       // Add cookies - parse individual cookies
       if (cookies) {
         // Initial cookies are the full cookie string with multiple cookies
@@ -371,14 +396,14 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
             processedStorage.push({
               timestamp: item.timestamp,
               type: 'cookie',
-              action: 'set',  // Use 'set' for initial values
+              action: 'set', // Use 'set' for initial values
               key: name,
               name: name,
               value: value,
-              oldValue: undefined,  // No old value for initial state
+              oldValue: undefined, // No old value for initial state
               domain: extractDomain(itemUrl) || 'unknown',
               url: itemUrl,
-              metadata: { initial: true }
+              metadata: { initial: true },
             });
           }
         });
@@ -386,17 +411,16 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
     } else {
       // Regular storage change event - ensure it has domain and name
       // Map type from 'local'/'session' to 'localStorage'/'sessionStorage'
-      const mappedType = item.type === 'local' ? 'localStorage' : 
-                        item.type === 'session' ? 'sessionStorage' : 
-                        item.type;
-      
+      const mappedType =
+        item.type === 'local' ? 'localStorage' : item.type === 'session' ? 'sessionStorage' : item.type;
+
       // Handle cookie SET events specially - parse individual cookies
       if (mappedType === 'cookie' && item.newValue !== undefined && item.newValue !== null) {
         const parsedCookies = parseCookieString(item.newValue as string);
         parsedCookies.forEach(({ name, value, isDeleted, domain: cookieDomain, attributes }) => {
           // Use cookie's domain attribute if available, otherwise fall back to URL domain
           const effectiveDomain = cookieDomain || item.domain || extractDomain(itemUrl) || 'unknown';
-          
+
           processedStorage.push({
             ...item,
             type: 'cookie',
@@ -415,8 +439,8 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
               sameSite: attributes?.samesite || undefined,
               maxAge: attributes?.['max-age'] || undefined,
               expires: attributes?.expires || undefined,
-              rawAttributes: attributes
-            }
+              rawAttributes: attributes,
+            },
           });
         });
       } else {
@@ -427,12 +451,12 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
           name: item.key || item.name || '*',
           value: item.value !== undefined ? item.value : item.newValue, // Ensure value field exists
           url: itemUrl,
-          domain: item.domain || extractDomain(itemUrl) || 'unknown'
+          domain: item.domain || extractDomain(itemUrl) || 'unknown',
         });
       }
     }
   });
-  
+
   // Deduplicate INITIAL storage states
   return deduplicateInitialStorage(processedStorage);
 }
@@ -444,7 +468,7 @@ export function processStorageEvents(storage: StorageRecord[], record: RawRecord
 function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
   const seenKeys = new Map<string, unknown>();
   const processedEvents: StorageRecord[] = [];
-  
+
   // Find the timestamp of the first storage-initial event (recording start)
   let recordingStartTime = null;
   for (const event of storageEvents) {
@@ -453,39 +477,39 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
       break;
     }
   }
-  
+
   storageEvents.forEach((event: StorageRecord) => {
     const key = `${event.type}:${event.name}`;
-    
+
     // Check if this is an initial storage state by looking at metadata
     if (event.metadata && event.metadata.initial === true) {
       // Only keep the "Initial" attribute for storage that existed at recording start
       const isAtRecordingStart = event.timestamp === recordingStartTime;
-      
+
       // For initial events, check if we've seen this key before
       if (!seenKeys.has(key)) {
         seenKeys.set(key, event.value);
         processedEvents.push({
           ...event,
-          metadata: isAtRecordingStart ? event.metadata : undefined
+          metadata: isAtRecordingStart ? event.metadata : undefined,
         });
       }
     } else {
       // Non-initial events - update old value based on what we've seen
       const previousValue = seenKeys.get(key);
-      
+
       if (event.action === 'set') {
         processedEvents.push({
           ...event,
           oldValue: previousValue,
-          value: event.value
+          value: event.value,
         });
         seenKeys.set(key, event.value);
       } else if (event.action === 'remove') {
         processedEvents.push({
           ...event,
           oldValue: previousValue !== undefined ? previousValue : event.oldValue,
-          value: undefined
+          value: undefined,
         });
         seenKeys.delete(key);
       } else if (event.action === 'clear') {
@@ -496,10 +520,10 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
             clearedKeys.push({ key: k, value: v });
           }
         }
-        
+
         // Remove cleared keys from tracking
         clearedKeys.forEach(({ key }) => seenKeys.delete(key));
-        
+
         processedEvents.push({
           ...event,
           metadata: {
@@ -507,9 +531,9 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
             clearedCount: clearedKeys.length,
             clearedKeys: clearedKeys.map(({ key, value }) => ({
               name: key.split(':')[1],
-              value
-            }))
-          }
+              value,
+            })),
+          },
         });
       } else {
         // Other actions
@@ -517,7 +541,7 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
       }
     }
   });
-  
+
   return processedEvents;
 }
 
@@ -533,16 +557,16 @@ export function convertStorageForTable(storage: StorageRecord[]) {
       // Initial state entries
       tableData.push({
         ...item,
-        domain: item.domain || 'unknown'
+        domain: item.domain || 'unknown',
       });
     } else {
       // Regular storage change events
       tableData.push({
         ...item,
-        domain: item.domain || 'unknown'
+        domain: item.domain || 'unknown',
       });
     }
   });
-  
+
   return tableData;
 }

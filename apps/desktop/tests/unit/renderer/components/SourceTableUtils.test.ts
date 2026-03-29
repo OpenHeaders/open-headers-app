@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  debugRefreshState,
   formatTimeRemaining,
   trimContent,
-  debugRefreshState,
 } from '../../../../src/renderer/components/sources/source-table/SourceTableUtils';
 
 // ======================================================================

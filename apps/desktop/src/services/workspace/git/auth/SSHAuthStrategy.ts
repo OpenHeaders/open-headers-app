@@ -2,11 +2,11 @@
  * SSHAuthStrategy - Handles SSH key-based authentication for Git operations
  */
 
+import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
-import mainLogger from '../../../../utils/mainLogger';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;
@@ -99,7 +99,7 @@ class SSHAuthStrategy {
           log.error('Failed to cleanup SSH keys:', error);
         }
       },
-      keyHash
+      keyHash,
     };
   }
 
@@ -110,7 +110,7 @@ class SSHAuthStrategy {
     if (!authData.privateKey) {
       return {
         valid: false,
-        error: 'SSH private key is required'
+        error: 'SSH private key is required',
       };
     }
 
@@ -119,7 +119,7 @@ class SSHAuthStrategy {
     if (!key.includes('-----BEGIN') || !key.includes('-----END')) {
       return {
         valid: false,
-        error: 'Invalid SSH key format'
+        error: 'Invalid SSH key format',
       };
     }
 
@@ -152,7 +152,7 @@ class SSHAuthStrategy {
 
     try {
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/').filter(p => p);
+      const pathParts = urlObj.pathname.split('/').filter((p) => p);
 
       if (pathParts.length < 2) {
         throw new Error('Invalid repository URL');
@@ -187,6 +187,6 @@ class SSHAuthStrategy {
   }
 }
 
-export { SSHAuthStrategy };
 export type { SSHAuthData, SSHAuthResult, SSHValidationResult };
+export { SSHAuthStrategy };
 export default SSHAuthStrategy;

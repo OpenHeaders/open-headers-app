@@ -3,8 +3,8 @@
  * Tests for useEnv hook — validates IPC delegation and input validation.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -62,7 +62,8 @@ describe('useEnv', () => {
   });
 
   it('handles JWT token values', async () => {
-    const jwt = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIiwiaWF0IjoxNzE2MDAwMDAwfQ.signature';
+    const jwt =
+      'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQG9wZW5oZWFkZXJzLmlvIiwiaWF0IjoxNzE2MDAwMDAwfQ.signature';
     mockGetEnvVariable.mockResolvedValue(jwt);
 
     const { result } = renderHook(() => useEnv());
@@ -81,7 +82,7 @@ describe('useEnv', () => {
     await expect(
       act(async () => {
         await result.current.getVariable('');
-      })
+      }),
     ).rejects.toThrow('Environment variable name is required');
   });
 
@@ -93,7 +94,7 @@ describe('useEnv', () => {
     await expect(
       act(async () => {
         await result.current.getVariable('OAUTH2_CLIENT_ID');
-      })
+      }),
     ).rejects.toThrow('Error getting environment variable: IPC channel timeout after 5000ms');
   });
 

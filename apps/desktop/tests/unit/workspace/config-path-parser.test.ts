@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { parseConfigPath, getSearchPatterns, getPathErrorMessage } from '../../../src/services/workspace/config-path-parser';
+import { describe, expect, it } from 'vitest';
+import {
+  getPathErrorMessage,
+  getSearchPatterns,
+  parseConfigPath,
+} from '../../../src/services/workspace/config-path-parser';
 
 describe('config-path-parser', () => {
-
   describe('parseConfigPath()', () => {
     it('returns default single path for null input', () => {
       const result = parseConfigPath(null);

@@ -10,32 +10,36 @@
  * @param {string} props.viewMode - Current view mode
  */
 
-import React from 'react';
 import type { GlobalToken } from 'antd/es/theme/interface';
+import type React from 'react';
 
-interface DOMPlayerContainerProps { playerContainerRef: React.RefObject<HTMLDivElement | null>; token: GlobalToken; viewMode: string; }
+interface DOMPlayerContainerProps {
+  playerContainerRef: React.RefObject<HTMLDivElement | null>;
+  token: GlobalToken;
+  viewMode: string;
+}
 const DOMPlayerContainer = ({ playerContainerRef, token, viewMode }: DOMPlayerContainerProps) => {
-    if (viewMode !== 'dom') return null;
+  if (viewMode !== 'dom') return null;
 
-    return (
-        <div
-            ref={playerContainerRef}
-            style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: token.colorBgLayout,
-                borderRadius: '6px',
-                border: `1px solid ${token.colorBorderSecondary}`,
-                overflow: 'hidden',
-                position: 'absolute',
-                top: 0,
-                left: 0
-            }}
-        />
-    );
+  return (
+    <div
+      ref={playerContainerRef}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        background: token.colorBgLayout,
+        borderRadius: '6px',
+        border: `1px solid ${token.colorBorderSecondary}`,
+        overflow: 'hidden',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+      }}
+    />
+  );
 };
 
 export default DOMPlayerContainer;

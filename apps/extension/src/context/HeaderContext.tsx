@@ -1,9 +1,10 @@
-import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
-import { storage, runtime } from '../utils/browser-api';
-import { getChunkedData } from '../utils/storage-chunking';
-import { sendMessageWithCallback } from '../utils/messaging';
+import type React from 'react';
+import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { getBrowserAPI } from '../types/browser';
 import type { HeaderEntry } from '../types/header';
+import { runtime, storage } from '../utils/browser-api';
+import { sendMessageWithCallback } from '../utils/messaging';
+import { getChunkedData } from '../utils/storage-chunking';
 
 // Re-export HeaderEntry from the canonical types location
 export type { HeaderEntry } from '../types/header';
@@ -49,7 +50,7 @@ export interface HeaderContextValue {
 // Wrapper to adapt sendMessageWithCallback to the expected signature
 const sendContextMessage = (
   message: { type: string; [key: string]: unknown },
-  callback?: (response: Record<string, unknown> | null, error: chrome.runtime.LastError | null) => void
+  callback?: (response: Record<string, unknown> | null, error: chrome.runtime.LastError | null) => void,
 ): void => {
   sendMessageWithCallback(message, (response, error) => {
     if (callback) callback(response as Record<string, unknown> | null, error);
@@ -67,13 +68,13 @@ const defaultContextValue: HeaderContextValue = {
     tableState: {
       searchText: '',
       filteredInfo: {},
-      sortedInfo: {}
-    }
+      sortedInfo: {},
+    },
   },
   loadHeaderEntries: () => {},
   loadDynamicSources: () => {},
   refreshHeaderEntries: () => {},
-  updateUiState: () => {}
+  updateUiState: () => {},
 };
 
 export const HeaderContext = createContext<HeaderContextValue>(defaultContextValue);
@@ -95,8 +96,8 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     tableState: {
       searchText: '',
       filteredInfo: {},
-      sortedInfo: {}
-    }
+      sortedInfo: {},
+    },
   });
 
   const isLoadingRef = useRef(false);
@@ -104,7 +105,12 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
 
   const loadHeaderEntries = useCallback((forceRefresh = false) => {
     if (isLoadingRef.current && !forceRefresh) {
-      console.log(new Date().toISOString(), 'INFO ', '[HeaderContext]', 'HeaderContext: Load already in progress, skipping');
+      console.log(
+        new Date().toISOString(),
+        'INFO ',
+        '[HeaderContext]',
+        'HeaderContext: Load already in progress, skipping',
+      );
       return;
     }
 
@@ -154,12 +160,18 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
 
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'sync') {
-        const hasDataChange = changes.savedData ||
-                             changes.savedData_chunked ||
-                             Object.keys(changes).some(key => key.startsWith('savedData_chunk_'));
+        const hasDataChange =
+          changes.savedData ||
+          changes.savedData_chunked ||
+          Object.keys(changes).some((key) => key.startsWith('savedData_chunk_'));
 
         if (hasDataChange) {
-          console.log(new Date().toISOString(), 'INFO ', '[HeaderContext]', 'HeaderContext: Storage changed, updating entries');
+          console.log(
+            new Date().toISOString(),
+            'INFO ',
+            '[HeaderContext]',
+            'HeaderContext: Storage changed, updating entries',
+          );
           getChunkedData('savedData', (data) => {
             setHeaderEntries((data || {}) as Record<string, HeaderEntry>);
           });
@@ -171,16 +183,32 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
 
     const messageListener = (message: { type?: string; entries?: Record<string, HeaderEntry> }) => {
       if (message.type === 'dynamicSourcesUpdated') {
-        console.log(new Date().toISOString(), 'INFO ', '[HeaderContext]', 'HeaderContext: Dynamic sources updated notification received');
+        console.log(
+          new Date().toISOString(),
+          'INFO ',
+          '[HeaderContext]',
+          'HeaderContext: Dynamic sources updated notification received',
+        );
         loadDynamicSources();
       } else if (message.type === 'headerEntriesUpdated' && message.entries) {
-        console.log(new Date().toISOString(), 'INFO ', '[HeaderContext]', 'HeaderContext: Header entries updated from app');
+        console.log(
+          new Date().toISOString(),
+          'INFO ',
+          '[HeaderContext]',
+          'HeaderContext: Header entries updated from app',
+        );
         setHeaderEntries(message.entries);
         setRulesFromApp(true);
       }
     };
 
-    runtime.onMessage.addListener(messageListener as (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => void);
+    runtime.onMessage.addListener(
+      messageListener as (
+        message: unknown,
+        sender: chrome.runtime.MessageSender,
+        sendResponse: (response?: unknown) => void,
+      ) => void,
+    );
 
     const intervalId = setInterval(() => {
       loadDynamicSources();
@@ -188,7 +216,13 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
 
     return () => {
       storage.onChanged.removeListener(handleStorageChange);
-      runtime.onMessage.removeListener(messageListener as (message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => void);
+      runtime.onMessage.removeListener(
+        messageListener as (
+          message: unknown,
+          sender: chrome.runtime.MessageSender,
+          sendResponse: (response?: unknown) => void,
+        ) => void,
+      );
       clearInterval(intervalId);
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
@@ -201,9 +235,9 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     storage.local.get(['popupState'], (result: Record<string, unknown>) => {
       const popupState = result.popupState as { uiState?: Partial<UiState> } | undefined;
       if (popupState?.uiState) {
-        setUiState(prev => ({
+        setUiState((prev) => ({
           ...prev,
-          ...popupState.uiState
+          ...popupState.uiState,
         }));
       }
     });
@@ -217,8 +251,8 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
         storage.local.set({
           popupState: {
             ...popupState,
-            uiState
-          }
+            uiState,
+          },
         });
       });
     }, 500);
@@ -227,9 +261,9 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
   }, [uiState]);
 
   const updateUiState = useCallback((updates: Partial<UiState>) => {
-    setUiState(prev => ({
+    setUiState((prev) => ({
       ...prev,
-      ...updates
+      ...updates,
     }));
   }, []);
 
@@ -243,12 +277,8 @@ export const HeaderProvider: React.FC<HeaderProviderProps> = ({ children }) => {
     loadHeaderEntries,
     loadDynamicSources,
     refreshHeaderEntries,
-    updateUiState
+    updateUiState,
   };
 
-  return (
-    <HeaderContext.Provider value={contextValue}>
-      {children}
-    </HeaderContext.Provider>
-  );
+  return <HeaderContext.Provider value={contextValue}>{children}</HeaderContext.Provider>;
 };

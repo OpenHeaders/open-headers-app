@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the ExportImportConfig module
 vi.mock('../../../../src/renderer/services/export-import/core/ExportImportConfig', () => ({
@@ -23,9 +23,7 @@ const {
   readJsonFile,
   handleSingleFileExport,
   handleMultiFileExport,
-} = await import(
-  '../../../../src/renderer/services/export-import/utilities/FileOperations'
-);
+} = await import('../../../../src/renderer/services/export-import/utilities/FileOperations');
 
 describe('FileOperations', () => {
   // ========================================================================
@@ -96,16 +94,13 @@ describe('FileOperations', () => {
     it('handles enterprise path with spaces', () => {
       const result = generateCompanionFilePath(
         '/Users/jane.doe/Documents/OpenHeaders Configs/export.json',
-        'open-headers-env.json'
+        'open-headers-env.json',
       );
       expect(result).toBe('/Users/jane.doe/Documents/OpenHeaders Configs/open-headers-env.json');
     });
 
     it('handles deeply nested enterprise path', () => {
-      const result = generateCompanionFilePath(
-        '/opt/openheaders/data/exports/2026/03/config.json',
-        'env.json'
-      );
+      const result = generateCompanionFilePath('/opt/openheaders/data/exports/2026/03/config.json', 'env.json');
       expect(result).toBe('/opt/openheaders/data/exports/2026/03/env.json');
     });
   });
@@ -177,7 +172,12 @@ describe('FileOperations', () => {
   // (require window.electronAPI mock)
   // ========================================================================
   describe('electronAPI-dependent operations', () => {
-    let mockElectronAPI: { saveFileDialog: ReturnType<typeof vi.fn>; openFileDialog: ReturnType<typeof vi.fn>; writeFile: ReturnType<typeof vi.fn>; readFile: ReturnType<typeof vi.fn> };
+    let mockElectronAPI: {
+      saveFileDialog: ReturnType<typeof vi.fn>;
+      openFileDialog: ReturnType<typeof vi.fn>;
+      writeFile: ReturnType<typeof vi.fn>;
+      readFile: ReturnType<typeof vi.fn>;
+    };
 
     beforeEach(() => {
       mockElectronAPI = {
@@ -212,7 +212,7 @@ describe('FileOperations', () => {
             title: 'My Export',
             defaultPath: 'config.json',
             buttonLabel: 'Save',
-          })
+          }),
         );
       });
 
@@ -241,7 +241,7 @@ describe('FileOperations', () => {
         expect(mockElectronAPI.openFileDialog).toHaveBeenCalledWith(
           expect.objectContaining({
             properties: ['openFile', 'multiSelections'],
-          })
+          }),
         );
       });
 
@@ -251,7 +251,7 @@ describe('FileOperations', () => {
         expect(mockElectronAPI.openFileDialog).toHaveBeenCalledWith(
           expect.objectContaining({
             properties: ['openFile'],
-          })
+          }),
         );
       });
 
@@ -266,23 +266,18 @@ describe('FileOperations', () => {
         await writeJsonFile('/path/file.json', { key: 'value' });
         expect(mockElectronAPI.writeFile).toHaveBeenCalledWith(
           '/path/file.json',
-          JSON.stringify({ key: 'value' }, null, 2)
+          JSON.stringify({ key: 'value' }, null, 2),
         );
       });
 
       it('writes compact JSON when pretty is false', async () => {
         await writeJsonFile('/path/file.json', { key: 'value' }, false);
-        expect(mockElectronAPI.writeFile).toHaveBeenCalledWith(
-          '/path/file.json',
-          JSON.stringify({ key: 'value' })
-        );
+        expect(mockElectronAPI.writeFile).toHaveBeenCalledWith('/path/file.json', JSON.stringify({ key: 'value' }));
       });
 
       it('throws on write error', async () => {
         mockElectronAPI.writeFile.mockRejectedValue(new Error('write err'));
-        await expect(writeJsonFile('/path/file.json', {})).rejects.toThrow(
-          'Failed to write file'
-        );
+        await expect(writeJsonFile('/path/file.json', {})).rejects.toThrow('Failed to write file');
       });
     });
 
@@ -295,16 +290,12 @@ describe('FileOperations', () => {
 
       it('throws on read error', async () => {
         mockElectronAPI.readFile.mockRejectedValue(new Error('read err'));
-        await expect(readJsonFile('/path/file.json')).rejects.toThrow(
-          'Failed to read file'
-        );
+        await expect(readJsonFile('/path/file.json')).rejects.toThrow('Failed to read file');
       });
 
       it('throws on invalid JSON', async () => {
         mockElectronAPI.readFile.mockResolvedValue('not json');
-        await expect(readJsonFile('/path/file.json')).rejects.toThrow(
-          'Failed to read file'
-        );
+        await expect(readJsonFile('/path/file.json')).rejects.toThrow('Failed to read file');
       });
     });
 
@@ -324,9 +315,7 @@ describe('FileOperations', () => {
 
       it('throws when user cancels', async () => {
         mockElectronAPI.saveFileDialog.mockResolvedValue(null);
-        await expect(
-          handleSingleFileExport({ filename: 'config.json', data: {} })
-        ).rejects.toThrow('cancelled');
+        await expect(handleSingleFileExport({ filename: 'config.json', data: {} })).rejects.toThrow('cancelled');
       });
     });
 
@@ -367,7 +356,7 @@ describe('FileOperations', () => {
           handleMultiFileExport({
             mainFilename: 'config.json',
             mainData: {},
-          })
+          }),
         ).rejects.toThrow('cancelled');
       });
     });

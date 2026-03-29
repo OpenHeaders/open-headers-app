@@ -1,2 +1,8 @@
 // Re-export from shared module
-export { Mutex, Semaphore, ConcurrentMap, ConcurrentSet, RequestDeduplicator } from '../../../shared/ConcurrencyControl';
+export {
+  ConcurrentMap,
+  ConcurrentSet,
+  Mutex,
+  RequestDeduplicator,
+  Semaphore,
+} from '../../../shared/ConcurrencyControl';

@@ -2,8 +2,8 @@
  * TokenAuthStrategy - Handles token-based authentication for various Git providers
  */
 
-import mainLogger from '../../../../utils/mainLogger';
 import { errorMessage } from '../../../../types/common';
+import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
@@ -39,7 +39,7 @@ class TokenAuthStrategy {
 
     return {
       effectiveUrl,
-      env: process.env
+      env: process.env,
     };
   }
 
@@ -50,7 +50,7 @@ class TokenAuthStrategy {
     if (!authData.token) {
       return {
         valid: false,
-        error: 'Access token is required'
+        error: 'Access token is required',
       };
     }
     return { valid: true };
@@ -126,6 +126,6 @@ class TokenAuthStrategy {
   }
 }
 
-export { TokenAuthStrategy };
 export type { TokenAuthData, TokenAuthResult, TokenValidationResult };
+export { TokenAuthStrategy };
 export default TokenAuthStrategy;

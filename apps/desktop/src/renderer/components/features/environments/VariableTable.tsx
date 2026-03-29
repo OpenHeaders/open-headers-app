@@ -3,23 +3,23 @@
  * Displays environment variables with usage tracking and editing features
  */
 
-import React, { useState } from 'react';
-import { Table, Form, Space, Button, Tag, Typography, Tooltip, Popconfirm, Empty } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
-  EyeOutlined, 
-  EyeInvisibleOutlined, 
-  WarningOutlined,
-  PlusOutlined,
+import {
+  CheckCircleTwoTone,
   CopyOutlined,
-  CheckCircleTwoTone
+  DeleteOutlined,
+  EditOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
-import EditableCell from './EditableCell';
-import JWTEditorModal from './JWTEditorModal';
+import { Button, Empty, Form, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import React, { useState } from 'react';
+import type { Source } from '../../../../types/source';
 import { showMessage } from '../../../utils';
 import { isJWT } from '../../../utils/jwtUtils';
-import type { Source } from '../../../../types/source';
+import EditableCell from './EditableCell';
+import JWTEditorModal from './JWTEditorModal';
 
 const { Text } = Typography;
 
@@ -37,47 +37,47 @@ const { Text } = Typography;
  * @param {Object} props.form - Ant Design form instance
  */
 interface VariableMetadata {
-    value: string;
-    isSecret: boolean;
-    updatedAt?: string;
+  value: string;
+  isSecret: boolean;
+  updatedAt?: string;
 }
 
 interface VariableRecord {
-    key: string;
-    name: string;
-    value: string;
-    isSecret: boolean;
-    usedIn: string[];
-    missing?: boolean;
+  key: string;
+  name: string;
+  value: string;
+  isSecret: boolean;
+  usedIn: string[];
+  missing?: boolean;
 }
 
 interface HeaderRuleEntry {
-    id: string;
-    headerName?: string;
+  id: string;
+  headerName?: string;
 }
 
 type SourceEntry = Pick<Source, 'sourceId' | 'sourceName'>;
 
 interface RulesMap {
-    header?: HeaderRuleEntry[];
+  header?: HeaderRuleEntry[];
 }
 
 interface JwtModalData {
-    variableName: string;
-    value: string;
-    isSecret: boolean;
+  variableName: string;
+  value: string;
+  isSecret: boolean;
 }
 
 interface VariableTableProps {
-    variablesWithMetadata: Record<string, VariableMetadata>;
-    missingVariables: string[];
-    variableUsage: Record<string, string[]>;
-    sources: SourceEntry[];
-    rules: RulesMap;
-    onAddVariable: (...args: unknown[]) => void;
-    onEditVariable: (key: string, row: unknown) => Promise<void>;
-    onDeleteVariable: (name: string) => void;
-    form: ReturnType<typeof Form.useForm>[0];
+  variablesWithMetadata: Record<string, VariableMetadata>;
+  missingVariables: string[];
+  variableUsage: Record<string, string[]>;
+  sources: SourceEntry[];
+  rules: RulesMap;
+  onAddVariable: (...args: unknown[]) => void;
+  onEditVariable: (key: string, row: unknown) => Promise<void>;
+  onDeleteVariable: (name: string) => void;
+  form: ReturnType<typeof Form.useForm>[0];
 }
 
 const VariableTable = ({
@@ -89,7 +89,7 @@ const VariableTable = ({
   onAddVariable,
   onEditVariable,
   onDeleteVariable,
-  form
+  form,
 }: VariableTableProps) => {
   const [editingKey, setEditingKey] = useState('');
   const [showSensitive, setShowSensitive] = useState<Record<string, boolean>>({});
@@ -114,7 +114,7 @@ const VariableTable = ({
       setJwtModalData({
         variableName: record.name,
         value: record.value,
-        isSecret: record.isSecret
+        isSecret: record.isSecret,
       });
       setJwtModalVisible(true);
     } else {
@@ -123,12 +123,12 @@ const VariableTable = ({
         ...record,
       });
       setEditingKey(record.key);
-      
+
       // Automatically show secret values when editing
       if (record.isSecret) {
-        setShowSensitive(prev => ({
+        setShowSensitive((prev) => ({
           ...prev,
-          [record.name]: true
+          [record.name]: true,
         }));
       }
     }
@@ -155,9 +155,9 @@ const VariableTable = ({
       // Hide the secret value again after saving if it's a secret
       // The key is the variable name in this case
       if (row.isSecret) {
-        setShowSensitive(prev => ({
+        setShowSensitive((prev) => ({
           ...prev,
-          [row.name]: false
+          [row.name]: false,
         }));
       }
     } catch (errInfo) {
@@ -170,9 +170,9 @@ const VariableTable = ({
    * @param {string} varName - Variable name
    */
   const toggleSensitive = (varName: string) => {
-    setShowSensitive(prev => ({
+    setShowSensitive((prev) => ({
       ...prev,
-      [varName]: !prev[varName]
+      [varName]: !prev[varName],
     }));
   };
 
@@ -200,7 +200,7 @@ const VariableTable = ({
       await onEditVariable(jwtModalData.variableName, {
         name: jwtModalData.variableName,
         value: newToken,
-        isSecret: isSecret
+        isSecret: isSecret,
       });
       setJwtModalVisible(false);
       // Don't clear data immediately to allow animation to complete
@@ -230,7 +230,7 @@ const VariableTable = ({
   const renderVariableValue = (value: string, record: VariableRecord) => {
     const editable = isEditing(record);
     if (editable) return value;
-    
+
     const isSensitive = record.isSecret;
     const isVisible = showSensitive[record.name];
     const isEmpty = !value || value === '';
@@ -264,11 +264,7 @@ const VariableTable = ({
             icon={<EyeInvisibleOutlined />}
             onClick={() => toggleSensitive(record.name)}
           />
-          <Button
-            size="small"
-            onClick={() => toggleSensitive(record.name)}
-            style={{ width: 60 }}
-          >
+          <Button size="small" onClick={() => toggleSensitive(record.name)} style={{ width: 60 }}>
             Show
           </Button>
         </Space>
@@ -278,11 +274,14 @@ const VariableTable = ({
     // Check if this is a domain variable with comma-separated values
     const isDomainVariable = record.name.toLowerCase().includes('domain');
     const hasCommas = value && value.includes(',');
-    
+
     if (isDomainVariable && hasCommas) {
       // Split by comma and create tags
-      const domains = value.split(',').map((domain: string) => domain.trim()).filter((domain: string) => domain);
-      
+      const domains = value
+        .split(',')
+        .map((domain: string) => domain.trim())
+        .filter((domain: string) => domain);
+
       return (
         <Space wrap>
           {domains.map((domain: string, index: number) => (
@@ -292,17 +291,8 @@ const VariableTable = ({
           ))}
           {isSensitive && (
             <>
-              <Button
-                type="text"
-                size="small"
-                icon={<EyeOutlined />}
-                onClick={() => toggleSensitive(record.name)}
-              />
-              <Button
-                size="small"
-                onClick={() => toggleSensitive(record.name)}
-                style={{ width: 60 }}
-              >
+              <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => toggleSensitive(record.name)} />
+              <Button size="small" onClick={() => toggleSensitive(record.name)} style={{ width: 60 }}>
                 Hide
               </Button>
             </>
@@ -317,17 +307,8 @@ const VariableTable = ({
         <Text>{value}</Text>
         {isSensitive && (
           <>
-            <Button
-              type="text"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => toggleSensitive(record.name)}
-            />
-            <Button
-              size="small"
-              onClick={() => toggleSensitive(record.name)}
-              style={{ width: 60 }}
-            >
+            <Button type="text" size="small" icon={<EyeOutlined />} onClick={() => toggleSensitive(record.name)} />
+            <Button size="small" onClick={() => toggleSensitive(record.name)} style={{ width: 60 }}>
               Hide
             </Button>
           </>
@@ -349,7 +330,7 @@ const VariableTable = ({
           if (sourceId.startsWith('rule-')) {
             const ruleId = sourceId.substring(5); // Remove 'rule-' prefix
             let ruleName = `Rule #${ruleId}`;
-            
+
             // Try to find the actual rule to get its name
             if (rules && rules.header) {
               const rule = rules.header.find((r: HeaderRuleEntry) => r.id === ruleId);
@@ -357,16 +338,16 @@ const VariableTable = ({
                 ruleName = rule.headerName || `Header Rule`;
               }
             }
-            
+
             return (
               <Tag key={sourceId} color="green">
                 {ruleName}
               </Tag>
             );
           }
-          
+
           // Regular source
-          const source = sources.find(s => s.sourceId === sourceId);
+          const source = sources.find((s) => s.sourceId === sourceId);
           const sourceName = source?.sourceName || `Source ${sourceId}`;
           return (
             <Tag key={sourceId} color="blue">
@@ -387,15 +368,11 @@ const VariableTable = ({
    */
   const renderActions = (record: VariableRecord) => {
     const editable = isEditing(record);
-    
+
     if (editable) {
       return (
         <Space>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => save(record.key)}
-          >
+          <Button type="link" size="small" onClick={() => save(record.key)}>
             Save
           </Button>
           <Button
@@ -405,9 +382,9 @@ const VariableTable = ({
               cancel();
               // Hide the secret value when cancelling
               if (record.isSecret) {
-                setShowSensitive(prev => ({
+                setShowSensitive((prev) => ({
                   ...prev,
-                  [record.name]: false
+                  [record.name]: false,
                 }));
               }
             }}
@@ -429,7 +406,7 @@ const VariableTable = ({
             onClick={() => copyToClipboard(record.value, record.name)}
           />
         </Tooltip>
-        <Tooltip title={record.value && isJWT(record.value) ? "Edit JWT Token" : "Edit"}>
+        <Tooltip title={record.value && isJWT(record.value) ? 'Edit JWT Token' : 'Edit'}>
           <Button
             type="text"
             size="small"
@@ -444,13 +421,7 @@ const VariableTable = ({
           onConfirm={() => onDeleteVariable(record.name)}
         >
           <Tooltip title="Delete">
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              disabled={editingKey !== ''}
-            />
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} disabled={editingKey !== ''} />
           </Tooltip>
         </Popconfirm>
       </Space>
@@ -473,8 +444,10 @@ const VariableTable = ({
         const isDomainVariable = name.toLowerCase().includes('domain');
         const hasCommas = record.value && record.value.includes(',');
         const isDomainList = isDomainVariable && hasCommas;
-        
-        return editable ? name : (
+
+        return editable ? (
+          name
+        ) : (
           <Space>
             <Text strong>{name}</Text>
             {isJwtToken && (
@@ -494,7 +467,7 @@ const VariableTable = ({
             )}
           </Space>
         );
-      }
+      },
     },
     {
       title: 'Value',
@@ -502,7 +475,7 @@ const VariableTable = ({
       key: 'value',
       width: '30%',
       editable: true,
-      render: renderVariableValue
+      render: renderVariableValue,
     },
     {
       title: 'Type',
@@ -510,25 +483,21 @@ const VariableTable = ({
       key: 'isSecret',
       width: '15%',
       editable: true,
-      render: (isSecret: boolean) => (
-        <Tag color="default">
-          {isSecret ? 'Secret' : 'Default'}
-        </Tag>
-      )
+      render: (isSecret: boolean) => <Tag color="default">{isSecret ? 'Secret' : 'Default'}</Tag>,
     },
     {
       title: 'Used In',
       dataIndex: 'usedIn',
       key: 'usedIn',
       width: '20%',
-      render: renderUsageInfo
+      render: renderUsageInfo,
     },
     {
       title: 'Actions',
       key: 'actions',
       width: '10%',
-      render: (_: unknown, record: VariableRecord) => renderActions(record)
-    }
+      render: (_: unknown, record: VariableRecord) => renderActions(record),
+    },
   ];
 
   /**
@@ -536,13 +505,12 @@ const VariableTable = ({
    */
   const mergedColumns = columns.map((col) => {
     if (!col.editable) return col;
-    
+
     return {
       ...col,
       onCell: (record: VariableRecord) => ({
         record,
-        inputType: col.dataIndex === 'isSecret' ? 'radio' : 
-                   (col.dataIndex === 'value') ? 'dynamic' : 'text',
+        inputType: col.dataIndex === 'isSecret' ? 'radio' : col.dataIndex === 'value' ? 'dynamic' : 'text',
         dataIndex: col.dataIndex,
         title: col.title,
         editing: isEditing(record),
@@ -554,7 +522,7 @@ const VariableTable = ({
    * Prepares table data from variables and missing variables
    */
   const existingVariableNames = new Set(Object.keys(variablesWithMetadata));
-  
+
   const tableData = [
     // Existing variables
     ...Object.entries(variablesWithMetadata).map(([name, variable]) => ({
@@ -562,19 +530,19 @@ const VariableTable = ({
       name,
       value: variable.value || '',
       isSecret: variable.isSecret || false,
-      usedIn: variableUsage[name] || []
+      usedIn: variableUsage[name] || [],
     })),
     // Missing variables (used but not defined)
     ...missingVariables
-      .filter(name => !existingVariableNames.has(name))
-      .map(name => ({
+      .filter((name) => !existingVariableNames.has(name))
+      .map((name) => ({
         key: name,
         name,
         value: '',
         isSecret: false,
         usedIn: variableUsage[name] || [],
-        missing: true
-      }))
+        missing: true,
+      })),
   ];
 
   return (
@@ -591,23 +559,16 @@ const VariableTable = ({
           pagination={false}
           locale={{
             emptyText: (
-              <Empty
-                description="No variables defined"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              >
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  onClick={onAddVariable}
-                >
+              <Empty description="No variables defined" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={onAddVariable}>
                   Add Your First Variable
                 </Button>
               </Empty>
-            )
+            ),
           }}
         />
       </Form>
-      
+
       {/* JWT Editor Modal */}
       {jwtModalData && (
         <JWTEditorModal

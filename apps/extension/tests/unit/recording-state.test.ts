@@ -1,13 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RecordingState } from '../../src/assets/recording/shared/recording-state';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FlowType, OptimizedReplayData } from '../../src/assets/recording/shared/recording-state';
+import { RecordingState } from '../../src/assets/recording/shared/recording-state';
 
 const FIXED_TIME = 1700000000000; // 2023-11-14T22:13:20.000Z
 
-function makeRecordingState(overrides: {
-  recordId?: string;
-  startTime?: number;
-} = {}): RecordingState {
+function makeRecordingState(overrides: { recordId?: string; startTime?: number } = {}): RecordingState {
   return new RecordingState(
     overrides.recordId ?? 'rec_a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     overrides.startTime ?? FIXED_TIME,
@@ -199,11 +196,7 @@ describe('RecordingState', () => {
     it('adds redirect entry to chain', () => {
       const state = makeRecordingState();
 
-      state.addRedirect(
-        'https://login.idp.com/authorize',
-        'https://app.acme-corp.com/redirect',
-        302,
-      );
+      state.addRedirect('https://login.idp.com/authorize', 'https://app.acme-corp.com/redirect', 302);
 
       expect(state.redirectChain).toHaveLength(1);
       expect(state.redirectChain[0].from).toBe('https://login.idp.com/authorize');
@@ -296,9 +289,7 @@ describe('RecordingState', () => {
       expect(state.accumulated.network).toHaveLength(2);
 
       state.accumulatePageData({
-        network: [
-          { url: 'https://api.acme-corp.com/v2/sessions', method: 'DELETE', status: 204 },
-        ],
+        network: [{ url: 'https://api.acme-corp.com/v2/sessions', method: 'DELETE', status: 204 }],
       });
 
       expect(state.accumulated.network).toHaveLength(3);
@@ -390,7 +381,7 @@ describe('RecordingState', () => {
       // Should keep all snapshots + last maxEventsPerPage non-snapshots
       expect(state.accumulated.events.length).toBeLessThan(305);
       // All snapshots should be preserved
-      const remainingSnapshots = state.accumulated.events.filter(e => e.type === 2);
+      const remainingSnapshots = state.accumulated.events.filter((e) => e.type === 2);
       expect(remainingSnapshots).toHaveLength(5);
     });
 
@@ -460,9 +451,7 @@ describe('RecordingState', () => {
       state.accumulated.events = [{ type: 2, timestamp: FIXED_TIME }];
       state.accumulated.console = [{ level: 'log', message: 'test' }];
       state.accumulated.network = [{ url: 'https://api.acme-corp.com', method: 'GET' }];
-      state.accumulated.storage = [
-        { type: 'localStorage', name: 'key', action: 'set', timestamp: FIXED_TIME },
-      ];
+      state.accumulated.storage = [{ type: 'localStorage', name: 'key', action: 'set', timestamp: FIXED_TIME }];
       state.navigationHistory = [{ url: 'https://app.com', timestamp: FIXED_TIME, relativeTime: 0 }];
       state.redirectChain = [{ from: 'a', to: 'b', statusCode: 302, timestamp: 100 }];
       state.flowType = 'nav';
@@ -515,7 +504,7 @@ describe('RecordingState', () => {
 
       const result = state.compressEventsForReplay(events);
 
-      const snapshots = result.filter(e => e.type === 2);
+      const snapshots = result.filter((e) => e.type === 2);
       expect(snapshots).toHaveLength(2);
     });
 
@@ -546,7 +535,7 @@ describe('RecordingState', () => {
       const result = state.compressEventsForReplay(events);
 
       // Mouse event at +9ms should be kept (>8ms threshold)
-      const incrementals = result.filter(e => e.type === 3);
+      const incrementals = result.filter((e) => e.type === 3);
       expect(incrementals.length).toBeGreaterThanOrEqual(1);
     });
   });
