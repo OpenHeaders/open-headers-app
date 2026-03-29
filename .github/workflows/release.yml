@@ -1,8 +1,7 @@
-name: Build and Release
+name: Release
 
 on:
   push:
-    branches: [main]
     tags:
       - 'v*'
 
@@ -78,7 +77,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-electron-cache-
 
-
       # Cache Portable Git for Windows builds (avoids re-downloading 55MB + extracting 398MB)
       - name: Cache Portable Git
         if: matrix.os == 'windows-latest'
@@ -109,18 +107,18 @@ jobs:
             echo "@openheaders:registry=https://npm.pkg.github.com" >> ~/.npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> ~/.npmrc
           fi
-          
+
           npm ci --include=optional
-          
+
           # Debug: Check if optional dependencies were installed
           echo "=== Checking installed packages ==="
           npm ls --depth=0 || true
-          
+
           # Check if Windows-specific module was installed
           if [ "$RUNNER_OS" == "Windows" ]; then
             echo "=== Checking Windows-specific module ==="
             npm ls @openheaders/windows-foreground || echo "Module not found in dependency tree"
-            
+
             echo "=== Checking node_modules directory ==="
             if [ -d "node_modules/@openheaders" ]; then
               echo "Found @openheaders directory:"
@@ -128,7 +126,7 @@ jobs:
             else
               echo "@openheaders directory not found in node_modules"
             fi
-            
+
             if [ -d "node_modules/@openheaders/windows-foreground" ]; then
               echo "Module directory contents:"
               ls -la node_modules/@openheaders/windows-foreground/ || true
@@ -145,19 +143,18 @@ jobs:
         env:
           NODE_ENV: production
 
-      # macOS specific steps
+      # macOS code signing (always — this is a release build)
       - name: Setup macOS code signing
-        if: matrix.os == 'macos-latest' && startsWith(github.ref, 'refs/tags/')
+        if: matrix.os == 'macos-latest'
         uses: apple-actions/import-codesign-certs@v3
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
           p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
           keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
-      # Clear caches to ensure clean build
+      # Clean output directory
       - name: Clean electron-builder cache
         run: |
-          # Complete cleanup of output directory
           rm -rf dist
           mkdir -p dist
         shell: bash
@@ -174,14 +171,13 @@ jobs:
           fi
         shell: bash
 
-      # For tagged builds, set package.json version to match the tag so artifact filenames align.
+      # Set package.json version to match the tag so artifact filenames align.
       # This is transient — the change is never committed back to the repo.
       - name: Align package.json version with tag
-        if: startsWith(github.ref, 'refs/tags/')
         run: node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='${GITHUB_REF_NAME/v/}';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
         shell: bash
 
-      # Build for macOS (signed + notarized for all tag builds)
+      # Build for macOS (signed + notarized)
       - name: Build macOS
         if: matrix.os == 'macos-latest'
         run: |
@@ -191,7 +187,6 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          SKIP_NOTARIZATION: ${{ !startsWith(github.ref, 'refs/tags/') }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Build for Windows
@@ -204,9 +199,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Find the exact exe file name first (only for production releases, not beta)
+      # Find the exact exe file name (only for production releases, not beta)
       - name: Find Windows Executable
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
+        if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         id: find-exe
         run: |
           $exeFile = Get-ChildItem -Path "dist" -Filter "*-Setup.exe" -File | Select-Object -First 1
@@ -225,7 +220,7 @@ jobs:
 
       # Sign Windows executables with SSL.com eSigner (only for production releases, not beta)
       - name: Sign Windows Executables
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
+        if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         uses: sslcom/esigner-codesign@v1.3.1
         with:
           command: sign
@@ -243,7 +238,7 @@ jobs:
 
       # Regenerate blockmap and update latest.yml after signing (signing changes the exe)
       - name: Update latest.yml and blockmap after signing
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta != 'true'
+        if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta != 'true'
         run: |
           $exePath = "dist/${{ steps.find-exe.outputs.EXE_FILENAME }}"
           $blockmapPath = "$exePath.blockmap"
@@ -298,7 +293,7 @@ jobs:
 
       # Log that signing was skipped for beta
       - name: Skip signing for beta
-        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/') && steps.detect_beta.outputs.is_beta == 'true'
+        if: matrix.os == 'windows-latest' && steps.detect_beta.outputs.is_beta == 'true'
         run: echo "Skipping Windows code signing for beta build"
 
       # Build for Linux
@@ -363,7 +358,6 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
 
     steps:
