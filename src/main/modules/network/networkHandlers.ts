@@ -16,7 +16,7 @@ class NetworkHandlers {
 
         // Forward every state update to the renderer (quality, latency, interfaces, etc.)
         networkService.on('state-changed', (event: { newState: NetworkState; oldState: NetworkState; version: number }) => {
-            log.info('NetworkService state changed event:', {
+            log.debug('NetworkService state changed event:', {
                 isOnline: event.newState.isOnline,
                 wasOnline: event.oldState.isOnline,
                 quality: event.newState.networkQuality,
