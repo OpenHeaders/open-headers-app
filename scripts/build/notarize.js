@@ -15,14 +15,7 @@ async function notarizeApp(context) {
         return;
     }
 
-    // Check if notarization should be explicitly skipped
-    // This allows CI to set SKIP_NOTARIZATION=true for PRs/non-tag builds
-    if (process.env.SKIP_NOTARIZATION === 'true') {
-        console.log('⏭️ Skipping notarization as requested by SKIP_NOTARIZATION=true');
-        return;
-    }
-
-    // Check if code signing is disabled (unsigned build)
+    // Check if code signing is disabled (local unsigned builds)
     if (process.env.CSC_IDENTITY_AUTO_DISCOVERY === 'false') {
         console.log('⏭️ Skipping notarization for unsigned build (CSC_IDENTITY_AUTO_DISCOVERY=false)');
         return;
