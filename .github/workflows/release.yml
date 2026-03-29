@@ -1,16 +1,16 @@
-name: Release Desktop
+name: Release
 
 on:
   push:
     tags:
-      - 'desktop-v*'
+      - 'v*'
 
 permissions:
   contents: write
   packages: read
 
 jobs:
-  build:
+  build-desktop:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -131,7 +131,7 @@ jobs:
 
       - name: Align package.json version with tag
         run: |
-          TAG="${GITHUB_REF_NAME/desktop-v/}"
+          TAG="${GITHUB_REF_NAME/v/}"
           node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('apps/desktop/package.json'));p.version='$TAG';fs.writeFileSync('apps/desktop/package.json',JSON.stringify(p,null,2)+'\n')"
         shell: bash
 
@@ -224,10 +224,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-artifacts
+          name: desktop-${{ matrix.os }}
           path: |
             apps/desktop/dist/*.dmg
             apps/desktop/dist/*.exe
@@ -239,8 +239,57 @@ jobs:
             apps/desktop/dist/*.yml
             apps/desktop/dist/install-open-headers.sh
 
+  build-extension:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Align extension version with tag
+        working-directory: apps/extension
+        run: |
+          TAG="${GITHUB_REF_NAME/v/}"
+
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+          if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+            MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          else
+            MANIFEST_VERSION="$TAG"
+          fi
+
+          for manifest in manifests/*/manifest.json; do
+            node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('$manifest'));m.version='$MANIFEST_VERSION';fs.writeFileSync('$manifest',JSON.stringify(m,null,2)+'\n')"
+          done
+
+      - name: Build core package
+        run: pnpm --filter @openheaders/core build
+
+      - name: Build and package extensions
+        working-directory: apps/extension
+        run: pnpm release
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-packages
+          path: apps/extension/releases/*.zip
+
   release:
-    needs: build
+    needs: [build-desktop, build-extension]
     runs-on: ubuntu-latest
 
     steps:
@@ -258,7 +307,7 @@ jobs:
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
@@ -266,27 +315,34 @@ jobs:
       - name: Process artifacts for release
         run: |
           mkdir -p processed_files
+          VERSION=${GITHUB_REF_NAME/v/}
 
-          if [ -d "dist/windows-latest-artifacts" ]; then
-            cp dist/windows-latest-artifacts/*.exe processed_files/ 2>/dev/null || true
-            cp dist/windows-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || true
-            cp dist/windows-latest-artifacts/latest.yml processed_files/ 2>/dev/null || true
+          # Desktop artifacts
+          if [ -d "dist/desktop-windows-latest" ]; then
+            cp dist/desktop-windows-latest/*.exe processed_files/ 2>/dev/null || true
+            cp dist/desktop-windows-latest/*.blockmap processed_files/ 2>/dev/null || true
+            cp dist/desktop-windows-latest/latest.yml processed_files/ 2>/dev/null || true
           fi
 
-          if [ -d "dist/macos-latest-artifacts" ]; then
-            cp dist/macos-latest-artifacts/*.dmg processed_files/ 2>/dev/null || true
-            cp dist/macos-latest-artifacts/*.zip processed_files/ 2>/dev/null || true
-            cp dist/macos-latest-artifacts/*.blockmap processed_files/ 2>/dev/null || true
-            cp dist/macos-latest-artifacts/latest-mac.yml processed_files/ 2>/dev/null || true
+          if [ -d "dist/desktop-macos-latest" ]; then
+            cp dist/desktop-macos-latest/*.dmg processed_files/ 2>/dev/null || true
+            cp dist/desktop-macos-latest/*.zip processed_files/ 2>/dev/null || true
+            cp dist/desktop-macos-latest/*.blockmap processed_files/ 2>/dev/null || true
+            cp dist/desktop-macos-latest/latest-mac.yml processed_files/ 2>/dev/null || true
           fi
 
-          if [ -d "dist/ubuntu-latest-artifacts" ]; then
-            cp dist/ubuntu-latest-artifacts/*.AppImage processed_files/ 2>/dev/null || true
-            cp dist/ubuntu-latest-artifacts/*.deb processed_files/ 2>/dev/null || true
-            find dist/ubuntu-latest-artifacts -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
-            cp dist/ubuntu-latest-artifacts/install-open-headers.sh processed_files/ 2>/dev/null || true
-            cp dist/ubuntu-latest-artifacts/latest-linux.yml processed_files/ 2>/dev/null || true
-            cp dist/ubuntu-latest-artifacts/latest-linux-arm64.yml processed_files/ 2>/dev/null || true
+          if [ -d "dist/desktop-ubuntu-latest" ]; then
+            cp dist/desktop-ubuntu-latest/*.AppImage processed_files/ 2>/dev/null || true
+            cp dist/desktop-ubuntu-latest/*.deb processed_files/ 2>/dev/null || true
+            find dist/desktop-ubuntu-latest -name "*.rpm" -exec cp {} processed_files/ \; 2>/dev/null || true
+            cp dist/desktop-ubuntu-latest/install-open-headers.sh processed_files/ 2>/dev/null || true
+            cp dist/desktop-ubuntu-latest/latest-linux.yml processed_files/ 2>/dev/null || true
+            cp dist/desktop-ubuntu-latest/latest-linux-arm64.yml processed_files/ 2>/dev/null || true
+          fi
+
+          # Extension artifacts
+          if [ -d "dist/extension-packages" ]; then
+            cp dist/extension-packages/*.zip processed_files/ 2>/dev/null || true
           fi
 
           echo "Files prepared for release:"
@@ -294,9 +350,8 @@ jobs:
         shell: bash
 
       - name: Generate Release Body
-        id: generate_body
         run: |
-          VERSION=${GITHUB_REF_NAME/desktop-v/}
+          VERSION=${GITHUB_REF_NAME/v/}
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -305,7 +360,7 @@ jobs:
           fi
 
           cat >> release_body.md << EOF
-          ## Downloads
+          ## Desktop App
 
           ### macOS
           - [Intel (x64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
@@ -322,6 +377,13 @@ jobs:
           - [Fedora/RHEL x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm)
           - [Fedora/RHEL ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
           - [Install Script](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/install-open-headers.sh)
+
+          ## Browser Extension
+
+          - [Chrome](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-chrome-v${VERSION}.zip)
+          - [Firefox](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-firefox-v${VERSION}.zip)
+          - [Edge](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-edge-v${VERSION}.zip)
+          - [Safari](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-safari-v${VERSION}.zip)
           EOF
 
       - name: Create Release

@@ -28,23 +28,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Align versions with tag
+      - name: Align extension version with tag
         working-directory: apps/extension
         run: |
           TAG="${GITHUB_REF_NAME/ext-v/}"
 
-          # 1. Set package.json to full semver
           node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
 
-          # 2. Compute numeric manifest version
           if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
             MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
           else
             MANIFEST_VERSION="$TAG"
           fi
-
-          echo "package.json version: $TAG"
-          echo "manifest version: $MANIFEST_VERSION"
 
           for manifest in manifests/*/manifest.json; do
             node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('$manifest'));m.version='$MANIFEST_VERSION';fs.writeFileSync('$manifest',JSON.stringify(m,null,2)+'\n')"
@@ -57,32 +52,10 @@ jobs:
         working-directory: apps/extension
         run: pnpm release
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-packages
-          path: apps/extension/releases/*.zip
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: extension-packages
-          path: releases
-
       - name: Determine release type
         id: release_type
         run: |
-          TAG_NAME=${GITHUB_REF_NAME}
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          if [[ "$TAG_NAME" =~ -beta[.0-9]*$ ]]; then
+          if [[ "${{ github.ref_name }}" =~ -beta[.0-9]*$ ]]; then
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
@@ -90,38 +63,38 @@ jobs:
 
       - name: Generate Release Body
         run: |
-          VERSION=${GITHUB_REF_NAME/ext-v/}
+          TAG="${GITHUB_REF_NAME/ext-v/}"
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
-            echo '> **This is a beta build.** It may contain bugs.' > release_body.md
+            echo '> **This is a beta build for early testing.** It may contain bugs.' > release_body.md
             echo '' >> release_body.md
           fi
 
           cat >> release_body.md << EOF
-          ## Downloads
+          ## Browser Extension Downloads
 
-          - [Chrome](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/open-headers-chrome-v${VERSION}.zip)
-          - [Firefox](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/open-headers-firefox-v${VERSION}.zip)
-          - [Edge](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/open-headers-edge-v${VERSION}.zip)
-          - [Safari](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/open-headers-safari-v${VERSION}.zip)
+          - [Chrome](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${{ github.ref_name }}/open-headers-chrome-v${TAG}.zip)
+          - [Firefox](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${{ github.ref_name }}/open-headers-firefox-v${TAG}.zip)
+          - [Edge](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${{ github.ref_name }}/open-headers-edge-v${TAG}.zip)
+          - [Safari](https://github.com/OpenHeaders/open-headers-browser-extension/releases/download/${{ github.ref_name }}/open-headers-safari-v${TAG}.zip)
 
-          ## Installation
-
-          **Chrome / Edge**: Download zip, extract, go to \`chrome://extensions\`, enable Developer mode, click Load unpacked.
-          **Firefox**: Download zip, go to \`about:debugging#/runtime/this-firefox\`, click Load Temporary Add-on.
-          **Safari**: Download zip, run \`xcrun safari-web-extension-converter\`, build from Xcode.
+          ### Installation
+          1. Download the zip for your browser
+          2. Extract to a folder
+          3. Chrome/Edge: Go to \`chrome://extensions\`, enable Developer mode, click Load unpacked
+          4. Firefox: Go to \`about:debugging#/runtime/this-firefox\`, click Load Temporary Add-on
           EOF
 
-      - name: Create Release
+      - name: Publish to extension repo
         uses: softprops/action-gh-release@v2
         with:
+          repository: OpenHeaders/open-headers-browser-extension
+          tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
           name: "${{ github.ref_name }}"
-          files: releases/*.zip
+          files: apps/extension/releases/*.zip
           body_path: release_body.md
-          generate_release_notes: true
-          append_body: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.EXTENSION_REPO_PAT }}

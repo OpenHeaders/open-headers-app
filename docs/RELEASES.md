@@ -2,62 +2,47 @@
 
 ## Overview
 
-OpenHeaders is a monorepo with independent release cycles for the desktop app and browser extension. Each is released via its own git tag prefix — the CI pipeline handles everything else.
+OpenHeaders uses two tag patterns for releases:
 
-## Tag Naming Convention
+| Tag | What it does |
+|-----|-------------|
+| `v4.0.0` | Full release — desktop app + extension. Published to this repo. Desktop users auto-update. |
+| `v4.0.0-beta.1` | Full beta — desktop app + extension. Published as prerelease. Beta desktop users auto-update. |
+| `ext-v4.0.1-beta.1` | Extension only — published to `OpenHeaders/open-headers-browser-extension`. Desktop users unaffected. |
 
-| Tag | What gets released |
-|-----|-------------------|
-| `desktop-v4.0.0` | Desktop app (macOS, Windows, Linux) |
-| `desktop-v4.1.0-beta.1` | Desktop app beta |
-| `ext-v4.0.0` | Browser extension (Chrome, Firefox, Edge, Safari) |
-| `ext-v4.1.0-beta.1` | Browser extension beta |
+## Full Release (`v*` tags)
 
-Tags must follow [semver 2.0.0](https://semver.org/) with the appropriate prefix. Beta releases use the `-beta.N` suffix.
+Builds both the desktop app and browser extension. Everything goes into a single GitHub Release on this repo.
 
----
-
-## Desktop App Releases
-
-The desktop app uses GitHub Releases with `electron-updater` for automatic updates.
-
-### Who Receives What
-
-Users choose their release channel in **Settings > General**:
-
-- **Production** (default): Only receives production releases (`desktop-v4.0.0`)
-- **Beta**: Receives everything — production + beta releases
-
-**Hotfix discipline**: If a security hotfix (`4.1.1`) ships while a beta (`4.2.0-beta.1`) is in flight, beta users won't receive the hotfix (since `4.2.0-beta.1 > 4.1.1`). Always forward-merge hotfixes into the beta line and cut a new beta.
-
-### How electron-updater Routing Works
-
-electron-builder v25 always generates `latest*.yml` for every build. Routing is controlled solely by `allowPrerelease`:
-
-| User setting | `allowPrerelease` | Sees prereleases | Sees production |
-|---|---|---|---|
-| Production | `false` | No | Yes |
-| Beta | `true` | Yes | Yes |
-
-**Downgrade prevention**: If the running app is a beta, `allowPrerelease` is forced to `true` to prevent downgrading to an older production release.
-
-### Creating a Desktop Release
+### Creating a Release
 
 ```bash
 # Production
-git tag desktop-v4.0.0
-git push origin desktop-v4.0.0
+git tag v4.0.0
+git push origin v4.0.0
 
 # Beta
-git tag desktop-v4.1.0-beta.1
-git push origin desktop-v4.1.0-beta.1
+git tag v4.1.0-beta.1
+git push origin v4.1.0-beta.1
 ```
 
 CI will:
-- Build for all platforms (macOS x64 + arm64, Windows, Linux x64 + arm64)
-- Sign macOS (notarized) and Windows (SSL.com eSigner, production only) builds
-- Generate blockmaps for differential updates
-- Create a GitHub release (published for production, prerelease for beta)
+- Build desktop for all platforms (macOS x64 + arm64, Windows, Linux x64 + arm64)
+- Sign macOS (notarized) and Windows (SSL.com eSigner, production only)
+- Build extension for all browsers (Chrome, Firefox, Edge, Safari)
+- Create a GitHub Release with all artifacts (desktop + extension zips)
+- Generate `latest*.yml` for electron-updater
+
+### Desktop Auto-Update
+
+Users choose their channel in **Settings > General**:
+
+- **Production** (default): Only receives production releases
+- **Beta**: Receives production + beta releases
+
+electron-updater reads `latest*.yml` from this repo's GitHub Releases to determine if an update is available.
+
+**Downgrade prevention**: If the running app is a beta, `allowPrerelease` is forced to `true` to prevent downgrading to an older production release.
 
 ### Desktop Build Matrix
 
@@ -66,72 +51,80 @@ CI will:
 | macOS | Signed + notarized | Signed + notarized |
 | Windows | Signed (SSL.com eSigner) | Unsigned |
 | Linux | N/A | N/A |
-| Formats | DMG, zip, blockmap, exe, AppImage, deb, RPM | Same |
-| Architectures | x64 + arm64 | Same |
+
+### Extension in Full Release
+
+Extension zips are included in the same GitHub Release. You can grab them for store submission at any time. The extension version in stores doesn't need to match — you upload whenever you're ready.
 
 ---
 
-## Browser Extension Releases
+## Extension-Only Release (`ext-v*` tags)
 
-The extension is distributed as zip files via GitHub Releases.
+For releasing extension changes independently — beta testing, store submissions, or hotfixes that don't require a desktop release.
 
-### Creating an Extension Release
+Published to `OpenHeaders/open-headers-browser-extension` (separate repo) so electron-updater on this repo is never affected.
+
+### Creating an Extension-Only Release
 
 ```bash
-# Production
-git tag ext-v4.0.0
-git push origin ext-v4.0.0
+# Extension beta
+git tag ext-v4.0.1-beta.1
+git push origin ext-v4.0.1-beta.1
 
-# Beta
-git tag ext-v4.1.0-beta.1
-git push origin ext-v4.1.0-beta.1
+# Extension production
+git tag ext-v4.0.1
+git push origin ext-v4.0.1
 ```
 
 CI will:
-- Build extensions for all browsers (Chrome, Firefox, Edge, Safari)
-- Package each as a zip file
-- Create a GitHub release (published for production, prerelease for beta)
+- Build extension for all browsers
+- Publish zips to `OpenHeaders/open-headers-browser-extension` releases
 
-### Extension Versioning
+Users can download and load unpacked for testing. Submit to stores when ready.
 
-Browser stores require numeric-only `version` fields in manifest.json. CI maintains two version representations:
+### Required Secret
 
-| Git tag | Manifest `version` | `__APP_VERSION__` (UI) | Zip filename |
-|---|---|---|---|
-| `ext-v4.0.0` | `4.0.0` | `4.0.0` | `*-v4.0.0.zip` |
-| `ext-v4.0.0-beta.1` | `4.0.0.1` | `4.0.0-beta.1` | `*-v4.0.0-beta.1.zip` |
+`EXTENSION_REPO_PAT` — a GitHub PAT with `contents: write` on `OpenHeaders/open-headers-browser-extension`.
 
 ---
 
-## Common
+## Extension Versioning
 
-### Version Progression
+Browser stores require numeric-only `version` fields in manifest.json:
+
+| Git tag | Manifest `version` | `__APP_VERSION__` (UI) |
+|---|---|---|
+| `v4.0.0` or `ext-v4.0.0` | `4.0.0` | `4.0.0` |
+| `v4.0.0-beta.1` or `ext-v4.0.0-beta.1` | `4.0.0.1` | `4.0.0-beta.1` |
+
+---
+
+## Version Progression Example
 
 ```
-desktop-v4.0.0          ← current production
-desktop-v4.1.0-beta.1   ← early testing
-desktop-v4.1.0-beta.2   ← bug fixes
-desktop-v4.1.0           ← production (everyone gets it)
+v4.0.0              ← full release (desktop + extension)
+v4.1.0-beta.1       ← full beta
+ext-v4.1.0-beta.2   ← extension-only beta for quick iteration
+v4.1.0-beta.3       ← full beta with desktop fixes
+v4.1.0              ← full production release
 ```
 
-Same pattern applies to `ext-v*` tags independently.
+## Tagging from a Branch
 
-### Tagging from a Branch
-
-Tags can be pushed from any branch — CI triggers on the tag pattern, not the branch:
+Tags can be pushed from any branch:
 
 ```bash
-git checkout refactor/some-feature
-git tag desktop-v4.1.0-beta.1
-git push origin desktop-v4.1.0-beta.1
+git checkout feature/some-branch
+git tag v4.1.0-beta.1
+git push origin v4.1.0-beta.1
 ```
 
-### Deleting a Bad Release
+## Deleting a Bad Release
 
-1. Delete the GitHub release (stops new downloads)
-2. Delete the git tag: `git push origin :refs/tags/desktop-v4.1.0-beta.1`
+1. Delete the GitHub release
+2. Delete the git tag: `git push origin :refs/tags/v4.1.0-beta.1`
 3. Users who already downloaded keep that version until a newer one ships
 
-### Required CI Secrets
+## Required CI Secrets
 
-See [CI_SETUP.md](CI_SETUP.md) for the full list of secrets needed for signing and notarization.
+See [CI_SETUP.md](CI_SETUP.md) for the full list of secrets.
