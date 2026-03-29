@@ -241,6 +241,16 @@ class WorkspaceStateService {
 
             broadcastToServices(this.state, this.webSocketService, this.proxyService);
             syncToRefreshService(this.state.sources, this.sourceRefreshService);
+
+            // Activate sync scheduling for the initial workspace. On boot there
+            // is no switch — we use activateWorkspace() directly (onWorkspaceSwitch
+            // is for transitions that first stop the previous workspace's sync).
+            if (this.syncScheduler) {
+                this.syncScheduler.activateWorkspace(this.state.activeWorkspaceId).catch(e =>
+                    log.warn('Failed to start initial workspace sync:', errorMessage(e))
+                );
+            }
+
             this.startAutoSave();
 
             this.state.initialized = true;

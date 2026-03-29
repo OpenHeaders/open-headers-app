@@ -9,6 +9,7 @@ import ExportModal from '../modals/export-config';
 import ImportModal from '../modals/import-config/ImportModal';
 import UpdateNotification from '../modals/update-notification';
 import TrayMenu from '../features/TrayMenu';
+import { DebugWorkspaceSync } from '../status/DebugWorkspaceSync';
 import { CircuitBreakerStatus } from '../status/CircuitBreakerStatus';
 import { DebugSourceInfo } from '../status/DebugSourceInfo';
 import { DebugNetworkState } from '../status/DebugNetworkState';
@@ -144,6 +145,7 @@ export function AppLayout({
         debugComponents={
           !!settings?.developerMode && (
             <>
+              <DebugWorkspaceSync inFooter={true} />
               <CircuitBreakerStatus inFooter={true} />
               <DebugSourceInfo inFooter={true} />
               <DebugNetworkState inFooter={true} />
