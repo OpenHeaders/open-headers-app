@@ -1,0 +1,500 @@
+@import 'antd/dist/reset.css';
+
+/* Global styles */
+html {
+  background-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  width: 800px;
+  height: 600px;
+  overflow: hidden !important;
+  box-sizing: border-box;
+  background-color: transparent;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+// Ensure Ant Design App component fills height
+#root > .ant-app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden !important;
+}
+
+/* Ensure ant-layout doesn't add scrollbar */
+.ant-layout {
+  overflow: hidden !important;
+}
+
+.header {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.header .ant-typography {
+  margin: 0;
+}
+
+.header .ant-typography h4 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.content {
+  flex: 1 1 auto;
+  padding: 16px 16px 30px 16px;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+
+/* Header Rules Section */
+.header-rules-section {
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .header-rules-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  /* Add Rule button styling */
+  .add-rule-button {
+    height: 36px;
+    padding: 0 20px;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    
+    &:hover {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .anticon-plus {
+      font-size: 14px;
+    }
+    
+    .anticon-down {
+      margin-left: 4px;
+      opacity: 0.6;
+    }
+  }
+
+  .header-rules-table {
+    .ant-table {
+      border-radius: 0;
+    }
+
+    .ant-table-cell-fix-left,
+    .ant-table-cell-fix-right,
+    .ant-table-cell-fix-left-last,
+    .ant-table-cell-fix-right-first {
+      transition: none !important;
+      * {
+        transition: none !important;
+      }
+    }
+
+    .ant-table-ping-right .ant-table-cell-fix-right-first::after,
+    .ant-table-ping-left .ant-table-cell-fix-left-last::after {
+      transition: none !important;
+    }
+
+    .ant-table-thead > tr > th {
+      font-weight: 500;
+    }
+
+    .ant-table-tbody > tr > td {
+      overflow: hidden;
+      padding: 8px;
+      vertical-align: middle;
+    }
+
+    .ant-table-tbody > tr.row-not-injecting > td:first-child {
+      box-shadow: inset 3px 0 0 0 #faad14;
+    }
+
+    /* Ensure the column headers don't wrap unnecessarily */
+    .ant-table-thead > tr > th {
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    /* Fix for tag display in the Tags column */
+    .ant-tag {
+      display: inline-block;
+      margin-bottom: 2px !important;
+      white-space: nowrap;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+
+      &:last-child {
+        margin-bottom: 0 !important;
+      }
+    }
+
+    /* Prevent cell content from overflowing into adjacent cells */
+    .ant-table-cell {
+      position: relative;
+      overflow: hidden;
+    }
+  }
+}
+
+.entries-list {
+  margin-top: 6px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 800px;
+  padding: 6px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+/* Tag hover effects */
+.domain-tag {
+  position: relative;
+  max-width: 100%;
+  display: inline-block;
+  margin-right: 4px;
+  margin-bottom: 2px !important;
+  cursor: pointer;
+  vertical-align: middle;
+
+  .pattern-text {
+    display: inline-block;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+
+/* No outer scrollbar — only the table scrolls internally */
+
+/* Form item spacing adjustments */
+.ant-form-item {
+  margin-bottom: 12px;
+}
+
+.ant-form-item-label {
+  padding-bottom: 4px;
+}
+
+/* Empty state styling */
+.no-headers-message {
+  text-align: center;
+  padding: 60px 20px;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-headers-message h4 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.no-headers-message p {
+  font-size: 14px;
+  margin-bottom: 0;
+  max-width: 400px;
+}
+
+/* Alert styling for connection status */
+.connection-alert {
+  margin-bottom: 12px;
+}
+
+/* Alert close button alignment */
+.ant-alert-closable .ant-alert-close-icon {
+  top: 12px;
+  right: 12px;
+}
+
+/* Dropdown theme selector styling */
+.theme-selector {
+  .ant-dropdown-menu-item {
+    padding: 8px 16px;
+    
+    .ant-space {
+      width: 100%;
+      
+      .ant-typography {
+        flex: 1;
+      }
+    }
+  }
+}
+
+/* Settings modal styling */
+.settings-modal {
+  .ant-modal-body {
+    padding: 24px;
+  }
+  
+  .settings-section {
+    margin-bottom: 24px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+  }
+}
+
+/* Collapse panel animation fix */
+.ant-collapse-content-inactive {
+  display: none;
+}
+
+/* Typography adjustments for consistency */
+.ant-typography {
+  margin-bottom: 0;
+}
+
+/* Responsive modal sizing */
+@media (max-width: 768px) {
+  .ant-modal {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+}
+
+/* Button group styling */
+.button-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Ensure proper z-index layering */
+.ant-dropdown {
+  z-index: 1050;
+}
+
+.ant-select-dropdown {
+  z-index: 1050;
+}
+
+.ant-tooltip {
+  z-index: 1060;
+}
+
+.ant-modal-mask {
+  z-index: 1000;
+}
+
+.ant-modal-wrap {
+  z-index: 1000;
+}
+
+/* Fix for domain tag styling with status colors */
+.domain-tag {
+  &.inactive-domain {
+    opacity: 0.5;
+  }
+  
+  &.error-domain {
+    .ant-tag {
+      border-color: #ff4d4f;
+    }
+  }
+}
+
+/* Connection status styling */
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+/* Header count styling */
+.header-count {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+/* Loading state styling */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+/* Error state styling */
+.error-container {
+  text-align: center;
+  padding: 40px;
+  
+  .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .error-message {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  
+  .error-description {
+    font-size: 14px;
+  }
+}
+
+/* Utility classes */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.mb-2 {
+  margin-bottom: 8px !important;
+}
+
+.mb-3 {
+  margin-bottom: 12px !important;
+}
+
+.mb-4 {
+  margin-bottom: 16px !important;
+}
+
+.mt-2 {
+  margin-top: 8px !important;
+}
+
+.mt-3 {
+  margin-top: 12px !important;
+}
+
+.mt-4 {
+  margin-top: 16px !important;
+}
+
+/* Smooth transitions */
+* {
+  transition: none;
+}
+
+/* Only apply transitions to specific properties */
+.ant-btn,
+.ant-input,
+.ant-select-selector,
+.ant-tag,
+.ant-collapse-header {
+  transition: all 0.2s ease;
+}
+
+/* Add Rule dropdown menu styling */
+.ant-dropdown-menu {
+  &.ant-dropdown-menu-root {
+    min-width: 280px;
+    
+    .ant-dropdown-menu-item {
+      padding: 10px 16px;
+      font-size: 14px;
+      
+      .ant-dropdown-menu-item-icon {
+        font-size: 16px;
+        margin-right: 12px;
+        color: inherit;
+        opacity: 0.8;
+      }
+      
+      &:hover {
+        .ant-dropdown-menu-item-icon {
+          opacity: 1;
+        }
+      }
+    }
+    
+    .ant-dropdown-menu-item-divider {
+      margin: 4px 0;
+    }
+  }
+}
+
+

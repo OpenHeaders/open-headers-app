@@ -1,28 +1,20 @@
-# Dependency directories
+# Dependencies
 node_modules/
 
 # Build output
-dist-webpack/
-
-# Electron-builder output
 dist/
+dist-webpack/
+.turbo/
+.electron-vite/
 
 # Logs
-logs
 *.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Environment files
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# NPM configuration (contains auth tokens)
-.npmrc
+.env.*.local
 
 # IDE and editor files
 .idea/
@@ -30,11 +22,15 @@ yarn-error.log*
 *.swp
 *.swo
 .DS_Store
-/CLAUDE.md
-certs/
 
-# Certificate base64 files
+# Certificate files
+certs/
 *-base64.txt
-/build/windows/portable/
+
+# Test output
 test-results/
+coverage/
 **/.e2e-userdata/
+
+# OS files
+Thumbs.db

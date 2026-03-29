@@ -7,46 +7,42 @@ on:
     branches: [main]
 
 jobs:
-  typecheck-and-test:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: npm
-          cache-dependency-path: '**/package-lock.json'
+          cache: pnpm
 
       - name: Cache Electron
         uses: actions/cache@v4
         with:
           path: ~/.cache/electron
-          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: electron-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: electron-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Electron system dependencies
         run: sudo apt-get update && sudo apt-get install -y libgtk-3-0 libnotify4 libnss3 libxss1 libasound2t64 libgbm1
 
-      - name: TypeScript typecheck (main)
-        run: npx tsc --noEmit
+      - name: Typecheck all packages
+        run: pnpm turbo typecheck
 
-      - name: TypeScript typecheck (renderer)
-        run: npx tsc -p src/renderer/tsconfig.json --noEmit
+      - name: Run all tests
+        run: pnpm turbo test
 
-      - name: Run unit tests
-        run: npx vitest run
-
-      - name: Build app (for e2e)
-        run: npm run build
-
-      - name: Run e2e tests
-        run: xvfb-run --auto-servernum npx playwright test
+      - name: Build all packages
+        run: pnpm turbo build
