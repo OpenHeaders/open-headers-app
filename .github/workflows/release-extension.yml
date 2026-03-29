@@ -34,13 +34,20 @@ jobs:
           TAG="${GITHUB_REF_NAME/ext-v/}"
           PKG_VERSION=$(node -p "require('./package.json').version")
 
-          if [ "$TAG" != "$PKG_VERSION" ]; then
-            echo "::error::Version mismatch! Tag says $TAG but apps/extension/package.json says $PKG_VERSION"
-            echo "::error::Bump apps/extension/package.json to $TAG and commit before tagging."
+          # Extract base version (strip -beta.N suffix)
+          TAG_BASE=$(echo "$TAG" | sed 's/-beta\.[0-9]*$//')
+          PKG_BASE=$(echo "$PKG_VERSION" | sed 's/-beta\.[0-9]*$//')
+
+          if [ "$TAG_BASE" != "$PKG_BASE" ]; then
+            echo "::error::Version mismatch! Tag base is $TAG_BASE but apps/extension/package.json base is $PKG_BASE"
+            echo "::error::Bump apps/extension/package.json to $TAG_BASE and commit before tagging."
             exit 1
           fi
 
-          echo "Version verified: $TAG"
+          echo "Extension version verified: tag=$TAG, package.json=$PKG_VERSION (base: $TAG_BASE)"
+
+          # Set the full tag version in package.json for the build
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
 
       - name: Align manifests with version
         working-directory: apps/extension
