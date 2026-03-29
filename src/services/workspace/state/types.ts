@@ -63,6 +63,7 @@ export interface SourceRefreshServiceLike {
 }
 
 export interface WorkspaceSyncSchedulerLike {
+    activateWorkspace(workspaceId: string, options?: { skipInitialSync?: boolean }): Promise<void>;
     onWorkspaceSwitch(workspaceId: string, options?: { skipInitialSync?: boolean }): Promise<void>;
     onWorkspaceUpdated(workspaceId: string, workspace: Workspace): Promise<void>;
     importSyncedData(workspaceId: string, data: SyncData, options?: { broadcastToExtensions?: boolean }): Promise<void>;

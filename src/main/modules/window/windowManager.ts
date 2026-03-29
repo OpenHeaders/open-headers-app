@@ -43,6 +43,8 @@ class WindowManager {
         const windowConfig: BrowserWindowConstructorOptions = {
             width: 1350,
             height: 800,
+            minWidth: 680,
+            minHeight: 440,
             center: true,
             webPreferences: {
                 preload: path.join(__dirname, '../preload/index.js'),
