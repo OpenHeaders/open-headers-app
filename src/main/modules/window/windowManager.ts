@@ -126,7 +126,7 @@ class WindowManager {
 
         // Cross-platform auto-launch detection with OS-specific heuristics
         if (process.platform === 'darwin') {
-            this.appLaunchArgs.isAutoLaunch = loginSettings.wasOpenedAtLogin || loginSettings.wasOpenedAsHidden;
+            this.appLaunchArgs.isAutoLaunch = loginSettings.wasOpenedAtLogin || loginSettings.wasOpenedAsHidden || this.appLaunchArgs.startMinimized;
         } else if (process.platform === 'win32') {
             this.appLaunchArgs.isAutoLaunch = this.appLaunchArgs.startMinimized ||
                 process.argv.includes('--autostart') ||
