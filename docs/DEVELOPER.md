@@ -299,17 +299,17 @@ pnpm turbo typecheck                                  # Typecheck all
 Runs on push to `main` and PRs:
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm biome check .` (lint)
+2. `pnpm biome check .` (lint — non-blocking, warnings only)
 3. `pnpm turbo typecheck` (all packages)
 4. `pnpm turbo test` (all packages)
 5. `pnpm turbo build` (all packages)
 
 ### Release Pipelines
 
-- **Desktop**: Tag `desktop-v*` triggers `release-desktop.yml` — builds on 3 platforms, signs, creates GitHub Release
-- **Extension**: Tag `ext-v*` triggers `release-extension.yml` — builds 4 browser zips, creates GitHub Release
+- **Full release**: Tag `v*` triggers `release.yml` — builds desktop (3 platforms, signed) + extension (4 browsers) into one GitHub Release. Desktop version = tag, extension version = its own `package.json`.
+- **Extension-only**: Tag `ext-v*` triggers `release-extension.yml` — builds extension only, publishes to `OpenHeaders/open-headers-browser-extension`. Fails if tag doesn't match `apps/extension/package.json`.
 
-See [RELEASES.md](RELEASES.md) for full release process.
+Desktop and extension have **independent versions**. See [RELEASES.md](RELEASES.md) for full release process.
 
 ---
 
