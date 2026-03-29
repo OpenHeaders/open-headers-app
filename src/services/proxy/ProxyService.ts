@@ -101,7 +101,7 @@ class ProxyService extends EventEmitter {
                 : String(data);
         });
         this.environmentVariables = processedVariables;
-        this.log.info(`Environment variables updated: ${Object.keys(this.environmentVariables).length} variables`);
+        this.log.debug(`Environment variables updated: ${Object.keys(this.environmentVariables).length} variables`);
     }
 
     async start(port = this.port): Promise<{ success: boolean; port?: number; error?: string }> {
@@ -574,12 +574,12 @@ class ProxyService extends EventEmitter {
 
     updateHeaderRules(rules: HeaderRule[]): void {
         this.headerRules = rules || [];
-        this.log.info(`Header rules updated: ${this.headerRules.length} rules loaded`);
+        this.log.debug(`Header rules updated: ${this.headerRules.length} rules loaded`);
     }
 
     updateProxyRules(rules: ProxyRule[]): void {
         this.ruleStore.rules = rules || [];
-        this.log.info(`Proxy rules updated: ${this.ruleStore.rules.length} rules loaded`);
+        this.log.debug(`Proxy rules updated: ${this.ruleStore.rules.length} rules loaded`);
     }
 
     updateSource(sourceId: string | number, value: string): void {
@@ -594,7 +594,7 @@ class ProxyService extends EventEmitter {
                 this.updateSource(source.sourceId, source.sourceContent);
             }
         });
-        this.log.info(`Sources updated: ${sourcesArray.length} sources loaded`);
+        this.log.debug(`Sources updated: ${sourcesArray.length} sources loaded`);
     }
 
     clearRules(): void {
