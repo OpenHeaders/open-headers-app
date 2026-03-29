@@ -102,6 +102,15 @@ class WorkspaceStateService {
     // Init
     private initPromise: Promise<boolean> | null = null;
 
+    /** Resolves when configure() has wired external services.
+     *  _doInitialize() loads data from disk immediately (so the renderer
+     *  can show skeletons), then awaits this before broadcasting to
+     *  WebSocket/proxy/refresh services. This eliminates the race where
+     *  the renderer's IPC call triggers initialize() before lifecycle.ts
+     *  calls configure(). */
+    private configReady: Promise<void>;
+    private _resolveConfigReady!: () => void;
+
     constructor() {
         this.appDataPath = electron.app.getPath('userData');
         this.state = {
@@ -111,6 +120,7 @@ class WorkspaceStateService {
             sources: [], rules: { header: [], request: [], response: [] }, proxyRules: [],
             environments: { Default: {} }, activeEnvironment: 'Default'
         };
+        this.configReady = new Promise(resolve => { this._resolveConfigReady = resolve; });
         log.info('WorkspaceStateService created');
     }
 
@@ -149,6 +159,7 @@ class WorkspaceStateService {
         this.envResolver = deps.webSocketService.environmentHandler;
         this.sourceRefreshService = deps.sourceRefreshService;
         this.syncScheduler = deps.syncScheduler;
+        this._resolveConfigReady();
         log.info('WorkspaceStateService configured with dependencies');
     }
 
@@ -165,6 +176,10 @@ class WorkspaceStateService {
             this.state.loading = true;
             this.state.error = null;
 
+            // ── Phase 1: Load from disk (no service dependencies) ────
+            // Runs immediately even if configure() hasn't been called yet,
+            // so the renderer can hydrate its skeleton UI from state.
+
             const config = await loadWorkspacesConfig(this.appDataPath);
             this.state.workspaces = config.workspaces;
             this.state.activeWorkspaceId = config.activeWorkspaceId;
@@ -180,17 +195,56 @@ class WorkspaceStateService {
                 }
             }
 
+            await this.loadEnvironmentData(this.state.activeWorkspaceId);
+
+            // Load workspace data into state (sources, rules, proxyRules).
+            // We inline the disk-read portion here instead of calling
+            // loadWorkspaceData() which also broadcasts. Broadcasting
+            // requires services — handled in Phase 2 below.
+            const [sources, rules, proxyRules] = await Promise.all([
+                loadSources(this.appDataPath, this.state.activeWorkspaceId),
+                loadRules(this.appDataPath, this.state.activeWorkspaceId),
+                loadProxyRules(this.appDataPath, this.state.activeWorkspaceId)
+            ]);
+            this.state.rules = rules;
+            this.state.proxyRules = proxyRules;
+            this.dirty.sources = false;
+            this.dirty.rules = false;
+            this.dirty.proxyRules = false;
+            this.dirty.environments = false;
+
+            this.state.loading = false;
+            sendPatchToRenderers(this.state, ['loading', 'workspaces', 'activeWorkspaceId', 'syncStatus', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
+
+            log.info(`Loaded workspace ${this.state.activeWorkspaceId}: ${sources.length} sources, ${rules.header.length + rules.request.length + rules.response.length} rules, ${proxyRules.length} proxy rules`);
+
+            // ── Phase 2: Await services, then broadcast ──────────────
+            // If configure() already ran, this resolves immediately.
+            // If the renderer triggered initialize() first, we wait here
+            // until lifecycle.ts calls configure().
+
+            await this.configReady;
+
             if (this.sourceRefreshService) {
                 this.sourceRefreshService.activeWorkspaceId = this.state.activeWorkspaceId;
             }
-            await this.loadEnvironmentData(this.state.activeWorkspaceId);
+
+            // Now that envResolver is wired, apply env vars and evaluate source dependencies
             this.applyActiveEnvVarsToServices();
-            await this.loadWorkspaceData(this.state.activeWorkspaceId);
+            this.state.sources = evaluateAllSourceDependencies(sources, this.envResolver);
+
+            const totalRules = rules.header.length + rules.request.length + rules.response.length;
+            this.updateWorkspaceMetadataInMemory(this.state.activeWorkspaceId, {
+                sourceCount: this.state.sources.length, ruleCount: totalRules,
+                proxyRuleCount: proxyRules.length, lastDataLoad: new Date().toISOString()
+            });
+
+            broadcastToServices(this.state, this.webSocketService, this.proxyService);
+            syncToRefreshService(this.state.sources, this.sourceRefreshService);
             this.startAutoSave();
 
             this.state.initialized = true;
-            this.state.loading = false;
-            sendPatchToRenderers(this.state, ['initialized', 'loading', 'workspaces', 'activeWorkspaceId', 'syncStatus', 'sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
+            sendPatchToRenderers(this.state, ['initialized', 'sources']);
 
             log.info(`Initialized with workspace ${this.state.activeWorkspaceId}: ${this.state.sources.length} sources, ${this.state.rules.header.length} header rules`);
             setTimeout(() => { this.activateReadySources().catch(e => log.warn('Activation check failed:', errorMessage(e))); }, 200);

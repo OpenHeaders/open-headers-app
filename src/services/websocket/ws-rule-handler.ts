@@ -76,7 +76,9 @@ class WSRuleHandler {
             }
 
             try {
+                const inputCount = this.wsService.rules.header.length;
                 const populatedRulesCollection = this._populateDynamicHeaderValues(this.wsService.rules);
+                const outputCount = populatedRulesCollection.header.length;
 
                 const message = JSON.stringify({
                     type: 'rules-update',
@@ -91,6 +93,7 @@ class WSRuleHandler {
                         log.error('Error sending rules to client:', error);
                         reject(error);
                     } else {
+                        log.debug(`sendRulesToClient: ${inputCount} rules in, ${outputCount} after filtering`);
                         resolve();
                     }
                 });

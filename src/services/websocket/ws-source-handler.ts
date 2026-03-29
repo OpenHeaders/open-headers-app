@@ -59,6 +59,7 @@ class WSSourceHandler {
             }
 
             try {
+                const sourceCount = this.wsService.sources.length;
                 const message = JSON.stringify({
                     type: 'sourcesInitial',
                     sources: this.wsService.sources
@@ -69,6 +70,7 @@ class WSSourceHandler {
                         log.error('Error sending sources to client:', error);
                         reject(error);
                     } else {
+                        log.debug(`sendSourcesToClient: ${sourceCount} sources`);
                         resolve();
                     }
                 });
