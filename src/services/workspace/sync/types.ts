@@ -115,17 +115,12 @@ export interface SyncStatusOwnerLike {
 }
 
 export interface NetworkServiceLike {
-    on(event: string, handler: (event: NetworkStateChange) => void): void;
+    on(event: string, handler: (...args: unknown[]) => void): void;
     getState(): NetworkState;
 }
 
 export interface NetworkState {
     isOnline: boolean;
-}
-
-export interface NetworkStateChange {
-    newState: NetworkState;
-    oldState: NetworkState;
 }
 
 // ── Scheduler options ────────────────────────────────────────────
