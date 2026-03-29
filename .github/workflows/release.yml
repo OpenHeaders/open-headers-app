@@ -286,20 +286,18 @@ jobs:
         working-directory: apps/extension
         run: pnpm release
 
+      - name: Write extension version file
+        run: |
+          mkdir -p apps/extension/releases
+          echo "${{ steps.ext_version.outputs.version }}" > apps/extension/releases/EXT_VERSION.txt
+
       - name: Upload extension artifacts
         uses: actions/upload-artifact@v4
         with:
           name: extension-packages
-          path: apps/extension/releases/*.zip
-
-      - name: Write extension version file
-        run: echo "${{ steps.ext_version.outputs.version }}" > apps/extension/releases/EXT_VERSION.txt
-
-      - name: Upload extension version
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-version
-          path: apps/extension/releases/EXT_VERSION.txt
+          path: |
+            apps/extension/releases/*.zip
+            apps/extension/releases/EXT_VERSION.txt
 
   release:
     needs: [build-desktop, build-extension]
@@ -328,7 +326,7 @@ jobs:
       - name: Read extension version
         id: ext_ver
         run: |
-          EXT_VERSION=$(cat dist/extension-version/EXT_VERSION.txt)
+          EXT_VERSION=$(cat dist/extension-packages/EXT_VERSION.txt)
           echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
           echo "Extension version: $EXT_VERSION"
 
@@ -360,7 +358,7 @@ jobs:
             cp dist/desktop-ubuntu-latest/latest-linux-arm64.yml processed_files/ 2>/dev/null || true
           fi
 
-          # Extension artifacts
+          # Extension artifacts (zips only, not the version file)
           if [ -d "dist/extension-packages" ]; then
             cp dist/extension-packages/*.zip processed_files/ 2>/dev/null || true
           fi
