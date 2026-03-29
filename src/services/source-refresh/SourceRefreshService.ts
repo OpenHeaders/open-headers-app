@@ -33,7 +33,7 @@ const log = createLogger('SourceRefreshService');
 
 interface NetworkServiceLike {
     getState(): { isOnline: boolean; networkQuality: string };
-    on(event: string, cb: (event: { newState?: { isOnline: boolean; networkQuality: string } }) => void): void;
+    on(event: string, cb: (...args: unknown[]) => void): void;
     forceCheck(): Promise<{ isOnline: boolean; networkQuality: string }>;
 }
 
@@ -134,12 +134,10 @@ class SourceRefreshService {
         this.httpRequestService = httpRequestService;
 
         if (networkService) {
-            networkService.on('state-changed', (event) => {
-                if (event.newState) {
-                    this.handleNetworkChange(event.newState).catch(err => {
-                        log.error('Error handling network change:', errorMessage(err));
-                    });
-                }
+            networkService.on('online', () => {
+                this.handleNetworkRecovery().catch(err => {
+                    log.error('Error handling network recovery:', errorMessage(err));
+                });
             });
         }
 
@@ -571,9 +569,7 @@ class SourceRefreshService {
 
     // ── Network / power events ──────────────────────────────────────
 
-    private async handleNetworkChange(state: { isOnline: boolean }): Promise<void> {
-        if (!state.isOnline) return;
-
+    private async handleNetworkRecovery(): Promise<void> {
         log.info('Network recovered, rescheduling all sources');
         const entries = await this.schedules.entries();
         for (const [sourceId] of entries) {

@@ -292,6 +292,19 @@ class NetworkService extends EventEmitter {
                 return;
             }
 
+            const eventData = {
+                newState: this.getState(),
+                oldState,
+                version: newState.version
+            };
+
+            // Always emit state-changed for consumers that need every update
+            // (renderer sync, WS broadcast, etc.)
+            this.emit('state-changed', eventData);
+
+            // Emit semantic connectivity events only on actual transitions.
+            // Consumers that care about recovery or loss subscribe to these
+            // instead of filtering state-changed themselves.
             if (wasOnline !== newState.isOnline) {
                 this.log.warn('NETWORK STATE TRANSITION:', {
                     from: wasOnline ? 'online' : 'offline',
@@ -300,16 +313,14 @@ class NetworkService extends EventEmitter {
                     timeSinceInit,
                     version: newState.version
                 });
+
+                const connectivityState = this.getState();
+                if (newState.isOnline) {
+                    this.emit('online', connectivityState);
+                } else {
+                    this.emit('offline', connectivityState);
+                }
             }
-
-            const eventData = {
-                newState: this.getState(),
-                oldState,
-                version: newState.version
-            };
-
-
-            this.emit('state-changed', eventData);
 
         } finally {
             this.stateUpdateLock = false;
