@@ -258,18 +258,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Align extension version with tag
+      - name: Align extension manifests with package.json version
+        id: ext_version
         working-directory: apps/extension
         run: |
-          TAG="${GITHUB_REF_NAME/v/}"
+          # Read the extension's own version (independent from desktop tag)
+          EXT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
 
-          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
-
-          if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+          # Compute numeric manifest version for store compatibility
+          if [[ "$EXT_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
             MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
           else
-            MANIFEST_VERSION="$TAG"
+            MANIFEST_VERSION="$EXT_VERSION"
           fi
+
+          echo "Extension version: $EXT_VERSION (manifest: $MANIFEST_VERSION)"
 
           for manifest in manifests/*/manifest.json; do
             node -e "const fs=require('fs'),m=JSON.parse(fs.readFileSync('$manifest'));m.version='$MANIFEST_VERSION';fs.writeFileSync('$manifest',JSON.stringify(m,null,2)+'\n')"
@@ -287,6 +291,15 @@ jobs:
         with:
           name: extension-packages
           path: apps/extension/releases/*.zip
+
+      - name: Write extension version file
+        run: echo "${{ steps.ext_version.outputs.version }}" > apps/extension/releases/EXT_VERSION.txt
+
+      - name: Upload extension version
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-version
+          path: apps/extension/releases/EXT_VERSION.txt
 
   release:
     needs: [build-desktop, build-extension]
@@ -311,6 +324,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
+
+      - name: Read extension version
+        id: ext_ver
+        run: |
+          EXT_VERSION=$(cat dist/extension-version/EXT_VERSION.txt)
+          echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
+          echo "Extension version: $EXT_VERSION"
 
       - name: Process artifacts for release
         run: |
@@ -352,6 +372,7 @@ jobs:
       - name: Generate Release Body
         run: |
           VERSION=${GITHUB_REF_NAME/v/}
+          EXT_VERSION="${{ steps.ext_ver.outputs.version }}"
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
@@ -360,7 +381,7 @@ jobs:
           fi
 
           cat >> release_body.md << EOF
-          ## Desktop App
+          ## Desktop App (v${VERSION})
 
           ### macOS
           - [Intel (x64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
@@ -378,12 +399,12 @@ jobs:
           - [Fedora/RHEL ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
           - [Install Script](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/install-open-headers.sh)
 
-          ## Browser Extension
+          ## Browser Extension (v${EXT_VERSION})
 
-          - [Chrome](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-chrome-v${VERSION}.zip)
-          - [Firefox](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-firefox-v${VERSION}.zip)
-          - [Edge](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-edge-v${VERSION}.zip)
-          - [Safari](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-safari-v${VERSION}.zip)
+          - [Chrome](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-chrome-v${EXT_VERSION}.zip)
+          - [Firefox](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-firefox-v${EXT_VERSION}.zip)
+          - [Edge](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-edge-v${EXT_VERSION}.zip)
+          - [Safari](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-safari-v${EXT_VERSION}.zip)
           EOF
 
       - name: Create Release

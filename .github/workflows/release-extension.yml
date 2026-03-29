@@ -28,12 +28,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Align extension version with tag
+      - name: Verify extension version matches tag
         working-directory: apps/extension
         run: |
           TAG="${GITHUB_REF_NAME/ext-v/}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
 
-          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json'));p.version='$TAG';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Version mismatch! Tag says $TAG but apps/extension/package.json says $PKG_VERSION"
+            echo "::error::Bump apps/extension/package.json to $TAG and commit before tagging."
+            exit 1
+          fi
+
+          echo "Version verified: $TAG"
+
+      - name: Align manifests with version
+        working-directory: apps/extension
+        run: |
+          TAG="${GITHUB_REF_NAME/ext-v/}"
 
           if [[ "$TAG" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
             MANIFEST_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
