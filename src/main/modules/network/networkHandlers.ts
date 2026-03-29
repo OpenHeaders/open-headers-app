@@ -14,6 +14,7 @@ class NetworkHandlers {
     async initializeNetworkService() {
         log.info('Setting up network service event handlers...');
 
+        // Forward every state update to the renderer (quality, latency, interfaces, etc.)
         networkService.on('state-changed', (event: { newState: NetworkState; oldState: NetworkState; version: number }) => {
             log.info('NetworkService state changed event:', {
                 isOnline: event.newState.isOnline,
@@ -21,14 +22,6 @@ class NetworkHandlers {
                 quality: event.newState.networkQuality,
                 version: event.version
             });
-
-            if (AppStateMachine.isReady()) {
-                if (!event.newState.isOnline && event.oldState.isOnline) {
-                    AppStateMachine.networkLost();
-                } else if (event.newState.isOnline && !event.oldState.isOnline) {
-                    AppStateMachine.networkRestored();
-                }
-            }
 
             BrowserWindow.getAllWindows().forEach(window => {
                 if (window && !window.isDestroyed()) {
@@ -49,6 +42,19 @@ class NetworkHandlers {
                     window.webContents.send('network-state-sync', syncData);
                 }
             });
+        });
+
+        // Semantic connectivity events — only fire on actual offline↔online transitions
+        networkService.on('offline', () => {
+            if (AppStateMachine.isReady()) {
+                AppStateMachine.networkLost();
+            }
+        });
+
+        networkService.on('online', () => {
+            if (AppStateMachine.isReady()) {
+                AppStateMachine.networkRestored();
+            }
         });
 
         log.info('Network service initialized with state:', networkService.getState());

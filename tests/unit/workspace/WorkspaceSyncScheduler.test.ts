@@ -91,23 +91,18 @@ function createMockWorkspaceSettingsService() {
   };
 }
 
-interface NetworkStateChange {
-  newState: { isOnline: boolean };
-  oldState: { isOnline: boolean };
-}
-
 function createMockNetworkService(isOnline = true) {
-  const listeners = new Map<string, ((event: NetworkStateChange) => void)[]>();
+  const listeners = new Map<string, ((...args: unknown[]) => void)[]>();
   return {
-    on: vi.fn((event: string, handler: (event: NetworkStateChange) => void) => {
+    on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(handler);
     }),
     getState: vi.fn().mockReturnValue({ isOnline }),
-    _emit(event: string, data: NetworkStateChange) {
-      (listeners.get(event) || []).forEach(fn => fn(data));
+    _emit(event: string, ...args: unknown[]) {
+      (listeners.get(event) || []).forEach(fn => fn(...args));
     }
-  } satisfies NetworkService & { _emit: (event: string, data: NetworkStateChange) => void };
+  } satisfies NetworkService & { _emit: (event: string, ...args: unknown[]) => void };
 }
 
 describe('WorkspaceSyncScheduler', () => {
@@ -136,9 +131,10 @@ describe('WorkspaceSyncScheduler', () => {
   });
 
   describe('initialize()', () => {
-    it('registers network state change listener', async () => {
+    it('registers semantic network event listeners', async () => {
       await scheduler.initialize();
-      expect(networkService.on).toHaveBeenCalledWith('state-changed', expect.any(Function));
+      expect(networkService.on).toHaveBeenCalledWith('offline', expect.any(Function));
+      expect(networkService.on).toHaveBeenCalledWith('online', expect.any(Function));
     });
   });
 
