@@ -129,10 +129,18 @@ jobs:
           fi
         shell: bash
 
-      - name: Align package.json version with tag
+      - name: Verify desktop version matches tag
         run: |
           TAG="${GITHUB_REF_NAME/v/}"
-          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('apps/desktop/package.json'));p.version='$TAG';fs.writeFileSync('apps/desktop/package.json',JSON.stringify(p,null,2)+'\n')"
+          PKG_VERSION=$(node -p "require('./apps/desktop/package.json').version")
+
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Version mismatch! Tag says $TAG but apps/desktop/package.json says $PKG_VERSION"
+            echo "::error::Bump apps/desktop/package.json to $TAG and commit before tagging."
+            exit 1
+          fi
+
+          echo "Desktop version verified: $TAG"
         shell: bash
 
       - name: Build macOS
