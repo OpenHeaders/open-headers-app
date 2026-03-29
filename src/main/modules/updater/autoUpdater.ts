@@ -6,6 +6,7 @@ import windowManager from '../window/windowManager';
 import settingsCache from '../../../services/core/SettingsCache';
 import trayManager from '../tray/trayManager';
 import { errorMessage, toErrno } from '../../../types/common';
+import { writeRestartHiddenFlag } from '../window/restartFlag';
 import type { AppSettings } from '../../../types/settings';
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;
@@ -393,6 +394,14 @@ class AutoUpdaterManager {
             log.info('Performing pre-update server cleanup...');
             await appLifecycle.beforeQuit();
             log.info('Pre-update cleanup complete, installing update');
+
+            // If the window is currently hidden, preserve that state after restart.
+            // Skip if the flag was already written by the caller (e.g. restartApp IPC
+            // → before-quit → installUpdate) to avoid checking window state during shutdown.
+            const mainWindow = windowManager.getMainWindow();
+            if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+                writeRestartHiddenFlag();
+            }
 
             autoUpdater.quitAndInstall(false, true);
 

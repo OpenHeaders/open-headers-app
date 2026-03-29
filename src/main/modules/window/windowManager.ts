@@ -4,6 +4,7 @@ import path from 'path';
 import mainLogger from '../../../utils/mainLogger';
 import windowsFocusHelper from '../utils/windowsFocus';
 import appLifecycle from '../app/lifecycle';
+import { consumeRestartHiddenFlag } from './restartFlag';
 import type { AppSettings } from '../../../types/settings';
 
 const { BrowserWindow, shell, app } = electron;
@@ -125,7 +126,7 @@ class WindowManager {
 
         // Cross-platform auto-launch detection with OS-specific heuristics
         if (process.platform === 'darwin') {
-            this.appLaunchArgs.isAutoLaunch = loginSettings.wasOpenedAtLogin || loginSettings.wasOpenedAsHidden;
+            this.appLaunchArgs.isAutoLaunch = loginSettings.wasOpenedAtLogin || loginSettings.wasOpenedAsHidden || this.appLaunchArgs.startMinimized;
         } else if (process.platform === 'win32') {
             this.appLaunchArgs.isAutoLaunch = this.appLaunchArgs.startMinimized ||
                 process.argv.includes('--autostart') ||
@@ -146,14 +147,15 @@ class WindowManager {
         this.mainWindow!.once('ready-to-show', () => {
             const hideOnLaunch = Boolean(settings?.hideOnLaunch);
             const isAutoLaunch = this.appLaunchArgs.isAutoLaunch;
+            const isUpdateRestart = consumeRestartHiddenFlag();
             const launchedByProtocol = this._launchedByProtocol;
 
-            log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}, launchedByProtocol=${launchedByProtocol}`);
+            log.info(`App launch details: hideOnLaunch=${hideOnLaunch}, isAutoLaunch=${isAutoLaunch}, isUpdateRestart=${isUpdateRestart}, launchedByProtocol=${launchedByProtocol}`);
 
-            // Hide window only for auto-launches when user has enabled the setting,
-            // but ALWAYS show when launched by a protocol URL (user clicked a link
-            // that requires interaction — invite acceptance, env import, etc.)
-            const shouldHideWindow = hideOnLaunch && isAutoLaunch && !launchedByProtocol;
+            // Hide window for auto-launches or update/app restarts when user has
+            // enabled the setting, but ALWAYS show when launched by a protocol URL
+            // (user clicked a link that requires interaction — invite, env import, etc.)
+            const shouldHideWindow = hideOnLaunch && (isAutoLaunch || isUpdateRestart) && !launchedByProtocol;
 
             if (!shouldHideWindow) {
                 log.info(launchedByProtocol
@@ -161,7 +163,9 @@ class WindowManager {
                     : 'Showing window on startup (manual launch detected)');
                 windowsFocusHelper.focusWindow(this.mainWindow!);
             } else {
-                log.info('Keeping window hidden on startup (auto-launch with hide setting enabled)');
+                log.info(isUpdateRestart
+                    ? 'Keeping window hidden on startup (update restart with hide setting enabled)'
+                    : 'Keeping window hidden on startup (auto-launch with hide setting enabled)');
             }
 
             // Reset the flag after the first show decision
