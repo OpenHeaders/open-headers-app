@@ -118,6 +118,7 @@ function createService(opts: {
 
     // Wire dependencies via configure()
     const syncScheduler = {
+        activateWorkspace: vi.fn().mockResolvedValue(undefined),
         onWorkspaceSwitch: vi.fn().mockResolvedValue(undefined),
         onWorkspaceUpdated: vi.fn().mockResolvedValue(undefined),
         importSyncedData: vi.fn().mockResolvedValue(undefined),

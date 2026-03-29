@@ -144,13 +144,17 @@ class WorkspaceSyncScheduler {
 
     // ── Workspace events ─────────────────────────────────────────
 
-    async onWorkspaceSwitch(workspaceId: string, options: { skipInitialSync?: boolean } = {}): Promise<void> {
-        log.info(`Workspace switched to: ${workspaceId}`);
-
-        if (this.activeWorkspaceId) {
-            this.stopSync(this.activeWorkspaceId);
-        }
-
+    /**
+     * Activate sync scheduling for a workspace.
+     *
+     * Looks up the workspace config, sets it as active, and starts the
+     * periodic sync timer if the workspace is syncable with autoSync enabled.
+     *
+     * Called by:
+     *  - onWorkspaceSwitch() — after stopping the previous workspace's sync
+     *  - _doInitialize() in WorkspaceStateService — for the initial workspace on boot
+     */
+    async activateWorkspace(workspaceId: string, options: { skipInitialSync?: boolean } = {}): Promise<void> {
         try {
             const workspaces = await this.workspaceSettingsService.getWorkspaces();
             const workspace = workspaces.find(w => w.id === workspaceId);
@@ -168,8 +172,18 @@ class WorkspaceSyncScheduler {
                 log.info(`Workspace ${workspaceId} is not a Git workspace or has autoSync disabled`);
             }
         } catch (error) {
-            log.error('Error handling workspace switch:', error);
+            log.error('Error activating workspace sync:', error);
         }
+    }
+
+    async onWorkspaceSwitch(workspaceId: string, options: { skipInitialSync?: boolean } = {}): Promise<void> {
+        log.info(`Workspace switched to: ${workspaceId}`);
+
+        if (this.activeWorkspaceId) {
+            this.stopSync(this.activeWorkspaceId);
+        }
+
+        await this.activateWorkspace(workspaceId, options);
     }
 
     async onWorkspaceUpdated(workspaceId: string, workspace: Workspace): Promise<void> {

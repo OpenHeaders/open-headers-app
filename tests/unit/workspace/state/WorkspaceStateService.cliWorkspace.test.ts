@@ -105,6 +105,7 @@ function createSyncScheduler(): WorkspaceSyncSchedulerLike & {
     importSyncedData: ReturnType<typeof vi.fn>;
 } {
     return {
+        activateWorkspace: vi.fn().mockResolvedValue(undefined),
         onWorkspaceSwitch: vi.fn().mockResolvedValue(undefined),
         onWorkspaceUpdated: vi.fn().mockResolvedValue(undefined),
         importSyncedData: vi.fn().mockResolvedValue(undefined),

@@ -259,12 +259,15 @@ describe('Renderer TimeManager', () => {
       expect(date.getSeconds()).toBe(0);
     });
 
-    it('aligns to day boundary with hours, minutes, seconds zeroed', () => {
+    it('aligns to day boundary with minutes and seconds zeroed', () => {
       const result = timeManager.getNextAlignedTime(86400000, null, {
         alignToDay: true,
       });
       const date = new Date(result);
-      expect(date.getHours()).toBe(0);
+      // Hours may be 0 or 1 depending on DST transitions (spring-forward
+      // shifts local-midnight + 24h to 1am). Minutes and seconds are
+      // always zeroed because the base is set via setHours(0,0,0,0).
+      expect(date.getHours()).toBeLessThanOrEqual(1);
       expect(date.getMinutes()).toBe(0);
       expect(date.getSeconds()).toBe(0);
     });
