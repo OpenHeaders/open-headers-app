@@ -162,8 +162,8 @@ class AutoUpdaterManager {
      * network monitoring rather than duplicating it.
      */
     private setupNetworkListener() {
-        const handler = (event: { newState: { isOnline: boolean }; oldState: { isOnline: boolean } }) => {
-            if (event.newState.isOnline && !event.oldState.isOnline && this.pendingRetry) {
+        const handler = () => {
+            if (this.pendingRetry) {
                 log.info('Network recovered with pending update retry, checking now');
                 this.clearPendingRetry();
                 // Small delay to let DNS/connections stabilize
@@ -171,8 +171,8 @@ class AutoUpdaterManager {
             }
         };
 
-        networkService.on('state-changed', handler);
-        this.networkCleanup = () => networkService.removeListener('state-changed', handler);
+        networkService.on('online', handler);
+        this.networkCleanup = () => networkService.removeListener('online', handler);
     }
 
     // ── Error handling ───────────────────────────────────────────

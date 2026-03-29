@@ -27,7 +27,6 @@ import type {
     GitSyncServiceLike,
     WorkspaceSettingsServiceLike,
     NetworkServiceLike,
-    NetworkStateChange,
     SyncData,
     SyncStatusOwnerLike,
 } from './sync/types';
@@ -103,15 +102,15 @@ class WorkspaceSyncScheduler {
     // ── Lifecycle ────────────────────────────────────────────────
 
     async initialize(): Promise<void> {
-        this.networkService.on('state-changed', (event: NetworkStateChange) => {
-            if (!event.newState.isOnline && event.oldState.isOnline) {
-                log.info('Network went offline, recording offline time');
-                this.networkOfflineTime = Date.now();
-            } else if (event.newState.isOnline && !event.oldState.isOnline) {
-                log.info('Network restored, resuming sync schedules');
-                this.networkOfflineTime = null;
-                this.resumeAllSyncs();
-            }
+        this.networkService.on('offline', () => {
+            log.info('Network went offline, recording offline time');
+            this.networkOfflineTime = Date.now();
+        });
+
+        this.networkService.on('online', () => {
+            log.info('Network restored, resuming sync schedules');
+            this.networkOfflineTime = null;
+            this.resumeAllSyncs();
         });
     }
 
