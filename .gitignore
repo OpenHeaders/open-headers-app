@@ -4,8 +4,12 @@ node_modules/
 # Build output
 dist/
 dist-webpack/
+packages/core/dist/
 .turbo/
 .electron-vite/
+
+# Package manager
+pnpm-debug.log*
 
 # Logs
 *.log
@@ -15,6 +19,10 @@ npm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# NPM configuration (contains auth tokens)
+.npmrc
+!apps/desktop/.npmrc
 
 # IDE and editor files
 .idea/
@@ -32,5 +40,16 @@ test-results/
 coverage/
 **/.e2e-userdata/
 
+# Extension build output
+apps/extension/dist/
+apps/extension/releases/
+
+# Desktop portable git (downloaded at build time)
+apps/desktop/build/windows/portable/
+
 # OS files
 Thumbs.db
+
+# Chrome extension artifacts
+*.crx
+*.pem
