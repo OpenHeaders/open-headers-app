@@ -11,6 +11,7 @@ const { createLogger } = mainLogger;
 
 // Only import modules needed before app.whenReady()
 import protocolHandler from './main/modules/protocol/protocolHandler';
+import { writeRestartHiddenFlag } from './main/modules/window/restartFlag';
 
 const log = createLogger('Main');
 
@@ -499,6 +500,13 @@ function setupIPC(
         app.quit();
     });
     ipcMain.on('restartApp', () => {
+        // Preserve hidden state across restart.
+        // writeRestartHiddenFlag is sync (fs.writeFileSync) so it completes
+        // before app.quit() tears down the process.
+        const mw = windowManager.getMainWindow();
+        if (!mw || !mw.isVisible()) {
+            writeRestartHiddenFlag();
+        }
         if (!autoUpdater.updateDownloaded) {
             app.relaunch();
         }
