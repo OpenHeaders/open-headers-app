@@ -625,7 +625,7 @@ class WorkspaceStateService {
 
         broadcastToServices(this.state, this.webSocketService, this.proxyService);
         syncToRefreshService(this.state.sources, this.sourceRefreshService);
-        sendPatchToRenderers(this.state, ['sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
+        sendPatchToRenderers(this.state, ['workspaces', 'sources', 'rules', 'proxyRules', 'environments', 'activeEnvironment']);
     }
 
     /**
