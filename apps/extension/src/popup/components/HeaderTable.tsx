@@ -16,7 +16,7 @@ import {
 import type { DynamicSource, HeaderEntry } from '@context/HeaderContext';
 import { useHeader } from '@hooks/useHeader';
 import { getAppLauncher } from '@utils/app-launcher';
-import { App, Button, Dropdown, Empty, Input, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Dropdown, Empty, Input, Popconfirm, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
@@ -490,28 +490,35 @@ const HeaderTable: React.FC = () => {
               }}
             />
           </Tooltip>
-          <Tooltip title={!isConnected ? 'App not connected' : 'Delete in desktop app'}>
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-              disabled={!isConnected}
-              onClick={async () => {
-                if (!isConnected) {
-                  message.warning('Please connect to the desktop app to delete rules');
-                  return;
+          <Popconfirm
+            title="Delete rule"
+            description={`Delete "${record.headerName}"?`}
+            onConfirm={async () => {
+              const { runtime } = await import('../../utils/browser-api');
+              runtime.sendMessage({ type: 'deleteRule', ruleId: record.id }, (response: unknown) => {
+                const resp = response as { success?: boolean } | undefined;
+                if (resp?.success) {
+                  message.success('Rule deleted');
+                } else {
+                  message.error('Failed to delete rule');
                 }
-                await appLauncher.launchOrFocus({
-                  tab: 'rules',
-                  subTab: 'headers',
-                  action: 'delete',
-                  itemId: record.id,
-                });
-                message.info('Opening delete confirmation in OpenHeaders app');
-              }}
-            />
-          </Tooltip>
+              });
+            }}
+            okText="Delete"
+            okType="danger"
+            cancelText="Cancel"
+            disabled={!isConnected}
+          >
+            <Tooltip title={!isConnected ? 'App not connected' : 'Delete rule'}>
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+                disabled={!isConnected}
+              />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },

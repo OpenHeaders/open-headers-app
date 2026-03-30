@@ -37,6 +37,7 @@ type WSMessage =
   | { type: 'toggleRule'; ruleId: string | number; enabled: boolean }
   | { type: 'toggleAllRules'; ruleIds: string[]; enabled: boolean }
   | { type: 'toggleVideoRecording'; enabled: boolean }
+  | { type: 'deleteRule'; ruleId: string | number }
   | { type: 'toggleRecordingHotkey'; enabled: boolean }
   | { type: 'focusApp'; navigation?: AppNavigationIntent }
   | { type: 'saveRecording' | 'saveWorkflow'; recording: unknown }
@@ -355,6 +356,13 @@ class WebSocketService {
         break;
       case 'toggleAllRules':
         void this.ruleHandler.handleToggleAllRules(data.ruleIds, data.enabled);
+        break;
+      case 'deleteRule':
+        void this.ruleHandler.handleDeleteRule(data.ruleId).then((success) => {
+          if (ws.readyState === WS.OPEN) {
+            ws.send(JSON.stringify({ type: 'deleteRuleResponse', success }));
+          }
+        });
         break;
       case 'saveRecording':
       case 'saveWorkflow':

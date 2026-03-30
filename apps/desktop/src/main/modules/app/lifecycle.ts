@@ -142,6 +142,7 @@ class AppLifecycle {
         workspaceStateService.updateHeaderRule(ruleId, updates);
       webSocketService.ruleHandler.onRuleToggleBatch = (updates) =>
         workspaceStateService.updateHeaderRulesBatch(updates);
+      webSocketService.ruleHandler.onRuleDelete = (ruleId) => workspaceStateService.removeHeaderRule(ruleId);
 
       // Initialize: loads workspaces + active workspace data, starts auto-save,
       // broadcasts to WS/proxy. App is operational even without a renderer window.

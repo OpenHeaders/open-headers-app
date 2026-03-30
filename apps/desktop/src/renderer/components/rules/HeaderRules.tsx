@@ -120,7 +120,9 @@ const HeaderRules = () => {
     toggleRule,
   ]);
 
-  // Flush pending navigation actions when rules data arrives
+  // Flush pending data-dependent actions (edit/delete/toggle) when rules arrive.
+  // Data-independent actions like "create" are auto-flushed by NavigationContext
+  // when the handler is registered — no manual flush needed.
   useEffect(() => {
     if (rules.length > 0) {
       setTimeout(() => flushPendingActions(TARGETS.RULES_HEADERS), 0);

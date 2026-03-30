@@ -53,6 +53,12 @@ class WSRuleHandler {
   onRuleToggleBatch: ((updates: Array<{ ruleId: string; changes: Partial<HeaderRule> }>) => Promise<void>) | null =
     null;
 
+  /**
+   * Callback to delegate a rule deletion to WorkspaceStateService.
+   * Set by lifecycle.ts after WorkspaceStateService is configured.
+   */
+  onRuleDelete: ((ruleId: string) => Promise<void>) | null = null;
+
   constructor(wsService: RuleHandlerDeps) {
     this.wsService = wsService;
   }
@@ -248,6 +254,27 @@ class WSRuleHandler {
       log.info(`Successfully toggled rule ${ruleId} to ${enabled}`);
     } catch (error) {
       log.error('Error handling toggle rule:', errorMessage(error));
+    }
+  }
+
+  /**
+   * Handle delete rule request from extension.
+   * Delegates to WorkspaceStateService via onRuleDelete callback,
+   * which handles persistence, WS broadcast, proxy update, and renderer notification.
+   */
+  async handleDeleteRule(ruleId: string | number): Promise<boolean> {
+    if (!this.onRuleDelete) {
+      log.warn(`Cannot delete rule ${ruleId} — onRuleDelete not wired yet`);
+      return false;
+    }
+
+    try {
+      await this.onRuleDelete(String(ruleId));
+      log.info(`Successfully deleted rule ${ruleId}`);
+      return true;
+    } catch (error) {
+      log.error('Error handling delete rule:', errorMessage(error));
+      return false;
     }
   }
 

@@ -526,6 +526,38 @@ describe('WSRuleHandler', () => {
     });
   });
 
+  describe('handleDeleteRule', () => {
+    it('delegates to onRuleDelete callback with stringified ruleId', async () => {
+      const onDelete = vi.fn().mockResolvedValue(undefined);
+      handler.onRuleDelete = onDelete;
+
+      const result = await handler.handleDeleteRule('rule-abc-123');
+      expect(onDelete).toHaveBeenCalledWith('rule-abc-123');
+      expect(result).toBe(true);
+    });
+
+    it('coerces numeric ruleId to string', async () => {
+      const onDelete = vi.fn().mockResolvedValue(undefined);
+      handler.onRuleDelete = onDelete;
+
+      const result = await handler.handleDeleteRule(42 as unknown as string);
+      expect(onDelete).toHaveBeenCalledWith('42');
+      expect(result).toBe(true);
+    });
+
+    it('returns false when onRuleDelete is not wired', async () => {
+      handler.onRuleDelete = null;
+      const result = await handler.handleDeleteRule('rule-1');
+      expect(result).toBe(false);
+    });
+
+    it('returns false and logs error on callback failure', async () => {
+      handler.onRuleDelete = vi.fn().mockRejectedValue(new Error('persistence failed'));
+      const result = await handler.handleDeleteRule('rule-1');
+      expect(result).toBe(false);
+    });
+  });
+
   describe('handleToggleAllRules', () => {
     it('uses batch callback when available (single broadcast)', async () => {
       const onBatch = vi.fn().mockResolvedValue(undefined);

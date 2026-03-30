@@ -164,8 +164,23 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       actionHandlersRef.current = { ...actionHandlersRef.current, [key]: handler };
       setActionHandlersVersion((v) => v + 1);
 
-      // Pending actions are NOT executed here — the component must call
-      // flushPendingActions(target) once its data is loaded.
+      // Auto-flush any pending actions that match this handler.
+      // This covers the race where navigate() fires before the component
+      // registers its handler (e.g., extension triggers "create" while
+      // the Rules tab is mounting). Uses requestAnimationFrame so React
+      // has flushed the current state updates before the action fires.
+      requestAnimationFrame(() => {
+        const now = Date.now();
+        pendingActionsRef.current = pendingActionsRef.current.filter((pending) => {
+          if (now - pending.timestamp > 10000) return false;
+          if (pending.target === target && pending.action === action) {
+            log.info(`Auto-flushing pending action on handler registration: ${key}`);
+            handler(pending.itemId, pending.data);
+            return false;
+          }
+          return true;
+        });
+      });
 
       // Return cleanup function
       return () => {

@@ -328,6 +328,19 @@ export function handleGeneralMessage(
         safeResponse({ success: false, error: 'Not connected to desktop app' });
       }
       return true;
+    } else if (message.type === 'deleteRule') {
+      // Handle delete rule directly via WebSocket without focusing app
+      const wsConnected = isWebSocketConnected();
+      if (wsConnected) {
+        const sent = sendViaWebSocket({
+          type: 'deleteRule',
+          ruleId: message.ruleId as string,
+        });
+        safeResponse({ success: sent });
+      } else {
+        safeResponse({ success: false, error: 'Not connected to desktop app' });
+      }
+      return true;
     } else if (message.type === 'getActiveRulesForTab') {
       // Get all active rules for a specific tab using centralized logic
       const tabId = message.tabId as number;
