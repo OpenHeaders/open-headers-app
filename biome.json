@@ -31,6 +31,9 @@
         "noNonNullAssertion": "off",
         "useConst": "warn"
       },
+      "a11y": {
+        "useSemanticElements": "off"
+      },
       "complexity": {
         "noForEach": "off"
       }

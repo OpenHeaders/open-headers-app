@@ -27,6 +27,7 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
   }, []);
 
   const { token } = theme.useToken();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   if (!settings?.developerMode) return null;
 
@@ -55,8 +56,6 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
 
   const overallHealth = open > 0 ? 'error' : halfOpen > 0 ? 'warning' : 'success';
   const healthColor = overallHealth === 'error' ? '#ff4d4f' : overallHealth === 'warning' ? '#faad14' : '#52c41a';
-
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const baseStyle = {
     background: 'rgba(0,0,0,0.8)',

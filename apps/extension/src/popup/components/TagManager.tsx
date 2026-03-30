@@ -65,6 +65,14 @@ const TagManager: React.FC = () => {
     });
   }, [headerEntries]);
 
+  const totalStats = useMemo(
+    () => ({
+      totalRules: Object.keys(headerEntries).length,
+      tagGroups: groupedRules.length,
+    }),
+    [headerEntries, groupedRules],
+  );
+
   const handleEnvironmentToggle = async (groupKey: string, enabled: boolean) => {
     const group = groupedRules.find(([key]) => key === groupKey);
     if (!group) return;
@@ -204,14 +212,6 @@ const TagManager: React.FC = () => {
       />
     );
   }
-
-  const totalStats = useMemo(
-    () => ({
-      totalRules: Object.keys(headerEntries).length,
-      tagGroups: groupedRules.length,
-    }),
-    [headerEntries, groupedRules],
-  );
 
   return (
     <div className="tag-manager-section" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

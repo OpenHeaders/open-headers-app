@@ -119,8 +119,11 @@ const Workspaces = () => {
           content: (
             <div>
               {React.createElement(() => {
+                // biome-ignore lint/correctness/useHookAtTopLevel: hooks are at the top level of this inline component function
                 const [linkType, setLinkType] = useState('web');
+                // biome-ignore lint/correctness/useHookAtTopLevel: hooks are at the top level of this inline component function
                 const [includeAuth, setIncludeAuth] = useState(false);
+                // biome-ignore lint/correctness/useHookAtTopLevel: hooks are at the top level of this inline component function
                 const [appLink, setAppLink] = useState(currentAppLink);
 
                 const handleChange = async (type: string, auth: boolean) => {
