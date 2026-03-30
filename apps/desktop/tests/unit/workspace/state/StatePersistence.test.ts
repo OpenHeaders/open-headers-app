@@ -6,7 +6,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: { createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }) },
 }));
 
@@ -14,7 +14,7 @@ const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
 
 // Mock atomicFileWriter
-vi.mock('../../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (...args: unknown[]) => mockWriteJson(...args),
     readJson: (...args: unknown[]) => mockReadJson(...args),
@@ -22,7 +22,7 @@ vi.mock('../../../../src/utils/atomicFileWriter.js', () => ({
 }));
 
 // Mock config/version
-vi.mock('../../../../src/config/version', () => ({ DATA_FORMAT_VERSION: '3.0.0' }));
+vi.mock('@/config/version', () => ({ DATA_FORMAT_VERSION: '3.0.0' }));
 
 import {
   loadProxyRules,

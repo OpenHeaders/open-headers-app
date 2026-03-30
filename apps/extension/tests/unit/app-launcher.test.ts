@@ -1,6 +1,6 @@
+import type { LaunchData } from '@utils/app-launcher';
+import { AppLauncher, getAppLauncher } from '@utils/app-launcher';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LaunchData } from '../../src/utils/app-launcher';
-import { AppLauncher, getAppLauncher } from '../../src/utils/app-launcher';
 
 // Helper to set lastError without readonly assignment error
 function setLastError(err: { message?: string } | null): void {

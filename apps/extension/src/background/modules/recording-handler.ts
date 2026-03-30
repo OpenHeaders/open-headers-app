@@ -2,12 +2,11 @@
  * Recording Message Handler - Handles all recording-related messages
  */
 
-import { NewMessageTypes } from '../../assets/recording/shared/message-adapter.js';
-import type { SendResponse } from '../../types/browser';
-
-import type { IRecordingService } from '../../types/recording';
-import { runtime as browserRuntime, cookies, downloads, tabs } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
+import { NewMessageTypes } from '@assets/recording/shared/message-adapter.js';
+import { runtime as browserRuntime, cookies, downloads, tabs } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import type { SendResponse } from '@/types/browser';
+import type { IRecordingService } from '@/types/recording';
 
 const browserAPI = { runtime: browserRuntime };
 

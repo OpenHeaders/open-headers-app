@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isValidHeaderValue, sanitizeHeaderValue, validateHeaderValue } from '../../src/background/rule-validator';
-import type { HeaderValueValidation } from '../../src/types/header';
+import { isValidHeaderValue, sanitizeHeaderValue, validateHeaderValue } from '@/background/rule-validator';
+import type { HeaderValueValidation } from '@/types/header';
 
 // ---------------------------------------------------------------------------
 //  Enterprise test data

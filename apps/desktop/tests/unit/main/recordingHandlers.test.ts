@@ -98,7 +98,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -112,7 +112,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 }));
 
 const mockWriteJson = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (...args: unknown[]) => mockWriteJson(...args),
     readJson: vi.fn().mockResolvedValue(null),
@@ -121,18 +121,18 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   },
 }));
 
-vi.mock('../../../src/main/modules/window/windowManager.js', () => ({
+vi.mock('@/main/modules/window/windowManager.js', () => ({
   default: {
     sendToWindow: vi.fn(),
     getMainWindow: vi.fn(() => null),
   },
 }));
 
-vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+vi.mock('@/main/modules/tray/trayManager.js', () => ({
   default: { updateTray: vi.fn() },
 }));
 
-vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
+vi.mock('@/main/modules/app/lifecycle.js', () => ({
   default: {
     getGitSyncService: () => null,
     getWorkspaceSyncScheduler: () => null,
@@ -141,7 +141,7 @@ vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+vi.mock('@/services/websocket/ws-service.js', () => ({
   default: {
     broadcastVideoRecordingState: vi.fn(),
     broadcastRecordingHotkeyChange: vi.fn(),
@@ -150,7 +150,7 @@ vi.mock('../../../src/services/websocket/ws-service.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/proxy/ProxyService.js', () => ({
+vi.mock('@/services/proxy/ProxyService.js', () => ({
   default: {
     getStatus: vi.fn().mockResolvedValue(null),
     isRunning: false,
@@ -158,15 +158,15 @@ vi.mock('../../../src/services/proxy/ProxyService.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/network/NetworkService.js', () => ({
+vi.mock('@/services/network/NetworkService.js', () => ({
   default: { getState: () => ({ isOnline: true }) },
 }));
 
-vi.mock('../../../src/services/core/ServiceRegistry.js', () => ({
+vi.mock('@/services/core/ServiceRegistry.js', () => ({
   default: { getStatus: () => ({}) },
 }));
 
-vi.mock('../../../src/services/websocket/utils/recordingPreprocessor.js', () => ({
+vi.mock('@/services/websocket/utils/recordingPreprocessor.js', () => ({
   preprocessRecordingForSave: vi.fn().mockImplementation((data: unknown) => Promise.resolve(data)),
 }));
 

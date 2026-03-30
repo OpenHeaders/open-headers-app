@@ -90,7 +90,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -105,7 +105,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 
 const mockAtomicWriteFile = vi.fn().mockResolvedValue(undefined);
 const mockAtomicWriteJson = vi.fn().mockResolvedValue(undefined);
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (...args: unknown[]) => mockAtomicWriteJson(...args),
     readJson: vi.fn().mockResolvedValue(null),
@@ -114,19 +114,19 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   },
 }));
 
-vi.mock('../../../src/main/modules/window/windowManager.js', () => ({
+vi.mock('@/main/modules/window/windowManager.js', () => ({
   default: {
     getMainWindow: vi.fn(() => ({})),
     sendToWindow: vi.fn(),
   },
 }));
 
-vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+vi.mock('@/main/modules/tray/trayManager.js', () => ({
   default: { updateTray: vi.fn() },
 }));
 
 const mockFileWatchers = new Map();
-vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
+vi.mock('@/main/modules/app/lifecycle.js', () => ({
   default: {
     getGitSyncService: () => null,
     getWorkspaceSyncScheduler: () => null,
@@ -135,7 +135,7 @@ vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+vi.mock('@/services/websocket/ws-service.js', () => ({
   default: {
     broadcastVideoRecordingState: vi.fn(),
     broadcastRecordingHotkeyChange: vi.fn(),

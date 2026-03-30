@@ -1,12 +1,12 @@
+import ErrorBoundary from '@components/ErrorBoundary';
+import { HeaderProvider } from '@context/HeaderContext';
+import { useTheme } from '@context/ThemeContext';
+import { runtime } from '@utils/browser-api';
+import { sendMessage } from '@utils/messaging';
 import { Layout } from 'antd';
 import type React from 'react';
 import { useEffect } from 'react';
-import ErrorBoundary from '../components/ErrorBoundary';
-import { HeaderProvider } from '../context/HeaderContext';
-import { useTheme } from '../context/ThemeContext';
-import { getBrowserAPI } from '../types/browser';
-import { runtime } from '../utils/browser-api';
-import { sendMessage } from '../utils/messaging';
+import { getBrowserAPI } from '@/types/browser';
 import ConnectionInfo from './components/ConnectionInfo';
 import Footer from './components/Footer';
 import Header from './components/Header';

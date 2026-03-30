@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 }));
 
 const mockConvertNewRecordingFormat = vi.fn((record: unknown) => record);
-vi.mock('../../../../src/renderer/utils/formatters/recordConverter', () => ({
+vi.mock('@/renderer/utils/formatters/recordConverter', () => ({
   convertNewRecordingFormat: (record: unknown) => mockConvertNewRecordingFormat(record),
 }));
 

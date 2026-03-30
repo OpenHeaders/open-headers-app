@@ -2,8 +2,8 @@
  * Welcome Page Manager - Handles welcome page opening logic
  */
 
-import { isFirefox, runtime, storage, tabs } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
+import { isFirefox, runtime, storage, tabs } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
 
 // Track if we're currently opening a welcome page to prevent duplicates
 let welcomePageBeingOpened = false;

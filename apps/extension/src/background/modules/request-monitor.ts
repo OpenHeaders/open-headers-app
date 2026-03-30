@@ -2,10 +2,10 @@
  * Request Monitor - Sets up webRequest monitoring for tracking requests
  */
 
-import type { PendingRequest } from '../../types/browser';
-import { getBrowserAPI } from '../../types/browser';
-import { tabs } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
+import { tabs } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import type { PendingRequest } from '@/types/browser';
+import { getBrowserAPI } from '@/types/browser';
 import { addTrackedUrl, checkIfUrlMatchesAnyRule, tabsWithActiveRules } from './request-tracker';
 import { isTrackableUrl, normalizeUrlForTracking } from './url-utils';
 

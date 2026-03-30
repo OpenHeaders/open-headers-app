@@ -5,7 +5,7 @@ import type { HeaderRule } from '@/types/rules';
 import type { Source } from '@/types/source';
 
 // Mock atomicFileWriter (ProxyCache and ProxyRuleStore use it for disk I/O)
-vi.mock('../../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: { readJson: () => Promise.resolve(null), writeJson: () => Promise.resolve() },
   readJson: () => Promise.resolve(null),
   writeJson: () => Promise.resolve(),

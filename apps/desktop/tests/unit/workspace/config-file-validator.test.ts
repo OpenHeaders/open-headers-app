@@ -7,7 +7,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -19,7 +19,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 }));
 
 // Mock config/version
-vi.mock('../../../src/config/version', () => ({
+vi.mock('@/config/version', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
 }));
 

@@ -2,7 +2,7 @@
  * Unified recording state management with flow support and performance optimization
  */
 
-import { logger } from '../../../utils/logger';
+import { logger } from '@utils/logger';
 
 export type FlowType = 'pre-nav' | 'nav' | 'oauth-redirect' | null;
 

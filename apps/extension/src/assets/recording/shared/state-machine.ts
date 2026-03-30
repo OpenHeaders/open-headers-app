@@ -6,7 +6,7 @@
  * The RecordingService is responsible for acting on state changes.
  */
 
-import { logger } from '../../../utils/logger';
+import { logger } from '@utils/logger';
 import type { RecordingState } from './recording-state';
 
 export const RecordingStates = {

@@ -1,10 +1,10 @@
 import { DownloadOutlined } from '@ant-design/icons';
+import { useHeader } from '@hooks/useHeader';
+import { storage } from '@utils/browser-api';
+import { sendMessage } from '@utils/messaging';
 import { Alert, Button, Space } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useHeader } from '../../hooks/useHeader';
-import { storage } from '../../utils/browser-api';
-import { sendMessage } from '../../utils/messaging';
 
 const ConnectionInfo: React.FC = () => {
   const { isConnected, isStatusLoaded, headerEntries } = useHeader();

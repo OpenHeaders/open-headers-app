@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SavedDataMap } from '../../src/types/header';
-import type { Source } from '../../src/types/websocket';
+import type { SavedDataMap } from '@/types/header';
+import type { Source } from '@/types/websocket';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
 let mockSavedData: SavedDataMap = {};
 
-vi.mock('../../src/utils/storage-chunking', () => ({
+vi.mock('@/utils/storage-chunking', () => ({
   getChunkedData: vi.fn((_key: string, cb: (data: SavedDataMap | null) => void) => {
     cb(mockSavedData);
   }),
   setChunkedData: vi.fn(),
 }));
 
-vi.mock('../../src/utils/browser-api', () => ({
+vi.mock('@/utils/browser-api', () => ({
   declarativeNetRequest: {
     getDynamicRules: vi.fn(() => Promise.resolve([])),
     updateDynamicRules: vi.fn(() => Promise.resolve()),
@@ -21,11 +21,11 @@ vi.mock('../../src/utils/browser-api', () => ({
   storage: { sync: { get: vi.fn((_k: string[], cb: (r: Record<string, unknown>) => void) => cb({})) } },
 }));
 
-vi.mock('../../src/utils/messaging', () => ({
+vi.mock('@/utils/messaging', () => ({
   sendMessageWithCallback: vi.fn(),
 }));
 
-vi.mock('../../src/utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -34,8 +34,8 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }));
 
-import { formatUrlPattern, setRulesPaused, updateNetworkRules } from '../../src/background/header-manager';
-import { declarativeNetRequest } from '../../src/utils/browser-api';
+import { declarativeNetRequest } from '@utils/browser-api';
+import { formatUrlPattern, setRulesPaused, updateNetworkRules } from '@/background/header-manager';
 
 const mockGetDynamicRules = declarativeNetRequest!.getDynamicRules as ReturnType<typeof vi.fn>;
 const mockUpdateDynamicRules = declarativeNetRequest!.updateDynamicRules as ReturnType<typeof vi.fn>;

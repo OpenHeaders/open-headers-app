@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 }));
 
 const mockShowMessage = vi.fn();
-vi.mock('../../../../src/renderer/utils/ui/messageUtil', () => ({
+vi.mock('@/renderer/utils/ui/messageUtil', () => ({
   showMessage: (...args: [type: string, content: React.ReactNode, duration?: number]) => mockShowMessage(...args),
 }));
 

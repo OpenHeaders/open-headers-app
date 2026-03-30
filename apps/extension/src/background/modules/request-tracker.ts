@@ -2,10 +2,10 @@
  * Request Tracker - Tracks which tabs are making requests to domains with rules
  */
 
-import type { ActiveRule } from '../../types/browser';
-import type { HeaderEntry, SavedDataMap } from '../../types/header';
-import { storage, tabs } from '../../utils/browser-api.js';
-import { getChunkedData } from '../../utils/storage-chunking.js';
+import { storage, tabs } from '@utils/browser-api.js';
+import { getChunkedData } from '@utils/storage-chunking.js';
+import type { ActiveRule } from '@/types/browser';
+import type { HeaderEntry, SavedDataMap } from '@/types/header';
 import {
   clearPatternCache,
   doesUrlMatchPattern,

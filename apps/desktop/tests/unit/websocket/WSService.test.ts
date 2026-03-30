@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock mainLogger to prevent .js extension resolution issues in CJS→ESM chains
-vi.mock('../../../src/utils/mainLogger', () => ({
+vi.mock('@/utils/mainLogger', () => ({
   default: { createLogger: () => ({ info: () => {}, warn: () => {}, error: () => {}, debug: () => {} }) },
   createLogger: () => ({ info: () => {}, warn: () => {}, error: () => {}, debug: () => {} }),
 }));

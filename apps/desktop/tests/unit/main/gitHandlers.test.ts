@@ -66,7 +66,7 @@ vi.mock('electron', () => ({
   globalShortcut: { register: vi.fn(), unregister: vi.fn(), isRegistered: vi.fn() },
 }));
 
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -79,7 +79,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
   setGlobalLogLevel: vi.fn(),
 }));
 
-vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
+vi.mock('@/main/modules/app/lifecycle.js', () => ({
   default: {
     getGitSyncService: () => ({
       testConnection: mockTestConnection,
@@ -102,18 +102,18 @@ vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
   },
 }));
 
-vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+vi.mock('@/main/modules/tray/trayManager.js', () => ({
   default: { updateTray: vi.fn() },
 }));
 
-vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+vi.mock('@/services/websocket/ws-service.js', () => ({
   default: {
     broadcastVideoRecordingState: vi.fn(),
     broadcastRecordingHotkeyChange: vi.fn(),
   },
 }));
 
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
     readJson: vi.fn().mockResolvedValue(null),

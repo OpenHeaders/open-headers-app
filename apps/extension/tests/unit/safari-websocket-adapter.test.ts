@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // We need to mock the browser-api module to control isSafari flag
 let mockIsSafari = false;
 
-vi.mock('../../src/utils/browser-api', () => ({
+vi.mock('@/utils/browser-api', () => ({
   get isSafari() {
     return mockIsSafari;
   },
 }));
 
-import { adaptWebSocketUrl, safariPreCheck } from '../../src/background/safari-websocket-adapter';
+import { adaptWebSocketUrl, safariPreCheck } from '@/background/safari-websocket-adapter';
 
 describe('safari-websocket-adapter', () => {
   beforeEach(() => {

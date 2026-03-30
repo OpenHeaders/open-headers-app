@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the ExportImportConfig module
-vi.mock('../../../../src/renderer/services/export-import/core/ExportImportConfig', () => ({
+vi.mock('@/renderer/services/export-import/core/ExportImportConfig', () => ({
   FILE_FILTERS: {
     JSON: [
       { name: 'JSON Files', extensions: ['json'] },

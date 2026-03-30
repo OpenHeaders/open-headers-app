@@ -8,11 +8,15 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@components": ["src/components/index"],
       "@components/*": ["src/components/*"],
       "@assets/*": ["src/assets/*"],
       "@styles/*": ["src/assets/styles/*"],
+      "@utils": ["src/utils/index"],
       "@utils/*": ["src/utils/*"],
+      "@context": ["src/context/index"],
       "@context/*": ["src/context/*"],
+      "@hooks": ["src/hooks/index"],
       "@hooks/*": ["src/hooks/*"]
     }
   },

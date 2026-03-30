@@ -97,7 +97,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -110,7 +110,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
   setGlobalLogLevel: vi.fn(),
 }));
 
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
     readJson: vi.fn().mockResolvedValue(null),
@@ -119,7 +119,7 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
   },
 }));
 
-vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+vi.mock('@/main/modules/tray/trayManager.js', () => ({
   default: { updateTray: vi.fn() },
 }));
 
@@ -131,7 +131,7 @@ const mockGetWorkspaces = vi.fn().mockResolvedValue([]);
 const mockGetGitStatus = vi.fn().mockResolvedValue({ isInstalled: true });
 const mockSyncWorkspace = vi.fn().mockResolvedValue({ success: true });
 
-vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
+vi.mock('@/main/modules/app/lifecycle.js', () => ({
   default: {
     getGitSyncService: () => ({
       getGitStatus: mockGetGitStatus,
@@ -151,7 +151,7 @@ vi.mock('../../../src/main/modules/app/lifecycle.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+vi.mock('@/services/websocket/ws-service.js', () => ({
   default: {
     broadcastVideoRecordingState: vi.fn(),
     broadcastRecordingHotkeyChange: vi.fn(),
@@ -166,7 +166,7 @@ vi.mock('../../../src/services/websocket/ws-service.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/proxy/ProxyService.js', () => ({
+vi.mock('@/services/proxy/ProxyService.js', () => ({
   default: {
     getStatus: vi.fn().mockResolvedValue({ isRunning: false }),
     switchWorkspace: vi.fn().mockResolvedValue(undefined),
@@ -176,19 +176,19 @@ vi.mock('../../../src/services/proxy/ProxyService.js', () => ({
   },
 }));
 
-vi.mock('../../../src/services/network/NetworkService.js', () => ({
+vi.mock('@/services/network/NetworkService.js', () => ({
   default: {
     getState: () => ({ isOnline: true, networkQuality: 'good' }),
   },
 }));
 
-vi.mock('../../../src/services/core/ServiceRegistry.js', () => ({
+vi.mock('@/services/core/ServiceRegistry.js', () => ({
   default: {
     getStatus: () => ({}),
   },
 }));
 
-vi.mock('../../../src/main/modules/ipc/handlers/settingsHandlers.js', () => ({
+vi.mock('@/main/modules/ipc/handlers/settingsHandlers.js', () => ({
   default: {
     handleGetSettings: vi.fn().mockResolvedValue({
       autoSyncWorkspaces: true,

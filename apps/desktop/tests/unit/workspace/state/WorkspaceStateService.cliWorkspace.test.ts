@@ -23,20 +23,20 @@ vi.mock('electron', () => ({
   },
 }));
 
-vi.mock('../../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: { createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }) },
 }));
 
 const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
-vi.mock('../../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (...args: unknown[]) => mockWriteJson(...args),
     readJson: (...args: unknown[]) => mockReadJson(...args),
   },
 }));
 
-vi.mock('../../../../src/config/version', () => ({ DATA_FORMAT_VERSION: '3.0.0' }));
+vi.mock('@/config/version', () => ({ DATA_FORMAT_VERSION: '3.0.0' }));
 
 // Mock fs.promises used by mkdir in crudCreateWorkspace
 const mockMkdir = vi.fn().mockResolvedValue(undefined);

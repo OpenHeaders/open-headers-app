@@ -1,12 +1,12 @@
+import { runtime, storage } from '@utils/browser-api';
+import { sendMessageWithCallback } from '@utils/messaging';
+import { getChunkedData } from '@utils/storage-chunking';
 import type React from 'react';
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
-import type { HeaderEntry } from '../types/header';
-import { runtime, storage } from '../utils/browser-api';
-import { sendMessageWithCallback } from '../utils/messaging';
-import { getChunkedData } from '../utils/storage-chunking';
+import type { HeaderEntry } from '@/types/header';
 
 // Re-export HeaderEntry from the canonical types location
-export type { HeaderEntry } from '../types/header';
+export type { HeaderEntry } from '@/types/header';
 
 export interface DynamicSource {
   sourceId?: string;

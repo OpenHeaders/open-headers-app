@@ -2,7 +2,7 @@ import { StopOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { App, Button, Tooltip } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { getRecordingState, startRecording, stopRecording } from '../utils/recording';
+import { getRecordingState, startRecording, stopRecording } from '@/popup/utils/recording';
 
 interface RecordingButtonProps {
   useWidget?: boolean;

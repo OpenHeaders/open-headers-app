@@ -11,9 +11,9 @@
  * When a WebSocket message arrives it writes through: memory → storage.
  */
 
-import type { Source } from '../../types/websocket';
-import { storage } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
+import { storage } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import type { Source } from '@/types/websocket';
 
 // ── In-memory cache ──────────────────────────────────────────────────
 

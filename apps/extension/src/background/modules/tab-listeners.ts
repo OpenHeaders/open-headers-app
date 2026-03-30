@@ -2,9 +2,9 @@
  * Tab Listeners - Handles all tab-related events
  */
 
-import type { IRecordingService } from '../../types/recording';
-import { runtime, tabs, webNavigation, windows } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
+import { runtime, tabs, webNavigation, windows } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import type { IRecordingService } from '@/types/recording';
 import { checkIfUrlMatchesAnyRule, tabsWithActiveRules } from './request-tracker';
 import { isTrackableUrl, normalizeUrlForTracking } from './url-utils';
 

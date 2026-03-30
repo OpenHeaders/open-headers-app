@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock the version module before importing MessageGeneration
-vi.mock('../../../../src/config/version.esm', () => ({
+vi.mock('@/config/version.esm', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
   APP_VERSION: '3.1.8',
   SUPPORTED_DATA_VERSIONS: ['1.0.0', '2.0.0', '3.0.0'],

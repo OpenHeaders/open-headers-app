@@ -8,13 +8,13 @@
 
 declare const browser: typeof chrome | undefined;
 
-import { RecordingService } from '../assets/recording/background/recording-service.js';
-import type { ActiveRule, HotkeyCommand } from '../types/browser';
-import type { SavedDataMap } from '../types/header';
-import type { IRecordingService } from '../types/recording';
-import { alarms, isChrome, isEdge, isFirefox, isSafari, runtime, storage, tabs } from '../utils/browser-api.js';
-import { logger } from '../utils/logger';
-import { getChunkedData } from '../utils/storage-chunking.js';
+import { RecordingService } from '@assets/recording/background/recording-service.js';
+import { alarms, isChrome, isEdge, isFirefox, isSafari, runtime, storage, tabs } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import { getChunkedData } from '@utils/storage-chunking.js';
+import type { ActiveRule, HotkeyCommand } from '@/types/browser';
+import type { SavedDataMap } from '@/types/header';
+import type { IRecordingService } from '@/types/recording';
 import { initPauseState, setRulesPaused } from './header-manager';
 import { updateExtensionBadge } from './modules/badge-manager';
 import { handleGeneralMessage } from './modules/message-handler';

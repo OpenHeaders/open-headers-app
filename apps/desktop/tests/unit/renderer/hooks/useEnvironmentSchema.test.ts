@@ -23,7 +23,7 @@ const mockEnvironments = {
   },
 };
 
-vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => ({
+vi.mock('@/renderer/hooks/environment/useEnvironmentCore', () => ({
   useEnvironmentCore: () => ({
     environments: mockEnvironments,
   }),

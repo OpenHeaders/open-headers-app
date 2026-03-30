@@ -1,12 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MESSAGE_TYPES } from '../../src/assets/recording/shared/constants';
+import { MESSAGE_TYPES } from '@assets/recording/shared/constants';
 import {
   adaptCoreResponse,
   adaptInjectedEvent,
   adaptRecordingData,
   adaptUIMessage,
   NewMessageTypes,
-} from '../../src/assets/recording/shared/message-adapter';
+} from '@assets/recording/shared/message-adapter';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('message-adapter', () => {
   beforeEach(() => {

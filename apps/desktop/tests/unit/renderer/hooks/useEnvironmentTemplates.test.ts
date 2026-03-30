@@ -18,7 +18,7 @@ const mockResolveTemplate = vi.fn((template: string) => {
     .replace('{{DATABASE_PORT}}', '5432');
 });
 
-vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => ({
+vi.mock('@/renderer/hooks/environment/useEnvironmentCore', () => ({
   useEnvironmentCore: () => ({
     service: {
       resolveTemplate: mockResolveTemplate,

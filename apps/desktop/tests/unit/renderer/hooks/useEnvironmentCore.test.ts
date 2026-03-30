@@ -40,12 +40,12 @@ const mockService = {
   handleWorkspaceChange: vi.fn().mockResolvedValue(undefined),
 };
 
-vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
+vi.mock('@/renderer/services/CentralizedEnvironmentService', () => ({
   getCentralizedEnvironmentService: () => mockService,
   CentralizedEnvironmentService: class {},
 }));
 
-vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
+vi.mock('@/renderer/hooks/useCentralizedWorkspace', () => ({
   useCentralizedWorkspace: () => ({
     activeWorkspaceId: 'default-personal',
     initialized: true,

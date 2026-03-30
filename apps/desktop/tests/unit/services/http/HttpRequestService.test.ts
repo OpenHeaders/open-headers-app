@@ -13,7 +13,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../../src/utils/mainLogger', () => ({
+vi.mock('@/utils/mainLogger', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),

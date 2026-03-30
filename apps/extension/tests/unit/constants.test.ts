@@ -1,6 +1,6 @@
+import type { MessageType, RecordingStateType } from '@assets/recording/shared/constants';
+import { MESSAGE_TYPES, RECORDING_STATES } from '@assets/recording/shared/constants';
 import { describe, expect, it } from 'vitest';
-import type { MessageType, RecordingStateType } from '../../src/assets/recording/shared/constants';
-import { MESSAGE_TYPES, RECORDING_STATES } from '../../src/assets/recording/shared/constants';
 
 describe('constants', () => {
   describe('MESSAGE_TYPES', () => {

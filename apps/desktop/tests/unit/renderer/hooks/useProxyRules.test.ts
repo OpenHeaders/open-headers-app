@@ -6,12 +6,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }));
 
 const mockShowMessage = vi.fn();
-vi.mock('../../../../src/renderer/utils', () => ({
+vi.mock('@/renderer/utils', () => ({
   showMessage: (...args: unknown[]) => mockShowMessage(...args),
 }));
 
@@ -35,7 +35,7 @@ const mockProxyRules = [
   },
 ];
 
-vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
+vi.mock('@/renderer/hooks/useCentralizedWorkspace', () => ({
   useCentralizedWorkspace: () => ({
     proxyRules: mockProxyRules,
     service: {

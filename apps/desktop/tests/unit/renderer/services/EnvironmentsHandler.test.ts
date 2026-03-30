@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock CentralizedEnvironmentService before importing EnvironmentsHandler
-vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () => ({
+vi.mock('@/renderer/services/CentralizedEnvironmentService', () => ({
   getCentralizedEnvironmentService: () => ({
     batchSetVariablesInEnvironment: vi.fn(),
   }),

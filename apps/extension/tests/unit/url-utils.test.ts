@@ -6,7 +6,7 @@ import {
   normalizeUrlForTracking,
   precompileAllPatterns,
   precompilePattern,
-} from '../../src/background/modules/url-utils';
+} from '@/background/modules/url-utils';
 
 // ---------------------------------------------------------------------------
 //  normalizeUrlForTracking

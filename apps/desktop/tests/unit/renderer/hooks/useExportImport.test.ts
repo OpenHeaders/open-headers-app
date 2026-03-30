@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 
 // Mock the logger so we don't get noise
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 const mockExportExecute = vi.fn();
 const mockImportExecute = vi.fn();
 
-vi.mock('../../../../src/renderer/services/export-import', () => ({
+vi.mock('@/renderer/services/export-import', () => ({
   createExportImportServices: vi.fn(() => ({
     exportService: { execute: mockExportExecute },
     importService: { execute: mockImportExecute },

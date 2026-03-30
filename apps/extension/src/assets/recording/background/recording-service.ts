@@ -8,14 +8,14 @@
  * - Uses atomic tryTransition to prevent TOCTOU races
  */
 
-import { isWebSocketConnected, sendRecordingViaWebSocket, sendViaWebSocket } from '../../../background/websocket.js';
-import type { IRecordingService, RecordingEvent } from '../../../types/recording';
-import { downloads, tabs } from '../../../utils/browser-api';
-import { DisplayDetector } from '../../../utils/display-detector';
-import { logger } from '../../../utils/logger';
-import { MESSAGE_TYPES } from '../shared/constants';
-import { RecordingState } from '../shared/recording-state';
-import { RecordingStateMachine, RecordingStates } from '../shared/state-machine';
+import { MESSAGE_TYPES } from '@assets/recording/shared/constants';
+import { RecordingState } from '@assets/recording/shared/recording-state';
+import { RecordingStateMachine, RecordingStates } from '@assets/recording/shared/state-machine';
+import { downloads, tabs } from '@utils/browser-api';
+import { DisplayDetector } from '@utils/display-detector';
+import { logger } from '@utils/logger';
+import { isWebSocketConnected, sendRecordingViaWebSocket, sendViaWebSocket } from '@/background/websocket.js';
+import type { IRecordingService, RecordingEvent } from '@/types/recording';
 
 declare const browser: typeof chrome | undefined;
 

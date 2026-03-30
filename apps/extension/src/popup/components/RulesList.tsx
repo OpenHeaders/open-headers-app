@@ -1,9 +1,9 @@
 import { AppstoreTwoTone, TagsTwoTone, ThunderboltTwoTone } from '@ant-design/icons';
+import { useHeader } from '@hooks/useHeader';
 import { Tabs } from 'antd';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { useHeader } from '../../hooks/useHeader';
-import { getBrowserAPI } from '../../types/browser';
+import { getBrowserAPI } from '@/types/browser';
 import ActiveRules from './ActiveRules';
 import HeaderTable from './HeaderTable';
 import TagManager from './TagManager';

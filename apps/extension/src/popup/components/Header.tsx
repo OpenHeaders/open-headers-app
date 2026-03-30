@@ -9,13 +9,13 @@ import {
   QuestionCircleOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import { useTheme } from '@context';
+import { useHeader } from '@hooks/useHeader';
+import { type LogLevel, logger } from '@utils/logger';
 import { Badge, Button, Dropdown, type MenuProps, Select, Space, Switch, Tooltip, Typography } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useTheme } from '../../context';
-import { useHeader } from '../../hooks/useHeader';
-import { getBrowserAPI } from '../../types/browser';
-import { type LogLevel, logger } from '../../utils/logger';
+import { getBrowserAPI } from '@/types/browser';
 
 const { Title, Text } = Typography;
 

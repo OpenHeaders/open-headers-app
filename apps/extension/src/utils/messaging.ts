@@ -6,7 +6,7 @@
  * context/HeaderContext.tsx, background/header-manager.ts, and background/websocket.ts.
  */
 
-import { getBrowserAPI } from '../types/browser';
+import { getBrowserAPI } from '@/types/browser';
 import { runtime } from './browser-api';
 import { logger } from './logger';
 

@@ -1,8 +1,8 @@
+import { RecordingState } from '@assets/recording/shared/recording-state';
+import { RecordingStateMachine, RecordingStates } from '@assets/recording/shared/state-machine';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RecordingState } from '../../src/assets/recording/shared/recording-state';
-import { RecordingStateMachine, RecordingStates } from '../../src/assets/recording/shared/state-machine';
 
-vi.mock('../../src/utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),

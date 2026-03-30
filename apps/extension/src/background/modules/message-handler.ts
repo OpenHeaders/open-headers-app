@@ -2,12 +2,12 @@
  * Main Message Handler - Handles non-recording messages
  */
 
-import type { MessageHandlerContext, SendResponse } from '../../types/browser';
-import type { SavedDataMap } from '../../types/header';
-import type { Source } from '../../types/websocket';
-import { runtime as browserRuntime, tabs } from '../../utils/browser-api.js';
-import { logger } from '../../utils/logger';
-import { getChunkedData, setChunkedData } from '../../utils/storage-chunking.js';
+import { runtime as browserRuntime, tabs } from '@utils/browser-api.js';
+import { logger } from '@utils/logger';
+import { getChunkedData, setChunkedData } from '@utils/storage-chunking.js';
+import type { MessageHandlerContext, SendResponse } from '@/types/browser';
+import type { SavedDataMap } from '@/types/header';
+import type { Source } from '@/types/websocket';
 import { clearAllTracking, getActiveRulesForTab } from './request-tracker';
 import { setSourcesFromApp } from './sources-store';
 import { generateSavedDataHash, generateSourcesHash } from './utils';

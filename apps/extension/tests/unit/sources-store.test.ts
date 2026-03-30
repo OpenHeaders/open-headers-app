@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '../../src/types/websocket';
+import type { Source } from '@/types/websocket';
 
 // ── Mocks ────────────────────────────────────────────────────────────
 
@@ -15,7 +15,7 @@ const mockStorageLocalGet = vi.fn((_keys: string[], cb: (result: Record<string, 
   cb({ dynamicSources: storedDynamicSources });
 });
 
-vi.mock('../../src/utils/browser-api', () => ({
+vi.mock('@/utils/browser-api', () => ({
   storage: {
     local: {
       get: (...args: unknown[]) =>
@@ -25,7 +25,7 @@ vi.mock('../../src/utils/browser-api', () => ({
   },
 }));
 
-vi.mock('../../src/utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }));
 
-import { getCurrentSources, hydrateFromStorage, setSourcesFromApp } from '../../src/background/modules/sources-store';
+import { getCurrentSources, hydrateFromStorage, setSourcesFromApp } from '@/background/modules/sources-store';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

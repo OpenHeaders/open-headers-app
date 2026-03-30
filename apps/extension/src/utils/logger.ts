@@ -12,7 +12,7 @@
  * Stored in chrome.storage.sync as `logLevel`. Default: 'info'.
  */
 
-import { getBrowserAPI } from '../types/browser';
+import { getBrowserAPI } from '@/types/browser';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 

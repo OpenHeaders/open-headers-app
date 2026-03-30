@@ -1,13 +1,13 @@
+import type { BrowserWindowInfo, DisplayBounds, DisplayInfo } from '@utils/display-detector';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BrowserWindowInfo, DisplayBounds, DisplayInfo } from '../../src/utils/display-detector';
 
 // Mock browser-api before importing DisplayDetector
-vi.mock('../../src/utils/browser-api', () => ({
+vi.mock('@/utils/browser-api', () => ({
   isChrome: true,
   isEdge: false,
 }));
 
-import { DisplayDetector } from '../../src/utils/display-detector';
+import { DisplayDetector } from '@utils/display-detector';
 
 // Helper to mock chrome.system.display.getInfo without type issues
 function mockGetInfo(displays: Record<string, unknown>[]): void {

@@ -3,7 +3,7 @@ import { ProxyRuleStore } from '@/services/proxy/ProxyRuleStore';
 import type { ProxyRule } from '@/types/proxy';
 
 // Mock atomicWriter to avoid filesystem I/O
-vi.mock('../../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: {
     readJson: vi.fn(() => Promise.resolve(null)),
     writeJson: vi.fn(() => Promise.resolve()),

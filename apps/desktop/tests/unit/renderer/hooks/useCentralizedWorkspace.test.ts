@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -58,7 +58,7 @@ const mockService = {
   initialize: mockInitialize,
 };
 
-vi.mock('../../../../src/renderer/services/CentralizedWorkspaceService', () => ({
+vi.mock('@/renderer/services/CentralizedWorkspaceService', () => ({
   getCentralizedWorkspaceService: () => mockService,
 }));
 
@@ -70,12 +70,12 @@ const mockEnvReturn = {
   environmentsReady: true,
 };
 
-vi.mock('../../../../src/renderer/hooks/useCentralizedEnvironments', () => ({
+vi.mock('@/renderer/hooks/useCentralizedEnvironments', () => ({
   useCentralizedEnvironments: () => mockEnvReturn,
 }));
 
 // Mock the workspace sub-hooks (re-exported by useCentralizedWorkspace)
-vi.mock('../../../../src/renderer/hooks/workspace', () => ({
+vi.mock('@/renderer/hooks/workspace', () => ({
   useWorkspaces: () => ({}),
   useSources: () => ({}),
   useHeaderRules: () => ({}),

@@ -7,11 +7,11 @@ import {
   GlobalOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
+import type { HeaderEntry } from '@context/HeaderContext';
+import { useHeader } from '@hooks/useHeader';
 import { App, Badge, Collapse, Divider, Empty, List, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import type React from 'react';
 import { useMemo, useState } from 'react';
-import type { HeaderEntry } from '../../context/HeaderContext';
-import { useHeader } from '../../hooks/useHeader';
 
 const { Text } = Typography;
 const { Panel } = Collapse;

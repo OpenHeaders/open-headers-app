@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock header-manager before importing rule-engine
-vi.mock('../../src/background/header-manager', () => ({
+vi.mock('@/background/header-manager', () => ({
   updateNetworkRules: vi.fn(),
 }));
 
-vi.mock('../../src/background/modules/sources-store', () => ({
+vi.mock('@/background/modules/sources-store', () => ({
   getCurrentSources: vi.fn(() => []),
 }));
 
-vi.mock('../../src/utils/logger', () => ({
+vi.mock('@/utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -18,7 +18,7 @@ vi.mock('../../src/utils/logger', () => ({
   },
 }));
 
-import { updateNetworkRules } from '../../src/background/header-manager';
+import { updateNetworkRules } from '@/background/header-manager';
 import {
   getLastRulesUpdateTime,
   getLastSavedDataHash,
@@ -28,10 +28,10 @@ import {
   setLastSavedDataHash,
   setLastSourcesHash,
   updateSavedDataHash,
-} from '../../src/background/modules/rule-engine';
-import { getCurrentSources } from '../../src/background/modules/sources-store';
-import type { SavedDataMap } from '../../src/types/header';
-import type { Source } from '../../src/types/websocket';
+} from '@/background/modules/rule-engine';
+import { getCurrentSources } from '@/background/modules/sources-store';
+import type { SavedDataMap } from '@/types/header';
+import type { Source } from '@/types/websocket';
 
 const mockUpdateNetworkRules = updateNetworkRules as ReturnType<typeof vi.fn>;
 const mockGetCurrentSources = getCurrentSources as ReturnType<typeof vi.fn>;

@@ -10,14 +10,14 @@ import {
   TrademarkCircleTwoTone,
   VideoCameraTwoTone,
 } from '@ant-design/icons';
+import { useHeader } from '@hooks/useHeader';
+import { getAppLauncher } from '@utils/app-launcher';
+import { runtime } from '@utils/browser-api';
+import { sendMessage } from '@utils/messaging';
 import { App, Button, Dropdown, Space, Switch, Tag, Tooltip, Typography, theme } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { useHeader } from '../../hooks/useHeader';
-import { getBrowserAPI } from '../../types/browser';
-import { getAppLauncher } from '../../utils/app-launcher';
-import { runtime } from '../../utils/browser-api';
-import { sendMessage } from '../../utils/messaging';
+import { getBrowserAPI } from '@/types/browser';
 import RecordingButton from './RecordingButton';
 
 const { Text } = Typography;

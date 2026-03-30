@@ -13,14 +13,14 @@ import {
   StopOutlined,
   SwapOutlined,
 } from '@ant-design/icons';
+import type { DynamicSource, HeaderEntry } from '@context/HeaderContext';
+import { useHeader } from '@hooks/useHeader';
+import { getAppLauncher } from '@utils/app-launcher';
 import { App, Button, Dropdown, Empty, Input, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { FilterValue, SorterResult } from 'antd/es/table/interface';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import type { DynamicSource, HeaderEntry } from '../../context/HeaderContext';
-import { useHeader } from '../../hooks/useHeader';
-import { getAppLauncher } from '../../utils/app-launcher';
 
 const { Search } = Input;
 const { Text } = Typography;

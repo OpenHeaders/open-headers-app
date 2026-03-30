@@ -13,7 +13,7 @@ import type { Workspace } from '@/types/workspace';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 }));
 
 const mockShowMessage = vi.fn();
-vi.mock('../../../../src/renderer/utils/ui/messageUtil', () => ({
+vi.mock('@/renderer/utils/ui/messageUtil', () => ({
   showMessage: (...args: [type: string, content: React.ReactNode, duration?: number]) => mockShowMessage(...args),
 }));
 
@@ -50,7 +50,7 @@ const mockState = {
   syncStatus: {},
 };
 
-vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
+vi.mock('@/renderer/hooks/useCentralizedWorkspace', () => ({
   useCentralizedWorkspace: () => ({
     workspaces: mockState.workspaces,
     activeWorkspaceId: 'ws-a1b2c3d4-e5f6-7890',

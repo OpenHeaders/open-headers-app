@@ -8,6 +8,12 @@
  */
 declare const browser: typeof chrome | undefined;
 
+import { declarativeNetRequest } from '@utils/browser-api.js';
+import { validateHeaderName } from '@utils/header-validator.js';
+import { logger } from '@utils/logger';
+import { sendMessageWithCallback } from '@utils/messaging';
+import { getChunkedData } from '@utils/storage-chunking.js';
+import { normalizeHeaderName } from '@utils/utils.js';
 import type {
   EntryResult,
   HeaderDnrRule,
@@ -15,14 +21,8 @@ import type {
   PlaceholderInfo,
   ResolvedEntry,
   SavedDataMap,
-} from '../types/header';
-import type { Source } from '../types/websocket';
-import { declarativeNetRequest } from '../utils/browser-api.js';
-import { validateHeaderName } from '../utils/header-validator.js';
-import { logger } from '../utils/logger';
-import { sendMessageWithCallback } from '../utils/messaging';
-import { getChunkedData } from '../utils/storage-chunking.js';
-import { normalizeHeaderName } from '../utils/utils.js';
+} from '@/types/header';
+import type { Source } from '@/types/websocket';
 import { isValidHeaderValue, sanitizeHeaderValue } from './rule-validator';
 
 // Track the highest rule ID from the last update for efficient removal

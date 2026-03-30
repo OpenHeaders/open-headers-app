@@ -3,7 +3,7 @@ import type { CacheMetadata } from '@/services/proxy/ProxyCache';
 import { ProxyCache } from '@/services/proxy/ProxyCache';
 
 // Mock atomicWriter
-vi.mock('../../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: {
     readJson: vi.fn(() => Promise.resolve(null)),
     writeJson: vi.fn(() => Promise.resolve()),

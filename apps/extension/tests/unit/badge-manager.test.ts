@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { resetBadgeState, updateExtensionBadge } from '../../src/background/modules/badge-manager';
-import type { IRecordingService } from '../../src/types/recording';
+import { resetBadgeState, updateExtensionBadge } from '@/background/modules/badge-manager';
+import type { IRecordingService } from '@/types/recording';
 
 // ---------------------------------------------------------------------------
 //  Helpers

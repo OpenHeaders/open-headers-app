@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock the logger
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),

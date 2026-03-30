@@ -2,10 +2,10 @@
  * Badge Manager - Handles extension badge updates
  */
 
-import type { BadgeState } from '../../types/browser';
-import { getBrowserAPI } from '../../types/browser';
-import type { IRecordingService } from '../../types/recording';
-import { logger } from '../../utils/logger';
+import { logger } from '@utils/logger';
+import type { BadgeState } from '@/types/browser';
+import { getBrowserAPI } from '@/types/browser';
+import type { IRecordingService } from '@/types/recording';
 
 const browserAPI = getBrowserAPI();
 

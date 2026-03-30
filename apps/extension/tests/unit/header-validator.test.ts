@@ -1,5 +1,5 @@
+import { sanitizeHeaderValue, validateHeaderName, validateHeaderValue } from '@utils/header-validator';
 import { describe, expect, it } from 'vitest';
-import { sanitizeHeaderValue, validateHeaderName, validateHeaderValue } from '../../src/utils/header-validator';
 
 // ---------------------------------------------------------------------------
 //  Enterprise test data

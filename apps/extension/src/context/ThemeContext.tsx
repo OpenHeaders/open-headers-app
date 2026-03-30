@@ -1,7 +1,7 @@
+import { storage } from '@utils/browser-api';
 import { ConfigProvider, theme } from 'antd';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { storage } from '../utils/browser-api';
 
 type ThemeMode = 'light' | 'dark' | 'auto';
 

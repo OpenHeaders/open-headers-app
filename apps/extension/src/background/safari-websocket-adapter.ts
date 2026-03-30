@@ -1,7 +1,7 @@
 /**
  * Browser-specific WebSocket handling
  */
-import { isSafari } from '../utils/browser-api.js';
+import { isSafari } from '@utils/browser-api.js';
 
 /**
  * Modifies WebSocket connection behavior for different browsers

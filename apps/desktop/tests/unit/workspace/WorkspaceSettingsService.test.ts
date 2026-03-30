@@ -9,7 +9,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 // Mock atomicFileWriter
 const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (filePath: string, data: object) => mockWriteJson(filePath, data),
     readJson: (filePath: string) => mockReadJson(filePath),
@@ -31,7 +31,7 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
 }));
 
 // Mock config/version
-vi.mock('../../../src/config/version', () => ({
+vi.mock('@/config/version', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
 }));
 

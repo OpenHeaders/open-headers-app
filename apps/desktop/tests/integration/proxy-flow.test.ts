@@ -41,7 +41,7 @@ function makeProxyRule(overrides: Partial<ProxyRule> = {}): ProxyRule {
 }
 
 // Mock atomicFileWriter to avoid filesystem I/O
-vi.mock('../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: { readJson: () => Promise.resolve(null), writeJson: () => Promise.resolve() },
   readJson: () => Promise.resolve(null),
   writeJson: () => Promise.resolve(),

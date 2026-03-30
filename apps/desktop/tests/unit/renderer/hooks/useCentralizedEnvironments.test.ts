@@ -72,7 +72,7 @@ const mockSchema = {
   }),
 };
 
-vi.mock('../../../../src/renderer/hooks/environment', () => ({
+vi.mock('@/renderer/hooks/environment', () => ({
   useEnvironmentCore: () => mockCore,
   useEnvironmentOperations: () => mockOperations,
   useEnvironmentVariables: () => mockVariables,

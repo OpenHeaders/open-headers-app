@@ -4,7 +4,7 @@ import { WSRecordingHandler } from '@/services/websocket/ws-recording-handler';
 import type { RecordingMetadata } from '@/types/recording';
 
 // Mock atomicFileWriter
-vi.mock('../../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
   },

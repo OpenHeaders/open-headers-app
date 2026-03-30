@@ -1,5 +1,5 @@
 // Simple recording utilities that work directly from popup
-import { MESSAGE_TYPES } from '../../assets/recording/shared/constants';
+import { MESSAGE_TYPES } from '@assets/recording/shared/constants';
 
 declare const browser: typeof chrome | undefined;
 

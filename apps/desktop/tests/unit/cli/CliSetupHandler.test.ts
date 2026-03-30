@@ -9,21 +9,21 @@ const mockGetWorkspaceSettingsService = vi.fn();
 const mockOnCliWorkspaceCreated = vi.fn();
 const mockImportEnvironments = vi.fn();
 
-vi.mock('../../../src/main/modules/app/lifecycle', () => ({
+vi.mock('@/main/modules/app/lifecycle', () => ({
   default: {
     getGitSyncService: (...args: unknown[]) => mockGetGitSyncService(...args),
     getWorkspaceSettingsService: (...args: unknown[]) => mockGetWorkspaceSettingsService(...args),
   },
 }));
 
-vi.mock('../../../src/services/workspace/WorkspaceStateService', () => ({
+vi.mock('@/services/workspace/WorkspaceStateService', () => ({
   default: {
     onCliWorkspaceCreated: (...args: unknown[]) => mockOnCliWorkspaceCreated(...args),
     importEnvironments: (...args: unknown[]) => mockImportEnvironments(...args),
   },
 }));
 
-vi.mock('../../../src/utils/mainLogger', () => ({
+vi.mock('@/utils/mainLogger', () => ({
   default: {
     createLogger: () => ({
       info: () => {},
@@ -34,7 +34,7 @@ vi.mock('../../../src/utils/mainLogger', () => ({
   },
 }));
 
-vi.mock('../../../src/utils/atomicFileWriter', () => ({
+vi.mock('@/utils/atomicFileWriter', () => ({
   default: {
     readJson: vi.fn().mockResolvedValue(null),
     writeJson: vi.fn().mockResolvedValue(undefined),

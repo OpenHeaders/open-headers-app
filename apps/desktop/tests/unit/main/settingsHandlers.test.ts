@@ -57,7 +57,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -73,7 +73,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 // Mock atomicFileWriter (still used transitively by SettingsCache)
 const mockWriteJson = vi.fn().mockResolvedValue(undefined);
 const mockReadJson = vi.fn().mockResolvedValue(null);
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: (...args: unknown[]) => mockWriteJson(...args),
     readJson: (...args: unknown[]) => mockReadJson(...args),
@@ -85,7 +85,7 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
 // Mock SettingsCache — settingsHandlers now delegates to this singleton
 const mockSettingsGet = vi.fn<() => AppSettings>();
 const mockSettingsSave = vi.fn<(updates: Partial<AppSettings>) => Promise<AppSettings>>();
-vi.mock('../../../src/services/core/SettingsCache.js', () => {
+vi.mock('@/services/core/SettingsCache.js', () => {
   const defaultSettings = {
     launchAtLogin: true,
     hideOnLaunch: true,
@@ -118,12 +118,12 @@ vi.mock('../../../src/services/core/SettingsCache.js', () => {
 });
 
 // Mock trayManager
-vi.mock('../../../src/main/modules/tray/trayManager.js', () => ({
+vi.mock('@/main/modules/tray/trayManager.js', () => ({
   default: { updateTray: vi.fn() },
 }));
 
 // Mock webSocketService
-vi.mock('../../../src/services/websocket/ws-service.js', () => ({
+vi.mock('@/services/websocket/ws-service.js', () => ({
   default: {
     broadcastVideoRecordingState: vi.fn(),
     broadcastRecordingHotkeyChange: vi.fn(),
@@ -132,7 +132,7 @@ vi.mock('../../../src/services/websocket/ws-service.js', () => ({
 
 // Mock autoUpdater module (dynamically imported by settingsHandlers)
 const mockApplyUpdateSettings = vi.fn();
-vi.mock('../../../src/main/modules/updater/autoUpdater.js', () => ({
+vi.mock('@/main/modules/updater/autoUpdater.js', () => ({
   default: { applyUpdateSettings: mockApplyUpdateSettings },
 }));
 

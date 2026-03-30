@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock mainLogger
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 }));
 
 // Mock atomicFileWriter
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     readFile: vi.fn(),
     writeFile: vi.fn(),

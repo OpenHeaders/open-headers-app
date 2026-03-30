@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const syncStore: Record<string, unknown> = {};
 
 // We need to mock the browser-api storage module since storage-chunking imports from it
-vi.mock('../../src/utils/browser-api', () => {
+vi.mock('@/utils/browser-api', () => {
   // We cannot reference outer `syncStore` directly in vi.mock factory due to hoisting.
   // Instead we attach it to globalThis so the mock can access it.
   return {
@@ -18,8 +18,8 @@ vi.mock('../../src/utils/browser-api', () => {
   };
 });
 
-import { storage } from '../../src/utils/browser-api';
-import { getChunkedData, setChunkedData } from '../../src/utils/storage-chunking';
+import { storage } from '@utils/browser-api';
+import { getChunkedData, setChunkedData } from '@utils/storage-chunking';
 
 function clearStore(): void {
   for (const key of Object.keys(syncStore)) {

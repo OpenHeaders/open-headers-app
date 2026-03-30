@@ -2,11 +2,11 @@
  * Functions for validating and sanitizing header values for declarativeNetRequest
  */
 
-import type { HeaderValueValidation } from '../types/header';
 import {
   sanitizeHeaderValue as sanitizeHeaderValueCore,
   validateHeaderValue as validateHeaderValueCore,
-} from '../utils/header-validator';
+} from '@utils/header-validator';
+import type { HeaderValueValidation } from '@/types/header';
 
 /**
  * Validates if a header value is acceptable for Chrome's declarativeNetRequest API.

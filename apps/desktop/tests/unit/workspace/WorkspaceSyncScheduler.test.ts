@@ -12,7 +12,7 @@ vi.mock('electron', () => ({
 }));
 
 // Mock mainLogger
-vi.mock('../../../src/utils/mainLogger.js', () => ({
+vi.mock('@/utils/mainLogger.js', () => ({
   default: {
     createLogger: () => ({
       info: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
 }));
 
 // Mock atomicFileWriter
-vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
+vi.mock('@/utils/atomicFileWriter.js', () => ({
   default: {
     writeJson: vi.fn().mockResolvedValue(undefined),
     readJson: vi.fn().mockResolvedValue(null),
@@ -32,12 +32,12 @@ vi.mock('../../../src/utils/atomicFileWriter.js', () => ({
 }));
 
 // Mock config/version
-vi.mock('../../../src/config/version', () => ({
+vi.mock('@/config/version', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
 }));
 
 // Mock EnvironmentSyncUtils
-vi.mock('../../../src/services/workspace/git/utils/EnvironmentSyncUtils.js', () => ({
+vi.mock('@/services/workspace/git/utils/EnvironmentSyncUtils.js', () => ({
   countNonEmptyEnvValues: vi.fn().mockReturnValue(0),
   readFileWithAtomicWriter: vi.fn().mockResolvedValue({ exists: false, content: null }),
   createBackupIfNeeded: vi.fn().mockResolvedValue(undefined),

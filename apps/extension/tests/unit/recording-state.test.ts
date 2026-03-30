@@ -1,6 +1,6 @@
+import type { FlowType, OptimizedReplayData } from '@assets/recording/shared/recording-state';
+import { RecordingState } from '@assets/recording/shared/recording-state';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { FlowType, OptimizedReplayData } from '../../src/assets/recording/shared/recording-state';
-import { RecordingState } from '../../src/assets/recording/shared/recording-state';
 
 const FIXED_TIME = 1700000000000; // 2023-11-14T22:13:20.000Z
 

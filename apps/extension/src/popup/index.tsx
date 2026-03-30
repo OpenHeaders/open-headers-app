@@ -1,6 +1,6 @@
+import { ThemeProvider } from '@context/ThemeContext';
 import { App as AntApp } from 'antd';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider } from '../context/ThemeContext';
 import App from './App';
 import './styles/popup.less';
 

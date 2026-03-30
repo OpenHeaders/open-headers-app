@@ -14,7 +14,7 @@ import type { Source } from '@/types/source';
 // Mocks
 // ---------------------------------------------------------------------------
 
-vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
+vi.mock('@/renderer/utils/error-handling/logger', () => ({
   createLogger: () => ({
     info: vi.fn(),
     warn: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
 }));
 
 const mockShowMessage = vi.fn();
-vi.mock('../../../../src/renderer/utils', () => ({
+vi.mock('@/renderer/utils', () => ({
   showMessage: (...args: unknown[]) => mockShowMessage(...args),
 }));
 
@@ -56,7 +56,7 @@ const mockSources: Source[] = [
 
 let mockIsWorkspaceSwitching = false;
 
-vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
+vi.mock('@/renderer/hooks/useCentralizedWorkspace', () => ({
   useCentralizedWorkspace: () => ({
     sources: mockSources,
     isWorkspaceSwitching: mockIsWorkspaceSwitching,
