@@ -469,7 +469,7 @@ export class RecordingService implements IRecordingService {
     const dataUrl =
       'data:application/json;base64,' +
       btoa(encodeURIComponent(json).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
-    const filename = `recording_${recording.id}_${new Date(recording.startTime).toISOString().replace(/[:.]/g, '-')}.json`;
+    const filename = `openheaders_${recording.id}_${new Date(recording.startTime).toISOString().replace(/[:.]/g, '-')}.json`;
 
     await new Promise<void>((resolve, reject) => {
       downloads!.download(
