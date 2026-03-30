@@ -36,7 +36,9 @@ type WSMessage =
   | { type: 'browserInfo'; browser: string; version?: string; extensionVersion?: string }
   | { type: 'toggleRule'; ruleId: string | number; enabled: boolean }
   | { type: 'toggleAllRules'; ruleIds: string[]; enabled: boolean }
-  | { type: 'focusApp'; navigation?: { tab?: string; subTab?: string } }
+  | { type: 'toggleVideoRecording'; enabled: boolean }
+  | { type: 'toggleRecordingHotkey'; enabled: boolean }
+  | { type: 'focusApp'; navigation?: AppNavigationIntent }
   | { type: 'saveRecording' | 'saveWorkflow'; recording: unknown }
   | { type: 'startSyncRecording'; data: StartSyncRecordingData }
   | { type: 'stopSyncRecording'; data: StopSyncRecordingData }
@@ -358,6 +360,12 @@ class WebSocketService {
       case 'saveWorkflow':
         this.recordingHandler.handleSaveRecordingMessage(ws, { type: data.type, recording: data.recording });
         break;
+      case 'toggleVideoRecording':
+        void this._handleToggleVideoRecording(data.enabled);
+        break;
+      case 'toggleRecordingHotkey':
+        void this._handleToggleRecordingHotkey(data.enabled);
+        break;
       case 'focusApp':
         void this._handleFocusApp(data.navigation ?? {});
         break;
@@ -413,6 +421,42 @@ class WebSocketService {
       log.info('App focused successfully');
     } catch (error) {
       log.error('Error focusing app:', error);
+    }
+  }
+
+  /**
+   * Toggle video recording setting from extension — no UI interaction needed.
+   * Saves to settings, broadcasts state change to all connected extensions.
+   */
+  async _handleToggleVideoRecording(enabled: boolean): Promise<void> {
+    try {
+      log.info(`Toggling video recording to ${enabled} (from extension)`);
+      await settingsCache.save({ videoRecording: enabled });
+      this.recordingHandler.broadcastVideoRecordingState(enabled);
+      log.info(`Video recording toggled to ${enabled}`);
+    } catch (error) {
+      log.error('Error toggling video recording:', error);
+    }
+  }
+
+  /**
+   * Toggle recording hotkey setting from extension — no UI interaction needed.
+   * Saves to settings, updates global shortcut, broadcasts to all connected extensions.
+   */
+  async _handleToggleRecordingHotkey(enabled: boolean): Promise<void> {
+    try {
+      log.info(`Toggling recording hotkey to ${enabled} (from extension)`);
+      const hotkey = settingsCache.get().recordingHotkey || 'CommandOrControl+Shift+E';
+
+      await settingsCache.save({ recordingHotkeyEnabled: enabled });
+
+      const globalShortcuts = (await import('../../main/modules/shortcuts/globalShortcuts')).default;
+      await globalShortcuts.updateHotkeyEnabled(enabled, hotkey);
+
+      this.recordingHandler.broadcastRecordingHotkeyChange(hotkey, enabled);
+      log.info(`Recording hotkey toggled to ${enabled}`);
+    } catch (error) {
+      log.error('Error toggling recording hotkey:', error);
     }
   }
 

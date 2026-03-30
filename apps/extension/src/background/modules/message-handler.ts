@@ -266,6 +266,30 @@ export function handleGeneralMessage(
         safeResponse({ success: false });
       }
       return true;
+    } else if (message.type === 'toggleVideoRecording') {
+      const wsConnected = isWebSocketConnected();
+      if (wsConnected) {
+        const sent = sendViaWebSocket({
+          type: 'toggleVideoRecording',
+          enabled: !!message.enabled,
+        });
+        safeResponse({ success: sent });
+      } else {
+        safeResponse({ success: false, error: 'App not connected' });
+      }
+      return true;
+    } else if (message.type === 'toggleRecordingHotkey') {
+      const wsConnected = isWebSocketConnected();
+      if (wsConnected) {
+        const sent = sendViaWebSocket({
+          type: 'toggleRecordingHotkey',
+          enabled: !!message.enabled,
+        });
+        safeResponse({ success: sent });
+      } else {
+        safeResponse({ success: false, error: 'App not connected' });
+      }
+      return true;
     } else if (message.type === 'getVideoRecordingState') {
       // Request video recording state via WebSocket
       const wsConnected = isWebSocketConnected();

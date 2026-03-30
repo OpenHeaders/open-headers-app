@@ -147,13 +147,10 @@ const Footer: React.FC = () => {
       message.warning('Please connect to the desktop app to change video recording settings');
       return;
     }
-    await appLauncher.launchOrFocus({
-      tab: 'settings',
-      settingsTab: 'workflows',
-      action: 'toggleVideoRecording',
-      value: checked,
-    });
-    message.info('Switch to OpenHeaders app to change video recording setting');
+    const response = await sendMessage({ type: 'toggleVideoRecording', enabled: checked });
+    if (!response?.success) {
+      message.error('Failed to toggle video recording');
+    }
   };
 
   const handleEditHotkey = async () => {
@@ -170,13 +167,10 @@ const Footer: React.FC = () => {
       message.warning('Please connect to the desktop app to change hotkey settings');
       return;
     }
-    await appLauncher.launchOrFocus({
-      tab: 'settings',
-      settingsTab: 'workflows',
-      action: 'toggleRecordingHotkey',
-      value: checked,
-    });
-    message.info('Switch to OpenHeaders app to change hotkey setting');
+    const response = await sendMessage({ type: 'toggleRecordingHotkey', enabled: checked });
+    if (!response?.success) {
+      message.error('Failed to toggle recording hotkey');
+    }
   };
 
   const handleGlobalRulesToggle = async (checked: boolean) => {

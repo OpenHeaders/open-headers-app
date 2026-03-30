@@ -279,6 +279,20 @@ describe('WebSocketService', () => {
       expect(spy).toHaveBeenCalledWith(ruleIds, true);
     });
 
+    it('dispatches toggleVideoRecording to _handleToggleVideoRecording', () => {
+      const mockWs = {} as Parameters<typeof service._dispatchMessage>[0];
+      const spy = vi.spyOn(service, '_handleToggleVideoRecording').mockResolvedValue();
+      service._dispatchMessage(mockWs, { type: 'toggleVideoRecording', enabled: true });
+      expect(spy).toHaveBeenCalledWith(true);
+    });
+
+    it('dispatches toggleRecordingHotkey to _handleToggleRecordingHotkey', () => {
+      const mockWs = {} as Parameters<typeof service._dispatchMessage>[0];
+      const spy = vi.spyOn(service, '_handleToggleRecordingHotkey').mockResolvedValue();
+      service._dispatchMessage(mockWs, { type: 'toggleRecordingHotkey', enabled: false });
+      expect(spy).toHaveBeenCalledWith(false);
+    });
+
     it('dispatches getVideoRecordingState to recordingHandler', () => {
       const mockWs = {} as Parameters<typeof service._dispatchMessage>[0];
       const spy = vi.spyOn(service.recordingHandler, 'sendVideoRecordingState').mockResolvedValue();

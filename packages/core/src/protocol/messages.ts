@@ -131,6 +131,16 @@ export interface GetRecordingHotkeyMessage {
   type: 'getRecordingHotkey';
 }
 
+export interface ToggleVideoRecordingMessage {
+  type: 'toggleVideoRecording';
+  enabled: boolean;
+}
+
+export interface ToggleRecordingHotkeyMessage {
+  type: 'toggleRecordingHotkey';
+  enabled: boolean;
+}
+
 export interface SaveWorkflowMessage {
   type: 'saveWorkflow';
   recording: WorkflowRecordingPayload;
