@@ -6,7 +6,7 @@
  * - generateTOTP: TOTP generator exposed via contextBridge
  */
 
-import type { HeaderRule, Source, SourceRequestOptions } from '@openheaders/core';
+import type { AppNavigationIntent, HeaderRule, Source, SourceRequestOptions } from '@openheaders/core';
 import type { NetworkInterfaceInfo } from 'node:os';
 import type { AppSettings } from './settings';
 import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
@@ -48,12 +48,7 @@ declare global {
   // --- Event data types for IPC callbacks ---
 
   /** Navigation data sent to renderer */
-  interface NavigationData {
-    tab: string;
-    action?: string;
-    itemId?: string;
-    sourceId?: string;
-  }
+  type NavigationData = AppNavigationIntent;
 
   /** Recording metadata returned from loadRecordings / events */
   interface RecordingMetadataEvent {

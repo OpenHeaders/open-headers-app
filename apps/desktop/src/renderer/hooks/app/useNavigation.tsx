@@ -5,19 +5,13 @@
  * UI actions and tab switches.
  */
 
+import type { AppNavigationIntent, NavigationAction } from '@openheaders/core';
 import { useEffect } from 'react';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('useNavigation');
 
-interface NavigationRequest {
-  tab?: string;
-  subTab?: string;
-  itemId?: string;
-  action?: string;
-  settingsTab?: string;
-  value?: string | boolean;
-}
+type NavigationRequest = AppNavigationIntent;
 
 export interface NavigationIntent {
   tab?: string;
@@ -28,8 +22,8 @@ export interface NavigationIntent {
 }
 
 export interface SettingsAction {
-  action: string;
-  value?: unknown;
+  action: NavigationAction;
+  value?: string | boolean;
 }
 
 interface UseNavigationDeps {

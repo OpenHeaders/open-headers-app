@@ -11,14 +11,34 @@ import type { Source } from '../types/source';
 
 // ── Shared protocol types ──────────────────────────────────────────
 
-/** Navigation intent sent with focusApp to tell the desktop UI which view to show. */
+/** Navigation action applied to an item or settings toggle. */
+export type NavigationAction =
+  | 'edit'
+  | 'delete'
+  | 'toggle'
+  | 'view'
+  | 'create'
+  | 'duplicate'
+  | 'highlight'
+  | 'toggleVideoRecording'
+  | 'toggleRecordingHotkey'
+  | 'editHotkey';
+
+/** Settings tab identifier. */
+export type SettingsTabId = 'general' | 'appearance' | 'workflows';
+
+/**
+ * Navigation intent sent with focusApp to tell the desktop UI which view
+ * to show and what action to perform.
+ */
 export interface AppNavigationIntent {
   tab?: string;
   subTab?: string;
-  action?: string;
+  action?: NavigationAction;
   itemId?: string;
-  settingsTab?: string;
-  value?: unknown;
+  settingsTab?: SettingsTabId;
+  /** Value for toggle actions — boolean via WebSocket, string via protocol URL. */
+  value?: string | boolean;
 }
 
 /** Display bounds rectangle. */
