@@ -48,7 +48,7 @@ function compileAndCachePattern(pattern: string): void {
   // Handle IDN in patterns
   try {
     if (/[^\x00-\x7F]/.test(urlFilter)) {
-      const patternUrl = new URL(urlFilter.includes('://') ? urlFilter : 'http://' + urlFilter);
+      const patternUrl = new URL(urlFilter.includes('://') ? urlFilter : `http://${urlFilter}`);
       urlFilter = patternUrl.hostname.toLowerCase();
     }
   } catch (_e) {
@@ -57,12 +57,12 @@ function compileAndCachePattern(pattern: string): void {
 
   // If pattern doesn't have protocol, add wildcard
   if (!urlFilter.includes('://')) {
-    urlFilter = '*://' + urlFilter;
+    urlFilter = `*://${urlFilter}`;
   }
 
   // Ensure pattern has a path
   if (!urlFilter.includes('/', urlFilter.indexOf('://') + 3)) {
-    urlFilter = urlFilter + '/*';
+    urlFilter = `${urlFilter}/*`;
   }
 
   // Normalize default ports
@@ -73,7 +73,7 @@ function compileAndCachePattern(pattern: string): void {
     .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars except *
     .replace(/\*/g, '.*'); // Replace * with .*
 
-  const regex = new RegExp('^' + regexPattern + '$', 'i');
+  const regex = new RegExp(`^${regexPattern}$`, 'i');
   compiledPatternCache.set(pattern, regex);
 }
 
@@ -176,7 +176,7 @@ export function doesUrlMatchPattern(url: string, pattern: string): boolean {
     if (!trimmedPattern.includes('*') && !trimmedPattern.includes('/') && !trimmedPattern.includes('://')) {
       try {
         const urlObj = new URL(normalizedUrl);
-        const portSuffix = urlObj.port ? ':' + urlObj.port : '';
+        const portSuffix = urlObj.port ? `:${urlObj.port}` : '';
         const hostWithPort = urlObj.hostname + portSuffix;
         // Strict match: "localhost:3000" must match "localhost:3000",
         // bare "localhost" must match "localhost" (no port in URL).

@@ -82,7 +82,7 @@ const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false 
   const renderMessage = (args: ConsoleRecord['args'], consoleRecord: ConsoleRecord) => {
     const message = args.map(formatConsoleArg).join(' ');
     const needsExpansion = message.length > 150;
-    const displayMessage = needsExpansion ? message.substring(0, 150) + '...' : message;
+    const displayMessage = needsExpansion ? `${message.substring(0, 150)}...` : message;
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', width: '100%' }}>

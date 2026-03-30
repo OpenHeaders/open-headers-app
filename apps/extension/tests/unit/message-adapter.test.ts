@@ -397,7 +397,7 @@ describe('message-adapter', () => {
         data: { level: 'log', message: 'test' },
       });
 
-      expect(result.payload!['timestamp']).toBe(1700000099000);
+      expect(result.payload!.timestamp).toBe(1700000099000);
     });
   });
 });

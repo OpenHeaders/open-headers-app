@@ -176,7 +176,7 @@ class VideoConverter {
             errorMessage = 'Invalid input video format';
           }
 
-          reject(new Error(errorMessage + '\n' + stderr.slice(-500))); // Include last 500 chars of stderr
+          reject(new Error(`${errorMessage}\n${stderr.slice(-500)}`)); // Include last 500 chars of stderr
         }
       });
 
@@ -415,7 +415,7 @@ class VideoConverter {
               resolve(info);
             }
           } catch (error: unknown) {
-            reject(new Error('Failed to parse video info: ' + errMsg(error)));
+            reject(new Error(`Failed to parse video info: ${errMsg(error)}`));
           }
         } else {
           log.error('ffprobe failed:', stderr);

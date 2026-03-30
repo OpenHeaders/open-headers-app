@@ -243,7 +243,7 @@ describe('Proxy integration – full request flow', () => {
 
       const echo = parseEcho(res.body);
       expect(echo.headers['x-custom-trace']).toBe('trace-a1b2c3d4');
-      expect(echo.headers['accept']).toBe('application/json');
+      expect(echo.headers.accept).toBe('application/json');
     });
   });
 
@@ -320,7 +320,7 @@ describe('Proxy integration – full request flow', () => {
       const res = await proxyRequest(proxyPort, targetUrl);
       const echo = parseEcho(res.body);
 
-      expect(echo.headers['authorization']).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.prod-token.sig');
+      expect(echo.headers.authorization).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.prod-token.sig');
     });
 
     it('applies domain-scoped rules only to matching domains', async () => {
@@ -374,7 +374,7 @@ describe('Proxy integration – full request flow', () => {
       const res = await proxyRequest(proxyPort, targetUrl);
       const echo = parseEcho(res.body);
 
-      expect(echo.headers['authorization']).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.dynamic-source-token.sig');
+      expect(echo.headers.authorization).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.dynamic-source-token.sig');
     });
 
     it('does NOT inject dynamic header when source content is missing', async () => {
@@ -397,7 +397,7 @@ describe('Proxy integration – full request flow', () => {
       const echo = parseEcho(res.body);
 
       // isDynamic with no resolved value and no fallback → empty, so header not injected
-      expect(echo.headers['authorization']).toBeUndefined();
+      expect(echo.headers.authorization).toBeUndefined();
     });
 
     it('end-to-end: source → header rule → proxy rule → injected header', async () => {
@@ -437,7 +437,7 @@ describe('Proxy integration – full request flow', () => {
       const echo = parseEcho(res.body);
 
       // 5. Verify the header was injected with source value + prefix
-      expect(echo.headers['authorization']).toBe(`Bearer ${token}`);
+      expect(echo.headers.authorization).toBe(`Bearer ${token}`);
     });
   });
 
@@ -552,7 +552,7 @@ describe('Proxy integration – full request flow', () => {
       const res = await proxyRequest(proxyPort, targetUrl);
       const echo = parseEcho(res.body);
 
-      expect(echo.headers['authorization']).toBe('Bearer dynamic-token-value (prod)');
+      expect(echo.headers.authorization).toBe('Bearer dynamic-token-value (prod)');
     });
 
     it('skips rule with unresolved env var instead of injecting placeholder', async () => {
@@ -719,7 +719,7 @@ describe('Proxy integration – full request flow', () => {
       const res = await proxyRequest(proxyPort, targetUrl);
       const echo = parseEcho(res.body);
 
-      expect(echo.headers['authorization']).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.from-header-rule.sig');
+      expect(echo.headers.authorization).toBe('Bearer eyJhbGciOiJSUzI1NiJ9.from-header-rule.sig');
       expect(echo.headers['x-trace-id']).toBe('trace-a1b2c3d4');
     });
 
@@ -750,7 +750,7 @@ describe('Proxy integration – full request flow', () => {
       const res = await proxyRequest(proxyPort, targetUrl);
       const echo = parseEcho(res.body);
 
-      expect(echo.headers['authorization']).toBe('Bearer dynamic-oauth-token');
+      expect(echo.headers.authorization).toBe('Bearer dynamic-oauth-token');
       expect(echo.headers['x-api-version']).toBe('v2.1.0');
     });
 

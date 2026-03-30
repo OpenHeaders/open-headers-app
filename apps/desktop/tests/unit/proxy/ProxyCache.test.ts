@@ -202,7 +202,7 @@ describe('ProxyCache', () => {
         ETag: '"abc"',
       });
       expect(result['Content-Type']).toBe('text/html');
-      expect(result['ETag']).toBe('"abc"');
+      expect(result.ETag).toBe('"abc"');
     });
 
     it('returns empty object when no relevant headers present', () => {

@@ -26,7 +26,7 @@ export function generateSourcesHash(sources: Source[]): string {
   let combined = '';
   for (let i = 0; i < sources.length; i++) {
     const s = sources[i];
-    combined += (s.sourceId || '') + '\0' + (s.sourceContent || '') + '\x01';
+    combined += `${s.sourceId || ''}\0${s.sourceContent || ''}\x01`;
   }
 
   return fnv1a(combined).toString(36);

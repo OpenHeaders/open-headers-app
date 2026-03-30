@@ -83,7 +83,7 @@ const RulesList: React.FC = () => {
             const baseDomain = domain.substring(2);
             return currentTabDomain!.endsWith(baseDomain);
           }
-          return currentTabDomain === domain || currentTabDomain!.endsWith('.' + domain);
+          return currentTabDomain === domain || currentTabDomain!.endsWith(`.${domain}`);
         });
       }).length;
     }

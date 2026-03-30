@@ -91,7 +91,7 @@ export const validateUrlField = (
 
   // Ensure URL has a protocol for validation
   if (!resolvedUrl.match(/^https?:\/\//i)) {
-    resolvedUrl = 'https://' + resolvedUrl;
+    resolvedUrl = `https://${resolvedUrl}`;
   }
 
   // Validate the final resolved URL format

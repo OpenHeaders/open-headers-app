@@ -131,7 +131,7 @@ export function validateWorkspaceConfig(workspaceInput: unknown): ValidationResu
     }
   }
 
-  const name = workspace['name'];
+  const name = workspace.name;
   if (typeof name === 'string' && name.length > VALIDATION_RULES.MAX_NAME_LENGTH) {
     return {
       success: false,

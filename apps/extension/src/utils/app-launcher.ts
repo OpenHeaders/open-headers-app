@@ -82,7 +82,7 @@ export class AppLauncher {
     if (data.settingsTab) params.set('settingsTab', data.settingsTab);
     if (data.value !== undefined) params.set('value', String(data.value));
 
-    const url = `${this.protocolName}://launch${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `${this.protocolName}://launch${params.toString() ? `?${params.toString()}` : ''}`;
 
     // Method 1: Create a new tab with the protocol URL
     if (chrome?.tabs?.create) {

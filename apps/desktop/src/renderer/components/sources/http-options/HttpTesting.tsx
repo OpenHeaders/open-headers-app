@@ -207,7 +207,7 @@ function buildRequestSpec(
 ): HttpRequestSpec {
   let url = sourcePath || values.sourcePath || '';
   if (!url.match(/^https?:\/\//i)) {
-    url = 'https://' + url;
+    url = `https://${url}`;
   }
 
   const method = sourceMethod || values.sourceMethod || 'GET';

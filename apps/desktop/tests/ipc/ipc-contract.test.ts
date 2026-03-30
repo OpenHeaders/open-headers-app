@@ -28,7 +28,7 @@ function readDir(relativePath: string): string {
   for (const file of files) {
     const full = path.join(dir, file);
     if (fs.statSync(full).isFile() && (full.endsWith('.ts') || full.endsWith('.tsx'))) {
-      combined += fs.readFileSync(full, 'utf8') + '\n';
+      combined += `${fs.readFileSync(full, 'utf8')}\n`;
     }
   }
   return combined;

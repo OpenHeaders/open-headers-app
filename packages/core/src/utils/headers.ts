@@ -162,7 +162,7 @@ export function sanitizeHeaderValue(value: string): string {
   sanitized = sanitized.trim();
 
   if (sanitized.length > 8192) {
-    sanitized = sanitized.substring(0, 8189) + '...';
+    sanitized = `${sanitized.substring(0, 8189)}...`;
   }
 
   return sanitized;

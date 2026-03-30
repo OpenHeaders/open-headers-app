@@ -45,7 +45,7 @@ describe('validateHeaderName', () => {
   });
 
   it('rejects header names longer than 256 characters', () => {
-    expect(validateHeaderName('X-' + 'a'.repeat(255)).valid).toBe(false);
+    expect(validateHeaderName(`X-${'a'.repeat(255)}`).valid).toBe(false);
   });
 
   it('provides sanitized name', () => {

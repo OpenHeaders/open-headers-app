@@ -316,36 +316,36 @@ export function formatUrlPattern(domain: string): string {
     const protocolEnd = urlFilter.indexOf('://') + 3;
     const afterProtocol = urlFilter.substring(protocolEnd);
     if (!afterProtocol.includes('/')) {
-      urlFilter = urlFilter + '/*';
+      urlFilter = `${urlFilter}/*`;
     }
     return urlFilter;
   }
 
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d+)?$/;
   if (ipRegex.test(urlFilter)) {
-    return '*://' + urlFilter + '/*';
+    return `*://${urlFilter}/*`;
   }
 
   if (urlFilter.includes('[') && urlFilter.includes(']')) {
-    return '*://' + urlFilter + '/*';
+    return `*://${urlFilter}/*`;
   }
 
   if (urlFilter === 'localhost' || urlFilter.startsWith('localhost:')) {
-    return '*://' + urlFilter + '/*';
+    return `*://${urlFilter}/*`;
   }
 
   if (urlFilter.startsWith('*.')) {
-    return '*://' + urlFilter + '/*';
+    return `*://${urlFilter}/*`;
   } else if (urlFilter.startsWith('*') && !urlFilter.startsWith('*://')) {
-    return '*://' + urlFilter + '/*';
+    return `*://${urlFilter}/*`;
   } else {
-    urlFilter = '*://' + urlFilter;
+    urlFilter = `*://${urlFilter}`;
   }
 
   const protocolEnd = urlFilter.indexOf('://');
   const afterProtocol = protocolEnd >= 0 ? urlFilter.substring(protocolEnd + 3) : urlFilter;
   if (!afterProtocol.includes('/')) {
-    urlFilter = urlFilter + '/*';
+    urlFilter = `${urlFilter}/*`;
   }
 
   return urlFilter;

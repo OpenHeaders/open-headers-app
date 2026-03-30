@@ -211,7 +211,7 @@ class FormSubmissionHandler {
 
   ensureUrlProtocol(sourceData: EditSourceSubmission): void {
     if (sourceData.sourceType === 'http' && sourceData.sourcePath && !sourceData.sourcePath.match(/^https?:\/\//i)) {
-      sourceData.sourcePath = 'https://' + sourceData.sourcePath;
+      sourceData.sourcePath = `https://${sourceData.sourcePath}`;
     }
   }
 

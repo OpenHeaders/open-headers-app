@@ -51,7 +51,7 @@ export const formatConsoleArg = (
   }
 
   if (typeof arg === 'object' && arg.__type === 'HTMLElement') {
-    return `<${arg.tagName}${arg.id ? '#' + arg.id : ''}${arg.className ? '.' + arg.className : ''}>`;
+    return `<${arg.tagName}${arg.id ? `#${arg.id}` : ''}${arg.className ? `.${arg.className}` : ''}>`;
   }
 
   if (typeof arg === 'object' && arg.__type === 'Function') {

@@ -657,7 +657,7 @@ class ProtocolHandler {
           if (arg.includes('open?')) {
             // Try to reconstruct the URL
             if (!arg.startsWith('openheaders://')) {
-              protocolUrl = 'openheaders://' + arg;
+              protocolUrl = `openheaders://${arg}`;
             } else {
               protocolUrl = arg;
             }

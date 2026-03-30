@@ -52,7 +52,7 @@ const output = fs.createWriteStream(outputPath);
 const archive = archiver('zip', { zlib: { level: 9 } });
 
 console.log(`\n  Firefox Source Zip  v${VERSION}`);
-console.log('  ' + '─'.repeat(40));
+console.log(`  ${'─'.repeat(40)}`);
 console.log(`  Excluding: node_modules, dist, .git, IDE files\n`);
 
 output.on('close', () => {

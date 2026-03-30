@@ -101,8 +101,8 @@ describe('storage-chunking', () => {
 
       setChunkedData('profileHeaders', data, callback);
 
-      expect(syncStore['profileHeaders']).toEqual(data);
-      expect(syncStore['profileHeaders_chunked']).toBe(false);
+      expect(syncStore.profileHeaders).toEqual(data);
+      expect(syncStore.profileHeaders_chunked).toBe(false);
       expect(callback).toHaveBeenCalledOnce();
     });
 
@@ -111,8 +111,8 @@ describe('storage-chunking', () => {
 
       setChunkedData('emptyConfig', {}, callback);
 
-      expect(syncStore['emptyConfig']).toEqual({});
-      expect(syncStore['emptyConfig_chunked']).toBe(false);
+      expect(syncStore.emptyConfig).toEqual({});
+      expect(syncStore.emptyConfig_chunked).toBe(false);
       expect(callback).toHaveBeenCalledOnce();
     });
 
@@ -122,10 +122,10 @@ describe('storage-chunking', () => {
 
       setChunkedData('largeHeaders', data, callback);
 
-      expect(syncStore['largeHeaders_chunked']).toBe(true);
-      expect(typeof syncStore['largeHeaders_chunks']).toBe('number');
+      expect(syncStore.largeHeaders_chunked).toBe(true);
+      expect(typeof syncStore.largeHeaders_chunks).toBe('number');
 
-      const numChunks = syncStore['largeHeaders_chunks'] as number;
+      const numChunks = syncStore.largeHeaders_chunks as number;
       expect(numChunks).toBeGreaterThan(1);
 
       for (let i = 0; i < numChunks; i++) {
@@ -134,7 +134,7 @@ describe('storage-chunking', () => {
       }
 
       // The main key should have been removed
-      expect(syncStore['largeHeaders']).toBeUndefined();
+      expect(syncStore.largeHeaders).toBeUndefined();
       expect(callback).toHaveBeenCalledOnce();
     });
 
@@ -144,8 +144,8 @@ describe('storage-chunking', () => {
 
       setChunkedData('hugePayload', data, callback);
 
-      expect(syncStore['hugePayload_chunked']).toBe(true);
-      const numChunks = syncStore['hugePayload_chunks'] as number;
+      expect(syncStore.hugePayload_chunked).toBe(true);
+      const numChunks = syncStore.hugePayload_chunks as number;
       expect(numChunks).toBeGreaterThan(10);
 
       // Reconstruct and verify
@@ -161,7 +161,7 @@ describe('storage-chunking', () => {
       const largeData = makeLargeData(10);
       setChunkedData('configData', largeData);
 
-      const numChunks = syncStore['configData_chunks'] as number;
+      const numChunks = syncStore.configData_chunks as number;
       expect(numChunks).toBeGreaterThan(1);
 
       // Now store small data under the same key
@@ -169,8 +169,8 @@ describe('storage-chunking', () => {
       setChunkedData('configData', smallData);
 
       // Small data should be stored directly
-      expect(syncStore['configData']).toEqual(smallData);
-      expect(syncStore['configData_chunked']).toBe(false);
+      expect(syncStore.configData).toEqual(smallData);
+      expect(syncStore.configData_chunked).toBe(false);
 
       // Old chunks should be cleaned up (async, but our mock is sync)
       for (let i = 0; i < numChunks; i++) {
@@ -188,7 +188,7 @@ describe('storage-chunking', () => {
 
       setChunkedData('specialChars', data, callback);
 
-      expect(syncStore['specialChars']).toEqual(data);
+      expect(syncStore.specialChars).toEqual(data);
       expect(callback).toHaveBeenCalledOnce();
     });
 
@@ -197,15 +197,15 @@ describe('storage-chunking', () => {
 
       expect(() => setChunkedData('noCallback', data)).not.toThrow();
 
-      expect(syncStore['noCallback']).toEqual(data);
+      expect(syncStore.noCallback).toEqual(data);
     });
   });
 
   describe('getChunkedData', () => {
     it('retrieves non-chunked data directly', () => {
       const data = makeSmallData();
-      syncStore['userProfile'] = data;
-      syncStore['userProfile_chunked'] = false;
+      syncStore.userProfile = data;
+      syncStore.userProfile_chunked = false;
 
       const callback = vi.fn();
       getChunkedData('userProfile', callback);
@@ -234,10 +234,10 @@ describe('storage-chunking', () => {
     });
 
     it('returns null when chunked data has corrupted JSON', () => {
-      syncStore['corrupt_chunked'] = true;
-      syncStore['corrupt_chunks'] = 2;
-      syncStore['corrupt_chunk_0'] = '{"broken":';
-      syncStore['corrupt_chunk_1'] = 'not valid json}}}';
+      syncStore.corrupt_chunked = true;
+      syncStore.corrupt_chunks = 2;
+      syncStore.corrupt_chunk_0 = '{"broken":';
+      syncStore.corrupt_chunk_1 = 'not valid json}}}';
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const callback = vi.fn();
@@ -248,11 +248,11 @@ describe('storage-chunking', () => {
     });
 
     it('reconstructs data when some chunks are empty strings', () => {
-      syncStore['partial_chunked'] = true;
-      syncStore['partial_chunks'] = 3;
-      syncStore['partial_chunk_0'] = '{"id":"abc",';
+      syncStore.partial_chunked = true;
+      syncStore.partial_chunks = 3;
+      syncStore.partial_chunk_0 = '{"id":"abc",';
       // chunk_1 is missing — getChunkedData uses || '' for missing chunks
-      syncStore['partial_chunk_2'] = '"extra":"val"}';
+      syncStore.partial_chunk_2 = '"extra":"val"}';
 
       const callback = vi.fn();
       getChunkedData('partial', callback);
@@ -263,8 +263,8 @@ describe('storage-chunking', () => {
     });
 
     it('handles zero chunks', () => {
-      syncStore['empty_chunked'] = true;
-      syncStore['empty_chunks'] = 0;
+      syncStore.empty_chunked = true;
+      syncStore.empty_chunks = 0;
 
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const callback = vi.fn();
@@ -276,7 +276,7 @@ describe('storage-chunking', () => {
     });
 
     it('retrieves data that was stored directly without _chunked flag', () => {
-      syncStore['legacyData'] = { id: 'c9a1f2b3-d4e5-6789-0abc-def012345678', name: 'Legacy Config' };
+      syncStore.legacyData = { id: 'c9a1f2b3-d4e5-6789-0abc-def012345678', name: 'Legacy Config' };
 
       const callback = vi.fn();
       getChunkedData('legacyData', callback);
@@ -313,8 +313,8 @@ describe('storage-chunking', () => {
         id: 'b2c3d4e5-f6a7-8901-bcde-f01234567890',
         enabled: true,
       };
-      syncStore['typedData'] = data;
-      syncStore['typedData_chunked'] = false;
+      syncStore.typedData = data;
+      syncStore.typedData_chunked = false;
 
       const callback = vi.fn();
       getChunkedData<ProfileConfig>('typedData', callback);

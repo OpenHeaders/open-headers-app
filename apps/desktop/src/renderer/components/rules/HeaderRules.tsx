@@ -404,7 +404,7 @@ const HeaderRules = () => {
           displayValue = displayValue.replace(/^https?:\/\//, '');
           // Truncate if too long
           if (displayValue.length > 25) {
-            displayValue = displayValue.substring(0, 25) + '...';
+            displayValue = `${displayValue.substring(0, 25)}...`;
           }
         } else if (sourceType === 'file') {
           label = 'FILE';
@@ -413,13 +413,13 @@ const HeaderRules = () => {
           displayValue = parts[parts.length - 1] || displayValue;
           // Truncate if too long
           if (displayValue.length > 20) {
-            displayValue = displayValue.substring(0, 20) + '...';
+            displayValue = `${displayValue.substring(0, 20)}...`;
           }
         } else if (sourceType === 'env') {
           label = 'ENV';
           // Truncate if too long
           if (displayValue.length > 20) {
-            displayValue = displayValue.substring(0, 20) + '...';
+            displayValue = `${displayValue.substring(0, 20)}...`;
           }
         } else {
           label = sourceType.toUpperCase();

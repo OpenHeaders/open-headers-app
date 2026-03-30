@@ -53,8 +53,8 @@ export function applyJsonFilter(body: string | JsonObject, filter: JsonFilterCon
     // Check if this is an error response
     if (jsonObj.error) {
       let errorMessage = `Error: ${jsonObj.error}`;
-      if (jsonObj['error_description']) {
-        errorMessage += ` - ${jsonObj['error_description']}`;
+      if (jsonObj.error_description) {
+        errorMessage += ` - ${jsonObj.error_description}`;
       } else if (jsonObj.message) {
         errorMessage += ` - ${jsonObj.message}`;
       }

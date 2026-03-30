@@ -170,7 +170,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
       }
     } catch (error) {
       console.error('Failed to export video:', error);
-      errorMessage('Failed to export video: ' + (error instanceof Error ? error.message : String(error)));
+      errorMessage(`Failed to export video: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsExporting(false);
       setExportStatus('');

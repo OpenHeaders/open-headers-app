@@ -56,7 +56,7 @@ class DomainMatcher {
       const lowerHostname = hostname.toLowerCase();
 
       // Match exact domain or any subdomain
-      return lowerHostname === baseDomain || lowerHostname.endsWith('.' + baseDomain);
+      return lowerHostname === baseDomain || lowerHostname.endsWith(`.${baseDomain}`);
     }
 
     // Handle exact domain match (case-insensitive)

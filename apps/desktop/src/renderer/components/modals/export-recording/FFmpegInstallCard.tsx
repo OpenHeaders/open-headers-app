@@ -107,7 +107,7 @@ const FFmpegInstallCard = ({
       }
     } catch (error) {
       console.error('[FFmpeg Install] Installation error:', error);
-      errorMessage('Failed to install FFmpeg: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      errorMessage(`Failed to install FFmpeg: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       // Cleanup listeners
       if (unsubscribeProgress) unsubscribeProgress();

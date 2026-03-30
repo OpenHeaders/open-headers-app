@@ -296,7 +296,7 @@ if (!gotTheLock) {
       break;
     }
     if (arg.includes('open?')) {
-      protocolUrl = arg.startsWith('openheaders://') ? arg : 'openheaders://' + arg;
+      protocolUrl = arg.startsWith('openheaders://') ? arg : `openheaders://${arg}`;
       break;
     }
     if (arg.match(/^[A-Za-z0-9+/]+=*$/) && arg.length > 50) {

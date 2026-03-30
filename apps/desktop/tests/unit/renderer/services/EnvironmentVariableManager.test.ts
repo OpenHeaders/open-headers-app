@@ -435,8 +435,8 @@ describe('EnvironmentVariableManager', () => {
     it('trims whitespace in .env keys and values', () => {
       const data = '  API_KEY  =  ohk_live_abc123  ';
       const result = manager.importEnvironment(data, 'env');
-      expect(result['API_KEY']).toBeDefined();
-      expect(result['API_KEY'].value).toBe('ohk_live_abc123');
+      expect(result.API_KEY).toBeDefined();
+      expect(result.API_KEY.value).toBe('ohk_live_abc123');
     });
 
     it('throws on unsupported format', () => {

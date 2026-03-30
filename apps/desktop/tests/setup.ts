@@ -25,7 +25,7 @@ ModuleInternal._resolveFilename = function (request: string, parent: Module, isM
     const error = err as NodeJS.ErrnoException;
     if (error.code === 'MODULE_NOT_FOUND' && !request.match(/\.\w+$/)) {
       try {
-        return originalResolve.call(this, request + '.ts', parent, isMain, options);
+        return originalResolve.call(this, `${request}.ts`, parent, isMain, options);
       } catch (_) {
         /* fall through */
       }

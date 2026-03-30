@@ -852,7 +852,7 @@ class WorkspaceStateService {
     sendPatchToRenderers(this.state, ['environments', 'activeEnvironment']);
 
     if (wasActive) {
-      const activeVars = this.state.environments['Default'] ?? {};
+      const activeVars = this.state.environments.Default ?? {};
       await this.onEnvironmentVariablesChanged(activeVars);
     }
     log.info(`Deleted environment: ${name}`);

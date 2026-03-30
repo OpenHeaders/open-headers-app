@@ -85,7 +85,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: Storage
         {!record.oldValue || oldDisplay === '' ? (
           <span style={{ opacity: 0.5, fontStyle: 'italic' }}>{'<new>'}</span>
         ) : oldDisplay.length > 50 ? (
-          oldDisplay.substring(0, 50) + '...'
+          `${oldDisplay.substring(0, 50)}...`
         ) : (
           oldDisplay
         )}
@@ -110,7 +110,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: Storage
         {record.action === 'remove' ? (
           <span style={{ opacity: 0.5, fontStyle: 'italic' }}>{'<removed>'}</span>
         ) : newDisplay.length > 50 ? (
-          newDisplay.substring(0, 50) + '...'
+          `${newDisplay.substring(0, 50)}...`
         ) : (
           newDisplay
         )}

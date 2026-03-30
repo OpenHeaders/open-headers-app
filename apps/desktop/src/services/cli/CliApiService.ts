@@ -235,7 +235,7 @@ class CliApiService {
     const logEntry: RequestLogEntry = { timestamp: Date.now(), ...entry };
     this.requestLogs.unshift(logEntry);
     if (this.logsPath) {
-      const line = JSON.stringify(logEntry) + '\n';
+      const line = `${JSON.stringify(logEntry)}\n`;
       fs.promises.appendFile(this.logsPath, line, 'utf8').catch((err: unknown) => {
         log.warn('Failed to append CLI API log:', errorMessage(err));
       });
@@ -437,7 +437,7 @@ class CliApiService {
   }
 
   _validateAuth(req: http.IncomingMessage): boolean {
-    const authHeader = req.headers['authorization'];
+    const authHeader = req.headers.authorization;
     if (!authHeader) return false;
     const parts = authHeader.split(' ');
     return parts.length === 2 && parts[0] === 'Bearer' && parts[1] === this.token;

@@ -54,7 +54,7 @@ const BrowserConnectionStatus = () => {
       safari: <GlobalOutlined />,
       unknown: <ApiOutlined />,
     };
-    return icons[browser as BrowserKey] || icons['unknown'];
+    return icons[browser as BrowserKey] || icons.unknown;
   };
 
   // Browser display name mapping

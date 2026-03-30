@@ -135,7 +135,7 @@ class ConfigFileDetector {
    */
   matchPattern(name: string, pattern: string): boolean {
     // Simple wildcard matching
-    const regex = new RegExp('^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
+    const regex = new RegExp(`^${pattern.replace(/\*/g, '.*').replace(/\?/g, '.')}$`);
     return regex.test(name);
   }
 

@@ -169,7 +169,7 @@ describe('GitRepositoryManager', () => {
   describe('pullRepository()', () => {
     it('returns success with changes when commits are pulled', async () => {
       // getRepositoryUrl
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       // ls-remote (branch exists check)
       executeSpy.mockResolvedValueOnce({ stdout: 'abc123\trefs/heads/main\n', stderr: '' });
       // fetch
@@ -186,7 +186,7 @@ describe('GitRepositoryManager', () => {
     });
 
     it('returns no changes when already up to date', async () => {
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       executeSpy.mockResolvedValueOnce({ stdout: 'abc\trefs/heads/main\n', stderr: '' });
       executeSpy.mockResolvedValueOnce({ stdout: '', stderr: '' });
       executeSpy.mockResolvedValueOnce({ stdout: '0\n', stderr: '' });
@@ -198,7 +198,7 @@ describe('GitRepositoryManager', () => {
     });
 
     it('creates new branch when branch does not exist on remote (non-empty repo)', async () => {
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       // ls-remote returns other branches but not the one we want
       executeSpy.mockResolvedValueOnce({ stdout: 'abc\trefs/heads/main\n', stderr: '' });
       // symbolic-ref for default branch
@@ -217,7 +217,7 @@ describe('GitRepositoryManager', () => {
     });
 
     it('always cleans up auth resources', async () => {
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       executeSpy.mockRejectedValueOnce(new Error('network error'));
 
       await expect(manager.pullRepository({ repoDir: REPO_DIR, branch: 'main' })).rejects.toThrow('network error');
@@ -228,7 +228,7 @@ describe('GitRepositoryManager', () => {
 
   describe('pushRepository()', () => {
     it('pushes commits and returns count', async () => {
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       // unpushed count
       executeSpy.mockResolvedValueOnce({ stdout: '2\n', stderr: '' });
       // push
@@ -244,7 +244,7 @@ describe('GitRepositoryManager', () => {
     });
 
     it('returns pushed=false when no changes to push', async () => {
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       executeSpy.mockResolvedValueOnce({ stdout: '0\n', stderr: '' });
 
       const result = await manager.pushRepository({
@@ -257,7 +257,7 @@ describe('GitRepositoryManager', () => {
 
     it('always cleans up auth resources even on push failure', async () => {
       // getRepositoryUrl
-      executeSpy.mockResolvedValueOnce({ stdout: REPO_URL + '\n', stderr: '' });
+      executeSpy.mockResolvedValueOnce({ stdout: `${REPO_URL}\n`, stderr: '' });
       // unpushed count
       executeSpy.mockResolvedValueOnce({ stdout: '1\n', stderr: '' });
       // push itself fails

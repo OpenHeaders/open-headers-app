@@ -349,7 +349,7 @@ const prepareSourceData = (
 
     // Ensure URL has protocol
     if (!sourceData.sourcePath.match(/^https?:\/\//i)) {
-      sourceData.sourcePath = 'https://' + sourceData.sourcePath;
+      sourceData.sourcePath = `https://${sourceData.sourcePath}`;
     }
   }
 

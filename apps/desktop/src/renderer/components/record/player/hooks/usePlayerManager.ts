@@ -57,9 +57,9 @@ export const usePlayerManager = (
   useEffect(() => {
     if (viewMode === 'video' && previousViewModeRef.current === 'dom' && player) {
       log.debug('Destroying player when switching to video mode');
-      if (typeof player['$destroy'] === 'function') {
+      if (typeof player.$destroy === 'function') {
         // $destroy is a Svelte component method
-        player['$destroy']();
+        player.$destroy();
       }
       setPlayer(null);
     }
@@ -259,9 +259,9 @@ export const usePlayerManager = (
         // Clear previous player
         if (player) {
           log.debug('Destroying previous player');
-          if (typeof player['$destroy'] === 'function') {
+          if (typeof player.$destroy === 'function') {
             // $destroy is a Svelte component method
-            player['$destroy']();
+            player.$destroy();
           }
           if (player._restoreCreateElement) {
             player._restoreCreateElement();
@@ -449,9 +449,9 @@ export const usePlayerManager = (
   useEffect(() => {
     return () => {
       if (player) {
-        if (typeof player['$destroy'] === 'function') {
+        if (typeof player.$destroy === 'function') {
           // $destroy is a Svelte component method
-          player['$destroy']();
+          player.$destroy();
         }
         if (player._restoreConsole) {
           player._restoreConsole();

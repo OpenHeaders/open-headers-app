@@ -97,7 +97,7 @@ function summary(): void {
   }
 
   console.log(`\n  Release v${VERSION} ready`);
-  console.log('  ' + '─'.repeat(50));
+  console.log(`  ${'─'.repeat(50)}`);
 
   let totalSize = 0;
   for (const file of files) {
@@ -105,7 +105,7 @@ function summary(): void {
     totalSize += size;
     console.log(`    ${formatSize(size).padStart(10)}  ${file}`);
   }
-  console.log('  ' + '─'.repeat(50));
+  console.log(`  ${'─'.repeat(50)}`);
   console.log(`    ${formatSize(totalSize).padStart(10)}  total (${files.length} packages)`);
   console.log(`\n  Output: ${RELEASES}\n`);
 }
@@ -114,7 +114,7 @@ function summary(): void {
 
 async function main(): Promise<void> {
   console.log(`\n  Open Headers Release  v${VERSION}`);
-  console.log('  ' + '='.repeat(40) + '\n');
+  console.log(`  ${'='.repeat(40)}\n`);
 
   try {
     await build();

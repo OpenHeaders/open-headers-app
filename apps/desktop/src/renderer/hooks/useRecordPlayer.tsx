@@ -144,7 +144,7 @@ export const useRecordPlayer = (): UseRecordPlayerReturn => {
       // Then replace all HTTP/HTTPS URLs with proxied versions
       recordString = recordString.replace(/(https?:\/\/[^"'\s)]+)/g, (match: string, url: string) => {
         // Don't proxy URLs that are already proxied
-        if (url.includes('localhost:' + proxyStatus.port)) {
+        if (url.includes(`localhost:${proxyStatus.port}`)) {
           return match;
         }
 

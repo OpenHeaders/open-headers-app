@@ -44,7 +44,7 @@ const TagManager: React.FC = () => {
 
   const groupedRules = useMemo((): Array<[string, GroupData]> => {
     const groups: Record<string, GroupData> = {};
-    groups['__no_tag__'] = { name: 'Untagged Rules', rules: [], icon: <FolderOutlined />, color: 'default' };
+    groups.__no_tag__ = { name: 'Untagged Rules', rules: [], icon: <FolderOutlined />, color: 'default' };
 
     Object.entries(headerEntries).forEach(([id, rule]) => {
       const tag = rule.tag || '__no_tag__';

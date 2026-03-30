@@ -79,7 +79,7 @@ function printBrowserReport(browser: string): void {
 // ── Main ────────────────────────────────────────────────────────────
 
 console.log('\n  Build Report');
-console.log('  ' + '─'.repeat(60));
+console.log(`  ${'─'.repeat(60)}`);
 
 let anyBuilt = false;
 for (const browser of BROWSERS) {

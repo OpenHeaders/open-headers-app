@@ -179,7 +179,7 @@ class FFmpegManager {
       }
 
       // Download file
-      const tempFile = path.join(this.ffmpegDir, 'ffmpeg-temp' + path.extname(url));
+      const tempFile = path.join(this.ffmpegDir, `ffmpeg-temp${path.extname(url)}`);
       await this.downloadFile(url, tempFile, progressCallback);
 
       // Extract file

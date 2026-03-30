@@ -94,7 +94,7 @@ export const useGitActions = () => {
       }
     } catch (error) {
       log.error('Git installation error:', error);
-      message.error('Failed to install Git: ' + errorMessage(error));
+      message.error(`Failed to install Git: ${errorMessage(error)}`);
     } finally {
       setInstallingGit(false);
       setGitInstallProgress('');

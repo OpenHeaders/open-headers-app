@@ -256,7 +256,7 @@ class GitAutoInstaller {
       if (errMsg.includes('sudo') || errMsg.includes('permission')) {
         return {
           success: false,
-          error: 'Git installation requires administrator privileges. Please run: sudo ' + installCommand,
+          error: `Git installation requires administrator privileges. Please run: sudo ${installCommand}`,
         };
       }
 

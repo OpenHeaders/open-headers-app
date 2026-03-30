@@ -67,7 +67,7 @@ describe('truncateValue', () => {
   });
 
   it('truncates long value with ellipsis preserving start and end', () => {
-    const long = 'ABCDEFGHIJ' + 'x'.repeat(20) + '0123456789';
+    const long = `ABCDEFGHIJ${'x'.repeat(20)}0123456789`;
     expect(truncateValue(long)).toBe('ABCDEFGHIJ...0123456789');
   });
 

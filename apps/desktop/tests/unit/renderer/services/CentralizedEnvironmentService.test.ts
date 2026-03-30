@@ -493,7 +493,7 @@ describe('CES state management patterns', () => {
     it('throws for non-existent environment', () => {
       const environments = makeEnterpriseEnvironments();
       const updatedEnvironments = JSON.parse(JSON.stringify(environments));
-      expect(updatedEnvironments['NonExistent']).toBeUndefined();
+      expect(updatedEnvironments.NonExistent).toBeUndefined();
     });
   });
 

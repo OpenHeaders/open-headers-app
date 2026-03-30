@@ -52,7 +52,7 @@ describe('trimContent', () => {
   });
 
   it('trims long content with middle ellipsis', () => {
-    const long = 'ABCDEFGHIJ' + 'x'.repeat(20) + '0123456789';
+    const long = `ABCDEFGHIJ${'x'.repeat(20)}0123456789`;
     const result = trimContent(long);
     expect(result).toBe('ABCDEFGHIJ...0123456789');
   });

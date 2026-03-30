@@ -253,7 +253,7 @@ class ProxyService extends EventEmitter {
   }
 
   doProxy(req: http.IncomingMessage, res: http.ServerResponse, targetUrl: string): void {
-    const requestId = Date.now() + '-' + Math.random().toString(36).substring(2, 11);
+    const requestId = `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const parsedUrl = url.parse(targetUrl);
     const rules = this.getApplicableRules(targetUrl);
 
@@ -302,7 +302,7 @@ class ProxyService extends EventEmitter {
       this.stats.errors++;
       if (!res.headersSent) {
         res.writeHead(502, { 'Content-Type': 'text/plain' });
-        res.end('Proxy Error: ' + err.message);
+        res.end(`Proxy Error: ${err.message}`);
       }
     });
 
@@ -368,7 +368,7 @@ class ProxyService extends EventEmitter {
             agent: parsedRedirectUrl.protocol === 'https:' ? this.httpsAgent || undefined : undefined,
           },
           (redirectRes) => {
-            this.handleProxyResponse(redirectRes, req, res, redirectUrl, requestId + '-redirect');
+            this.handleProxyResponse(redirectRes, req, res, redirectUrl, `${requestId}-redirect`);
           },
         );
 
@@ -376,7 +376,7 @@ class ProxyService extends EventEmitter {
           this.log.error(`[${requestId}] Redirect request error:`, err);
           if (!res.headersSent) {
             res.writeHead(502, { 'Content-Type': 'text/plain' });
-            res.end('Proxy Error: ' + err.message);
+            res.end(`Proxy Error: ${err.message}`);
           }
         });
 

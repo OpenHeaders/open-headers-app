@@ -101,7 +101,7 @@ export function useSourceRefresh({
             jsonFilter: sourceData.jsonFilter?.enabled
               ? { enabled: true, path: sourceData.jsonFilter.path || '' }
               : undefined,
-            sourceId: 'new-source-' + Date.now(),
+            sourceId: `new-source-${Date.now()}`,
             workspaceId,
           };
 

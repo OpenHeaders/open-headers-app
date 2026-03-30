@@ -63,13 +63,13 @@ function mockElectronResponse(statusCode: number, body: string, headers: Record<
     end: vi.fn(() => {
       // Trigger response
       setTimeout(() => {
-        for (const h of requestHandlers['response'] || []) h(response);
+        for (const h of requestHandlers.response || []) h(response);
         // Trigger data
         setTimeout(() => {
-          for (const h of responseHandlers['data'] || []) h(Buffer.from(body));
+          for (const h of responseHandlers.data || []) h(Buffer.from(body));
           // Trigger end
           setTimeout(() => {
-            for (const h of responseHandlers['end'] || []) h();
+            for (const h of responseHandlers.end || []) h();
           }, 0);
         }, 0);
       }, 0);

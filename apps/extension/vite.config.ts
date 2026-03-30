@@ -74,7 +74,7 @@ function copyAssetsPlugin() {
             // Inject version from package.json into the output manifest
             const manifest = JSON.parse(fs.readFileSync(src, 'utf8'));
             manifest.version = pkg.version;
-            fs.writeFileSync(dest, JSON.stringify(manifest, null, 2) + '\n');
+            fs.writeFileSync(dest, `${JSON.stringify(manifest, null, 2)}\n`);
           } else {
             fs.copyFileSync(src, dest);
           }
