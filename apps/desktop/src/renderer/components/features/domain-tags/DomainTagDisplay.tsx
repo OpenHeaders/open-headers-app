@@ -156,11 +156,14 @@ export const DomainTag: React.FC<DomainTagProps> = ({
       }}
     >
       <span
+        role="button"
+        tabIndex={0}
         onClick={(e) => {
           onEdit(index, tag);
           e.preventDefault();
           e.stopPropagation();
         }}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onEdit(index, tag); e.preventDefault(); } }}
         title="Click to edit"
       >
         {displayTag}
@@ -307,6 +310,7 @@ export const DomainTagsContainer: React.FC<DomainTagsContainerProps> = ({
           </div>
         ) : (
           <button
+            type="button"
             onClick={onShowInput}
             style={{
               height: 24,

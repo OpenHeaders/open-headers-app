@@ -1,6 +1,4 @@
 class MainTimeManager {
-  private startTime = Date.now();
-
   now(): number {
     return Date.now();
   }

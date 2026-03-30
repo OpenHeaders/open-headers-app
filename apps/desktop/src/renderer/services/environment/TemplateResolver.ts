@@ -29,7 +29,7 @@ class TemplateResolver {
 
     const missingVars: string[] = [];
 
-    const resolved = template.replace(this.variablePattern, (match, varName) => {
+    const resolved = template.replace(this.variablePattern, (_match, varName) => {
       if (Object.hasOwn(variables, varName)) {
         return variables[varName];
       }
@@ -63,11 +63,12 @@ class TemplateResolver {
     }
 
     const variables = new Set<string>();
-    let match;
+    let match: RegExpExecArray | null;
 
     // Reset regex lastIndex
     this.variablePattern.lastIndex = 0;
 
+    // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
     while ((match = this.variablePattern.exec(template)) !== null) {
       variables.add(match[1]);
     }

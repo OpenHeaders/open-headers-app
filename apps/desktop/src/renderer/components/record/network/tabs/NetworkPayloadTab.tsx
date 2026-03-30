@@ -29,7 +29,7 @@ const NetworkPayloadTab = ({ request, token }: NetworkPayloadTabProps) => {
     );
   }
 
-  let formattedPayload;
+  let formattedPayload: string;
   const contentType = request.requestHeaders?.['content-type'] || request.requestHeaders?.['Content-Type'] || '';
 
   try {

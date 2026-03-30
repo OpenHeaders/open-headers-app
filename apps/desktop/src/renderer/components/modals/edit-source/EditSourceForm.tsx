@@ -102,6 +102,7 @@ const EditSourceForm: React.FC<EditSourceFormProps> = ({
 
       {/* HTTP-specific options */}
       <div style={{ marginBottom: 24 }}>
+        {/* biome-ignore lint/a11y/noLabelWithoutControl: label describes HttpOptions composite component below */}
         <label style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>HTTP Options</label>
         <HttpOptions
           ref={onGetHttpOptionsRef}

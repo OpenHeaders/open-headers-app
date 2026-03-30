@@ -212,6 +212,8 @@ const Footer: React.FC = () => {
     {
       key: 'widget',
       label: (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents menu close
+        // biome-ignore lint/a11y/useKeyWithClickEvents: not a true interactive element
         <div
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '270px' }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -230,6 +232,8 @@ const Footer: React.FC = () => {
     {
       key: 'hotkey',
       label: (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents menu close
+        // biome-ignore lint/a11y/useKeyWithClickEvents: not a true interactive element
         <div
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '270px' }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -308,6 +312,8 @@ const Footer: React.FC = () => {
     {
       key: 'video',
       label: (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents menu close
+        // biome-ignore lint/a11y/useKeyWithClickEvents: not a true interactive element
         <div
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '270px' }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}

@@ -4,7 +4,6 @@
  */
 
 import type {
-  CommitInfo,
   Workspace,
   WorkspaceAuthData,
   WorkspaceSyncCompletedData,
@@ -20,21 +19,6 @@ interface AdapterGitProgressEvent {
   data: GitProgressEvent;
 }
 
-interface GitResult {
-  success: boolean;
-  error?: string;
-  message?: string;
-  branches?: string[];
-  configFileValid?: boolean;
-  validationDetails?: { sourceCount?: number; ruleCount?: number; proxyRuleCount?: number; variableCount?: number };
-  readAccess?: boolean;
-  writeAccess?: boolean;
-  commitHash?: string;
-  commitInfo?: CommitInfo;
-  files?: string[];
-  noChanges?: boolean;
-  details?: { canPush?: boolean; reason?: string };
-}
 
 interface GitConfig {
   url?: string;
@@ -323,6 +307,7 @@ class SyncServiceAdapter {
 
   constructor() {
     if (SyncServiceAdapter.instance) {
+      // biome-ignore lint/correctness/noConstructorReturn: singleton pattern — return existing instance
       return SyncServiceAdapter.instance;
     }
 
@@ -427,6 +412,7 @@ interface ServiceAdapterInstance {
 /**
  * Main service adapter factory - uses singleton pattern
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: singleton factory pattern used throughout codebase
 export class WorkspaceServiceAdapterFactory {
   static instance: ServiceAdapterInstance | null = null;
 

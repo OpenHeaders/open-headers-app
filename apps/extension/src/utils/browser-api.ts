@@ -96,12 +96,12 @@ export const storage = {
     addListener: (
       listener: (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => void,
     ): void => {
-      return browserAPI.storage.onChanged.addListener(listener);
+      browserAPI.storage.onChanged.addListener(listener);
     },
     removeListener: (
       listener: (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => void,
     ): void => {
-      return browserAPI.storage.onChanged.removeListener(listener);
+      browserAPI.storage.onChanged.removeListener(listener);
     },
   },
 };

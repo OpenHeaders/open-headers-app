@@ -17,7 +17,7 @@ let page: Page;
 test.beforeAll(async () => {
   context = await chromium.launchPersistentContext('', {
     headless: false,
-    slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO) : undefined,
+    slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO, 10) : undefined,
     args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`, '--no-sandbox'],
   });
 
@@ -82,7 +82,7 @@ test.describe('Popup Layout', () => {
   test('popup body is 800x600', async () => {
     const size = await page.evaluate(() => {
       const style = window.getComputedStyle(document.body);
-      return { width: parseInt(style.width), height: parseInt(style.height) };
+      return { width: parseInt(style.width, 10), height: parseInt(style.height, 10) };
     });
     expect(size.width).toBe(800);
     expect(size.height).toBe(600);

@@ -418,7 +418,7 @@ export const createEnvironmentChangeEffect =
           .then(() => {
             // Re-validation completed successfully
           })
-          .catch((errorInfo) => {
+          .catch((_errorInfo) => {
             // Re-validation found errors
           });
       }
@@ -571,7 +571,7 @@ export const createImperativeHandleMethods = ({
         .then(() => {
           // Validation passed for all fields
         })
-        .catch((errorInfo) => {
+        .catch((_errorInfo) => {
           // Validation errors found
         });
     } else {

@@ -10,6 +10,7 @@ import url from 'node:url';
  * - `192.168.1.1:8080`     — IP with optional port
  * - `*://example.com/*`    — full URL wildcard pattern
  */
+// biome-ignore lint/complexity/noStaticOnlyClass: used as a namespace for domain matching utilities
 class DomainMatcher {
   /**
    * Check if a URL matches a domain pattern.

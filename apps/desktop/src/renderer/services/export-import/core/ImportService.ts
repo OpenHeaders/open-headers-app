@@ -173,7 +173,7 @@ export class ImportService {
    * @returns {Promise<Object>} - Combined import statistics
    * @private
    */
-  async _importAllDataTypes(importData: ImportData, envData: ImportData | null, importOptions: ImportOptions) {
+  async _importAllDataTypes(importData: ImportData, _envData: ImportData | null, importOptions: ImportOptions) {
     const { selectedItems } = importOptions;
 
     const allStats: ImportStats = {

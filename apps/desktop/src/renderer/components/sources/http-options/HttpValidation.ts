@@ -176,7 +176,7 @@ export const resolveAllVariables = (text: string, envContext: EnvironmentContext
  *   { validator: (rule, value) => validateUrlField(rule, value, envContext, form) }
  * ]
  */
-export const validateUrlField = (rule: unknown, value: string, envContext: EnvironmentContext, form: FormInstance) => {
+export const validateUrlField = (_rule: unknown, value: string, envContext: EnvironmentContext, form: FormInstance) => {
   if (!value) return Promise.resolve();
 
   const result = validateVariableExists(value, envContext, form);
@@ -357,7 +357,7 @@ export const validateJsonFilterPath = (
  */
 export const validateAllHttpFields = (
   form: FormInstance,
-  values: HttpFormValues,
+  _values: HttpFormValues,
   envContext: EnvironmentContext,
 ): ValidationError | null => {
   // Validate headers

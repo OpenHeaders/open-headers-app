@@ -279,7 +279,7 @@ const RecordNetworkTab = ({ record, viewMode, activeTime, autoHighlight = false 
       filteredValue: networkFilters.type,
       onFilter: (value: boolean | React.Key, filterRecord: NetworkRecord) =>
         getTypeFromRecord(filterRecord) === String(value),
-      render: (type: string, networkRecord: NetworkRecord) => (
+      render: (_type: string, networkRecord: NetworkRecord) => (
         <Text style={{ fontSize: '12px' }}>{getTypeFromRecord(networkRecord)}</Text>
       ),
     },

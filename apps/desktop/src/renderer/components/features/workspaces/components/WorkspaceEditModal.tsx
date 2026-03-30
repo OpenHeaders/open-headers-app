@@ -356,8 +356,7 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
 
   const renderGitConfigSection = () => {
     return (
-      <>
-        <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: 12 }}>Git Repository Configuration</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '12px', marginBottom: 16 }}>
@@ -447,7 +446,6 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
 
           <AuthenticationForm authType={authType} sshKeySource={sshKeySource} onBrowseSSHKey={handleBrowseSSHKey} />
         </div>
-      </>
     );
   };
 

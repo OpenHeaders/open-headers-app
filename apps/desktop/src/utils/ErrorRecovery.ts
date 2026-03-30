@@ -232,7 +232,7 @@ class ErrorRecovery {
    */
   async handleRateLimitError(
     error: Error & { retryAfter?: number },
-    context: RecoveryContext,
+    _context: RecoveryContext,
     retryFn: RetryFn,
   ): Promise<unknown> {
     // Extract retry-after header if available
@@ -279,7 +279,7 @@ class ErrorRecovery {
   /**
    * Handle resource exhausted errors
    */
-  async handleResourceError(error: Error, context: RecoveryContext, retryFn: RetryFn): Promise<unknown> {
+  async handleResourceError(error: Error, _context: RecoveryContext, retryFn: RetryFn): Promise<unknown> {
     // Attempt to free resources
     if (global.gc) {
       global.gc();

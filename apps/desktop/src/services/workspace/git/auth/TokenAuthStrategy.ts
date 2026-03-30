@@ -94,8 +94,6 @@ class TokenAuthStrategy {
           urlObj.username = 'token';
           urlObj.password = token;
           break;
-
-        case 'generic':
         default:
           // Generic: use token as password
           urlObj.username = 'token';

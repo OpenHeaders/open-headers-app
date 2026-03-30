@@ -633,6 +633,7 @@ describe('NetworkService', () => {
 
     it('skips offline state change during initial check', () => {
       // Simulate initial check in progress
+      // biome-ignore lint/complexity/useLiteralKeys: bracket notation needed to access private property in tests
       svc['_doingInitialCheck'] = true;
       svc.isInitialized = false;
       svc.updateState({ isOnline: false });

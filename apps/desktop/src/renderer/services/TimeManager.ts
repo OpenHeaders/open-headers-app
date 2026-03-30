@@ -192,7 +192,7 @@ class TimeManager {
     const monotonic = this.getMonotonicTime();
 
     // Get timezone info from system instead of cached JavaScript runtime
-    let currentTimezone, currentOffset;
+    let currentTimezone: string, currentOffset: number;
     if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getSystemTimezone) {
       try {
         const systemTz = await window.electronAPI.getSystemTimezone();
@@ -363,7 +363,7 @@ class TimeManager {
    */
   async getCurrentTimeInfo() {
     const now = this.now();
-    let timezone, offset;
+    let timezone: string, offset: number;
 
     // Try to get system timezone first
     if (typeof window !== 'undefined' && window.electronAPI && window.electronAPI.getSystemTimezone) {

@@ -72,7 +72,7 @@ const LOG_LEVEL_OPTIONS: Array<{ value: LogLevel; label: React.ReactNode }> = [
 
 const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
   const { isConnected, isStatusLoaded } = useHeader();
-  const { isDarkMode, themeMode, setThemeMode, isCompactMode, toggleCompactMode } = useTheme();
+  const { themeMode, setThemeMode, isCompactMode, toggleCompactMode } = useTheme();
   const [logLevel, setLogLevel] = useState<LogLevel>(logger.getLevel());
 
   useEffect(() => {
@@ -186,6 +186,8 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
     {
       key: 'logLevel',
       label: (
+        // biome-ignore lint/a11y/noStaticElementInteractions: stopPropagation prevents menu close
+        // biome-ignore lint/a11y/useKeyWithClickEvents: not a true interactive element
         <div
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minWidth: '200px' }}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}

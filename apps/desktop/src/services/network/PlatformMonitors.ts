@@ -76,7 +76,7 @@ class BasePlatformMonitor extends EventEmitter {
       const childProcess = exec(
         `${command} ${args.join(' ')}`,
         { timeout: timeoutMs, windowsHide: true },
-        (error, stdout, stderr) => {
+        (error, stdout, _stderr) => {
           if (error) {
             // If timeout, force kill the process
             if (error.killed) {

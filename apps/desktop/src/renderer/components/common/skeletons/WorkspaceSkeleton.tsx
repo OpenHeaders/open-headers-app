@@ -16,8 +16,7 @@ export const SourceListSkeleton = () => (
       <Skeleton.Button size="small" />
     </div>
     <Space direction="vertical" style={{ width: '100%' }} size="small">
-      <>
-        {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4].map((i) => (
           <div key={i} className="skeleton-item">
             <Skeleton.Avatar size="default" />
             <div className="skeleton-content">
@@ -30,7 +29,6 @@ export const SourceListSkeleton = () => (
             </div>
           </div>
         ))}
-      </>
     </Space>
   </Card>
 );
@@ -43,7 +41,7 @@ export const ProxyRulesSkeleton = () => (
     </div>
     <div className="skeleton-table">
       <div className="skeleton-table-header">
-        {['Rule Name', 'Domains', 'Header', 'Actions'].map((col, i) => (
+        {['Rule Name', 'Domains', 'Header', 'Actions'].map((_col, i) => (
           <Skeleton.Input key={i} style={{ width: '100%', height: 16 }} active />
         ))}
       </div>
@@ -95,7 +93,7 @@ export const RecordViewerSkeleton = () => (
     <div className="skeleton-header">
       <Skeleton.Input style={{ width: 180, height: 24 }} active />
       <div className="skeleton-tabs">
-        {['Network', 'Console', 'Storage'].map((tab, i) => (
+        {['Network', 'Console', 'Storage'].map((_tab, i) => (
           <Skeleton.Button key={i} size="small" />
         ))}
       </div>

@@ -47,6 +47,7 @@ function compileAndCachePattern(pattern: string): void {
 
   // Handle IDN in patterns
   try {
+    // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — detecting non-ASCII for IDN normalization
     if (/[^\x00-\x7F]/.test(urlFilter)) {
       const patternUrl = new URL(urlFilter.includes('://') ? urlFilter : `http://${urlFilter}`);
       urlFilter = patternUrl.hostname.toLowerCase();

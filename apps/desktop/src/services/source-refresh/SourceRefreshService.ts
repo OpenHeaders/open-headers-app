@@ -532,12 +532,12 @@ class SourceRefreshService {
   private parseInterval(interval: string | number | undefined | null): number | null {
     if (!interval || interval === 'never') return null;
     if (typeof interval === 'number') {
-      if (!isFinite(interval) || interval <= 0 || interval > 1440) return null;
+      if (!Number.isFinite(interval) || interval <= 0 || interval > 1440) return null;
       return interval * 60 * 1000;
     }
     const match = interval.toString().match(/^(\d+)\s*(second|minute|hour|day)s?$/i);
     if (!match) return null;
-    const value = parseInt(match[1]);
+    const value = parseInt(match[1], 10);
     const unit = match[2].toLowerCase();
     const multipliers: Record<string, number> = { second: 1000, minute: 60000, hour: 3600000, day: 86400000 };
     return value * multipliers[unit];

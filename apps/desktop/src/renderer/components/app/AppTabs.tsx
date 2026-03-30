@@ -98,7 +98,7 @@ export function AppTabs({
     {
       key: 'record-viewer',
       label: (
-        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handleWorkflowsTabClick}>
+        <span role="button" tabIndex={0} style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={handleWorkflowsTabClick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleWorkflowsTabClick(); }}>
           <PlayCircleOutlined />
           Workflows
         </span>

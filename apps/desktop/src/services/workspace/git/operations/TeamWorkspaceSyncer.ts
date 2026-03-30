@@ -617,7 +617,7 @@ class TeamWorkspaceSyncer {
   async getCommitCount(repoDir: string, range: string): Promise<number> {
     try {
       const { stdout } = await this.executor.execute(`rev-list --count ${range}`, { cwd: repoDir });
-      return parseInt(stdout.trim()) || 0;
+      return parseInt(stdout.trim(), 10) || 0;
     } catch (_error) {
       return 0;
     }
@@ -727,7 +727,7 @@ class TeamWorkspaceSyncer {
       const { stdout } = await this.executor.execute('log -1 --grep="sync" --pretty=format:"%at"', { cwd: repoDir });
 
       if (stdout.trim()) {
-        return new Date(parseInt(stdout.trim()) * 1000);
+        return new Date(parseInt(stdout.trim(), 10) * 1000);
       }
 
       return null;

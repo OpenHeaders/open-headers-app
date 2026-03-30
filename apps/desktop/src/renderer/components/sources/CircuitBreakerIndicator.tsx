@@ -37,7 +37,7 @@ const CircuitBreakerIndicator = ({ circuitBreaker, showDetails = true }: Circuit
     return null;
   }
 
-  const { state, isOpen, timeUntilNextAttempt, consecutiveOpenings, failureCount } = circuitBreaker;
+  const { state, timeUntilNextAttempt, consecutiveOpenings, failureCount } = circuitBreaker;
 
   // Don't show indicator for closed circuit with no failures
   if (state === 'CLOSED' && failureCount === 0) {

@@ -37,7 +37,7 @@ const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: Sto
   };
 
   const handleCopyOldValue = () => {
-    let textToCopy;
+    let textToCopy: string;
     if (
       selectedEntry.action === 'clear' &&
       typeof selectedEntry.oldValue === 'object' &&

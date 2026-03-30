@@ -293,7 +293,7 @@ function validateConfigStructure(data: ConfigData) {
  * @param {string} filePath - Expected file path in repository
  * @returns {Object} Validation result
  */
-async function validateGitWorkspaceConfig(content: string, filePath: string) {
+async function validateGitWorkspaceConfig(content: string, _filePath: string) {
   try {
     // First, use the standard config validation
     const validationResult = await analyzeConfigFile(content, false, false);

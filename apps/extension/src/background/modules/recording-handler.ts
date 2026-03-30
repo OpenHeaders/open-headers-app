@@ -22,7 +22,7 @@ export function handleRecordingMessage(
   sendResponse: SendResponse,
   recordingService: IRecordingService,
   sendRecordingViaWebSocket: (recording: unknown) => boolean,
-): boolean | void {
+): boolean | undefined {
   // Handle record recording messages
   if (
     message.type &&

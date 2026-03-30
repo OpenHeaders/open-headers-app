@@ -43,7 +43,7 @@ export const parseHeaderValue = (headerValue: string | undefined, mode: string):
 
 // Build cookie value string
 const buildCookieValue = (values: HeaderFormValues, isDynamic = false) => {
-  let cookieString;
+  let cookieString: string;
 
   // Build name=value part
   if (isDynamic && values.sourceId) {
@@ -69,7 +69,7 @@ const buildCookieValue = (values: HeaderFormValues, isDynamic = false) => {
     } else if (values.expirationMode === 'expires' && values.expires) {
       // Convert the date to UTC string
       // Handle both dayjs objects and string/date values
-      let expiresDate;
+      let expiresDate: string;
       const expiresVal = values.expires as { toDate?: () => Date } | string | Date;
       if (typeof expiresVal === 'object' && 'toDate' in expiresVal && typeof expiresVal.toDate === 'function') {
         // It's a dayjs object
@@ -128,7 +128,7 @@ const parseCookieValue = (cookieString: string | undefined): ParsedCookieValue =
     else if (lowerKey === 'secure') result.secure = true;
     else if (lowerKey === 'httponly') result.httpOnly = true;
     else if (lowerKey === 'max-age') {
-      result.maxAge = parseInt(val);
+      result.maxAge = parseInt(val, 10);
       result.expirationMode = 'maxAge';
     } else if (lowerKey === 'expires') {
       result.expires = val;

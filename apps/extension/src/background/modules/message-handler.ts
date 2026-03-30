@@ -36,7 +36,7 @@ export function handleGeneralMessage(
   _sender: chrome.runtime.MessageSender,
   sendResponse: SendResponse,
   ctx: MessageHandlerContext,
-): boolean | void {
+): boolean | undefined {
   const safeResponse = createSafeResponse(sendResponse);
 
   const {

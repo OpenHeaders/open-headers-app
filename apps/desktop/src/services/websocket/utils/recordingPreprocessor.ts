@@ -264,6 +264,7 @@ function collectResourcesFromSnapshot(snapshot: Snapshot, resourceMap: Map<strin
         if (child.textContent) {
           const linkRegex = /<link[^>]+href=["']([^"']+)["']/gi;
           let match: RegExpExecArray | null;
+          // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
           while ((match = linkRegex.exec(child.textContent!)) !== null) {
             const matchedUrl = match[1];
             if (!matchedUrl.startsWith('data:')) {
@@ -296,6 +297,7 @@ function collectResourcesFromSnapshot(snapshot: Snapshot, resourceMap: Map<strin
 function collectResourcesFromCss(cssText: string, resourceMap: Map<string, string[]>, baseUrl: string): void {
   const fontFaceRegex = /url\s*\(\s*["']?([^"')]+\.(woff2?|otf|ttf|eot)[^"')]*)["']?\s*\)/gi;
   let match: RegExpExecArray | null;
+  // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
   while ((match = fontFaceRegex.exec(cssText)) !== null) {
     const fontUrl = match[1].trim();
     if (!fontUrl.startsWith('data:')) {
@@ -749,6 +751,7 @@ function preprocessSnapshot(
         if (child.textContent) {
           const linkRegex = /<link[^>]+rel=["']stylesheet["'][^>]+href=["']([^"']+)["']/gi;
           let match: RegExpExecArray | null;
+          // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
           while ((match = linkRegex.exec(child.textContent!)) !== null) {
             const styleUrl = match[1];
             if (styleUrl.startsWith('http')) {
@@ -926,6 +929,7 @@ function extractFontUrlsFromCss(
 ): void {
   const fontFaceRegex = /url\s*\(\s*["']?([^"')]+\.(woff2?|otf|ttf|eot)[^"')]*)["']?\s*\)/gi;
   let match: RegExpExecArray | null;
+  // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
   while ((match = fontFaceRegex.exec(cssText)) !== null) {
     const fontUrl = match[1].trim();
 

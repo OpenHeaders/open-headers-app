@@ -57,7 +57,7 @@ export function consumeRestartHiddenFlag(): boolean {
     }
 
     const timestamp = parseInt(content, 10);
-    if (isNaN(timestamp)) {
+    if (Number.isNaN(timestamp)) {
       log.warn('Stale .restart-hidden flag (invalid content), ignoring');
       return false;
     }

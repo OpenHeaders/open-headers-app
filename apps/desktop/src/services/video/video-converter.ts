@@ -40,7 +40,7 @@ interface VideoFormatInfo {
  * Parse a HH:MM:SS duration string into total seconds
  */
 function parseDuration(hours: string, minutes: string, seconds: string): number {
-  return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
+  return parseInt(hours, 10) * 3600 + parseInt(minutes, 10) * 60 + parseInt(seconds, 10);
 }
 
 /**

@@ -103,7 +103,7 @@ export const createNameColumn = () => ({
 const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; headerRules: HeaderRule[] }) => {
   const envContext = useEnvironments();
 
-  let domains;
+  let domains: string[] | undefined;
   let hasEnvVars = false;
 
   if (record.headerRuleId) {
@@ -193,7 +193,15 @@ const HeaderColumnContent = ({
   const envContext = useEnvironments();
   const { isWaiting } = useProxyRuleActivation(record, headerRules);
 
-  let headerInfo;
+  let headerInfo: {
+    name: string | undefined;
+    isDynamic: boolean | undefined;
+    value: string | undefined;
+    sourceId: string | number | null | undefined;
+    prefix: string | undefined;
+    suffix: string | undefined;
+    hasEnvVars: boolean | undefined;
+  };
   if (record.headerRuleId) {
     // Reference to existing header rule
     const headerRule = getHeaderRuleInfo(record.headerRuleId, headerRules);

@@ -16,7 +16,7 @@ type MessageContent = React.ReactNode;
 type ShowMessageFn = (type: MessageType, content: MessageContent, duration?: number) => void;
 
 // These functions will be used outside of React components
-let globalShowMessage: ShowMessageFn = (type: MessageType, content: MessageContent, duration?: number) => {
+let globalShowMessage: ShowMessageFn = (type: MessageType, content: MessageContent, _duration?: number) => {
   log.debug(`Message API not initialized yet: ${type} - ${String(content)}`);
   // Default implementation that just logs
   log.debug(`This message will not be displayed to user: ${String(content)}`);
@@ -47,7 +47,7 @@ export const MessageInitializer = () => {
     initializeMessageApi(showMessage);
     return () => {
       // Reset to default implementation when component unmounts
-      globalShowMessage = (type: MessageType, content: MessageContent, duration?: number) => {
+      globalShowMessage = (type: MessageType, content: MessageContent, _duration?: number) => {
         log.debug(`Message API reset: ${type} - ${content}`);
       };
     };

@@ -382,8 +382,8 @@ class ConnectionTester {
    * Check for configuration files in repository
    */
   async checkConfigFiles(
-    url: string,
-    branch: string,
+    _url: string,
+    _branch: string,
     configDir?: string,
   ): Promise<{
     hasConfig: boolean | null;

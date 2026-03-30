@@ -29,7 +29,7 @@ const NetworkResponseTab = ({ request, token }: NetworkResponseTabProps) => {
     );
   }
 
-  let formattedResponse;
+  let formattedResponse: string;
   const contentType = request.responseHeaders?.['content-type'] || '';
 
   try {

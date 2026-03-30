@@ -101,7 +101,8 @@ const CliServerControls = ({
     const regex =
       /\b(curl)\b|(\\)\n|(-[HXd])\b|\b(GET|POST|PUT|DELETE|PATCH)\b|(https?:\/\/\S+)|("(?:[^"\\]|\\.)*")\s*:|("(?:[^"\\]|\\.)*")|\b(true|false|null)\b|([{}[\]])|(')/gm;
     let last = 0;
-    let match;
+    let match: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
     while ((match = regex.exec(cmd)) !== null) {
       if (match.index > last) result.push(cmd.slice(last, match.index));
       if (match[1])
@@ -140,7 +141,8 @@ const CliServerControls = ({
     const regex =
       /\b(Invoke-RestMethod|ConvertTo-Json)\b|(`)\n|(-[A-Za-z]+)\b|(\$\w+)|(https?:\/\/\S+)|("(?:[^"\\]|\\.)*")\s*=|("(?:[^"\\]|\\.)*")|\b(POST|GET|PUT|DELETE|PATCH)\b|(@\{|[{}|;])/gm;
     let last = 0;
-    let match;
+    let match: RegExpExecArray | null;
+    // biome-ignore lint/suspicious/noAssignInExpressions: idiomatic regex.exec() loop
     while ((match = regex.exec(cmd)) !== null) {
       if (match.index > last) result.push(cmd.slice(last, match.index));
       if (match[1])
@@ -193,6 +195,7 @@ const CliServerControls = ({
           {(shellType === 'powershell' ? highlightPs : highlightCmd)(cmd)}
         </pre>
         <button
+          type="button"
           onClick={handleCopy}
           style={{
             display: 'flex',

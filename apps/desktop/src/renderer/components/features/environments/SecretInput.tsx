@@ -100,6 +100,8 @@ const SecretInput = forwardRef<TextAreaRef, SecretInputProps>(
           {...restProps}
         />
         <span
+          role="button"
+          tabIndex={0}
           style={{
             position: 'absolute',
             right: '8px',
@@ -109,6 +111,7 @@ const SecretInput = forwardRef<TextAreaRef, SecretInputProps>(
             zIndex: 1,
           }}
           onClick={toggleVisibility}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleVisibility(); }}
         >
           {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
         </span>

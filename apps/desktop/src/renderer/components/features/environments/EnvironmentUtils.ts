@@ -180,7 +180,7 @@ export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
  * @returns {Array} Array of formatted source info
  */
 export const formatVariableUsage = (
-  varName: string,
+  _varName: string,
   sourceIds: string[],
   sources: Source[],
   rules: RulesConfig | null = null,

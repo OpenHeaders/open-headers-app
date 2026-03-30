@@ -334,9 +334,9 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
           />
 
           <div
-            ref={inputRef}
+            role="textbox"
             tabIndex={0}
-            autoFocus
+            ref={inputRef}
             onKeyDown={handleKeyDown}
             onKeyUp={handleKeyUp}
             style={{

@@ -128,6 +128,7 @@ export function validateHeaderValue(value: string, headerName = ''): HeaderValue
     return { valid: false, message: 'Header value cannot contain line breaks' };
   }
 
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — RFC 7230 header value validation
   if (/[\x00-\x08\x0A-\x1F\x7F]/.test(value)) {
     return { valid: false, message: 'Header value contains invalid control characters' };
   }
@@ -157,6 +158,7 @@ export function sanitizeHeaderValue(value: string): string {
 
   let sanitized = String(value);
   sanitized = sanitized.replace(/\0/g, '');
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — stripping control characters from header values
   sanitized = sanitized.replace(/[\x00-\x08\x0A-\x1F\x7F]/g, '');
   sanitized = sanitized.replace(/[\r\n]+/g, ' ');
   sanitized = sanitized.trim();

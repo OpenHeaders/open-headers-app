@@ -25,7 +25,7 @@ const EnvVarInfo = ({
             if (!validation?.hasVars) return null;
 
             // Determine field label based on mode and field name
-            let fieldLabel;
+            let fieldLabel: string;
             if (mode === 'cookie') {
               if (field === 'cookieName') fieldLabel = 'Cookie name';
               else if (field === 'cookieValue') fieldLabel = 'Cookie value';

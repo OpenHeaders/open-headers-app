@@ -262,7 +262,7 @@ class GitSyncService {
             log.warn('Failed to check branch existence, will try to clone anyway:', error);
           }
 
-          let cloneResult;
+          let cloneResult: { success: boolean; error?: string };
           if (needsNewBranch) {
             log.info(`Branch '${targetBranch}' not found, cloning default branch`);
             cloneResult = await this.repositoryManager!.cloneRepository({

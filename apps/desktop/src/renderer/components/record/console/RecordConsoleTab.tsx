@@ -12,7 +12,7 @@
  */
 
 import { ClearOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons';
-import { App, Button, Empty, Table, Tag, Tooltip, Typography, theme } from 'antd';
+import { App, Button, Empty, Table, Tag, Tooltip, Typography } from 'antd';
 import type { FilterValue } from 'antd/es/table/interface';
 import type React from 'react';
 import { useState } from 'react';
@@ -35,7 +35,6 @@ interface RecordConsoleTabProps {
 }
 
 const RecordConsoleTab = ({ record, viewMode, activeTime, autoHighlight = false }: RecordConsoleTabProps) => {
-  const { token } = theme.useToken();
   const { message: messageApi } = App.useApp();
 
   // Modal state

@@ -71,6 +71,7 @@ const VideoPlayerContainer = ({
           <Spin />
         </div>
       )}
+      {/* biome-ignore lint/a11y/useMediaCaption: screen recording playback — no spoken content to caption */}
       <video
         ref={videoRef}
         controls

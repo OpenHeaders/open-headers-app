@@ -79,7 +79,7 @@ describe('AtomicFileWriter', () => {
         order.push(n);
       });
 
-      const promises = ops.map((op, i) => writer.queueWrite('/tmp/openheaders-triple.json', op));
+      const promises = ops.map((op, _i) => writer.queueWrite('/tmp/openheaders-triple.json', op));
 
       await Promise.all(promises);
       expect(order).toEqual([1, 2, 3]);

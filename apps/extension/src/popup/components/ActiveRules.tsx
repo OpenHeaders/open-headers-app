@@ -10,7 +10,7 @@ import { Alert, Divider, Empty, Space, Spin, Table, Tag, Tooltip, Typography } f
 import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import { useHeader } from '../../hooks/useHeader';
+
 
 declare const browser: typeof chrome | undefined;
 
@@ -40,7 +40,6 @@ interface TableRecord extends ActiveRule {
 }
 
 const ActiveRules: React.FC = () => {
-  const { isConnected } = useHeader();
   const [currentTab, setCurrentTab] = useState<CurrentTabInfo | null>(null);
   const [activeRules, setActiveRules] = useState<ActiveRule[]>([]);
   const [loading, setLoading] = useState(true);

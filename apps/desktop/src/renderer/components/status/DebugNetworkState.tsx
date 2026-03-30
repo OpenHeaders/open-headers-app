@@ -96,7 +96,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
 
   return (
     <>
-      <div style={style} onClick={() => setIsExpanded(!isExpanded)}>
+      <div role="button" tabIndex={0} style={style} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }}>
         Network:{' '}
         {networkState?.isOnline ? (
           <span style={{ color: '#52c41a' }}>Online</span>
@@ -125,6 +125,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <h4 style={{ margin: 0 }}>Debug: Network State</h4>
             <button
+              type="button"
               style={{
                 background: 'none',
                 border: 'none',

@@ -14,7 +14,7 @@ interface ImportFileSelectorProps {
   analyzing: boolean;
   fileData: FileDataItem | null;
   envFileData: FileDataItem | null;
-  onFileSelect: (file: File, isEnvFile?: boolean) => boolean | void | Promise<boolean>;
+  onFileSelect: (file: File, isEnvFile?: boolean) => boolean | undefined | Promise<boolean>;
   onFileRemove: () => void;
   onEnvFileRemove: () => void;
   fileError: string | null;

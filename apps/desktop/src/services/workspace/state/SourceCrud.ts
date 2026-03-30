@@ -30,7 +30,7 @@ export async function addSource(ctx: StateContext, sourceData: Source): Promise<
   }
 
   const maxId = ctx.state.sources.reduce((max, src) => {
-    const id = parseInt(src.sourceId ?? '0');
+    const id = parseInt(src.sourceId ?? '0', 10);
     return id > max ? id : max;
   }, 0);
 

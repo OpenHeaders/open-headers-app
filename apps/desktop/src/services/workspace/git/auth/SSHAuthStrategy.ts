@@ -170,7 +170,7 @@ class SSHAuthStrategy {
   /**
    * Create askpass script for SSH passphrase
    */
-  createAskpassScript(passphrase: string): string {
+  createAskpassScript(_passphrase: string): string {
     // This is a placeholder - in production, you'd create a proper script
     // that returns the passphrase when called
     log.warn('SSH passphrase support not fully implemented');

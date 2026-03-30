@@ -61,7 +61,7 @@ export const DebugWorkspaceSync = ({ inFooter = false }: { inFooter?: boolean })
 
   return (
     <>
-      <div style={style} onClick={() => setIsExpanded(!isExpanded)}>
+      <div role="button" tabIndex={0} style={style} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }}>
         Workspaces ({teamWorkspaces.length})
       </div>
 
@@ -85,6 +85,7 @@ export const DebugWorkspaceSync = ({ inFooter = false }: { inFooter?: boolean })
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ margin: 0 }}>Debug: Workspace Sync</h4>
             <button
+              type="button"
               style={{
                 background: 'none',
                 border: 'none',

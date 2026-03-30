@@ -264,7 +264,7 @@ class GitRepositoryManager {
         env,
       });
 
-      const behind = parseInt(status.trim()) || 0;
+      const behind = parseInt(status.trim(), 10) || 0;
 
       if (behind === 0) {
         log.info('Already up to date');
@@ -332,7 +332,7 @@ class GitRepositoryManager {
             cwd: repoDir,
             env,
           });
-          unpushedCount = parseInt(unpushed.trim()) || 0;
+          unpushedCount = parseInt(unpushed.trim(), 10) || 0;
 
           if (unpushedCount === 0 && !force) {
             log.info('No changes to push');
@@ -352,7 +352,7 @@ class GitRepositoryManager {
         // For new branches, count all commits
         try {
           const { stdout: allCommits } = await this.executor.execute(`rev-list HEAD --count`, { cwd: repoDir, env });
-          unpushedCount = parseInt(allCommits.trim()) || 1;
+          unpushedCount = parseInt(allCommits.trim(), 10) || 1;
         } catch (_error) {
           unpushedCount = 1; // Default to 1
         }
@@ -433,7 +433,7 @@ class GitRepositoryManager {
           hash,
           author,
           email,
-          date: new Date(parseInt(timestamp) * 1000),
+          date: new Date(parseInt(timestamp, 10) * 1000),
           message,
         },
       };

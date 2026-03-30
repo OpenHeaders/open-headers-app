@@ -264,7 +264,6 @@ const HeaderRules = () => {
     }
 
     // Build the actual value with prefix/suffix
-    let actualValue: string;
     let prefix = rule.prefix || '';
     let suffix = rule.suffix || '';
 
@@ -281,7 +280,7 @@ const HeaderRules = () => {
       }
     }
 
-    actualValue = `${prefix}${content}${suffix}`;
+    const actualValue = `${prefix}${content}${suffix}`;
 
     const sourceType = source.sourceType || '';
     const sourcePath = source.sourcePath || '';

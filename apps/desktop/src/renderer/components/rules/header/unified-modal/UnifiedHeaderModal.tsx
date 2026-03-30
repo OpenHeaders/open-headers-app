@@ -231,7 +231,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
         return;
       }
 
-      let ruleData;
+      let ruleData: HeaderRuleFormValues;
 
       if (mode === 'cookie') {
         // Build cookie header value

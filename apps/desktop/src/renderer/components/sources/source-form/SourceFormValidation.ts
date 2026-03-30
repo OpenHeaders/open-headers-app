@@ -57,7 +57,7 @@ interface SourceFormValues {
  * validation.catch(error => console.log(error.message));
  */
 export const validateUrlField = (
-  rule: unknown,
+  _rule: unknown,
   value: string,
   sourceType: string,
   envContext: EnvironmentContext,

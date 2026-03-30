@@ -474,7 +474,7 @@ class CommitManager {
           hash,
           author,
           email,
-          date: new Date(parseInt(timestamp) * 1000),
+          date: new Date(parseInt(timestamp, 10) * 1000),
           message,
         });
       }

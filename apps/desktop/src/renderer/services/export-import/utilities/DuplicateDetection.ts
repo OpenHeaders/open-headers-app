@@ -26,11 +26,6 @@ interface ImportHeader {
   suffix?: string;
 }
 
-interface ImportProxyRule {
-  pattern?: string;
-  headers?: ImportHeader[];
-}
-
 interface ImportRule {
   id?: string;
   name?: string;

@@ -8,7 +8,7 @@ import * as tar from 'tar';
 import { errorMessage as errMsg } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
 
-const { app, dialog } = electron;
+const { app } = electron;
 const { exec } = child_process;
 const { createLogger } = mainLogger;
 

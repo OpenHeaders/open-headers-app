@@ -33,7 +33,7 @@ const WorkspaceStatus = () => {
   // Build menu items for workspace dropdown
   const menuItems = workspaces.map((workspace) => {
     const isActive = workspace.id === activeWorkspaceId;
-    const wsIcon = workspace.type === 'git' ? <TeamOutlined /> : <UserOutlined />;
+    const wsIcon = workspace.type === 'git' ? <TeamOutlined key="icon" /> : <UserOutlined key="icon" />;
     const wsSyncInfo = syncStatus[workspace.id];
     const hasError = wsSyncInfo?.error;
 

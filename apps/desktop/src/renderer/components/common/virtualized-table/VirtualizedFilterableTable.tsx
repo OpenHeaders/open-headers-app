@@ -161,6 +161,8 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
 
         return (
           <div
+            role="row"
+            tabIndex={0}
             style={{
               ...style,
               display: 'flex',
@@ -170,6 +172,7 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
             }}
             className={`virtual-table-row ${className} ${rowProps.className || ''}`}
             onClick={rowProps.onClick}
+            onKeyDown={(e) => { if (e.key === 'Enter' && rowProps.onClick) rowProps.onClick(e as unknown as React.MouseEvent<HTMLDivElement>); }}
             onDoubleClick={rowProps.onDoubleClick}
           >
             {/* Selection radio/checkbox */}
@@ -264,7 +267,7 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
                 onChange={(e) => {
                   const checked = e.target.checked;
                   if (checked) {
-                    const allKeys = processedData.map((item, index) => index);
+                    const allKeys = processedData.map((_item, index) => index);
                     rowSelection.onChange?.(allKeys, processedData);
                   } else {
                     rowSelection.onChange?.([], []);

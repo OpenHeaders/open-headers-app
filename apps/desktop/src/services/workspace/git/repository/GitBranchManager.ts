@@ -258,7 +258,7 @@ class GitBranchManager {
           const [a, b] = counts
             .trim()
             .split('\t')
-            .map((n) => parseInt(n) || 0);
+            .map((n) => parseInt(n, 10) || 0);
           ahead = a;
           behind = b;
         } catch (_error) {
@@ -272,7 +272,7 @@ class GitBranchManager {
           hash,
           author,
           email,
-          date: new Date(parseInt(timestamp) * 1000),
+          date: new Date(parseInt(timestamp, 10) * 1000),
           message,
         },
         upstream,

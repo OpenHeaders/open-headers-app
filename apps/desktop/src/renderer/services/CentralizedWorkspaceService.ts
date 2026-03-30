@@ -252,7 +252,7 @@ class CentralizedWorkspaceService {
 
   // ── Workspace data operations (IPC forwards) ───────────────
 
-  async loadWorkspaceData(workspaceId: string): Promise<void> {
+  async loadWorkspaceData(_workspaceId: string): Promise<void> {
     // Main process handles this — just re-hydrate state
     const state = await window.electronAPI.workspaceState.getState();
     const changedKeys: string[] = [];

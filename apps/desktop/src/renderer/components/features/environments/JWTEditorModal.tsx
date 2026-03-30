@@ -141,7 +141,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
    */
   const updateEncodedToken = async (headerObj: JsonObject, payloadObj: JsonObject) => {
     try {
-      let newToken;
+      let newToken: string;
 
       if (useSecretKey && secretKey) {
         // Sign with the provided secret

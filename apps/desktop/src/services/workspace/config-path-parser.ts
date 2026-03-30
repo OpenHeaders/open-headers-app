@@ -182,8 +182,6 @@ function getSearchPatterns(parsedPath: ParsedPath): SearchPatterns {
         envFiles: [parsedPath.multiFileEnv],
         exactMatch: false,
       };
-
-    case 'single':
     default:
       return {
         configFiles: [parsedPath.primaryPath],
@@ -219,8 +217,6 @@ function getPathErrorMessage(parsedPath: ParsedPath, foundFiles: string[] = []):
         message += `\n\nFound these JSON files: ${jsonFiles.join(', ')}`;
       }
       break;
-
-    case 'single':
     default:
       message += `File not found: ${parsedPath.primaryPath}`;
       if (jsonFiles.length > 0) {

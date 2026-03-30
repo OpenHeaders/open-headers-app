@@ -662,8 +662,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
           const workspaceType = getFieldValue('type');
           if (editingWorkspace || workspaceType === 'team') {
             return (
-              <>
-                <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 16 }}>
                   <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: 12 }}>
                     Git Repository Configuration
                   </div>
@@ -785,7 +784,6 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
                     </>
                   )}
                 </div>
-              </>
             );
           }
           return null;

@@ -38,7 +38,7 @@ export const DebugSourceInfo = ({ inFooter = false }: { inFooter?: boolean }) =>
 
   return (
     <>
-      <div style={style} onClick={() => setIsExpanded(!isExpanded)}>
+      <div role="button" tabIndex={0} style={style} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }}>
         HTTP Sources ({httpSources.length})
       </div>
 
@@ -62,6 +62,7 @@ export const DebugSourceInfo = ({ inFooter = false }: { inFooter?: boolean }) =>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h4 style={{ margin: 0 }}>Debug: HTTP Sources</h4>
             <button
+              type="button"
               style={{
                 background: 'none',
                 border: 'none',

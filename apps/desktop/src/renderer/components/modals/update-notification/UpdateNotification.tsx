@@ -30,7 +30,7 @@ const _log = createLogger('UpdateNotification');
  * @param {Object} props - Component props (unused)
  * @param {Object} ref - Forward ref for imperative API
  */
-const UpdateNotification = forwardRef((props, ref) => {
+const UpdateNotification = forwardRef((_props, ref) => {
   const { notification, modal } = App.useApp();
   const { token } = theme.useToken();
 
@@ -64,7 +64,7 @@ const UpdateNotification = forwardRef((props, ref) => {
    * @param {string} message - Log message
    * @param {*} data - Optional data to log
    */
-  const debugLog = (message: string, data = null) => {
+  const debugLog = (_message: string, _data = null) => {
     // No-op: debug logging disabled for update notifications
   };
 
