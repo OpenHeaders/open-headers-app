@@ -22,9 +22,9 @@ interface TableRecord {
 
 /**
  * Create a standard timestamp column configuration
- * @param {Function} timestampRenderer - Custom renderer for timestamp cell
- * @param {number} width - Column width
- * @returns {Object} Column configuration
+ *  timestampRenderer - Custom renderer for timestamp cell
+ *  width - Column width
+ *  Column configuration
  */
 export const createTimestampColumn = (timestampRenderer: (value: number) => React.ReactNode, width = 120) => ({
   title: 'Timestamp',
@@ -38,12 +38,12 @@ export const createTimestampColumn = (timestampRenderer: (value: number) => Reac
 
 /**
  * Create a search-enabled column header with search button
- * @param {string} title - Column title
- * @param {boolean} isSearchActive - Whether search is currently active
- * @param {Function} onSearchToggle - Handler for search toggle
- * @param {string} searchTooltip - Tooltip text for search button
- * @param {Object} token - Ant Design theme token
- * @returns {JSX.Element} Column header with search button
+ *  title - Column title
+ *  isSearchActive - Whether search is currently active
+ *  onSearchToggle - Handler for search toggle
+ *  searchTooltip - Tooltip text for search button
+ *  token - Ant Design theme token
+ *  Column header with search button
  */
 export const createSearchableColumnHeader = (
   title: string,
@@ -78,12 +78,12 @@ export const createSearchableColumnHeader = (
 
 /**
  * Create standard table props with common configurations
- * @param {Array} dataSource - Table data
- * @param {Array} columns - Table columns
- * @param {Function} onTableChange - Table change handler
- * @param {Function} rowClassNameGenerator - Function to generate row CSS classes
- * @param {Object} additionalProps - Additional table props
- * @returns {Object} Complete table props
+ *  dataSource - Table data
+ *  columns - Table columns
+ *  onTableChange - Table change handler
+ *  rowClassNameGenerator - Function to generate row CSS classes
+ *  additionalProps - Additional table props
+ *  Complete table props
  */
 export const createStandardTableProps = <T extends TableRecord>(
   dataSource: T[],
@@ -105,12 +105,12 @@ export const createStandardTableProps = <T extends TableRecord>(
 
 /**
  * Create a copy button for cells
- * @param {string} text - Text to copy
- * @param {Object} messageApi - Ant Design message API with success/error methods
- * @param {Function} messageApi.success - Success message function
- * @param {Function} messageApi.error - Error message function
- * @param {string} successMessage - Success message
- * @returns {JSX.Element} Copy button
+ *  text - Text to copy
+ *  messageApi - Ant Design message API with success/error methods
+ *  messageApi.success - Success message function
+ *  messageApi.error - Error message function
+ *  successMessage - Success message
+ *  Copy button
  */
 export const createCopyButton = (text: string, messageApi: MessageApi, successMessage = 'Copied to clipboard') => {
   return (
@@ -135,9 +135,9 @@ export const createCopyButton = (text: string, messageApi: MessageApi, successMe
 
 /**
  * Create a view/expand button for cells
- * @param {Function} onClick - Click handler
- * @param {string} tooltip - Tooltip text
- * @returns {JSX.Element} View button
+ *  onClick - Click handler
+ *  tooltip - Tooltip text
+ *  View button
  */
 export const createViewButton = (onClick: () => void, tooltip = 'View details') => {
   return (
@@ -155,10 +155,10 @@ export const createViewButton = (onClick: () => void, tooltip = 'View details') 
 
 /**
  * Format data for table by adding keys and sorting
- * @param {Array} data - Raw data array
- * @param {string} sortField - Field to sort by (default: 'timestamp')
- * @param {string} keyField - Field to use as React key (default: index)
- * @returns {Array} Formatted data with keys
+ *  data - Raw data array
+ *  sortField - Field to sort by (default: 'timestamp')
+ *  keyField - Field to use as React key (default: index)
+ *  Formatted data with keys
  */
 export const formatTableData = (data: TableRecord[]) => {
   return data

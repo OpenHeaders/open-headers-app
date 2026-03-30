@@ -17,15 +17,15 @@ import '../../../../styles/RecordViewer.css';
 
 /**
  * WorkflowViewer component
- * @param {Object} props - Component props
- * @param {Object} props.record - External record data
- * @param {Function} props.onRecordChange - Record change handler
- * @param {string} props.viewMode - Current view mode
- * @param {number} props.playbackTime - Current playback time
- * @param {Function} props.onPlaybackTimeChange - Playback time change handler
- * @param {boolean} props.autoHighlight - External auto-highlight state
- * @param {Function} props.onAutoHighlightChange - External auto-highlight change handler
- * @returns {React.ReactNode} Rendered workflow viewer
+ *  props - Component props
+ *  props.record - External record data
+ *  props.onRecordChange - Record change handler
+ *  props.viewMode - Current view mode
+ *  props.playbackTime - Current playback time
+ *  props.onPlaybackTimeChange - Playback time change handler
+ *  props.autoHighlight - External auto-highlight state
+ *  props.onAutoHighlightChange - External auto-highlight change handler
+ *  Rendered workflow viewer
  */
 interface WorkflowViewerProps {
   record: Recording | null;

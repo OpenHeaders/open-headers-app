@@ -31,8 +31,8 @@ const getBrowserDisplay = (browser: string) => {
 /**
  * ConnectionsClientTable - Connected browser extension clients
  *
- * @param {Object} status - Connection status containing clients array
- * @returns {JSX.Element} Connected clients table
+ *  status - Connection status containing clients array
+ *  Connected clients table
  */
 interface ClientRecord {
   id: string;

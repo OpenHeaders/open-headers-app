@@ -5,10 +5,10 @@ import { Alert } from 'antd';
  * ExportWarnings component for displaying contextual warnings and information alerts
  * Provides dynamic warnings based on export configuration and sensitive data inclusion
  *
- * @param {string} environmentOption - Environment export option ('none', 'schema', 'full')
- * @param {boolean} includeWorkspace - Whether workspace configuration is included
- * @param {boolean} includeCredentials - Whether authentication credentials are included
- * @param {string} exportPurpose - Export purpose ('team' or 'backup')
+ *  environmentOption - Environment export option ('none', 'schema', 'full')
+ *  includeWorkspace - Whether workspace configuration is included
+ *  includeCredentials - Whether authentication credentials are included
+ *  exportPurpose - Export purpose ('team' or 'backup')
  */
 interface ExportWarningsProps {
   environmentOption: string;

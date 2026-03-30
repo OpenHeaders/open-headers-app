@@ -94,14 +94,14 @@ const modalStyles = {
  * - Provides restart app functionality when permissions change
  * - Saves pending states for post-permission actions
  *
- * @param {boolean} open - Whether the modal is visible
- * @param {Object} settings - Current settings object
- * @param {function} onCancel - Handler for modal close/cancel
- * @param {function} onSave - Handler for settings save
- * @param {string} initialTab - Initial tab to display ('1', '2', or '3')
- * @param {Object} initialAction - Initial action to perform when modal opens
- * @param {string} initialAction.action - Action type (e.g., 'toggleVideoRecording')
- * @param {*} initialAction.value - Action value
+ *  open - Whether the modal is visible
+ *  settings - Current settings object
+ *  onCancel - Handler for modal close/cancel
+ *  onSave - Handler for settings save
+ *  initialTab - Initial tab to display ('1', '2', or '3')
+ *  initialAction - Initial action to perform when modal opens
+ *  initialAction.action - Action type (e.g., 'toggleVideoRecording')
+ *  initialAction.value - Action value
  */
 const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAction }: SettingsModalProps) => {
   // Form state management
@@ -145,10 +145,10 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
   /**
    * Handle individual field changes with dependency management
-   * @param {string} fieldName - Name of the field being changed
-   * @param {*} value - New value for the field
-   * @param {boolean} autoSave - Whether to auto-save after successful change
-   * @returns {Promise<boolean>} True if the field was successfully changed
+   *  fieldName - Name of the field being changed
+   *  value - New value for the field
+   *  autoSave - Whether to auto-save after successful change
+   *  True if the field was successfully changed
    */
   const handleFieldChange = async (fieldName: string, value: unknown, autoSave = false): Promise<boolean> => {
     // Handle screen recording permission for video recording
@@ -215,7 +215,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
   /**
    * Handle video recording permission checks and requests
-   * @returns {Promise<boolean>} True if permission is granted, false otherwise
+   *  True if permission is granted, false otherwise
    */
   const handleVideoRecordingPermission = async () => {
     try {
@@ -243,8 +243,8 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
   /**
    * Handle permission denied scenario with user-friendly alerts
-   * @param {Object} permissionCheck - Initial permission check result
-   * @param {Object} permissionRequest - Permission request result
+   *  permissionCheck - Initial permission check result
+   *  permissionRequest - Permission request result
    */
   const handlePermissionDenied = (permissionCheck: PermissionCheck, permissionRequest: PermissionRequest) => {
     log.warn('Screen recording permission denied');
@@ -283,10 +283,10 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
   /**
    * Apply setting dependencies and rules
-   * @param {Object} newValues - New form values
-   * @param {string} fieldName - Field being changed
-   * @param {*} value - New value
-   * @returns {Object} Updated form values with dependencies applied
+   *  newValues - New form values
+   *  fieldName - Field being changed
+   *  value - New value
+   *  Updated form values with dependencies applied
    */
   const applySettingDependencies = (newValues: SettingsValues, fieldName: string, value: unknown): SettingsValues => {
     const updatedValues = { ...newValues };
@@ -314,7 +314,7 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
   /**
    * Handle form submission with specific values
-   * @param {Object} valuesToSave - Optional specific values to save (defaults to formValues)
+   *  valuesToSave - Optional specific values to save (defaults to formValues)
    */
   const handleSubmitWithValues = (valuesToSave?: SettingsValues) => {
     try {

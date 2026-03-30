@@ -27,8 +27,8 @@ import { showMessage } from '@/renderer/utils/ui/messageUtil';
  * Factory function that creates a handler for copying all domains
  * to clipboard as comma-separated values with user feedback.
  *
- * @param {Array} domains - Array of domain strings to copy
- * @returns {Function} Copy handler function
+ *  domains - Array of domain strings to copy
+ *  Copy handler function
  */
 export const createCopyAllHandler = (domains: string[]) => async () => {
   if (domains.length === 0) {
@@ -52,9 +52,9 @@ export const createCopyAllHandler = (domains: string[]) => async () => {
  * Factory function that creates a handler for deleting all domains
  * with user feedback and confirmation messaging.
  *
- * @param {Array} domains - Array of domain strings to delete
- * @param {Function} onChange - Domain change callback function
- * @returns {Function} Delete handler function
+ *  domains - Array of domain strings to delete
+ *  onChange - Domain change callback function
+ *  Delete handler function
  */
 export const createDeleteAllHandler = (domains: string[], onChange: (domains: string[]) => void) => () => {
   if (domains.length === 0) {
@@ -72,10 +72,10 @@ export const createDeleteAllHandler = (domains: string[], onChange: (domains: st
  * Renders copy and delete action buttons for bulk domain operations
  * with appropriate tooltips and disabled states.
  *
- * @param {Object} props - Component props
- * @param {Array} props.domains - Array of domain strings
- * @param {Function} props.onChange - Domain change callback function
- * @returns {JSX.Element} Domain action buttons component
+ *  props - Component props
+ *  props.domains - Array of domain strings
+ *  props.onChange - Domain change callback function
+ *  Domain action buttons component
  *
  * @example
  * <DomainActionButtons
@@ -137,11 +137,11 @@ export const DomainActionButtons = ({ domains, onChange }: DomainActionButtonsPr
  * Combines help text and action buttons in a flexible header layout
  * with proper spacing and responsive design.
  *
- * @param {Object} props - Component props
- * @param {Array} props.domains - Array of domain strings
- * @param {Function} props.onChange - Domain change callback function
- * @param {JSX.Element} props.helpComponent - Help text component to display
- * @returns {JSX.Element} Domain actions header component
+ *  props - Component props
+ *  props.domains - Array of domain strings
+ *  props.onChange - Domain change callback function
+ *  props.helpComponent - Help text component to display
+ *  Domain actions header component
  *
  * @example
  * <DomainActionsHeader

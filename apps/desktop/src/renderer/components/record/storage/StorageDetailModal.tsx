@@ -4,11 +4,11 @@
  * Modal for displaying detailed storage entry information
  * Shows key, domain, URL, timestamp, attributes, and values
  *
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether modal is visible
- * @param {Object} props.selectedEntry - Selected storage entry
- * @param {Function} props.onClose - Close handler
- * @param {Function} props.messageApi - Ant Design message API
+ *  props - Component props
+ *  props.visible - Whether modal is visible
+ *  props.selectedEntry - Selected storage entry
+ *  props.onClose - Close handler
+ *  props.messageApi - Ant Design message API
  */
 
 import { CopyOutlined } from '@ant-design/icons';

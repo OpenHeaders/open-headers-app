@@ -54,30 +54,30 @@ interface HttpOptionsTabProps {
 /**
  * HTTP Options tab component combining various configuration cards
  *
- * @param {Object} props - Component props
- * @param {boolean} props.jsonFilterEnabled - JSON filter enabled state
- * @param {Function} props.handleJsonFilterToggle - JSON filter toggle handler
- * @param {Function} props.validateVariableExists - Variable validation function
- * @param {Object} props.form - Form instance
- * @param {Function} props.handleTotpToggle - TOTP toggle handler
- * @param {Function} props.handleTotpSecretChange - TOTP secret change handler
- * @param {Function} props.handleTestTotp - TOTP test handler
- * @param {string} props.totpError - TOTP error message
- * @param {boolean} props.totpTesting - TOTP testing state
- * @param {boolean} props.totpPreviewVisible - TOTP preview visibility
- * @param {string} props.totpCode - Current TOTP code
- * @param {number} props.timeRemaining - Time remaining for TOTP code
- * @param {string} props.testSourceId - Test source ID
- * @param {Function} props.canUseTotpSecret - TOTP cooldown check function
- * @param {Function} props.getCooldownSeconds - Cooldown seconds function
- * @param {boolean} props.refreshEnabled - Auto-refresh enabled state
- * @param {Function} props.handleRefreshToggle - Refresh toggle handler
- * @param {string} props.refreshType - Refresh type (preset/custom)
- * @param {Function} props.handleRefreshTypeChange - Refresh type change handler
- * @param {number} props.customInterval - Custom interval value
- * @param {Function} props.handlePresetIntervalChange - Preset interval change handler
- * @param {Function} props.handleCustomIntervalChange - Custom interval change handler
- * @returns {JSX.Element} HTTP options tab component
+ *  props - Component props
+ *  props.jsonFilterEnabled - JSON filter enabled state
+ *  props.handleJsonFilterToggle - JSON filter toggle handler
+ *  props.validateVariableExists - Variable validation function
+ *  props.form - Form instance
+ *  props.handleTotpToggle - TOTP toggle handler
+ *  props.handleTotpSecretChange - TOTP secret change handler
+ *  props.handleTestTotp - TOTP test handler
+ *  props.totpError - TOTP error message
+ *  props.totpTesting - TOTP testing state
+ *  props.totpPreviewVisible - TOTP preview visibility
+ *  props.totpCode - Current TOTP code
+ *  props.timeRemaining - Time remaining for TOTP code
+ *  props.testSourceId - Test source ID
+ *  props.canUseTotpSecret - TOTP cooldown check function
+ *  props.getCooldownSeconds - Cooldown seconds function
+ *  props.refreshEnabled - Auto-refresh enabled state
+ *  props.handleRefreshToggle - Refresh toggle handler
+ *  props.refreshType - Refresh type (preset/custom)
+ *  props.handleRefreshTypeChange - Refresh type change handler
+ *  props.customInterval - Custom interval value
+ *  props.handlePresetIntervalChange - Preset interval change handler
+ *  props.handleCustomIntervalChange - Custom interval change handler
+ *  HTTP options tab component
  */
 const HttpOptionsTab: React.FC<HttpOptionsTabProps> = ({
   // JSON Filter props

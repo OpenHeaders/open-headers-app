@@ -4,13 +4,13 @@ import type React from 'react';
 
 /**
  * Git status alert component showing installation status and actions
- * @param {Object} props - Component props
- * @param {boolean} props.checkingGitStatus - Whether Git status is being checked
- * @param {Object} props.gitStatus - Git status object
- * @param {boolean} props.installingGit - Whether Git is being installed
- * @param {string} props.gitInstallProgress - Git installation progress message
- * @param {Function} props.onInstallGit - Handler for Git installation
- * @returns {JSX.Element} GitStatusAlert component
+ *  props - Component props
+ *  props.checkingGitStatus - Whether Git status is being checked
+ *  props.gitStatus - Git status object
+ *  props.installingGit - Whether Git is being installed
+ *  props.gitInstallProgress - Git installation progress message
+ *  props.onInstallGit - Handler for Git installation
+ *  GitStatusAlert component
  */
 interface GitStatusAlertProps {
   checkingGitStatus: boolean;
@@ -30,7 +30,7 @@ const GitStatusAlert = ({
 }: GitStatusAlertProps) => {
   /**
    * Renders the checking status alert
-   * @returns {JSX.Element} Checking status alert
+   *  Checking status alert
    */
   const renderCheckingAlert = () => (
     <Alert
@@ -44,7 +44,7 @@ const GitStatusAlert = ({
 
   /**
    * Renders the Git not installed alert with installation options
-   * @returns {JSX.Element} Git not installed alert
+   *  Git not installed alert
    */
   const renderNotInstalledAlert = () => (
     <Alert
@@ -87,7 +87,7 @@ const GitStatusAlert = ({
 
   /**
    * Renders the Git installed success alert
-   * @returns {JSX.Element} Git installed alert
+   *  Git installed alert
    */
   const _renderInstalledAlert = () => (
     <Alert

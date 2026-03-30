@@ -7,9 +7,9 @@ import { useCliServer } from './hooks';
  * Control panel for the local CLI API server that enables programmatic
  * workspace join and environment import from scripts and CLI tools.
  *
- * @param {Object} props
- * @param {boolean} props.active - Whether this tab is currently visible
- * @returns {JSX.Element} CLI server management interface
+ *  props
+ *  props.active - Whether this tab is currently visible
+ *  CLI server management interface
  */
 interface CliServerProps {
   active: boolean;

@@ -4,8 +4,8 @@
  * Renders storage type with appropriate color and tooltip
  * Shows shortened names for better table display
  *
- * @param {Object} props - Component props
- * @param {string} props.type - Storage type ('localStorage', 'sessionStorage', 'cookie')
+ *  props - Component props
+ *  props.type - Storage type ('localStorage', 'sessionStorage', 'cookie')
  */
 
 import { Tag, Tooltip } from 'antd';

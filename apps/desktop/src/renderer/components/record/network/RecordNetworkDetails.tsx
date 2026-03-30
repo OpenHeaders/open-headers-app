@@ -4,10 +4,10 @@
  * Refactored network request details panel with improved modularity
  * Uses separate tab components for different data views
  *
- * @param {Object} props - Component props
- * @param {Object} props.request - Network request to display
- * @param {Object} props.record - Full record for context
- * @param {Function} props.onClose - Close handler
+ *  props - Component props
+ *  props.request - Network request to display
+ *  props.record - Full record for context
+ *  props.onClose - Close handler
  */
 
 import { CloseOutlined } from '@ant-design/icons';

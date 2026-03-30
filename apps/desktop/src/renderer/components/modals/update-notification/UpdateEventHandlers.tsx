@@ -14,14 +14,14 @@ import timeManager from '@/renderer/services/TimeManager';
  * - Silent mode handling
  * - Progress tracking
  *
- * @param {Object} params - Handler parameters
- * @param {Object} params.notificationManager - Notification manager instance
- * @param {Object} params.state - Component state object
- * @param {Object} params.setState - State setters object
- * @param {Object} params.refs - Component refs object
- * @param {function} params.debugLog - Debug logging function
- * @param {number} params.MIN_CHECK_DISPLAY_TIME - Minimum notification display time
- * @returns {Object} Event handlers and cleanup function
+ *  params - Handler parameters
+ *  params.notificationManager - Notification manager instance
+ *  params.state - Component state object
+ *  params.setState - State setters object
+ *  params.refs - Component refs object
+ *  params.debugLog - Debug logging function
+ *  params.MIN_CHECK_DISPLAY_TIME - Minimum notification display time
+ *  Event handlers and cleanup function
  */
 interface UpdateEventHandlersParams {
   notificationManager: {
@@ -116,7 +116,7 @@ export const createUpdateEventHandlers = ({
    * Called when the main process indicates that an update was already downloaded
    * in a previous session. This handles the timing to ensure proper user experience.
    *
-   * @param {Object} payload - Event payload containing isManual and info
+   *  payload - Event payload containing isManual and info
    */
   const handleUpdateAlreadyDownloaded = (payload: { isManual?: boolean; info?: UpdateInfoEvent | null } = {}) => {
     const { isManual = false, info = null } = payload;
@@ -154,8 +154,8 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Show update ready notification with proper state management
-   * @param {boolean} isManual - Whether this was a manual check
-   * @param {Object} info - Update info from main process (optional)
+   *  isManual - Whether this was a manual check
+   *  info - Update info from main process (optional)
    */
   const showUpdateReadyNotification = (isManual: boolean, info: { version?: string } | null = null) => {
     debugLog(`${debugLabel} Showing update ready notification`);
@@ -182,7 +182,7 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Handle update available event
-   * @param {Object} info - Update information
+   *  info - Update information
    */
   const handleUpdateAvailable = (info: { version: string }) => {
     debugLog(`${debugLabel} Received "update-available" event with version ${info.version}`);
@@ -201,7 +201,7 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Handle download progress updates
-   * @param {Object} progressObj - Progress information
+   *  progressObj - Progress information
    */
   const handleUpdateProgress = (progressObj: { percent: number }) => {
     const percent = Math.round(progressObj.percent) || 0;
@@ -218,7 +218,7 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Handle update downloaded event
-   * @param {Object} info - Update information
+   *  info - Update information
    */
   const handleUpdateDownloaded = (info: { version: string }) => {
     debugLog(`${debugLabel} Received "update-downloaded" event for version ${info.version}`);
@@ -237,7 +237,7 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Handle update error event
-   * @param {string} message - Error message
+   *  message - Error message
    */
   const handleUpdateError = (message: string) => {
     debugLog(`${debugLabel} Received "update-error" event: ${message}`);
@@ -308,7 +308,7 @@ export const createUpdateEventHandlers = ({
 
   /**
    * Set up all event listeners
-   * @returns {function} Cleanup function
+   *  Cleanup function
    */
   const setupEventListeners = () => {
     // Set up event subscriptions

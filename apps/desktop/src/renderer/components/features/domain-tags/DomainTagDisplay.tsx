@@ -73,18 +73,18 @@ interface DomainTagsContainerProps {
  * Renders a single domain tag with the ability to edit inline,
  * show tooltips for long domains, and handle removal actions.
  *
- * @param {Object} props - Component props
- * @param {string} props.tag - Domain tag value to display
- * @param {number} props.index - Index of tag in the array
- * @param {boolean} props.isEditing - Whether tag is currently being edited
- * @param {string} props.editValue - Current edit input value
- * @param {Function} props.onEdit - Handler for starting edit mode
- * @param {Function} props.onEditChange - Handler for edit input changes
- * @param {Function} props.onEditConfirm - Handler for confirming edits
- * @param {Function} props.onEditKeyDown - Handler for edit keyboard events
- * @param {Function} props.onClose - Handler for tag removal
- * @param {Object} props.editInputRef - Reference for edit input element
- * @returns {JSX.Element} Domain tag component
+ *  props - Component props
+ *  props.tag - Domain tag value to display
+ *  props.index - Index of tag in the array
+ *  props.isEditing - Whether tag is currently being edited
+ *  props.editValue - Current edit input value
+ *  props.onEdit - Handler for starting edit mode
+ *  props.onEditChange - Handler for edit input changes
+ *  props.onEditConfirm - Handler for confirming edits
+ *  props.onEditKeyDown - Handler for edit keyboard events
+ *  props.onClose - Handler for tag removal
+ *  props.editInputRef - Reference for edit input element
+ *  Domain tag component
  *
  * @example
  * <DomainTag
@@ -205,25 +205,25 @@ export const DomainTag: React.FC<DomainTagProps> = ({
  * Renders the complete domain tags interface including existing tags,
  * input field for new domains, and add button when input is hidden.
  *
- * @param {Object} props - Component props
- * @param {Array} props.domains - Array of domain strings to display
- * @param {boolean} props.inputVisible - Whether input field is visible
- * @param {string} props.inputValue - Current input field value
- * @param {number} props.editIndex - Index of tag being edited (-1 if none)
- * @param {string} props.editValue - Current edit input value
- * @param {Function} props.onTagEdit - Handler for starting tag edit
- * @param {Function} props.onTagEditChange - Handler for edit input changes
- * @param {Function} props.onTagEditConfirm - Handler for confirming edits
- * @param {Function} props.onTagEditKeyDown - Handler for edit keyboard events
- * @param {Function} props.onTagClose - Handler for tag removal
- * @param {Function} props.onShowInput - Handler for showing input field
- * @param {Function} props.onInputChange - Handler for input field changes
- * @param {Function} props.onInputPaste - Handler for paste events
- * @param {Function} props.onInputConfirm - Handler for input confirmation
- * @param {Function} props.onInputKeyDown - Handler for input keyboard events
- * @param {Object} props.inputRef - Reference for input element
- * @param {Object} props.editInputRef - Reference for edit input element
- * @returns {JSX.Element} Domain tags container component
+ *  props - Component props
+ *  props.domains - Array of domain strings to display
+ *  props.inputVisible - Whether input field is visible
+ *  props.inputValue - Current input field value
+ *  props.editIndex - Index of tag being edited (-1 if none)
+ *  props.editValue - Current edit input value
+ *  props.onTagEdit - Handler for starting tag edit
+ *  props.onTagEditChange - Handler for edit input changes
+ *  props.onTagEditConfirm - Handler for confirming edits
+ *  props.onTagEditKeyDown - Handler for edit keyboard events
+ *  props.onTagClose - Handler for tag removal
+ *  props.onShowInput - Handler for showing input field
+ *  props.onInputChange - Handler for input field changes
+ *  props.onInputPaste - Handler for paste events
+ *  props.onInputConfirm - Handler for input confirmation
+ *  props.onInputKeyDown - Handler for input keyboard events
+ *  props.inputRef - Reference for input element
+ *  props.editInputRef - Reference for edit input element
+ *  Domain tags container component
  */
 export const DomainTagsContainer: React.FC<DomainTagsContainerProps> = ({
   domains,
@@ -346,7 +346,7 @@ export const DomainTagsContainer: React.FC<DomainTagsContainerProps> = ({
  * Displays comprehensive help text with examples and keyboard shortcuts
  * for the domain tags input interface.
  *
- * @returns {JSX.Element} Help text component
+ *  Help text component
  */
 export const DomainInputHelp = () => {
   const { token } = theme.useToken();

@@ -7,11 +7,11 @@ const { Text, Title } = Typography;
  * WorkspaceConfigCard component for workspace configuration options
  * Handles Git workspace configuration and credentials inclusion with security warnings
  *
- * @param {boolean} isGitWorkspace - Whether current workspace is a Git workspace
- * @param {boolean} includeWorkspace - Whether to include workspace configuration
- * @param {boolean} includeCredentials - Whether to include authentication credentials
- * @param {function} onIncludeWorkspaceChange - Handler for workspace inclusion changes
- * @param {function} onIncludeCredentialsChange - Handler for credentials inclusion changes
+ *  isGitWorkspace - Whether current workspace is a Git workspace
+ *  includeWorkspace - Whether to include workspace configuration
+ *  includeCredentials - Whether to include authentication credentials
+ *  onIncludeWorkspaceChange - Handler for workspace inclusion changes
+ *  onIncludeCredentialsChange - Handler for credentials inclusion changes
  */
 interface WorkspaceConfigCardProps {
   isGitWorkspace: boolean;

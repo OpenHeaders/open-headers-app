@@ -9,11 +9,11 @@ import {
 
 /**
  * Authentication form component for Git repository access
- * @param {Object} props - Component props
- * @param {string} props.authType - Currently selected authentication type
- * @param {string} props.sshKeySource - SSH key source (text or file)
- * @param {Function} props.onBrowseSSHKey - Handler for SSH key file browsing
- * @returns {JSX.Element} AuthenticationForm component
+ *  props - Component props
+ *  props.authType - Currently selected authentication type
+ *  props.sshKeySource - SSH key source (text or file)
+ *  props.onBrowseSSHKey - Handler for SSH key file browsing
+ *  AuthenticationForm component
  */
 interface AuthenticationFormProps {
   authType: string;
@@ -23,7 +23,7 @@ interface AuthenticationFormProps {
 const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: AuthenticationFormProps) => {
   /**
    * Renders token authentication fields
-   * @returns {JSX.Element} Token authentication form fields
+   *  Token authentication form fields
    */
   const renderTokenFields = () => (
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
@@ -62,7 +62,7 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
 
   /**
    * Renders SSH key authentication fields
-   * @returns {JSX.Element} SSH key authentication form fields
+   *  SSH key authentication form fields
    */
   const renderSSHKeyFields = () => (
     <>
@@ -147,7 +147,7 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
 
   /**
    * Renders basic authentication fields
-   * @returns {JSX.Element} Basic authentication form fields
+   *  Basic authentication form fields
    */
   const renderBasicFields = () => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -186,7 +186,7 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
 
   /**
    * Renders the system Git config information
-   * @returns {JSX.Element} System Git config alert
+   *  System Git config alert
    */
   const renderSystemGitInfo = () => (
     <Alert

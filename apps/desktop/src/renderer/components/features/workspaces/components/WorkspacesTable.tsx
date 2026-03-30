@@ -26,17 +26,17 @@ const { Text } = Typography;
 
 /**
  * Table component for displaying workspaces
- * @param {Object} props - Component props
- * @param {Array} props.workspaces - Array of workspace objects
- * @param {string} props.activeWorkspaceId - ID of the currently active workspace
- * @param {Object} props.syncStatus - Sync status for each workspace
- * @param {Function} props.onSyncWorkspace - Handler for workspace sync
- * @param {Function} props.onEditWorkspace - Handler for workspace editing
- * @param {Function} props.onDeleteWorkspace - Handler for workspace deletion
- * @param {Function} props.onCloneToPersonal - Handler for cloning to personal workspace
- * @param {Function} props.onSwitchWorkspace - Handler for switching workspace
- * @param {Function} props.onUpdateWorkspace - Handler for updating workspace settings
- * @returns {JSX.Element} WorkspacesTable component
+ *  props - Component props
+ *  props.workspaces - Array of workspace objects
+ *  props.activeWorkspaceId - ID of the currently active workspace
+ *  props.syncStatus - Sync status for each workspace
+ *  props.onSyncWorkspace - Handler for workspace sync
+ *  props.onEditWorkspace - Handler for workspace editing
+ *  props.onDeleteWorkspace - Handler for workspace deletion
+ *  props.onCloneToPersonal - Handler for cloning to personal workspace
+ *  props.onSwitchWorkspace - Handler for switching workspace
+ *  props.onUpdateWorkspace - Handler for updating workspace settings
+ *  WorkspacesTable component
  */
 interface WorkspacesTableProps {
   workspaces: Workspace[];
@@ -171,9 +171,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the workspace name with appropriate icon and status
-   * @param {string} name - Workspace name
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered name cell
+   *  name - Workspace name
+   *  record - Workspace record
+   *  Rendered name cell
    */
   const renderNameCell = (name: string, record: Workspace) => (
     <Space>
@@ -185,8 +185,8 @@ const WorkspacesTable = ({
 
   /**
    * Renders the workspace type with appropriate styling
-   * @param {string} type - Workspace type
-   * @returns {JSX.Element} Rendered type cell
+   *  type - Workspace type
+   *  Rendered type cell
    */
   const renderTypeCell = (type: string) => (
     <Tag color={type === WORKSPACE_TYPES.GIT ? 'blue' : 'default'}>
@@ -196,9 +196,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the sync status with appropriate icon and tooltip
-   * @param {Workspace} _value - Cell value (unused, record used instead)
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered sync status cell
+   *  _value - Cell value (unused, record used instead)
+   *  record - Workspace record
+   *  Rendered sync status cell
    */
   const renderSyncStatusCell = (_value: Workspace, record: Workspace) => {
     if (record.type !== WORKSPACE_TYPES.GIT) {
@@ -245,9 +245,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the repository information with appropriate icon
-   * @param {string} url - Repository URL
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered repository cell
+   *  url - Repository URL
+   *  record - Workspace record
+   *  Rendered repository cell
    */
   const renderRepositoryCell = (url: string, record: Workspace) => {
     if (record.type !== WORKSPACE_TYPES.GIT || !url) {
@@ -275,9 +275,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the authentication information
-   * @param {Workspace} _value - Cell value (unused, record used instead)
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered auth cell
+   *  _value - Cell value (unused, record used instead)
+   *  record - Workspace record
+   *  Rendered auth cell
    */
   const renderAuthCell = (_value: Workspace, record: Workspace) => {
     if (record.type !== WORKSPACE_TYPES.GIT) {
@@ -310,9 +310,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the auto-sync toggle for team workspaces
-   * @param {Workspace} _value - Cell value (unused, record used instead)
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered auto-sync cell
+   *  _value - Cell value (unused, record used instead)
+   *  record - Workspace record
+   *  Rendered auto-sync cell
    */
   const renderAutoSyncCell = (_value: Workspace, record: Workspace) => {
     if (record.type !== WORKSPACE_TYPES.GIT) {
@@ -343,9 +343,9 @@ const WorkspacesTable = ({
 
   /**
    * Renders the action buttons for each workspace with consistent alignment
-   * @param {Workspace} _value - Cell value (unused, record used instead)
-   * @param {Object} record - Workspace record
-   * @returns {JSX.Element} Rendered actions cell
+   *  _value - Cell value (unused, record used instead)
+   *  record - Workspace record
+   *  Rendered actions cell
    */
   const renderActionsCell = (_value: Workspace, record: Workspace) => {
     const isGitWorkspace = record.type === WORKSPACE_TYPES.GIT;

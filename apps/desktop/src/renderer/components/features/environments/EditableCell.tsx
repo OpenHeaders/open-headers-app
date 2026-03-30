@@ -30,15 +30,15 @@ const DynamicValueInput = forwardRef<TextAreaRef, React.TextareaHTMLAttributes<H
 
 /**
  * EditableCell component for inline editing in the variables table
- * @param {Object} props - Component props
- * @param {boolean} props.editing - Whether the cell is in edit mode
- * @param {string} props.dataIndex - The data field being edited
- * @param {string} props.title - Column title for validation messages
- * @param {string} props.inputType - Type of input (text, password, radio)
- * @param {Object} props.record - Current record data
- * @param {number} props.index - Row index
- * @param {React.ReactNode} props.children - Child elements to render when not editing
- * @param {Object} restProps - Additional props to pass to the td element
+ *  props - Component props
+ *  props.editing - Whether the cell is in edit mode
+ *  props.dataIndex - The data field being edited
+ *  props.title - Column title for validation messages
+ *  props.inputType - Type of input (text, password, radio)
+ *  props.record - Current record data
+ *  props.index - Row index
+ *  props.children - Child elements to render when not editing
+ *  restProps - Additional props to pass to the td element
  */
 interface EditableCellProps extends React.TdHTMLAttributes<HTMLTableCellElement> {
   editing: boolean;

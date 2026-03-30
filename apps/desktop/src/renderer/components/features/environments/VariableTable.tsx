@@ -25,16 +25,16 @@ const { Text } = Typography;
 
 /**
  * VariableTable component for displaying and editing environment variables
- * @param {Object} props - Component props
- * @param {Object} props.variablesWithMetadata - Variables with metadata
- * @param {Array} props.missingVariables - Array of missing variable names
- * @param {Object} props.variableUsage - Usage mapping for variables
- * @param {Array} props.sources - Source configurations for name lookup
- * @param {Object} props.rules - Rules object for rule name lookup
- * @param {Function} props.onAddVariable - Callback to add new variable
- * @param {Function} props.onEditVariable - Callback to edit variable
- * @param {Function} props.onDeleteVariable - Callback to delete variable
- * @param {Object} props.form - Ant Design form instance
+ *  props - Component props
+ *  props.variablesWithMetadata - Variables with metadata
+ *  props.missingVariables - Array of missing variable names
+ *  props.variableUsage - Usage mapping for variables
+ *  props.sources - Source configurations for name lookup
+ *  props.rules - Rules object for rule name lookup
+ *  props.onAddVariable - Callback to add new variable
+ *  props.onEditVariable - Callback to edit variable
+ *  props.onDeleteVariable - Callback to delete variable
+ *  props.form - Ant Design form instance
  */
 interface VariableMetadata {
   value: string;
@@ -98,14 +98,14 @@ const VariableTable = ({
 
   /**
    * Checks if a record is currently being edited
-   * @param {Object} record - Table record
-   * @returns {boolean} True if record is being edited
+   *  record - Table record
+   *  True if record is being edited
    */
   const isEditing = (record: VariableRecord) => record.key === editingKey;
 
   /**
    * Starts editing a record
-   * @param {Object} record - Record to edit
+   *  record - Record to edit
    */
   const edit = (record: VariableRecord) => {
     // Check if the value is a JWT token
@@ -144,7 +144,7 @@ const VariableTable = ({
 
   /**
    * Saves the edited record
-   * @param {string} key - Record key
+   *  key - Record key
    */
   const save = async (key: string) => {
     try {
@@ -167,7 +167,7 @@ const VariableTable = ({
 
   /**
    * Toggles visibility of sensitive variable values
-   * @param {string} varName - Variable name
+   *  varName - Variable name
    */
   const toggleSensitive = (varName: string) => {
     setShowSensitive((prev) => ({
@@ -178,8 +178,8 @@ const VariableTable = ({
 
   /**
    * Copies variable value to clipboard
-   * @param {string} value - Value to copy
-   * @param {string} varName - Variable name for feedback
+   *  value - Value to copy
+   *  varName - Variable name for feedback
    */
   const copyToClipboard = async (value: string, varName: string) => {
     try {
@@ -192,8 +192,8 @@ const VariableTable = ({
 
   /**
    * Handle JWT modal save
-   * @param {string} newToken - New JWT token value
-   * @param {boolean} isSecret - Whether the variable should be secret
+   *  newToken - New JWT token value
+   *  isSecret - Whether the variable should be secret
    */
   const handleJwtSave = async (newToken: string, isSecret: boolean) => {
     if (jwtModalData) {
@@ -223,9 +223,9 @@ const VariableTable = ({
 
   /**
    * Renders the variable value with appropriate visibility controls
-   * @param {string} value - Variable value
-   * @param {Object} record - Record data
-   * @returns {React.ReactNode} Rendered value
+   *  value - Variable value
+   *  record - Record data
+   *  Rendered value
    */
   const renderVariableValue = (value: string, record: VariableRecord) => {
     const editable = isEditing(record);
@@ -319,8 +319,8 @@ const VariableTable = ({
 
   /**
    * Renders variable usage information
-   * @param {Array} usedIn - Array of source IDs
-   * @returns {React.ReactNode} Rendered usage info
+   *  usedIn - Array of source IDs
+   *  Rendered usage info
    */
   const renderUsageInfo = (usedIn: string[]) => (
     <Space wrap>
@@ -363,8 +363,8 @@ const VariableTable = ({
 
   /**
    * Renders action buttons for each row
-   * @param {Object} record - Record data
-   * @returns {React.ReactNode} Rendered actions
+   *  record - Record data
+   *  Rendered actions
    */
   const renderActions = (record: VariableRecord) => {
     const editable = isEditing(record);

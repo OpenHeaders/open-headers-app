@@ -37,13 +37,13 @@ const { Text } = Typography;
  * - Domain pattern configuration with validation
  * - Proper form initialization and cleanup
  *
- * @param {boolean} visible - Whether the modal is visible
- * @param {function} onCancel - Callback when modal is cancelled
- * @param {function} onSave - Callback when form is submitted with rule data
- * @param {Object|null} rule - Existing rule data for editing, null for creation
- * @param {Array} sources - Available sources for dynamic header values
- * @param {Array} headerRules - Available header rules for reference mode
- * @returns {JSX.Element} Proxy rule form modal
+ *  visible - Whether the modal is visible
+ *  onCancel - Callback when modal is cancelled
+ *  onSave - Callback when form is submitted with rule data
+ *  rule - Existing rule data for editing, null for creation
+ *  sources - Available sources for dynamic header values
+ *  headerRules - Available header rules for reference mode
+ *  Proxy rule form modal
  */
 interface ProxyRuleFormProps {
   visible: boolean;

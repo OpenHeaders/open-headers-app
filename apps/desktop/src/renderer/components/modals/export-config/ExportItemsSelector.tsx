@@ -6,8 +6,8 @@ const { Text, Title } = Typography;
  * ExportItemsSelector component for selecting configuration items to export
  * Provides checkboxes for different types of configuration data with clear descriptions
  *
- * @param {Object} selectedItems - Object containing selection state for each item type
- * @param {function} onItemChange - Handler for item selection changes
+ *  selectedItems - Object containing selection state for each item type
+ *  onItemChange - Handler for item selection changes
  */
 interface ExportItemsSelectorProps {
   selectedItems: Record<string, boolean>;

@@ -12,9 +12,9 @@ import type { WorkflowRecord } from './WorkflowTableColumns';
 
 /**
  * Upload component for importing workflows
- * @param {Function} onImportSuccess - Callback when import succeeds
- * @param {Function} onImportError - Callback when import fails
- * @returns {React.ReactNode} Upload component
+ *  onImportSuccess - Callback when import succeeds
+ *  onImportError - Callback when import fails
+ *  Upload component
  */
 interface WorkflowUploadProps {
   onImportSuccess: () => void;
@@ -46,11 +46,11 @@ export const WorkflowUpload = ({ onImportSuccess, onImportError }: WorkflowUploa
 
 /**
  * Action buttons for the workflows table header
- * @param {Function} onImportSuccess - Callback when import succeeds
- * @param {Function} onImportError - Callback when import fails
- * @param {Array} selectedWorkflows - Currently selected workflows
- * @param {Function} onBulkDelete - Callback for bulk delete action
- * @returns {React.ReactNode} Action buttons component
+ *  onImportSuccess - Callback when import succeeds
+ *  onImportError - Callback when import fails
+ *  selectedWorkflows - Currently selected workflows
+ *  onBulkDelete - Callback for bulk delete action
+ *  Action buttons component
  */
 interface WorkflowTableActionsProps {
   onImportSuccess: () => void;

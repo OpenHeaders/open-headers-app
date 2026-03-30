@@ -22,12 +22,12 @@ const { Text } = Typography;
 /**
  * JSON Filter card component for response filtering configuration
  *
- * @param {Object} props - Component props
- * @param {boolean} props.jsonFilterEnabled - Current JSON filter enabled state
- * @param {Function} props.handleJsonFilterToggle - JSON filter toggle handler
- * @param {Function} props.validateVariableExists - Variable validation function
- * @param {Object} props.form - Form instance for field access
- * @returns {JSX.Element} JSON filter card component
+ *  props - Component props
+ *  props.jsonFilterEnabled - Current JSON filter enabled state
+ *  props.handleJsonFilterToggle - JSON filter toggle handler
+ *  props.validateVariableExists - Variable validation function
+ *  props.form - Form instance for field access
+ *  JSON filter card component
  */
 interface JsonFilterCardProps {
   jsonFilterEnabled: boolean;

@@ -29,14 +29,14 @@ const { Title, Text } = Typography;
  * - Handles edge cases like empty cache and disabled state
  * - Integrates with proxy server settings for persistence
  *
- * @param {Object} cacheStats - Current cache statistics
- * @param {boolean} cacheEnabled - Whether cache is enabled
- * @param {Array} cacheEntries - Detailed cache entries for table display
- * @param {boolean} showCacheDetails - Whether to show detailed entries table
- * @param {function} onToggleCache - Callback for cache enable/disable
- * @param {function} onClearCache - Callback for cache clear operation
- * @param {function} onToggleCacheDetails - Callback for details visibility toggle
- * @returns {JSX.Element} Cache management section
+ *  cacheStats - Current cache statistics
+ *  cacheEnabled - Whether cache is enabled
+ *  cacheEntries - Detailed cache entries for table display
+ *  showCacheDetails - Whether to show detailed entries table
+ *  onToggleCache - Callback for cache enable/disable
+ *  onClearCache - Callback for cache clear operation
+ *  onToggleCacheDetails - Callback for details visibility toggle
+ *  Cache management section
  */
 export interface CacheStats {
   totalSize: number;

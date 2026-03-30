@@ -4,10 +4,10 @@
  * Provides a segmented control to switch between DOM playback and video modes
  * Only visible when the recording has video available
  *
- * @param {Object} props - Component props
- * @param {string} props.viewMode - Current view mode ('dom' or 'video')
- * @param {Function} props.onViewModeChange - Handler for view mode changes
- * @param {boolean} props.hasVideo - Whether the recording has video
+ *  props - Component props
+ *  props.viewMode - Current view mode ('dom' or 'video')
+ *  props.onViewModeChange - Handler for view mode changes
+ *  props.hasVideo - Whether the recording has video
  */
 
 import { FileOutlined, VideoCameraOutlined } from '@ant-design/icons';

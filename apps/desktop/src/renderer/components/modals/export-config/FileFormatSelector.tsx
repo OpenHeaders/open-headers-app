@@ -7,9 +7,9 @@ const { Text, Title } = Typography;
  * FileFormatSelector component for selecting export file format
  * Provides options for single file or multiple files export with conditional availability
  *
- * @param {string} fileFormat - Current file format selection ('single' or 'separate')
- * @param {function} onFileFormatChange - Handler for file format changes
- * @param {string} environmentOption - Environment export option affecting availability
+ *  fileFormat - Current file format selection ('single' or 'separate')
+ *  onFileFormatChange - Handler for file format changes
+ *  environmentOption - Environment export option affecting availability
  */
 interface FileFormatSelectorProps {
   fileFormat: string;

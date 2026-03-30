@@ -81,7 +81,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles record deletion
-   * @param {string} recordId - ID of record to delete
+   *  recordId - ID of record to delete
    */
   const handleDelete = async (recordId: string) => {
     const success = await deleteWorkflowRecording(recordId);
@@ -97,7 +97,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles record export via modal
-   * @param {Object} record - Record to export
+   *  record - Record to export
    */
   const handleExport = (record: WorkflowRecordingEntry) => {
     setSelectedRecord(record);
@@ -106,7 +106,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles JSON export completion
-   * @param {Object} record - Record metadata being exported
+   *  record - Record metadata being exported
    */
   const handleExportJson = async (record: WorkflowRecordingEntry) => {
     try {
@@ -156,7 +156,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles workflow recording import error
-   * @param {Error} error - Import error
+   *  error - Import error
    */
   const handleImportError = (error: Error) => {
     log.error('Import error:', error);
@@ -288,8 +288,8 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles metadata update for a recording
-   * @param {string} recordId - ID of the record to update
-   * @param {Object} updates - Object containing fields to update (tag, description) or special actions
+   *  recordId - ID of the record to update
+   *  updates - Object containing fields to update (tag, description) or special actions
    */
   const handleUpdateMetadata = async (recordId: string, updates: MetadataUpdate) => {
     if ('_action' in updates) {
@@ -336,7 +336,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles saving description from modal
-   * @param {string} description - New description value
+   *  description - New description value
    */
   const handleSaveDescription = async (description: string | null) => {
     if (!editingRecord) return;
@@ -348,7 +348,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
 
   /**
    * Handles saving tag from modal
-   * @param {string|Object} tag - New tag value (string or {name, url})
+   *  tag - New tag value (string or {name, url})
    */
   const handleSaveTag = async (tag: { name: string; url: string } | null) => {
     if (!editingRecord) return;

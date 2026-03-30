@@ -4,11 +4,11 @@ import React, { useCallback, useState } from 'react';
 import { copyToClipboard } from '@/renderer/utils/ui/copyToClipboard';
 /**
  * TeamWorkspaceShareInviteModal - A reusable modal for sharing team workspace invites
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether the modal is visible
- * @param {Object} props.workspace - The workspace object to share
- * @param {Function} props.onClose - Handler for closing the modal
- * @returns {JSX.Element} TeamWorkspaceShareInviteModal component
+ *  props - Component props
+ *  props.visible - Whether the modal is visible
+ *  props.workspace - The workspace object to share
+ *  props.onClose - Handler for closing the modal
+ *  TeamWorkspaceShareInviteModal component
  */
 import type { Workspace } from '@/types/workspace';
 

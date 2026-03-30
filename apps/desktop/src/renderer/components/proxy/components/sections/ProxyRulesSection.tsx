@@ -39,13 +39,13 @@ const { Title } = Typography;
  * - Provides clean separation between display and editing functionality
  * - Handles both creation and editing workflows with proper form initialization
  *
- * @param {Array} rules - Current proxy rules
- * @param {Array} sources - Available sources for dynamic header values
- * @param {Array} headerRules - Available header rules for reference mode
- * @param {function} onSaveRule - Callback for rule save operations
- * @param {function} onDeleteRule - Callback for rule deletion
- * @param {function} onToggleRule - Callback for rule enable/disable
- * @returns {JSX.Element} Complete proxy rules management section
+ *  rules - Current proxy rules
+ *  sources - Available sources for dynamic header values
+ *  headerRules - Available header rules for reference mode
+ *  onSaveRule - Callback for rule save operations
+ *  onDeleteRule - Callback for rule deletion
+ *  onToggleRule - Callback for rule enable/disable
+ *  Complete proxy rules management section
  */
 interface ProxyRulesSectionProps {
   rules: ProxyRule[];

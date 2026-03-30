@@ -18,15 +18,15 @@ let globalShowSecretsInModal = true;
 
 /**
  * SecretInput - A reusable component for secret/password inputs with visibility toggle
- * @param {Object} props - Component props
- * @param {string} props.value - Input value
- * @param {Function} props.onChange - Change handler
- * @param {string} props.placeholder - Placeholder text
- * @param {boolean} props.showButton - Whether to show the Show/Hide button (default: false)
- * @param {boolean|string} props.useGlobalPreference - Whether to use global preference ('edit', 'modal', or false) (default: false)
- * @param {Object} props.autoSize - AutoSize configuration for TextArea
- * @param {Object} props.style - Additional styles
- * @param {Object} restProps - Additional props to pass to TextArea
+ *  props - Component props
+ *  props.value - Input value
+ *  props.onChange - Change handler
+ *  props.placeholder - Placeholder text
+ *  props.showButton - Whether to show the Show/Hide button (default: false)
+ *  props.useGlobalPreference - Whether to use global preference ('edit', 'modal', or false) (default: false)
+ *  props.autoSize - AutoSize configuration for TextArea
+ *  props.style - Additional styles
+ *  restProps - Additional props to pass to TextArea
  */
 interface SecretInputOwnProps {
   showButton?: boolean;

@@ -15,7 +15,7 @@ import { useEffect } from 'react';
  *
  * Note: This component returns null as it's purely for event management.
  *
- * @returns {null} No visible UI - purely for event handling
+ *  No visible UI - purely for event handling
  */
 const TrayMenu = () => {
   useEffect(() => {

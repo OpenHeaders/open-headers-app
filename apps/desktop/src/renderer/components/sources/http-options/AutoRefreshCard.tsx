@@ -21,16 +21,16 @@ import { Card, Col, Form, Input, InputNumber, Radio, Row, Select, Space, Switch 
 /**
  * Auto-Refresh card component for refresh configuration
  *
- * @param {Object} props - Component props
- * @param {boolean} props.refreshEnabled - Current refresh enabled state
- * @param {Function} props.handleRefreshToggle - Refresh toggle handler
- * @param {string} props.refreshType - Current refresh type (preset/custom)
- * @param {Function} props.handleRefreshTypeChange - Refresh type change handler
- * @param {number} props.customInterval - Current custom interval value
- * @param {Function} props.handlePresetIntervalChange - Preset interval change handler
- * @param {Function} props.handleCustomIntervalChange - Custom interval change handler
- * @param {Object} props.form - Form instance for field access
- * @returns {JSX.Element} Auto-refresh card component
+ *  props - Component props
+ *  props.refreshEnabled - Current refresh enabled state
+ *  props.handleRefreshToggle - Refresh toggle handler
+ *  props.refreshType - Current refresh type (preset/custom)
+ *  props.handleRefreshTypeChange - Refresh type change handler
+ *  props.customInterval - Current custom interval value
+ *  props.handlePresetIntervalChange - Preset interval change handler
+ *  props.handleCustomIntervalChange - Custom interval change handler
+ *  props.form - Form instance for field access
+ *  Auto-refresh card component
  */
 interface AutoRefreshCardProps {
   refreshEnabled: boolean;

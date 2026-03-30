@@ -36,11 +36,11 @@ const { Text } = Typography;
  * Orchestrates the display of source content with intelligent content type detection
  * and appropriate visualization. Manages modal state and coordinates with child components.
  *
- * @param {Object} props - Component props
- * @param {Object} props.source - Source object containing content and metadata
- * @param {boolean} props.open - Modal visibility state
- * @param {Function} props.onClose - Modal close handler function
- * @returns {React.Component} Rendered modal component with content display
+ *  props - Component props
+ *  props.source - Source object containing content and metadata
+ *  props.open - Modal visibility state
+ *  props.onClose - Modal close handler function
+ *  Rendered modal component with content display
  * @example
  * <ContentViewer source={sourceData} open={isOpen} onClose={handleClose} />
  */

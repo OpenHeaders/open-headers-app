@@ -20,14 +20,14 @@ const { Text } = Typography;
  * - App restart prompts after permission changes
  * - System preferences guidance
  *
- * @param {Object} permissionAlert - Alert configuration object
- * @param {string} permissionAlert.type - Alert type ('warning', 'error', 'info', 'success')
- * @param {string} permissionAlert.message - Main alert message/title
- * @param {string} permissionAlert.description - Detailed description text
- * @param {Object} permissionAlert.action - Optional action button configuration
- * @param {string} permissionAlert.action.text - Button text
- * @param {function} permissionAlert.action.onClick - Button click handler
- * @param {function} onClose - Callback function when alert is closed
+ *  permissionAlert - Alert configuration object
+ *  permissionAlert.type - Alert type ('warning', 'error', 'info', 'success')
+ *  permissionAlert.message - Main alert message/title
+ *  permissionAlert.description - Detailed description text
+ *  permissionAlert.action - Optional action button configuration
+ *  permissionAlert.action.text - Button text
+ *  permissionAlert.action.onClick - Button click handler
+ *  onClose - Callback function when alert is closed
  */
 interface PermissionAlertProps {
   permissionAlert: {

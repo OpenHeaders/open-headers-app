@@ -51,10 +51,10 @@ import {
  * Provides a comprehensive interface for domain tag management including validation,
  * input processing, editing, and bulk operations with proper user feedback.
  *
- * @param {Object} props - Component props
- * @param {Array} props.value - Array of domain strings (default: [])
- * @param {Function} props.onChange - Callback function for domain changes
- * @returns {JSX.Element} Domain tags management component
+ *  props - Component props
+ *  props.value - Array of domain strings (default: [])
+ *  props.onChange - Callback function for domain changes
+ *  Domain tags management component
  *
  * @example
  * <DomainTags

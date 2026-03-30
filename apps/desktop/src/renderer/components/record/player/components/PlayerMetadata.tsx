@@ -4,9 +4,9 @@
  * Displays recording metadata in a tooltip
  * Shows URL, duration, start time, events count, and viewport dimensions
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - The recording data
- * @param {boolean} props.hasVideo - Whether the recording has video
+ *  props - Component props
+ *  props.record - The recording data
+ *  props.hasVideo - Whether the recording has video
  */
 
 import { InfoCircleOutlined } from '@ant-design/icons';

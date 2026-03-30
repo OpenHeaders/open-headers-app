@@ -5,11 +5,11 @@
  * Displays relative time with milliseconds and tooltip with absolute time
  * Includes current entry indicator when highlighting is active
  *
- * @param {Object} props - Component props
- * @param {number} props.timestamp - The timestamp to display
- * @param {Object} props.record - The full record for context
- * @param {boolean} props.isCurrentEntry - Whether this is the current highlighted entry
- * @param {number} props.width - Minimum width for the cell
+ *  props - Component props
+ *  props.timestamp - The timestamp to display
+ *  props.record - The full record for context
+ *  props.isCurrentEntry - Whether this is the current highlighted entry
+ *  props.width - Minimum width for the cell
  */
 
 import { CaretRightOutlined } from '@ant-design/icons';

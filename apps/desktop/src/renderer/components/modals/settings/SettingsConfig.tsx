@@ -53,11 +53,11 @@ import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
  * - disabled: Whether control is disabled
  * - tooltip: Contextual help text
  *
- * @param {Object} formValues - Current form values
- * @param {Object} screenRecordingPermission - Screen recording permission state
- * @param {boolean} screenRecordingPermission.hasPermission - Whether permission is granted
- * @param {string} screenRecordingPermission.platform - Operating system platform
- * @returns {Object} Configuration object with general, appearance, and records sections
+ *  formValues - Current form values
+ *  screenRecordingPermission - Screen recording permission state
+ *  screenRecordingPermission.hasPermission - Whether permission is granted
+ *  screenRecordingPermission.platform - Operating system platform
+ *  Configuration object with general, appearance, and records sections
  */
 export const getSettingsConfig = (
   formValues: Partial<AppSettings>,

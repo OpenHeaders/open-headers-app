@@ -21,11 +21,11 @@ const { TextArea } = Input;
 /**
  * HTTP Body tab component for request body configuration
  *
- * @param {Object} props - Component props
- * @param {string} props.contentType - Current content type
- * @param {Function} props.handleContentTypeChange - Content type change handler
- * @param {Function} props.validateVariableExists - Variable validation function
- * @returns {JSX.Element} Body tab component
+ *  props - Component props
+ *  props.contentType - Current content type
+ *  props.handleContentTypeChange - Content type change handler
+ *  props.validateVariableExists - Variable validation function
+ *  Body tab component
  */
 interface HttpBodyTabProps {
   contentType: string;

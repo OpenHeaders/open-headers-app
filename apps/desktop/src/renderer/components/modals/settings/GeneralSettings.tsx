@@ -20,9 +20,9 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * - "Hide on start" depends on "Open at login" being enabled
  * - When "Open at login" is disabled, "Hide on start" is automatically disabled
  *
- * @param {Object} formValues - Current form values containing all settings
- * @param {Object} screenRecordingPermission - Screen recording permission state
- * @param {function} onChange - Callback function for handling setting changes
+ *  formValues - Current form values containing all settings
+ *  screenRecordingPermission - Screen recording permission state
+ *  onChange - Callback function for handling setting changes
  */
 interface GeneralSettingsProps {
   formValues: Partial<AppSettings>;
@@ -35,8 +35,8 @@ const GeneralSettings = ({ formValues, screenRecordingPermission, onChange }: Ge
 
   /**
    * Render individual setting items
-   * @param {Array} items - Array of setting configuration objects
-   * @returns {React.ReactNode} Rendered setting items
+   *  items - Array of setting configuration objects
+   *  Rendered setting items
    */
   const renderSettingItems = (items: ReturnType<typeof getSettingsConfig>['general']) => (
     <>

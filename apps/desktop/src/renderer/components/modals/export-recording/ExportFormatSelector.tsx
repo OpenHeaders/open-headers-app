@@ -17,11 +17,11 @@ const { useToken } = theme;
  * - Visual state indicators: Different styling for selected, disabled, and available states
  * - Accessibility: Proper ARIA attributes and keyboard navigation support
  *
- * @param {string} exportType - Current selected export type ('json' or 'video')
- * @param {function} onExportTypeChange - Callback function when export type selection changes
- * @param {Object} record - Recording data object containing metadata about the session
- * @param {boolean} record.hasVideo - Whether video recording is available for this session
- * @param {boolean} isExporting - Whether export process is currently in progress (disables controls)
+ *  exportType - Current selected export type ('json' or 'video')
+ *  onExportTypeChange - Callback function when export type selection changes
+ *  record - Recording data object containing metadata about the session
+ *  record.hasVideo - Whether video recording is available for this session
+ *  isExporting - Whether export process is currently in progress (disables controls)
  */
 
 interface ExportFormatSelectorProps {

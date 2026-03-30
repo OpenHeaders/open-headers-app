@@ -7,9 +7,9 @@ import { useConnectionsServer } from './hooks';
  *
  * Displays WebSocket server status and connected browser extension clients.
  *
- * @param {Object} props
- * @param {boolean} props.active - Whether this tab is currently visible
- * @returns {JSX.Element} Connections management interface
+ *  props
+ *  props.active - Whether this tab is currently visible
+ *  Connections management interface
  */
 interface ConnectionsServerProps {
   active: boolean;

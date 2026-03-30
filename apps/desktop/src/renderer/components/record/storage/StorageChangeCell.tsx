@@ -4,11 +4,11 @@
  * Renders storage value changes with old -> new value display
  * Includes action buttons for copy and view details
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - Storage record
- * @param {Function} props.onViewDetails - Handler for view details action
- * @param {Function} props.messageApi - Ant Design message API
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.record - Storage record
+ *  props.onViewDetails - Handler for view details action
+ *  props.messageApi - Ant Design message API
+ *  props.token - Ant Design theme token
  */
 
 import { ArrowRightOutlined, CopyOutlined, EyeOutlined } from '@ant-design/icons';

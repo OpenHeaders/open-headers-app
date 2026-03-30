@@ -4,11 +4,11 @@
  * Refactored network requests display component with improved modularity
  * Uses shared hooks and components for consistent behavior
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - The record containing network requests
- * @param {string} props.viewMode - Current view mode
- * @param {number} props.activeTime - Current playback time for highlighting
- * @param {boolean} props.autoHighlight - Whether to enable auto-highlighting
+ *  props - Component props
+ *  props.record - The record containing network requests
+ *  props.viewMode - Current view mode
+ *  props.activeTime - Current playback time for highlighting
+ *  props.autoHighlight - Whether to enable auto-highlighting
  */
 
 import { ClearOutlined, SearchOutlined } from '@ant-design/icons';

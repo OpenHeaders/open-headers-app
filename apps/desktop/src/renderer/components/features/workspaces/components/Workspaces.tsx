@@ -45,7 +45,7 @@ const styles = {
  * - Workspace cloning and deletion
  * - Connection testing for Git repositories
  *
- * @returns {JSX.Element} The main Workspaces component
+ *  The main Workspaces component
  */
 const Workspaces = () => {
   const { message, modal } = App.useApp();
@@ -70,7 +70,7 @@ const Workspaces = () => {
 
   /**
    * Handles editing an existing workspace
-   * @param {Object} workspace - Workspace object to edit
+   *  workspace - Workspace object to edit
    */
   const handleEditWorkspace = (workspace: Workspace) => {
     setEditingWorkspace(workspace);
@@ -87,7 +87,7 @@ const Workspaces = () => {
 
   /**
    * Handles successful workspace creation
-   * @param {string} workspaceId - ID of the created workspace
+   *  workspaceId - ID of the created workspace
    */
   const handleWorkspaceSuccess = (workspaceId?: string) => {
     console.log('Workspace created successfully:', workspaceId);
@@ -97,7 +97,7 @@ const Workspaces = () => {
 
   /**
    * Handles sharing a workspace by generating and displaying invite links
-   * @param {Object} workspace - Workspace object to share
+   *  workspace - Workspace object to share
    */
   const _handleShareWorkspace = async (workspace: Workspace) => {
     try {
@@ -314,7 +314,7 @@ const Workspaces = () => {
    * and privacy information. Only shown if tutorial mode is enabled
    * in user settings.
    *
-   * @returns {JSX.Element|null} Tutorial alert component or null if disabled
+   *  Tutorial alert component or null if disabled
    */
   const renderTutorialAlert = () => {
     if (settings?.tutorialMode === false) {

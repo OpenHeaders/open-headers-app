@@ -4,13 +4,13 @@
  * Container for video playback with loading state
  * Handles video element styling and error handling
  *
- * @param {Object} props - Component props
- * @param {React.RefObject} props.videoRef - Ref for the video element
- * @param {Object} props.token - Ant Design theme token
- * @param {string} props.viewMode - Current view mode
- * @param {boolean} props.videoLoading - Whether video is loading
- * @param {Function} props.onVideoLoaded - Handler for video loaded event
- * @param {Function} props.onVideoError - Handler for video error event
+ *  props - Component props
+ *  props.videoRef - Ref for the video element
+ *  props.token - Ant Design theme token
+ *  props.viewMode - Current view mode
+ *  props.videoLoading - Whether video is loading
+ *  props.onVideoLoaded - Handler for video loaded event
+ *  props.onVideoError - Handler for video error event
  */
 
 import { Spin } from 'antd';

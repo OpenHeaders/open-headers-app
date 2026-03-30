@@ -11,8 +11,8 @@ const { Text } = Typography;
 
 /**
  * Alert component for missing variables
- * @param {Object} props - Component props
- * @param {Array} props.missingVariables - Array of missing variable names
+ *  props - Component props
+ *  props.missingVariables - Array of missing variable names
  */
 interface MissingVariablesAlertProps {
   missingVariables: string[];
@@ -32,8 +32,8 @@ export const MissingVariablesAlert = ({ missingVariables }: MissingVariablesAler
 
 /**
  * Tutorial information component
- * @param {Object} props - Component props
- * @param {boolean} props.showTutorial - Whether to show tutorial mode
+ *  props - Component props
+ *  props.showTutorial - Whether to show tutorial mode
  */
 interface TutorialInfoProps {
   showTutorial: boolean;
@@ -63,8 +63,8 @@ export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
 
 /**
  * Summary of sources using environment variables
- * @param {Object} props - Component props
- * @param {Array} props.sources - Array of source configurations
+ *  props - Component props
+ *  props.sources - Array of source configurations
  */
 interface VariableUsageSummaryProps {
   sources: Source[];

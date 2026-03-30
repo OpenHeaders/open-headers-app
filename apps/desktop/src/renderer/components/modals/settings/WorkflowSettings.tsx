@@ -28,9 +28,9 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * - Shows appropriate tooltips when permissions are required
  * - Gracefully handles permission request flows
  *
- * @param {Object} formValues - Current form values containing all settings
- * @param {Object} screenRecordingPermission - Screen recording permission state
- * @param {function} onChange - Callback function for handling setting changes
+ *  formValues - Current form values containing all settings
+ *  screenRecordingPermission - Screen recording permission state
+ *  onChange - Callback function for handling setting changes
  */
 interface WorkflowSettingsProps {
   formValues: Partial<AppSettings>;
@@ -63,8 +63,8 @@ const WorkflowSettings = ({
 
   /**
    * Render individual setting items
-   * @param {Array} items - Array of setting configuration objects
-   * @returns {React.ReactNode} Rendered setting items
+   *  items - Array of setting configuration objects
+   *  Rendered setting items
    */
   const renderSettingItems = (items: ReturnType<typeof getSettingsConfig>['records']) => (
     <>

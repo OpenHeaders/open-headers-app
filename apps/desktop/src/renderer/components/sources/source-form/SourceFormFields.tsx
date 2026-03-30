@@ -32,11 +32,11 @@ import type React from 'react';
  * the selected source type. Provides specialized functionality for each
  * source type including file browser integration.
  *
- * @param {Object} props - Component props
- * @param {string} props.sourceType - Type of source (file, env, http)
- * @param {string} props.filePath - Current file path for file sources
- * @param {Function} props.onBrowse - Callback for file browse button
- * @returns {JSX.Element} Appropriate input field for the source type
+ *  props - Component props
+ *  props.sourceType - Type of source (file, env, http)
+ *  props.filePath - Current file path for file sources
+ *  props.onBrowse - Callback for file browse button
+ *  Appropriate input field for the source type
  *
  * @example
  * <SourcePathField
@@ -105,11 +105,11 @@ export const SourcePathField = ({
  * Primary action button for adding sources with loading states and
  * conditional disabled states based on form and testing status.
  *
- * @param {Object} props - Component props
- * @param {boolean} props.submitting - Whether form is currently submitting
- * @param {boolean} props.testing - Whether HTTP testing is in progress
- * @param {Function} props.onSubmit - Form submission callback
- * @returns {JSX.Element} Add source button with appropriate state
+ *  props - Component props
+ *  props.submitting - Whether form is currently submitting
+ *  props.testing - Whether HTTP testing is in progress
+ *  props.onSubmit - Form submission callback
+ *  Add source button with appropriate state
  *
  * @example
  * <AddSourceButton
@@ -151,10 +151,10 @@ export const AddSourceButton = ({ submitting, testing, onSubmit }: AddSourceButt
  * out of view. Provides consistent access to the add button and form title
  * during long form interactions.
  *
- * @param {Object} props - Component props
- * @param {boolean} props.isVisible - Whether sticky header should be visible
- * @param {JSX.Element} props.addButton - Add button component to render
- * @returns {JSX.Element|null} Sticky header component or null if not visible
+ *  props - Component props
+ *  props.isVisible - Whether sticky header should be visible
+ *  props.addButton - Add button component to render
+ *  Sticky header component or null if not visible
  *
  * @example
  * <StickyHeader
@@ -192,8 +192,8 @@ export const StickyHeader = ({ isVisible, addButton }: StickyHeaderProps) => {
  * Utility function that returns the correct label text for the source path
  * field based on the selected source type.
  *
- * @param {string} sourceType - Type of source (file, env, http)
- * @returns {string} Appropriate label text for the source type
+ *  sourceType - Type of source (file, env, http)
+ *  Appropriate label text for the source type
  *
  * @example
  * const label = getSourcePathLabel('file'); // Returns "File Path"
@@ -218,8 +218,8 @@ export const getSourcePathLabel = (sourceType: string) => {
  * Utility function that returns the correct validation message for required
  * field validation based on the selected source type.
  *
- * @param {string} sourceType - Type of source (file, env, http)
- * @returns {string} Appropriate validation message for the source type
+ *  sourceType - Type of source (file, env, http)
+ *  Appropriate validation message for the source type
  *
  * @example
  * const message = getSourcePathValidationMessage('file');

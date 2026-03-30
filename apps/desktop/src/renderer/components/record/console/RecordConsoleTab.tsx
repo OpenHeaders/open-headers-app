@@ -4,11 +4,11 @@
  * Refactored console logs display component with improved modularity
  * Uses shared hooks and components for consistent behavior
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - The record containing console logs
- * @param {string} props.viewMode - Current view mode
- * @param {number} props.activeTime - Current playback time for highlighting
- * @param {boolean} props.autoHighlight - Whether to enable auto-highlighting
+ *  props - Component props
+ *  props.record - The record containing console logs
+ *  props.viewMode - Current view mode
+ *  props.activeTime - Current playback time for highlighting
+ *  props.autoHighlight - Whether to enable auto-highlighting
  */
 
 import { ClearOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons';

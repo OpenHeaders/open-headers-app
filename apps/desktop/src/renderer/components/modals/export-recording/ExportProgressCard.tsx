@@ -17,9 +17,9 @@ const { Text } = Typography;
  * The component provides visual feedback to users during potentially long-running operations,
  * helping them understand what's happening and roughly how long it might take.
  *
- * @param {string} exportStatus - Current export status ('downloading', 'converting', 'saving', or empty)
- * @param {number} downloadProgress - Download progress percentage (0-100) for FFmpeg installation
- * @param {number} conversionProgress - Video conversion progress percentage (0-100) for MP4 conversion
+ *  exportStatus - Current export status ('downloading', 'converting', 'saving', or empty)
+ *  downloadProgress - Download progress percentage (0-100) for FFmpeg installation
+ *  conversionProgress - Video conversion progress percentage (0-100) for MP4 conversion
  */
 interface ExportProgressCardProps {
   exportStatus: string;

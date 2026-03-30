@@ -7,9 +7,9 @@ const { Text } = Typography;
  * ImportWarnings component for displaying contextual warnings and information alerts
  * Shows dynamic warnings based on import mode and data types being imported
  *
- * @param {string} importMode - Import mode ('merge' or 'replace')
- * @param {Object} selectedItems - Selected items to import
- * @param {Object} combinedEnvInfo - Combined environment information
+ *  importMode - Import mode ('merge' or 'replace')
+ *  selectedItems - Selected items to import
+ *  combinedEnvInfo - Combined environment information
  */
 interface ImportWarningsProps {
   importMode: string;

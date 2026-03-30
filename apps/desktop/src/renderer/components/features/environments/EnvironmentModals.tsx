@@ -12,11 +12,11 @@ const { TextArea } = Input;
 
 /**
  * Modal for creating new environments
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Modal visibility
- * @param {Function} props.onCancel - Cancel callback
- * @param {Function} props.onOk - Confirm callback
- * @param {Object} props.form - Ant Design form instance
+ *  props - Component props
+ *  props.visible - Modal visibility
+ *  props.onCancel - Cancel callback
+ *  props.onOk - Confirm callback
+ *  props.form - Ant Design form instance
  */
 interface ModalProps {
   visible: boolean;
@@ -37,11 +37,11 @@ export const CreateEnvironmentModal = ({ visible, onCancel, onOk, form }: ModalP
 
 /**
  * Modal for adding new global variables
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Modal visibility
- * @param {Function} props.onCancel - Cancel callback
- * @param {Function} props.onOk - Confirm callback
- * @param {Object} props.form - Ant Design form instance
+ *  props - Component props
+ *  props.visible - Modal visibility
+ *  props.onCancel - Cancel callback
+ *  props.onOk - Confirm callback
+ *  props.form - Ant Design form instance
  */
 export const AddVariableModal = ({ visible, onCancel, onOk, form }: ModalProps) => (
   <Modal title="Add Variable" open={visible} onOk={onOk} onCancel={onCancel} width={480}>

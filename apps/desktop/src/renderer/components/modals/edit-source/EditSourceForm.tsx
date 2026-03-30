@@ -49,9 +49,9 @@ const EditSourceForm: React.FC<EditSourceFormProps> = ({
 }) => {
   /**
    * URL field validator that checks for environment variables and TOTP codes
-   * @param {Object} _ - Rule object (unused)
-   * @param {string} value - URL value to validate
-   * @returns {Promise} - Validation result
+   *  _ - Rule object (unused)
+   *  value - URL value to validate
+   *  - Validation result
    */
   const validateUrl = async (_: unknown, value: string) => {
     log.debug('URL validator called with value:', value);

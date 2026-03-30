@@ -12,15 +12,15 @@ const { Text } = Typography;
 
 /**
  * EditDescriptionModal component
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether modal is visible
- * @param {string} props.recordId - ID of the record being edited
- * @param {string} props.recordUrl - URL of the record for display
- * @param {Object} props.recordTag - Tag object of the record for display
- * @param {string} props.currentDescription - Current description value
- * @param {boolean} props.viewOnly - Whether modal is in view-only mode
- * @param {Function} props.onSave - Callback when saving description
- * @param {Function} props.onCancel - Callback when canceling
+ *  props - Component props
+ *  props.visible - Whether modal is visible
+ *  props.recordId - ID of the record being edited
+ *  props.recordUrl - URL of the record for display
+ *  props.recordTag - Tag object of the record for display
+ *  props.currentDescription - Current description value
+ *  props.viewOnly - Whether modal is in view-only mode
+ *  props.onSave - Callback when saving description
+ *  props.onCancel - Callback when canceling
  */
 interface EditDescriptionModalProps {
   visible: boolean;

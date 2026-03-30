@@ -20,9 +20,9 @@ import { Button, Form, Input, Space } from 'antd';
 /**
  * HTTP Headers tab component for header configuration
  *
- * @param {Object} props - Component props
- * @param {Function} props.validateVariableExists - Variable validation function
- * @returns {JSX.Element} Headers tab component
+ *  props - Component props
+ *  props.validateVariableExists - Variable validation function
+ *  Headers tab component
  */
 interface HttpHeadersTabProps {
   validateVariableExists: (value: string) => { valid: boolean; error?: string };

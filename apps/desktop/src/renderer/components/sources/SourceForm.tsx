@@ -62,9 +62,9 @@ const log = createLogger('SourceForm');
  * Provides a comprehensive form interface for creating different types of sources
  * with proper validation, error handling, and user experience optimizations.
  *
- * @param {Object} props - Component props
- * @param {Function} props.onAddSource - Callback function for adding new sources
- * @returns {JSX.Element} Source form component
+ *  props - Component props
+ *  props.onAddSource - Callback function for adding new sources
+ *  Source form component
  */
 interface SourceFormProps {
   onAddSource: (sourceData: NewSourceData) => Promise<boolean>;

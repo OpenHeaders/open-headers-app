@@ -10,12 +10,12 @@ const { Text } = Typography;
 
 /**
  * WorkflowViewerControls component
- * @param {Object} props - Component props
- * @param {boolean} props.autoHighlight - Auto-highlight enabled state
- * @param {boolean} props.autoScroll - Auto-scroll enabled state
- * @param {Function} props.onAutoHighlightChange - Auto-highlight change handler
- * @param {Function} props.onAutoScrollChange - Auto-scroll change handler
- * @returns {React.ReactNode} Rendered controls
+ *  props - Component props
+ *  props.autoHighlight - Auto-highlight enabled state
+ *  props.autoScroll - Auto-scroll enabled state
+ *  props.onAutoHighlightChange - Auto-highlight change handler
+ *  props.onAutoScrollChange - Auto-scroll change handler
+ *  Rendered controls
  */
 interface WorkflowViewerControlsProps {
   autoHighlight: boolean;

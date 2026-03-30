@@ -63,7 +63,7 @@ const WorkflowRecording = ({
 
   /**
    * Handles viewing a specific record
-   * @param {Object} recordData - Record to view
+   *  recordData - Record to view
    */
   const handleViewRecord = async (recordData: WorkflowRecordingEntry) => {
     try {
@@ -82,7 +82,7 @@ const WorkflowRecording = ({
 
   /**
    * Handles record deletion
-   * @param {string} recordId - ID of deleted record
+   *  recordId - ID of deleted record
    */
   const handleRecordDeleted = (recordId: string) => {
     // If the currently viewed record is deleted, show upload view

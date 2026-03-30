@@ -4,12 +4,12 @@
  * Modal component for displaying detailed console log information
  * Extracted from RecordConsoleTab for better modularity
  *
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether the modal is visible
- * @param {Object} props.selectedLog - The selected console log entry
- * @param {Object} props.record - The full record for context
- * @param {Function} props.onClose - Handler for modal close
- * @param {Function} props.messageApi - Ant Design message API
+ *  props - Component props
+ *  props.visible - Whether the modal is visible
+ *  props.selectedLog - The selected console log entry
+ *  props.record - The full record for context
+ *  props.onClose - Handler for modal close
+ *  props.messageApi - Ant Design message API
  */
 
 import { CopyOutlined } from '@ant-design/icons';

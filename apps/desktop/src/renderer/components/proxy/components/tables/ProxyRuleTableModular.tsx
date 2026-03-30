@@ -40,14 +40,14 @@ import ProxyRuleTableEmpty from './ProxyRuleTableEmpty';
  * - Implements responsive design with column width management
  * - Uses popconfirm for destructive delete operations
  *
- * @param {Array} rules - Array of proxy rule objects
- * @param {Array} sources - Available sources for dynamic value display
- * @param {Array} headerRules - Available header rules for reference resolution
- * @param {function} onEdit - Callback when edit button is clicked
- * @param {function} onDelete - Callback when delete is confirmed
- * @param {function} onToggle - Callback when rule is enabled/disabled
- * @param {function} onAdd - Callback when "Add First Rule" button is clicked
- * @returns {JSX.Element} Proxy rules management table
+ *  rules - Array of proxy rule objects
+ *  sources - Available sources for dynamic value display
+ *  headerRules - Available header rules for reference resolution
+ *  onEdit - Callback when edit button is clicked
+ *  onDelete - Callback when delete is confirmed
+ *  onToggle - Callback when rule is enabled/disabled
+ *  onAdd - Callback when "Add First Rule" button is clicked
+ *  Proxy rules management table
  */
 interface ProxyRuleTableProps {
   rules: ProxyRule[];

@@ -4,8 +4,8 @@
  * Renders storage attributes like initial, HttpOnly, Secure, SameSite for cookies
  * Shows appropriate tags with tooltips for each attribute
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - Storage record with metadata
+ *  props - Component props
+ *  props.record - Storage record with metadata
  */
 
 import type { StorageRecord } from '@openheaders/core';

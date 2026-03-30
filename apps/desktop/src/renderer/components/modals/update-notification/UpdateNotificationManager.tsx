@@ -19,12 +19,12 @@ import React from 'react';
  * - Install button generation with confirmation dialogs
  * - Proper cleanup and state management
  *
- * @param {Object} notification - Ant Design notification API
- * @param {Object} modal - Ant Design modal API
- * @param {Object} token - Theme token for styling
- * @param {boolean} isInstalling - Whether update installation is in progress
- * @param {function} setIsInstalling - State setter for installation status
- * @param {function} debugLog - Debug logging function
+ *  notification - Ant Design notification API
+ *  modal - Ant Design modal API
+ *  token - Theme token for styling
+ *  isInstalling - Whether update installation is in progress
+ *  setIsInstalling - State setter for installation status
+ *  debugLog - Debug logging function
  */
 interface UpdateNotificationManagerProps {
   notification: NotificationInstance;
@@ -66,7 +66,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Clear a specific notification by key
-   * @param {string} key - Notification key to clear
+   *  key - Notification key to clear
    */
   const clearNotification = (key: string) => {
     debugLog(`Clearing notification with key: ${key}`);
@@ -89,7 +89,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Show already checking notification
-   * @param {boolean} isDownloading - Whether download/processing is in progress
+   *  isDownloading - Whether download/processing is in progress
    */
   const showAlreadyCheckingNotification = (isDownloading: boolean) => {
     notification.info({
@@ -102,8 +102,8 @@ export const UpdateNotificationManager = ({
 
   /**
    * Show update available notification with processing progress
-   * @param {Object} info - Update information
-   * @param {number} progress - Processing progress (0-100)
+   *  info - Update information
+   *  progress - Processing progress (0-100)
    */
   const showUpdateAvailableNotification = (info: { version: string }, progress = 0) => {
     debugLog(`Showing update available notification for version ${info.version}`);
@@ -122,7 +122,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Show update processing progress notification
-   * @param {number} percent - Processing progress percentage
+   *  percent - Processing progress percentage
    */
   const showDownloadProgressNotification = (percent: number) => {
     notification.info({
@@ -139,7 +139,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Create install button with confirmation dialog
-   * @returns {React.ReactNode} Install button component
+   *  Install button component
    */
   const createInstallButton = () => {
     return (
@@ -182,7 +182,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Show update ready notification
-   * @param {Object} info - Update information
+   *  info - Update information
    */
   const showUpdateReadyNotification = (info: { version: string }) => {
     debugLog(`Showing update ready notification for version ${info.version}`);
@@ -214,7 +214,7 @@ export const UpdateNotificationManager = ({
 
   /**
    * Show update error notification
-   * @param {string} message - Error message
+   *  message - Error message
    */
   const showUpdateErrorNotification = (message: string) => {
     debugLog('Showing update error notification');

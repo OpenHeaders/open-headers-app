@@ -7,8 +7,8 @@ const { Text, Title } = Typography;
  * ExportPurposeSelector component for selecting export purpose
  * Provides user-friendly selection between team sharing and personal backup modes
  *
- * @param {string} exportPurpose - Current export purpose ('team' or 'backup')
- * @param {function} onPurposeChange - Handler for purpose selection changes
+ *  exportPurpose - Current export purpose ('team' or 'backup')
+ *  onPurposeChange - Handler for purpose selection changes
  */
 interface ExportPurposeSelectorProps {
   exportPurpose: string;

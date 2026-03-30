@@ -27,8 +27,8 @@ const _log = createLogger('UpdateNotification');
  * - UpdateNotificationManager: Notification display and formatting
  * - UpdateEventHandlers: Event handling and state management
  *
- * @param {Object} props - Component props (unused)
- * @param {Object} ref - Forward ref for imperative API
+ *  props - Component props (unused)
+ *  ref - Forward ref for imperative API
  */
 const UpdateNotification = forwardRef((_props, ref) => {
   const { notification, modal } = App.useApp();
@@ -61,8 +61,8 @@ const UpdateNotification = forwardRef((_props, ref) => {
 
   /**
    * Debug logging function with timestamp
-   * @param {string} message - Log message
-   * @param {*} data - Optional data to log
+   *  message - Log message
+   *  data - Optional data to log
    */
   const debugLog = (_message: string, _data = null) => {
     // No-op: debug logging disabled for update notifications
@@ -123,7 +123,7 @@ const UpdateNotification = forwardRef((_props, ref) => {
 
   /**
    * Perform update check with debouncing and state management
-   * @param {boolean} isManual - Whether this is a manual check
+   *  isManual - Whether this is a manual check
    */
   const performUpdateCheck = (isManual = false) => {
     debugLog(`${debugLabel} checkForUpdates called (manual: ${isManual})`);

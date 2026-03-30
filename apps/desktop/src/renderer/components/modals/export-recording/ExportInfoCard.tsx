@@ -15,7 +15,7 @@ const { useToken } = theme;
  * - Only shows for JSON exports (video exports are self-explanatory)
  * - Could be extended to show format-specific tips for video exports
  *
- * @param {string} exportType - Current export type ('json' or 'video')
+ *  exportType - Current export type ('json' or 'video')
  */
 interface ExportInfoCardProps {
   exportType: string;

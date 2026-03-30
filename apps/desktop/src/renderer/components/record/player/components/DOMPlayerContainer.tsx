@@ -4,10 +4,10 @@
  * Container for the rrweb DOM playback player
  * Handles styling and positioning for the player
  *
- * @param {Object} props - Component props
- * @param {React.RefObject} props.playerContainerRef - Ref for the player container
- * @param {Object} props.token - Ant Design theme token
- * @param {string} props.viewMode - Current view mode
+ *  props - Component props
+ *  props.playerContainerRef - Ref for the player container
+ *  props.token - Ant Design theme token
+ *  props.viewMode - Current view mode
  */
 
 import type { GlobalToken } from 'antd/es/theme/interface';

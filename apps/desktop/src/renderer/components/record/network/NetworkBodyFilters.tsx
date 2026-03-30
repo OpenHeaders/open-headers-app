@@ -4,10 +4,10 @@
  * Dropdown component for filtering network requests by request/response body presence
  * Extracted from RecordNetworkTab for better modularity
  *
- * @param {Object} props - Component props
- * @param {Object} props.bodyFilters - Current body filter state
- * @param {Function} props.onBodyFiltersChange - Handler for body filter changes
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.bodyFilters - Current body filter state
+ *  props.onBodyFiltersChange - Handler for body filter changes
+ *  props.token - Ant Design theme token
  */
 
 import { FilterOutlined } from '@ant-design/icons';

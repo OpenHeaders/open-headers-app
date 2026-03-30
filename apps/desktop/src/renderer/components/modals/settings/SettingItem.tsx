@@ -52,18 +52,18 @@ const styles = {
  * - Tooltip support for contextual help
  * - Responsive layout with proper spacing
  *
- * @param {React.Component} icon - Icon component to display next to the setting
- * @param {string} title - Main title/label for the setting
- * @param {string} description - Descriptive text explaining the setting
- * @param {string} fieldName - Field name for the setting (used in onChange)
- * @param {boolean} isActive - Whether the setting should appear active/enabled
- * @param {boolean} disabled - Whether the setting control is disabled
- * @param {string} tooltip - Optional tooltip text to show on hover
- * @param {string} type - Type of input control ('switch', 'select', or 'text')
- * @param {Array} options - Options array for select type controls
- * @param {string} placeholder - Placeholder text for text input
- * @param {*} value - Current value of the setting
- * @param {function} onChange - Callback function when setting value changes
+ *  icon - Icon component to display next to the setting
+ *  title - Main title/label for the setting
+ *  description - Descriptive text explaining the setting
+ *  fieldName - Field name for the setting (used in onChange)
+ *  isActive - Whether the setting should appear active/enabled
+ *  disabled - Whether the setting control is disabled
+ *  tooltip - Optional tooltip text to show on hover
+ *  type - Type of input control ('switch', 'select', or 'text')
+ *  options - Options array for select type controls
+ *  placeholder - Placeholder text for text input
+ *  value - Current value of the setting
+ *  onChange - Callback function when setting value changes
  */
 interface SettingItemProps {
   icon?: React.ComponentType<{ style?: React.CSSProperties }>;
@@ -100,7 +100,7 @@ const SettingItem = forwardRef(
   ) => {
     /**
      * Handle setting value changes
-     * @param {*} newValue - New value for the setting
+     *  newValue - New value for the setting
      */
     const handleChange = (newValue: unknown) => {
       onChange?.(fieldName, newValue);

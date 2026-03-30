@@ -34,12 +34,12 @@ const { Title, Text } = Typography;
  * - Uses consistent styling with other proxy components
  * - Integrates with tutorial mode settings for conditional display
  *
- * @param {Object} proxyStatus - Current proxy server status and configuration
- * @param {boolean} loading - Whether server operation is in progress
- * @param {boolean} tutorialMode - Whether to show educational content
- * @param {function} onToggleProxy - Callback for start/stop operations
- * @param {function} onUpdatePort - Callback for port configuration changes
- * @returns {JSX.Element} Proxy server control panel
+ *  proxyStatus - Current proxy server status and configuration
+ *  loading - Whether server operation is in progress
+ *  tutorialMode - Whether to show educational content
+ *  onToggleProxy - Callback for start/stop operations
+ *  onUpdatePort - Callback for port configuration changes
+ *  Proxy server control panel
  */
 interface ProxyStatus {
   running: boolean;

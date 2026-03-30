@@ -140,8 +140,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Update combined environment info for separate files mode
-   * @param {Object} mainAnalysis - Analysis from main file
-   * @param {Object} envAnalysis - Analysis from environment file
+   *  mainAnalysis - Analysis from main file
+   *  envAnalysis - Analysis from environment file
    */
   const updateCombinedEnvInfo = (mainAnalysis: FileAnalysis | null, envAnalysis: FileAnalysis | null) => {
     setCombinedEnvInfo(() => {
@@ -243,8 +243,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Handle file selection and analysis
-   * @param {File} file - Selected file
-   * @param {boolean} isEnvironmentFile - Whether this is an environment file
+   *  file - Selected file
+   *  isEnvironmentFile - Whether this is an environment file
    */
   const handleFileSelection = async (file: File, isEnvironmentFile = false) => {
     try {
@@ -301,7 +301,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Handle item selection changes
-   * @param {string} item - Item type to toggle
+   *  item - Item type to toggle
    */
   const handleItemChange = (item: string) => {
     setSelectedItems((prev) => ({
@@ -312,8 +312,8 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Handle environment selection changes
-   * @param {string} envName - Environment name
-   * @param {boolean} checked - Selection state
+   *  envName - Environment name
+   *  checked - Selection state
    */
   const handleEnvironmentSelectionChange = (envName: string, checked: boolean) => {
     setSelectedEnvironments((prev) => ({
@@ -342,7 +342,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Handle import mode change
-   * @param {string} mode - Import mode ('merge' or 'replace')
+   *  mode - Import mode ('merge' or 'replace')
    */
   const handleImportModeChange = (mode: string) => {
     setImportMode(mode);
@@ -350,7 +350,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
   /**
    * Handle workspace import toggle
-   * @param {boolean} checked - Whether to import workspace
+   *  checked - Whether to import workspace
    */
   const handleImportWorkspaceChange = (checked: boolean) => {
     setImportWorkspace(checked);

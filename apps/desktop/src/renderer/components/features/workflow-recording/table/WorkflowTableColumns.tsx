@@ -171,12 +171,12 @@ const DeleteActionButton = ({
 
 /**
  * Creates table columns configuration for workflow recordings
- * @param {Function} onView - Callback for viewing a record
- * @param {Function} onDelete - Callback for deleting a record
- * @param {Function} onExport - Callback for exporting a record
- * @param {Function} onUpdateMetadata - Callback for updating record metadata
- * @param {Object} processingRecords - Map of recordId to processing state
- * @returns {Array} Table columns configuration
+ *  onView - Callback for viewing a record
+ *  onDelete - Callback for deleting a record
+ *  onExport - Callback for exporting a record
+ *  onUpdateMetadata - Callback for updating record metadata
+ *  processingRecords - Map of recordId to processing state
+ *  Table columns configuration
  */
 interface MetadataAction {
   _action: string;

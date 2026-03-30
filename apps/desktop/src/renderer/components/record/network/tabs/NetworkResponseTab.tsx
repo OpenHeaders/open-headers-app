@@ -4,9 +4,9 @@
  * Displays response body with content type information
  * Formats JSON and other responses appropriately
  *
- * @param {Object} props - Component props
- * @param {Object} props.request - Network request data
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.request - Network request data
+ *  props.token - Ant Design theme token
  */
 
 import { Space, Typography } from 'antd';

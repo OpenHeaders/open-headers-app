@@ -32,7 +32,7 @@ import { useProxyServer } from './hooks';
  * - Integrates with global settings for cache enable/disable state
  * - Modular design allows for easy testing and maintenance
  *
- * @returns {JSX.Element} Proxy server management interface
+ *  Proxy server management interface
  */
 const ProxyServer = () => {
   const {

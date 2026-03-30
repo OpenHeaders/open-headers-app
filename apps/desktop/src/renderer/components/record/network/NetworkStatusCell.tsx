@@ -4,10 +4,10 @@
  * Renders the status code cell with appropriate coloring based on HTTP status
  * Handles error states and pending requests
  *
- * @param {Object} props - Component props
- * @param {number} props.status - HTTP status code
- * @param {Object} props.record - The full network record
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.status - HTTP status code
+ *  props.record - The full network record
+ *  props.token - Ant Design theme token
  */
 
 import { Typography } from 'antd';

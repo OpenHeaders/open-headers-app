@@ -20,9 +20,9 @@ const { useToken } = theme;
  * - Requires FFmpeg conversion (may need installation)
  * - Best for sharing with non-technical users
  *
- * @param {string} videoFormat - Currently selected video format ('webm' or 'mp4')
- * @param {function} onVideoFormatChange - Callback function when format selection changes
- * @param {boolean} isExporting - Whether export process is active (disables format selection)
+ *  videoFormat - Currently selected video format ('webm' or 'mp4')
+ *  onVideoFormatChange - Callback function when format selection changes
+ *  isExporting - Whether export process is active (disables format selection)
  */
 interface VideoFormatSelectorProps {
   videoFormat: string;

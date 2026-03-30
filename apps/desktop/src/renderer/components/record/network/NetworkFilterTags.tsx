@@ -4,10 +4,10 @@
  * Displays active filter tags in the network table header
  * Shows visual indicators for inverse filters and body filters
  *
- * @param {Object} props - Component props
- * @param {boolean} props.showInverseTag - Whether to show inverse filter tag
- * @param {boolean} props.showSearchTag - Whether to show search active tag
- * @param {Object} props.bodyFilters - Current body filter state
+ *  props - Component props
+ *  props.showInverseTag - Whether to show inverse filter tag
+ *  props.showSearchTag - Whether to show search active tag
+ *  props.bodyFilters - Current body filter state
  */
 
 import { InfoCircleOutlined } from '@ant-design/icons';

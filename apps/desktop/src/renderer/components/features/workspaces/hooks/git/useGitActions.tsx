@@ -26,7 +26,7 @@ interface GitConnectionResult {
  * Handles Git status monitoring, installation, and connection testing
  * with proper progress tracking and error handling.
  *
- * @returns {Object} Git actions and state
+ *  Git actions and state
  */
 export const useGitActions = () => {
   const { message } = App.useApp();
@@ -103,11 +103,11 @@ export const useGitActions = () => {
 
   /**
    * Tests Git connection with progress tracking
-   * @param {Object} formValues - Form values for connection test
+   *  formValues - Form values for connection test
    */
   /**
    * Handles successful connection test
-   * @param {Object} result - Connection test result
+   *  result - Connection test result
    */
   const handleConnectionSuccess = useCallback(
     (result: GitConnectionResult) => {
@@ -154,7 +154,7 @@ export const useGitActions = () => {
 
   /**
    * Handles connection test error
-   * @param {Object} result - Connection test result
+   *  result - Connection test result
    */
   const handleConnectionError = useCallback(
     (result: GitConnectionResult) => {

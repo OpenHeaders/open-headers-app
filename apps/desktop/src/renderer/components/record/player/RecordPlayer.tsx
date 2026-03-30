@@ -4,15 +4,15 @@
  * Refactored player component with improved modularity
  * Handles both DOM playback and video playback modes
  *
- * @param {Object} props - Component props
- * @param {Object} props.record - Recording data to play
- * @param {Object} props.rrwebPlayer - rrweb player class
- * @param {boolean} props.loading - Loading state
- * @param {Function} props.onPlaybackTimeChange - Playback time change handler
- * @param {Function} props.processRecordForProxy - Record processing function
- * @param {Function} props.createConsoleOverrides - Console override creation function
- * @param {Function} props.onPlayingStateChange - Playing state change handler
- * @param {boolean} props.autoHighlight - Auto-highlight mode
+ *  props - Component props
+ *  props.record - Recording data to play
+ *  props.rrwebPlayer - rrweb player class
+ *  props.loading - Loading state
+ *  props.onPlaybackTimeChange - Playback time change handler
+ *  props.processRecordForProxy - Record processing function
+ *  props.createConsoleOverrides - Console override creation function
+ *  props.onPlayingStateChange - Playing state change handler
+ *  props.autoHighlight - Auto-highlight mode
  */
 
 import { InfoCircleOutlined, TableOutlined } from '@ant-design/icons';

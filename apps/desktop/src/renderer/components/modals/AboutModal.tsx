@@ -17,11 +17,11 @@ const { Title, Text, Paragraph } = Typography;
  * - Responsive layout with consistent styling
  * - Apple-inspired minimalist design
  *
- * @param {Object} props - Component props
- * @param {boolean} props.open - Whether the modal is visible
- * @param {Function} props.onClose - Callback function when modal is closed
- * @param {string} props.appVersion - Current application version
- * @returns {JSX.Element} About modal component
+ *  props - Component props
+ *  props.open - Whether the modal is visible
+ *  props.onClose - Callback function when modal is closed
+ *  props.appVersion - Current application version
+ *  About modal component
  */
 interface AboutModalProps {
   open: boolean;
@@ -36,7 +36,7 @@ const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
    * Opens external URLs safely in the default browser
    * Falls back to window.open if Electron API is not available
    *
-   * @param {string} url - The URL to open
+   *  url - The URL to open
    */
   const openExternal = (url: string) => {
     if (window.electronAPI?.openExternal) {

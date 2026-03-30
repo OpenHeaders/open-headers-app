@@ -20,9 +20,9 @@ import { Button, Form, Input, Space } from 'antd';
 /**
  * HTTP Query Parameters tab component for query parameter configuration
  *
- * @param {Object} props - Component props
- * @param {Function} props.validateVariableExists - Variable validation function
- * @returns {JSX.Element} Query parameters tab component
+ *  props - Component props
+ *  props.validateVariableExists - Variable validation function
+ *  Query parameters tab component
  */
 interface HttpQueryParamsTabProps {
   validateVariableExists: (value: string) => { valid: boolean; error?: string };

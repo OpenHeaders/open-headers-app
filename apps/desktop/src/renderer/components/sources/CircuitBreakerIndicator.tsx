@@ -17,10 +17,10 @@ import { Badge, Tag, Tooltip } from 'antd';
 /**
  * CircuitBreakerIndicator - Shows circuit breaker state in the UI
  *
- * @param {Object} props
- * @param {Object} props.circuitBreaker - Circuit breaker status from RefreshManager
- * @param {boolean} props.showDetails - Whether to show detailed information
- * @returns {JSX.Element|null} Circuit breaker indicator or null if not applicable
+ *  props
+ *  props.circuitBreaker - Circuit breaker status from RefreshManager
+ *  props.showDetails - Whether to show detailed information
+ *  Circuit breaker indicator or null if not applicable
  */
 interface CircuitBreakerIndicatorProps {
   circuitBreaker: {

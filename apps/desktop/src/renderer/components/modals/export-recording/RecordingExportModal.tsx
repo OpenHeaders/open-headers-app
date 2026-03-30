@@ -29,13 +29,13 @@ import { errorMessage, successMessage } from '@/renderer/utils';
  * - ExportProgressCard: Progress display
  * - ExportInfoCard: Helpful tips and information
  *
- * @param {boolean} visible - Whether the modal is visible
- * @param {function} onCancel - Handler for modal close/cancel
- * @param {Object} record - Recording data object containing session information
- * @param {boolean} record.hasVideo - Whether video recording is available
- * @param {string} record.id - Unique identifier for the recording
- * @param {number} record.timestamp - Recording timestamp
- * @param {function} onExportJson - Handler for JSON export completion
+ *  visible - Whether the modal is visible
+ *  onCancel - Handler for modal close/cancel
+ *  record - Recording data object containing session information
+ *  record.hasVideo - Whether video recording is available
+ *  record.id - Unique identifier for the recording
+ *  record.timestamp - Recording timestamp
+ *  onExportJson - Handler for JSON export completion
  */
 import ExportFormatSelector from './ExportFormatSelector';
 import ExportInfoCard from './ExportInfoCard';

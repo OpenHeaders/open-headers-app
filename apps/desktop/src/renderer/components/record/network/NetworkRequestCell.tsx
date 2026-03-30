@@ -4,10 +4,10 @@
  * Renders the request name cell with appropriate styling and error handling
  * Extracts display name from URL and shows error states
  *
- * @param {Object} props - Component props
- * @param {string} props.url - The request URL
- * @param {Object} props.record - The full network record
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.url - The request URL
+ *  props.record - The full network record
+ *  props.token - Ant Design theme token
  */
 
 import { Typography } from 'antd';

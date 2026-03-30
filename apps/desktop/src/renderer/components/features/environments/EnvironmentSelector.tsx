@@ -55,7 +55,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
   const [shareModalVisible, setShareModalVisible] = useState(false);
   /**
    * Handles environment switching with missing variable validation
-   * @param {string} targetEnv - Target environment name
+   *  targetEnv - Target environment name
    */
   const handleEnvironmentSwitch = (targetEnv: string) => {
     const targetVars = environments[targetEnv] || {};

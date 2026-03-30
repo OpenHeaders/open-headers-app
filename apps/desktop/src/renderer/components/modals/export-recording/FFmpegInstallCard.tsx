@@ -23,15 +23,15 @@ const { Text } = Typography;
  * - Clear messaging about what's happening at each stage
  * - One-click installation with automatic setup
  *
- * @param {function} onFFmpegInstalled - Callback function called when FFmpeg is successfully installed
- * @param {string} installStatus - Current installation status ('downloading', 'extracting', 'verifying', or empty)
- * @param {number} downloadProgress - Download progress percentage (0-100)
- * @param {Object} downloadSize - Download size information object
- * @param {number} downloadSize.downloaded - Bytes downloaded so far
- * @param {number} downloadSize.total - Total bytes to download
- * @param {function} onInstallStatusChange - Handler for installation status changes
- * @param {function} onDownloadProgressChange - Handler for download progress changes
- * @param {function} onDownloadSizeChange - Handler for download size changes
+ *  onFFmpegInstalled - Callback function called when FFmpeg is successfully installed
+ *  installStatus - Current installation status ('downloading', 'extracting', 'verifying', or empty)
+ *  downloadProgress - Download progress percentage (0-100)
+ *  downloadSize - Download size information object
+ *  downloadSize.downloaded - Bytes downloaded so far
+ *  downloadSize.total - Total bytes to download
+ *  onInstallStatusChange - Handler for installation status changes
+ *  onDownloadProgressChange - Handler for download progress changes
+ *  onDownloadSizeChange - Handler for download size changes
  */
 interface FFmpegInstallCardProps {
   onFFmpegInstalled: () => void;

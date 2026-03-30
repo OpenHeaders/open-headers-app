@@ -21,9 +21,9 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
 
   /**
    * Saves workspace with proper error handling
-   * @param {Object} values - Form values
-   * @param {Object} editingWorkspace - Workspace being edited (if any)
-   * @returns {Promise<Object>} Save result with success status and result data
+   *  values - Form values
+   *  editingWorkspace - Workspace being edited (if any)
+   *  Save result with success status and result data
    */
   const handleSaveWorkspace = async (values: WorkspaceFormValues, editingWorkspace: { id?: string } | null) => {
     setLoading(true);
@@ -57,7 +57,7 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
 
   /**
    * Handles workspace deletion with confirmation
-   * @param {Object} workspace - Workspace to delete
+   *  workspace - Workspace to delete
    */
   const handleDeleteWorkspace = async (workspace: { id: string; name: string; isDefault?: boolean }) => {
     if (workspace.id === 'default-personal' || workspace.isDefault) {
@@ -110,7 +110,7 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
 
   /**
    * Handles SSH key file browsing
-   * @param {Object} form - Form instance
+   *  form - Form instance
    */
   const handleBrowseSSHKey = async (form: { setFieldsValue: (values: { sshKeyPath: string }) => void }) => {
     const filePath = await window.electronAPI.openFileDialog();

@@ -7,12 +7,12 @@ import type { EnvironmentVariable, EnvironmentVariables } from '@/types/environm
 
 /**
  * EnvironmentShareModal - A reusable modal for sharing environment configurations
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether the modal is visible
- * @param {string} props.environmentName - Name of the environment to share
- * @param {Object} props.environmentData - Environment data to share
- * @param {Function} props.onClose - Handler for closing the modal
- * @returns {JSX.Element} EnvironmentShareModal component
+ *  props - Component props
+ *  props.visible - Whether the modal is visible
+ *  props.environmentName - Name of the environment to share
+ *  props.environmentData - Environment data to share
+ *  props.onClose - Handler for closing the modal
+ *  EnvironmentShareModal component
  */
 interface EnvironmentShareModalProps {
   visible: boolean;

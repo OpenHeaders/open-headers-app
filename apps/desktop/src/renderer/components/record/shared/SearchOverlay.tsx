@@ -24,18 +24,18 @@
  * />
  * ```
  *
- * @param {Object} props - Component props
- * @param {boolean} props.visible - Whether the overlay is visible
- * @param {string} props.searchValue - Current search value
- * @param {Function} props.onSearchChange - Handler for search value changes
- * @param {Function} props.onClose - Handler for closing the overlay
- * @param {boolean} [props.inverseFilter=false] - Whether inverse filtering is enabled
- * @param {Function} [props.onInverseFilterChange] - Handler for inverse filter toggle
- * @param {string} [props.placeholder='Search...'] - Placeholder text for search input
- * @param {boolean} [props.showInverseFilter=false] - Whether to show inverse filter option
- * @param {Object} [props.style={}] - Additional styles for the overlay
+ *  props - Component props
+ *  props.visible - Whether the overlay is visible
+ *  props.searchValue - Current search value
+ *  props.onSearchChange - Handler for search value changes
+ *  props.onClose - Handler for closing the overlay
+ *  [props.inverseFilter=false] - Whether inverse filtering is enabled
+ *  [props.onInverseFilterChange] - Handler for inverse filter toggle
+ *  [props.placeholder='Search...'] - Placeholder text for search input
+ *  [props.showInverseFilter=false] - Whether to show inverse filter option
+ *  [props.style={}] - Additional styles for the overlay
  *
- * @returns {JSX.Element|null} The search overlay component or null if not visible
+ *  The search overlay component or null if not visible
  */
 
 import { CloseOutlined } from '@ant-design/icons';
@@ -131,7 +131,7 @@ const SearchOverlay = ({
 
   /**
    * Handle keyboard events in the search input
-   * @param {KeyboardEvent} e - The keyboard event
+   *  e - The keyboard event
    */
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {

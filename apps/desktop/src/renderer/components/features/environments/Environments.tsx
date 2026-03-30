@@ -151,8 +151,8 @@ const Environments = () => {
 
   /**
    * Handles variable editing with name change support
-   * @param {string} oldName - Original variable name
-   * @param {Object} newData - New variable data
+   *  oldName - Original variable name
+   *  newData - New variable data
    */
   const handleEditVariable = async (oldName: string, newData: unknown) => {
     const data = newData as { name: string; value: string; isSecret?: boolean };
@@ -178,7 +178,7 @@ const Environments = () => {
 
   /**
    * Handles environment copying
-   * @param {string} fromEnv - Source environment name
+   *  fromEnv - Source environment name
    */
   const handleCopyEnvironment = async (fromEnv: string) => {
     const newName = generateUniqueEnvironmentName(fromEnv, environments);

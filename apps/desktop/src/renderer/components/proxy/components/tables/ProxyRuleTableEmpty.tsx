@@ -15,8 +15,8 @@ const { Text } = Typography;
  * - Fallback message when no add callback is provided
  * - Consistent styling with Ant Design Empty component
  *
- * @param {function|undefined} onAdd - Optional callback for adding first rule
- * @returns {JSX.Element} Empty state component
+ *  onAdd - Optional callback for adding first rule
+ *  Empty state component
  */
 interface ProxyRuleTableEmptyProps {
   onAdd?: () => void;

@@ -7,11 +7,11 @@ const { Text, Title } = Typography;
  * ImportItemsSelector component for selecting configuration items to import
  * Provides checkboxes for different data types with counts, descriptions, and warnings
  *
- * @param {Object} fileInfo - Information about the selected files
- * @param {Object} combinedEnvInfo - Combined environment information from all files
- * @param {Object} selectedItems - Currently selected items to import
- * @param {function} onItemChange - Handler for item selection changes
- * @param {string} importMode - Current import mode ('merge' or 'replace')
+ *  fileInfo - Information about the selected files
+ *  combinedEnvInfo - Combined environment information from all files
+ *  selectedItems - Currently selected items to import
+ *  onItemChange - Handler for item selection changes
+ *  importMode - Current import mode ('merge' or 'replace')
  */
 interface ImportItemsSelectorProps {
   fileInfo: {

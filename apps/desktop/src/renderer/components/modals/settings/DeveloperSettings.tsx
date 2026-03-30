@@ -11,9 +11,9 @@ import { getSettingsConfig, settingsStyles } from './SettingsConfig';
  * Only visible when developerMode is enabled in Appearance settings.
  * Provides log level control and quick access to app directories.
  *
- * @param {Object} formValues - Current form values containing all settings
- * @param {Object} screenRecordingPermission - Screen recording permission state
- * @param {function} onChange - Callback function for handling setting changes
+ *  formValues - Current form values containing all settings
+ *  screenRecordingPermission - Screen recording permission state
+ *  onChange - Callback function for handling setting changes
  */
 interface DeveloperSettingsProps {
   formValues: Partial<AppSettings>;

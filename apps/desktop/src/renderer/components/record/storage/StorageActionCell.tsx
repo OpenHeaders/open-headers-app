@@ -4,9 +4,9 @@
  * Renders storage action with appropriate color and tooltip
  * Shows cleared count for clear actions
  *
- * @param {Object} props - Component props
- * @param {string} props.action - Storage action ('set', 'remove', 'clear')
- * @param {Object} props.record - Storage record with metadata
+ *  props - Component props
+ *  props.action - Storage action ('set', 'remove', 'clear')
+ *  props.record - Storage record with metadata
  */
 
 import type { StorageRecord } from '@openheaders/core';

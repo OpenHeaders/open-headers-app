@@ -41,12 +41,12 @@ const maskToken = (token: string) => {
  * Displays CLI API server status, token, uptime, and provides start/stop controls.
  * Shows discovery file path and available endpoints.
  *
- * @param {Object} status - Current CLI server status
- * @param {boolean} loading - Whether server operation is in progress
- * @param {boolean} tutorialMode - Whether to show educational content
- * @param {function} onToggleServer - Callback for start/stop operations
- * @param {function} onRegenerateToken - Callback to rotate the auth token
- * @returns {JSX.Element} CLI server control panel
+ *  status - Current CLI server status
+ *  loading - Whether server operation is in progress
+ *  tutorialMode - Whether to show educational content
+ *  onToggleServer - Callback for start/stop operations
+ *  onRegenerateToken - Callback to rotate the auth token
+ *  CLI server control panel
  */
 interface CliServerControlsProps {
   status: { running: boolean; port: number; token?: string; discoveryPath?: string };

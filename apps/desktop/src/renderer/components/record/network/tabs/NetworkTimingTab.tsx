@@ -4,10 +4,10 @@
  * Displays request timing breakdown and details
  * Shows DNS, connection, SSL, waiting, and download times
  *
- * @param {Object} props - Component props
- * @param {Object} props.request - Network request data
- * @param {Object} props.record - Full record for context
- * @param {Object} props.token - Ant Design theme token
+ *  props - Component props
+ *  props.request - Network request data
+ *  props.record - Full record for context
+ *  props.token - Ant Design theme token
  */
 
 import { Space, Typography } from 'antd';

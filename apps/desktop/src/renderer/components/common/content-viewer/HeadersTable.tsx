@@ -26,10 +26,10 @@ const { Text } = Typography;
  * Renders a structured table of HTTP headers with proper formatting and styling.
  * Automatically handles empty states and provides consistent visual presentation.
  *
- * @param {Object} props - Component props
- * @param {Object} props.headers - Headers object with key-value pairs to display
- * @param {string} [props.className='headers-table'] - CSS class name for styling
- * @returns {React.Component} Rendered headers table or empty state message
+ *  props - Component props
+ *  props.headers - Headers object with key-value pairs to display
+ *  [props.className='headers-table'] - CSS class name for styling
+ *  Rendered headers table or empty state message
  * @example
  * <HeadersTable headers={{'Content-Type': 'application/json', 'Accept': 'text/html'}} />
  */
