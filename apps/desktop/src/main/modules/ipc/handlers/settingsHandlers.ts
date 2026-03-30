@@ -91,7 +91,7 @@ class SettingsHandlers {
         autoUpdaterManager.applyUpdateSettings(settingsCache.get());
       }
 
-      return { success: true };
+      return { success: true, settings: settingsCache.get() };
     } catch (err: unknown) {
       log.error('Error saving settings:', err);
       return { success: false, message: errorMessage(err) };

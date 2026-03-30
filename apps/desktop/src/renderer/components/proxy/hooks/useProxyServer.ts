@@ -192,10 +192,7 @@ export const useProxyServer = () => {
     if (result.success) {
       setCacheEnabled(enabled);
       // Save to global settings
-      await saveSettings({
-        ...settings,
-        proxyCacheEnabled: enabled,
-      });
+      await saveSettings({ proxyCacheEnabled: enabled });
       message.success(`Cache ${enabled ? 'enabled' : 'disabled'}`);
       return true;
     } else {

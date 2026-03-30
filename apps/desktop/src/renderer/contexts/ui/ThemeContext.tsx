@@ -106,10 +106,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Save theme settings
   const saveThemeMode = async (mode: AppSettings['theme']): Promise<boolean> => {
     try {
-      const success = await saveSettings({
-        ...settings,
-        theme: mode,
-      });
+      const success = await saveSettings({ theme: mode });
 
       if (success) {
         const newTheme = mode === THEME_MODES.AUTO ? detectSystemTheme() : mode;
@@ -131,10 +128,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleCompactMode = async (): Promise<boolean> => {
     try {
       const newCompactMode = !isCompactMode;
-      const success = await saveSettings({
-        ...settings,
-        compactMode: newCompactMode,
-      });
+      const success = await saveSettings({ compactMode: newCompactMode });
 
       if (success) {
         setIsCompactMode(newCompactMode);

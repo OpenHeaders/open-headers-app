@@ -67,33 +67,31 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Save settings
+  // Save settings — sends only the partial to main process (source of truth).
+  // Main merges with its own state, persists, and returns the full merged result.
   const saveSettings = async (newSettings: Partial<Settings>): Promise<boolean> => {
     try {
       setLoading(true);
 
-      // Prepare settings object (merge with defaults to ensure all fields)
-      const settingsToSave = {
-        ...defaultSettings,
-        ...newSettings,
-      };
-
-      // Save to main process
-      const result = await window.electronAPI.saveSettings(settingsToSave);
+      // Send only the partial update — main process merges with its truth
+      const result = await window.electronAPI.saveSettings(newSettings);
 
       if (result.success) {
-        // Update local state
+        // Hydrate local state from main's merged result
+        const mergedSettings = result.settings ?? { ...settings, ...newSettings };
         if (isMounted.current) {
-          setSettings(settingsToSave);
+          setSettings(mergedSettings);
         }
 
         // Apply log level to renderer logger
-        if (settingsToSave.logLevel) {
-          setGlobalLogLevel(settingsToSave.logLevel);
+        if (mergedSettings.logLevel) {
+          setGlobalLogLevel(mergedSettings.logLevel);
         }
 
-        // Apply auto-launch setting
-        await window.electronAPI.setAutoLaunch(settingsToSave.launchAtLogin);
+        // Apply auto-launch setting if it was changed
+        if ('launchAtLogin' in newSettings) {
+          await window.electronAPI.setAutoLaunch(mergedSettings.launchAtLogin);
+        }
 
         return true;
       } else {

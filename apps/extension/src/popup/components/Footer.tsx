@@ -248,7 +248,6 @@ const Footer: React.FC = () => {
                     style={{
                       margin: 0,
                       fontSize: '11px',
-                      opacity: recordingHotkeyEnabled ? 1 : 0.5,
                     }}
                   >
                     {key}
@@ -261,21 +260,23 @@ const Footer: React.FC = () => {
               </Text>
             )}
             <Tooltip title={!isConnected ? 'App not connected' : 'Edit hotkey in settings'}>
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                size="small"
-                disabled={!isConnected}
-                onClick={handleEditHotkey}
-                style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
-              />
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  size="small"
+                  disabled={!isConnected}
+                  onClick={handleEditHotkey}
+                  style={{ padding: '0 4px', height: '20px', minWidth: 'auto' }}
+                />
+                <Switch
+                  size="small"
+                  checked={isConnected && recordingHotkeyEnabled}
+                  disabled={!isConnected}
+                  onChange={handleHotkeyToggle}
+                />
+              </span>
             </Tooltip>
-            <Switch
-              size="small"
-              checked={recordingHotkeyEnabled}
-              disabled={!isConnected}
-              onChange={handleHotkeyToggle}
-            />
           </div>
         </div>
       ),

@@ -261,9 +261,8 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
         ? 'System Preferences has been opened. Please enable screen recording for Open Headers. Note: macOS may require restarting the app after granting permission.'
         : 'Please grant screen recording permission in System Preferences > Privacy & Security > Screen Recording. Note: macOS may require restarting the app after granting permission.';
 
-      // Save pending video recording preference
-      const updatedSettings = { ...formValues, pendingVideoRecording: true };
-      window.electronAPI.saveSettings(updatedSettings).then(() => {
+      // Save pending video recording preference — send only the partial
+      window.electronAPI.saveSettings({ pendingVideoRecording: true }).then(() => {
         log.debug('Saved pendingVideoRecording flag');
       });
 

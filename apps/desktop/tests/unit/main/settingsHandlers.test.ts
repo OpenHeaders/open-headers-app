@@ -234,11 +234,14 @@ describe('SettingsHandlers', () => {
         compactMode: true,
         developerMode: true,
       };
-      mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings(), ...partialSettings });
+      const mergedSettings = { ...makeDefaultSettings(), ...partialSettings };
+      mockSettingsSave.mockResolvedValueOnce(mergedSettings);
+      mockSettingsGet.mockReturnValue(mergedSettings);
 
       const result = await handlers.handleSaveSettings(mockEvent, partialSettings);
 
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(true);
+      expect(result.settings).toEqual(mergedSettings);
       expect(mockSettingsSave).toHaveBeenCalledWith(
         expect.objectContaining({
           theme: 'dark',
@@ -276,10 +279,13 @@ describe('SettingsHandlers', () => {
     });
 
     it('accepts null event for programmatic saves', async () => {
-      mockSettingsSave.mockResolvedValueOnce({ ...makeDefaultSettings(), autoStartProxy: false });
+      const mergedSettings = { ...makeDefaultSettings(), autoStartProxy: false };
+      mockSettingsSave.mockResolvedValueOnce(mergedSettings);
+      mockSettingsGet.mockReturnValue(mergedSettings);
 
       const result = await handlers.handleSaveSettings(null, { autoStartProxy: false });
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(true);
+      expect(result.settings).toEqual(mergedSettings);
     });
   });
 

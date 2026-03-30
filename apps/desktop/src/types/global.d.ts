@@ -230,7 +230,7 @@ declare global {
     // Settings
     saveSettings: (
       settings: Record<string, string | boolean | number | null | undefined>,
-    ) => Promise<{ success: boolean; message?: string }>;
+    ) => Promise<{ success: boolean; message?: string; settings?: AppSettings }>;
     getSettings: () => Promise<Partial<AppSettings>>;
     setAutoLaunch: (enable: boolean) => Promise<{ success: boolean; message?: string }>;
     openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
