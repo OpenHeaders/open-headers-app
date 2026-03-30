@@ -1,6 +1,6 @@
 import type { BrowserWindowConstructorOptions, BrowserWindow as BrowserWindowType, WebContents } from 'electron';
 import electron from 'electron';
-import path from 'path';
+import path from 'node:path';
 import type { AppSettings } from '../../../types/settings';
 import mainLogger from '../../../utils/mainLogger';
 import appLifecycle from '../app/lifecycle';

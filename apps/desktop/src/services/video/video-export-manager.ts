@@ -1,7 +1,7 @@
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
 import { FFmpegManager } from './ffmpeg-manager';

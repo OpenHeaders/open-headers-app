@@ -1,6 +1,6 @@
 import type { IpcRendererEvent } from 'electron';
 import electron from 'electron';
-import type { NetworkInterfaceInfo } from 'os';
+import type { NetworkInterfaceInfo } from 'node:os';
 
 const { ipcRenderer } = electron;
 

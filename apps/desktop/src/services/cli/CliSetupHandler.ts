@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import type { InferOutput } from 'valibot';
 import { errorMessage } from '../../types/common';

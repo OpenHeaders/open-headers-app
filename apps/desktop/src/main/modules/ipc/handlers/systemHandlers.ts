@@ -1,7 +1,7 @@
-import child_process from 'child_process';
+import child_process from 'node:child_process';
 import electron from 'electron';
-import path from 'path';
-import util from 'util';
+import path from 'node:path';
+import util from 'node:util';
 import timeManager from '../../../../services/core/TimeManager';
 import type { IpcInvokeEvent } from '../../../../types/common';
 import { errorMessage } from '../../../../types/common';

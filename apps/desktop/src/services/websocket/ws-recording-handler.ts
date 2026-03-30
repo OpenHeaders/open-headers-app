@@ -4,8 +4,8 @@
  */
 
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import WebSocket from 'ws';
 import { errorMessage } from '../../types/common';
 import type { RecordingMetadata } from '../../types/recording';

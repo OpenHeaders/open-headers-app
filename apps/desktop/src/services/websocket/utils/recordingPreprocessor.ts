@@ -9,8 +9,8 @@
  * - Adding font-display: swap to prevent blocking
  */
 
-import http from 'http';
-import nodeUrl from 'url';
+import http from 'node:http';
+import nodeUrl from 'node:url';
 import { errorMessage } from '../../../types/common';
 import type {
   DomNode,

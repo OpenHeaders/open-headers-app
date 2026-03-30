@@ -1,4 +1,4 @@
-import type http from 'http';
+import type http from 'node:http';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CliApiService } from '../../../src/services/cli/CliApiService';
 import type { JsonObject, JsonValue } from '../../../src/types/common';

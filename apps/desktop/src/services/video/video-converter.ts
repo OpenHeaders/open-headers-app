@@ -1,5 +1,5 @@
-import child_process from 'child_process';
-import fs from 'fs';
+import child_process from 'node:child_process';
+import fs from 'node:fs';
 import { errorMessage as errMsg, toErrno } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
 

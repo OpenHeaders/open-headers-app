@@ -9,9 +9,9 @@
  * - JSON validation before writes
  */
 
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage, toErrno } from '../types/common';
 import { createLogger } from './mainLogger';
 

@@ -12,8 +12,8 @@
  */
 
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
 import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
 import type { Source } from '../../../types/source';

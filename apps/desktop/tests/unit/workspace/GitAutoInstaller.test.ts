@@ -103,7 +103,7 @@ function getLinuxInstallCommand(
 // ---------- Windows portable git path ----------
 // Mirrors the path construction in installGitWindows()
 function getWindowsPortableGitPath(resourcesPath: string): string {
-  const path = require('path');
+  const path = require('node:path');
   return path.join(resourcesPath, 'git', 'bin', 'git.exe');
 }
 

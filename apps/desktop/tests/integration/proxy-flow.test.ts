@@ -1,4 +1,4 @@
-import http from 'http';
+import http from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProxyService } from '../../src/services/proxy/ProxyService';
 import type { ProxyRule } from '../../src/types/proxy';

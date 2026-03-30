@@ -261,7 +261,7 @@ describe('CommitManager', () => {
     });
 
     it('commits files in direct file mode', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
       vi.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined);
 

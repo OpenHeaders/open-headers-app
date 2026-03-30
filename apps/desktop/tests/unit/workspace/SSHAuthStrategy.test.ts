@@ -136,7 +136,7 @@ describe('SSHAuthStrategy', () => {
 
   describe('setup()', () => {
     it('writes key files and returns SSH URL with cleanup function', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       const writeFileSpy = vi.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined);
 
       const strategy = new SSHAuthStrategy(SSH_DIR);
@@ -184,7 +184,7 @@ describe('SSHAuthStrategy', () => {
     });
 
     it('sets SSH_ASKPASS_REQUIRE when passphrase is provided', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       vi.spyOn(fs.promises, 'writeFile').mockResolvedValue(undefined);
 
       const strategy = new SSHAuthStrategy(SSH_DIR);

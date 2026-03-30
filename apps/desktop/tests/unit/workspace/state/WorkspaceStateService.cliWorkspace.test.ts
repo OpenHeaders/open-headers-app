@@ -11,7 +11,7 @@
  *  7. Broadcasts state to renderers
  */
 
-import type fs from 'fs';
+import type fs from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyncData } from '../../../../src/services/workspace/sync/types';
 import type { Source } from '../../../../src/types/source';

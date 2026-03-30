@@ -11,7 +11,7 @@
  */
 
 import log from 'electron-log';
-import path from 'path';
+import path from 'node:path';
 
 // Configure electron-log to output only our pre-formatted text
 log.transports.console.format = '{text}';

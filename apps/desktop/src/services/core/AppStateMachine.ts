@@ -1,4 +1,4 @@
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import type { ProxyStatus } from '../../types/proxy';
 import type { AppSettings } from '../../types/settings';
 import mainLogger from '../../utils/mainLogger';

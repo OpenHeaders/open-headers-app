@@ -3,7 +3,7 @@
  * Manages clone, pull, push, and other repository-level operations
  */
 
-import fs from 'fs';
+import fs from 'node:fs';
 import { errorMessage, toErrno } from '../../../../types/common';
 import type { WorkspaceAuthData } from '../../../../types/workspace';
 import mainLogger from '../../../../utils/mainLogger';

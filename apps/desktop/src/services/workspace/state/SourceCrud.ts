@@ -5,7 +5,7 @@
  * broadcast, and persist without coupling to the service class.
  */
 
-import fs from 'fs';
+import fs from 'node:fs';
 import { errorMessage } from '../../../types/common';
 import type { ProxyRule } from '../../../types/proxy';
 import type { HeaderRule } from '../../../types/rules';

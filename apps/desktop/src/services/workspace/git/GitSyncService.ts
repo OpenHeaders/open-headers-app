@@ -3,8 +3,8 @@
  * Orchestrates all Git-related functionality through modular components
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage, toError } from '../../../types/common';
 import type { WorkspaceAuthData } from '../../../types/workspace';
 import mainLogger from '../../../utils/mainLogger';

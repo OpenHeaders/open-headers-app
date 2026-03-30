@@ -1,6 +1,6 @@
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { IpcInvokeEvent } from '../../../../types/common';
 import { toErrno } from '../../../../types/common';
 import atomicWriter from '../../../../utils/atomicFileWriter';

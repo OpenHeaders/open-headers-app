@@ -282,7 +282,7 @@ describe('ProxyCache', () => {
     });
 
     it('returns null and removes entry when file read fails', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       vi.mocked(fs.default.promises.readFile).mockRejectedValueOnce(new Error('ENOENT'));
 
       const url = 'https://cdn.openheaders.io/missing-on-disk.js';
@@ -321,7 +321,7 @@ describe('ProxyCache', () => {
     });
 
     it('writes file to disk in correct subdirectory', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       const url = 'https://cdn.openheaders.io/font.woff2';
       const data = Buffer.from('woff2-binary');
 
@@ -528,7 +528,7 @@ describe('ProxyCache', () => {
     });
 
     it('recreates cache directory after deletion', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       await cache.clear();
 
       expect(fs.default.promises.rm).toHaveBeenCalled();
@@ -540,7 +540,7 @@ describe('ProxyCache', () => {
 
   describe('remove()', () => {
     it('removes entry from metadata and disk', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       cache.metadata.set('remove-me', makeCacheMetadata());
 
       await cache.remove('remove-me');
@@ -550,7 +550,7 @@ describe('ProxyCache', () => {
     });
 
     it('handles ENOENT gracefully (file already deleted)', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       const enoent = new Error('ENOENT') as NodeJS.ErrnoException;
       enoent.code = 'ENOENT';
       vi.mocked(fs.default.promises.unlink).mockRejectedValueOnce(enoent);

@@ -3,8 +3,8 @@
  * Manages selective file checkout for large repositories
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';
 

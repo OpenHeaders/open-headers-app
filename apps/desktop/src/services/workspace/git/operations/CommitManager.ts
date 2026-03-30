@@ -3,8 +3,8 @@
  * Manages committing configuration changes and maintaining commit history
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage } from '../../../../types/common';
 import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';

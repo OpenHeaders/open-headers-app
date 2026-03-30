@@ -4,7 +4,7 @@
  * All functions take explicit paths and return data. No service state dependency.
  */
 
-import path from 'path';
+import path from 'node:path';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
 import type { EnvironmentsFile } from '../../../types/environment';
 import type { ProxyRule } from '../../../types/proxy';

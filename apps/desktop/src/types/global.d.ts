@@ -8,7 +8,7 @@
 
 import type { Source, SourceRequestOptions } from './source';
 import type { AppSettings } from './settings';
-import type { NetworkInterfaceInfo } from 'os';
+import type { NetworkInterfaceInfo } from 'node:os';
 import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
 import type { ProxyRule, CacheStats, CacheEntry } from './proxy';
 import type { HeaderRule } from './rules';

@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import { EventEmitter } from 'events';
-import http from 'http';
-import https from 'https';
-import type net from 'net';
-import tls from 'tls';
-import url from 'url';
+import crypto from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import http from 'node:http';
+import https from 'node:https';
+import type net from 'node:net';
+import tls from 'node:tls';
+import url from 'node:url';
 import { errorMessage } from '../../types/common';
 import type { HeaderRule } from '../../types/rules';
 import type { Source } from '../../types/source';

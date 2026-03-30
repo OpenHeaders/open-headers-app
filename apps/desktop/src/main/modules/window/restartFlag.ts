@@ -19,8 +19,8 @@
  */
 
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import mainLogger from '../../../utils/mainLogger';
 
 const { app } = electron;

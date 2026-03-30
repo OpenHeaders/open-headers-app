@@ -1,6 +1,6 @@
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import electron from 'electron';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';
 

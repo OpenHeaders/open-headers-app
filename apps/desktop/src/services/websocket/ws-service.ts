@@ -1,7 +1,7 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
 
 import electron from 'electron';
-import http from 'http';
+import http from 'node:http';
 import WS, { WebSocketServer } from 'ws';
 import type { RulesCollection } from '../../types/rules';
 import type { Source } from '../../types/source';

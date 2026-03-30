@@ -1,9 +1,9 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import electron from 'electron';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import zlib from 'zlib';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import zlib from 'node:zlib';
 import { DATA_FORMAT_VERSION } from '../../../../config/version';
 import serviceRegistry from '../../../../services/core/ServiceRegistry';
 import networkService from '../../../../services/network/NetworkService';

@@ -3,9 +3,9 @@
  * Manages removal of temporary files, old repositories, and SSH keys
  */
 
-import child_process from 'child_process';
-import fs from 'fs';
-import path from 'path';
+import child_process from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage } from '../../../../types/common';
 import mainLogger from '../../../../utils/mainLogger';
 

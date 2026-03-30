@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FFmpegManager } from '../../../src/services/video/ffmpeg-manager';
 
@@ -90,9 +90,9 @@ describe('FFmpegManager', () => {
   describe('findFilesRecursive()', () => {
     it('returns an array', async () => {
       const mgr = new FFmpegManager();
-      const fs = await import('fs');
-      const os = await import('os');
-      const path = await import('path');
+      const fs = await import('node:fs');
+      const os = await import('node:os');
+      const path = await import('node:path');
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ffmpeg-test-'));
       fs.writeFileSync(path.join(tmpDir, 'test.txt'), 'hello');
       try {

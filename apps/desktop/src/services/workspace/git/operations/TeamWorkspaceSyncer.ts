@@ -3,9 +3,9 @@
  * Handles both auto-sync and manual sync operations
  */
 
-import fs from 'fs';
+import fs from 'node:fs';
 import { glob } from 'glob';
-import path from 'path';
+import path from 'node:path';
 import type { EnvironmentMap, EnvironmentSchema } from '../../../../types/environment';
 import type { ProxyRule } from '../../../../types/proxy';
 import type { RulesCollection } from '../../../../types/rules';

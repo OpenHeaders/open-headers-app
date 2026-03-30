@@ -288,7 +288,7 @@ describe('GitRepositoryManager', () => {
 
   describe('ensureCleanDirectory()', () => {
     it('creates directory when it does not exist', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       vi.spyOn(fs.promises, 'stat').mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
       const mkdirSpy = vi.spyOn(fs.promises, 'mkdir').mockResolvedValue(undefined);
 
@@ -299,7 +299,7 @@ describe('GitRepositoryManager', () => {
     });
 
     it('throws when directory is not empty', async () => {
-      const fs = await import('fs');
+      const fs = await import('node:fs');
       vi.spyOn(fs.promises, 'stat').mockResolvedValue({ isDirectory: () => true } as Awaited<
         ReturnType<typeof fs.promises.stat>
       >);

@@ -1,4 +1,4 @@
-import url from 'url';
+import url from 'node:url';
 
 /**
  * Matches a URL against domain patterns.

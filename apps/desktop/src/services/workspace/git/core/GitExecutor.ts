@@ -3,8 +3,8 @@
  * Handles running git commands with proper error handling and logging
  */
 
-import child_process from 'child_process';
-import util from 'util';
+import child_process from 'node:child_process';
+import util from 'node:util';
 import { toError } from '../../../../types/common';
 import mainLogger from '../../../../utils/mainLogger';
 

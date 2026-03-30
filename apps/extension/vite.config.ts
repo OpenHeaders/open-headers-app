@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { defineConfig, build as viteBuild } from 'vite';
 
 const browser = process.env.BROWSER || 'chrome';

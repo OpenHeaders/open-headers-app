@@ -19,7 +19,7 @@
  */
 
 import { type ElectronApplication, _electron as electron, expect, type Page, test } from '@playwright/test';
-import path from 'path';
+import path from 'node:path';
 
 let app: ElectronApplication;
 let page: Page;

@@ -5,8 +5,8 @@
  * broadcast, and persist without coupling to the service class.
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { DATA_FORMAT_VERSION } from '../../../config/version';
 import { errorMessage } from '../../../types/common';
 import type { Workspace, WorkspaceType } from '../../../types/workspace';

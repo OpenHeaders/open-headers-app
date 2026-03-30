@@ -1,9 +1,9 @@
-import child_process from 'child_process';
-import dns from 'dns';
-import { EventEmitter } from 'events';
-import net from 'net';
-import os from 'os';
-import util from 'util';
+import child_process from 'node:child_process';
+import dns from 'node:dns';
+import { EventEmitter } from 'node:events';
+import net from 'node:net';
+import os from 'node:os';
+import util from 'node:util';
 import { errorMessage } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';

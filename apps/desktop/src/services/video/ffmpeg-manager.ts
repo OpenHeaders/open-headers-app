@@ -1,9 +1,9 @@
 import AdmZip from 'adm-zip';
-import child_process from 'child_process';
+import child_process from 'node:child_process';
 import electron from 'electron';
-import fs from 'fs';
-import https from 'https';
-import path from 'path';
+import fs from 'node:fs';
+import https from 'node:https';
+import path from 'node:path';
 import * as tar from 'tar';
 import { errorMessage as errMsg } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';

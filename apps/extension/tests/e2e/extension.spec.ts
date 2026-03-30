@@ -6,7 +6,7 @@
  */
 
 import { type BrowserContext, chromium, expect, type Page, test } from '@playwright/test';
-import path from 'path';
+import path from 'node:path';
 
 const extensionPath = path.resolve(__dirname, '../../dist/chrome');
 

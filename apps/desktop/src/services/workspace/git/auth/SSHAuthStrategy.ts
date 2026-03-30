@@ -2,9 +2,9 @@
  * SSHAuthStrategy - Handles SSH key-based authentication for Git operations
  */
 
-import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { errorMessage } from '../../../../types/common';
 import mainLogger from '../../../../utils/mainLogger';
 

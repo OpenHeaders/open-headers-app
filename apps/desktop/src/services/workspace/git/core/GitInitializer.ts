@@ -3,11 +3,11 @@
  * Manages finding Git executable and setting up required directories
  */
 
-import child_process from 'child_process';
+import child_process from 'node:child_process';
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
-import util from 'util';
+import fs from 'node:fs';
+import path from 'node:path';
+import util from 'node:util';
 import mainLogger from '../../../../utils/mainLogger';
 import { GitExecutor } from './GitExecutor';
 

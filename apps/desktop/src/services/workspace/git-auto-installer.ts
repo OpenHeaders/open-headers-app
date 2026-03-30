@@ -1,8 +1,8 @@
-import { exec } from 'child_process';
+import { exec } from 'node:child_process';
 import electron from 'electron';
-import fs from 'fs';
-import path from 'path';
-import { promisify } from 'util';
+import fs from 'node:fs';
+import path from 'node:path';
+import { promisify } from 'node:util';
 import mainLogger from '../../utils/mainLogger';
 
 const { app } = electron;

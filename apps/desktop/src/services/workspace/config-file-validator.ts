@@ -3,8 +3,8 @@
  * Ensures configuration files meet the required schema and constraints
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import type { JsonObject } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
 
