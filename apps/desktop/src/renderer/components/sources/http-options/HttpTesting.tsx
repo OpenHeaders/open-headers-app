@@ -278,7 +278,7 @@ export const createHttpTestHandler =
     setRawResponse,
     onTestResponse,
     effectiveSourceId,
-    testSourceId,
+    testSourceId: _testSourceId,
     workspaceId,
   }: HttpTestHandlerParams) =>
   async (

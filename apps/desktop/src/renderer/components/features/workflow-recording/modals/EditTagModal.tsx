@@ -19,7 +19,7 @@ interface EditTagModalProps {
   onCancel: () => void;
 }
 
-const EditTagModal = ({ visible, recordId, recordUrl, currentTag, onSave, onCancel }: EditTagModalProps) => {
+const EditTagModal = ({ visible, recordId: _recordId, recordUrl, currentTag, onSave, onCancel }: EditTagModalProps) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 

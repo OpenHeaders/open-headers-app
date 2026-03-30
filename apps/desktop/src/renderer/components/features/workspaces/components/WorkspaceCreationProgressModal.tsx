@@ -14,7 +14,7 @@ interface WorkspaceCreationProgressModalProps {
 
 const WorkspaceCreationProgressModal = ({
   visible,
-  state,
+  state: _state,
   progress,
   progressMessage,
   error,

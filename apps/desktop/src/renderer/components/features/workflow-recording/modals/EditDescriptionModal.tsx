@@ -35,7 +35,7 @@ interface EditDescriptionModalProps {
 
 const EditDescriptionModal = ({
   visible,
-  recordId,
+  recordId: _recordId,
   recordUrl,
   recordTag,
   currentDescription,

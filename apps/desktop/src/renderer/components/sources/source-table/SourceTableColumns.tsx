@@ -56,7 +56,7 @@ interface SourceTableColumnsParams {
 }
 
 export const createSourceTableColumns = ({
-  token,
+  token: _token,
   getRefreshStatusText,
   handleViewContent,
   handleEditSource,

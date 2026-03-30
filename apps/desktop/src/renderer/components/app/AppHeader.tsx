@@ -32,7 +32,7 @@ export function AppHeader({
   onCheckForUpdates,
   onOpenSettings,
   onOpenAbout,
-  theme,
+  theme: _theme,
 }: AppHeaderProps) {
   const actionsMenuItems: NonNullable<MenuProps['items']> = [
     {
