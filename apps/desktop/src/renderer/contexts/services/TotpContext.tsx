@@ -7,7 +7,7 @@
  */
 
 import type React from 'react';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useWorkspaces } from '@/renderer/contexts/data';
 
 interface TotpContextValue {
@@ -152,23 +152,27 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!sourceId) return;
     trackedSourcesRef.current.delete(sourceId);
     setCooldowns((prev) => {
+      if (!(sourceId in prev)) return prev;
       const next = { ...prev };
       delete next[sourceId];
       return next;
     });
   }, []);
 
-  const value: TotpContextValue = {
-    canUseTotpForSource,
-    getCooldownSecondsForSource,
-    trackTotpSource,
-    untrackTotpSource,
-    // Legacy aliases
-    canUseTotpSecret: canUseTotpForSource,
-    getCooldownSeconds: getCooldownSecondsForSource,
-    trackTotpSecret: trackTotpSource,
-    untrackTotpSecret: untrackTotpSource,
-  };
+  const value: TotpContextValue = useMemo(
+    () => ({
+      canUseTotpForSource,
+      getCooldownSecondsForSource,
+      trackTotpSource,
+      untrackTotpSource,
+      // Legacy aliases
+      canUseTotpSecret: canUseTotpForSource,
+      getCooldownSeconds: getCooldownSecondsForSource,
+      trackTotpSecret: trackTotpSource,
+      untrackTotpSecret: untrackTotpSource,
+    }),
+    [canUseTotpForSource, getCooldownSecondsForSource, trackTotpSource, untrackTotpSource],
+  );
 
   return <TotpContext.Provider value={value}>{children}</TotpContext.Provider>;
 };

@@ -190,7 +190,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
     },
   ];
 
-  const getRowKey = (record: CliApiLogEntry, index: number | undefined) => `${record.timestamp}-${index}`;
+  const getRowKey = (record: CliApiLogEntry) => `${record.timestamp}-${record.method}-${record.path}`;
 
   const toggleRowExpand = (key: string) => {
     setExpandedRowKeys((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -343,10 +343,10 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
             size: 'small',
           }}
           expandable={expandable}
-          onRow={(record: CliApiLogEntry, index: number | undefined) => {
+          onRow={(record: CliApiLogEntry) => {
             const expandable = !!(record.errorMessage || record.bodySummary || record.clientProcess);
             return {
-              onClick: () => expandable && toggleRowExpand(getRowKey(record, index)),
+              onClick: () => expandable && toggleRowExpand(getRowKey(record)),
               style: expandable ? { cursor: 'pointer' } : undefined,
             };
           }}

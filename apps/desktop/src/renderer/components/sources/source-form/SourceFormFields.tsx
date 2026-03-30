@@ -22,7 +22,7 @@
 
 import { PlusOutlined } from '@ant-design/icons';
 import type { SourceType } from '@openheaders/core';
-import { Button, Input } from 'antd';
+import { Button, Input, Space } from 'antd';
 import type React from 'react';
 
 /**
@@ -64,17 +64,12 @@ export const SourcePathField = ({
   switch (sourceType) {
     case 'file':
       return (
-        <Input
-          value={filePath}
-          placeholder="Select a file"
-          readOnly
-          size="small"
-          addonAfter={
-            <Button type="link" onClick={onBrowse} style={{ padding: 0 }}>
-              Browse
-            </Button>
-          }
-        />
+        <Space.Compact style={{ width: '100%' }}>
+          <Input value={filePath} placeholder="Select a file" readOnly size="small" />
+          <Button type="default" onClick={onBrowse} size="small">
+            Browse
+          </Button>
+        </Space.Compact>
       );
 
     case 'env':

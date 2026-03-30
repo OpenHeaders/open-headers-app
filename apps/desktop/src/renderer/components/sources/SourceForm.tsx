@@ -39,22 +39,18 @@ import type { NewSourceData } from './source-form';
 // Import extracted modules from source-form package
 import {
   AddSourceButton,
-  createEnvironmentChangeHandler,
   createFileBrowseHandler,
   createFormSubmissionHandler,
-  createScrollHandler,
   createSourceTypeChangeHandler,
   createTestResponseHandler,
   createTestSourceId,
   createTotpChangeHandler,
-  createTotpTrackingHandler,
   generateTempSourceId,
   getFormInitialValues,
   getSourcePathLabel,
   getSourcePathValidationMessage,
   SourcePathField,
   StickyHeader,
-  setupScrollListener,
   validateUrlField,
 } from './source-form';
 
@@ -154,40 +150,63 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
     log,
   });
 
-  // Create scroll handler for sticky header behavior
-  const handleScroll = createScrollHandler({
-    formCardRef,
-    setIsSticky,
-    isSticky,
-    headerHeight: 64,
-  });
+  // Setup scroll event listener for sticky header behavior
+  const isStickyRef = useRef(isSticky);
+  isStickyRef.current = isSticky;
 
-  // Setup scroll event listener with cleanup
   useEffect(() => {
-    return setupScrollListener(handleScroll);
-  }, [handleScroll]);
+    const headerHeight = 64;
+    const onScroll = () => {
+      if (!formCardRef.current) return;
+      const formCardTop = (formCardRef.current as HTMLElement).getBoundingClientRect().top;
+      if (formCardTop <= headerHeight && !isStickyRef.current) {
+        setIsSticky(true);
+      } else if (formCardTop > headerHeight && isStickyRef.current) {
+        setIsSticky(false);
+      }
+    };
+    window.addEventListener('scroll', onScroll);
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   // Handle environment changes with form validation
-  const handleEnvironmentChange = createEnvironmentChangeHandler({
-    form,
-    sourceType,
-    envContext,
-    httpOptionsRef,
-    log,
-  });
+  useEffect(() => {
+    if (!form || sourceType !== 'http' || !envContext.environmentsReady) return;
 
-  useEffect(handleEnvironmentChange, [handleEnvironmentChange]);
+    setTimeout(() => {
+      const values = form.getFieldsValue();
+      const fieldsToValidate: string[] = [];
+
+      if (
+        values.sourcePath &&
+        typeof values.sourcePath === 'string' &&
+        (values.sourcePath.includes('{{') || values.sourcePath.includes('[['))
+      ) {
+        fieldsToValidate.push('sourcePath');
+      }
+
+      if (fieldsToValidate.length > 0) {
+        log.debug('[SourceForm] Re-validating URL field after environment change');
+        form.validateFields(fieldsToValidate).catch(() => {});
+      }
+
+      if (httpOptionsRef.current?.validateFields) {
+        log.debug('[SourceForm] Triggering HttpOptions validation after environment change');
+        httpOptionsRef.current.validateFields();
+      }
+    }, 100);
+  }, [form, sourceType, envContext.environmentsReady]);
 
   // Handle TOTP tracking lifecycle
-  const handleTotpTracking = createTotpTrackingHandler({
-    totpEnabled,
-    totpSecret,
-    trackTotpSecret,
-    untrackTotpSecret,
-    testSourceId,
-  });
-
-  useEffect(handleTotpTracking, [handleTotpTracking]);
+  useEffect(() => {
+    if (totpEnabled && totpSecret) {
+      trackTotpSecret(testSourceId);
+    }
+    return () => {
+      untrackTotpSecret(testSourceId);
+    };
+  }, [totpEnabled, totpSecret, testSourceId, trackTotpSecret, untrackTotpSecret]);
 
   // Create URL field validator with context dependencies
   const validateUrl = (rule: unknown, value: string) => validateUrlField(rule, value, sourceType, envContext, form);

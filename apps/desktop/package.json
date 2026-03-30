@@ -282,6 +282,7 @@
     "react-window-infinite-loader": "^1.0.10",
     "rrweb": "^2.0.0-alpha.14",
     "rrweb-player": "^2.0.0-alpha.14",
+    "scheduler": "^0.27.0",
     "tar": "^7.5.4",
     "valibot": "^1.3.1",
     "ws": "^8.16.0"

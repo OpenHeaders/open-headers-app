@@ -1,4 +1,4 @@
-import { Alert, Card, InputNumber, Space, Tag, Typography } from 'antd';
+import { Alert, Card, Input, InputNumber, Space, Tag, Typography } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -30,7 +30,10 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
               {status.wsServerRunning ? 'Running' : 'Stopped'}
             </Tag>
           </Space>
-          <InputNumber addonBefore="Port" value={status.wsPort} disabled style={{ width: 140 }} />
+          <Space.Compact>
+            <Input value="Port" disabled style={{ width: 50, textAlign: 'center', pointerEvents: 'none' }} />
+            <InputNumber value={status.wsPort} disabled style={{ width: 90 }} />
+          </Space.Compact>
         </div>
 
         {/* Info panel */}

@@ -77,6 +77,9 @@ importers:
       rrweb-player:
         specifier: ^2.0.0-alpha.14
         version: 2.0.0-alpha.20
+      scheduler:
+        specifier: ^0.27.0
+        version: 0.27.0
       tar:
         specifier: ^7.5.4
         version: 7.5.13

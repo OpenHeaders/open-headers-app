@@ -8,24 +8,18 @@ import {
 } from '@ant-design/icons';
 import type { Recording, Source } from '@openheaders/core';
 import { Alert, Tabs } from 'antd';
-import { lazy, Suspense } from 'react';
 import {
-  EnvironmentsSkeleton,
-  ProxyRulesSkeleton,
   RecordViewerSkeleton,
   SourceListSkeleton,
 } from '@/renderer/components/common/skeletons/WorkspaceSkeleton';
+import Environments from '@/renderer/components/features/environments';
+import Workspaces from '@/renderer/components/features/workspaces';
 import { WorkflowDetails, WorkflowRecording } from '@/renderer/components/features/workflow-recording';
+import Rules from '@/renderer/components/rules/Rules';
+import ServerConfig from '@/renderer/components/server-config/ServerConfig';
 import SourceForm from '@/renderer/components/sources/SourceForm';
 import SourceTable from '@/renderer/components/sources/SourceTable';
 import type { NewSourceData } from '@/renderer/components/sources/source-form';
-
-// Lazy-load tab content that isn't visible on first render.
-// These modules (and their sub-trees) are only parsed when the tab is first activated.
-const Rules = lazy(() => import('../rules/Rules'));
-const Workspaces = lazy(() => import('../features/workspaces'));
-const Environments = lazy(() => import('../features/environments'));
-const ServerConfig = lazy(() => import('../server-config/ServerConfig'));
 
 interface AppTabsProps {
   isReady: boolean;
@@ -148,13 +142,7 @@ export function AppTabs({
       ),
       children: (
         <div className="content-container">
-          {isReady ? (
-            <Suspense fallback={<ProxyRulesSkeleton />}>
-              <Rules />
-            </Suspense>
-          ) : (
-            <ProxyRulesSkeleton />
-          )}
+          {isReady ? <Rules /> : null}
         </div>
       ),
     },
@@ -216,13 +204,7 @@ export function AppTabs({
       ),
       children: (
         <div className="content-container">
-          {isReady ? (
-            <Suspense fallback={<EnvironmentsSkeleton />}>
-              <Environments />
-            </Suspense>
-          ) : (
-            <EnvironmentsSkeleton />
-          )}
+          {isReady ? <Environments /> : null}
         </div>
       ),
     },
@@ -236,13 +218,7 @@ export function AppTabs({
       ),
       children: (
         <div className="content-container">
-          {isReady ? (
-            <Suspense fallback={<SourceListSkeleton />}>
-              <Workspaces />
-            </Suspense>
-          ) : (
-            <SourceListSkeleton />
-          )}
+          {isReady ? <Workspaces /> : null}
         </div>
       ),
     },
@@ -256,13 +232,7 @@ export function AppTabs({
       ),
       children: (
         <div className="content-container">
-          {isReady ? (
-            <Suspense fallback={<ProxyRulesSkeleton />}>
-              <ServerConfig activeParentTab={activeTab} />
-            </Suspense>
-          ) : (
-            <ProxyRulesSkeleton />
-          )}
+          {isReady ? <ServerConfig activeParentTab={activeTab} /> : null}
         </div>
       ),
     },
