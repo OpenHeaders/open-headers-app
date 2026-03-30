@@ -6,7 +6,42 @@
  */
 
 import type { RecordingEvent, RecordingMetadata } from '../types/recording';
+import type { PayloadRule, Rule } from '../types/rules';
 import type { Source } from '../types/source';
+
+// ── Shared protocol types ──────────────────────────────────────────
+
+/** Navigation intent sent with focusApp to tell the desktop UI which view to show. */
+export interface AppNavigationIntent {
+  tab?: string;
+  subTab?: string;
+  action?: string;
+  itemId?: string;
+  settingsTab?: string;
+  value?: unknown;
+}
+
+/** Display bounds rectangle. */
+export interface DisplayBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** Information about a display/monitor. */
+export interface BrowserDisplayInfo {
+  id: string | number;
+  name?: string;
+  bounds: DisplayBounds;
+}
+
+/** Display context sent with startSyncRecording for video capture targeting. */
+export interface DisplayContext {
+  currentDisplay?: BrowserDisplayInfo;
+  allDisplays?: BrowserDisplayInfo[];
+  windowPosition?: { x: number; y: number };
+}
 
 // ── Recording wire format (extension → desktop via WebSocket) ──────
 
@@ -55,7 +90,7 @@ export interface BrowserInfoMessage {
 
 export interface FocusAppMessage {
   type: 'focusApp';
-  navigation: Record<string, unknown>;
+  navigation: AppNavigationIntent;
 }
 
 export interface ToggleRuleMessage {
@@ -92,7 +127,7 @@ export interface StartSyncRecordingMessage {
     windowId: number;
     recordingId: string;
     timestamp: number;
-    displayInfo?: unknown;
+    displayInfo?: DisplayContext;
   };
 }
 
@@ -170,7 +205,6 @@ export interface HeaderRuleFromApp {
 
 export interface RulesData {
   header?: HeaderRuleFromApp[];
-  request?: unknown[];
-  response?: unknown[];
-  [key: string]: unknown;
+  request?: PayloadRule[];
+  response?: Rule[];
 }

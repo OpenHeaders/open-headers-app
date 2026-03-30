@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { BrowserDisplayInfo, DisplayContext } from '@openheaders/core';
 import { errorMessage } from '@openheaders/core';
 import type { BrowserWindow as BrowserWindowType, DesktopCapturerSource, Display, IpcMainEvent } from 'electron';
 import electron from 'electron';
@@ -18,20 +19,8 @@ interface RecordingOptions {
   title: string;
   windowId?: string;
   tabId?: string;
-  displayInfo?: DisplayInfo;
+  displayInfo?: DisplayContext;
   videoQuality?: string;
-}
-
-interface DisplayInfo {
-  currentDisplay?: BrowserDisplayInfo;
-  allDisplays?: BrowserDisplayInfo[];
-  windowPosition?: { x: number; y: number };
-}
-
-interface BrowserDisplayInfo {
-  id: string | number;
-  name?: string;
-  bounds: { left: number; top: number; width: number; height: number };
 }
 
 interface RecordingInfo {
@@ -207,7 +196,7 @@ class VideoCaptureService {
   /**
    * Find target window by URL and title
    */
-  async findTargetWindow(url: string, title: string, displayInfo?: DisplayInfo): Promise<CaptureSource | null> {
+  async findTargetWindow(url: string, title: string, displayInfo?: DisplayContext): Promise<CaptureSource | null> {
     try {
       // Get both screen and window sources - SCREEN FIRST for priority
       const sources = await desktopCapturer.getSources({

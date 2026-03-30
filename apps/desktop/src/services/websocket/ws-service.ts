@@ -1,7 +1,7 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
 
 import http from 'node:http';
-import type { RulesCollection, Source } from '@openheaders/core';
+import type { AppNavigationIntent, RulesCollection, Source } from '@openheaders/core';
 import electron from 'electron';
 import WS, { WebSocketServer } from 'ws';
 import settingsCache from '@/services/core/SettingsCache';
@@ -390,12 +390,7 @@ class WebSocketService {
     }
   }
 
-  async _handleFocusApp(navigation: {
-    tab?: string;
-    subTab?: string;
-    action?: string;
-    itemId?: string;
-  }): Promise<void> {
+  async _handleFocusApp(navigation: AppNavigationIntent): Promise<void> {
     try {
       log.info('_handleFocusApp called with navigation:', navigation);
       const { BrowserWindow } = electron;

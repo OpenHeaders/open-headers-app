@@ -3,18 +3,12 @@
  * Uses multiple methods for reliability: WebSocket (via background), then protocol handler
  */
 
+import type { AppNavigationIntent } from '@openheaders/core';
 import { logger } from './logger';
 
 declare const browser: typeof chrome | undefined;
 
-export interface LaunchData {
-  tab?: string;
-  subTab?: string;
-  action?: string;
-  itemId?: string;
-  settingsTab?: string;
-  value?: unknown;
-}
+export type LaunchData = AppNavigationIntent;
 
 interface LaunchResult {
   success: boolean;

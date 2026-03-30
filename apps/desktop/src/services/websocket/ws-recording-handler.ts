@@ -5,7 +5,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RecordingMetadata, WorkflowRecordingPayload } from '@openheaders/core';
+import type {
+  AppNavigationIntent,
+  DisplayContext,
+  RecordingMetadata,
+  WorkflowRecordingPayload,
+} from '@openheaders/core';
 import { errorMessage } from '@openheaders/core';
 import { WorkflowRecordingPayloadSchema } from '@openheaders/core/schemas';
 import electron from 'electron';
@@ -25,27 +30,6 @@ interface RecordingHandlerDeps {
   _broadcastToAll(message: string): number;
 }
 
-interface FocusNavigation {
-  tab?: string;
-  subTab?: string;
-  action?: string;
-  itemId?: string;
-}
-
-interface DisplayInfo {
-  currentDisplay?: {
-    id: string | number;
-    name?: string;
-    bounds: { left: number; top: number; width: number; height: number };
-  };
-  allDisplays?: Array<{
-    id: string | number;
-    name?: string;
-    bounds: { left: number; top: number; width: number; height: number };
-  }>;
-  windowPosition?: { x: number; y: number };
-}
-
 interface RecordingOptions {
   recordingId: string;
   url: string;
@@ -53,7 +37,7 @@ interface RecordingOptions {
   windowId?: string;
   tabId?: string;
   timestamp?: number;
-  displayInfo?: DisplayInfo;
+  displayInfo?: DisplayContext;
 }
 
 interface VideoCaptureServiceLike {
@@ -98,7 +82,7 @@ interface StartSyncRecordingData {
   windowId?: string;
   tabId?: string;
   timestamp?: number;
-  displayInfo?: DisplayInfo;
+  displayInfo?: DisplayContext;
 }
 
 interface StopSyncRecordingData {
@@ -120,7 +104,7 @@ class WSRecordingHandler {
   videoCaptureService: VideoCaptureServiceLike | null;
 
   /** Callback to focus the app window. Set by ws-service after construction. */
-  onFocusApp: ((navigation: FocusNavigation) => void) | null = null;
+  onFocusApp: ((navigation: AppNavigationIntent) => void) | null = null;
 
   /** Callback to send IPC to renderer windows. Set by ws-service after construction. */
   onNotifyRenderers: ((channel: string, data: unknown) => void) | null = null;

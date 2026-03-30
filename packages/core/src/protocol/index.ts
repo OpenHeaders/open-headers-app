@@ -11,7 +11,11 @@ export {
 } from './constants';
 
 export type {
+  AppNavigationIntent,
+  BrowserDisplayInfo,
   BrowserInfoMessage,
+  DisplayBounds,
+  DisplayContext,
   FocusAppMessage,
   GetRecordingHotkeyMessage,
   GetVideoRecordingStateMessage,
