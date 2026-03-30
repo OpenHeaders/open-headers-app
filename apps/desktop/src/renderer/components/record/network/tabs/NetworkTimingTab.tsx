@@ -57,7 +57,7 @@ const NetworkTimingTab = ({ request, record, token }: NetworkTimingTabProps) => 
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>
       <div style={{ padding: '16px' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>
             <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>
               Timing Breakdown

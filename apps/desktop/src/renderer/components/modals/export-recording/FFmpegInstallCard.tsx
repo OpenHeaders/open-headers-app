@@ -120,9 +120,9 @@ const FFmpegInstallCard = ({
 
   return (
     <Alert
-      message="FFmpeg Not Found"
+      title="FFmpeg Not Found"
       description={
-        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
           <div>
             <Text>MP4 export requires FFmpeg to convert the video.</Text>
             <br />

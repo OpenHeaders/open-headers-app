@@ -83,7 +83,7 @@ export const createSourceTableColumns = ({
     render: (_value: unknown, record: Source) => {
       const type = record.sourceType;
       return (
-        <Space size={4} direction="vertical" align="start">
+        <Space size={4} orientation="vertical" align="start">
           <Space size={4}>
             {/* Primary type tag with color coding:
                         Blue for HTTP (dynamic sources)
@@ -200,7 +200,7 @@ export const createSourceTableColumns = ({
     key: 'actions',
     width: 180,
     render: (_: unknown, record: Source) => (
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="small" style={{ width: '100%' }}>
         {/* HTTP Sources: Full functionality with refresh status and controls */}
         {record.sourceType === 'http' &&
           (() => {

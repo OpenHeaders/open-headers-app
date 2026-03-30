@@ -712,7 +712,7 @@ const HeaderTable: React.FC = () => {
                   searchText ? (
                     <Text type="secondary">No matching headers found</Text>
                   ) : (
-                    <Space direction="vertical" size={4}>
+                    <Space orientation="vertical" size={4}>
                       <Text type="secondary">No header rules yet</Text>
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         Click "Add Rule" above to create rules in the desktop app

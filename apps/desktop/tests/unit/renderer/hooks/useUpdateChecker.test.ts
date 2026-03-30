@@ -73,7 +73,7 @@ describe('useUpdateChecker', () => {
     expect(mockCheckForUpdates).toHaveBeenCalledWith(true);
     expect(mockNotificationOpen).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Checking for Updates',
+        title: 'Checking for Updates',
         key: 'checking-updates',
       }),
     );
@@ -88,7 +88,7 @@ describe('useUpdateChecker', () => {
 
     expect(mockNotificationOpen).toHaveBeenCalledOnce();
     const notifArgs = mockNotificationOpen.mock.calls[0][0];
-    expect(notifArgs.message).toBe('Checking for Updates');
+    expect(notifArgs.title).toBe('Checking for Updates');
     expect(notifArgs.key).toBe('checking-updates');
     expect(notifArgs.duration).toBeDefined();
   });

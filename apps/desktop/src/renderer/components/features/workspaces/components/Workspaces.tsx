@@ -155,7 +155,7 @@ const Workspaces = () => {
                 };
 
                 return (
-                  <Space direction="vertical" style={{ width: '100%' }} size={20}>
+                  <Space orientation="vertical" style={{ width: '100%' }} size={20}>
                     <div style={{ marginTop: 8 }}>
                       <Segmented
                         value={linkType}
@@ -283,7 +283,7 @@ const Workspaces = () => {
 
                     {includeAuth && (
                       <Alert
-                        message="This link contains sensitive authentication data"
+                        title="This link contains sensitive authentication data"
                         type="warning"
                         showIcon
                         banner
@@ -323,9 +323,9 @@ const Workspaces = () => {
 
     return (
       <Alert
-        message="About Workspaces"
+        title="About Workspaces"
         description={
-          <Space direction="vertical">
+          <Space orientation="vertical">
             <Text>Workspaces allow you to organize and share configurations:</Text>
             <ul style={styles.tutorialList}>
               <li>
@@ -365,7 +365,7 @@ const Workspaces = () => {
   return (
     <div style={styles.container}>
       <Card>
-        <Space direction="vertical" style={styles.spaceVertical} size="large">
+        <Space orientation="vertical" style={styles.spaceVertical} size="large">
           <div style={styles.headerContainer}>
             <Space>
               <Title level={4} style={styles.title}>

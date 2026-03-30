@@ -122,7 +122,7 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
             zIndex: 1000,
           }}
         >
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <div>
               <Space>
                 <Badge status={overallHealth} />

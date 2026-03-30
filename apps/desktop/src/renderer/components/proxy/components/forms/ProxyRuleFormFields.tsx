@@ -83,7 +83,7 @@ export const ExistingHeaderRuleSelector: React.FC<ExistingHeaderRuleSelectorProp
       size="small"
       showSearch
       optionFilterProp="children"
-      dropdownStyle={{ maxWidth: 600 }}
+      styles={{ popup: { root: { maxWidth: 600 } } }}
       style={{ width: '100%' }}
       optionLabelProp="label"
     >

@@ -79,7 +79,7 @@ export const UpdateNotificationManager = ({
   const showCheckingNotification = () => {
     debugLog('Showing checking for updates notification');
     notification.open({
-      message: 'Checking for Updates',
+      title: 'Checking for Updates',
       description: 'Looking for new versions…',
       duration: 0,
       key: NOTIFICATION_KEYS.CHECKING,
@@ -93,7 +93,7 @@ export const UpdateNotificationManager = ({
    */
   const showAlreadyCheckingNotification = (isDownloading: boolean) => {
     notification.info({
-      message: isDownloading ? 'Update In Progress' : 'Check In Progress',
+      title: isDownloading ? 'Update In Progress' : 'Check In Progress',
       description: isDownloading ? 'Already processing the latest update' : 'Already checking for updates',
       duration: 3,
       key: NOTIFICATION_KEYS.ALREADY_CHECKING,
@@ -108,7 +108,7 @@ export const UpdateNotificationManager = ({
   const showUpdateAvailableNotification = (info: { version: string }, progress = 0) => {
     debugLog(`Showing update available notification for version ${info.version}`);
     notification.info({
-      message: 'Update Available',
+      title: 'Update Available',
       description: (
         <div>
           <div>Version {info.version} is processing...</div>
@@ -126,7 +126,7 @@ export const UpdateNotificationManager = ({
    */
   const showDownloadProgressNotification = (percent: number) => {
     notification.info({
-      message: 'Processing Update',
+      title: 'Processing Update',
       description: (
         <div>
           <Progress percent={percent} status="active" format={(percent) => `${percent}%`} />
@@ -161,7 +161,7 @@ export const UpdateNotificationManager = ({
 
               // Show installation notification
               notification.info({
-                message: 'Installing Update',
+                title: 'Installing Update',
                 description: 'The application will restart momentarily...',
                 duration: 0,
                 key: NOTIFICATION_KEYS.INSTALLING,
@@ -190,11 +190,11 @@ export const UpdateNotificationManager = ({
     const installButton = createInstallButton();
 
     notification.success({
-      message: 'Update Ready',
+      title: 'Update Ready',
       description: `Version ${info.version} is ready to install`,
       duration: 0,
       key: NOTIFICATION_KEYS.DOWNLOADED,
-      btn: installButton,
+      actions: installButton,
     });
   };
 
@@ -204,7 +204,7 @@ export const UpdateNotificationManager = ({
   const showNoUpdatesNotification = () => {
     debugLog('Showing no updates available notification');
     notification.success({
-      message: 'No Updates Available',
+      title: 'No Updates Available',
       description: 'You are already using the latest version.',
       duration: 4,
       key: NOTIFICATION_KEYS.NOT_AVAILABLE,
@@ -219,7 +219,7 @@ export const UpdateNotificationManager = ({
   const showUpdateErrorNotification = (message: string) => {
     debugLog('Showing update error notification');
     notification.error({
-      message: 'Update Error',
+      title: 'Update Error',
       description: message,
       duration: 8,
       key: NOTIFICATION_KEYS.ERROR,

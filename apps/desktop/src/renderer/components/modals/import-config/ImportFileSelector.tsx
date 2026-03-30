@@ -63,7 +63,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
             <div>
               {/* Single file mode explanation */}
               <Alert
-                message="Single File Import"
+                title="Single File Import"
                 description="Use this option when you have one JSON file that contains all your configuration data (sources, rules, proxy rules, and optionally environment variables)."
                 type="info"
                 showIcon
@@ -92,7 +92,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
               {/* Selected file confirmation */}
               {fileData && (
                 <Alert
-                  message={`Selected: ${fileData.file.name}`}
+                  title={`Selected: ${fileData.file.name}`}
                   type="success"
                   showIcon
                   closable
@@ -115,9 +115,9 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
             </Space>
           ),
           children: (
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <Alert
-                message="Separate Files Import"
+                title="Separate Files Import"
                 description="Use this option when you want to keep environment variables (which may contain sensitive data) in a separate file from your main configuration."
                 type="info"
                 showIcon
@@ -154,7 +154,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
                 </div>
                 {fileData && (
                   <Alert
-                    message={`Selected: ${fileData.file.name}`}
+                    title={`Selected: ${fileData.file.name}`}
                     type="success"
                     showIcon
                     closable
@@ -194,7 +194,7 @@ const ImportFileSelector: React.FC<ImportFileSelectorProps> = ({
                 </div>
                 {envFileData && (
                   <Alert
-                    message="Environment file loaded"
+                    title="Environment file loaded"
                     type="success"
                     showIcon
                     closable

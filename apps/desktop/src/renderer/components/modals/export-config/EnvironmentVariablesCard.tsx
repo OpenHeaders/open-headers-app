@@ -63,7 +63,7 @@ const EnvironmentVariablesCard: React.FC<EnvironmentVariablesCardProps> = ({
     >
       {/* Environment variable export options */}
       <Radio.Group value={environmentOption} onChange={handleEnvironmentOptionChange} style={{ width: '100%' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           {/* Schema only option - safe for team sharing */}
           <Radio value="schema" style={{ marginBottom: 8 }}>
             <Space align="start">
@@ -121,7 +121,7 @@ const EnvironmentVariablesCard: React.FC<EnvironmentVariablesCardProps> = ({
                 </Text>
               </div>
             ) : environments && Object.keys(environments).length > 0 ? (
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 {Object.keys(environments).map((envName) => (
                   <Checkbox
                     key={envName}

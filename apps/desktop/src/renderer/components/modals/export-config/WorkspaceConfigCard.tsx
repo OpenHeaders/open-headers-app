@@ -45,7 +45,7 @@ const WorkspaceConfigCard = ({
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* Main workspace configuration checkbox */}
         <Checkbox
           checked={includeWorkspace}
@@ -78,7 +78,7 @@ const WorkspaceConfigCard = ({
             {/* Security warning for credentials */}
             {includeCredentials && (
               <Alert
-                message="Security Warning"
+                title="Security Warning"
                 description={
                   <div>
                     <Text>Including credentials will export sensitive authentication data such as:</Text>

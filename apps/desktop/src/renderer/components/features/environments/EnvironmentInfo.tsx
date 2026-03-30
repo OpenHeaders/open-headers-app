@@ -23,7 +23,7 @@ export const MissingVariablesAlert = ({ missingVariables }: MissingVariablesAler
   return (
     <Alert
       type="warning"
-      message="Missing Variables"
+      title="Missing Variables"
       description={`The following variables are used in sources and rules but not defined: ${missingVariables.join(', ')}`}
       showIcon
     />
@@ -43,7 +43,7 @@ export const TutorialInfo = ({ showTutorial }: TutorialInfoProps) => {
 
   return (
     <Alert
-      message={
+      title={
         <Space>
           <span>Use</span>
           <Tag color="purple" style={{ margin: 0 }}>

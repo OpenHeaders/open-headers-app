@@ -317,7 +317,7 @@ const HeaderRules = () => {
         const info = getDynamicValueInfo(record);
 
         return (
-          <Space size={4} direction="vertical" align="start">
+          <Space size={4} orientation="vertical" align="start">
             <Space size={4}>
               {/* Primary type tag */}
               <Tag color={record.isResponse ? 'blue' : 'green'} style={{ fontSize: '11px', padding: '0 4px' }}>
@@ -610,7 +610,7 @@ const HeaderRules = () => {
         }
 
         return (
-          <Space direction="vertical" size={1}>
+          <Space orientation="vertical" size={1}>
             {resolvedDomains.slice(0, 1).map((domain: string, index: number) => {
               const isTruncated = domain.length > 18;
               const displayDomain = isTruncated ? `${domain.substring(0, 18)}...` : domain;
@@ -736,7 +736,7 @@ const HeaderRules = () => {
 
         {tutorialMode && (
           <Alert
-            message="Header Rules"
+            title="Header Rules"
             description={
               <div>
                 <div>Header rules allow you to modify HTTP request and response headers for specific domains.</div>

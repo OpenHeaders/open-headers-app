@@ -199,7 +199,7 @@ const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
           ) : (
             <div className="tab-content">
               {/* Extensions Tab Content - Browser Extension Store Links */}
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 {/* Chrome Web Store Link */}
                 <Button
                   icon={<CompassOutlined />}

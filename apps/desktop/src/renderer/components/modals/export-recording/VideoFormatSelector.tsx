@@ -52,7 +52,7 @@ const VideoFormatSelector = ({ videoFormat, onVideoFormatChange, isExporting }: 
         disabled={isExporting}
         style={{ width: '100%' }}
       >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
           {/* WebM Format Option - Native recording format */}
           <Radio
             value="webm"

@@ -72,23 +72,21 @@ const TotpAuthCard: React.FC<TotpAuthCardProps> = ({
             <>
               <div style={{ marginBottom: 16 }}>
                 <Form.Item name="totpSecret" rules={[{ required: true, message: 'TOTP secret is required' }]}>
-                  <Input.Password
-                    placeholder="Enter TOTP secret key"
-                    onChange={handleTotpSecretChange}
-                    status={totpError ? 'error' : ''}
-                    size="small"
-                    addonAfter={
-                      <Button
-                        type="link"
-                        size="small"
-                        onClick={handleTestTotp}
-                        style={{ padding: '0 4px' }}
-                        loading={totpTesting}
-                      >
-                        Test
-                      </Button>
-                    }
-                  />
+                  <Space.Compact style={{ width: '100%' }}>
+                    <Input.Password
+                      placeholder="Enter TOTP secret key"
+                      onChange={handleTotpSecretChange}
+                      status={totpError ? 'error' : ''}
+                      size="small"
+                    />
+                    <Button
+                      size="small"
+                      onClick={handleTestTotp}
+                      loading={totpTesting}
+                    >
+                      Test
+                    </Button>
+                  </Space.Compact>
                 </Form.Item>
                 {totpError && (
                   <Text type="danger" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
@@ -106,7 +104,7 @@ const TotpAuthCard: React.FC<TotpAuthCardProps> = ({
 
               {totpPreviewVisible && (
                 <Card size="small" style={{ marginBottom: 8 }}>
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space orientation="vertical" style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Space>
                         <Text
@@ -165,7 +163,7 @@ const TotpAuthCard: React.FC<TotpAuthCardProps> = ({
                   return secret && testSourceId && !canUseTotpSecret(testSourceId) ? (
                     <Alert
                       type="warning"
-                      message={`⏱️ TOTP cooldown active: ${getCooldownSeconds(testSourceId)} seconds remaining`}
+                      title={`⏱️ TOTP cooldown active: ${getCooldownSeconds(testSourceId)} seconds remaining`}
                       style={{ marginTop: 8 }}
                       description="Please wait before making another request with this source."
                       showIcon={false}

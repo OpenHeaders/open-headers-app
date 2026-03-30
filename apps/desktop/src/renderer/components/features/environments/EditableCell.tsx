@@ -3,6 +3,7 @@
  * Supports different input types based on the data being edited
  */
 
+import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { Form, Input, Radio } from 'antd';
 import type React from 'react';
 import { forwardRef } from 'react';
@@ -14,7 +15,7 @@ const { TextArea } = Input;
 /**
  * Dynamic value input that switches between TextArea and SecretInput based on isSecret
  */
-const DynamicValueInput = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+const DynamicValueInput = forwardRef<TextAreaRef, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
   (props, ref) => {
     const form = Form.useFormInstance();
     const isSecret = Form.useWatch('isSecret', form);

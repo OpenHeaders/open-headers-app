@@ -34,7 +34,7 @@ const GitStatusAlert = ({
    */
   const renderCheckingAlert = () => (
     <Alert
-      message="Checking Git status..."
+      title="Checking Git status..."
       description={<Spin size="small" />}
       type="info"
       showIcon
@@ -48,7 +48,7 @@ const GitStatusAlert = ({
    */
   const renderNotInstalledAlert = () => (
     <Alert
-      message="Git Required for Team Workspaces"
+      title="Git Required for Team Workspaces"
       description={
         <div>
           <p style={{ marginBottom: 8 }}>
@@ -91,7 +91,7 @@ const GitStatusAlert = ({
    */
   const _renderInstalledAlert = () => (
     <Alert
-      message={
+      title={
         <span>
           <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
           Git is installed and ready

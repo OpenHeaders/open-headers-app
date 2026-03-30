@@ -218,7 +218,7 @@ const ConnectionProgressModal = ({
       footer={renderFooter()}
       width={600}
       closable={!isTestingConnection}
-      maskClosable={!isTestingConnection}
+      mask={{ closable: !isTestingConnection }}
       centered
       zIndex={1500}
     >

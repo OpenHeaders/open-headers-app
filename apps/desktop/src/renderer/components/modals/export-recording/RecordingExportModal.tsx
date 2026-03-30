@@ -281,9 +281,9 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
         </Button>,
       ]}
       closable={!isExporting}
-      maskClosable={!isExporting}
+      mask={{ closable: !isExporting }}
     >
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Space orientation="vertical" size={16} style={{ width: '100%' }}>
         {/* Export Format Selection */}
         <ExportFormatSelector
           exportType={exportType}

@@ -263,10 +263,10 @@
     }
   },
   "dependencies": {
-    "@ant-design/icons": "^5.2.6",
+    "@ant-design/icons": "^6.1.1",
     "@openheaders/core": "workspace:*",
     "adm-zip": "^0.5.16",
-    "antd": "^5.13.2",
+    "antd": "^6.3.5",
     "auto-launch": "^5.0.6",
     "chokidar": "^3.5.3",
     "dayjs": "^1.11.20",

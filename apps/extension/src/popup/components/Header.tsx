@@ -193,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenSetupGuide }) => {
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
           <Tooltip
-            overlayStyle={{ maxWidth: 280 }}
+            styles={{ root: { maxWidth: 280 } }}
             title={
               <>
                 <div style={{ marginBottom: 4, opacity: 0.75 }}>Each level includes all levels above it:</div>

@@ -32,7 +32,7 @@ export function useUpdateChecker(): UseUpdateCheckerReturn {
 
       const loadingIcon = <LoadingOutlined spin />;
       notification.open({
-        message: 'Checking for Updates',
+        title: 'Checking for Updates',
         description: 'Looking for new versions…',
         duration: 0,
         key: 'checking-updates',

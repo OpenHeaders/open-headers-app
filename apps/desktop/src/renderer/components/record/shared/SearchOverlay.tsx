@@ -149,7 +149,7 @@ const SearchOverlay = ({
 
   return (
     <div ref={overlayRef} style={defaultStyle}>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <Input
           placeholder={placeholder}
           value={localSearchValue}

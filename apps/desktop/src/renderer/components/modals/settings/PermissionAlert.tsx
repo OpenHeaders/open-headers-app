@@ -44,9 +44,9 @@ const PermissionAlert = ({ permissionAlert, onClose }: PermissionAlertProps) => 
 
   return (
     <Alert
-      message={permissionAlert.message}
+      title={permissionAlert.message}
       description={
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Text>{permissionAlert.description}</Text>
           {permissionAlert.action && (
             <Button size="small" type="primary" onClick={permissionAlert.action.onClick} style={{ marginTop: 8 }}>

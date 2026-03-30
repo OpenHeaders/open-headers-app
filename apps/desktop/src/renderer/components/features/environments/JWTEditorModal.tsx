@@ -375,7 +375,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
 
     return (
       <Alert
-        message={
+        title={
           <Space>
             {isExpired ? (
               <>
@@ -451,10 +451,12 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
         type: 'primary',
       }}
       centered
-      bodyStyle={{
-        height: 'calc(80vh - 110px)',
-        overflow: 'hidden',
-        padding: '16px 24px',
+      styles={{
+        body: {
+          height: 'calc(80vh - 110px)',
+          overflow: 'hidden',
+          padding: '16px 24px',
+        },
       }}
       style={{
         maxWidth: '1400px',
@@ -462,7 +464,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
     >
       {error && (
         <Alert
-          message="Initial JWT Decode Error"
+          title="Initial JWT Decode Error"
           description={error}
           type="error"
           showIcon
@@ -603,7 +605,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
               />
               {encodedInputError && (
                 <Alert
-                  message="JWT Parse Error"
+                  title="JWT Parse Error"
                   description={encodedInputError}
                   type="error"
                   showIcon
@@ -611,7 +613,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
                 />
               )}
               <Alert
-                message="Direct Edit Mode"
+                title="Direct Edit Mode"
                 description="Paste a complete JWT token to decode and edit it. The decoded view will update automatically if the token is valid."
                 type="info"
                 showIcon
@@ -745,7 +747,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
                 marginBottom: 16,
               }}
             >
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <Checkbox checked={useSecretKey} onChange={(e) => handleUseSecretKeyToggle(e.target.checked)}>
                   <Space>
                     <KeyOutlined />
@@ -827,7 +829,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
 
                     {signingError && (
                       <Alert
-                        message="Signing Error"
+                        title="Signing Error"
                         description={signingError}
                         type="error"
                         showIcon
@@ -837,7 +839,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
                     )}
                     {!signingError && secretKey && (
                       <Alert
-                        message="Token will be re-signed"
+                        title="Token will be re-signed"
                         description={`The JWT will be signed with your secret key using ${algorithm} algorithm`}
                         type="success"
                         showIcon
@@ -859,7 +861,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
             {/* Modified Status Alert */}
             {isModified && (
               <Alert
-                message="Changes Preview"
+                title="Changes Preview"
                 description="The encoded token reflects your edits to the header and payload. Click Save to apply these changes."
                 type="warning"
                 showIcon

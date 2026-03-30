@@ -15,7 +15,7 @@
  */
 
 import type { FormInstance } from 'antd';
-import { Card, Col, Form, InputNumber, Radio, Row, Select, Switch } from 'antd';
+import { Card, Col, Form, Input, InputNumber, Radio, Row, Select, Space, Switch } from 'antd';
 
 const { Option } = Select;
 
@@ -94,15 +94,17 @@ const AutoRefreshCard = ({
               </Form.Item>
             ) : (
               <Form.Item name={['refreshOptions', 'interval']} initialValue={15} style={{ marginBottom: 0 }}>
-                <InputNumber
-                  min={1}
-                  max={10080}
-                  value={customInterval}
-                  onChange={handleCustomIntervalChange}
-                  addonAfter="minutes"
-                  size="small"
-                  style={{ width: '100%' }}
-                />
+                <Space.Compact style={{ width: '100%' }}>
+                  <InputNumber
+                    min={1}
+                    max={10080}
+                    value={customInterval}
+                    onChange={handleCustomIntervalChange}
+                    size="small"
+                    style={{ width: '100%' }}
+                  />
+                  <Input value="minutes" disabled style={{ width: 80, textAlign: 'center', pointerEvents: 'none' }} />
+                </Space.Compact>
               </Form.Item>
             )}
           </Col>

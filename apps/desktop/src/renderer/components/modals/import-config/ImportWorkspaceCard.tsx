@@ -39,7 +39,7 @@ const ImportWorkspaceCard = ({
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <Checkbox checked={importWorkspace} onChange={(e) => onImportWorkspaceChange(e.target.checked)}>
           <Space>
             <Text>Import Git workspace configuration</Text>
@@ -51,7 +51,7 @@ const ImportWorkspaceCard = ({
 
         {importWorkspace && (
           <div style={{ marginLeft: 24 }}>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Space orientation="vertical" style={{ width: '100%' }}>
               <Text type="secondary">Repository Details:</Text>
               <div style={{ paddingLeft: 16 }}>
                 <Text style={{ display: 'block' }}>
@@ -71,7 +71,7 @@ const ImportWorkspaceCard = ({
                 </Text>
                 {workspaceInfo.authData && (
                   <Alert
-                    message={
+                    title={
                       <Space>
                         <KeyOutlined />
                         <Text>Contains authentication credentials</Text>
@@ -88,7 +88,7 @@ const ImportWorkspaceCard = ({
               {/* Check for existing workspace with same name */}
               {workspaces?.some((w) => w.name === workspaceInfo.name) && (
                 <Alert
-                  message="Workspace Name Conflict"
+                  title="Workspace Name Conflict"
                   description={`A workspace named "${workspaceInfo.name}" already exists. It will be renamed to "${workspaceInfo.name} (Imported)" to avoid conflicts.`}
                   type="info"
                   showIcon

@@ -45,7 +45,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
       case 'preprocessing':
         return (
           <div style={{ textAlign: 'center', width: '100%' }}>
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <div
                 style={{
                   fontSize: '15px',
@@ -70,7 +70,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
                 strokeWidth={8}
               />
               <div style={{ fontSize: '13px', color: '#595959' }}>
-                <Space direction="vertical" size="small">
+                <Space orientation="vertical" size="small">
                   <div>
                     Analyzing <strong>{details.eventCount || details.totalEvents || 0}</strong> events
                   </div>
@@ -104,7 +104,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
 
         return (
           <div style={{ textAlign: 'center', width: '100%' }}>
-            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            <Space orientation="vertical" size="small" style={{ width: '100%' }}>
               <div
                 style={{
                   fontSize: '15px',
@@ -130,7 +130,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
               />
               <div style={{ fontSize: '13px', color: '#595959' }}>
                 {details.completed !== undefined ? (
-                  <Space direction="vertical" size="small">
+                  <Space orientation="vertical" size="small">
                     <div>
                       <strong>{details.completed + (details.failed || 0)}</strong> of <strong>{details.total}</strong>{' '}
                       resources processed
@@ -177,7 +177,7 @@ const ProcessingOverlay = ({ processing }: ProcessingOverlayProps) => {
       case 'saving':
         return (
           <div style={{ textAlign: 'center' }}>
-            <Space direction="vertical" size="small">
+            <Space orientation="vertical" size="small">
               <div
                 style={{
                   fontSize: '16px',

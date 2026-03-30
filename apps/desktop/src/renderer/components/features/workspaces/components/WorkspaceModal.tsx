@@ -469,7 +469,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
           const workspaceType = getFieldValue('type');
           return (
             <Alert
-              message={workspaceType === 'team' ? 'Team Workspace' : 'Personal Workspace'}
+              title={workspaceType === 'team' ? 'Team Workspace' : 'Personal Workspace'}
               description={
                 workspaceType === 'team' ? (
                   <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
@@ -501,7 +501,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
 
   const renderExportOptions = () => {
     return (
-      <Space direction="vertical" style={{ width: '100%', marginTop: 16 }} size="large">
+      <Space orientation="vertical" style={{ width: '100%', marginTop: 16 }} size="large">
         {/* What to Export */}
         <Card
           size="small"
@@ -511,7 +511,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
             </Title>
           }
         >
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Checkbox
               checked={selectedItems.rules}
               onChange={(e) => setSelectedItems({ ...selectedItems, rules: e.target.checked })}
@@ -564,7 +564,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
         >
           <Form.Item name="environmentOption" initialValue={ENVIRONMENT_OPTIONS.SCHEMA} style={{ marginBottom: 0 }}>
             <Radio.Group style={{ width: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <Radio value={ENVIRONMENT_OPTIONS.SCHEMA} style={{ marginBottom: 8 }}>
                   <Space align="start">
                     <div>
@@ -614,7 +614,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
         >
           <Form.Item name="fileFormat" initialValue={FILE_FORMATS.SINGLE} style={{ marginBottom: 0 }}>
             <Radio.Group style={{ width: '100%' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <Radio value={FILE_FORMATS.SINGLE}>
                   <Space>
                     <FileOutlined />
@@ -809,7 +809,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
 
     return (
       <Alert
-        message="Workspace Creation Failed"
+        title="Workspace Creation Failed"
         description={
           <div>
             <div style={{ marginBottom: 8 }}>{error.message}</div>
@@ -911,7 +911,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
         footer={renderFooter()}
         width={700}
         closable={!isLoading}
-        maskClosable={!isLoading}
+        mask={{ closable: !isLoading }}
         styles={{
           body: {
             maxHeight: 'calc(70vh - 110px)',

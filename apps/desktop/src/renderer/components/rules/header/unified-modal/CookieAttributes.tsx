@@ -76,13 +76,13 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
 
   return (
     <>
-      <Divider orientation="left" style={{ fontSize: 12, marginTop: 24, marginBottom: 16 }}>
+      <Divider titlePlacement="left" style={{ fontSize: 12, marginTop: 24, marginBottom: 16 }}>
         Cookie Attributes
       </Divider>
 
       {headerType === 'request' ? (
         <Alert
-          message="Request Cookies"
+          title="Request Cookies"
           description="Request cookies (Cookie header) only contain name=value pairs. Cookie attributes like Path, Expiration, Secure, HttpOnly, and SameSite are only used when setting cookies via the Set-Cookie response header."
           type="info"
           showIcon
@@ -201,13 +201,15 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
               {expirationMode === 'maxAge' && (
                 <>
                   <Form.Item name="maxAge" style={{ marginBottom: 8 }}>
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      placeholder="Seconds (e.g., 3600 for 1 hour)"
-                      min={0}
-                      addonAfter="seconds"
-                      size="small"
-                    />
+                    <Space.Compact style={{ width: '100%' }}>
+                      <InputNumber
+                        style={{ width: '100%' }}
+                        placeholder="Seconds (e.g., 3600 for 1 hour)"
+                        min={0}
+                        size="small"
+                      />
+                      <Input value="seconds" disabled style={{ width: 80, textAlign: 'center', pointerEvents: 'none' }} />
+                    </Space.Compact>
                   </Form.Item>
                   <Space wrap>
                     {EXPIRATION_PRESETS.map((preset) => (
@@ -234,7 +236,7 @@ const CookieAttributes: React.FC<CookieAttributesProps> = ({
 
           {sameSite === 'None' && (
             <Alert
-              message="SameSite=None Configuration"
+              title="SameSite=None Configuration"
               description="When SameSite is set to 'None', the Secure flag is required and has been automatically enabled. The cookie will only be sent over HTTPS connections."
               type="info"
               showIcon

@@ -17,9 +17,9 @@ const EnvVarInfo = ({
 
   return (
     <Alert
-      message="Environment Variables Detected"
+      title="Environment Variables Detected"
       description={
-        <Space direction="vertical" size="small">
+        <Space orientation="vertical" size="small">
           <Text>This rule uses environment variables. They will be resolved when the rule is applied.</Text>
           {Object.entries(envVarValidation).map(([field, validation]) => {
             if (!validation?.hasVars) return null;

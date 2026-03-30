@@ -466,7 +466,7 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
 
     return (
       <Alert
-        message="Workspace Update Failed"
+        title="Workspace Update Failed"
         description={
           <div>
             <div style={{ marginBottom: 8 }}>{updateError.message}</div>
@@ -526,7 +526,7 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
         footer={renderFooter()}
         width={700}
         closable={!isUpdating}
-        maskClosable={!isUpdating}
+        mask={{ closable: !isUpdating }}
         styles={{
           body: {
             maxHeight: 'calc(70vh - 110px)',

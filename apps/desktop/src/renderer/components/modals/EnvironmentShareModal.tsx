@@ -115,7 +115,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
       centered
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: '100%' }} size={20}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={20}>
         <div style={{ marginTop: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'center', minHeight: 32, alignItems: 'center' }}>
             <Checkbox
@@ -209,7 +209,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
         </Button>
 
         {isIncludeValues && (
-          <Alert message="This link contains environment variable values" type="warning" showIcon banner />
+          <Alert title="This link contains environment variable values" type="warning" showIcon banner />
         )}
       </Space>
     </Modal>

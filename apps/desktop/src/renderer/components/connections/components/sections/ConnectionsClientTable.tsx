@@ -110,7 +110,7 @@ const ConnectionsClientTable = ({ status }: ConnectionsClientTableProps) => {
 
   return (
     <Card style={{ marginTop: 16 }}>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <Title level={5} style={{ margin: 0 }}>
           Connected Clients{' '}
           <Text type="secondary" style={{ fontSize: 12, fontWeight: 'normal' }}>

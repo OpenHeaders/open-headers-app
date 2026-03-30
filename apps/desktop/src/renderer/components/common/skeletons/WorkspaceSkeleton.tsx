@@ -15,7 +15,7 @@ export const SourceListSkeleton = () => (
       <Skeleton.Input style={{ width: 200, height: 22 }} active />
       <Skeleton.Button size="small" />
     </div>
-    <Space direction="vertical" style={{ width: '100%' }} size="small">
+    <Space orientation="vertical" style={{ width: '100%' }} size="small">
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="skeleton-item">
           <Skeleton.Avatar size="default" />

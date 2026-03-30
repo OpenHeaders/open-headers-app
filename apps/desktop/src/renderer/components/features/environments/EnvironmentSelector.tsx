@@ -157,7 +157,7 @@ const EnvironmentSelector: React.FC<EnvironmentSelectorProps> = ({
     <>
       <Row gutter={[16, 16]} align="middle" justify="space-between">
         <Col flex="auto">
-          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={8} style={{ width: '100%' }}>
             <Text type="secondary">Active Environment</Text>
             <Select value={activeEnvironment} onChange={handleEnvironmentSwitch} style={{ width: 200 }}>
               {Object.keys(environments).map((env) => {

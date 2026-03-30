@@ -201,7 +201,7 @@ const TagManager: React.FC = () => {
       <Empty
         image={<AppstoreOutlined style={{ fontSize: 32, color: 'var(--text-tertiary)' }} />}
         description={
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Text type="secondary">No rules to organize</Text>
             <Text type="secondary" style={{ fontSize: '12px' }}>
               Add rules and tag them for better organization

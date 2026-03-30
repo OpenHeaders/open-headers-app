@@ -150,7 +150,7 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
         <>
           {sources && sources.length === 0 && (
             <Alert
-              message="No Sources Available"
+              title="No Sources Available"
               description="Please create at least one source in the Sources tab before using dynamic values."
               type="warning"
               showIcon

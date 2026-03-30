@@ -415,7 +415,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
         />
       }
       destroyOnHidden={false}
-      maskClosable={!saving && !testing && !(refreshingSourceId === source.sourceId)}
+      mask={{ closable: !saving && !testing && !(refreshingSourceId === source.sourceId) }}
       closable={!saving && !testing && !(refreshingSourceId === source.sourceId)}
       keyboard={!saving && !testing && !(refreshingSourceId === source.sourceId)}
     >

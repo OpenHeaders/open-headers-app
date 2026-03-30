@@ -98,7 +98,7 @@ const ActiveRules: React.FC = () => {
         if (displayValue !== '[Dynamic]' && displayValue.length > 20)
           displayValue = `${displayValue.substring(0, 10)}...${displayValue.substring(displayValue.length - 5)}`;
         return (
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text strong style={{ fontSize: '13px' }}>
               {text}
             </Text>
@@ -154,7 +154,7 @@ const ActiveRules: React.FC = () => {
                   ))}
                 </div>
               }
-              overlayStyle={{ maxWidth: 500 }}
+              styles={{ root: { maxWidth: 500 } }}
             >
               <Tag style={{ fontSize: '12px', cursor: 'default' }}>{label}</Tag>
             </Tooltip>
@@ -203,7 +203,7 @@ const ActiveRules: React.FC = () => {
     return (
       <div style={{ padding: '20px' }}>
         <Alert
-          message="System Page"
+          title="System Page"
           description="Header rules do not apply to browser system pages"
           type="info"
           showIcon
@@ -252,7 +252,7 @@ const ActiveRules: React.FC = () => {
               <Empty
                 image={<FileTextOutlined style={{ fontSize: 24, color: 'var(--text-tertiary)' }} />}
                 description={
-                  <Space direction="vertical" size={4}>
+                  <Space orientation="vertical" size={4}>
                     <Text type="secondary">No rules active on this page</Text>
                     <Text type="secondary" style={{ fontSize: '11px' }}>
                       Rules may be disabled or configured for other domains

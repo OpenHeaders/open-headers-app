@@ -79,10 +79,10 @@ const WorkspaceCreationProgressModal = ({
       footer={null}
       width={800}
       closable={false}
-      maskClosable={false}
+      mask={{ closable: false }}
       centered
     >
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
+      <Space orientation="vertical" style={{ width: '100%' }} size="large">
         {/* Current Progress Message */}
         <div
           style={{
@@ -106,7 +106,7 @@ const WorkspaceCreationProgressModal = ({
             <Steps
               current={Math.min(progress.step - 1, progressSteps.length - 1)}
               size="default"
-              labelPlacement="vertical"
+              titlePlacement="vertical"
               items={progressSteps.map((step, index) => ({
                 title: step.title,
                 description: step.description,
@@ -142,7 +142,7 @@ const WorkspaceCreationProgressModal = ({
         {/* Error Display */}
         {error && (
           <Alert
-            message="Creation Failed"
+            title="Creation Failed"
             description={typeof error === 'object' ? error.message : error}
             type="error"
             showIcon

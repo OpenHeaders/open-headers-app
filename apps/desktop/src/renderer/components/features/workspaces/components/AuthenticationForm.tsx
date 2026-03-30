@@ -141,14 +141,12 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
           }
           rules={[{ required: true, message: 'Please select your SSH key file' }]}
         >
-          <Input
-            placeholder="~/.ssh/id_rsa"
-            addonAfter={
-              <Button type="text" icon={<FolderOpenOutlined />} onClick={onBrowseSSHKey}>
-                Browse
-              </Button>
-            }
-          />
+          <Space.Compact style={{ width: '100%' }}>
+            <Input placeholder="~/.ssh/id_rsa" />
+            <Button icon={<FolderOpenOutlined />} onClick={onBrowseSSHKey}>
+              Browse
+            </Button>
+          </Space.Compact>
         </Form.Item>
       )}
     </>
@@ -199,7 +197,7 @@ const AuthenticationForm = ({ authType, sshKeySource, onBrowseSSHKey }: Authenti
    */
   const renderSystemGitInfo = () => (
     <Alert
-      message="Using System Git Configuration"
+      title="Using System Git Configuration"
       description={
         <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
           <li>Will use your existing Git credentials (SSH keys, credential helpers, etc.)</li>

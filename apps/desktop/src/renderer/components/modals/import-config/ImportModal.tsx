@@ -607,7 +607,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
 
           {/* Step 2: Import Configuration */}
           {step === 2 && (
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+            <Space orientation="vertical" style={{ width: '100%' }} size="middle">
               {/* File Analysis Results */}
               <ImportFileAnalysis
                 fileInfo={fileInfo}

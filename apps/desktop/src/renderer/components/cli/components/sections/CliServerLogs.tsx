@@ -254,7 +254,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
         );
       }
       return (
-        <Space direction="vertical" size={4}>
+        <Space orientation="vertical" size={4}>
           {details}
         </Space>
       );
@@ -264,7 +264,7 @@ const CliServerLogs: React.FC<CliServerLogsProps> = ({
 
   return (
     <Card style={{ marginTop: 16 }}>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* Header with title and action buttons */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>

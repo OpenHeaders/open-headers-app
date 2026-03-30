@@ -134,7 +134,7 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
   }
 
   return (
-    <Space direction="vertical" size={1}>
+    <Space orientation="vertical" size={1}>
       {resolvedDomains && resolvedDomains.length > 0 ? (
         <>
           {resolvedDomains.slice(0, 1).map((domain: string, index: number) => {
@@ -283,7 +283,7 @@ const HeaderColumnContent = ({
   }
 
   return (
-    <Space direction="vertical" size="small" style={{ opacity: isWaiting ? 0.5 : 1 }}>
+    <Space orientation="vertical" size="small" style={{ opacity: isWaiting ? 0.5 : 1 }}>
       <Space align="center">
         <Text strong>{displayName}</Text>
         {nameHasEnvVars && (

@@ -551,7 +551,7 @@ const TeamWorkspaceAcceptInviteModal = ({
       >
         {inviteData && (
           <Alert
-            message={`Workspace Invitation${inviteData.inviterName ? ` from ${inviteData.inviterName}` : ''}`}
+            title={`Workspace Invitation${inviteData.inviterName ? ` from ${inviteData.inviterName}` : ''}`}
             description={
               <div>
                 {!inviteData.authData && (
@@ -761,20 +761,19 @@ const TeamWorkspaceAcceptInviteModal = ({
                             label="SSH Key File"
                             rules={[{ required: true, message: 'Please select your SSH key file' }]}
                           >
-                            <Input
-                              placeholder="~/.ssh/id_rsa"
-                              size="small"
-                              addonAfter={
-                                <Button
-                                  type="text"
-                                  icon={<FolderOpenOutlined />}
-                                  onClick={handleBrowseSSHKey}
-                                  size="small"
-                                >
-                                  Browse
-                                </Button>
-                              }
-                            />
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Input
+                                placeholder="~/.ssh/id_rsa"
+                                size="small"
+                              />
+                              <Button
+                                icon={<FolderOpenOutlined />}
+                                onClick={handleBrowseSSHKey}
+                                size="small"
+                              >
+                                Browse
+                              </Button>
+                            </Space.Compact>
                           </Form.Item>
                         )}
                       </>
@@ -803,7 +802,7 @@ const TeamWorkspaceAcceptInviteModal = ({
 
                     {authType === AUTH_TYPES.NONE && (
                       <Alert
-                        message="Using System Git Configuration"
+                        title="Using System Git Configuration"
                         description={
                           <ul style={{ margin: '4px 0', paddingLeft: '20px', fontSize: '12px' }}>
                             <li>Will use your existing Git credentials (SSH keys, credential helpers, etc.)</li>
@@ -899,7 +898,7 @@ const TeamWorkspaceAcceptInviteModal = ({
 
           {isError && error && (
             <Alert
-              message="Workspace Creation Failed"
+              title="Workspace Creation Failed"
               description={error?.message || String(error)}
               type="error"
               showIcon

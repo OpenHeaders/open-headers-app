@@ -325,9 +325,9 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
         ]}
         width={500}
       >
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           <Alert
-            message="Press your desired key combination"
+            title="Press your desired key combination"
             description={`Use ${isMac ? 'Cmd' : 'Ctrl'}, Alt, or Shift with any letter or number key`}
             type="info"
             showIcon
@@ -371,11 +371,11 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
             )}
           </div>
 
-          {error && <Alert message="Invalid Combination" description={error} type="error" showIcon />}
+          {error && <Alert title="Invalid Combination" description={error} type="error" showIcon />}
 
           {capturedHotkey && !error && (
             <Alert
-              message="Valid Combination"
+              title="Valid Combination"
               description="Press Enter to save or continue pressing keys to change"
               type="success"
               showIcon

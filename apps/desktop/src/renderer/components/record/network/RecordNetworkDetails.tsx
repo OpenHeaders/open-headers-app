@@ -138,7 +138,7 @@ const RecordNetworkDetails = ({ request, record, onClose }: RecordNetworkDetails
             backgroundColor: token.colorBgContainer,
             flexShrink: 0,
           }}
-          destroyInactiveTabPane={true}
+          destroyOnHidden={true}
           items={tabItems}
         />
       </div>

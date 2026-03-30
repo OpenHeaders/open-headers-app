@@ -108,7 +108,7 @@ const EditDescriptionModal = ({
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>
             <Text type="secondary">Recording: </Text>
             <Text ellipsis style={{ maxWidth: 500 }}>

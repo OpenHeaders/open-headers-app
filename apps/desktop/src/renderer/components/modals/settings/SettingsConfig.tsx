@@ -106,7 +106,7 @@ export const getSettingsConfig = (
         <>
           Choose which releases to receive{' '}
           <Tooltip
-            overlayStyle={{ maxWidth: 340 }}
+            styles={{ root: { maxWidth: 340 } }}
             title={
               <>
                 <div>
@@ -326,7 +326,7 @@ export const getSettingsConfig = (
         <>
           Control the verbosity of application logs{' '}
           <Tooltip
-            overlayStyle={{ maxWidth: 340 }}
+            styles={{ root: { maxWidth: 340 } }}
             title={
               <>
                 <div style={{ marginBottom: 4, opacity: 0.75 }}>Each level includes all levels above it:</div>

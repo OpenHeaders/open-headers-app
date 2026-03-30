@@ -13,6 +13,7 @@ import {
   Card,
   Collapse,
   Divider,
+  Input,
   InputNumber,
   Segmented,
   Space,
@@ -254,7 +255,7 @@ const CliServerControls = ({
 
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* Header row: title + status + controls */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
@@ -264,13 +265,15 @@ const CliServerControls = ({
             <Tag color={status.running ? 'success' : 'warning'}>{status.running ? 'Running' : 'Stopped'}</Tag>
           </Space>
           <Space>
-            <InputNumber
-              addonBefore="Port"
-              value={status.port}
-              onChange={onUpdatePort}
-              disabled={status.running}
-              style={{ width: 150 }}
-            />
+            <Space.Compact>
+              <Input value="Port" disabled style={{ width: 50, textAlign: 'center', pointerEvents: 'none' }} />
+              <InputNumber
+                value={status.port}
+                onChange={onUpdatePort}
+                disabled={status.running}
+                style={{ width: 100 }}
+              />
+            </Space.Compact>
             <Button
               type="primary"
               icon={status.running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
@@ -340,9 +343,9 @@ const CliServerControls = ({
         {tutorialMode !== false && (
           <Alert
             style={{ marginTop: '16px' }}
-            message="About CLI Server"
+            title="About CLI Server"
             description={
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <Text>
                   The CLI API server enables programmatic control of OpenHeaders from scripts and CLI tools. It listens
                   on <Text code>127.0.0.1:{status.port}</Text> (localhost only) and requires a bearer token for

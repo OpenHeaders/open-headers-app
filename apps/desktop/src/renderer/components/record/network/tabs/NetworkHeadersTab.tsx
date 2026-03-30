@@ -52,7 +52,7 @@ const NetworkHeadersTab = ({ request, token }: NetworkHeadersTabProps) => {
   return (
     <div style={{ height: '100%', overflow: 'auto', padding: '0' }}>
       <div style={{ padding: '16px' }}>
-        <Space direction="vertical" style={{ width: '100%' }} size="large">
+        <Space orientation="vertical" style={{ width: '100%' }} size="large">
           {/* General Section */}
           <div>
             <Text strong style={{ fontSize: '13px', color: token.colorTextSecondary }}>

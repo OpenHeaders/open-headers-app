@@ -184,7 +184,7 @@ const ExportModal = ({ visible, onCancel, onExport }: ExportModalProps) => {
             paddingBottom: '16px',
           }}
         >
-          <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <Space orientation="vertical" style={{ width: '100%' }} size="large">
             {/* Export Purpose Selection */}
             <ExportPurposeSelector exportPurpose={exportPurpose} onPurposeChange={handlePurposeChange} />
 

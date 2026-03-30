@@ -1,5 +1,5 @@
 import { InfoCircleOutlined, PauseCircleOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Divider, InputNumber, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Divider, Input, InputNumber, Space, Tag, Typography } from 'antd';
 
 const { Title, Text } = Typography;
 
@@ -63,7 +63,7 @@ const ProxyServerControls = ({
 }: ProxyServerControlsProps) => {
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             <Title level={4} style={{ margin: 0 }}>
@@ -72,15 +72,17 @@ const ProxyServerControls = ({
             <Tag color={proxyStatus.running ? 'success' : 'warning'}>{proxyStatus.running ? `Running` : 'Stopped'}</Tag>
           </Space>
           <Space>
-            <InputNumber
-              addonBefore="Port"
-              value={proxyStatus.port}
-              onChange={(value) => {
-                if (value !== null) onUpdatePort(value);
-              }}
-              disabled={proxyStatus.running}
-              style={{ width: 150 }}
-            />
+            <Space.Compact>
+              <Input value="Port" disabled style={{ width: 50, textAlign: 'center', pointerEvents: 'none' }} />
+              <InputNumber
+                value={proxyStatus.port}
+                onChange={(value) => {
+                  if (value !== null) onUpdatePort(value);
+                }}
+                disabled={proxyStatus.running}
+                style={{ width: 100 }}
+              />
+            </Space.Compact>
             <Button
               type="primary"
               icon={proxyStatus.running ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
@@ -95,9 +97,9 @@ const ProxyServerControls = ({
         {tutorialMode !== false && (
           <Alert
             style={{ marginTop: '16px' }}
-            message="About Proxy Server"
+            title="About Proxy Server"
             description={
-              <Space direction="vertical">
+              <Space orientation="vertical">
                 <Text>The proxy server is essential for properly replaying browser workflows:</Text>
                 <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
                   <li>

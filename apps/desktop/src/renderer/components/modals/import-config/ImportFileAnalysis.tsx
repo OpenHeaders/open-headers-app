@@ -37,13 +37,13 @@ const ImportFileAnalysis = ({ fileInfo, envFileData, hasAnyData, combinedEnvInfo
       {/* File Information */}
       {fileInfo && (
         <Card size="small" title="File Information">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space orientation="vertical" style={{ width: '100%' }}>
             <Text>
               <strong>Version:</strong> {fileInfo.version}
             </Text>
             {!hasAnyData && (
               <Alert
-                message="Empty Configuration"
+                title="Empty Configuration"
                 description="This file doesn't contain any data to import."
                 type="warning"
                 showIcon

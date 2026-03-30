@@ -43,7 +43,7 @@ const ImportEnvironmentSelector = ({
       <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: 8 }}>
         Select which environments to import:
       </Text>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {Object.entries(availableEnvironments).map(([envName, envInfo]) => (
           <Checkbox
             key={envName}

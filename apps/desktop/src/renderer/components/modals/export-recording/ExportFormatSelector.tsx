@@ -49,7 +49,7 @@ const ExportFormatSelector = ({ exportType, onExportTypeChange, record, isExport
         style={{ width: '100%', marginTop: 16 }}
         disabled={isExporting}
       >
-        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
           {/* JSON Export Option - Always available */}
           <Radio
             value="json"

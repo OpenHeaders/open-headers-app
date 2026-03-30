@@ -129,7 +129,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
       centered
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: '100%' }} size={20}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={20}>
         <div style={{ marginTop: 8 }}>
           <Segmented
             value={linkType}
@@ -260,7 +260,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
         </Button>
 
         {includeAuth && (
-          <Alert message="This link contains sensitive authentication data" type="warning" showIcon banner />
+          <Alert title="This link contains sensitive authentication data" type="warning" showIcon banner />
         )}
       </Space>
     </Modal>

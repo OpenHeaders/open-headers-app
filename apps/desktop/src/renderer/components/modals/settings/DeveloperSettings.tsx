@@ -45,7 +45,7 @@ const DeveloperSettings = ({ formValues, screenRecordingPermission, onChange }: 
       {renderSettingItems(settingsConfig.developer || [])}
 
       <div style={settingsStyles.section}>Quick Access</div>
-      <Space direction="vertical" style={{ width: '100%' }} size={8}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={8}>
         <Button
           icon={<FolderOpenOutlined />}
           onClick={() => handleOpenPath('logs')}

@@ -105,7 +105,7 @@ const WorkflowRecording = ({
       >
         {tutorialMode && (
           <Alert
-            message="Recording (Session & Video)"
+            title="Recording (Session & Video)"
             description={
               <div>
                 <div>

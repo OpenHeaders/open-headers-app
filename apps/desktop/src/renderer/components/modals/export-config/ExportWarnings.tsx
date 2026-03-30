@@ -34,7 +34,7 @@ const ExportWarnings = ({
       {/* Security warning for sensitive data export */}
       {showSecurityWarning && (
         <Alert
-          message="Security Warning"
+          title="Security Warning"
           description={
             <div>
               This export will contain sensitive data:
@@ -54,7 +54,7 @@ const ExportWarnings = ({
       {/* Team-ready confirmation for safe exports */}
       {showTeamReadyInfo && (
         <Alert
-          message="Team Export Ready"
+          title="Team Export Ready"
           description={
             includeWorkspace
               ? "This configuration can be safely committed to Git. Team members will import the file and immediately connect to your Git repository. They'll only need to add their own authentication credentials and environment variable values."

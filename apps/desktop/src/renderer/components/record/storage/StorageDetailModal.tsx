@@ -212,7 +212,7 @@ const StorageDetailModal = ({ visible, selectedEntry, onClose, messageApi }: Sto
       width={800}
     >
       <div>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>
             <Text strong>Key/Name:</Text>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', marginBottom: '16px' }}>

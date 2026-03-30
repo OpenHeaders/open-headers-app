@@ -74,7 +74,7 @@ const ProxyCacheSection = ({
 }: ProxyCacheSectionProps) => {
   return (
     <Card style={{ marginTop: '16px' }}>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
             <Title level={4} style={{ margin: 0 }}>
@@ -103,7 +103,7 @@ const ProxyCacheSection = ({
               Caches resources (images, fonts, CSS, JS) locally for faster replay of recordings.
             </Text>
             <div style={{ marginTop: '16px' }}>
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Space orientation="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text>Cache Usage: </Text>
                   <Text strong>{formatBytes(cacheStats.totalSize)}</Text>

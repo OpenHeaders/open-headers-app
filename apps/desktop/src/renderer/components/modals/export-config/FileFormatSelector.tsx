@@ -27,7 +27,7 @@ const FileFormatSelector = ({ fileFormat, onFileFormatChange, environmentOption 
       }
     >
       <Radio.Group value={fileFormat} onChange={(e) => onFileFormatChange(e.target.value)} style={{ width: '100%' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           {/* Single file format option */}
           <Radio value="single">
             <Space>

@@ -22,7 +22,7 @@ const ImportModeSelector = ({ importMode, onImportModeChange }: ImportModeSelect
       }
     >
       <Radio.Group value={importMode} onChange={(e) => onImportModeChange(e.target.value)} style={{ width: '100%' }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <Radio value="merge">
             <Space>
               <MergeOutlined />

@@ -148,7 +148,7 @@ const BrowserConnectionStatus = () => {
     // Developer mode: Show detailed technical information
     <div className="connection-tooltip">
       <div className="server-status">
-        <Space direction="vertical" size="small">
+        <Space orientation="vertical" size="small">
           <div>
             <Tag color={wsServerRunning ? 'green' : 'red'}>WS Server: {wsServerRunning ? 'Running' : 'Stopped'}</Tag>
           </div>

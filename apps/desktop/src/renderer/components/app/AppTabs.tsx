@@ -160,7 +160,7 @@ export function AppTabs({
             <>
               {tutorialMode && (
                 <Alert
-                  message="Dynamic Values for Header Rules"
+                  title="Dynamic Values for Header Rules"
                   description={
                     <div>
                       <div>Sources provide dynamic values that can be used in header rules.</div>

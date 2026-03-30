@@ -27,7 +27,7 @@ const ImportWarnings = ({ importMode, selectedItems, combinedEnvInfo }: ImportWa
       {/* Replace mode warning */}
       {importMode === 'replace' && (
         <Alert
-          message="Data Will Be Replaced"
+          title="Data Will Be Replaced"
           description={
             <div>
               <Text>
@@ -47,7 +47,7 @@ const ImportWarnings = ({ importMode, selectedItems, combinedEnvInfo }: ImportWa
       {/* Sensitive data warning */}
       {combinedEnvInfo.hasEnvironments && selectedItems.environments && (
         <Alert
-          message="Contains Sensitive Data"
+          title="Contains Sensitive Data"
           description="This file contains environment variable values which may include sensitive data like API keys and passwords."
           type="warning"
           showIcon
@@ -58,7 +58,7 @@ const ImportWarnings = ({ importMode, selectedItems, combinedEnvInfo }: ImportWa
       {/* Schema only info */}
       {combinedEnvInfo.hasEnvironmentSchema && !combinedEnvInfo.hasEnvironments && selectedItems.environments && (
         <Alert
-          message="Environment Schema Only"
+          title="Environment Schema Only"
           description="This file contains only the environment variable schema. You'll need to provide your own values after import."
           type="info"
           showIcon

@@ -113,7 +113,7 @@ const SettingItem = forwardRef(
         <Col span={16}>
           <div style={styles.label(isActive && !disabled && !!value)}>
             {Icon && <Icon style={styles.icon(isActive && !disabled && !!value)} />}
-            <Space direction="vertical" size={0}>
+            <Space orientation="vertical" size={0}>
               <span>{title}</span>
               <span style={styles.description(isActive && !disabled && !!value)}>{description}</span>
             </Space>

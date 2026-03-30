@@ -23,7 +23,7 @@ const ExportItemsSelector = ({ selectedItems, onItemChange }: ExportItemsSelecto
         </Title>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* Header Rules Selection */}
         <Checkbox checked={selectedItems.rules} onChange={() => onItemChange('rules')}>
           <Space>

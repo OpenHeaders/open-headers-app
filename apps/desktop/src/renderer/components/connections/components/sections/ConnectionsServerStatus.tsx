@@ -19,7 +19,7 @@ interface ConnectionsServerStatusProps {
 const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStatusProps) => {
   return (
     <Card>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* Header row: title + status + port */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Space>
@@ -40,7 +40,7 @@ const ConnectionsServerStatus = ({ status, tutorialMode }: ConnectionsServerStat
         {tutorialMode && (
           <Alert
             style={{ marginTop: '16px' }}
-            message="About the WebSocket Server"
+            title="About the WebSocket Server"
             description={
               <div>
                 <div>

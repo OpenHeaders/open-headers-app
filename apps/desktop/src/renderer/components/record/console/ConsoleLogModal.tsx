@@ -101,7 +101,7 @@ const ConsoleLogModal = ({ visible, selectedLog, record, onClose, messageApi }: 
       width={800}
     >
       <div>
-        <Space direction="vertical" style={{ width: '100%' }}>
+        <Space orientation="vertical" style={{ width: '100%' }}>
           <div>
             <Text strong>Timestamp:</Text>
             <div style={{ marginBottom: '16px' }}>

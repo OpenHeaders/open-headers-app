@@ -54,7 +54,7 @@ const ImportItemsSelector = ({
         </Space>
       }
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <Space orientation="vertical" style={{ width: '100%' }}>
         {/* HTTP Sources */}
         {fileInfo?.hasSources && (
           <Checkbox checked={selectedItems.sources} onChange={() => onItemChange('sources')}>
@@ -116,7 +116,7 @@ const ImportItemsSelector = ({
       {/* Environment merge info */}
       {selectedItems.environments && (
         <Alert
-          message="Environment Variables Import Behavior"
+          title="Environment Variables Import Behavior"
           description={
             <Text type="secondary" style={{ fontSize: '12px' }}>
               {importMode === 'merge'

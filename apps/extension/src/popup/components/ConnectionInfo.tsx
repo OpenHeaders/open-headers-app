@@ -46,7 +46,7 @@ const ConnectionInfo: React.FC = () => {
   return (
     <div style={{ position: 'fixed', top: 8, right: 8, zIndex: 1000 }}>
       <Alert
-        message="Desktop App Not Connected"
+        title="Desktop App Not Connected"
         description={
           <div>
             {Object.keys(headerEntries).length > 0 && (
