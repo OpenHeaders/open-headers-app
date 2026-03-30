@@ -70,7 +70,14 @@ function copyAssetsPlugin() {
         const dest = path.resolve(outDir, to);
         if (fs.existsSync(src)) {
           fs.mkdirSync(path.dirname(dest), { recursive: true });
-          fs.copyFileSync(src, dest);
+          if (to === 'manifest.json') {
+            // Inject version from package.json into the output manifest
+            const manifest = JSON.parse(fs.readFileSync(src, 'utf8'));
+            manifest.version = pkg.version;
+            fs.writeFileSync(dest, JSON.stringify(manifest, null, 2) + '\n');
+          } else {
+            fs.copyFileSync(src, dest);
+          }
         }
       }
     },
