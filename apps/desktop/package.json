@@ -27,8 +27,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "npx playwright test",
-    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e": "pnpm exec playwright test",
+    "test:e2e:headed": "pnpm exec playwright test --headed",
     "typecheck": "tsc --noEmit && tsc -p src/renderer/tsconfig.json --noEmit",
     "clean": "rm -rf dist-webpack dist .electron-vite"
   },

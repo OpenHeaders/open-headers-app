@@ -17,12 +17,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "npx playwright test",
-    "test:e2e:headed": "npx playwright test --headed",
+    "test:e2e": "pnpm exec playwright test",
+    "test:e2e:headed": "pnpm exec playwright test --headed",
     "typecheck": "tsc --noEmit",
-    "postbuild": "npx tsx config/scripts/build-report.ts",
-    "release": "npx tsx config/scripts/release.ts",
-    "source-zip": "npx tsx config/scripts/source-zip.ts",
+    "postbuild": "pnpm exec tsx config/scripts/build-report.ts",
+    "release": "pnpm exec tsx config/scripts/release.ts",
+    "source-zip": "pnpm exec tsx config/scripts/source-zip.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -47,6 +47,7 @@
     "jsdom": "^29.0.1",
     "less": "^4.2.0",
     "terser": "^5.46.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.1",
     "vitest": "^4.1.0"
