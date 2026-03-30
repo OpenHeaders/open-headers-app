@@ -35,6 +35,13 @@ Open Headers is a privacy-focused desktop app that works with browser extensions
 - **Privacy First**: No telemetry, runs offline, data stays local
 - **Cross-platform**: macOS, Windows, Linux support
 
+## Documentation
+
+- [Developer Guide](docs/DEVELOPER.md) — Architecture, setup, tech stack
+- [Contributing](docs/CONTRIBUTING.md) — How to report bugs and request features
+- [Releases](docs/RELEASES.md) — Release process and versioning
+- [Privacy Policy](docs/PRIVACY.md) — Data practices and permissions
+
 ## License
 
 This project is licensed under the MIT License - for details see [LICENSE.md](LICENSE.md)
