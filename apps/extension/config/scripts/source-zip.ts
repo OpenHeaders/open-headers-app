@@ -17,14 +17,11 @@ const VERSION: string = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json
 
 const EXCLUDE = [
   'node_modules/**',
-  '.git/**',
-  '.idea/**',
-  '.claude/**',
+  '.*/**',           // all hidden directories (.git, .idea, .tmp, etc.)
   'dist/**',
   'build/**',
   'releases/**',
   'coverage/**',
-  '.tmp/**',
   'manifests/safari/xcode_project/**',
   '.DS_Store',
   '*.log',
@@ -71,4 +68,4 @@ archive.on('warning', (err: Error & { code?: string }) => {
 
 archive.pipe(output);
 archive.glob('**/*', { cwd: ROOT, ignore: EXCLUDE, dot: true });
-archive.finalize();
+void archive.finalize();

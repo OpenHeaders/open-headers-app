@@ -44,7 +44,7 @@ function zip(sourceDir: string, outputPath: string): Promise<number> {
 
     archive.pipe(output);
     archive.directory(sourceDir, false);
-    archive.finalize();
+    void archive.finalize();
   });
 }
 
@@ -126,4 +126,4 @@ async function main(): Promise<void> {
   }
 }
 
-main();
+void main();
