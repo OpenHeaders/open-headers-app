@@ -3,16 +3,16 @@
  * Ensures all operations are atomic and provides comprehensive error recovery
  */
 
-import type { Workspace, WorkspaceAuthData, WorkspaceType } from '../../../../../types/workspace';
-import { createLogger } from '../../../../utils/error-handling/logger';
 import WorkspaceCreationStateMachine, {
   type RollbackAction,
   type StateChangeData,
   WORKSPACE_CREATION_EVENTS,
   WORKSPACE_CREATION_STATES,
-} from '../state/WorkspaceCreationStateMachine';
-import { prepareAuthData, prepareWorkspaceData } from '../utils';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+} from '@/renderer/components/features/workspaces/state/WorkspaceCreationStateMachine';
+import { prepareAuthData, prepareWorkspaceData } from '@/renderer/components/features/workspaces/utils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { Workspace, WorkspaceAuthData, WorkspaceType } from '@/types/workspace';
 
 const log = createLogger('WorkspaceCreationController');
 

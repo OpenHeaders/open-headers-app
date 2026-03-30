@@ -31,7 +31,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useFileSystem } from '../../../../src/renderer/hooks/useFileSystem';
+import { useFileSystem } from '@/renderer/hooks/useFileSystem';
 
 // ---------------------------------------------------------------------------
 // Tests

@@ -2,10 +2,10 @@ import { LinkOutlined, SolutionOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
 import { Form, Input, Radio, Select, Space, Tag, Typography } from 'antd';
 import type React from 'react';
-import type { Source } from '../../../../../types/source';
-import DomainTags from '../../../features/domain-tags';
-import { formatSourceDisplay, getSourceIcon } from '../../utils';
-import type { HeaderRule } from '../tables/ProxyRuleTableColumns';
+import DomainTags from '@/renderer/components/features/domain-tags';
+import type { HeaderRule } from '@/renderer/components/proxy/components/tables/ProxyRuleTableColumns';
+import { formatSourceDisplay, getSourceIcon } from '@/renderer/components/proxy/utils';
+import type { Source } from '@/types/source';
 
 const { Text } = Typography;
 const { Option } = Select;

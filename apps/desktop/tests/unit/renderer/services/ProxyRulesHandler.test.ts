@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
-import { ProxyRulesHandler } from '../../../../src/renderer/services/export-import/handlers/ProxyRulesHandler';
-import type { ProxyRule } from '../../../../src/types/proxy';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '@/renderer/services/export-import/core/types';
+import { ProxyRulesHandler } from '@/renderer/services/export-import/handlers/ProxyRulesHandler';
+import type { ProxyRule } from '@/types/proxy';
 
 // ---------------------------------------------------------------------------
 // Helpers

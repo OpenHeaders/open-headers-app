@@ -21,10 +21,10 @@ vi.mock('../../../../src/utils/mainLogger', () => ({
   },
 }));
 
-import { HttpRequestService } from '../../../../src/services/http/HttpRequestService';
-import { TotpCooldownTracker } from '../../../../src/services/http/TotpCooldownTracker';
-import { SourceRefreshService } from '../../../../src/services/source-refresh/SourceRefreshService';
-import type { Source } from '../../../../src/types/source';
+import { HttpRequestService } from '@/services/http/HttpRequestService';
+import { TotpCooldownTracker } from '@/services/http/TotpCooldownTracker';
+import { SourceRefreshService } from '@/services/source-refresh/SourceRefreshService';
+import type { Source } from '@/types/source';
 
 function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {

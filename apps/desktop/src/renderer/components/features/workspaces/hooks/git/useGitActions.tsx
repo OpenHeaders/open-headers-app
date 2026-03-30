@@ -1,10 +1,10 @@
 import { App } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import { errorMessage } from '../../../../../../types/common';
-import { createLogger } from '../../../../../utils/error-handling/logger';
-import { TIMING } from '../../constants';
-import { formatValidationDetails, prepareAuthData } from '../../utils';
-import type { WorkspaceFormValues } from '../../utils/WorkspaceUtils';
+import { TIMING } from '@/renderer/components/features/workspaces/constants';
+import { formatValidationDetails, prepareAuthData } from '@/renderer/components/features/workspaces/utils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { errorMessage } from '@/types/common';
 
 const log = createLogger('GitActions');
 

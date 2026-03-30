@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcInvokeEvent } from '../../../src/types/common';
-import type { WorkspaceAuthData } from '../../../src/types/workspace';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
 
 // --- Mocks ---
 
@@ -130,7 +130,7 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { GitHandlers } from '../../../src/main/modules/ipc/handlers/gitHandlers';
+import { GitHandlers } from '@/main/modules/ipc/handlers/gitHandlers';
 
 const mockEvent = {
   sender: {

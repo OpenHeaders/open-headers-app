@@ -14,11 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import { DATA_FORMAT_VERSION } from '../../../config/version';
-import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
-import type { Source } from '../../../types/source';
-import atomicWriter from '../../../utils/atomicFileWriter';
-import mainLogger from '../../../utils/mainLogger';
+import { DATA_FORMAT_VERSION } from '@/config/version';
 import {
   cleanupOldBackups,
   countNonEmptyEnvValues,
@@ -26,7 +22,11 @@ import {
   ENV_FILE_READ_MAX_RETRIES,
   readFileWithAtomicWriter,
   validateEnvironmentWrite,
-} from '../git/utils/EnvironmentSyncUtils';
+} from '@/services/workspace/git/utils/EnvironmentSyncUtils';
+import type { EnvironmentMap, EnvironmentsFile } from '@/types/environment';
+import type { Source } from '@/types/source';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 import { broadcastToRenderers } from './SyncBroadcaster';
 import type { BroadcasterFn, SyncData } from './types';
 

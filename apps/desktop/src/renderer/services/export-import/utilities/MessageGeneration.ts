@@ -14,9 +14,14 @@
  * - Support for both regular imports and Git sync operations
  */
 
-import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
-import { FILE_FORMATS, SUCCESS_MESSAGES } from '../core/ExportImportConfig';
-import type { ExportData, ExportOptions, ImportData, ImportOptions } from '../core/types';
+import { DATA_FORMAT_VERSION } from '@/config/version.esm';
+import { FILE_FORMATS, SUCCESS_MESSAGES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type {
+  ExportData,
+  ExportOptions,
+  ImportData,
+  ImportOptions,
+} from '@/renderer/services/export-import/core/types';
 
 /** Import statistics shape used by message generation */
 interface ImportStatsLike {

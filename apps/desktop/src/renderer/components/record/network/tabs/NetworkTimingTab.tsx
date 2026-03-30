@@ -11,8 +11,13 @@
  */
 
 import { Space, Typography } from 'antd';
-import { format24HTimeWithMs } from '../../../../utils';
-import type { GlobalToken, NetworkRecord, NetworkTimingData, RecordData } from '../types';
+import type {
+  GlobalToken,
+  NetworkRecord,
+  NetworkTimingData,
+  RecordData,
+} from '@/renderer/components/record/network/types';
+import { format24HTimeWithMs } from '@/renderer/utils';
 
 const { Text } = Typography;
 

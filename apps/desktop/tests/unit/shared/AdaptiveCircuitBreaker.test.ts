@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  AdaptiveCircuitBreaker,
-  AdaptiveCircuitBreakerManager,
-  CircuitState,
-} from '../../../src/shared/AdaptiveCircuitBreaker';
+import { AdaptiveCircuitBreaker, AdaptiveCircuitBreakerManager, CircuitState } from '@/shared/AdaptiveCircuitBreaker';
 
 describe('AdaptiveCircuitBreaker', () => {
   function makeBreaker(overrides = {}) {

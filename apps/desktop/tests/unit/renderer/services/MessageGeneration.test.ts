@@ -7,13 +7,13 @@ vi.mock('../../../../src/config/version.esm', () => ({
   SUPPORTED_DATA_VERSIONS: ['1.0.0', '2.0.0', '3.0.0'],
 }));
 
-import { SUCCESS_MESSAGES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import { SUCCESS_MESSAGES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type {
   ExportData,
   ExportOptions,
   ImportData,
   ImportOptions,
-} from '../../../../src/renderer/services/export-import/core/types';
+} from '@/renderer/services/export-import/core/types';
 import {
   generateEnvironmentVariablesMessage,
   generateErrorMessage,
@@ -22,7 +22,7 @@ import {
   generateImportSummary,
   generateImportWarnings,
   generateProgressMessage,
-} from '../../../../src/renderer/services/export-import/utilities/MessageGeneration';
+} from '@/renderer/services/export-import/utilities/MessageGeneration';
 
 function makeExportData(overrides: Record<string, unknown> = {}): ExportData {
   return { version: '3.0.0', ...overrides } as ExportData;

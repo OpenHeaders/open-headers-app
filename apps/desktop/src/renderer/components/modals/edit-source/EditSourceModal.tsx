@@ -1,10 +1,10 @@
 import { EditOutlined } from '@ant-design/icons';
 import { Form, Modal } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { Source, SourceHeader } from '../../../../types/source';
-import { useEnvironments, useTotpState } from '../../../contexts';
-import { showMessage } from '../../../utils';
-import { createLogger } from '../../../utils/error-handling/logger';
+import { useEnvironments, useTotpState } from '@/renderer/contexts';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { Source, SourceHeader } from '@/types/source';
 import EditSourceForm from './EditSourceForm';
 import EditSourceModalFooter from './EditSourceModalFooter';
 import type { EditSourceFormValues } from './form-submission-handler';

@@ -1,6 +1,6 @@
 import { Descriptions, Typography } from 'antd';
-import type { Recording } from '../../../../types/recording';
-import { format24HTimeWithMs, formatDuration } from '../../../utils';
+import { format24HTimeWithMs, formatDuration } from '@/renderer/utils';
+import type { Recording } from '@/types/recording';
 
 const { Text } = Typography;
 

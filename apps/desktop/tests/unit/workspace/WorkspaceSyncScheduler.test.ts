@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Workspace } from '../../../src/types/workspace';
+import type { Workspace } from '@/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -53,8 +53,8 @@ import type {
   GitSyncServiceLike as GitSyncService,
   NetworkServiceLike as NetworkService,
   WorkspaceSettingsServiceLike as WorkspaceSettingsServiceInterface,
-} from '../../../src/services/workspace/sync/types';
-import { WorkspaceSyncScheduler } from '../../../src/services/workspace/WorkspaceSyncScheduler';
+} from '@/services/workspace/sync/types';
+import { WorkspaceSyncScheduler } from '@/services/workspace/WorkspaceSyncScheduler';
 
 /** Helper to access private fields for test assertions. */
 function testable(s: WorkspaceSyncScheduler) {

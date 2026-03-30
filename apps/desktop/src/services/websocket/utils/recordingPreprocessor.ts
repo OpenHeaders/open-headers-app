@@ -11,7 +11,7 @@
 
 import http from 'node:http';
 import nodeUrl from 'node:url';
-import { errorMessage } from '../../../types/common';
+import { errorMessage } from '@/types/common';
 import type {
   DomNode,
   PageTransition,
@@ -21,8 +21,8 @@ import type {
   RRWebEvent,
   Snapshot,
   StaticResources,
-} from '../../../types/recording';
-import mainLogger from '../../../utils/mainLogger';
+} from '@/types/recording';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('RecordingPreprocessor');

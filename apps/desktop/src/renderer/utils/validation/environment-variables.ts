@@ -3,7 +3,7 @@
  * Provides functions for detecting, extracting, and validating environment variables
  */
 
-import { createLogger } from '../error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const _log = createLogger('EnvironmentVariableValidation');
 

@@ -7,12 +7,12 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { WorkspaceState } from '../../services/workspace/WorkspaceStateService';
-import type { EnvironmentMap } from '../../types/environment';
-import type { ProxyRule } from '../../types/proxy';
-import type { HeaderRule } from '../../types/rules';
-import type { Source, SourceUpdate } from '../../types/source';
-import type { Workspace, WorkspaceType } from '../../types/workspace';
+import type { WorkspaceState } from '@/services/workspace/WorkspaceStateService';
+import type { EnvironmentMap } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule } from '@/types/rules';
+import type { Source, SourceUpdate } from '@/types/source';
+import type { Workspace, WorkspaceType } from '@/types/workspace';
 
 export interface WorkspaceStatePatch {
   sources?: Source[];

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
-import { GitBranchManager } from '../../../src/services/workspace/git/repository/GitBranchManager';
+import { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import { GitBranchManager } from '@/services/workspace/git/repository/GitBranchManager';
 
 function createMockExecutor() {
   const executor = new GitExecutor();

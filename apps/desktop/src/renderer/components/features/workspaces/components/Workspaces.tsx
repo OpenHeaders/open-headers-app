@@ -1,10 +1,10 @@
 import { CopyOutlined, PlusOutlined, QuestionCircleOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Card, Checkbox, Divider, Input, Segmented, Space, Tooltip, Typography } from 'antd';
 import React, { useCallback, useState } from 'react';
-import type { Workspace } from '../../../../../types/workspace';
-import { useSettings, useWorkspaces } from '../../../../contexts';
-import { copyToClipboard } from '../../../../utils/ui/copyToClipboard';
-import { useWorkspaceActions } from '../hooks';
+import { useWorkspaceActions } from '@/renderer/components/features/workspaces/hooks';
+import { useSettings, useWorkspaces } from '@/renderer/contexts';
+import { copyToClipboard } from '@/renderer/utils/ui/copyToClipboard';
+import type { Workspace } from '@/types/workspace';
 import WorkspaceEditModal from './WorkspaceEditModal';
 import WorkspaceModal from './WorkspaceModal';
 import WorkspacesTable from './WorkspacesTable';

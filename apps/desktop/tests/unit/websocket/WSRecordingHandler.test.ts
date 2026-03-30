@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import type WebSocket from 'ws';
-import { WSRecordingHandler } from '../../../src/services/websocket/ws-recording-handler';
-import type { RecordingMetadata } from '../../../src/types/recording';
+import { WSRecordingHandler } from '@/services/websocket/ws-recording-handler';
+import type { RecordingMetadata } from '@/types/recording';
 
 // Mock atomicFileWriter
 vi.mock('../../../src/utils/atomicFileWriter', () => ({

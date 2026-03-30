@@ -5,17 +5,23 @@
  * handles file parsing, validation, and provides comprehensive error handling.
  */
 
-import { errorMessage } from '../../../../types/common';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { showMessage } from '../../../utils/ui/messageUtil';
-import { IMPORT_MODES, SUCCESS_MESSAGES } from '../core/ExportImportConfig';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
-import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
-import { RulesHandler } from '../handlers/RulesHandler';
-import { SourcesHandler } from '../handlers/SourcesHandler';
-import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
-import { generateImportSuccessMessage, generateImportWarnings } from '../utilities/MessageGeneration';
-import { validateAndParseFileContent, validateImportPayload } from '../utilities/ValidationUtils';
+import { IMPORT_MODES, SUCCESS_MESSAGES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import { EnvironmentsHandler } from '@/renderer/services/export-import/handlers/EnvironmentsHandler';
+import { ProxyRulesHandler } from '@/renderer/services/export-import/handlers/ProxyRulesHandler';
+import { RulesHandler } from '@/renderer/services/export-import/handlers/RulesHandler';
+import { SourcesHandler } from '@/renderer/services/export-import/handlers/SourcesHandler';
+import { WorkspaceHandler } from '@/renderer/services/export-import/handlers/WorkspaceHandler';
+import {
+  generateImportSuccessMessage,
+  generateImportWarnings,
+} from '@/renderer/services/export-import/utilities/MessageGeneration';
+import {
+  validateAndParseFileContent,
+  validateImportPayload,
+} from '@/renderer/services/export-import/utilities/ValidationUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import { errorMessage } from '@/types/common';
 import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
 
 const log = createLogger('ImportService');

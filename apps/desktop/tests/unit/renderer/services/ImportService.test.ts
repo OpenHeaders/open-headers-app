@@ -7,12 +7,9 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
   }),
 }));
 
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import { ImportService } from '../../../../src/renderer/services/export-import/core/ImportService';
-import type {
-  ExportImportDependencies,
-  ImportOptions,
-} from '../../../../src/renderer/services/export-import/core/types';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import { ImportService } from '@/renderer/services/export-import/core/ImportService';
+import type { ExportImportDependencies, ImportOptions } from '@/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers

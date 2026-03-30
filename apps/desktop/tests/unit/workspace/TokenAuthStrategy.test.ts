@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TokenAuthStrategy } from '../../../src/services/workspace/git/auth/TokenAuthStrategy';
+import { TokenAuthStrategy } from '@/services/workspace/git/auth/TokenAuthStrategy';
 
 // Enterprise-realistic tokens
 const GITHUB_PAT = 'ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ0123456789';

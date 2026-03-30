@@ -1,18 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import type { PreprocessorData } from '../../../../services/websocket/utils/recordingPreprocessor';
-import { preprocessRecordingForSave } from '../../../../services/websocket/utils/recordingPreprocessor';
-import type { IpcInvokeEvent } from '../../../../types/common';
-import { errorMessage } from '../../../../types/common';
-import type {
-  PreprocessProgressDetails,
-  RecordingMetadata,
-  WorkflowRecordingFileMetadata,
-} from '../../../../types/recording';
-import atomicWriter from '../../../../utils/atomicFileWriter';
-import mainLogger from '../../../../utils/mainLogger';
-import windowManager from '../../window/windowManager';
+import windowManager from '@/main/modules/window/windowManager';
+import type { PreprocessorData } from '@/services/websocket/utils/recordingPreprocessor';
+import { preprocessRecordingForSave } from '@/services/websocket/utils/recordingPreprocessor';
+import type { IpcInvokeEvent } from '@/types/common';
+import { errorMessage } from '@/types/common';
+import type { PreprocessProgressDetails, RecordingMetadata, WorkflowRecordingFileMetadata } from '@/types/recording';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { app, BrowserWindow } = electron;
 const { createLogger } = mainLogger;

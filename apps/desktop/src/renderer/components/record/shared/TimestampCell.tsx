@@ -14,7 +14,7 @@
 
 import { CaretRightOutlined } from '@ant-design/icons';
 import { Tooltip, Typography, theme } from 'antd';
-import { format24HTimeWithMs, formatRelativeTimeWithSmallMs } from '../../../utils';
+import { format24HTimeWithMs, formatRelativeTimeWithSmallMs } from '@/renderer/utils';
 
 const { Text } = Typography;
 

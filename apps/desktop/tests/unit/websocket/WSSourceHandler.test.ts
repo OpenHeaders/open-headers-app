@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WSSourceHandler } from '../../../src/services/websocket/ws-source-handler';
-import type { Source } from '../../../src/types/source';
+import { WSSourceHandler } from '@/services/websocket/ws-source-handler';
+import type { Source } from '@/types/source';
 
 function makeSource(overrides: Partial<Source> & { sourceId: string }): Source {
   return {

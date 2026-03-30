@@ -1,7 +1,7 @@
 import { DownloadOutlined } from '@ant-design/icons';
 import { Alert, Button, Progress, Space, Typography } from 'antd';
 import type React from 'react';
-import { errorMessage, successMessage } from '../../../utils';
+import { errorMessage, successMessage } from '@/renderer/utils';
 
 const { Text } = Typography;
 

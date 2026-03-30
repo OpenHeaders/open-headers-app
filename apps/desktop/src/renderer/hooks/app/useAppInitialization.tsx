@@ -5,9 +5,9 @@
  */
 
 import { useEffect } from 'react';
-import type { RawRecordingRecord, Recording } from '../../../types/recording';
-import { createLogger } from '../../utils/error-handling/logger';
-import { convertNewRecordingFormat } from '../../utils/formatters/recordConverter';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { convertNewRecordingFormat } from '@/renderer/utils/formatters/recordConverter';
+import type { RawRecordingRecord, Recording } from '@/types/recording';
 
 const log = createLogger('useAppInitialization');
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Source } from '../../../../src/types/source';
+import type { Source } from '@/types/source';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 
@@ -31,7 +31,7 @@ import {
   isRuleDuplicate,
   isSourceDuplicate,
   isWorkspaceNameDuplicate,
-} from '../../../../src/renderer/services/export-import/utilities/DuplicateDetection';
+} from '@/renderer/services/export-import/utilities/DuplicateDetection';
 
 // ---------------------------------------------------------------------------
 // isSourceDuplicate

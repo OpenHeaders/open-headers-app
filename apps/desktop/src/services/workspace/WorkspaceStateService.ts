@@ -15,14 +15,14 @@
  */
 
 import electron from 'electron';
-import { errorMessage } from '../../types/common';
-import type { EnvironmentMap } from '../../types/environment';
-import { cloneEnvironmentMap } from '../../types/environment';
-import type { ProxyRule } from '../../types/proxy';
-import type { HeaderRule } from '../../types/rules';
-import type { Source, SourceUpdate } from '../../types/source';
-import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { EnvironmentMap } from '@/types/environment';
+import { cloneEnvironmentMap } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule } from '@/types/rules';
+import type { Source, SourceUpdate } from '@/types/source';
+import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus, WorkspaceType } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 import {
   // Broadcasting
   broadcastToServices,

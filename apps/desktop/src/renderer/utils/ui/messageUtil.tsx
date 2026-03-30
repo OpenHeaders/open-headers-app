@@ -1,7 +1,7 @@
 // We're changing our approach to use the hook pattern
 import type React from 'react';
 import { useEffect } from 'react';
-import { createLogger } from '../error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { useAppMessage } from './MessageProvider';
 
 const log = createLogger('messageUtil');

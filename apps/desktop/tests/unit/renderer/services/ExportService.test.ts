@@ -7,14 +7,14 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
   }),
 }));
 
-import { FILE_FORMATS } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import { ExportService } from '../../../../src/renderer/services/export-import/core/ExportService';
+import { FILE_FORMATS } from '@/renderer/services/export-import/core/ExportImportConfig';
+import { ExportService } from '@/renderer/services/export-import/core/ExportService';
 import type {
   ExportData,
   ExportImportDependencies,
   ExportOptions,
   WorkspaceData,
-} from '../../../../src/renderer/services/export-import/core/types';
+} from '@/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers

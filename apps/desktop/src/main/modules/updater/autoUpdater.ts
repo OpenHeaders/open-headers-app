@@ -1,13 +1,13 @@
 import electron from 'electron';
 import { autoUpdater } from 'electron-updater';
-import settingsCache from '../../../services/core/SettingsCache';
-import networkService from '../../../services/network/NetworkService';
-import { errorMessage, toErrno } from '../../../types/common';
-import type { AppSettings } from '../../../types/settings';
-import mainLogger from '../../../utils/mainLogger';
-import trayManager from '../tray/trayManager';
-import { writeRestartHiddenFlag } from '../window/restartFlag';
-import windowManager from '../window/windowManager';
+import trayManager from '@/main/modules/tray/trayManager';
+import { writeRestartHiddenFlag } from '@/main/modules/window/restartFlag';
+import windowManager from '@/main/modules/window/windowManager';
+import settingsCache from '@/services/core/SettingsCache';
+import networkService from '@/services/network/NetworkService';
+import { errorMessage, toErrno } from '@/types/common';
+import type { AppSettings } from '@/types/settings';
+import mainLogger from '@/utils/mainLogger';
 
 const { app, dialog } = electron;
 const { createLogger } = mainLogger;

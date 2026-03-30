@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMMAND_TIMEOUT, GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
+import { COMMAND_TIMEOUT, GitExecutor } from '@/services/workspace/git/core/GitExecutor';
 
 describe('GitExecutor', () => {
   describe('COMMAND_TIMEOUT constants', () => {

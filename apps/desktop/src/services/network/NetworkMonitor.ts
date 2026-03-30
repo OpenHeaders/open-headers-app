@@ -2,8 +2,8 @@ import dns from 'node:dns';
 import { EventEmitter } from 'node:events';
 import os from 'node:os';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
-import timeManager from '../core/TimeManager';
+import timeManager from '@/services/core/TimeManager';
+import mainLogger from '@/utils/mainLogger';
 
 const { net } = electron;
 const { createLogger } = mainLogger;

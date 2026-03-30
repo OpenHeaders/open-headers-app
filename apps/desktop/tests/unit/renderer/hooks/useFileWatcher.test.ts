@@ -36,7 +36,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useFileWatcher } from '../../../../src/renderer/hooks/app/useFileWatcher';
+import { useFileWatcher } from '@/renderer/hooks/app/useFileWatcher';
 
 // ---------------------------------------------------------------------------
 // Tests

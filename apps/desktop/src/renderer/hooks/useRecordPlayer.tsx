@@ -3,7 +3,7 @@ import type {
   ProxyStatus,
   RecordData,
   RRWebPlayerConstructor,
-} from '../components/record/player/hooks/usePlayerManager';
+} from '@/renderer/components/record/player/hooks/usePlayerManager';
 
 interface UseRecordPlayerReturn {
   rrwebPlayer: RRWebPlayerConstructor | null;

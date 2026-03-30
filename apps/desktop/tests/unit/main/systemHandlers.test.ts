@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcInvokeEvent } from '../../../src/types/common';
+import type { IpcInvokeEvent } from '@/types/common';
 
 // Mock electron
 const mockShellOpenPath = vi.fn().mockResolvedValue('');
@@ -116,7 +116,7 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { SystemHandlers } from '../../../src/main/modules/ipc/handlers/systemHandlers';
+import { SystemHandlers } from '@/main/modules/ipc/handlers/systemHandlers';
 
 const mockEvent = {} as IpcInvokeEvent;
 

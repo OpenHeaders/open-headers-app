@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EnvAnalysisResult, MainAnalysisResult } from '../../../src/utils/configValidator';
-import { analyzeConfigFile } from '../../../src/utils/configValidator';
+import type { EnvAnalysisResult, MainAnalysisResult } from '@/utils/configValidator';
+import { analyzeConfigFile } from '@/utils/configValidator';
 
 // Enterprise config factory
 function makeEnterpriseConfig() {

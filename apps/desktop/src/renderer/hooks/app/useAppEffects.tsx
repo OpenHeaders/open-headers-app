@@ -13,8 +13,8 @@
  */
 
 import type React from 'react';
-import type { Recording } from '../../../types/recording';
-import type { InitialAction } from '../../components/modals/settings/SettingsModal';
+import type { InitialAction } from '@/renderer/components/modals/settings/SettingsModal';
+import type { Recording } from '@/types/recording';
 import { useAppInitialization } from './useAppInitialization';
 import { useFileWatcher } from './useFileWatcher';
 import { type NavigationIntent, useNavigation } from './useNavigation';

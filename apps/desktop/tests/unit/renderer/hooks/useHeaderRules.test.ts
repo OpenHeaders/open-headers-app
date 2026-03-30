@@ -47,7 +47,7 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
   }),
 }));
 
-import { useHeaderRules } from '../../../../src/renderer/hooks/workspace/useHeaderRules';
+import { useHeaderRules } from '@/renderer/hooks/workspace/useHeaderRules';
 
 describe('useHeaderRules', () => {
   beforeEach(() => {

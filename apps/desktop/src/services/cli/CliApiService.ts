@@ -7,10 +7,10 @@ import path from 'node:path';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import electron from 'electron';
 import * as v from 'valibot';
-import type { JsonObject, JsonValue } from '../../types/common';
-import { errorMessage } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
-import { EnvironmentImportDataSchema, JoinWorkspaceDataSchema } from '../../validation/cli-schemas';
+import type { JsonObject, JsonValue } from '@/types/common';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
+import { EnvironmentImportDataSchema, JoinWorkspaceDataSchema } from '@/validation/cli-schemas';
 import type { CliSetupHandler } from './CliSetupHandler';
 
 const { app } = electron;

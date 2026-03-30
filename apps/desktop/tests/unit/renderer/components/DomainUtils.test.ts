@@ -7,7 +7,7 @@ import {
   formatDomainCount,
   removeDomain,
   validateDomainArray,
-} from '../../../../src/renderer/components/features/domain-tags/DomainUtils';
+} from '@/renderer/components/features/domain-tags/DomainUtils';
 
 // ======================================================================
 // removeDomain

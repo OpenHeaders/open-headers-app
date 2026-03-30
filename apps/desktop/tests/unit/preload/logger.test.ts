@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import logger from '../../../src/preload/modules/logger';
-import timeUtils from '../../../src/preload/modules/timeUtils';
+import logger from '@/preload/modules/logger';
+import timeUtils from '@/preload/modules/timeUtils';
 
 describe('logger', () => {
   describe('log prefix format', () => {

@@ -5,8 +5,8 @@
 
 import child_process from 'node:child_process';
 import util from 'node:util';
-import { toError } from '../../../../types/common';
-import mainLogger from '../../../../utils/mainLogger';
+import { toError } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { exec } = child_process;
 const { promisify } = util;

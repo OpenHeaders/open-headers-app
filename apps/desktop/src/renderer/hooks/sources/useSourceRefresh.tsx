@@ -7,10 +7,10 @@
  */
 
 import { useCallback } from 'react';
-import type { HttpRequestSpec } from '../../../types/http';
-import type { NewSourceData, Source } from '../../../types/source';
-import { showMessage } from '../../utils';
-import { createLogger } from '../../utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { HttpRequestSpec } from '@/types/http';
+import type { NewSourceData, Source } from '@/types/source';
 
 const log = createLogger('useSourceRefresh');
 

@@ -36,7 +36,7 @@ import {
 } from '@ant-design/icons';
 import type { GlobalToken } from 'antd';
 import { Button, Popconfirm, Space, Tag, Tooltip, Typography } from 'antd';
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 import { isTemplateSource } from './SourceDependencyChecker';
 import { trimContent } from './SourceTableUtils';
 

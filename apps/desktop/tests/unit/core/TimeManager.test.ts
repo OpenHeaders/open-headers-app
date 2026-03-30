@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MainTimeManager } from '../../../src/services/core/TimeManager';
+import { MainTimeManager } from '@/services/core/TimeManager';
 
 describe('MainTimeManager', () => {
   const tm = new MainTimeManager();

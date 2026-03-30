@@ -17,10 +17,10 @@ import {
 } from '@ant-design/icons';
 import { App, Button, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import type { Workspace, WorkspaceSyncStatus } from '../../../../../types/workspace';
-import TeamWorkspaceShareInviteModal from '../../../modals/TeamWorkspaceShareInviteModal';
-import { AUTH_TYPES, WORKSPACE_TYPES } from '../constants';
-import { extractRepoName, getProviderIcon, getTimeAgo } from '../utils';
+import { AUTH_TYPES, WORKSPACE_TYPES } from '@/renderer/components/features/workspaces/constants';
+import { extractRepoName, getProviderIcon, getTimeAgo } from '@/renderer/components/features/workspaces/utils';
+import TeamWorkspaceShareInviteModal from '@/renderer/components/modals/TeamWorkspaceShareInviteModal';
+import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
 
 const { Text } = Typography;
 

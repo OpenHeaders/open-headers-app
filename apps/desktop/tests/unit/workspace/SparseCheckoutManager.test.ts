@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
-import { SparseCheckoutManager } from '../../../src/services/workspace/git/repository/SparseCheckoutManager';
+import { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import { SparseCheckoutManager } from '@/services/workspace/git/repository/SparseCheckoutManager';
 
 function createMockExecutor() {
   const executor = new GitExecutor();

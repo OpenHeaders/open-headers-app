@@ -20,7 +20,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
   },
 }));
 
-import { ConnectionTester } from '../../../src/services/workspace/git/operations/ConnectionTester';
+import { ConnectionTester } from '@/services/workspace/git/operations/ConnectionTester';
 
 type TesterDeps = ConstructorParameters<typeof ConnectionTester>[0];
 

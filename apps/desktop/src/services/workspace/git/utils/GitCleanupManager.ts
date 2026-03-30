@@ -6,8 +6,8 @@
 import child_process from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorMessage } from '../../../../types/common';
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { exec } = child_process;

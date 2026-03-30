@@ -1,21 +1,21 @@
 import type { FSWatcher } from 'node:fs';
 import electron from 'electron';
-import type { CliApiService } from '../../../services/cli/CliApiService';
-import { AppStateMachine } from '../../../services/core/AppStateMachine';
-import serviceRegistry from '../../../services/core/ServiceRegistry';
-import { HttpRequestService } from '../../../services/http/HttpRequestService';
-import totpCooldownTracker from '../../../services/http/TotpCooldownTracker';
-import networkService from '../../../services/network/NetworkService';
-import proxyService from '../../../services/proxy/ProxyService';
-import sourceRefreshService from '../../../services/source-refresh/SourceRefreshService';
-import webSocketService from '../../../services/websocket/ws-service';
-import GitSyncService from '../../../services/workspace/git/GitSyncService';
-import WorkspaceSettingsService from '../../../services/workspace/WorkspaceSettingsService';
-import workspaceStateService from '../../../services/workspace/WorkspaceStateService';
-import WorkspaceSyncScheduler from '../../../services/workspace/WorkspaceSyncScheduler';
-import { errorMessage } from '../../../types/common';
-import mainLogger from '../../../utils/mainLogger';
-import httpRequestHandlers from '../ipc/handlers/httpRequestHandlers';
+import httpRequestHandlers from '@/main/modules/ipc/handlers/httpRequestHandlers';
+import type { CliApiService } from '@/services/cli/CliApiService';
+import { AppStateMachine } from '@/services/core/AppStateMachine';
+import serviceRegistry from '@/services/core/ServiceRegistry';
+import { HttpRequestService } from '@/services/http/HttpRequestService';
+import totpCooldownTracker from '@/services/http/TotpCooldownTracker';
+import networkService from '@/services/network/NetworkService';
+import proxyService from '@/services/proxy/ProxyService';
+import sourceRefreshService from '@/services/source-refresh/SourceRefreshService';
+import webSocketService from '@/services/websocket/ws-service';
+import GitSyncService from '@/services/workspace/git/GitSyncService';
+import WorkspaceSettingsService from '@/services/workspace/WorkspaceSettingsService';
+import workspaceStateService from '@/services/workspace/WorkspaceStateService';
+import WorkspaceSyncScheduler from '@/services/workspace/WorkspaceSyncScheduler';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 
 const { createLogger } = mainLogger;

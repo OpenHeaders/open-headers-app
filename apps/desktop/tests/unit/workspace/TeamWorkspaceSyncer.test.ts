@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SYNC_STATUS, TeamWorkspaceSyncer } from '../../../src/services/workspace/git/operations/TeamWorkspaceSyncer';
+import { SYNC_STATUS, TeamWorkspaceSyncer } from '@/services/workspace/git/operations/TeamWorkspaceSyncer';
 
 function createMockDependencies() {
   return {

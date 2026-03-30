@@ -3,8 +3,8 @@ import {
   convertNewRecordingFormat,
   convertStorageForTable,
   processStorageEvents,
-} from '../../../../src/renderer/utils/formatters/recordConverter';
-import type { RawRecordingRecord, StorageRecord } from '../../../../src/types/recording';
+} from '@/renderer/utils/formatters/recordConverter';
+import type { RawRecordingRecord, StorageRecord } from '@/types/recording';
 
 // ======================================================================
 // extractDomain (internal, tested indirectly via processStorageEvents)

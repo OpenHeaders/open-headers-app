@@ -59,7 +59,7 @@ vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => (
   }),
 }));
 
-import { useEnvironmentVariables } from '../../../../src/renderer/hooks/environment/useEnvironmentVariables';
+import { useEnvironmentVariables } from '@/renderer/hooks/environment/useEnvironmentVariables';
 
 // ---------------------------------------------------------------------------
 // Tests

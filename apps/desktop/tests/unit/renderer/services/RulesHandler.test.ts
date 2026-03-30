@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies, RuleEntry } from '../../../../src/renderer/services/export-import/core/types';
-import { RulesHandler } from '../../../../src/renderer/services/export-import/handlers/RulesHandler';
-import type { HeaderRule } from '../../../../src/types/rules';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies, RuleEntry } from '@/renderer/services/export-import/core/types';
+import { RulesHandler } from '@/renderer/services/export-import/handlers/RulesHandler';
+import type { HeaderRule } from '@/types/rules';
 
 // ---------------------------------------------------------------------------
 // Helpers

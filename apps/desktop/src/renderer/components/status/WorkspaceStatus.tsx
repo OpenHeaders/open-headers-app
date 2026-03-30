@@ -9,8 +9,8 @@ import {
 } from '@ant-design/icons';
 import { Button, Dropdown, Space, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
-import { useWorkspaces } from '../../contexts';
-import TeamWorkspaceShareInviteModal from '../modals/TeamWorkspaceShareInviteModal';
+import TeamWorkspaceShareInviteModal from '@/renderer/components/modals/TeamWorkspaceShareInviteModal';
+import { useWorkspaces } from '@/renderer/contexts';
 
 const WorkspaceStatus = () => {
   const { workspaces, activeWorkspaceId, syncStatus, switchWorkspace } = useWorkspaces();

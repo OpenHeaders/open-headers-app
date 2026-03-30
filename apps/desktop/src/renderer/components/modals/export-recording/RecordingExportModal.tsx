@@ -1,6 +1,7 @@
 import { DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Modal, Space } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
+import { errorMessage, successMessage } from '@/renderer/utils';
 /**
  * RecordingExportModal component for exporting recorded sessions
  *
@@ -35,8 +36,7 @@ import { useCallback, useEffect, useState } from 'react';
  * @param {number} record.timestamp - Recording timestamp
  * @param {function} onExportJson - Handler for JSON export completion
  */
-import type { WorkflowRecordingEntry } from '../../../../types/recording';
-import { errorMessage, successMessage } from '../../../utils';
+import type { WorkflowRecordingEntry } from '@/types/recording';
 import ExportFormatSelector from './ExportFormatSelector';
 import ExportInfoCard from './ExportInfoCard';
 import ExportProgressCard from './ExportProgressCard';

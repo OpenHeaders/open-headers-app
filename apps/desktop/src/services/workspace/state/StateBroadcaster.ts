@@ -6,9 +6,9 @@
  */
 
 import electron from 'electron';
-import { errorMessage } from '../../../types/common';
-import type { Source } from '../../../types/source';
-import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { Source } from '@/types/source';
+import mainLogger from '@/utils/mainLogger';
 import type { ProxyServiceLike, SourceRefreshServiceLike, WebSocketServiceLike, WorkspaceState } from './types';
 
 const { createLogger } = mainLogger;

@@ -26,7 +26,7 @@ vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => (
   }),
 }));
 
-import { useEnvironmentTemplates } from '../../../../src/renderer/hooks/environment/useEnvironmentTemplates';
+import { useEnvironmentTemplates } from '@/renderer/hooks/environment/useEnvironmentTemplates';
 
 // ---------------------------------------------------------------------------
 // Tests

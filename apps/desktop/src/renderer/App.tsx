@@ -1,9 +1,9 @@
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import type { EnvironmentConfigData } from '../types/environment';
-import type { Recording } from '../types/recording';
-import type { AppSettings } from '../types/settings';
-import type { TeamWorkspaceInvite } from '../types/workspace';
+import type { EnvironmentConfigData } from '@/types/environment';
+import type { Recording } from '@/types/recording';
+import type { AppSettings } from '@/types/settings';
+import type { TeamWorkspaceInvite } from '@/types/workspace';
 import { AppLayout } from './components/app/AppLayout';
 import WorkspaceSwitchOverlay from './components/common/WorkspaceSwitchOverlay';
 import type { InitialAction } from './components/modals/settings/SettingsModal';

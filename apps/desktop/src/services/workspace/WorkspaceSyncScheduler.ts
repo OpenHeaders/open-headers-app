@@ -10,9 +10,9 @@
  *  - Delegates IPC broadcasting to SyncBroadcaster
  */
 
-import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
-import { isSyncableWorkspace } from '../../types/workspace';
-import mainLogger from '../../utils/mainLogger';
+import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
+import { isSyncableWorkspace } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 import { isTransientNetworkError } from './git/operations/TeamWorkspaceSyncer';
 import { broadcastToRenderers } from './sync/SyncBroadcaster';
 import { checkForDataChanges } from './sync/SyncChangeDetector';

@@ -4,7 +4,7 @@
  */
 
 import { Alert, Divider, Space, Tag, Typography } from 'antd';
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 import { getSourcesUsingVariables } from './EnvironmentUtils';
 
 const { Text } = Typography;

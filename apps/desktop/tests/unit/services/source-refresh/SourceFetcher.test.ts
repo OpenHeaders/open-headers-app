@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { encodeFormBody } from '../../../../src/services/http/HttpRequestService';
+import { encodeFormBody } from '@/services/http/HttpRequestService';
 
 describe('encodeFormBody', () => {
   it('converts key:value newline format to URL-encoded form data', () => {

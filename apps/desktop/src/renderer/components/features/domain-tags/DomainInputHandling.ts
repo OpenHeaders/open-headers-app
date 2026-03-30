@@ -17,7 +17,7 @@
  */
 
 import type { InputRef } from 'antd';
-import { showMessage } from '../../../utils/ui/messageUtil';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import { validateDomain } from './DomainValidation';
 
 interface PasteHandlerParams {

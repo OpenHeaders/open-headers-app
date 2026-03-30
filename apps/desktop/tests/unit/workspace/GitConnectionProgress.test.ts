@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { GitConnectionProgress } from '../../../src/services/workspace/git/utils/GitConnectionProgress';
+import { GitConnectionProgress } from '@/services/workspace/git/utils/GitConnectionProgress';
 
 describe('GitConnectionProgress', () => {
   describe('construction', () => {

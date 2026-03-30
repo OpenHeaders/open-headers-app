@@ -8,12 +8,8 @@
 
 import type { FormInstance } from 'antd';
 import type React from 'react';
-import type {
-  EnvironmentContextLike,
-  HttpProgressCallback,
-  HttpRequestSpec,
-  TestResponseContent,
-} from '../../../../types/http';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import type { EnvironmentContextLike, HttpProgressCallback, HttpRequestSpec, TestResponseContent } from '@/types/http';
 import type {
   JsonFilter,
   SourceHeader,
@@ -21,8 +17,7 @@ import type {
   SourceQueryParam,
   SourceRequestOptions,
   SourceType,
-} from '../../../../types/source';
-import { showMessage } from '../../../utils/ui/messageUtil';
+} from '@/types/source';
 import { validateAllHttpFields } from './HttpValidation';
 
 interface TotpState {

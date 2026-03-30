@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProxyRuleStore } from '../../../src/services/proxy/ProxyRuleStore';
-import type { ProxyRule } from '../../../src/types/proxy';
+import { ProxyRuleStore } from '@/services/proxy/ProxyRuleStore';
+import type { ProxyRule } from '@/types/proxy';
 
 // Mock atomicWriter to avoid filesystem I/O
 vi.mock('../../../src/utils/atomicFileWriter', () => ({

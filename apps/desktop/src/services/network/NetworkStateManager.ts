@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
-import timeManager from '../core/TimeManager';
+import timeManager from '@/services/core/TimeManager';
+import mainLogger from '@/utils/mainLogger';
 
 const { BrowserWindow } = electron;
 const { createLogger } = mainLogger;

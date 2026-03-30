@@ -21,7 +21,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-import type { WorkspaceServiceState } from '../../../../src/renderer/services/CentralizedWorkspaceService';
+import type { WorkspaceServiceState } from '@/renderer/services/CentralizedWorkspaceService';
 
 type StateListener = (state: WorkspaceServiceState, changedKeys: string[]) => void;
 
@@ -82,7 +82,7 @@ vi.mock('../../../../src/renderer/hooks/workspace', () => ({
   useProxyRules: () => ({}),
 }));
 
-import { useCentralizedWorkspace, useEnvironments } from '../../../../src/renderer/hooks/useCentralizedWorkspace';
+import { useCentralizedWorkspace, useEnvironments } from '@/renderer/hooks/useCentralizedWorkspace';
 
 // ---------------------------------------------------------------------------
 // Tests

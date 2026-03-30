@@ -1,8 +1,8 @@
 import http from 'node:http';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ProxyService } from '../../src/services/proxy/ProxyService';
-import type { ProxyRule } from '../../src/types/proxy';
-import type { HeaderRule } from '../../src/types/rules';
+import type { ProxyService } from '@/services/proxy/ProxyService';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule } from '@/types/rules';
 
 /** Create a realistic HeaderRule with enterprise-style defaults */
 function makeHeaderRule(overrides: Partial<HeaderRule> = {}): HeaderRule {

@@ -18,7 +18,7 @@ vi.mock('../../../src/utils/mainLogger.js', () => ({
   },
 }));
 
-import { ConfigFileDetector } from '../../../src/services/workspace/ConfigFileDetector';
+import { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
 
 type ConfigData = Parameters<ConfigFileDetector['detectFileType']>[0];
 

@@ -35,9 +35,9 @@ import {
   saveSources,
   saveWorkspacesConfig,
   workspaceDir,
-} from '../../../../src/services/workspace/state/StatePersistence';
-import type { RulesCollection } from '../../../../src/types/rules';
-import type { Source } from '../../../../src/types/source';
+} from '@/services/workspace/state/StatePersistence';
+import type { RulesCollection } from '@/types/rules';
+import type { Source } from '@/types/source';
 
 beforeEach(() => {
   vi.clearAllMocks();

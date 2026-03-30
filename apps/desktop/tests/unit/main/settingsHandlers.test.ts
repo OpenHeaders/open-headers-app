@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcInvokeEvent } from '../../../src/types/common';
-import type { AppSettings } from '../../../src/types/settings';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { AppSettings } from '@/types/settings';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -145,7 +145,7 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { SettingsHandlers } from '../../../src/main/modules/ipc/handlers/settingsHandlers';
+import { SettingsHandlers } from '@/main/modules/ipc/handlers/settingsHandlers';
 
 const mockEvent = {} as IpcInvokeEvent;
 

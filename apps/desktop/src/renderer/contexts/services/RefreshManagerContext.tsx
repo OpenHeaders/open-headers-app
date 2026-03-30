@@ -16,9 +16,9 @@
 
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import type { Source } from '../../../types/source';
-import { useSources } from '../../hooks/workspace';
-import { createLogger } from '../../utils/error-handling/logger';
+import { useSources } from '@/renderer/hooks/workspace';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { Source } from '@/types/source';
 
 const _log = createLogger('RefreshManagerContext');
 

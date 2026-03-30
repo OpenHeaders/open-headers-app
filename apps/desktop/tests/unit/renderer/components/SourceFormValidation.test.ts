@@ -9,8 +9,8 @@ import {
   validateTotpPlaceholders,
   validateTotpSecret,
   validateUrlField,
-} from '../../../../src/renderer/components/sources/source-form/SourceFormValidation';
-import type { JsonObject } from '../../../../src/types/common';
+} from '@/renderer/components/sources/source-form/SourceFormValidation';
+import type { JsonObject } from '@/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -36,15 +36,15 @@ vi.mock('../../../../src/renderer/services/export-import', () => ({
 }));
 
 // Now import the hook and the mocked modules so we can tweak per-test
-import { useExportImport } from '../../../../src/renderer/hooks/useExportImport';
-import { createExportImportServices, validateDependencies } from '../../../../src/renderer/services/export-import';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
+import { useExportImport } from '@/renderer/hooks/useExportImport';
+import { createExportImportServices, validateDependencies } from '@/renderer/services/export-import';
+import type { ExportImportDependencies } from '@/renderer/services/export-import/core/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-import type { ExportOptions, ImportOptions } from '../../../../src/renderer/services/export-import/core/types';
+import type { ExportOptions, ImportOptions } from '@/renderer/services/export-import/core/types';
 
 function makeDeps(overrides: Partial<ExportImportDependencies> = {}): ExportImportDependencies {
   return {

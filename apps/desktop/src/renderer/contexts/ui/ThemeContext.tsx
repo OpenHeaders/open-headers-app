@@ -2,8 +2,8 @@ import { ConfigProvider, theme } from 'antd';
 import type { MappingAlgorithm } from 'antd/es/theme/interface';
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import type { AppSettings } from '../../../types/settings';
-import { createLogger } from '../../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { AppSettings } from '@/types/settings';
 import { useSettings } from './SettingsContext';
 
 const log = createLogger('ThemeContext');

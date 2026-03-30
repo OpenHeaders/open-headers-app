@@ -4,9 +4,9 @@
  */
 
 import WebSocket, { type WebSocketServer } from 'ws';
-import { errorMessage } from '../../types/common';
-import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { ExtendedWebSocket, WSClientInfo } from '@/types/websocket';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSClientHandler');

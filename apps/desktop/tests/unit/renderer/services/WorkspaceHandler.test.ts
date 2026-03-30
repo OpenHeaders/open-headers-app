@@ -3,8 +3,8 @@ import type {
   ExportImportDependencies,
   ExportOptions,
   WorkspaceData,
-} from '../../../../src/renderer/services/export-import/core/types';
-import { WorkspaceHandler } from '../../../../src/renderer/services/export-import/handlers/WorkspaceHandler';
+} from '@/renderer/services/export-import/core/types';
+import { WorkspaceHandler } from '@/renderer/services/export-import/handlers/WorkspaceHandler';
 
 function makeExportOpts(overrides: Record<string, unknown> = {}): ExportOptions {
   return {

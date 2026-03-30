@@ -1,7 +1,7 @@
 import { TeamOutlined, UserOutlined } from '@ant-design/icons';
 import React, { useEffect } from 'react';
-import { useWorkspaceSwitch } from '../contexts';
-import { showMessage } from '../utils/ui/messageUtil';
+import { useWorkspaceSwitch } from '@/renderer/contexts';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import { useCentralizedWorkspace } from './useCentralizedWorkspace';
 
 interface UseWorkspaceSwitchIntegrationReturn {

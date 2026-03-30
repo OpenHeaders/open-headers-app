@@ -5,11 +5,11 @@
  * Used by Import modal and Git workspace validation
  */
 
-import type { EnvironmentMap, EnvironmentSchema } from '../../../types/environment';
-import type { ProxyRule } from '../../../types/proxy';
-import type { Source, SourceType } from '../../../types/source';
-import type { Workspace } from '../../../types/workspace';
-import { createLogger } from '../error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { EnvironmentMap, EnvironmentSchema } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { Source, SourceType } from '@/types/source';
+import type { Workspace } from '@/types/workspace';
 
 const log = createLogger('ConfigValidator');
 

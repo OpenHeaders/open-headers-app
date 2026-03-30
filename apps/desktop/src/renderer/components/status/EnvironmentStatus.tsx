@@ -1,8 +1,8 @@
 import { CheckOutlined, DatabaseOutlined, DownOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Space, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
-import { useEnvironments } from '../../contexts';
-import EnvironmentShareModal from '../modals/EnvironmentShareModal';
+import EnvironmentShareModal from '@/renderer/components/modals/EnvironmentShareModal';
+import { useEnvironments } from '@/renderer/contexts';
 
 const EnvironmentStatus = () => {
   const { environments, activeEnvironment, switchEnvironment, environmentsReady } = useEnvironments();

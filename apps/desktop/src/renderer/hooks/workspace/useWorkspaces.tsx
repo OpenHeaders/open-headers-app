@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../types/workspace';
-import { createLogger } from '../../utils/error-handling/logger';
-import { showMessage } from '../../utils/ui/messageUtil';
-import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
+import { useCentralizedWorkspace } from '@/renderer/hooks/useCentralizedWorkspace';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '@/types/workspace';
 
 const log = createLogger('useWorkspaces');
 

@@ -2,14 +2,14 @@ import { CloseOutlined, CopyrightTwoTone, RightCircleTwoTone, SaveOutlined } fro
 import { Button, Form, Modal, Segmented, Space, theme } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { HeaderRule } from '../../../../../types/rules';
-import { useEnvironments } from '../../../../contexts';
-import { showMessage } from '../../../../utils';
+import type { DomainValidation } from '@/renderer/components/features/domain-tags/DomainTagDisplay';
+import { useEnvironments } from '@/renderer/contexts';
+import { showMessage } from '@/renderer/utils';
 import {
   extractVariablesFromRule,
   validateEnvironmentVariables,
-} from '../../../../utils/validation/environment-variables';
-import type { DomainValidation } from '../../../features/domain-tags/DomainTagDisplay';
+} from '@/renderer/utils/validation/environment-variables';
+import type { HeaderRule } from '@/types/rules';
 import CookieAttributes from './CookieAttributes';
 import DomainSection from './DomainSection';
 import EnvVarInfo from './EnvVarInfo';

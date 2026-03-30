@@ -1,7 +1,7 @@
 import { App, theme } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import timeManager from '../../../services/TimeManager';
-import { createLogger } from '../../../utils/error-handling/logger';
+import timeManager from '@/renderer/services/TimeManager';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { createUpdateEventHandlers } from './UpdateEventHandlers';
 import { UpdateNotificationManager } from './UpdateNotificationManager';
 

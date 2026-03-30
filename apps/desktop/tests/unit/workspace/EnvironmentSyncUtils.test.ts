@@ -25,7 +25,7 @@ import {
   ENV_FILE_READ_MAX_RETRIES,
   ENV_FILE_READ_RETRY_DELAY,
   validateEnvironmentWrite,
-} from '../../../src/services/workspace/git/utils/EnvironmentSyncUtils';
+} from '@/services/workspace/git/utils/EnvironmentSyncUtils';
 
 describe('EnvironmentSyncUtils', () => {
   describe('countNonEmptyEnvValues()', () => {

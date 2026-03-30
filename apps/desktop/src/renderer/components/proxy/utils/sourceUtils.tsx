@@ -1,5 +1,5 @@
 import { ApiOutlined, CodeSandboxOutlined, FileTextOutlined, GlobalOutlined } from '@ant-design/icons';
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 
 export const getSourceIcon = (source: Pick<Source, 'sourceType'>) => {
   switch (source.sourceType) {

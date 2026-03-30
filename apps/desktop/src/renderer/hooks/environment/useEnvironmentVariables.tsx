@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import type { EnvironmentVariable } from '../../../types/environment';
-import { createLogger } from '../../utils/error-handling/logger';
-import { showMessage } from '../../utils/ui/messageUtil';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import type { EnvironmentVariable } from '@/types/environment';
 import { useEnvironmentCore } from './useEnvironmentCore';
 
 const log = createLogger('useEnvironmentVariables');

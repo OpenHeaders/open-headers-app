@@ -13,12 +13,12 @@ import { Alert, Button, Card, Empty, Popconfirm, Space, Switch, Table, Tag, Tool
 import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import type { HeaderRule } from '../../../types/rules';
-import { useEnvironments, useNavigation, useSettings, useSources } from '../../contexts';
-import { useHeaderRules } from '../../hooks/useCentralizedWorkspace';
-import { createRule, RULE_TYPES, showMessage } from '../../utils';
-import { createLogger } from '../../utils/error-handling/logger';
-import { checkRuleActivation, getResolvedPreview } from '../../utils/validation/environment-variables';
+import { useEnvironments, useNavigation, useSettings, useSources } from '@/renderer/contexts';
+import { useHeaderRules } from '@/renderer/hooks/useCentralizedWorkspace';
+import { createRule, RULE_TYPES, showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { checkRuleActivation, getResolvedPreview } from '@/renderer/utils/validation/environment-variables';
+import type { HeaderRule } from '@/types/rules';
 import UnifiedHeaderModal from './header/unified-modal/UnifiedHeaderModal';
 
 const log = createLogger('HeaderRules');

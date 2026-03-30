@@ -9,11 +9,11 @@
  *  - Exposes subscribe/notify for React hooks (same API as before)
  */
 
-import type { ProxyRule } from '../../types/proxy';
-import type { HeaderRule, RulesCollection } from '../../types/rules';
-import type { Source, SourceUpdate } from '../../types/source';
-import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../types/workspace';
-import { createLogger } from '../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule, RulesCollection } from '@/types/rules';
+import type { Source, SourceUpdate } from '@/types/source';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '@/types/workspace';
 
 const log = createLogger('CentralizedWorkspaceService');
 

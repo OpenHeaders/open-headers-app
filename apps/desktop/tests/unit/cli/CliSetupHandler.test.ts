@@ -41,7 +41,7 @@ vi.mock('../../../src/utils/atomicFileWriter', () => ({
   },
 }));
 
-import { CliSetupHandler } from '../../../src/services/cli/CliSetupHandler';
+import { CliSetupHandler } from '@/services/cli/CliSetupHandler';
 
 type AuthData = Parameters<CliSetupHandler['_normalizeAuthData']>[1];
 type NotifyData = Parameters<CliSetupHandler['_notifyRenderer']>[1];

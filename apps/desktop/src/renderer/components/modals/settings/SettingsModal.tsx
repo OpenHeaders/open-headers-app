@@ -1,9 +1,9 @@
 import { DesktopOutlined, GlobalOutlined, SettingOutlined, ToolOutlined } from '@ant-design/icons';
 import { Button, Modal, Tabs } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
-import { useTheme } from '../../../contexts';
-import { createLogger } from '../../../utils/error-handling/logger';
+import { useTheme } from '@/renderer/contexts';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
 import AppearanceSettings from './AppearanceSettings';
 import DeveloperSettings from './DeveloperSettings';
 import GeneralSettings from './GeneralSettings';

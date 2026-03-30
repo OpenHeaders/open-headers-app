@@ -1,9 +1,9 @@
 import { App } from 'antd';
 import { useState } from 'react';
-import { createLogger } from '../../../../../utils/error-handling/logger';
-import type { WorkspaceContextType } from '../../services/WorkspaceServiceAdapter';
-import { prepareAuthData, prepareWorkspaceData } from '../../utils';
-import type { WorkspaceFormValues } from '../../utils/WorkspaceUtils';
+import type { WorkspaceContextType } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import { prepareAuthData, prepareWorkspaceData } from '@/renderer/components/features/workspaces/utils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('WorkspaceOperations');
 

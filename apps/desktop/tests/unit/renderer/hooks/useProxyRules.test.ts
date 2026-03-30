@@ -45,7 +45,7 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
   }),
 }));
 
-import { useProxyRules } from '../../../../src/renderer/hooks/workspace/useProxyRules';
+import { useProxyRules } from '@/renderer/hooks/workspace/useProxyRules';
 
 describe('useProxyRules', () => {
   beforeEach(() => {

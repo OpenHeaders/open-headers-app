@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import timeUtils from '../../../src/preload/modules/timeUtils';
-import { TOTPGenerator } from '../../../src/shared/totpGenerator';
+import timeUtils from '@/preload/modules/timeUtils';
+import { TOTPGenerator } from '@/shared/totpGenerator';
 
 describe('TOTPGenerator', () => {
   let generator: InstanceType<typeof TOTPGenerator>;

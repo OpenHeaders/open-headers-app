@@ -9,7 +9,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { HttpRequestResult, HttpRequestSpec } from '../../../../src/types/http';
+import type { HttpRequestResult, HttpRequestSpec } from '@/types/http';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -37,7 +37,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useHttp } from '../../../../src/renderer/hooks/useHttp';
+import { useHttp } from '@/renderer/hooks/useHttp';
 
 // ---------------------------------------------------------------------------
 // Tests

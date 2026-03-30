@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { Workspace, WorkspaceSyncStatus } from '../../../types/workspace';
-import { isSyncableWorkspace } from '../../../types/workspace';
-import { useWorkspaces } from '../../hooks/workspace';
+import { useWorkspaces } from '@/renderer/hooks/workspace';
+import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
+import { isSyncableWorkspace } from '@/types/workspace';
 
 function formatTimeAgo(isoString: string | null | undefined): string {
   if (!isoString) return 'Never';

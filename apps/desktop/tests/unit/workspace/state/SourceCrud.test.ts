@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StateContext } from '../../../../src/services/workspace/state/types';
-import type { ProxyRule } from '../../../../src/types/proxy';
-import type { HeaderRule } from '../../../../src/types/rules';
-import type { Source } from '../../../../src/types/source';
+import type { StateContext } from '@/services/workspace/state/types';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule } from '@/types/rules';
+import type { Source } from '@/types/source';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -32,7 +32,7 @@ import {
   updateHeaderRule,
   updateSource,
   updateSourceFetchResult,
-} from '../../../../src/services/workspace/state/SourceCrud';
+} from '@/services/workspace/state/SourceCrud';
 
 function createCtx(overrides: Partial<StateContext> = {}): StateContext {
   return {

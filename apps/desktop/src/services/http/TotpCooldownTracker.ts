@@ -10,9 +10,9 @@
  * (test/initial requests).
  */
 
-import type { TotpCooldownInfo } from '../../types/http';
-import mainLogger from '../../utils/mainLogger';
-import timeManager from '../core/TimeManager';
+import timeManager from '@/services/core/TimeManager';
+import type { TotpCooldownInfo } from '@/types/http';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('TotpCooldownTracker');

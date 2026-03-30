@@ -19,8 +19,8 @@ import {
 import { Button, Input, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
-import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '../../../../../types/recording';
-import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '../../../../utils';
+import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '@/renderer/utils';
+import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '@/types/recording';
 
 /**
  * Component that displays timestamp with live updating relative time

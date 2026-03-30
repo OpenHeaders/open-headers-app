@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COMMON_GIT_PATHS, GitInitializer } from '../../../src/services/workspace/git/core/GitInitializer';
+import { COMMON_GIT_PATHS, GitInitializer } from '@/services/workspace/git/core/GitInitializer';
 
 describe('GitInitializer', () => {
   // ------- COMMON_GIT_PATHS -------

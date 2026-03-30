@@ -1,12 +1,9 @@
 // Re-export shared types and classes
-import {
-  AdaptiveCircuitBreaker,
-  AdaptiveCircuitBreakerManager,
-  CircuitState,
-} from '../../../shared/AdaptiveCircuitBreaker';
-import timeManager from '../../services/TimeManager';
 
-export type { BreakerStatus, BreakerStatusMap } from '../../../shared/AdaptiveCircuitBreaker';
+import timeManager from '@/renderer/services/TimeManager';
+import { AdaptiveCircuitBreaker, AdaptiveCircuitBreakerManager, CircuitState } from '@/shared/AdaptiveCircuitBreaker';
+
+export type { BreakerStatus, BreakerStatusMap } from '@/shared/AdaptiveCircuitBreaker';
 export { AdaptiveCircuitBreaker, AdaptiveCircuitBreakerManager, CircuitState };
 
 // Renderer singleton — uses renderer's TimeManager for time

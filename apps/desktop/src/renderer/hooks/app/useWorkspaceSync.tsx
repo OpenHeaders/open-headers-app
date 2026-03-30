@@ -5,8 +5,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { createLogger } from '../../utils/error-handling/logger';
-import { showMessage } from '../../utils/ui/messageUtil';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 
 const log = createLogger('useWorkspaceSync');
 

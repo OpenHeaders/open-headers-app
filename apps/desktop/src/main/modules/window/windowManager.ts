@@ -1,10 +1,10 @@
 import path from 'node:path';
 import type { BrowserWindowConstructorOptions, BrowserWindow as BrowserWindowType, WebContents } from 'electron';
 import electron from 'electron';
-import type { AppSettings } from '../../../types/settings';
-import mainLogger from '../../../utils/mainLogger';
-import appLifecycle from '../app/lifecycle';
-import windowsFocusHelper from '../utils/windowsFocus';
+import appLifecycle from '@/main/modules/app/lifecycle';
+import windowsFocusHelper from '@/main/modules/utils/windowsFocus';
+import type { AppSettings } from '@/types/settings';
+import mainLogger from '@/utils/mainLogger';
 import { consumeRestartHiddenFlag } from './restartFlag';
 
 const { BrowserWindow, shell, app } = electron;

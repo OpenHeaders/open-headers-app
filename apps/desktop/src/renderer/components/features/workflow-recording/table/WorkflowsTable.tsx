@@ -5,19 +5,19 @@
 
 import { Empty, Table, Typography, theme } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '../../../../../types/recording';
-import { useNavigation } from '../../../../contexts';
-import { showMessage } from '../../../../utils';
-import { createLogger } from '../../../../utils/error-handling/logger';
-import RecordingExportModal from '../../../modals/export-recording';
-import EditDescriptionModal from '../modals/EditDescriptionModal';
-import EditTagModal from '../modals/EditTagModal';
+import EditDescriptionModal from '@/renderer/components/features/workflow-recording/modals/EditDescriptionModal';
+import EditTagModal from '@/renderer/components/features/workflow-recording/modals/EditTagModal';
 import {
   applyWorkflowRecordingHighlight,
   DEFAULT_PAGINATION,
   deleteWorkflowRecording,
   loadWorkflowRecordings,
-} from '../shared';
+} from '@/renderer/components/features/workflow-recording/shared';
+import RecordingExportModal from '@/renderer/components/modals/export-recording';
+import { useNavigation } from '@/renderer/contexts';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '@/types/recording';
 import ProcessingOverlay from './ProcessingOverlay';
 import { WorkflowTableActions } from './WorkflowTableActions';
 import { createWorkflowColumns } from './WorkflowTableColumns';

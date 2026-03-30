@@ -5,7 +5,7 @@ import { useCallback, useMemo } from 'react';
 import {
   formatMissingVariables,
   validateEnvironmentVariables,
-} from '../../../../utils/validation/environment-variables';
+} from '@/renderer/utils/validation/environment-variables';
 
 const { Text } = Typography;
 

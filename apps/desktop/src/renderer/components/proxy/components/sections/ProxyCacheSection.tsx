@@ -1,6 +1,6 @@
 import { DeleteOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Button, Card, Progress, Space, Switch, Table, Tooltip, Typography } from 'antd';
-import { formatBytes } from '../../utils';
+import { formatBytes } from '@/renderer/components/proxy/utils';
 
 const { Title, Text } = Typography;
 

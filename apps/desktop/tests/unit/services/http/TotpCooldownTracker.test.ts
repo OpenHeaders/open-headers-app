@@ -12,7 +12,7 @@ vi.mock('../../../../src/utils/mainLogger', () => ({
   },
 }));
 
-import { TotpCooldownTracker } from '../../../../src/services/http/TotpCooldownTracker';
+import { TotpCooldownTracker } from '@/services/http/TotpCooldownTracker';
 
 describe('TotpCooldownTracker', () => {
   let tracker: TotpCooldownTracker;

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { EnvironmentServiceState } from '../../services/CentralizedEnvironmentService';
+import type { EnvironmentServiceState } from '@/renderer/services/CentralizedEnvironmentService';
 import {
   type CentralizedEnvironmentService,
   getCentralizedEnvironmentService,
-} from '../../services/CentralizedEnvironmentService';
+} from '@/renderer/services/CentralizedEnvironmentService';
 
 interface UseEnvironmentCoreReturn extends EnvironmentServiceState {
   service: CentralizedEnvironmentService;

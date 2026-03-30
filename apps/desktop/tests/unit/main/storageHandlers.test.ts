@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcInvokeEvent } from '../../../src/types/common';
+import type { IpcInvokeEvent } from '@/types/common';
 
 // --- Mocks ---
 
@@ -124,7 +124,7 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { StorageHandlers } from '../../../src/main/modules/ipc/handlers/storageHandlers';
+import { StorageHandlers } from '@/main/modules/ipc/handlers/storageHandlers';
 
 const mockEvent = {} as IpcInvokeEvent;
 

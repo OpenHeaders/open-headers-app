@@ -10,12 +10,12 @@ import {
 } from '@ant-design/icons';
 import { Alert, App, Button, Collapse, Form, Input, Modal, Radio, Space, Switch, Tooltip, Typography } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Workspace } from '../../../../../types/workspace';
-import { useWorkspaces } from '../../../../hooks/workspace';
-import { DEFAULT_VALUES, WORKSPACE_TYPES } from '../constants';
-import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
-import { prepareAuthData } from '../utils';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+import { DEFAULT_VALUES, WORKSPACE_TYPES } from '@/renderer/components/features/workspaces/constants';
+import { WorkspaceServiceAdapterFactory } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import { prepareAuthData } from '@/renderer/components/features/workspaces/utils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { useWorkspaces } from '@/renderer/hooks/workspace';
+import type { Workspace } from '@/types/workspace';
 import AuthenticationForm from './AuthenticationForm';
 import ConnectionProgressModal from './ConnectionProgressModal';
 import GitStatusAlert from './GitStatusAlert';

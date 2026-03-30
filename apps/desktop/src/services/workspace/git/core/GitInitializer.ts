@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import util from 'node:util';
 import electron from 'electron';
-import mainLogger from '../../../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 import { GitExecutor } from './GitExecutor';
 
 const { app } = electron;

@@ -1,12 +1,12 @@
 import type React from 'react';
 import { createContext } from 'react';
-import { useWorkspaces as useCentralizedWorkspaces } from '../../hooks/useCentralizedWorkspace';
+import { useWorkspaces as useCentralizedWorkspaces } from '@/renderer/hooks/useCentralizedWorkspace';
 
 // Create and export the context
 export const WorkspaceContext = createContext<ReturnType<typeof useCentralizedWorkspaces> | null>(null);
 
 // Re-export the hook from centralized implementation
-export { useWorkspaces } from '../../hooks/useCentralizedWorkspace';
+export { useWorkspaces } from '@/renderer/hooks/useCentralizedWorkspace';
 
 // Custom hook to use the workspace context
 // WorkspaceProvider component

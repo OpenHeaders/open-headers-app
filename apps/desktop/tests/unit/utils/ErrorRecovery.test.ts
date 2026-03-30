@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ErrorRecoveryClass, ErrorTypes } from '../../../src/utils/ErrorRecovery';
+import { ErrorRecoveryClass, ErrorTypes } from '@/utils/ErrorRecovery';
 
 describe('ErrorRecovery', () => {
   let recovery: InstanceType<typeof ErrorRecoveryClass>;

@@ -4,11 +4,11 @@
  */
 
 import fs from 'node:fs';
-import { errorMessage, toErrno } from '../../../../types/common';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
-import type { GitAuthenticator } from '../auth/GitAuthenticator';
-import type { GitExecutor } from '../core/GitExecutor';
+import type { GitAuthenticator } from '@/services/workspace/git/auth/GitAuthenticator';
+import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import { errorMessage, toErrno } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;

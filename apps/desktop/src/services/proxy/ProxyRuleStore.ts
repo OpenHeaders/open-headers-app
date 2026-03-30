@@ -1,17 +1,17 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import atomicWriter from '../../utils/atomicFileWriter';
-import mainLogger from '../../utils/mainLogger';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
 
 const fsPromises = fs.promises;
 
-import type { ProxyRule } from '../../types/proxy';
+import type { ProxyRule } from '@/types/proxy';
 
-export type { ProxyRule } from '../../types/proxy';
+export type { ProxyRule } from '@/types/proxy';
 
 class ProxyRuleStore {
   private log = createLogger('ProxyRuleStore');

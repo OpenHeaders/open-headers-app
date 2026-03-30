@@ -1,12 +1,12 @@
 import AutoLaunch from 'auto-launch';
 import electron from 'electron';
-import settingsCache from '../../../../services/core/SettingsCache';
-import webSocketService from '../../../../services/websocket/ws-service';
-import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
-import { errorMessage } from '../../../../types/common';
-import type { AppSettings } from '../../../../types/settings';
-import mainLogger from '../../../../utils/mainLogger';
-import trayManager from '../../tray/trayManager';
+import trayManager from '@/main/modules/tray/trayManager';
+import settingsCache from '@/services/core/SettingsCache';
+import webSocketService from '@/services/websocket/ws-service';
+import type { IpcInvokeEvent, OperationResult } from '@/types/common';
+import { errorMessage } from '@/types/common';
+import type { AppSettings } from '@/types/settings';
+import mainLogger from '@/utils/mainLogger';
 
 const { app, shell } = electron;
 const { createLogger } = mainLogger;

@@ -6,8 +6,8 @@ import {
   RULE_MESSAGE_TYPES,
   RULE_TYPES,
   validateRule,
-} from '../../../../src/renderer/utils/data-structures/rulesStructure';
-import type { HeaderRule, PayloadRule, UrlRule } from '../../../../src/types/rules';
+} from '@/renderer/utils/data-structures/rulesStructure';
+import type { HeaderRule, PayloadRule, UrlRule } from '@/types/rules';
 
 function createHeaderRule(overrides: Record<string, unknown> = {}): HeaderRule {
   return createRule(RULE_TYPES.HEADER, overrides) as HeaderRule;

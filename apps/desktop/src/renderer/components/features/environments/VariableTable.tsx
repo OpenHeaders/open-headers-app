@@ -15,9 +15,9 @@ import {
 } from '@ant-design/icons';
 import { Button, Empty, Form, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import React, { useState } from 'react';
-import type { Source } from '../../../../types/source';
-import { showMessage } from '../../../utils';
-import { isJWT } from '../../../utils/jwtUtils';
+import { showMessage } from '@/renderer/utils';
+import { isJWT } from '@/renderer/utils/jwtUtils';
+import type { Source } from '@/types/source';
 import EditableCell from './EditableCell';
 import JWTEditorModal from './JWTEditorModal';
 

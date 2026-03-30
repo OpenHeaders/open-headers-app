@@ -28,7 +28,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useUpdateChecker } from '../../../../src/renderer/hooks/app/useUpdateChecker';
+import { useUpdateChecker } from '@/renderer/hooks/app/useUpdateChecker';
 
 // ---------------------------------------------------------------------------
 // Tests

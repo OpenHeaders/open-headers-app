@@ -3,9 +3,9 @@
  */
 
 import type React from 'react';
-import type { JsonObject } from '../../../../../types/common';
-import { showMessage } from '../../../../utils';
-import { createLogger } from '../../../../utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { JsonObject } from '@/types/common';
 
 const log = createLogger('WorkflowUtils');
 

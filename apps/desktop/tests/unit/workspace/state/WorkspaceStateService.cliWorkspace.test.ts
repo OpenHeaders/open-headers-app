@@ -13,8 +13,8 @@
 
 import type fs from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SyncData } from '../../../../src/services/workspace/sync/types';
-import type { Source } from '../../../../src/types/source';
+import type { SyncData } from '@/services/workspace/sync/types';
+import type { Source } from '@/types/source';
 
 vi.mock('electron', () => ({
   default: {
@@ -64,8 +64,8 @@ import type {
   SourceRefreshServiceLike,
   WebSocketServiceLike,
   WorkspaceSyncSchedulerLike,
-} from '../../../../src/services/workspace/state/types';
-import { WorkspaceStateService } from '../../../../src/services/workspace/WorkspaceStateService';
+} from '@/services/workspace/state/types';
+import { WorkspaceStateService } from '@/services/workspace/WorkspaceStateService';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

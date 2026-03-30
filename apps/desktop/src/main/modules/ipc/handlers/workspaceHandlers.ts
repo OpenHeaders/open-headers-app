@@ -4,23 +4,23 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import electron from 'electron';
-import { DATA_FORMAT_VERSION } from '../../../../config/version';
-import serviceRegistry from '../../../../services/core/ServiceRegistry';
-import networkService from '../../../../services/network/NetworkService';
-import proxyService from '../../../../services/proxy/ProxyService';
-import webSocketService from '../../../../services/websocket/ws-service';
-import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
-import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
-import { errorMessage } from '../../../../types/common';
+import { DATA_FORMAT_VERSION } from '@/config/version';
+import appLifecycle from '@/main/modules/app/lifecycle';
+import serviceRegistry from '@/services/core/ServiceRegistry';
+import networkService from '@/services/network/NetworkService';
+import proxyService from '@/services/proxy/ProxyService';
+import webSocketService from '@/services/websocket/ws-service';
+import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
+import type { IpcInvokeEvent, OperationResult } from '@/types/common';
+import { errorMessage } from '@/types/common';
 import type {
   EnvironmentConfigData,
   EnvironmentMap,
   EnvironmentSchema,
   EnvironmentSchemaVariable,
-} from '../../../../types/environment';
-import type { ServicesHealth, TeamWorkspaceInvite, Workspace, WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
-import appLifecycle from '../../app/lifecycle';
+} from '@/types/environment';
+import type { ServicesHealth, TeamWorkspaceInvite, Workspace, WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 import settingsHandlers from './settingsHandlers';
 
 const { app, shell, BrowserWindow } = electron;

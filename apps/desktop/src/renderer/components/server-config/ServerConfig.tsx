@@ -1,9 +1,9 @@
 import { CodeOutlined, DatabaseOutlined, LinkOutlined } from '@ant-design/icons';
 import { Tabs } from 'antd';
 import { useState } from 'react';
-import CliServer from '../cli/CliServer';
-import ConnectionsServer from '../connections/ConnectionsServer';
-import ProxyServer from '../proxy/ProxyServer';
+import CliServer from '@/renderer/components/cli/CliServer';
+import ConnectionsServer from '@/renderer/components/connections/ConnectionsServer';
+import ProxyServer from '@/renderer/components/proxy/ProxyServer';
 
 interface ServerConfigProps {
   activeParentTab: string;

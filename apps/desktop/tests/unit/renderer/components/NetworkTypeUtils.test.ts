@@ -4,8 +4,8 @@ import {
   getUniqueMethods,
   getUniqueStatusGroups,
   getUniqueTypes,
-} from '../../../../src/renderer/components/record/network/NetworkTypeUtils';
-import type { NetworkRecord } from '../../../../src/types/recording';
+} from '@/renderer/components/record/network/NetworkTypeUtils';
+import type { NetworkRecord } from '@/types/recording';
 
 function makeNetRecord(overrides: Partial<NetworkRecord> = {}): NetworkRecord {
   return {

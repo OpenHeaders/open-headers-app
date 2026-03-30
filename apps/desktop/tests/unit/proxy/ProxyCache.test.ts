@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CacheMetadata } from '../../../src/services/proxy/ProxyCache';
-import { ProxyCache } from '../../../src/services/proxy/ProxyCache';
+import type { CacheMetadata } from '@/services/proxy/ProxyCache';
+import { ProxyCache } from '@/services/proxy/ProxyCache';
 
 // Mock atomicWriter
 vi.mock('../../../src/utils/atomicFileWriter', () => ({

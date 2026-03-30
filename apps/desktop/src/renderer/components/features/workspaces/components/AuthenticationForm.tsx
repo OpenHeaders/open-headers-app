@@ -1,6 +1,10 @@
 import { FolderOpenOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Alert, Button, Form, Input, Radio, Select, Space, Tooltip } from 'antd';
-import { AUTH_TYPES, SSH_KEY_SOURCES, TOKEN_TYPES } from '../constants/WorkspaceConstants';
+import {
+  AUTH_TYPES,
+  SSH_KEY_SOURCES,
+  TOKEN_TYPES,
+} from '@/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
 const { Option } = Select;
 

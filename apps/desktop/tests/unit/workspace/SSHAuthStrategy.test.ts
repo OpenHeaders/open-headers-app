@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SSHAuthStrategy } from '../../../src/services/workspace/git/auth/SSHAuthStrategy';
+import { SSHAuthStrategy } from '@/services/workspace/git/auth/SSHAuthStrategy';
 
 // Realistic SSH key material
 const RSA_PRIVATE_KEY = `-----BEGIN RSA PRIVATE KEY-----

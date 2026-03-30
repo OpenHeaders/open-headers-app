@@ -15,7 +15,7 @@
  * @since 3.0.0
  */
 
-import { showMessage } from '../../../utils/ui/messageUtil';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 
 /**
  * Handles copying text to clipboard with comprehensive user feedback

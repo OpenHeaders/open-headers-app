@@ -23,14 +23,20 @@ import {
   Typography,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { TeamWorkspaceInvite } from '../../../types/workspace';
-import { useWorkspaces } from '../../hooks/workspace';
-import { AUTH_TYPES, DEFAULT_VALUES, prepareAuthData, SSH_KEY_SOURCES, TOKEN_TYPES } from '../features/workspaces';
-import ConnectionProgressModal from '../features/workspaces/components/ConnectionProgressModal';
-import GitStatusAlert from '../features/workspaces/components/GitStatusAlert';
-import { useWorkspaceCreation } from '../features/workspaces/hooks/useWorkspaceCreation';
-import { WorkspaceServiceAdapterFactory } from '../features/workspaces/services/WorkspaceServiceAdapter';
-import type { WorkspaceFormValues } from '../features/workspaces/utils/WorkspaceUtils';
+import {
+  AUTH_TYPES,
+  DEFAULT_VALUES,
+  prepareAuthData,
+  SSH_KEY_SOURCES,
+  TOKEN_TYPES,
+} from '@/renderer/components/features/workspaces';
+import ConnectionProgressModal from '@/renderer/components/features/workspaces/components/ConnectionProgressModal';
+import GitStatusAlert from '@/renderer/components/features/workspaces/components/GitStatusAlert';
+import { useWorkspaceCreation } from '@/renderer/components/features/workspaces/hooks/useWorkspaceCreation';
+import { WorkspaceServiceAdapterFactory } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { useWorkspaces } from '@/renderer/hooks/workspace';
+import type { TeamWorkspaceInvite } from '@/types/workspace';
 
 const { Option } = Select;
 const { Text } = Typography;

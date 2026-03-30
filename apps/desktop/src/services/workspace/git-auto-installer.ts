@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import electron from 'electron';
-import mainLogger from '../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

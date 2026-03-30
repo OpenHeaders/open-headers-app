@@ -3,8 +3,8 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { errorMessage } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const { spawn, exec } = child_process;

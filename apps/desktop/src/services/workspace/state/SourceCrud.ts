@@ -6,11 +6,11 @@
  */
 
 import fs from 'node:fs';
-import { errorMessage } from '../../../types/common';
-import type { ProxyRule } from '../../../types/proxy';
-import type { HeaderRule } from '../../../types/rules';
-import type { Source, SourceUpdate } from '../../../types/source';
-import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule } from '@/types/rules';
+import type { Source, SourceUpdate } from '@/types/source';
+import mainLogger from '@/utils/mainLogger';
 import { evaluateSourceDependencies } from './SourceDependencyEvaluator';
 import { broadcastToServices, sendPatchToRenderers } from './StateBroadcaster';
 import type { StateContext } from './types';

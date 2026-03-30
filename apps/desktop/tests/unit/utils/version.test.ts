@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  APP_VERSION,
-  DATA_FORMAT_VERSION,
-  isVersionCompatible,
-  SUPPORTED_DATA_VERSIONS,
-} from '../../../src/config/version';
+import { APP_VERSION, DATA_FORMAT_VERSION, isVersionCompatible, SUPPORTED_DATA_VERSIONS } from '@/config/version';
 
 describe('version config', () => {
   describe('APP_VERSION', () => {

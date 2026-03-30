@@ -5,12 +5,12 @@
  * including duplicate detection and validation specific to sources.
  */
 
-import type { Source } from '../../../../types/source';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { IMPORT_MODES } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ExportOptions } from '../core/types';
-import { isSourceDuplicate } from '../utilities/DuplicateDetection';
-import { validateSource } from '../utilities/ValidationUtils';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies, ExportOptions } from '@/renderer/services/export-import/core/types';
+import { isSourceDuplicate } from '@/renderer/services/export-import/utilities/DuplicateDetection';
+import { validateSource } from '@/renderer/services/export-import/utilities/ValidationUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { Source } from '@/types/source';
 
 const log = createLogger('SourcesHandler');
 

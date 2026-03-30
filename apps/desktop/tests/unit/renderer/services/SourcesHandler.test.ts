@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
-import type { ExportImportDependencies } from '../../../../src/renderer/services/export-import/core/types';
-import { SourcesHandler } from '../../../../src/renderer/services/export-import/handlers/SourcesHandler';
-import type { Source } from '../../../../src/types/source';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies } from '@/renderer/services/export-import/core/types';
+import { SourcesHandler } from '@/renderer/services/export-import/handlers/SourcesHandler';
+import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Helpers

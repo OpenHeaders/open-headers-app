@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { PROVIDER_ICONS } from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
-import type { WorkspaceFormValues } from '../../../../src/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { PROVIDER_ICONS } from '@/renderer/components/features/workspaces/constants/WorkspaceConstants';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import {
   extractRepoName,
   formatValidationDetails,
   getProviderIcon,
   prepareWorkspaceData,
-} from '../../../../src/renderer/components/features/workspaces/utils/WorkspaceUtils';
+} from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 
 function makeFormValues(overrides: Partial<WorkspaceFormValues> = {}): WorkspaceFormValues {
   return { name: 'OpenHeaders — Production', authType: 'none', ...overrides };

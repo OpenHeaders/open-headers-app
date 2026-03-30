@@ -11,10 +11,10 @@
  */
 
 import electron from 'electron';
-import { applyJsonFilter } from '../../shared/jsonFilter';
-import { TOTPGenerator } from '../../shared/totpGenerator';
-import type { HttpRequestResult, HttpRequestSpec } from '../../types/http';
-import mainLogger from '../../utils/mainLogger';
+import { applyJsonFilter } from '@/shared/jsonFilter';
+import { TOTPGenerator } from '@/shared/totpGenerator';
+import type { HttpRequestResult, HttpRequestSpec } from '@/types/http';
+import mainLogger from '@/utils/mainLogger';
 import type { TotpCooldownTracker } from './TotpCooldownTracker';
 
 const { net } = electron;

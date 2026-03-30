@@ -8,8 +8,8 @@ import {
   validateRequestBody,
   validateUrlField,
   validateVariableExists,
-} from '../../../../src/renderer/components/sources/http-options/HttpValidation';
-import type { JsonObject } from '../../../../src/types/common';
+} from '@/renderer/components/sources/http-options/HttpValidation';
+import type { JsonObject } from '@/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers

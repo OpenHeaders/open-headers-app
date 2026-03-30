@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VALIDATION_RULES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import { VALIDATION_RULES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import {
   validateAndParseFileContent,
   validateEnvironmentSchema,
@@ -10,7 +10,7 @@ import {
   validateSource,
   validateVersion,
   validateWorkspaceConfig,
-} from '../../../../src/renderer/services/export-import/utilities/ValidationUtils';
+} from '@/renderer/services/export-import/utilities/ValidationUtils';
 
 // ---------------------------------------------------------------------------
 // validateImportData

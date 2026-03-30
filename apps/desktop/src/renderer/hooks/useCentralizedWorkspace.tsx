@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getCentralizedWorkspaceService, type WorkspaceServiceState } from '../services/CentralizedWorkspaceService';
+import {
+  getCentralizedWorkspaceService,
+  type WorkspaceServiceState,
+} from '@/renderer/services/CentralizedWorkspaceService';
 import { useCentralizedEnvironments } from './useCentralizedEnvironments';
 
 // Re-export hooks from workspace module

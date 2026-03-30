@@ -4,9 +4,9 @@ import {
   evaluateAllSourceDependencies,
   evaluateSourceDependencies,
   extractVariablesFromSource,
-} from '../../../../src/services/workspace/state/SourceDependencyEvaluator';
-import type { EnvironmentResolverLike } from '../../../../src/services/workspace/state/types';
-import type { Source } from '../../../../src/types/source';
+} from '@/services/workspace/state/SourceDependencyEvaluator';
+import type { EnvironmentResolverLike } from '@/services/workspace/state/types';
+import type { Source } from '@/types/source';
 
 function httpSource(overrides: Partial<Source> = {}): Source {
   return {

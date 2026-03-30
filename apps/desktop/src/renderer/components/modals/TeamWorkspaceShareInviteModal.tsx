@@ -1,6 +1,7 @@
 import { CopyOutlined, QuestionCircleOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Checkbox, Input, Modal, Segmented, Space, Tooltip, Typography, theme } from 'antd';
 import React, { useCallback, useState } from 'react';
+import { copyToClipboard } from '@/renderer/utils/ui/copyToClipboard';
 /**
  * TeamWorkspaceShareInviteModal - A reusable modal for sharing team workspace invites
  * @param {Object} props - Component props
@@ -9,8 +10,7 @@ import React, { useCallback, useState } from 'react';
  * @param {Function} props.onClose - Handler for closing the modal
  * @returns {JSX.Element} TeamWorkspaceShareInviteModal component
  */
-import type { Workspace } from '../../../types/workspace';
-import { copyToClipboard } from '../../utils/ui/copyToClipboard';
+import type { Workspace } from '@/types/workspace';
 
 interface TeamWorkspaceShareInviteModalProps {
   visible: boolean;

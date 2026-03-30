@@ -7,8 +7,8 @@ import {
   isJWT,
   JWT_CLAIM_DESCRIPTIONS,
   validateJSON,
-} from '../../../../src/renderer/utils/jwtUtils';
-import type { JsonObject } from '../../../../src/types/common';
+} from '@/renderer/utils/jwtUtils';
+import type { JsonObject } from '@/types/common';
 
 // Helper: build a minimal valid JWT from header + payload objects
 function buildJWT(header: object, payload: object, sig = 'fakesig'): string {

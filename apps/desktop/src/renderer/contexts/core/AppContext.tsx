@@ -1,9 +1,9 @@
 import { App } from 'antd';
 import React from 'react';
-import { MessageInitializer, MessageProvider } from '../../utils';
-import { EnvironmentProvider, SourceProvider, WorkspaceProvider } from '../data';
-import { RefreshManagerProvider, TotpProvider, WebSocketProvider } from '../services';
-import { SettingsProvider, ThemeProvider, WorkspaceSwitchProvider } from '../ui';
+import { EnvironmentProvider, SourceProvider, WorkspaceProvider } from '@/renderer/contexts/data';
+import { RefreshManagerProvider, TotpProvider, WebSocketProvider } from '@/renderer/contexts/services';
+import { SettingsProvider, ThemeProvider, WorkspaceSwitchProvider } from '@/renderer/contexts/ui';
+import { MessageInitializer, MessageProvider } from '@/renderer/utils';
 import { NavigationProvider } from './NavigationContext';
 
 // Create a dummy context for backward compatibility

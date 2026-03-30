@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StateContext } from '../../../../src/services/workspace/state/types';
-import type { Workspace } from '../../../../src/types/workspace';
+import type { StateContext } from '@/services/workspace/state/types';
+import type { Workspace } from '@/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -47,7 +47,7 @@ import {
   createWorkspace,
   deleteWorkspace,
   updateWorkspace,
-} from '../../../../src/services/workspace/state/WorkspaceCrud';
+} from '@/services/workspace/state/WorkspaceCrud';
 
 function createCtx(overrides: Partial<StateContext> = {}): StateContext {
   return {

@@ -26,10 +26,10 @@
 import type { FormInstance } from 'antd';
 import { Tabs } from 'antd';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import type { TestResponseContent } from '../../../types/http';
-import { useEnvironments, useTotpState } from '../../contexts';
-import { useWorkspaces } from '../../hooks/useCentralizedWorkspace';
-import { useHttp } from '../../hooks/useHttp';
+import { useEnvironments, useTotpState } from '@/renderer/contexts';
+import { useWorkspaces } from '@/renderer/hooks/useCentralizedWorkspace';
+import { useHttp } from '@/renderer/hooks/useHttp';
+import type { TestResponseContent } from '@/types/http';
 
 // Import extracted modules and components
 import {

@@ -1,17 +1,17 @@
 import electron from 'electron';
-import type { ProgressStep } from '../../../../services/workspace/git/utils/GitConnectionProgress';
-import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
-import { errorMessage } from '../../../../types/common';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
-import appLifecycle from '../../app/lifecycle';
+import appLifecycle from '@/main/modules/app/lifecycle';
+import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
+import type { IpcInvokeEvent, OperationResult } from '@/types/common';
+import { errorMessage } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 
 const { BrowserWindow } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('GitHandlers');
 
-import type { ConnectionTestOptions } from '../../../../services/workspace/git/operations/ConnectionTester';
-import type { SyncOptions } from '../../../../services/workspace/git/operations/TeamWorkspaceSyncer';
+import type { ConnectionTestOptions } from '@/services/workspace/git/operations/ConnectionTester';
+import type { SyncOptions } from '@/services/workspace/git/operations/TeamWorkspaceSyncer';
 
 class GitHandlers {
   async handleTestGitConnection(event: IpcInvokeEvent, config: Omit<ConnectionTestOptions, 'onProgress'>) {

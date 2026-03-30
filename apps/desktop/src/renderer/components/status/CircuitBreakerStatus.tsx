@@ -1,8 +1,8 @@
 import { SyncOutlined } from '@ant-design/icons';
 import { Badge, Card, Space, Tag, Typography, theme } from 'antd';
 import { useEffect, useState } from 'react';
-import { useRefreshManager, useSettings } from '../../contexts';
-import { useSources } from '../../hooks/workspace';
+import { useRefreshManager, useSettings } from '@/renderer/contexts';
+import { useSources } from '@/renderer/hooks/workspace';
 
 const { Text } = Typography;
 

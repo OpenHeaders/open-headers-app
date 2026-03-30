@@ -9,7 +9,7 @@ import {
 import { Space, Tag, Tooltip } from 'antd';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { useSettings } from '../../contexts';
+import { useSettings } from '@/renderer/contexts';
 
 import './BrowserConnectionStatus.css';
 

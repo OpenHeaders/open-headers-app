@@ -10,7 +10,7 @@ import {
   formatRelativeTimeWithSmallMs,
   formatTimeAgo,
   formatTimestamp,
-} from '../../../../src/renderer/utils/formatters/recordFormatters';
+} from '@/renderer/utils/formatters/recordFormatters';
 
 // ======================================================================
 // formatDuration

@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  getPathErrorMessage,
-  getSearchPatterns,
-  parseConfigPath,
-} from '../../../src/services/workspace/config-path-parser';
+import { getPathErrorMessage, getSearchPatterns, parseConfigPath } from '@/services/workspace/config-path-parser';
 
 describe('config-path-parser', () => {
   describe('parseConfigPath()', () => {

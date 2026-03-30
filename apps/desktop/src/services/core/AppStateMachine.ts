@@ -1,8 +1,8 @@
 import { EventEmitter } from 'node:events';
-import type { ProxyStatus } from '../../types/proxy';
-import type { AppSettings } from '../../types/settings';
-import mainLogger from '../../utils/mainLogger';
-import type { WebSocketConnectionStatus } from '../websocket/ws-client-handler';
+import type { WebSocketConnectionStatus } from '@/services/websocket/ws-client-handler';
+import type { ProxyStatus } from '@/types/proxy';
+import type { AppSettings } from '@/types/settings';
+import mainLogger from '@/utils/mainLogger';
 import timeManager from './TimeManager';
 
 const { createLogger } = mainLogger;

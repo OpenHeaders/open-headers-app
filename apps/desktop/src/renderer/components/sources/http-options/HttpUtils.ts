@@ -23,9 +23,9 @@
  */
 
 import type { FormInstance } from 'antd';
-import timeManager from '../../../services/TimeManager';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { showMessage } from '../../../utils/ui/messageUtil';
+import timeManager from '@/renderer/services/TimeManager';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 
 const log = createLogger('HttpUtils');
 

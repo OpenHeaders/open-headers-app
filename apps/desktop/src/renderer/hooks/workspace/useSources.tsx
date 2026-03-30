@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import type { RefreshOptions, Source, SourceUpdate } from '../../../types/source';
-import { showMessage } from '../../utils';
-import { createLogger } from '../../utils/error-handling/logger';
-import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
+import { useCentralizedWorkspace } from '@/renderer/hooks/useCentralizedWorkspace';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { RefreshOptions, Source, SourceUpdate } from '@/types/source';
 
 const log = createLogger('useSources');
 

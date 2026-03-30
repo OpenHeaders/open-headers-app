@@ -1,8 +1,8 @@
 import { App } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import type { CacheEntry, CacheStats, ProxyRule } from '../../../../types/proxy';
-import { useSettings, useSources, useWorkspaces } from '../../../contexts';
-import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
+import { useSettings, useSources, useWorkspaces } from '@/renderer/contexts';
+import { useHeaderRules } from '@/renderer/hooks/useCentralizedWorkspace';
+import type { CacheEntry, CacheStats, ProxyRule } from '@/types/proxy';
 
 /**
  * Proxy Server Management Hook

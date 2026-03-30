@@ -9,8 +9,8 @@
  *  - Dispatches local DOM events for renderer-internal UI updates
  */
 
-import type { EnvironmentMap } from '../../types/environment';
-import { createLogger } from '../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { EnvironmentMap } from '@/types/environment';
 import { EnvironmentVariableManager, TemplateResolver } from './environment';
 
 const log = createLogger('CentralizedEnvironmentService');

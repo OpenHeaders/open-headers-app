@@ -13,8 +13,8 @@
 
 import { CopyOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, Tag, Typography, theme } from 'antd';
-import type { StorageRecord } from '../../../../types/recording';
-import { formatRelativeTimeWithSmallMs } from '../../../utils';
+import { formatRelativeTimeWithSmallMs } from '@/renderer/utils';
+import type { StorageRecord } from '@/types/recording';
 import { formatValue, getActionColor, getTypeColor } from './StorageUtils';
 
 const { Text } = Typography;

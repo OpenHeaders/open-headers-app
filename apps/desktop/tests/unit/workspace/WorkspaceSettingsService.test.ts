@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WorkspaceSettings } from '../../../src/services/workspace/WorkspaceSettingsService';
-import type { Workspace } from '../../../src/types/workspace';
+import type { WorkspaceSettings } from '@/services/workspace/WorkspaceSettingsService';
+import type { Workspace } from '@/types/workspace';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -51,7 +51,7 @@ vi.mock('fs', () => ({
   },
 }));
 
-import { WorkspaceSettingsService } from '../../../src/services/workspace/WorkspaceSettingsService';
+import { WorkspaceSettingsService } from '@/services/workspace/WorkspaceSettingsService';
 
 describe('WorkspaceSettingsService', () => {
   let service: WorkspaceSettingsService;

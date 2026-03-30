@@ -1,5 +1,5 @@
 import electron from 'electron';
-import type { AppSettings } from '../../types/settings';
+import type { AppSettings } from '@/types/settings';
 
 const { ipcRenderer } = electron;
 

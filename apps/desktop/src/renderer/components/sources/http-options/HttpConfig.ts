@@ -23,7 +23,7 @@
  */
 
 import type { FormInstance } from 'antd';
-import { createLogger } from '../../../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('HttpConfig');
 

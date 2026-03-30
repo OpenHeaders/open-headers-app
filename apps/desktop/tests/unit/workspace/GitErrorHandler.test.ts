@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ERROR_TYPES, GitErrorHandler } from '../../../src/services/workspace/git/utils/GitErrorHandler';
+import { ERROR_TYPES, GitErrorHandler } from '@/services/workspace/git/utils/GitErrorHandler';
 
 describe('GitErrorHandler', () => {
   const handler = new GitErrorHandler();

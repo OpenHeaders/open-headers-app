@@ -5,12 +5,12 @@
  * including complex duplicate detection based on URL patterns and headers.
  */
 
-import type { ProxyRule } from '../../../../types/proxy';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { EVENTS, IMPORT_MODES } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ExportOptions } from '../core/types';
-import { isProxyRuleDuplicate } from '../utilities/DuplicateDetection';
-import { validateProxyRule } from '../utilities/ValidationUtils';
+import { EVENTS, IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies, ExportOptions } from '@/renderer/services/export-import/core/types';
+import { isProxyRuleDuplicate } from '@/renderer/services/export-import/utilities/DuplicateDetection';
+import { validateProxyRule } from '@/renderer/services/export-import/utilities/ValidationUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { ProxyRule } from '@/types/proxy';
 
 const log = createLogger('ProxyRulesHandler');
 

@@ -9,11 +9,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
-import type { ProxyRule } from '../../../types/proxy';
-import type { RulesStorage } from '../../../types/rules';
-import type { Source } from '../../../types/source';
-import mainLogger from '../../../utils/mainLogger';
+import type { EnvironmentMap, EnvironmentsFile } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { RulesStorage } from '@/types/rules';
+import type { Source } from '@/types/source';
+import mainLogger from '@/utils/mainLogger';
 import type { SyncData } from './types';
 
 const { createLogger } = mainLogger;

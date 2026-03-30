@@ -54,7 +54,7 @@ vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => (
   }),
 }));
 
-import { useEnvironmentOperations } from '../../../../src/renderer/hooks/environment/useEnvironmentOperations';
+import { useEnvironmentOperations } from '@/renderer/hooks/environment/useEnvironmentOperations';
 
 describe('useEnvironmentOperations', () => {
   beforeEach(() => {

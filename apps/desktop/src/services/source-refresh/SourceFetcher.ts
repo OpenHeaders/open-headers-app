@@ -6,11 +6,11 @@
  * that SourceRefreshService expects. No direct HTTP or TOTP logic.
  */
 
-import type { HttpRequestSpec } from '../../types/http';
-import type { Source } from '../../types/source';
-import type { FetchResult } from '../../types/source-refresh';
-import mainLogger from '../../utils/mainLogger';
-import type { HttpRequestService } from '../http/HttpRequestService';
+import type { HttpRequestService } from '@/services/http/HttpRequestService';
+import type { HttpRequestSpec } from '@/types/http';
+import type { Source } from '@/types/source';
+import type { FetchResult } from '@/types/source-refresh';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('SourceFetcher');

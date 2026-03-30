@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type WebSocket from 'ws';
-import { WSNetworkStateHandler } from '../../../src/services/websocket/ws-network-state';
+import { WSNetworkStateHandler } from '@/services/websocket/ws-network-state';
 
 function createMockService(): ConstructorParameters<typeof WSNetworkStateHandler>[0] {
   return {

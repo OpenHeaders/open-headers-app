@@ -19,7 +19,7 @@
 import { CopyOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Button, Space, Tooltip } from 'antd';
 import type React from 'react';
-import { showMessage } from '../../../utils/ui/messageUtil';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 
 /**
  * Creates copy all domains handler

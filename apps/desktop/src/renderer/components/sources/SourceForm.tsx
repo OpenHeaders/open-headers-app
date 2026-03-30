@@ -30,10 +30,10 @@
 
 import { Button, Card, Col, Form, Input, Row, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { SourceType } from '../../../types/source';
-import { useEnvironments, useTotpState } from '../../contexts';
-import { useFileSystem } from '../../hooks/useFileSystem';
-import { createLogger } from '../../utils/error-handling/logger';
+import { useEnvironments, useTotpState } from '@/renderer/contexts';
+import { useFileSystem } from '@/renderer/hooks/useFileSystem';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { SourceType } from '@/types/source';
 import HttpOptions from './HttpOptions';
 import type { NewSourceData } from './source-form';
 // Import extracted modules from source-form package

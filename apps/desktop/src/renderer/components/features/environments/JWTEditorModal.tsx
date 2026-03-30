@@ -37,7 +37,6 @@ import {
 } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import type { JsonObject } from '../../../../types/common';
 import {
   decodeJWT,
   encodeJWT,
@@ -46,7 +45,8 @@ import {
   JWT_CLAIM_DESCRIPTIONS,
   signJWT,
   validateJSON,
-} from '../../../utils/jwtUtils';
+} from '@/renderer/utils/jwtUtils';
+import type { JsonObject } from '@/types/common';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;

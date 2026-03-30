@@ -1,13 +1,13 @@
 import { ExportOutlined } from '@ant-design/icons';
 import { Button, Modal, Space, theme } from 'antd';
 import { useEffect, useState } from 'react';
-import { useEnvironments, useWorkspaces } from '../../../contexts';
+import { useEnvironments, useWorkspaces } from '@/renderer/contexts';
 /**
  * ExportModal component for exporting workspace configuration
  * Provides comprehensive interface for selecting export options including
  * purpose, items, environment variables, workspace config, and file format
  */
-import type { ExportOptions } from '../../../services/export-import/core/types';
+import type { ExportOptions } from '@/renderer/services/export-import/core/types';
 import EnvironmentVariablesCard from './EnvironmentVariablesCard';
 import ExportItemsSelector from './ExportItemsSelector';
 import ExportPurposeSelector from './ExportPurposeSelector';

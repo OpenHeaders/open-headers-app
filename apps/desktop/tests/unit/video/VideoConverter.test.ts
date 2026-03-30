@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateBitrate, parseDuration, VideoConverter } from '../../../src/services/video/video-converter';
+import { calculateBitrate, parseDuration, VideoConverter } from '@/services/video/video-converter';
 
 describe('VideoConverter', () => {
   describe('parseDuration()', () => {

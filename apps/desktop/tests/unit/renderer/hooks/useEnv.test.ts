@@ -17,7 +17,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useEnv } from '../../../../src/renderer/hooks/useEnv';
+import { useEnv } from '@/renderer/hooks/useEnv';
 
 // ---------------------------------------------------------------------------
 // Tests

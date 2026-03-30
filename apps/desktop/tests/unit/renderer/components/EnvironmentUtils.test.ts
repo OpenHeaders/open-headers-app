@@ -6,9 +6,9 @@ import {
   generateUniqueEnvironmentName,
   getSourcesUsingVariables,
   sourceUsesVariables,
-} from '../../../../src/renderer/components/features/environments/EnvironmentUtils';
-import type { EnvironmentVariables } from '../../../../src/types/environment';
-import type { Source } from '../../../../src/types/source';
+} from '@/renderer/components/features/environments/EnvironmentUtils';
+import type { EnvironmentVariables } from '@/types/environment';
+import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic factory

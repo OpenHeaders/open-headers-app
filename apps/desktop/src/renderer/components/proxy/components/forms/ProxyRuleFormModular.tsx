@@ -1,9 +1,9 @@
 import { CloseOutlined, SaveOutlined } from '@ant-design/icons';
 import { Button, Divider, Form, Input, Modal, Space, Typography } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import type { Source } from '../../../../../types/source';
-import { errorMessage } from '../../../../utils';
-import type { HeaderRule, ProxyRule } from '../tables/ProxyRuleTableColumns';
+import type { HeaderRule, ProxyRule } from '@/renderer/components/proxy/components/tables/ProxyRuleTableColumns';
+import { errorMessage } from '@/renderer/utils';
+import type { Source } from '@/types/source';
 import {
   CustomHeaderConfig,
   DomainConfig,

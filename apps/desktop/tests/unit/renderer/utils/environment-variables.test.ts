@@ -12,7 +12,7 @@ import {
   resolveRuleEnvironmentVariables,
   validateEnvironmentVariables,
   validateRuleEnvironmentVariables,
-} from '../../../../src/renderer/utils/validation/environment-variables';
+} from '@/renderer/utils/validation/environment-variables';
 
 // ---------------------------------------------------------------------------
 // Enterprise variable maps for reuse

@@ -8,13 +8,13 @@ vi.mock('../../../../src/renderer/services/CentralizedEnvironmentService', () =>
 }));
 
 import type { Mock } from 'vitest';
-import { IMPORT_MODES } from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type {
   EnvironmentSchema,
   EnvironmentVariable,
   ExportImportDependencies,
-} from '../../../../src/renderer/services/export-import/core/types';
-import { EnvironmentsHandler } from '../../../../src/renderer/services/export-import/handlers/EnvironmentsHandler';
+} from '@/renderer/services/export-import/core/types';
+import { EnvironmentsHandler } from '@/renderer/services/export-import/handlers/EnvironmentsHandler';
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic helpers

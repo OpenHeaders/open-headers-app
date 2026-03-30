@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  ConcurrentMap,
-  ConcurrentSet,
-  Mutex,
-  RequestDeduplicator,
-  Semaphore,
-} from '../../../src/shared/ConcurrencyControl';
+import { ConcurrentMap, ConcurrentSet, Mutex, RequestDeduplicator, Semaphore } from '@/shared/ConcurrencyControl';
 
 describe('Mutex', () => {
   it('allows sequential access', async () => {

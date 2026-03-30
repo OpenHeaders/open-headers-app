@@ -7,7 +7,7 @@ import {
   TIMING,
   TOKEN_TYPES,
   WORKSPACE_TYPES,
-} from '../../../../src/renderer/components/features/workspaces/constants/WorkspaceConstants';
+} from '@/renderer/components/features/workspaces/constants/WorkspaceConstants';
 
 // ======================================================================
 // AUTH_TYPES

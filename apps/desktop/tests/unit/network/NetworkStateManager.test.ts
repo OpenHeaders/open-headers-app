@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { NetworkManagerState } from '../../../src/services/network/NetworkStateManager';
-import { NetworkStateManager } from '../../../src/services/network/NetworkStateManager';
+import type { NetworkManagerState } from '@/services/network/NetworkStateManager';
+import { NetworkStateManager } from '@/services/network/NetworkStateManager';
 
 function makeNetworkState(overrides: Partial<NetworkManagerState> = {}): NetworkManagerState {
   return {

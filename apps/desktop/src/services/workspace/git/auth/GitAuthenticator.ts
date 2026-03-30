@@ -3,9 +3,9 @@
  * Handles different authentication strategies for Git operations
  */
 
-import { errorMessage } from '../../../../types/common';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 import BasicAuthStrategy from './BasicAuthStrategy';
 import SSHAuthStrategy from './SSHAuthStrategy';
 import TokenAuthStrategy from './TokenAuthStrategy';

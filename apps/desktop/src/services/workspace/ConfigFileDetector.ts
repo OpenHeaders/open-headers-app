@@ -5,8 +5,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { ConfigData } from '../../utils/configValidator';
-import mainLogger from '../../utils/mainLogger';
+import type { ConfigData } from '@/utils/configValidator';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');

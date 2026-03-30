@@ -3,14 +3,14 @@
  * Provides abstraction layer between controller and actual services
  */
 
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 import type {
   Workspace,
   WorkspaceAuthData,
   WorkspaceSyncCompletedData,
   WorkspaceSyncStatus,
   WorkspaceType,
-} from '../../../../../types/workspace';
-import { createLogger } from '../../../../utils/error-handling/logger';
+} from '@/types/workspace';
 
 const log = createLogger('WorkspaceServiceAdapter');
 

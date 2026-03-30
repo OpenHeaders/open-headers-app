@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EnvironmentVariable } from '../../../../src/types/environment';
+import type { EnvironmentVariable } from '@/types/environment';
 
 // Mock logger
 vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({

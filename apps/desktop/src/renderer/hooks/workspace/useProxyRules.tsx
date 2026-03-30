@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import type { ProxyRule } from '../../../types/proxy';
-import { showMessage } from '../../utils';
-import { useCentralizedWorkspace } from '../useCentralizedWorkspace';
+import { useCentralizedWorkspace } from '@/renderer/hooks/useCentralizedWorkspace';
+import { showMessage } from '@/renderer/utils';
+import type { ProxyRule } from '@/types/proxy';
 
 interface UseProxyRulesReturn {
   rules: ProxyRule[];

@@ -8,8 +8,8 @@
  */
 
 import WebSocket from 'ws';
-import type { Source } from '../../types/source';
-import mainLogger from '../../utils/mainLogger';
+import type { Source } from '@/types/source';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSSourceHandler');

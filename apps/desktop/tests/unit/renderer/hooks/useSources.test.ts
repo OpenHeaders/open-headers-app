@@ -8,7 +8,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '../../../../src/types/source';
+import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -74,7 +74,7 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
   }),
 }));
 
-import { useSources } from '../../../../src/renderer/hooks/workspace/useSources';
+import { useSources } from '@/renderer/hooks/workspace/useSources';
 
 // ---------------------------------------------------------------------------
 // Tests

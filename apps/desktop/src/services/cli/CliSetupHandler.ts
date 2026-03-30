@@ -1,10 +1,10 @@
 import crypto from 'node:crypto';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import type { InferOutput } from 'valibot';
-import { errorMessage } from '../../types/common';
-import type { AuthType } from '../../types/workspace';
-import mainLogger from '../../utils/mainLogger';
-import type { EnvironmentImportDataSchema, JoinWorkspaceDataSchema } from '../../validation/cli-schemas';
+import { errorMessage } from '@/types/common';
+import type { AuthType } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
+import type { EnvironmentImportDataSchema, JoinWorkspaceDataSchema } from '@/validation/cli-schemas';
 
 const VALID_AUTH_TYPES = new Set<string>(['none', 'token', 'ssh', 'ssh-key', 'basic']);
 function toAuthType(value: string | undefined): AuthType {

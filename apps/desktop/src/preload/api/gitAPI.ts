@@ -1,6 +1,6 @@
 import type { IpcRendererEvent } from 'electron';
 import electron from 'electron';
-import type { CommitInfo, WorkspaceAuthData } from '../../types/workspace';
+import type { CommitInfo, WorkspaceAuthData } from '@/types/workspace';
 
 const { ipcRenderer } = electron;
 

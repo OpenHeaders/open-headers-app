@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import type { WorkspaceContextType } from '../services/WorkspaceServiceAdapter';
-import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+import type { WorkspaceContextType } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import { WorkspaceServiceAdapterFactory } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import { useGitActions } from './git';
 import { useSyncOperations } from './sync';
 import { useWorkspaceCreation } from './useWorkspaceCreation';

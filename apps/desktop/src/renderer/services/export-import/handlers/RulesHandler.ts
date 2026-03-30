@@ -6,10 +6,10 @@
  * WorkspaceStateService via IPC) — never direct file I/O.
  */
 
-import type { HeaderRule, RulesCollection } from '../../../../types/rules';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { IMPORT_MODES } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, RuleEntry } from '../core/types';
+import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type { ExportImportDependencies, RuleEntry } from '@/renderer/services/export-import/core/types';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { HeaderRule, RulesCollection } from '@/types/rules';
 
 const log = createLogger('RulesHandler');
 

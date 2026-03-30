@@ -12,7 +12,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorMessage, toErrno } from '../types/common';
+import { errorMessage, toErrno } from '@/types/common';
 import { createLogger } from './mainLogger';
 
 const log = createLogger('AtomicFileWriter');

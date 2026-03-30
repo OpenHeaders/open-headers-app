@@ -24,10 +24,10 @@ vi.mock('../../../../src/utils/mainLogger', () => ({
   },
 }));
 
-import type { EnvironmentResolver } from '../../../../src/services/http/HttpRequestService';
-import { encodeFormBody, HttpRequestService } from '../../../../src/services/http/HttpRequestService';
-import { TotpCooldownTracker } from '../../../../src/services/http/TotpCooldownTracker';
-import type { HttpRequestSpec } from '../../../../src/types/http';
+import type { EnvironmentResolver } from '@/services/http/HttpRequestService';
+import { encodeFormBody, HttpRequestService } from '@/services/http/HttpRequestService';
+import { TotpCooldownTracker } from '@/services/http/TotpCooldownTracker';
+import type { HttpRequestSpec } from '@/types/http';
 
 // ── Helpers ─────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { IpcInvokeEvent } from '../../../src/types/common';
-import type { RecordingMetadata, WorkflowRecordingFileMetadata } from '../../../src/types/recording';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { RecordingMetadata, WorkflowRecordingFileMetadata } from '@/types/recording';
 
 // --- Mocks ---
 
@@ -178,8 +178,8 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { RecordingHandlers } from '../../../src/main/modules/ipc/handlers/recordingHandlers';
-import windowManager from '../../../src/main/modules/window/windowManager';
+import { RecordingHandlers } from '@/main/modules/ipc/handlers/recordingHandlers';
+import windowManager from '@/main/modules/window/windowManager';
 
 const mockEvent = { sender: { send: vi.fn() } } as unknown as IpcInvokeEvent;
 

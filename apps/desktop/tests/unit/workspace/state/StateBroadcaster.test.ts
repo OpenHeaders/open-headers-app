@@ -21,14 +21,14 @@ import {
   sendPatchToRenderers,
   sendProgressToRenderers,
   syncToRefreshService,
-} from '../../../../src/services/workspace/state/StateBroadcaster';
+} from '@/services/workspace/state/StateBroadcaster';
 import type {
   ProxyServiceLike,
   SourceRefreshServiceLike,
   WebSocketServiceLike,
   WorkspaceState,
-} from '../../../../src/services/workspace/state/types';
-import type { Source } from '../../../../src/types/source';
+} from '@/services/workspace/state/types';
+import type { Source } from '@/types/source';
 
 function makeState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
   return {

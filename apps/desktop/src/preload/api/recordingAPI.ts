@@ -1,6 +1,6 @@
 import type { IpcRendererEvent } from 'electron';
 import electron from 'electron';
-import type { PreprocessorData } from '../../services/websocket/utils/recordingPreprocessor';
+import type { PreprocessorData } from '@/services/websocket/utils/recordingPreprocessor';
 
 type RecordingData = PreprocessorData;
 

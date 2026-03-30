@@ -1,6 +1,6 @@
 import { App } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSettings } from '../../../contexts';
+import { useSettings } from '@/renderer/contexts';
 
 /**
  * CLI Server Management Hook

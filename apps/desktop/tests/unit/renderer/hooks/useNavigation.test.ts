@@ -26,11 +26,7 @@ vi.mock('../../../../src/renderer/utils/error-handling/logger', () => ({
   }),
 }));
 
-import {
-  type NavigationIntent,
-  type SettingsAction,
-  useNavigation,
-} from '../../../../src/renderer/hooks/app/useNavigation';
+import { type NavigationIntent, type SettingsAction, useNavigation } from '@/renderer/hooks/app/useNavigation';
 
 // ---------------------------------------------------------------------------
 // Test constants (mirror the real app constants)

@@ -5,13 +5,13 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { JsonObject } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
+import type { JsonObject } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileValidator');
 
-import { DATA_FORMAT_VERSION } from '../../config/version';
+import { DATA_FORMAT_VERSION } from '@/config/version';
 
 // Type definitions
 interface FieldDefinition {

@@ -5,7 +5,7 @@
 
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Source } from '../../../../src/types/source';
+import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -29,7 +29,7 @@ vi.mock('../../../../src/renderer/hooks/environment/useEnvironmentCore', () => (
   }),
 }));
 
-import { useEnvironmentSchema } from '../../../../src/renderer/hooks/environment/useEnvironmentSchema';
+import { useEnvironmentSchema } from '@/renderer/hooks/environment/useEnvironmentSchema';
 
 // ---------------------------------------------------------------------------
 // Enterprise test data

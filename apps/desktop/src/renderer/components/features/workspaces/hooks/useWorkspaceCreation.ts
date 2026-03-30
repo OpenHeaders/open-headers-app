@@ -5,16 +5,16 @@
 
 import { App } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createLogger } from '../../../../utils/error-handling/logger';
 import WorkspaceCreationController, {
   type WorkspaceCreationDependencies,
-} from '../controllers/WorkspaceCreationController';
+} from '@/renderer/components/features/workspaces/controllers/WorkspaceCreationController';
 import {
   type StateChangeData,
   type StateMachineContext,
   WORKSPACE_CREATION_STATES,
-} from '../state/WorkspaceCreationStateMachine';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+} from '@/renderer/components/features/workspaces/state/WorkspaceCreationStateMachine';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('useWorkspaceCreation');
 

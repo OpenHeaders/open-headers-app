@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GitAuthenticator } from '../../../src/services/workspace/git/auth/GitAuthenticator';
-import { GitExecutor } from '../../../src/services/workspace/git/core/GitExecutor';
-import { GitRepositoryManager } from '../../../src/services/workspace/git/repository/GitRepositoryManager';
+import { GitAuthenticator } from '@/services/workspace/git/auth/GitAuthenticator';
+import { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import { GitRepositoryManager } from '@/services/workspace/git/repository/GitRepositoryManager';
 
 const SSH_DIR = '/Users/jane.doe/.openheaders/ssh-keys';
 const REPO_DIR = '/Users/jane.doe/.openheaders/workspace-sync/ws-a1b2c3d4';

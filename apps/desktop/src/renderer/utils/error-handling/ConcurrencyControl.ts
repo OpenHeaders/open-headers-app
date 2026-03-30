@@ -5,4 +5,4 @@ export {
   Mutex,
   RequestDeduplicator,
   Semaphore,
-} from '../../../shared/ConcurrencyControl';
+} from '@/shared/ConcurrencyControl';

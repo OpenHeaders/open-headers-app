@@ -24,7 +24,7 @@
  * @since 3.0.0
  */
 
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 
 /**
  * Checks if source has missing dependencies for activation

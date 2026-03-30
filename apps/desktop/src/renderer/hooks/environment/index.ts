@@ -1,7 +1,7 @@
 // Export all environment-related hooks
 
 // Also export the combined hook that provides all functionality
-export { useCentralizedEnvironments, useEnvironments } from '../useCentralizedEnvironments';
+export { useCentralizedEnvironments, useEnvironments } from '@/renderer/hooks/useCentralizedEnvironments';
 export { useEnvironmentCore } from './useEnvironmentCore';
 export { useEnvironmentOperations } from './useEnvironmentOperations';
 export { useEnvironmentSchema } from './useEnvironmentSchema';

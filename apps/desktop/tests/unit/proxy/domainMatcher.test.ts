@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import DomainMatcher from '../../../src/services/proxy/domainMatcher';
+import DomainMatcher from '@/services/proxy/domainMatcher';
 
 describe('DomainMatcher', () => {
   describe('matches()', () => {

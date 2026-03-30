@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFormInitialValues } from '../../../../src/renderer/components/sources/http-options/HttpConfig';
+import { getFormInitialValues } from '@/renderer/components/sources/http-options/HttpConfig';
 
 // ======================================================================
 // getFormInitialValues

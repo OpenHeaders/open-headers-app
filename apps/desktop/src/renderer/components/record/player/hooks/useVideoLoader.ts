@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { createLogger } from '../../../../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('useVideoLoader');
 

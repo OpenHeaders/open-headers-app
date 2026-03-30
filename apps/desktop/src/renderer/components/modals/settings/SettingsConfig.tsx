@@ -26,8 +26,8 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { Tooltip } from 'antd';
-import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
-import { THEME_MODES } from '../../../contexts';
+import { THEME_MODES } from '@/renderer/contexts';
+import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
 
 /**
  * Settings configuration factory

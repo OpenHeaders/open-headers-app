@@ -7,7 +7,7 @@ const { Text, Title } = Typography;
  * ImportWorkspaceCard component for workspace configuration import
  * Handles Git workspace configuration import with credentials and conflict detection
  */
-import type { Workspace } from '../../../../types/workspace';
+import type { Workspace } from '@/types/workspace';
 
 interface ImportWorkspaceCardProps {
   workspaceInfo: Partial<Workspace> | null;

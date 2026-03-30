@@ -5,7 +5,7 @@
  * Extracted from RecordNetworkTab for reusability
  */
 
-import type { NetworkRecord } from '../../../../types/recording';
+import type { NetworkRecord } from '@/types/recording';
 
 /**
  * Get request type from network record with intelligent fallbacks

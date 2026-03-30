@@ -1,7 +1,7 @@
 import { FileSearchOutlined, FolderOpenOutlined, FolderOutlined } from '@ant-design/icons';
 import { Button, Space } from 'antd';
 import type React from 'react';
-import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
+import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
 import SettingItem from './SettingItem';
 import { getSettingsConfig, settingsStyles } from './SettingsConfig';
 

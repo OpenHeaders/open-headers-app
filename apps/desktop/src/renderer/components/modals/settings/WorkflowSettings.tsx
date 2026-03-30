@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useEffect, useRef } from 'react';
-import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
+import type { AppSettings, ScreenRecordingPermission } from '@/types/settings';
 import SettingItem from './SettingItem';
 import { getSettingsConfig, settingsStyles } from './SettingsConfig';
 

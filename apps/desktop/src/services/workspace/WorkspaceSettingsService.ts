@@ -10,15 +10,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import atomicWriter from '../../utils/atomicFileWriter';
-import mainLogger from '../../utils/mainLogger';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;
 const log = createLogger('WorkspaceSettingsService');
 
-import { DATA_FORMAT_VERSION } from '../../config/version';
-import type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
+import { DATA_FORMAT_VERSION } from '@/config/version';
+import type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
 
 interface WorkspaceSettings {
   version: string;
@@ -346,7 +346,7 @@ class WorkspaceSettingsService {
   }
 }
 
-export type { Workspace, WorkspaceSyncStatus } from '../../types/workspace';
+export type { Workspace, WorkspaceSyncStatus } from '@/types/workspace';
 export type { WorkspaceSettings, WorkspacesData };
 export { WorkspaceSettingsService };
 export default WorkspaceSettingsService;

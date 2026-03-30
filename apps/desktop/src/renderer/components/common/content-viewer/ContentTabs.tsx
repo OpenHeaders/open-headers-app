@@ -22,7 +22,7 @@
 
 import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
 import { Button, Tabs, Typography } from 'antd';
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 import { formatContent, formatJson } from './ContentFormatter';
 import { HeadersTable } from './HeadersTable';
 

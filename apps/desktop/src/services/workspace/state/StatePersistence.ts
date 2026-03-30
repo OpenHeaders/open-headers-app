@@ -5,14 +5,14 @@
  */
 
 import path from 'node:path';
-import { DATA_FORMAT_VERSION } from '../../../config/version';
-import type { EnvironmentsFile } from '../../../types/environment';
-import type { ProxyRule } from '../../../types/proxy';
-import type { RulesCollection, RulesStorage } from '../../../types/rules';
-import type { Source } from '../../../types/source';
-import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '../../../types/workspace';
-import atomicWriter from '../../../utils/atomicFileWriter';
-import mainLogger from '../../../utils/mainLogger';
+import { DATA_FORMAT_VERSION } from '@/config/version';
+import type { EnvironmentsFile } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { RulesCollection, RulesStorage } from '@/types/rules';
+import type { Source } from '@/types/source';
+import type { Workspace, WorkspaceSyncStatus, WorkspaceType } from '@/types/workspace';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('StatePersistence');

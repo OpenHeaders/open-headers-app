@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { FFmpegManager } from '../../../src/services/video/ffmpeg-manager';
+import { FFmpegManager } from '@/services/video/ffmpeg-manager';
 
 describe('FFmpegManager', () => {
   describe('constructor', () => {

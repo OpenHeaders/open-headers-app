@@ -9,10 +9,10 @@
  * - Managing automatic backups
  */
 
-import { errorMessage, toErrno, toError } from '../../../../types/common';
-import type { EnvironmentMap, EnvironmentVariable } from '../../../../types/environment';
-import atomicWriter from '../../../../utils/atomicFileWriter';
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage, toErrno, toError } from '@/types/common';
+import type { EnvironmentMap, EnvironmentVariable } from '@/types/environment';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 

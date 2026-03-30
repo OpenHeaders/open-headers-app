@@ -3,9 +3,9 @@
  * Provides user-friendly error messages and recovery suggestions
  */
 
-import { errorMessage, toError } from '../../../../types/common';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
+import { errorMessage, toError } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 

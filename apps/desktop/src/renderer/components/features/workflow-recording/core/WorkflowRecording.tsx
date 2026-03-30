@@ -7,11 +7,11 @@ import { TableOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, theme } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
-import type { Recording, WorkflowRecordingEntry } from '../../../../../types/recording';
-import { useSettings } from '../../../../contexts';
-import { convertNewRecordingFormat } from '../../../../utils';
-import { WorkflowsTable } from '../table';
-import { WorkflowViewer } from '../viewer';
+import { WorkflowsTable } from '@/renderer/components/features/workflow-recording/table';
+import { WorkflowViewer } from '@/renderer/components/features/workflow-recording/viewer';
+import { useSettings } from '@/renderer/contexts';
+import { convertNewRecordingFormat } from '@/renderer/utils';
+import type { Recording, WorkflowRecordingEntry } from '@/types/recording';
 
 interface WorkflowRecordingProps {
   record: Recording | null;

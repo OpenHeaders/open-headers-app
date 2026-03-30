@@ -1,8 +1,8 @@
 import { Layout, Space, Tag, Typography } from 'antd';
 import type React from 'react';
-import BrowserConnectionStatus from '../status/BrowserConnectionStatus';
-import EnvironmentStatus from '../status/EnvironmentStatus';
-import WorkspaceStatus from '../status/WorkspaceStatus';
+import BrowserConnectionStatus from '@/renderer/components/status/BrowserConnectionStatus';
+import EnvironmentStatus from '@/renderer/components/status/EnvironmentStatus';
+import WorkspaceStatus from '@/renderer/components/status/WorkspaceStatus';
 
 const { Footer } = Layout;
 const { Text } = Typography;

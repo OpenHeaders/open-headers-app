@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { WSEnvironmentHandler } from '../../../src/services/websocket/ws-environment-handler';
+import { WSEnvironmentHandler } from '@/services/websocket/ws-environment-handler';
 
 describe('WSEnvironmentHandler', () => {
   let handler: WSEnvironmentHandler;

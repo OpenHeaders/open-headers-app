@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getDisplayName } from '../../../../src/renderer/components/record/network/utils/urlUtils';
+import { getDisplayName } from '@/renderer/components/record/network/utils/urlUtils';
 
 // ======================================================================
 // getDisplayName

@@ -3,10 +3,10 @@
  * manual refreshes and query refresh status.
  */
 
-import sourceRefreshService from '../../../../services/source-refresh/SourceRefreshService';
-import type { IpcInvokeEvent } from '../../../../types/common';
-import type { Source } from '../../../../types/source';
-import mainLogger from '../../../../utils/mainLogger';
+import sourceRefreshService from '@/services/source-refresh/SourceRefreshService';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { Source } from '@/types/source';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('SourceRefreshHandlers');

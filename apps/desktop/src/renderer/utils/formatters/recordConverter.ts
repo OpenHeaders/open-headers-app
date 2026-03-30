@@ -7,7 +7,7 @@ import type {
   RecordingEventData,
   RecordingMetadata,
   StorageRecord,
-} from '../../../types/recording';
+} from '@/types/recording';
 
 interface ParsedCookie {
   name: string;

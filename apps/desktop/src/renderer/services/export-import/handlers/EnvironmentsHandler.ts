@@ -5,17 +5,20 @@
  * including schema processing, variable management, and Git sync integration.
  */
 
-import { getCentralizedEnvironmentService } from '../../../services/CentralizedEnvironmentService';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { DEFAULTS, EVENTS, IMPORT_MODES } from '../core/ExportImportConfig';
+import { getCentralizedEnvironmentService } from '@/renderer/services/CentralizedEnvironmentService';
+import { DEFAULTS, EVENTS, IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type {
   EnvironmentSchema,
   EnvironmentVariable,
   ExportImportDependencies,
   SchemaVariableDefinition,
-} from '../core/types';
-import { isEnvironmentVariableDuplicate } from '../utilities/DuplicateDetection';
-import { validateEnvironmentSchema, validateEnvironmentVariable } from '../utilities/ValidationUtils';
+} from '@/renderer/services/export-import/core/types';
+import { isEnvironmentVariableDuplicate } from '@/renderer/services/export-import/utilities/DuplicateDetection';
+import {
+  validateEnvironmentSchema,
+  validateEnvironmentVariable,
+} from '@/renderer/services/export-import/utilities/ValidationUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('EnvironmentsHandler');
 

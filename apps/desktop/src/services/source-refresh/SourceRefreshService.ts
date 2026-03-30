@@ -10,20 +10,20 @@
  */
 
 import electron from 'electron';
-import { AdaptiveCircuitBreakerManager } from '../../shared/AdaptiveCircuitBreaker';
-import { ConcurrentMap, RequestDeduplicator } from '../../shared/ConcurrencyControl';
+import type { HttpRequestService } from '@/services/http/HttpRequestService';
+import { AdaptiveCircuitBreakerManager } from '@/shared/AdaptiveCircuitBreaker';
+import { ConcurrentMap, RequestDeduplicator } from '@/shared/ConcurrencyControl';
 import {
   CIRCUIT_BREAKER_CONFIG,
   calculateDelayWithJitter,
   formatCircuitBreakerKey,
   INITIAL_RETRY_CONFIG,
   OVERDUE_RETRY_CONFIG,
-} from '../../shared/retryConfig';
-import { errorMessage } from '../../types/common';
-import type { Source } from '../../types/source';
-import type { FetchResult, RefreshStatusInfo } from '../../types/source-refresh';
-import mainLogger from '../../utils/mainLogger';
-import type { HttpRequestService } from '../http/HttpRequestService';
+} from '@/shared/retryConfig';
+import { errorMessage } from '@/types/common';
+import type { Source } from '@/types/source';
+import type { FetchResult, RefreshStatusInfo } from '@/types/source-refresh';
+import mainLogger from '@/utils/mainLogger';
 import { fetchSourceContent } from './SourceFetcher';
 
 const { createLogger } = mainLogger;

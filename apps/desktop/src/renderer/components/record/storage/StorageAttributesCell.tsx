@@ -9,7 +9,7 @@
  */
 
 import { Tag, Tooltip } from 'antd';
-import type { StorageRecord } from '../../../../types/recording';
+import type { StorageRecord } from '@/types/recording';
 
 interface StorageAttributesCellProps {
   record: StorageRecord;

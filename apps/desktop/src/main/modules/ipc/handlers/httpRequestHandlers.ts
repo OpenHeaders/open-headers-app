@@ -4,11 +4,11 @@
  * All template resolution, TOTP generation, and HTTP execution happen in main.
  */
 
-import type { HttpRequestService } from '../../../../services/http/HttpRequestService';
-import type { TotpCooldownTracker } from '../../../../services/http/TotpCooldownTracker';
-import type { IpcInvokeEvent } from '../../../../types/common';
-import type { HttpRequestResult, HttpRequestSpec, TotpCooldownInfo } from '../../../../types/http';
-import mainLogger from '../../../../utils/mainLogger';
+import type { HttpRequestService } from '@/services/http/HttpRequestService';
+import type { TotpCooldownTracker } from '@/services/http/TotpCooldownTracker';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { HttpRequestResult, HttpRequestSpec, TotpCooldownInfo } from '@/types/http';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('HttpRequestHandlers');

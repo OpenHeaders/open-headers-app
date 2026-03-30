@@ -1,5 +1,5 @@
 import { Alert, Space, Typography } from 'antd';
-import type { EnvVarValidation } from '../../../../utils/validation/environment-variables';
+import type { EnvVarValidation } from '@/renderer/utils/validation/environment-variables';
 
 const { Text } = Typography;
 

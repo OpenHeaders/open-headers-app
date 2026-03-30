@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { VideoExportManager } from '../../../src/services/video/video-export-manager';
+import { VideoExportManager } from '@/services/video/video-export-manager';
 
 describe('VideoExportManager', () => {
   describe('constructor', () => {

@@ -5,4 +5,4 @@ export {
   formatCircuitBreakerKey,
   INITIAL_RETRY_CONFIG,
   OVERDUE_RETRY_CONFIG,
-} from '../../shared/retryConfig';
+} from '@/shared/retryConfig';

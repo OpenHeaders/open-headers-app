@@ -1,4 +1,4 @@
-import timeManager from '../../../services/TimeManager';
+import timeManager from '@/renderer/services/TimeManager';
 
 /**
  * UpdateEventHandlers - Manages update event handling and logic

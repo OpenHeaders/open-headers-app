@@ -5,7 +5,7 @@
  * Called during render; the 1s tick in SourceTable drives countdown updates.
  */
 
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 import { formatTimeRemaining } from './SourceTableUtils';
 
 interface CircuitBreakerStatus {

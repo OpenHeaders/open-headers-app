@@ -4,15 +4,15 @@
  */
 
 import electron from 'electron';
-import { errorMessage, toError } from '../../../../types/common';
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import mainLogger from '../../../../utils/mainLogger';
-import type { ConfigFileDetector } from '../../ConfigFileDetector';
-import type GitAuthenticator from '../auth/GitAuthenticator';
-import type { GitExecutor } from '../core/GitExecutor';
-import type { GitBranchManager } from '../repository/GitBranchManager';
-import type { ProgressStep } from '../utils/GitConnectionProgress';
-import GitConnectionProgress from '../utils/GitConnectionProgress';
+import type { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
+import type GitAuthenticator from '@/services/workspace/git/auth/GitAuthenticator';
+import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import type { GitBranchManager } from '@/services/workspace/git/repository/GitBranchManager';
+import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
+import GitConnectionProgress from '@/services/workspace/git/utils/GitConnectionProgress';
+import { errorMessage, toError } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 
 const { net } = electron;
 const { createLogger } = mainLogger;

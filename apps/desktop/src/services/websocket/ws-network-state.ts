@@ -4,7 +4,7 @@
  */
 
 import type WS from 'ws';
-import mainLogger from '../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WSNetworkState');

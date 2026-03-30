@@ -10,7 +10,7 @@
  */
 
 import { Space, Typography } from 'antd';
-import type { GlobalToken, NetworkRecord } from '../types';
+import type { GlobalToken, NetworkRecord } from '@/renderer/components/record/network/types';
 
 const { Text } = Typography;
 

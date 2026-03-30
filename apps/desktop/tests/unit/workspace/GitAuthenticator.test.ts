@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GitAuthenticator } from '../../../src/services/workspace/git/auth/GitAuthenticator';
+import { GitAuthenticator } from '@/services/workspace/git/auth/GitAuthenticator';
 
 type SetupAuthResult = Awaited<ReturnType<GitAuthenticator['setupAuth']>>;
 

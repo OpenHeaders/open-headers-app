@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AppStateMachineImpl, AppStates, StateTransitions } from '../../../src/services/core/AppStateMachine';
+import { AppStateMachineImpl, AppStates, StateTransitions } from '@/services/core/AppStateMachine';
 
 describe('AppStateMachine', () => {
   let sm: AppStateMachineImpl;

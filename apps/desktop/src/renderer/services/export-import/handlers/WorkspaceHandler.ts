@@ -5,12 +5,19 @@
  * including Git integration, authentication data, and workspace creation.
  */
 
-import type { WorkspaceAuthData } from '../../../../types/workspace';
-import { createLogger } from '../../../utils/error-handling/logger';
-import { DEFAULTS } from '../core/ExportImportConfig';
-import type { ExportImportDependencies, ExportOptions, WorkspaceData } from '../core/types';
-import { generateUniqueName, isWorkspaceNameDuplicate } from '../utilities/DuplicateDetection';
-import { validateWorkspaceConfig } from '../utilities/ValidationUtils';
+import { DEFAULTS } from '@/renderer/services/export-import/core/ExportImportConfig';
+import type {
+  ExportImportDependencies,
+  ExportOptions,
+  WorkspaceData,
+} from '@/renderer/services/export-import/core/types';
+import {
+  generateUniqueName,
+  isWorkspaceNameDuplicate,
+} from '@/renderer/services/export-import/utilities/DuplicateDetection';
+import { validateWorkspaceConfig } from '@/renderer/services/export-import/utilities/ValidationUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { WorkspaceAuthData } from '@/types/workspace';
 
 const log = createLogger('WorkspaceHandler');
 

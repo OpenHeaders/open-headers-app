@@ -26,20 +26,20 @@ import {
   Typography,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Workspace } from '../../../../../types/workspace';
+import { DEFAULT_VALUES, WORKSPACE_TYPES } from '@/renderer/components/features/workspaces/constants';
+import { useWorkspaceCreation } from '@/renderer/components/features/workspaces/hooks/useWorkspaceCreation';
+import { WorkspaceServiceAdapterFactory } from '@/renderer/components/features/workspaces/services/WorkspaceServiceAdapter';
+import { prepareAuthData } from '@/renderer/components/features/workspaces/utils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import {
   useCentralizedWorkspace,
   useEnvironments,
   useHeaderRules,
   useSources,
-} from '../../../../hooks/useCentralizedWorkspace';
-import { useWorkspaces } from '../../../../hooks/workspace';
-import { type ExportData, ExportService, FILE_FORMATS } from '../../../../services/export-import';
-import { DEFAULT_VALUES, WORKSPACE_TYPES } from '../constants';
-import { useWorkspaceCreation } from '../hooks/useWorkspaceCreation';
-import { WorkspaceServiceAdapterFactory } from '../services/WorkspaceServiceAdapter';
-import { prepareAuthData } from '../utils';
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+} from '@/renderer/hooks/useCentralizedWorkspace';
+import { useWorkspaces } from '@/renderer/hooks/workspace';
+import { type ExportData, ExportService, FILE_FORMATS } from '@/renderer/services/export-import';
+import type { Workspace } from '@/types/workspace';
 import AuthenticationForm from './AuthenticationForm';
 import ConnectionProgressModal from './ConnectionProgressModal';
 import GitStatusAlert from './GitStatusAlert';

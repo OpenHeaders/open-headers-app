@@ -1,10 +1,10 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Space, Typography } from 'antd';
 import { useState } from 'react';
-import type { Source } from '../../../../../types/source';
-import { ProxyRuleFormModular } from '../forms';
-import { ProxyRuleTableModular } from '../tables';
-import type { HeaderRule, ProxyRule } from '../tables/ProxyRuleTableColumns';
+import { ProxyRuleFormModular } from '@/renderer/components/proxy/components/forms';
+import { ProxyRuleTableModular } from '@/renderer/components/proxy/components/tables';
+import type { HeaderRule, ProxyRule } from '@/renderer/components/proxy/components/tables/ProxyRuleTableColumns';
+import type { Source } from '@/types/source';
 
 const { Title } = Typography;
 

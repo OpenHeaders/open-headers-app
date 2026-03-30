@@ -14,7 +14,7 @@
  * @since 3.0.0
  */
 
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 
 /**
  * Extracts HTTP response headers from a Source object.

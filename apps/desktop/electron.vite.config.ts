@@ -43,6 +43,7 @@ export default defineConfig({
     },
     resolve: {
       alias: {
+        '@': resolve(__dirname, 'src'),
         chokidar: resolve(__dirname, 'node_modules/chokidar'),
       },
     },
@@ -70,6 +71,11 @@ export default defineConfig({
       },
       minify: process.env.NODE_ENV === 'production' ? 'terser' : false,
       sourcemap: process.env.NODE_ENV !== 'production',
+    },
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src'),
+      },
     },
     define: {
       'process.env.RUNNING_IN_PRODUCTION': JSON.stringify(true),
@@ -141,6 +147,7 @@ export default defineConfig({
     ],
     resolve: {
       alias: {
+        '@': resolve(__dirname, 'src'),
         react: resolve(__dirname, 'node_modules/react'),
         'react-dom': resolve(__dirname, 'node_modules/react-dom'),
         scheduler: resolve(__dirname, 'node_modules/scheduler'),

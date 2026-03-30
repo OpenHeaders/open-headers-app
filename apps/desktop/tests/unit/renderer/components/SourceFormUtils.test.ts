@@ -5,7 +5,7 @@ import {
   generateTempSourceId,
   getFieldsWithTemplateVariables,
   getFormInitialValues,
-} from '../../../../src/renderer/components/sources/source-form/SourceFormUtils';
+} from '@/renderer/components/sources/source-form/SourceFormUtils';
 
 // ======================================================================
 // getFormInitialValues

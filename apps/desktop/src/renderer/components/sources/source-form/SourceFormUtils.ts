@@ -15,7 +15,7 @@
  */
 
 import type { FormInstance } from 'antd';
-import type { SourceType } from '../../../../types/source';
+import type { SourceType } from '@/types/source';
 
 interface LoggerLike {
   debug: (message: string, data?: unknown) => void;

@@ -5,9 +5,9 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorMessage } from '../../../../types/common';
-import mainLogger from '../../../../utils/mainLogger';
-import type { GitExecutor } from '../core/GitExecutor';
+import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const fsPromises = fs.promises;
 const { createLogger } = mainLogger;

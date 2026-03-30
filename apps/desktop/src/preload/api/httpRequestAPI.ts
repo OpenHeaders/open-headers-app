@@ -1,5 +1,5 @@
 import electron from 'electron';
-import type { HttpRequestResult, HttpRequestSpec, TotpCooldownInfo } from '../../types/http';
+import type { HttpRequestResult, HttpRequestSpec, TotpCooldownInfo } from '@/types/http';
 
 const { ipcRenderer } = electron;
 

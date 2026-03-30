@@ -2,8 +2,8 @@ import { CopyOutlined, DatabaseOutlined, QuestionCircleOutlined } from '@ant-des
 import { Alert, App, Button, Checkbox, Input, Modal, Space, Tooltip, Typography, theme } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import React, { useCallback, useState } from 'react';
-import type { EnvironmentVariable, EnvironmentVariables } from '../../../types/environment';
-import { copyToClipboard } from '../../utils/ui/copyToClipboard';
+import { copyToClipboard } from '@/renderer/utils/ui/copyToClipboard';
+import type { EnvironmentVariable, EnvironmentVariables } from '@/types/environment';
 
 /**
  * EnvironmentShareModal - A reusable modal for sharing environment configurations

@@ -2,8 +2,8 @@
  * EnvironmentVariableManager - Manages environment variables and operations
  */
 
-import type { EnvironmentVariable, EnvironmentVariables } from '../../../types/environment';
-import { createLogger } from '../../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { EnvironmentVariable, EnvironmentVariables } from '@/types/environment';
 
 const log = createLogger('EnvironmentVariableManager');
 

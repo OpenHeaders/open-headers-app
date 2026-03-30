@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WindowManager } from '../../../src/main/modules/window/windowManager';
+import { WindowManager } from '@/main/modules/window/windowManager';
 
 describe('WindowManager', () => {
   describe('setLaunchedByProtocol', () => {

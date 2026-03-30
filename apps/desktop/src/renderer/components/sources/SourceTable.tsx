@@ -1,12 +1,12 @@
 import { Empty, Table, Typography, theme } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { Source } from '../../../types/source';
-import { useEnvironments, useRefreshManager } from '../../contexts';
-import timeManager from '../../services/TimeManager';
-import { createLogger } from '../../utils/error-handling/logger';
-import ContentViewer from '../common/ContentViewer';
-import { VirtualizedSimpleTable } from '../common/virtualized-table';
-import EditSourceModal from '../modals/edit-source';
+import ContentViewer from '@/renderer/components/common/ContentViewer';
+import { VirtualizedSimpleTable } from '@/renderer/components/common/virtualized-table';
+import EditSourceModal from '@/renderer/components/modals/edit-source';
+import { useEnvironments, useRefreshManager } from '@/renderer/contexts';
+import timeManager from '@/renderer/services/TimeManager';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { Source } from '@/types/source';
 import {
   checkSourceDependencies,
   createModalHandlers,

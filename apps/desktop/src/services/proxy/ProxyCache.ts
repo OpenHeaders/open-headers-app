@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import { toErrno } from '../../types/common';
-import atomicWriter from '../../utils/atomicFileWriter';
-import mainLogger from '../../utils/mainLogger';
+import { toErrno } from '@/types/common';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

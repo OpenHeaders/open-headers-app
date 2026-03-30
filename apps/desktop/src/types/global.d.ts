@@ -22,9 +22,9 @@ import type {
   CliWorkspaceJoinedData,
 } from './workspace';
 import type { EnvironmentMap, EnvironmentSchema, EnvironmentConfigData } from './environment';
-import type { RecordingData } from '../services/websocket/utils/recordingPreprocessor';
+import type { RecordingData } from '@/services/websocket/utils/recordingPreprocessor';
 import type { RefreshStatusInfo, StatusChangedPayload, ScheduleUpdatedPayload } from './source-refresh';
-import type { WorkspaceStateAPI } from '../preload/api/workspaceStateAPI';
+import type { WorkspaceStateAPI } from '@/preload/api/workspaceStateAPI';
 
 declare global {
   /** Network state data sent via IPC from main process */

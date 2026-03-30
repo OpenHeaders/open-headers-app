@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { VideoCaptureService } from '../../../src/services/video/video-capture-service';
+import { VideoCaptureService } from '@/services/video/video-capture-service';
 
 // Enterprise-style recording factory
 function makeRecordingInfo(

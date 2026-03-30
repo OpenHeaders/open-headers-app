@@ -16,15 +16,10 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { ProxyStatus } from '../../../../../types/proxy';
-import type {
-  Recording,
-  RRWebEvent,
-  RRWebPlayerConstructor,
-  RRWebPlayerInstance,
-} from '../../../../../types/recording';
-import { createLogger } from '../../../../utils/error-handling/logger';
-import { calculateViewportScale } from '../utils/playerUtils';
+import { calculateViewportScale } from '@/renderer/components/record/player/utils/playerUtils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { ProxyStatus } from '@/types/proxy';
+import type { Recording, RRWebEvent, RRWebPlayerConstructor, RRWebPlayerInstance } from '@/types/recording';
 
 const log = createLogger('usePlayerManager');
 

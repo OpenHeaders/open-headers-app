@@ -1,6 +1,6 @@
 import { Button, Tooltip } from 'antd';
 import type React from 'react';
-import type { Source } from '../../../../types/source';
+import type { Source } from '@/types/source';
 
 interface EditSourceModalFooterProps {
   source: Source;

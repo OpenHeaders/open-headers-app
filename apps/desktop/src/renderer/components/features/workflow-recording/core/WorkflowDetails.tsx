@@ -4,8 +4,8 @@
  */
 
 import { Card } from 'antd';
-import type { Recording } from '../../../../../types/recording';
-import { VIEW_MODES, WorkflowViewer } from '../viewer';
+import { VIEW_MODES, WorkflowViewer } from '@/renderer/components/features/workflow-recording/viewer';
+import type { Recording } from '@/types/recording';
 
 interface WorkflowDetailsProps {
   record: Recording | null;

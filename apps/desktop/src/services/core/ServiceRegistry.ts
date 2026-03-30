@@ -1,4 +1,4 @@
-import mainLogger from '../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 

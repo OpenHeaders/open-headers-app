@@ -45,7 +45,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useAppInitialization } from '../../../../src/renderer/hooks/app/useAppInitialization';
+import { useAppInitialization } from '@/renderer/hooks/app/useAppInitialization';
 
 // ---------------------------------------------------------------------------
 // Tests

@@ -26,7 +26,7 @@
  * @since 3.0.0
  */
 
-export type { NewSourceData } from '../../../../types/source';
+export type { NewSourceData } from '@/types/source';
 
 // Form Field Components Exports
 // Reusable form field components and rendering utilities

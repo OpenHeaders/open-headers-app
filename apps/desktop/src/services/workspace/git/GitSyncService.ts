@@ -5,14 +5,14 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorMessage, toError } from '../../../types/common';
-import type { WorkspaceAuthData } from '../../../types/workspace';
-import mainLogger from '../../../utils/mainLogger';
 // Config modules
-import { ConfigFileDetector } from '../ConfigFileDetector';
-import { ConfigFileValidator } from '../config-file-validator';
+import { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
+import { ConfigFileValidator } from '@/services/workspace/config-file-validator';
 // Legacy support
-import { GitAutoInstaller } from '../git-auto-installer';
+import { GitAutoInstaller } from '@/services/workspace/git-auto-installer';
+import { errorMessage, toError } from '@/types/common';
+import type { WorkspaceAuthData } from '@/types/workspace';
+import mainLogger from '@/utils/mainLogger';
 // Auth modules
 import GitAuthenticator from './auth/GitAuthenticator';
 import type { GitStatus } from './core/GitInitializer';

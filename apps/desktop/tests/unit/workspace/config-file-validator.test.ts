@@ -23,7 +23,7 @@ vi.mock('../../../src/config/version', () => ({
   DATA_FORMAT_VERSION: '3.0.0',
 }));
 
-import { ConfigFileValidator } from '../../../src/services/workspace/config-file-validator';
+import { ConfigFileValidator } from '@/services/workspace/config-file-validator';
 
 describe('ConfigFileValidator', () => {
   let validator: ConfigFileValidator;

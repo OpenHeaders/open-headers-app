@@ -3,11 +3,11 @@
 import http from 'node:http';
 import electron from 'electron';
 import WS, { WebSocketServer } from 'ws';
-import type { RulesCollection } from '../../types/rules';
-import type { Source } from '../../types/source';
-import type { ExtendedWebSocket, WSClientInfo } from '../../types/websocket';
-import mainLogger from '../../utils/mainLogger';
-import settingsCache from '../core/SettingsCache';
+import settingsCache from '@/services/core/SettingsCache';
+import type { RulesCollection } from '@/types/rules';
+import type { Source } from '@/types/source';
+import type { ExtendedWebSocket, WSClientInfo } from '@/types/websocket';
+import mainLogger from '@/utils/mainLogger';
 import { WSClientHandler } from './ws-client-handler';
 import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSNetworkStateHandler } from './ws-network-state';

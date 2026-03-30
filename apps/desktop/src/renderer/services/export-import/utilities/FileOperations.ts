@@ -14,7 +14,7 @@
  * - Path manipulation utilities
  */
 
-import { ERROR_MESSAGES, FILE_FILTERS } from '../core/ExportImportConfig';
+import { ERROR_MESSAGES, FILE_FILTERS } from '@/renderer/services/export-import/core/ExportImportConfig';
 
 /**
  * Generates a timestamp-based filename for exports

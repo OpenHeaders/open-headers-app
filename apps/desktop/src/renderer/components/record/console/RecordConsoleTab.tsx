@@ -16,13 +16,18 @@ import { App, Button, Empty, Table, Tag, Tooltip, Typography } from 'antd';
 import type { FilterValue } from 'antd/es/table/interface';
 import type React from 'react';
 import { useState } from 'react';
-import type { ConsoleRecord, Recording } from '../../../../types/recording';
-import { formatConsoleArg } from '../../../utils';
-import { createCopyButton, createStandardTableProps, createTimestampColumn, createViewButton } from '../shared';
-import SearchOverlay from '../shared/SearchOverlay';
-import TimestampCell from '../shared/TimestampCell';
-import { useSearchFilter } from '../shared/useSearchFilter';
-import { useTimeHighlight } from '../shared/useTimeHighlight';
+import {
+  createCopyButton,
+  createStandardTableProps,
+  createTimestampColumn,
+  createViewButton,
+} from '@/renderer/components/record/shared';
+import SearchOverlay from '@/renderer/components/record/shared/SearchOverlay';
+import TimestampCell from '@/renderer/components/record/shared/TimestampCell';
+import { useSearchFilter } from '@/renderer/components/record/shared/useSearchFilter';
+import { useTimeHighlight } from '@/renderer/components/record/shared/useTimeHighlight';
+import { formatConsoleArg } from '@/renderer/utils';
+import type { ConsoleRecord, Recording } from '@/types/recording';
 import ConsoleLogModal from './ConsoleLogModal';
 
 const { Text } = Typography;

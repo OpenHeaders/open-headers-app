@@ -7,7 +7,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Workspace } from '../../../../src/types/workspace';
+import type { Workspace } from '@/types/workspace';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -77,7 +77,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useWorkspaces } from '../../../../src/renderer/hooks/workspace/useWorkspaces';
+import { useWorkspaces } from '@/renderer/hooks/workspace/useWorkspaces';
 
 // ---------------------------------------------------------------------------
 // Tests

@@ -1,11 +1,11 @@
 import { Form } from 'antd';
 import { useCallback, useMemo } from 'react';
+import DomainTags from '@/renderer/components/features/domain-tags';
+import type { DomainValidation } from '@/renderer/components/features/domain-tags/DomainTagDisplay';
 import {
   formatMissingVariables,
   validateEnvironmentVariables,
-} from '../../../../utils/validation/environment-variables';
-import DomainTags from '../../../features/domain-tags';
-import type { DomainValidation } from '../../../features/domain-tags/DomainTagDisplay';
+} from '@/renderer/utils/validation/environment-variables';
 
 interface DomainSectionProps {
   domainValidation: DomainValidation[];

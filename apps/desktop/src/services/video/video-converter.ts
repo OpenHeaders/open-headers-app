@@ -1,7 +1,7 @@
 import child_process from 'node:child_process';
 import fs from 'node:fs';
-import { errorMessage as errMsg, toErrno } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage as errMsg, toErrno } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { spawn } = child_process;
 const { createLogger } = mainLogger;

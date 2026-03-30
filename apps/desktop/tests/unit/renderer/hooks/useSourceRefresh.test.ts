@@ -8,7 +8,7 @@
 
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { HttpRequestResult } from '../../../../src/types/http';
+import type { HttpRequestResult } from '@/types/http';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -27,9 +27,9 @@ vi.mock('../../../../src/renderer/utils', () => ({
   showMessage: vi.fn(),
 }));
 
-import { useSourceRefresh } from '../../../../src/renderer/hooks/sources/useSourceRefresh';
-import { showMessage } from '../../../../src/renderer/utils';
-import type { NewSourceData, Source } from '../../../../src/types/source';
+import { useSourceRefresh } from '@/renderer/hooks/sources/useSourceRefresh';
+import { showMessage } from '@/renderer/utils';
+import type { NewSourceData, Source } from '@/types/source';
 
 const mockExecuteRequest = vi.fn<() => Promise<HttpRequestResult>>();
 const mockManualRefresh = vi.fn<() => Promise<{ success: boolean; error?: string }>>();

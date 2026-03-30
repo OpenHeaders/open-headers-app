@@ -1,10 +1,10 @@
 import electron from 'electron';
-import { AppStateMachine } from '../../../services/core/AppStateMachine';
-import timeManager from '../../../services/core/TimeManager';
-import type { NetworkState } from '../../../services/network/NetworkService';
-import networkService from '../../../services/network/NetworkService';
-import webSocketService from '../../../services/websocket/ws-service';
-import mainLogger from '../../../utils/mainLogger';
+import { AppStateMachine } from '@/services/core/AppStateMachine';
+import timeManager from '@/services/core/TimeManager';
+import type { NetworkState } from '@/services/network/NetworkService';
+import networkService from '@/services/network/NetworkService';
+import webSocketService from '@/services/websocket/ws-service';
+import mainLogger from '@/utils/mainLogger';
 
 const { powerMonitor, BrowserWindow } = electron;
 const { createLogger } = mainLogger;

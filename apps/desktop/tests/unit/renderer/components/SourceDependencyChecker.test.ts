@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   checkSourceDependencies,
   isTemplateSource,
-} from '../../../../src/renderer/components/sources/source-table/SourceDependencyChecker';
-import type { Source } from '../../../../src/types/source';
+} from '@/renderer/components/sources/source-table/SourceDependencyChecker';
+import type { Source } from '@/types/source';
 
 function makeSource(overrides: Partial<Source> = {}): Source {
   return { sourceId: 'test', sourceType: 'http', ...overrides };

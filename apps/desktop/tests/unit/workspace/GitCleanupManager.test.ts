@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLEANUP_POLICIES, GitCleanupManager } from '../../../src/services/workspace/git/utils/GitCleanupManager';
+import { CLEANUP_POLICIES, GitCleanupManager } from '@/services/workspace/git/utils/GitCleanupManager';
 
 describe('GitCleanupManager', () => {
   const TEMP_DIR = '/Users/jane.doe/.openheaders/workspace-sync';

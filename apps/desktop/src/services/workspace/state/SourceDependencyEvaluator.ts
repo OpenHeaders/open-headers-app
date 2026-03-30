@@ -6,7 +6,7 @@
  * as 'waiting_for_deps' until the environment provides values.
  */
 
-import type { ActivationState, Source } from '../../../types/source';
+import type { ActivationState, Source } from '@/types/source';
 import type { EnvironmentResolverLike } from './types';
 
 interface DependencyResult {

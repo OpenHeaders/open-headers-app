@@ -21,7 +21,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import mainLogger from '../../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

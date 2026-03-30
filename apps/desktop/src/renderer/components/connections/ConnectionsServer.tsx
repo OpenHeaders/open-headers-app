@@ -1,4 +1,4 @@
-import { useSettings } from '../../contexts';
+import { useSettings } from '@/renderer/contexts';
 import { ConnectionsClientTable, ConnectionsServerStatus } from './components';
 import { useConnectionsServer } from './hooks';
 

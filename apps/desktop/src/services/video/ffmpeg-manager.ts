@@ -5,8 +5,8 @@ import path from 'node:path';
 import AdmZip from 'adm-zip';
 import electron from 'electron';
 import * as tar from 'tar';
-import { errorMessage as errMsg } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage as errMsg } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { exec } = child_process;

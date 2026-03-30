@@ -63,7 +63,7 @@ export interface RollbackAction {
  */
 export type RollbackExecutor = (action: RollbackAction) => Promise<void>;
 
-import type { WorkspaceFormValues } from '../utils/WorkspaceUtils';
+import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 
 interface GitStatus {
   isInstalled?: boolean;

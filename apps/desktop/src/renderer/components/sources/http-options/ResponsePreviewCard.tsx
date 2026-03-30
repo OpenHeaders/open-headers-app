@@ -17,7 +17,7 @@
 
 import { Card, Tabs } from 'antd';
 import type React from 'react';
-import type { TestResponseContent } from '../../../../types/http';
+import type { TestResponseContent } from '@/types/http';
 import { formatContentByType, getStatusText } from './HttpTesting';
 
 interface ResponsePreviewCardProps {

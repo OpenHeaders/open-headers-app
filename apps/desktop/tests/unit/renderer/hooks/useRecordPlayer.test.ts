@@ -12,9 +12,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // Mock the rrweb-player script loading
 vi.stubGlobal('rrwebPlayer', undefined);
 
-import type { ProxyStatus, RecordData } from '../../../../src/renderer/components/record/player/hooks/usePlayerManager';
-import { useRecordPlayer } from '../../../../src/renderer/hooks/useRecordPlayer';
-import type { Recording } from '../../../../src/types/recording';
+import type { ProxyStatus, RecordData } from '@/renderer/components/record/player/hooks/usePlayerManager';
+import { useRecordPlayer } from '@/renderer/hooks/useRecordPlayer';
+import type { Recording } from '@/types/recording';
 
 function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
   return {

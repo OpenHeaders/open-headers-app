@@ -1,12 +1,12 @@
 import { Alert, Form, Input, Select, Space, Typography, theme } from 'antd';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
-import { useSources } from '../../../../contexts';
+import { formatSourceDisplay, getSourceIcon } from '@/renderer/components/proxy';
+import { useSources } from '@/renderer/contexts';
 import {
   formatMissingVariables,
   validateEnvironmentVariables,
-} from '../../../../utils/validation/environment-variables';
-import { formatSourceDisplay, getSourceIcon } from '../../../proxy';
+} from '@/renderer/utils/validation/environment-variables';
 
 const { Option } = Select;
 const { Text } = Typography;

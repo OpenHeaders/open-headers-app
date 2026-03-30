@@ -8,7 +8,7 @@ import {
   IMPORT_MODES,
   SUCCESS_MESSAGES,
   VALIDATION_RULES,
-} from '../../../../src/renderer/services/export-import/core/ExportImportConfig';
+} from '@/renderer/services/export-import/core/ExportImportConfig';
 
 // ---------------------------------------------------------------------------
 // Constant shape and value checks

@@ -3,7 +3,7 @@ import {
   debugRefreshState,
   formatTimeRemaining,
   trimContent,
-} from '../../../../src/renderer/components/sources/source-table/SourceTableUtils';
+} from '@/renderer/components/sources/source-table/SourceTableUtils';
 
 // ======================================================================
 // formatTimeRemaining

@@ -6,7 +6,7 @@ import {
   LinuxNetworkMonitor,
   MacOSNetworkMonitor,
   WindowsNetworkMonitor,
-} from '../../../src/services/network/PlatformMonitors';
+} from '@/services/network/PlatformMonitors';
 
 describe('PlatformMonitors', () => {
   describe('BasePlatformMonitor', () => {

@@ -1,5 +1,5 @@
-import type { AuthType, WorkspaceAuthData, WorkspaceType } from '../../../../../types/workspace';
-import { AUTH_TYPES, PROVIDER_ICONS } from '../constants';
+import { AUTH_TYPES, PROVIDER_ICONS } from '@/renderer/components/features/workspaces/constants';
+import type { AuthType, WorkspaceAuthData, WorkspaceType } from '@/types/workspace';
 
 /** Form values from workspace creation/edit forms */
 export interface WorkspaceFormValues {

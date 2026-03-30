@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useRefreshManager } from '../../contexts';
-import { useSources } from '../../hooks/workspace';
+import { useRefreshManager } from '@/renderer/contexts';
+import { useSources } from '@/renderer/hooks/workspace';
 
 export const DebugSourceInfo = ({ inFooter = false }: { inFooter?: boolean }) => {
   const { sources } = useSources();

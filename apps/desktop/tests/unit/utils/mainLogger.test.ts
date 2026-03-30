@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createLogger, getLogDirectory, MainLogger, setGlobalLogLevel } from '../../../src/utils/mainLogger';
+import { createLogger, getLogDirectory, MainLogger, setGlobalLogLevel } from '@/utils/mainLogger';
 
 describe('mainLogger', () => {
   describe('createLogger()', () => {

@@ -9,9 +9,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import type { AppSettings } from '../../types/settings';
-import atomicWriter from '../../utils/atomicFileWriter';
-import mainLogger from '../../utils/mainLogger';
+import type { AppSettings } from '@/types/settings';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;
 const { createLogger } = mainLogger;

@@ -7,7 +7,7 @@ import { UploadOutlined } from '@ant-design/icons';
 import { Button, Space, Tooltip, Upload } from 'antd';
 import React from 'react';
 
-import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '../shared';
+import { handleWorkflowImport, SUPPORTED_FILE_TYPES } from '@/renderer/components/features/workflow-recording/shared';
 import type { WorkflowRecord } from './WorkflowTableColumns';
 
 /**

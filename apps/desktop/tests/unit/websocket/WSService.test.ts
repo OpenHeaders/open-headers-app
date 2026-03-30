@@ -6,10 +6,10 @@ vi.mock('../../../src/utils/mainLogger', () => ({
   createLogger: () => ({ info: () => {}, warn: () => {}, error: () => {}, debug: () => {} }),
 }));
 
-import { WebSocketService } from '../../../src/services/websocket/ws-service';
-import type { RulesCollection } from '../../../src/types/rules';
-import type { Source } from '../../../src/types/source';
-import type { WSClientInfo } from '../../../src/types/websocket';
+import { WebSocketService } from '@/services/websocket/ws-service';
+import type { RulesCollection } from '@/types/rules';
+import type { Source } from '@/types/source';
+import type { WSClientInfo } from '@/types/websocket';
 
 function makeClientInfo(overrides: Partial<WSClientInfo> & { id: string }): WSClientInfo {
   return {

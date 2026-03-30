@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import { Tabs } from 'antd';
 import { useEffect, useState } from 'react';
-import { useNavigation } from '../../contexts';
+import { useNavigation } from '@/renderer/contexts';
 import HeaderRules from './HeaderRules';
 import MoreRules from './MoreRules';
 import PayloadRules from './PayloadRules';

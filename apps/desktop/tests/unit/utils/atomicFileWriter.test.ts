@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { AtomicFileWriter } from '../../../src/utils/atomicFileWriter';
+import { AtomicFileWriter } from '@/utils/atomicFileWriter';
 
 describe('AtomicFileWriter', () => {
   let writer: AtomicFileWriter;

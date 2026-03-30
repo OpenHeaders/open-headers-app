@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { IpcMainEvent, IpcMainInvokeEvent } from 'electron';
 import electron from 'electron';
-import { errorMessage } from '../../types/common';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 import { FFmpegManager } from './ffmpeg-manager';
 import { VideoConverter } from './video-converter';
 

@@ -1,5 +1,5 @@
 import type { GlobalToken } from 'antd/es/theme/interface';
-import type { NetworkRecord, NetworkTimingData, Recording } from '../../../../types/recording';
+import type { NetworkRecord, NetworkTimingData, Recording } from '@/types/recording';
 
 export type { GlobalToken, NetworkRecord, NetworkTimingData };
 

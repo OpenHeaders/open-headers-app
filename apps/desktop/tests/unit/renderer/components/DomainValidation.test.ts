@@ -4,7 +4,7 @@ import {
   isWildcardDomain,
   validateDomain,
   validateDomainBatch,
-} from '../../../../src/renderer/components/features/domain-tags/DomainValidation';
+} from '@/renderer/components/features/domain-tags/DomainValidation';
 
 // ======================================================================
 // validateDomain

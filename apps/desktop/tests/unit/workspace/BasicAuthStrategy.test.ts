@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BasicAuthStrategy } from '../../../src/services/workspace/git/auth/BasicAuthStrategy';
+import { BasicAuthStrategy } from '@/services/workspace/git/auth/BasicAuthStrategy';
 
 describe('BasicAuthStrategy', () => {
   const strategy = new BasicAuthStrategy();

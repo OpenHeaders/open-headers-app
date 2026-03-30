@@ -1,7 +1,7 @@
 import { message } from 'antd';
 import type React from 'react';
 import { createContext, useContext } from 'react';
-import { createLogger } from '../error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 
 const log = createLogger('MessageProvider');
 

@@ -5,11 +5,11 @@
 
 import { Spin } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { Recording } from '../../../../../types/recording';
-import { useSettings } from '../../../../contexts';
-import { useRecordPlayer } from '../../../../hooks/useRecordPlayer';
-import { RecordPlayer } from '../../../record';
-import type { RecordData } from '../../../record/player/hooks/usePlayerManager';
+import { RecordPlayer } from '@/renderer/components/record';
+import type { RecordData } from '@/renderer/components/record/player/hooks/usePlayerManager';
+import { useSettings } from '@/renderer/contexts';
+import { useRecordPlayer } from '@/renderer/hooks/useRecordPlayer';
+import type { Recording } from '@/types/recording';
 import WorkflowViewerTabs from './WorkflowViewerTabs';
 import { AUTO_SCROLL_CONFIG, TAB_KEYS, VIEW_MODES } from './WorkflowViewerTypes';
 import { createAutoScrollHandler, createHighlightHandlers } from './WorkflowViewerUtils';

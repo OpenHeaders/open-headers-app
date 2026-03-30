@@ -5,8 +5,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import mainLogger from '../../../../utils/mainLogger';
-import type { GitExecutor } from '../core/GitExecutor';
+import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
+import mainLogger from '@/utils/mainLogger';
 
 const _fsPromises = fs.promises;
 const { createLogger } = mainLogger;

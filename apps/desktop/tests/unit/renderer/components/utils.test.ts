@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  buildHeaderValue,
-  parseHeaderValue,
-} from '../../../../src/renderer/components/rules/header/unified-modal/utils';
+import { buildHeaderValue, parseHeaderValue } from '@/renderer/components/rules/header/unified-modal/utils';
 
 // ======================================================================
 // buildHeaderValue - non-cookie mode

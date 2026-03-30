@@ -7,11 +7,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { DATA_FORMAT_VERSION } from '../../../config/version';
-import { errorMessage } from '../../../types/common';
-import type { Workspace, WorkspaceType } from '../../../types/workspace';
-import atomicWriter from '../../../utils/atomicFileWriter';
-import mainLogger from '../../../utils/mainLogger';
+import { DATA_FORMAT_VERSION } from '@/config/version';
+import { errorMessage } from '@/types/common';
+import type { Workspace, WorkspaceType } from '@/types/workspace';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 import { sendPatchToRenderers } from './StateBroadcaster';
 import { workspaceDir } from './StatePersistence';
 import type { StateContext, WorkspaceSyncSchedulerLike } from './types';

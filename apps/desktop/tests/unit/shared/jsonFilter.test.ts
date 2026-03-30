@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyJsonFilter } from '../../../src/shared/jsonFilter';
+import { applyJsonFilter } from '@/shared/jsonFilter';
 
 describe('applyJsonFilter', () => {
   const sampleJson = JSON.stringify({

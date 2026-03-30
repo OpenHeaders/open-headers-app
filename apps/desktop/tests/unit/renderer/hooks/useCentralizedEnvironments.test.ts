@@ -80,7 +80,7 @@ vi.mock('../../../../src/renderer/hooks/environment', () => ({
   useEnvironmentSchema: () => mockSchema,
 }));
 
-import { useCentralizedEnvironments, useEnvironments } from '../../../../src/renderer/hooks/useCentralizedEnvironments';
+import { useCentralizedEnvironments, useEnvironments } from '@/renderer/hooks/useCentralizedEnvironments';
 
 // ---------------------------------------------------------------------------
 // Tests

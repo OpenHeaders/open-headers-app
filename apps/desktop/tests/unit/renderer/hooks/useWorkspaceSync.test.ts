@@ -41,7 +41,7 @@ Object.defineProperty(window, 'electronAPI', {
   writable: true,
 });
 
-import { useWorkspaceSync } from '../../../../src/renderer/hooks/app/useWorkspaceSync';
+import { useWorkspaceSync } from '@/renderer/hooks/app/useWorkspaceSync';
 
 // ---------------------------------------------------------------------------
 // Tests

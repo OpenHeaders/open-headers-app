@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import mainLogger from '../../utils/mainLogger';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('ConfigFileDetector');
 
-import { toErrno } from '../../types/common';
-import type { AnalysisResult, ConfigData, MainAnalysisResult } from '../../utils/configValidator';
-import { analyzeConfigFile } from '../../utils/configValidator';
+import { toErrno } from '@/types/common';
+import type { AnalysisResult, ConfigData, MainAnalysisResult } from '@/utils/configValidator';
+import { analyzeConfigFile } from '@/utils/configValidator';
 
 interface DetectionResult {
   success: boolean;

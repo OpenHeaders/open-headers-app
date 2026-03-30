@@ -1,9 +1,9 @@
 import zlib from 'node:zlib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { DATA_FORMAT_VERSION } from '../../../src/config/version';
-import type { IpcInvokeEvent } from '../../../src/types/common';
-import type { EnvironmentSchema } from '../../../src/types/environment';
-import type { Workspace } from '../../../src/types/workspace';
+import { DATA_FORMAT_VERSION } from '@/config/version';
+import type { IpcInvokeEvent } from '@/types/common';
+import type { EnvironmentSchema } from '@/types/environment';
+import type { Workspace } from '@/types/workspace';
 
 // --- Mocks ---
 
@@ -204,7 +204,7 @@ vi.mock('auto-launch', () => {
   return { default: MockAutoLaunch };
 });
 
-import { WorkspaceHandlers } from '../../../src/main/modules/ipc/handlers/workspaceHandlers';
+import { WorkspaceHandlers } from '@/main/modules/ipc/handlers/workspaceHandlers';
 
 const mockEvent = {
   sender: { send: vi.fn() },

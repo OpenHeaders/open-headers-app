@@ -5,8 +5,8 @@
  * settings used across the export/import functionality.
  */
 
-import { APP_VERSION, DATA_FORMAT_VERSION, SUPPORTED_DATA_VERSIONS } from '../../../../config/version.esm';
-import type { AuthType, WorkspaceType } from '../../../../types/workspace';
+import { APP_VERSION, DATA_FORMAT_VERSION, SUPPORTED_DATA_VERSIONS } from '@/config/version.esm';
+import type { AuthType, WorkspaceType } from '@/types/workspace';
 
 /**
  * Export file format options

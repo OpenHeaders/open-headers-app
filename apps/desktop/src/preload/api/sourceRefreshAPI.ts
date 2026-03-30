@@ -1,6 +1,6 @@
 import electron from 'electron';
-import type { Source } from '../../types/source';
-import type { RefreshStatusInfo, ScheduleUpdatedPayload, StatusChangedPayload } from '../../types/source-refresh';
+import type { Source } from '@/types/source';
+import type { RefreshStatusInfo, ScheduleUpdatedPayload, StatusChangedPayload } from '@/types/source-refresh';
 
 const { ipcRenderer } = electron;
 

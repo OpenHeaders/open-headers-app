@@ -7,11 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
 import WebSocket from 'ws';
-import { errorMessage } from '../../types/common';
-import type { RecordingMetadata } from '../../types/recording';
-import type { AppSettings } from '../../types/settings';
-import atomicWriter from '../../utils/atomicFileWriter';
-import mainLogger from '../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import type { RecordingMetadata } from '@/types/recording';
+import type { AppSettings } from '@/types/settings';
+import atomicWriter from '@/utils/atomicFileWriter';
+import mainLogger from '@/utils/mainLogger';
 import type { PreprocessorData } from './utils/recordingPreprocessor';
 import { preprocessRecordingForSave } from './utils/recordingPreprocessor';
 

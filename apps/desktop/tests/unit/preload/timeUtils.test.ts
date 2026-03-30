@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import timeUtils from '../../../src/preload/modules/timeUtils';
+import timeUtils from '@/preload/modules/timeUtils';
 
 describe('timeUtils', () => {
   describe('now()', () => {

@@ -4,8 +4,8 @@
  */
 
 import { Tabs } from 'antd';
-import type { Recording } from '../../../../../types/recording';
-import { RecordConsoleTab, RecordInfoTab, RecordNetworkTab, RecordStorageTab } from '../../../record';
+import { RecordConsoleTab, RecordInfoTab, RecordNetworkTab, RecordStorageTab } from '@/renderer/components/record';
+import type { Recording } from '@/types/recording';
 import WorkflowViewerControls from './WorkflowViewerControls';
 import { DEFAULT_TAB_STYLES, TAB_KEYS } from './WorkflowViewerTypes';
 

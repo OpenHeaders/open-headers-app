@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import electron from 'electron';
-import type { HeaderRule } from '../../../../services/proxy/ProxyService';
-import proxyService from '../../../../services/proxy/ProxyService';
-import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';
-import { errorMessage } from '../../../../types/common';
-import type { EnvironmentsFile, EnvironmentVariable } from '../../../../types/environment';
-import type { ProxyRule } from '../../../../types/proxy';
-import mainLogger from '../../../../utils/mainLogger';
+import type { HeaderRule } from '@/services/proxy/ProxyService';
+import proxyService from '@/services/proxy/ProxyService';
+import type { IpcInvokeEvent, OperationResult } from '@/types/common';
+import { errorMessage } from '@/types/common';
+import type { EnvironmentsFile, EnvironmentVariable } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import mainLogger from '@/utils/mainLogger';
 import settingsHandlers from './settingsHandlers';
 
 const { app } = electron;

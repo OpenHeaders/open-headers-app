@@ -5,11 +5,11 @@
  * and SyncBroadcaster.
  */
 
-import type { EnvironmentMap, EnvironmentSchema } from '../../../types/environment';
-import type { ProxyRule } from '../../../types/proxy';
-import type { RulesCollection } from '../../../types/rules';
-import type { Source } from '../../../types/source';
-import type { CommitInfo, Workspace, WorkspaceAuthData, WorkspaceSyncStatus } from '../../../types/workspace';
+import type { EnvironmentMap, EnvironmentSchema } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { RulesCollection } from '@/types/rules';
+import type { Source } from '@/types/source';
+import type { CommitInfo, Workspace, WorkspaceAuthData, WorkspaceSyncStatus } from '@/types/workspace';
 
 // ── Sync operation types ─────────────────────────────────────────
 

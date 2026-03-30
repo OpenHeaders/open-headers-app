@@ -53,7 +53,7 @@ vi.mock('../../../../src/renderer/hooks/useCentralizedWorkspace', () => ({
   }),
 }));
 
-import { useEnvironmentCore } from '../../../../src/renderer/hooks/environment/useEnvironmentCore';
+import { useEnvironmentCore } from '@/renderer/hooks/environment/useEnvironmentCore';
 
 // ---------------------------------------------------------------------------
 // Enterprise data

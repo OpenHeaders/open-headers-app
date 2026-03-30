@@ -2,12 +2,12 @@
  * Shared types for WorkspaceStateService and its submodules.
  */
 
-import type { EnvironmentMap } from '../../../types/environment';
-import type { ProxyRule } from '../../../types/proxy';
-import type { HeaderRule, RulesCollection } from '../../../types/rules';
-import type { Source } from '../../../types/source';
-import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '../../../types/workspace';
-import type { SyncData } from '../sync/types';
+import type { SyncData } from '@/services/workspace/sync/types';
+import type { EnvironmentMap } from '@/types/environment';
+import type { ProxyRule } from '@/types/proxy';
+import type { HeaderRule, RulesCollection } from '@/types/rules';
+import type { Source } from '@/types/source';
+import type { Workspace, WorkspaceMetadata, WorkspaceSyncStatus } from '@/types/workspace';
 
 // ── State shape ───────────────────────────────────────────────────
 

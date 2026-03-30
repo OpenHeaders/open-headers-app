@@ -3,7 +3,7 @@
  * Applies JSON path traversal to extract values from responses.
  */
 
-import type { JsonArray, JsonObject } from '../types/common';
+import type { JsonArray, JsonObject } from '@/types/common';
 
 export interface JsonFilterConfig {
   enabled: boolean;

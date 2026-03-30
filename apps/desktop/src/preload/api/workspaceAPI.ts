@@ -1,7 +1,7 @@
 import type { IpcRendererEvent } from 'electron';
 import electron from 'electron';
-import type { OperationResult } from '../../types/common';
-import type { EnvironmentConfigData, EnvironmentMap, EnvironmentSchema } from '../../types/environment';
+import type { OperationResult } from '@/types/common';
+import type { EnvironmentConfigData, EnvironmentMap, EnvironmentSchema } from '@/types/environment';
 import type {
   CliWorkspaceJoinedData,
   ServicesHealth,
@@ -10,7 +10,7 @@ import type {
   WorkspaceAuthData,
   WorkspaceDataUpdatedData,
   WorkspaceSyncCompletedData,
-} from '../../types/workspace';
+} from '@/types/workspace';
 
 const { ipcRenderer } = electron;
 

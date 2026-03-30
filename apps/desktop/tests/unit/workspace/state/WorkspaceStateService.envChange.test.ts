@@ -8,7 +8,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '../../../../src/types/source';
+import type { Source } from '@/types/source';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -35,8 +35,8 @@ import type {
   ProxyServiceLike,
   SourceRefreshServiceLike,
   WebSocketServiceLike,
-} from '../../../../src/services/workspace/state/types';
-import { WorkspaceStateService } from '../../../../src/services/workspace/WorkspaceStateService';
+} from '@/services/workspace/state/types';
+import { WorkspaceStateService } from '@/services/workspace/WorkspaceStateService';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 

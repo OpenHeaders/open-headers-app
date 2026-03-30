@@ -5,19 +5,19 @@
  * handles file operations, and provides comprehensive error handling.
  */
 
-import { createLogger } from '../../../utils/error-handling/logger';
-import { showMessage } from '../../../utils/ui/messageUtil';
-import { EnvironmentsHandler } from '../handlers/EnvironmentsHandler';
-import { ProxyRulesHandler } from '../handlers/ProxyRulesHandler';
-import { RulesHandler } from '../handlers/RulesHandler';
-import { SourcesHandler } from '../handlers/SourcesHandler';
-import { WorkspaceHandler } from '../handlers/WorkspaceHandler';
+import { EnvironmentsHandler } from '@/renderer/services/export-import/handlers/EnvironmentsHandler';
+import { ProxyRulesHandler } from '@/renderer/services/export-import/handlers/ProxyRulesHandler';
+import { RulesHandler } from '@/renderer/services/export-import/handlers/RulesHandler';
+import { SourcesHandler } from '@/renderer/services/export-import/handlers/SourcesHandler';
+import { WorkspaceHandler } from '@/renderer/services/export-import/handlers/WorkspaceHandler';
 import {
   generateTimestampedFilename,
   handleMultiFileExport,
   handleSingleFileExport,
-} from '../utilities/FileOperations';
-import { generateExportSuccessMessage } from '../utilities/MessageGeneration';
+} from '@/renderer/services/export-import/utilities/FileOperations';
+import { generateExportSuccessMessage } from '@/renderer/services/export-import/utilities/MessageGeneration';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import { DEFAULTS, FILE_FORMATS } from './ExportImportConfig';
 import type { ExportData, ExportImportDependencies, ExportOptions } from './types';
 

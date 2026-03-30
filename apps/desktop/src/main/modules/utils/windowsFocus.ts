@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron';
-import { errorMessage } from '../../../types/common';
-import mainLogger from '../../../utils/mainLogger';
+import { errorMessage } from '@/types/common';
+import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;
 const log = createLogger('WindowsFocus');

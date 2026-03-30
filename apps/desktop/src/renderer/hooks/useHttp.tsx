@@ -6,8 +6,8 @@
  */
 
 import { useCallback } from 'react';
-import type { HttpRequestResult, HttpRequestSpec, TestResponseContent } from '../../types/http';
-import { createLogger } from '../utils/error-handling/logger';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
+import type { HttpRequestResult, HttpRequestSpec, TestResponseContent } from '@/types/http';
 
 const log = createLogger('useHttp');
 

@@ -8,7 +8,7 @@
 
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { useWorkspaces } from '../data';
+import { useWorkspaces } from '@/renderer/contexts/data';
 
 interface TotpContextValue {
   canUseTotpForSource: (sourceId: string) => boolean;

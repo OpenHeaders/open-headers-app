@@ -10,7 +10,7 @@
  */
 
 import { Tag, Tooltip } from 'antd';
-import type { StorageRecord } from '../../../../types/recording';
+import type { StorageRecord } from '@/types/recording';
 import { getActionColor, getActionTooltip } from './StorageUtils';
 
 interface StorageActionCellProps {

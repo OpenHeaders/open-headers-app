@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { WSClientHandler } from '../../../src/services/websocket/ws-client-handler';
-import type { WSClientInfo } from '../../../src/types/websocket';
+import { WSClientHandler } from '@/services/websocket/ws-client-handler';
+import type { WSClientInfo } from '@/types/websocket';
 
 function makeClientInfo(overrides: Partial<WSClientInfo> & { id: string }): WSClientInfo {
   return {
