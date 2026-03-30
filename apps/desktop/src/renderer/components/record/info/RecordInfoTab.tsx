@@ -1,6 +1,6 @@
+import type { Recording } from '@openheaders/core';
 import { Descriptions, Typography } from 'antd';
 import { format24HTimeWithMs, formatDuration } from '@/renderer/utils';
-import type { Recording } from '@/types/recording';
 
 const { Text } = Typography;
 

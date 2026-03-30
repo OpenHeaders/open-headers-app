@@ -1,7 +1,3 @@
-import type { FormInstance } from 'antd';
-import type React from 'react';
-import { showMessage } from '@/renderer/utils';
-import { createLogger } from '@/renderer/utils/error-handling/logger';
 import type {
   JsonFilter,
   RefreshOptions,
@@ -9,7 +5,11 @@ import type {
   SourceMethod,
   SourceRequestOptions,
   SourceType,
-} from '@/types/source';
+} from '@openheaders/core';
+import type { FormInstance } from 'antd';
+import type React from 'react';
+import { showMessage } from '@/renderer/utils';
+import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { validateAllFormFields } from './form-validation';
 
 const log = createLogger('FormSubmissionHandler');

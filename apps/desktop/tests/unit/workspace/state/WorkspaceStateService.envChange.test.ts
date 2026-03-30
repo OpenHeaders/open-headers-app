@@ -7,8 +7,8 @@
  *  3. Sources with env var references and resolved values changed → re-fetch
  */
 
+import type { Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '@/types/source';
 
 // Mock electron
 vi.mock('electron', () => ({

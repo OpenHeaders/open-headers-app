@@ -5,13 +5,13 @@
  */
 
 import { EnvironmentOutlined } from '@ant-design/icons';
+import type { HeaderRule } from '@openheaders/core';
 import { Card, Form, Space, theme } from 'antd';
 import { useEffect, useState } from 'react';
 import { useEnvironments, useSettings, useSources } from '@/renderer/contexts';
 import { useHeaderRules } from '@/renderer/hooks/useCentralizedWorkspace';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import type { HeaderRule } from '@/types/rules';
 import { MissingVariablesAlert, TutorialInfo, VariableUsageSummary } from './EnvironmentInfo';
 import { AddVariableModal, CreateEnvironmentModal } from './EnvironmentModals';
 import EnvironmentSelector from './EnvironmentSelector';

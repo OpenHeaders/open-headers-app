@@ -10,9 +10,9 @@
  */
 
 import { InfoCircleOutlined } from '@ant-design/icons';
+import type { Recording } from '@openheaders/core';
 import { Space, Tooltip, Typography } from 'antd';
 import { format24HTimeWithMs, formatDuration } from '@/renderer/utils';
-import type { Recording } from '@/types/recording';
 
 const { Text } = Typography;
 

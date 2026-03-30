@@ -1,8 +1,8 @@
+import type { HeaderRule } from '@openheaders/core';
 import { describe, expect, it, vi } from 'vitest';
 import { IMPORT_MODES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type { ExportImportDependencies, RuleEntry } from '@/renderer/services/export-import/core/types';
 import { RulesHandler } from '@/renderer/services/export-import/handlers/RulesHandler';
-import type { HeaderRule } from '@/types/rules';
 
 // ---------------------------------------------------------------------------
 // Helpers

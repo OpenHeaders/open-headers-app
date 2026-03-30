@@ -13,10 +13,10 @@
  * - Support for validation warnings vs hard errors
  */
 
+import type { Source } from '@openheaders/core';
 import { ERROR_MESSAGES, VALIDATION_RULES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import type { EnvironmentSchema } from '@/renderer/services/export-import/core/types';
 import type { ProxyRule } from '@/types/proxy';
-import type { Source } from '@/types/source';
 
 /** Validation result returned by all validation functions */
 interface ValidationResult {

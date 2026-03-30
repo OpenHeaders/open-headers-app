@@ -5,8 +5,8 @@
  * Each rule type has its own properties but shares common fields.
  */
 
+import type { RulesStorage } from '@openheaders/core';
 import { DATA_FORMAT_VERSION } from '@/config/version.esm';
-import type { RulesStorage } from '@/types/rules';
 
 // Rule types enum
 export const RULE_TYPES = {

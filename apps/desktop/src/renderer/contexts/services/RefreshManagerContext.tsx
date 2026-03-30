@@ -14,11 +14,11 @@
  * are not part of the core workspace state.
  */
 
+import type { Source } from '@openheaders/core';
 import type React from 'react';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useSources } from '@/renderer/hooks/workspace';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { Source } from '@/types/source';
 
 const _log = createLogger('RefreshManagerContext');
 

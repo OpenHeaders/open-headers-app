@@ -3,13 +3,13 @@
  * Handles workflow record display, playback, and interactions
  */
 
+import type { Recording } from '@openheaders/core';
 import { Spin } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RecordPlayer } from '@/renderer/components/record';
 import type { RecordData } from '@/renderer/components/record/player/hooks/usePlayerManager';
 import { useSettings } from '@/renderer/contexts';
 import { useRecordPlayer } from '@/renderer/hooks/useRecordPlayer';
-import type { Recording } from '@/types/recording';
 import WorkflowViewerTabs from './WorkflowViewerTabs';
 import { AUTO_SCROLL_CONFIG, TAB_KEYS, VIEW_MODES } from './WorkflowViewerTypes';
 import { createAutoScrollHandler, createHighlightHandlers } from './WorkflowViewerUtils';

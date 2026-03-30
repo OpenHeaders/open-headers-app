@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock electron before importing the service
@@ -24,7 +25,6 @@ vi.mock('@/utils/mainLogger', () => ({
 import { HttpRequestService } from '@/services/http/HttpRequestService';
 import { TotpCooldownTracker } from '@/services/http/TotpCooldownTracker';
 import { SourceRefreshService } from '@/services/source-refresh/SourceRefreshService';
-import type { Source } from '@/types/source';
 
 function makeHttpSource(id: string, overrides: Partial<Source> = {}): Source {
   return {

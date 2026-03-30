@@ -6,9 +6,9 @@
  * that SourceRefreshService expects. No direct HTTP or TOTP logic.
  */
 
+import type { Source } from '@openheaders/core';
 import type { HttpRequestService } from '@/services/http/HttpRequestService';
 import type { HttpRequestSpec } from '@/types/http';
-import type { Source } from '@/types/source';
 import type { FetchResult } from '@/types/source-refresh';
 import mainLogger from '@/utils/mainLogger';
 

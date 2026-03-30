@@ -1,6 +1,6 @@
+import type { Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WSSourceHandler } from '@/services/websocket/ws-source-handler';
-import type { Source } from '@/types/source';
 
 function makeSource(overrides: Partial<Source> & { sourceId: string }): Source {
   return {

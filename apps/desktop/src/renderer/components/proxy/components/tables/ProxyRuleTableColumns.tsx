@@ -1,14 +1,13 @@
 import { DeleteOutlined, EditOutlined, EnvironmentOutlined, LinkOutlined, SolutionOutlined } from '@ant-design/icons';
+import type { HeaderRule, Source } from '@openheaders/core';
 import { Button, Popconfirm, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import { truncateValue } from '@/renderer/components/proxy/utils';
 import { useEnvironments } from '@/renderer/contexts';
 import { checkRuleActivation, getResolvedPreview } from '@/renderer/utils/validation/environment-variables';
 import type { ProxyRule } from '@/types/proxy';
-import type { HeaderRule } from '@/types/rules';
-import type { Source } from '@/types/source';
 
+export type { HeaderRule } from '@openheaders/core';
 export type { ProxyRule } from '@/types/proxy';
-export type { HeaderRule } from '@/types/rules';
 
 const { Text } = Typography;
 

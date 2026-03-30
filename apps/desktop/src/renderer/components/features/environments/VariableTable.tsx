@@ -13,11 +13,11 @@ import {
   PlusOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import type { Source } from '@openheaders/core';
 import { Button, Empty, Form, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
 import React, { useState } from 'react';
 import { showMessage } from '@/renderer/utils';
 import { isJWT } from '@/renderer/utils/jwtUtils';
-import type { Source } from '@/types/source';
 import EditableCell from './EditableCell';
 import JWTEditorModal from './JWTEditorModal';
 

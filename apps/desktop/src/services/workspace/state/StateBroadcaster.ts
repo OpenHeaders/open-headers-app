@@ -5,9 +5,9 @@
  * source refresh service, and renderer windows via IPC.
  */
 
+import type { Source } from '@openheaders/core';
 import electron from 'electron';
 import { errorMessage } from '@/types/common';
-import type { Source } from '@/types/source';
 import mainLogger from '@/utils/mainLogger';
 import type { ProxyServiceLike, SourceRefreshServiceLike, WebSocketServiceLike, WorkspaceState } from './types';
 

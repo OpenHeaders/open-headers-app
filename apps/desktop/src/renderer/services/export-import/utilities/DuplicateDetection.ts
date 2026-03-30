@@ -12,8 +12,8 @@
  * - Configurable duplicate detection strategies
  */
 
+import type { Source } from '@openheaders/core';
 import type { ProxyRule } from '@/types/proxy';
-import type { Source } from '@/types/source';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 

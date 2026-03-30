@@ -8,8 +8,8 @@
  * @param {Object} props.record - Storage record with metadata
  */
 
+import type { StorageRecord } from '@openheaders/core';
 import { Tag, Tooltip } from 'antd';
-import type { StorageRecord } from '@/types/recording';
 
 interface StorageAttributesCellProps {
   record: StorageRecord;

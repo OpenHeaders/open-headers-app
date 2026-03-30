@@ -24,8 +24,8 @@
  * @since 3.0.0
  */
 
+import type { Source } from '@openheaders/core';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import type { Source } from '@/types/source';
 import { debugRefreshState } from './SourceTableUtils';
 
 interface LoggerLike {

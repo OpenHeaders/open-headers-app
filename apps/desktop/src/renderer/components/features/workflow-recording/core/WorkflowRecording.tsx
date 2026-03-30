@@ -4,6 +4,7 @@
  */
 
 import { TableOutlined } from '@ant-design/icons';
+import type { Recording, WorkflowRecordingEntry } from '@openheaders/core';
 import { Alert, Button, Card, theme } from 'antd';
 import type React from 'react';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,6 @@ import { WorkflowsTable } from '@/renderer/components/features/workflow-recordin
 import { WorkflowViewer } from '@/renderer/components/features/workflow-recording/viewer';
 import { useSettings } from '@/renderer/contexts';
 import { convertNewRecordingFormat } from '@/renderer/utils';
-import type { Recording, WorkflowRecordingEntry } from '@/types/recording';
 
 interface WorkflowRecordingProps {
   record: Recording | null;

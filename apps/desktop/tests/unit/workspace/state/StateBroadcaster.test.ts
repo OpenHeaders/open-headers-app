@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSend = vi.fn();
@@ -28,7 +29,6 @@ import type {
   WebSocketServiceLike,
   WorkspaceState,
 } from '@/services/workspace/state/types';
-import type { Source } from '@/types/source';
 
 function makeState(overrides: Partial<WorkspaceState> = {}): WorkspaceState {
   return {

@@ -1,10 +1,10 @@
+import type { RawRecordingRecord, StorageRecord } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   convertNewRecordingFormat,
   convertStorageForTable,
   processStorageEvents,
 } from '@/renderer/utils/formatters/recordConverter';
-import type { RawRecordingRecord, StorageRecord } from '@/types/recording';
 
 // ======================================================================
 // extractDomain (internal, tested indirectly via processStorageEvents)

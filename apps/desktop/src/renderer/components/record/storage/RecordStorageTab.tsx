@@ -12,6 +12,7 @@
  */
 
 import { ClearOutlined, InfoCircleOutlined, SearchOutlined } from '@ant-design/icons';
+import type { Recording, StorageRecord } from '@openheaders/core';
 import { App, Button, Empty, Table, Tag, Tooltip, Typography, theme } from 'antd';
 import type { FilterValue } from 'antd/es/table/interface';
 import type React from 'react';
@@ -21,7 +22,6 @@ import SearchOverlay from '@/renderer/components/record/shared/SearchOverlay';
 import TimestampCell from '@/renderer/components/record/shared/TimestampCell';
 import { useSearchFilter } from '@/renderer/components/record/shared/useSearchFilter';
 import { useTimeHighlight } from '@/renderer/components/record/shared/useTimeHighlight';
-import type { Recording, StorageRecord } from '@/types/recording';
 import StorageActionCell from './StorageActionCell';
 import StorageAttributesCell from './StorageAttributesCell';
 import StorageChangeCell from './StorageChangeCell';

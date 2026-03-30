@@ -1,8 +1,8 @@
+import type { RefreshOptions, Source, SourceUpdate } from '@openheaders/core';
 import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '@/renderer/hooks/useCentralizedWorkspace';
 import { showMessage } from '@/renderer/utils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { RefreshOptions, Source, SourceUpdate } from '@/types/source';
 
 const log = createLogger('useSources');
 

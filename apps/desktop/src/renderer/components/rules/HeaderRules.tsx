@@ -9,6 +9,7 @@ import {
   PlusOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import type { HeaderRule } from '@openheaders/core';
 import { Alert, Button, Card, Empty, Popconfirm, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
@@ -18,7 +19,6 @@ import { useHeaderRules } from '@/renderer/hooks/useCentralizedWorkspace';
 import { createRule, RULE_TYPES, showMessage } from '@/renderer/utils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { checkRuleActivation, getResolvedPreview } from '@/renderer/utils/validation/environment-variables';
-import type { HeaderRule } from '@/types/rules';
 import UnifiedHeaderModal from './header/unified-modal/UnifiedHeaderModal';
 
 const log = createLogger('HeaderRules');

@@ -1,3 +1,4 @@
+import type { Recording, Source } from '@openheaders/core';
 import { Layout, theme } from 'antd';
 import type React from 'react';
 import TrayMenu from '@/renderer/components/features/TrayMenu';
@@ -15,9 +16,7 @@ import { DebugWorkspaceSync } from '@/renderer/components/status/DebugWorkspaceS
 import type { UpdateNotificationHandle } from '@/renderer/hooks/app/useUpdateChecker';
 import type { ExportOptions, ImportOptions } from '@/renderer/services/export-import/core/types';
 import type { EnvironmentConfigData } from '@/types/environment';
-import type { Recording } from '@/types/recording';
 import type { AppSettings } from '@/types/settings';
-import type { Source } from '@/types/source';
 import { AppFooter } from './AppFooter';
 import { AppHeader } from './AppHeader';
 import { AppTabs } from './AppTabs';

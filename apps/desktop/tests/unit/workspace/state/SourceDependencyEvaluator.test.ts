@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 import { describe, expect, it, vi } from 'vitest';
 import {
   activateReadySources,
@@ -6,7 +7,6 @@ import {
   extractVariablesFromSource,
 } from '@/services/workspace/state/SourceDependencyEvaluator';
 import type { EnvironmentResolverLike } from '@/services/workspace/state/types';
-import type { Source } from '@/types/source';
 
 function httpSource(overrides: Partial<Source> = {}): Source {
   return {

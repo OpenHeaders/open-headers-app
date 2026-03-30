@@ -3,9 +3,9 @@
  * Tests for useEnvironmentSchema hook — validates variable usage analysis and schema generation.
  */
 
+import type { Source } from '@openheaders/core';
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks

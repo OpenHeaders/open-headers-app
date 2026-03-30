@@ -1,3 +1,4 @@
+import type { RulesCollection, Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock electron
@@ -36,8 +37,6 @@ import {
   saveWorkspacesConfig,
   workspaceDir,
 } from '@/services/workspace/state/StatePersistence';
-import type { RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 
 beforeEach(() => {
   vi.clearAllMocks();

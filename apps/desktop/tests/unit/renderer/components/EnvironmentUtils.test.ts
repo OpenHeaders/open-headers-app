@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   checkMissingVariables,
@@ -8,7 +9,6 @@ import {
   sourceUsesVariables,
 } from '@/renderer/components/features/environments/EnvironmentUtils';
 import type { EnvironmentVariables } from '@/types/environment';
-import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Enterprise-realistic factory

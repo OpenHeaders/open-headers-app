@@ -9,6 +9,7 @@
  *  - Notifies WebSocket service and renderer when content changes
  */
 
+import type { Source } from '@openheaders/core';
 import electron from 'electron';
 import type { HttpRequestService } from '@/services/http/HttpRequestService';
 import { AdaptiveCircuitBreakerManager } from '@/shared/AdaptiveCircuitBreaker';
@@ -21,7 +22,6 @@ import {
   OVERDUE_RETRY_CONFIG,
 } from '@/shared/retryConfig';
 import { errorMessage } from '@/types/common';
-import type { Source } from '@/types/source';
 import type { FetchResult, RefreshStatusInfo } from '@/types/source-refresh';
 import mainLogger from '@/utils/mainLogger';
 import { fetchSourceContent } from './SourceFetcher';

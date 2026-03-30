@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 /**
  * Source Dependency Checker
  *
@@ -23,8 +24,6 @@
  * @module SourceDependencyChecker
  * @since 3.0.0
  */
-
-import type { Source } from '@/types/source';
 
 /**
  * Checks if source has missing dependencies for activation

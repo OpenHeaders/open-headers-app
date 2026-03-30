@@ -7,7 +7,7 @@ import type {
   RecordingEventData,
   RecordingMetadata,
   StorageRecord,
-} from '@/types/recording';
+} from '@openheaders/core';
 
 interface ParsedCookie {
   name: string;

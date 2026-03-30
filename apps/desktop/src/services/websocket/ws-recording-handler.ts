@@ -5,10 +5,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { RecordingMetadata } from '@openheaders/core';
 import electron from 'electron';
 import WebSocket from 'ws';
 import { errorMessage } from '@/types/common';
-import type { RecordingMetadata } from '@/types/recording';
 import type { AppSettings } from '@/types/settings';
 import atomicWriter from '@/utils/atomicFileWriter';
 import mainLogger from '@/utils/mainLogger';

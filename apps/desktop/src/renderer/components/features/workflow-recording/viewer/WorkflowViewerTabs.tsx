@@ -3,9 +3,9 @@
  * Renders Console, Network, Storage, and Info tabs
  */
 
+import type { Recording } from '@openheaders/core';
 import { Tabs } from 'antd';
 import { RecordConsoleTab, RecordInfoTab, RecordNetworkTab, RecordStorageTab } from '@/renderer/components/record';
-import type { Recording } from '@/types/recording';
 import WorkflowViewerControls from './WorkflowViewerControls';
 import { DEFAULT_TAB_STYLES, TAB_KEYS } from './WorkflowViewerTypes';
 

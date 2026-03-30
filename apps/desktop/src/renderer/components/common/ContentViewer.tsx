@@ -23,9 +23,9 @@
  */
 
 import { CheckOutlined, CopyOutlined, FileTextOutlined } from '@ant-design/icons';
+import type { Source } from '@openheaders/core';
 import { Button, Card, Modal, Typography } from 'antd';
 import React, { useEffect, useState } from 'react';
-import type { Source } from '@/types/source';
 import { ContentTabs, createCopyHandler, extractHeaders, formatContent } from './content-viewer';
 
 const { Text } = Typography;

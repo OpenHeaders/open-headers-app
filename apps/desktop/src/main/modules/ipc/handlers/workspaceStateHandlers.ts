@@ -5,12 +5,11 @@
  * The renderer calls ipcRenderer.invoke() and receives results.
  */
 
+import type { HeaderRule, Source, SourceUpdate } from '@openheaders/core';
 import { ipcMain } from 'electron';
 import workspaceStateService from '@/services/workspace/WorkspaceStateService';
 import { errorMessage } from '@/types/common';
 import type { ProxyRule } from '@/types/proxy';
-import type { HeaderRule } from '@/types/rules';
-import type { Source, SourceUpdate } from '@/types/source';
 import type { Workspace, WorkspaceType } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 

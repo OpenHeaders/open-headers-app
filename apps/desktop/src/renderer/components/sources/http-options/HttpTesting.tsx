@@ -6,10 +6,6 @@
  * TOTP generation, and HTTP execution happen in main.
  */
 
-import type { FormInstance } from 'antd';
-import type React from 'react';
-import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import type { EnvironmentContextLike, HttpProgressCallback, HttpRequestSpec, TestResponseContent } from '@/types/http';
 import type {
   JsonFilter,
   SourceHeader,
@@ -17,7 +13,11 @@ import type {
   SourceQueryParam,
   SourceRequestOptions,
   SourceType,
-} from '@/types/source';
+} from '@openheaders/core';
+import type { FormInstance } from 'antd';
+import type React from 'react';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import type { EnvironmentContextLike, HttpProgressCallback, HttpRequestSpec, TestResponseContent } from '@/types/http';
 import { validateAllHttpFields } from './HttpValidation';
 
 interface TotpState {

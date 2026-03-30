@@ -8,11 +8,10 @@
  * and WorkspaceStateService.
  */
 
+import type { HeaderRule, RulesCollection, Source } from '@openheaders/core';
 import WebSocket from 'ws';
 import { DATA_FORMAT_VERSION } from '@/config/version';
 import { errorMessage } from '@/types/common';
-import type { HeaderRule, RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

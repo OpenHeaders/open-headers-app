@@ -14,8 +14,8 @@
  * @since 3.0.0
  */
 
+import type { SourceType } from '@openheaders/core';
 import type { FormInstance } from 'antd';
-import type { SourceType } from '@/types/source';
 
 interface LoggerLike {
   debug: (message: string, data?: unknown) => void;

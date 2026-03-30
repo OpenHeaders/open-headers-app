@@ -4,10 +4,10 @@
  * Handles app startup effects including version retrieval and record opening setup.
  */
 
+import type { RawRecordingRecord, Recording } from '@openheaders/core';
 import { useEffect } from 'react';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { convertNewRecordingFormat } from '@/renderer/utils/formatters/recordConverter';
-import type { RawRecordingRecord, Recording } from '@/types/recording';
 
 const log = createLogger('useAppInitialization');
 

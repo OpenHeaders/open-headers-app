@@ -1,10 +1,10 @@
+import type { Source } from '@openheaders/core';
 import type { FormInstance } from 'antd';
 import { Checkbox, Col, Form, Input, Row } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
 import type React from 'react';
 import HttpOptions from '@/renderer/components/sources/HttpOptions';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { Source } from '@/types/source';
 import type { EditSourceFormValues } from './form-submission-handler';
 import { validateEnvironmentVariables, validateTotpCodePlaceholder } from './form-validation';
 

@@ -1,3 +1,4 @@
+import type { HeaderRule, PayloadRule, UrlRule } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   createRule,
@@ -7,7 +8,6 @@ import {
   RULE_TYPES,
   validateRule,
 } from '@/renderer/utils/data-structures/rulesStructure';
-import type { HeaderRule, PayloadRule, UrlRule } from '@/types/rules';
 
 function createHeaderRule(overrides: Record<string, unknown> = {}): HeaderRule {
   return createRule(RULE_TYPES.HEADER, overrides) as HeaderRule;

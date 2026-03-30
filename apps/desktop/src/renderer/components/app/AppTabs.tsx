@@ -6,6 +6,7 @@ import {
   SettingOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
+import type { Recording, Source } from '@openheaders/core';
 import { Alert, Tabs } from 'antd';
 import { lazy, Suspense } from 'react';
 import {
@@ -18,8 +19,6 @@ import { WorkflowDetails, WorkflowRecording } from '@/renderer/components/featur
 import SourceForm from '@/renderer/components/sources/SourceForm';
 import SourceTable from '@/renderer/components/sources/SourceTable';
 import type { NewSourceData } from '@/renderer/components/sources/source-form';
-import type { Recording } from '@/types/recording';
-import type { Source } from '@/types/source';
 
 // Lazy-load tab content that isn't visible on first render.
 // These modules (and their sub-trees) are only parsed when the tab is first activated.

@@ -1,7 +1,7 @@
+import type { DomNode, RecordingMetadata, RRWebEvent, RRWebInnerData } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import type { PreprocessorData } from '@/services/websocket/utils/recordingPreprocessor';
 import { preprocessRecordingForSave } from '@/services/websocket/utils/recordingPreprocessor';
-import type { DomNode, RecordingMetadata, RRWebEvent, RRWebInnerData } from '@/types/recording';
 
 /** Get the DomNode from a preprocessor result event */
 function getNode(result: PreprocessorData, eventIndex: number): DomNode {

@@ -1,5 +1,5 @@
+import type { JsonFilter, SourceHeader, SourceQueryParam } from '@openheaders/core';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { JsonFilter, SourceHeader, SourceQueryParam } from '@/types/source';
 
 const log = createLogger('FormValidation');
 

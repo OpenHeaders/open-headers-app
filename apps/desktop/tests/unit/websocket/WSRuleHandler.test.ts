@@ -1,7 +1,6 @@
+import type { HeaderRule, RulesCollection, Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { WSRuleHandler } from '@/services/websocket/ws-rule-handler';
-import type { HeaderRule, RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 
 const emptyRules: RulesCollection = { header: [], request: [], response: [] };
 

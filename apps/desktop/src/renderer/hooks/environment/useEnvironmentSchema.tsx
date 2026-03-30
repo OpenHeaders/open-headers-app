@@ -1,7 +1,7 @@
+import type { Source } from '@openheaders/core';
 import { useCallback } from 'react';
 import type { EnvironmentSchema } from '@/renderer/services/export-import/core/types';
 import type { EnvironmentVariable } from '@/types/environment';
-import type { Source } from '@/types/source';
 import { useEnvironmentCore } from './useEnvironmentCore';
 
 interface VariableUsage {

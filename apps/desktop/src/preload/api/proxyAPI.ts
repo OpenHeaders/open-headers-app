@@ -1,7 +1,6 @@
+import type { HeaderRule, Source } from '@openheaders/core';
 import electron from 'electron';
 import type { CacheEntry, CacheStats, ProxyCertificateInfo, ProxyRule, ProxyStatus } from '@/types/proxy';
-import type { HeaderRule } from '@/types/rules';
-import type { Source } from '@/types/source';
 
 const { ipcRenderer } = electron;
 

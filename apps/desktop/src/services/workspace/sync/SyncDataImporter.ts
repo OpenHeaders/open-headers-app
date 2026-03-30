@@ -13,6 +13,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { Source } from '@openheaders/core';
 import electron from 'electron';
 import { DATA_FORMAT_VERSION } from '@/config/version';
 import {
@@ -24,7 +25,6 @@ import {
   validateEnvironmentWrite,
 } from '@/services/workspace/git/utils/EnvironmentSyncUtils';
 import type { EnvironmentMap, EnvironmentsFile } from '@/types/environment';
-import type { Source } from '@/types/source';
 import atomicWriter from '@/utils/atomicFileWriter';
 import mainLogger from '@/utils/mainLogger';
 import { broadcastToRenderers } from './SyncBroadcaster';

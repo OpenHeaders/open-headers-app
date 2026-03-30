@@ -6,6 +6,7 @@
  * via IPC, and initial HTTP fetches to HttpRequestService via IPC.
  */
 
+import type { NewSourceData, Source } from '@openheaders/core';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HttpRequestResult } from '@/types/http';
@@ -29,7 +30,6 @@ vi.mock('@/renderer/utils', () => ({
 
 import { useSourceRefresh } from '@/renderer/hooks/sources/useSourceRefresh';
 import { showMessage } from '@/renderer/utils';
-import type { NewSourceData, Source } from '@/types/source';
 
 const mockExecuteRequest = vi.fn<() => Promise<HttpRequestResult>>();
 const mockManualRefresh = vi.fn<() => Promise<{ success: boolean; error?: string }>>();

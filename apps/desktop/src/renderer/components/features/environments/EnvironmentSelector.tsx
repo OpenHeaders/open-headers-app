@@ -11,13 +11,13 @@ import {
   ShareAltOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import type { Source } from '@openheaders/core';
 import type { MenuProps } from 'antd';
 import { Button, Col, Dropdown, Modal, Row, Select, Space, Tag, Typography } from 'antd';
 import type React from 'react';
 import { useState } from 'react';
 import EnvironmentShareModal from '@/renderer/components/modals/EnvironmentShareModal';
 import type { EnvironmentVariable } from '@/types/environment';
-import type { Source } from '@/types/source';
 import { checkMissingVariables } from './EnvironmentUtils';
 
 const { Option } = Select;

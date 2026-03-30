@@ -1,3 +1,4 @@
+import type { Source } from '@openheaders/core';
 import { Empty, Table, Typography, theme } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ContentViewer from '@/renderer/components/common/ContentViewer';
@@ -6,7 +7,6 @@ import EditSourceModal from '@/renderer/components/modals/edit-source';
 import { useEnvironments, useRefreshManager } from '@/renderer/contexts';
 import timeManager from '@/renderer/services/TimeManager';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { Source } from '@/types/source';
 import {
   checkSourceDependencies,
   createModalHandlers,

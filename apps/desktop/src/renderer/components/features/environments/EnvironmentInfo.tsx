@@ -3,8 +3,8 @@
  * Displays warnings, tutorial info, and usage summaries
  */
 
+import type { Source } from '@openheaders/core';
 import { Alert, Divider, Space, Tag, Typography } from 'antd';
-import type { Source } from '@/types/source';
 import { getSourcesUsingVariables } from './EnvironmentUtils';
 
 const { Text } = Typography;

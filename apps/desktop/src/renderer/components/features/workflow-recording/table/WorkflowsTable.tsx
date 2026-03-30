@@ -3,6 +3,7 @@
  * Provides table view of all workflow recordings with actions for viewing, deleting, and exporting
  */
 
+import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '@openheaders/core';
 import { Empty, Table, Typography, theme } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import EditDescriptionModal from '@/renderer/components/features/workflow-recording/modals/EditDescriptionModal';
@@ -17,7 +18,6 @@ import RecordingExportModal from '@/renderer/components/modals/export-recording'
 import { useNavigation } from '@/renderer/contexts';
 import { showMessage } from '@/renderer/utils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '@/types/recording';
 import ProcessingOverlay from './ProcessingOverlay';
 import { WorkflowTableActions } from './WorkflowTableActions';
 import { createWorkflowColumns } from './WorkflowTableColumns';

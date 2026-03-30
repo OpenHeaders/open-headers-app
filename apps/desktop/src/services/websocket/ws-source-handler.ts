@@ -7,8 +7,8 @@
  * simply serialises and sends that in-memory state to clients.
  */
 
+import type { Source } from '@openheaders/core';
 import WebSocket from 'ws';
-import type { Source } from '@/types/source';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

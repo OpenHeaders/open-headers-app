@@ -1,8 +1,7 @@
+import type { HeaderRule, Source } from '@openheaders/core';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProxyService, ProxyStatus } from '@/services/proxy/ProxyService';
 import type { ProxyRule } from '@/types/proxy';
-import type { HeaderRule } from '@/types/rules';
-import type { Source } from '@/types/source';
 
 // Mock atomicFileWriter (ProxyCache and ProxyRuleStore use it for disk I/O)
 vi.mock('@/utils/atomicFileWriter', () => ({

@@ -6,12 +6,11 @@
  * - generateTOTP: TOTP generator exposed via contextBridge
  */
 
-import type { Source, SourceRequestOptions } from './source';
-import type { AppSettings } from './settings';
+import type { HeaderRule, Source, SourceRequestOptions } from '@openheaders/core';
 import type { NetworkInterfaceInfo } from 'node:os';
+import type { AppSettings } from './settings';
 import type { HttpRequestSpec, HttpRequestResult, TotpCooldownInfo } from './http';
 import type { ProxyRule, CacheStats, CacheEntry } from './proxy';
-import type { HeaderRule } from './rules';
 import type {
   Workspace,
   WorkspaceAuthData,

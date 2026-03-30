@@ -1,5 +1,5 @@
+import type { Source } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
-import type { Source } from '@/types/source';
 
 type ImportSource = Pick<Source, 'sourceType' | 'sourcePath'>;
 

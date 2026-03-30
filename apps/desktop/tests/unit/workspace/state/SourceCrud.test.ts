@@ -1,8 +1,7 @@
+import type { HeaderRule, Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StateContext } from '@/services/workspace/state/types';
 import type { ProxyRule } from '@/types/proxy';
-import type { HeaderRule } from '@/types/rules';
-import type { Source } from '@/types/source';
 
 // Mock electron
 vi.mock('electron', () => ({

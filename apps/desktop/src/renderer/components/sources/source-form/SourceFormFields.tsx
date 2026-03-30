@@ -21,9 +21,9 @@
  */
 
 import { PlusOutlined } from '@ant-design/icons';
+import type { SourceType } from '@openheaders/core';
 import { Button, Input } from 'antd';
 import type React from 'react';
-import type { SourceType } from '@/types/source';
 
 /**
  * Renders source path input field based on source type

@@ -23,9 +23,9 @@
  * @since 3.0.0
  */
 
+import type { JsonFilter, SourceType } from '@openheaders/core';
 import type { FormInstance } from 'antd';
 import type { EnvironmentContextLike } from '@/types/http';
-import type { JsonFilter, SourceType } from '@/types/source';
 
 type EnvironmentContext = EnvironmentContextLike;
 

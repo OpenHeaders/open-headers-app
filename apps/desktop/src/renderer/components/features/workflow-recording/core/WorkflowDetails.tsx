@@ -3,9 +3,9 @@
  * Simple wrapper component that renders a RecordViewer in a card layout
  */
 
+import type { Recording } from '@openheaders/core';
 import { Card } from 'antd';
 import { VIEW_MODES, WorkflowViewer } from '@/renderer/components/features/workflow-recording/viewer';
-import type { Recording } from '@/types/recording';
 
 interface WorkflowDetailsProps {
   record: Recording | null;

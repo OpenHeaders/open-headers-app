@@ -5,9 +5,9 @@
  * No Node.js APIs (fs, path, etc.) — safe for both main and renderer processes.
  */
 
+import type { Source } from '@openheaders/core';
 import type { EnvironmentMap, EnvironmentSchema } from '@/types/environment';
 import type { ProxyRule } from '@/types/proxy';
-import type { Source } from '@/types/source';
 
 interface ConfigData {
   version?: string;

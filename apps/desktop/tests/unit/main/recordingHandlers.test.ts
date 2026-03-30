@@ -1,6 +1,6 @@
+import type { RecordingMetadata, WorkflowRecordingFileMetadata } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcInvokeEvent } from '@/types/common';
-import type { RecordingMetadata, WorkflowRecordingFileMetadata } from '@/types/recording';
 
 // --- Mocks ---
 

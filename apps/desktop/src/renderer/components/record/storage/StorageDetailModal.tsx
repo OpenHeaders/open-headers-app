@@ -12,9 +12,9 @@
  */
 
 import { CopyOutlined } from '@ant-design/icons';
+import type { StorageRecord } from '@openheaders/core';
 import { Button, Modal, Space, Tag, Typography, theme } from 'antd';
 import { formatRelativeTimeWithSmallMs } from '@/renderer/utils';
-import type { StorageRecord } from '@/types/recording';
 import { formatValue, getActionColor, getTypeColor } from './StorageUtils';
 
 const { Text } = Typography;

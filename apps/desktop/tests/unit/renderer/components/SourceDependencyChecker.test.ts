@@ -1,9 +1,9 @@
+import type { Source } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   checkSourceDependencies,
   isTemplateSource,
 } from '@/renderer/components/sources/source-table/SourceDependencyChecker';
-import type { Source } from '@/types/source';
 
 function makeSource(overrides: Partial<Source> = {}): Source {
   return { sourceId: 'test', sourceType: 'http', ...overrides };

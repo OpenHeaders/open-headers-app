@@ -12,9 +12,9 @@
  */
 
 import type fs from 'node:fs';
+import type { Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyncData } from '@/services/workspace/sync/types';
-import type { Source } from '@/types/source';
 
 vi.mock('electron', () => ({
   default: {

@@ -1,4 +1,5 @@
 import { FileOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import type { WorkflowRecordingEntry } from '@openheaders/core';
 import { Radio, Space, Typography, theme } from 'antd';
 
 const { Text, Title } = Typography;
@@ -22,7 +23,6 @@ const { useToken } = theme;
  * @param {boolean} record.hasVideo - Whether video recording is available for this session
  * @param {boolean} isExporting - Whether export process is currently in progress (disables controls)
  */
-import type { WorkflowRecordingEntry } from '@/types/recording';
 
 interface ExportFormatSelectorProps {
   exportType: string;

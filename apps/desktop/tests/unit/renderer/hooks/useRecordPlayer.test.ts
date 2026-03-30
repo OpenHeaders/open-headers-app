@@ -6,6 +6,7 @@
  * and initial loading state.
  */
 
+import type { Recording } from '@openheaders/core';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -14,7 +15,6 @@ vi.stubGlobal('rrwebPlayer', undefined);
 
 import type { ProxyStatus, RecordData } from '@/renderer/components/record/player/hooks/usePlayerManager';
 import { useRecordPlayer } from '@/renderer/hooks/useRecordPlayer';
-import type { Recording } from '@/types/recording';
 
 function makeProxyStatus(overrides: Partial<ProxyStatus> = {}): ProxyStatus {
   return {

@@ -5,6 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import type { RulesCollection, Source } from '@openheaders/core';
 import { glob } from 'glob';
 import type { ConfigFileValidator, ConfigPaths } from '@/services/workspace/config-file-validator';
 import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
@@ -12,8 +13,6 @@ import type { GitBranchManager } from '@/services/workspace/git/repository/GitBr
 import type { GitRepositoryManager, RepositoryStatus } from '@/services/workspace/git/repository/GitRepositoryManager';
 import type { EnvironmentMap, EnvironmentSchema } from '@/types/environment';
 import type { ProxyRule } from '@/types/proxy';
-import type { RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 import type { CommitInfo, WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 import type { CommitManager } from './CommitManager';

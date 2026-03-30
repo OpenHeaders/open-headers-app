@@ -1,7 +1,7 @@
+import type { HeaderRule } from '@openheaders/core';
 import { useCallback } from 'react';
 import { useCentralizedWorkspace } from '@/renderer/hooks/useCentralizedWorkspace';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import type { HeaderRule } from '@/types/rules';
 
 interface UseHeaderRulesReturn {
   rules: HeaderRule[];

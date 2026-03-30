@@ -15,11 +15,11 @@
  * @returns {Object} Player state and refs
  */
 
+import type { Recording, RRWebEvent, RRWebPlayerConstructor, RRWebPlayerInstance } from '@openheaders/core';
 import { useEffect, useRef, useState } from 'react';
 import { calculateViewportScale } from '@/renderer/components/record/player/utils/playerUtils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import type { ProxyStatus } from '@/types/proxy';
-import type { Recording, RRWebEvent, RRWebPlayerConstructor, RRWebPlayerInstance } from '@/types/recording';
 
 const log = createLogger('usePlayerManager');
 

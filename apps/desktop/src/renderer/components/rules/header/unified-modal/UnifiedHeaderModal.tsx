@@ -1,4 +1,5 @@
 import { CloseOutlined, CopyrightTwoTone, RightCircleTwoTone, SaveOutlined } from '@ant-design/icons';
+import type { HeaderRule } from '@openheaders/core';
 import { Button, Form, Modal, Segmented, Space, theme } from 'antd';
 import dayjs from 'dayjs';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,7 +10,6 @@ import {
   extractVariablesFromRule,
   validateEnvironmentVariables,
 } from '@/renderer/utils/validation/environment-variables';
-import type { HeaderRule } from '@/types/rules';
 import CookieAttributes from './CookieAttributes';
 import DomainSection from './DomainSection';
 import EnvVarInfo from './EnvVarInfo';

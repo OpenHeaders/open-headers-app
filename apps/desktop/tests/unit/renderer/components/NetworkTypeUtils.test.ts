@@ -1,3 +1,4 @@
+import type { NetworkRecord } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   getTypeFromRecord,
@@ -5,7 +6,6 @@ import {
   getUniqueStatusGroups,
   getUniqueTypes,
 } from '@/renderer/components/record/network/NetworkTypeUtils';
-import type { NetworkRecord } from '@/types/recording';
 
 function makeNetRecord(overrides: Partial<NetworkRecord> = {}): NetworkRecord {
   return {

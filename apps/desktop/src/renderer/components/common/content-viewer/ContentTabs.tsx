@@ -21,8 +21,8 @@
  */
 
 import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
+import type { Source } from '@openheaders/core';
 import { Button, Tabs, Typography } from 'antd';
-import type { Source } from '@/types/source';
 import { formatContent, formatJson } from './ContentFormatter';
 import { HeadersTable } from './HeadersTable';
 

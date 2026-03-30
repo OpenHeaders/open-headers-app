@@ -21,9 +21,6 @@
  * @since 3.0.0
  */
 
-import type { FormInstance } from 'antd';
-import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import type { EnvironmentContextLike } from '@/types/http';
 import type {
   JsonFilter,
   NewSourceData,
@@ -31,7 +28,10 @@ import type {
   SourceMethod,
   SourceRequestOptions,
   SourceType,
-} from '@/types/source';
+} from '@openheaders/core';
+import type { FormInstance } from 'antd';
+import { showMessage } from '@/renderer/utils/ui/messageUtil';
+import type { EnvironmentContextLike } from '@/types/http';
 import { validateAllHttpFields } from './SourceFormValidation';
 
 interface SourceTypeChangeParams {

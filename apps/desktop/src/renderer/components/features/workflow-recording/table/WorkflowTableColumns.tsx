@@ -16,11 +16,11 @@ import {
   ShareAltOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons';
+import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '@openheaders/core';
 import { Button, Input, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
 import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '@/renderer/utils';
-import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '@/types/recording';
 
 /**
  * Component that displays timestamp with live updating relative time

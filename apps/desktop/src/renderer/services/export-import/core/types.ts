@@ -27,10 +27,9 @@ export interface EnvironmentSchema {
   variableDefinitions: Record<string, SchemaVariableDefinition>;
 }
 
+import type { HeaderRule, RulesCollection, RulesStorage as SharedRulesStorage, Source } from '@openheaders/core';
 import type { EnvironmentVariable } from '@/types/environment';
 import type { ProxyRule } from '@/types/proxy';
-import type { HeaderRule, RulesCollection, RulesStorage as SharedRulesStorage } from '@/types/rules';
-import type { Source } from '@/types/source';
 import type { Workspace } from '@/types/workspace';
 
 export type { EnvironmentVariable };

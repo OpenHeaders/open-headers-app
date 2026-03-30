@@ -1,11 +1,10 @@
+import type { NetworkRecord } from '@openheaders/core';
 /**
  * Network Type Utilities
  *
  * Utilities for determining and formatting network request types
  * Extracted from RecordNetworkTab for reusability
  */
-
-import type { NetworkRecord } from '@/types/recording';
 
 /**
  * Get request type from network record with intelligent fallbacks

@@ -1,7 +1,9 @@
 /**
- * Shared type re-exports.
+ * Desktop-only type re-exports.
  *
- * Import from 'types/' or from individual domain files.
+ * Shared types (Source, HeaderRule, Recording, etc.) are imported
+ * directly from '@openheaders/core'. This barrel only re-exports
+ * types that are specific to the desktop app.
  */
 
 export type {
@@ -38,68 +40,7 @@ export type {
   ProxyStats,
   ProxyStatus,
 } from './proxy';
-export type {
-  ConsoleArg,
-  ConsoleArgObject,
-  ConsoleRecord,
-  CookieAttributes,
-  DomNode,
-  NavigationEntry,
-  NetworkRecord,
-  NetworkTimingData,
-  PageTransition,
-  PreprocessedRecording,
-  PreprocessOptions,
-  PreprocessProgressDetails,
-  RawRecordingRecord,
-  Recording,
-  RecordingEvent,
-  RecordingEventData,
-  RecordingMetadata,
-  RRWebAdd,
-  RRWebEvent,
-  RRWebInnerData,
-  RRWebPlayerConstructor,
-  RRWebPlayerInstance,
-  Snapshot,
-  StaticResources,
-  StorageCookieMetadata,
-  StorageRecord,
-  TimeEvent,
-  WorkflowRecordingEntry,
-  WorkflowRecordingFileMetadata,
-  WorkflowTag,
-} from './recording';
-export type {
-  BaseRule,
-  ContentType,
-  HeaderRule,
-  MatchType,
-  PayloadRule,
-  Rule,
-  RulesCollection,
-  RulesStorage,
-  RuleType,
-  RuleValidation,
-  UrlParamModification,
-  UrlRule,
-  UrlRuleAction,
-} from './rules';
 export type { AppSettings, ScreenRecordingPermission } from './settings';
-export type {
-  ActivationState,
-  JsonFilter,
-  NewSourceData,
-  RefreshOptions,
-  RefreshStatus,
-  RefreshType,
-  Source,
-  SourceHeader,
-  SourceMethod,
-  SourceQueryParam,
-  SourceRequestOptions,
-  SourceType,
-} from './source';
 export type {
   AuthType,
   ServiceRegistryStatus,

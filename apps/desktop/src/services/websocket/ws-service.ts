@@ -1,11 +1,10 @@
 // ws-service.ts - WebSocket service core: server lifecycle, message routing, public API
 
 import http from 'node:http';
+import type { RulesCollection, Source } from '@openheaders/core';
 import electron from 'electron';
 import WS, { WebSocketServer } from 'ws';
 import settingsCache from '@/services/core/SettingsCache';
-import type { RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 import type { ExtendedWebSocket, WSClientInfo } from '@/types/websocket';
 import mainLogger from '@/utils/mainLogger';
 import { WSClientHandler } from './ws-client-handler';

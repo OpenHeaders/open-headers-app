@@ -1,3 +1,4 @@
+import type { RulesCollection, Source } from '@openheaders/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock mainLogger to prevent .js extension resolution issues in CJS→ESM chains
@@ -7,8 +8,6 @@ vi.mock('@/utils/mainLogger', () => ({
 }));
 
 import { WebSocketService } from '@/services/websocket/ws-service';
-import type { RulesCollection } from '@/types/rules';
-import type { Source } from '@/types/source';
 import type { WSClientInfo } from '@/types/websocket';
 
 function makeClientInfo(overrides: Partial<WSClientInfo> & { id: string }): WSClientInfo {

@@ -6,9 +6,9 @@
  * and broadcast suppression during workspace switch.
  */
 
+import type { Source } from '@openheaders/core';
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Source } from '@/types/source';
 
 // ---------------------------------------------------------------------------
 // Mocks
