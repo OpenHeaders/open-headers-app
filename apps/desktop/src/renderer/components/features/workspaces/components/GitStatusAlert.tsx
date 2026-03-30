@@ -89,7 +89,7 @@ const GitStatusAlert = ({
    * Renders the Git installed success alert
    * @returns {JSX.Element} Git installed alert
    */
-  const renderInstalledAlert = () => (
+  const _renderInstalledAlert = () => (
     <Alert
       message={
         <span>

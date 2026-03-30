@@ -91,7 +91,7 @@ export const useCliServer = ({ active = false } = {}) => {
         message.error(result.error || 'Failed to start CLI API server');
       }
       await loadStatus();
-    } catch (error) {
+    } catch (_error) {
       message.error('Failed to start CLI API server');
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ export const useCliServer = ({ active = false } = {}) => {
         message.error(result.error || 'Failed to stop CLI API server');
       }
       await loadStatus();
-    } catch (error) {
+    } catch (_error) {
       message.error('Failed to stop CLI API server');
     } finally {
       setLoading(false);
@@ -148,7 +148,7 @@ export const useCliServer = ({ active = false } = {}) => {
       } else {
         message.error(result.error || 'Failed to regenerate token');
       }
-    } catch (error) {
+    } catch (_error) {
       message.error('Failed to regenerate token');
     }
   }, [message, loadStatus]);
@@ -161,7 +161,7 @@ export const useCliServer = ({ active = false } = {}) => {
       await window.electronAPI.cliApiClearLogs();
       setLogs([]);
       message.success('Logs cleared');
-    } catch (error) {
+    } catch (_error) {
       message.error('Failed to clear logs');
     }
   }, [message]);

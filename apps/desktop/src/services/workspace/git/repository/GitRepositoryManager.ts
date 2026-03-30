@@ -139,7 +139,7 @@ class GitRepositoryManager {
       // Execute clone
       progressCallback({ phase: 'clone', message: 'Cloning repository...' });
 
-      const result = await this.executor.execute(cloneCommand, {
+      const _result = await this.executor.execute(cloneCommand, {
         env,
         timeout: 300000, // 5 minutes for clone
         maxBuffer: 50 * 1024 * 1024, // 50MB
@@ -353,7 +353,7 @@ class GitRepositoryManager {
         try {
           const { stdout: allCommits } = await this.executor.execute(`rev-list HEAD --count`, { cwd: repoDir, env });
           unpushedCount = parseInt(allCommits.trim()) || 1;
-        } catch (error) {
+        } catch (_error) {
           unpushedCount = 1; // Default to 1
         }
       }
@@ -513,7 +513,7 @@ class GitRepositoryManager {
     try {
       const { stdout } = await this.executor.execute('symbolic-ref refs/remotes/origin/HEAD', { cwd: repoDir, env });
       return stdout.trim().replace('refs/remotes/origin/', '');
-    } catch (error) {
+    } catch (_error) {
       // Fallback to common defaults
       const { stdout: branches } = await this.executor.execute('ls-remote --heads origin', { cwd: repoDir, env });
 

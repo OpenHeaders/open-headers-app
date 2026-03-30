@@ -365,7 +365,7 @@ export class EnvironmentsHandler {
       }
     }
 
-    for (const [envName, envSchema] of Object.entries(environmentsToProcess)) {
+    for (const [envName, _envSchema] of Object.entries(environmentsToProcess)) {
       try {
         // Create environment if it doesn't exist
         if (!environments[envName]) {

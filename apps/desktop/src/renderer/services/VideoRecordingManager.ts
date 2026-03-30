@@ -185,7 +185,7 @@ class VideoRecordingManager {
 
       // Use the highest quality codec available with quality hints
       let mimeType = 'video/webm;codecs=vp8'; // fallback
-      const mimeOptions = [];
+      const _mimeOptions = [];
 
       // Try VP9 with high quality profile first (best quality)
       if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {

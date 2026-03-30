@@ -606,7 +606,7 @@ class TeamWorkspaceSyncer {
     try {
       const { stdout } = await this.executor.execute('status --porcelain', { cwd: repoDir });
       return stdout.trim().length > 0;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -618,7 +618,7 @@ class TeamWorkspaceSyncer {
     try {
       const { stdout } = await this.executor.execute(`rev-list --count ${range}`, { cwd: repoDir });
       return parseInt(stdout.trim()) || 0;
-    } catch (error) {
+    } catch (_error) {
       return 0;
     }
   }
@@ -689,7 +689,7 @@ class TeamWorkspaceSyncer {
         if (files.length > 0) {
           return path.join(repoDir, files[0]);
         }
-      } catch (error) {
+      } catch (_error) {
         // Continue checking
       }
     }
@@ -731,7 +731,7 @@ class TeamWorkspaceSyncer {
       }
 
       return null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -758,7 +758,7 @@ class TeamWorkspaceSyncer {
           configData = JSON.parse(content) as ConfigFileJson;
           log.info(`Found config file: ${filePath}`);
           break;
-        } catch (error) {
+        } catch (_error) {
           // File doesn't exist or is invalid, continue
         }
       }

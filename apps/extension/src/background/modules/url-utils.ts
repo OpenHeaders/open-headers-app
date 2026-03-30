@@ -105,7 +105,7 @@ export function normalizeUrlForTracking(url: string): string {
     }
 
     return urlObj.toString();
-  } catch (e) {
+  } catch (_e) {
     // If URL parsing fails, return original
     return url.toLowerCase();
   }
@@ -193,7 +193,7 @@ export function doesUrlMatchPattern(url: string, pattern: string): boolean {
     }
 
     return cached.test(normalizedUrl);
-  } catch (e) {
+  } catch (_e) {
     return false;
   }
 }

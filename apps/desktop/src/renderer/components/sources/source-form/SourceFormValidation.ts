@@ -97,7 +97,7 @@ export const validateUrlField = (
   // Validate the final resolved URL format
   try {
     new URL(resolvedUrl);
-  } catch (error) {
+  } catch (_error) {
     return Promise.reject(new Error('Invalid URL format. Please check the URL structure and template variables.'));
   }
 

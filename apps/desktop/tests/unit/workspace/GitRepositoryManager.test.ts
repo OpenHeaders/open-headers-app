@@ -25,7 +25,7 @@ function createMocks() {
 describe('GitRepositoryManager', () => {
   let manager: GitRepositoryManager;
   let executeSpy: ReturnType<typeof createMocks>['executeSpy'];
-  let setupAuthSpy: ReturnType<typeof createMocks>['setupAuthSpy'];
+  let _setupAuthSpy: ReturnType<typeof createMocks>['setupAuthSpy'];
   let cleanupSpy: ReturnType<typeof createMocks>['cleanupSpy'];
 
   beforeEach(() => {
@@ -33,7 +33,7 @@ describe('GitRepositoryManager', () => {
     const mocks = createMocks();
     manager = new GitRepositoryManager(mocks.executor, mocks.authManager);
     executeSpy = mocks.executeSpy;
-    setupAuthSpy = mocks.setupAuthSpy;
+    _setupAuthSpy = mocks.setupAuthSpy;
     cleanupSpy = mocks.cleanupSpy;
   });
 

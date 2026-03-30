@@ -36,14 +36,14 @@ export function formatContent(content: string) {
         // Attempt to parse and re-stringify with 2-space indentation
         const parsed = JSON.parse(content);
         return JSON.stringify(parsed, null, 2);
-      } catch (parseError) {
+      } catch (_parseError) {
         // JSON parsing failed, return content as-is to preserve original format
         return content;
       }
     }
     // Return content as-is or show fallback message for empty content
     return content || 'No content available';
-  } catch (error) {
+  } catch (_error) {
     // Unexpected error during formatting, return safe fallback
     return content || 'No content available';
   }
@@ -73,7 +73,7 @@ export function formatJson(jsonString: string) {
       try {
         const parsed = JSON.parse(jsonString);
         return JSON.stringify(parsed, null, 2);
-      } catch (parseError) {
+      } catch (_parseError) {
         // JSON parsing failed, return original content (might be malformed JSON)
         return jsonString;
       }
@@ -81,7 +81,7 @@ export function formatJson(jsonString: string) {
 
     // Content is not JSON format (could be HTML, plain text, etc.)
     return jsonString;
-  } catch (error) {
+  } catch (_error) {
     // Unexpected error during processing
     return jsonString || 'Invalid content';
   }
@@ -127,7 +127,7 @@ export function safeJsonParse(content: string) {
     if (typeof content === 'string' && content.trim()) {
       return JSON.parse(content);
     }
-  } catch (parseError) {
+  } catch (_parseError) {
     // JSON parsing failed, return original content to preserve data
   }
   return content;

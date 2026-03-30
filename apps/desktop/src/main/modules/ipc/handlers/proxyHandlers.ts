@@ -57,7 +57,7 @@ class ProxyHandlers {
             // WorkspaceStateService.initialize() already pushed them to proxyService
             // via broadcastToServices(). Re-reading from disk would be redundant.
           }
-        } catch (error: unknown) {
+        } catch (_error: unknown) {
           log.info('No environment variables found for proxy, starting with empty variables');
           proxyService.updateEnvironmentVariables({});
         }

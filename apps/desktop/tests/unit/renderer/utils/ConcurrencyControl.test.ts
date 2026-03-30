@@ -294,7 +294,7 @@ describe('RequestDeduplicator', () => {
       return Promise.resolve(callCount);
     };
 
-    const [r1, r2] = await Promise.all([dedup.execute('key-a', fn), dedup.execute('key-b', fn)]);
+    const [_r1, _r2] = await Promise.all([dedup.execute('key-a', fn), dedup.execute('key-b', fn)]);
 
     expect(callCount).toBe(2);
   });

@@ -7,7 +7,7 @@ import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
-const log = createLogger('BasicAuthStrategy');
+const _log = createLogger('BasicAuthStrategy');
 
 interface AuthData {
   username?: string;
@@ -91,7 +91,7 @@ class BasicAuthStrategy {
       urlObj.username = username;
       urlObj.password = '***';
       return urlObj.toString();
-    } catch (error) {
+    } catch (_error) {
       return `${url} (with credentials)`;
     }
   }

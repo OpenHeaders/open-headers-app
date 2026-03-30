@@ -185,7 +185,7 @@ const VariableTable = ({
     try {
       await navigator.clipboard.writeText(value || '');
       showMessage('success', `Variable "${varName}" value copied to clipboard`);
-    } catch (error) {
+    } catch (_error) {
       showMessage('error', 'Failed to copy to clipboard');
     }
   };

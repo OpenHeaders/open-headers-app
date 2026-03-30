@@ -35,7 +35,7 @@ const StorageChangeCell = ({ record, onViewDetails, messageApi, token }: Storage
     try {
       await navigator.clipboard.writeText(textToCopy);
       messageApi.success('Copied to clipboard');
-    } catch (error) {
+    } catch (_error) {
       messageApi.error('Failed to copy to clipboard');
     }
   };

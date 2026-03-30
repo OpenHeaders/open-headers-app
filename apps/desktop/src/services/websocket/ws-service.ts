@@ -125,7 +125,7 @@ class WebSocketService {
           if (electron?.app) {
             this.appDataPath = electron.app.getPath('userData');
           }
-        } catch (e) {
+        } catch (_e) {
           this.appDataPath = process.cwd();
         }
       }
@@ -252,7 +252,7 @@ class WebSocketService {
       for (const c of this.wss.clients) {
         try {
           c.terminate();
-        } catch (e) {
+        } catch (_e) {
           /* ignore */
         }
       }
@@ -266,7 +266,7 @@ class WebSocketService {
       }, 2000);
       try {
         this.wss?.close();
-      } catch (e) {
+      } catch (_e) {
         /* ignore */
       }
       this.httpServer!.close(() => {

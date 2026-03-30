@@ -56,7 +56,7 @@ const EnvironmentStatus = () => {
           try {
             await switchEnvironment(envName);
             // Don't show message here - switchEnvironment already shows one
-          } catch (error) {
+          } catch (_error) {
             // Error message is already shown by switchEnvironment
           }
         }

@@ -321,7 +321,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
                           // First validate the URL field
                           try {
                             await form.validateFields(['sourcePath']);
-                          } catch (validationError) {
+                          } catch (_validationError) {
                             // URL validation failed - error will be shown in the form
                             return;
                           }

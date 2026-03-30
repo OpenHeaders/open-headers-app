@@ -351,7 +351,7 @@ export class ExportService {
       if (bytes < 1024) return `${bytes} bytes`;
       if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
       return `${Math.round((bytes / (1024 * 1024)) * 100) / 100} MB`;
-    } catch (error) {
+    } catch (_error) {
       return 'unknown size';
     }
   }

@@ -46,7 +46,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
                   significantChange = false;
                   break;
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Invalid URL in tracking
               }
             }
@@ -58,7 +58,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
               );
               tabsWithActiveRules.delete(tabId);
             }
-          } catch (e) {
+          } catch (_e) {
             // If URL parsing fails, clear to be safe
             tabsWithActiveRules.delete(tabId);
           }
@@ -81,7 +81,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
                   differentOrigin = false;
                   break;
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Invalid URL in tracking, ignore
               }
             }
@@ -90,7 +90,7 @@ export function setupTabListeners(updateBadgeCallback: () => void, recordingServ
               logger.info('TabListeners', `Tab ${tabId} navigated to different origin, clearing tracked requests`);
               tabsWithActiveRules.delete(tabId);
             }
-          } catch (e) {
+          } catch (_e) {
             // Invalid URL, clear tracking to be safe
             tabsWithActiveRules.delete(tabId);
           }

@@ -170,7 +170,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         await fs.promises.access(filePath);
         foundConfigFile = pattern;
         break;
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist, continue
       }
     }
@@ -204,7 +204,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
           foundEnvFile = path.join(dir, matches[0]);
           break;
         }
-      } catch (error) {
+      } catch (_error) {
         // Directory doesn't exist, continue
       }
     } else {
@@ -214,7 +214,7 @@ async function detectAndValidateConfig(repoDir: string, searchPatterns: SearchPa
         await fs.promises.access(filePath);
         foundEnvFile = pattern;
         break;
-      } catch (error) {
+      } catch (_error) {
         // File doesn't exist, continue
       }
     }

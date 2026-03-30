@@ -57,7 +57,7 @@ class GitInitializer {
     let userDataPath: string;
     try {
       userDataPath = app.getPath('userData');
-    } catch (e) {
+    } catch (_e) {
       userDataPath = '';
     }
     this.tempDir = path.join(userDataPath, 'workspace-sync');
@@ -106,7 +106,7 @@ class GitInitializer {
         this.gitPath = portableGitPath;
         log.info('Using bundled portable Git:', this.gitPath);
         return this.gitPath;
-      } catch (error) {
+      } catch (_error) {
         log.debug('Bundled portable Git not found, checking system git');
       }
     }
@@ -121,7 +121,7 @@ class GitInitializer {
         log.info('Found git in PATH:', this.gitPath);
         return this.gitPath;
       }
-    } catch (error) {
+    } catch (_error) {
       // Not in PATH, continue checking
     }
 
@@ -132,7 +132,7 @@ class GitInitializer {
         this.gitPath = gitPath;
         log.info('Found git at:', gitPath);
         return this.gitPath;
-      } catch (error) {
+      } catch (_error) {
         // Continue checking
       }
     }

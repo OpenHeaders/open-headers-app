@@ -92,7 +92,7 @@ class ConfigFileDetector {
               foundFiles.push(await this.analyzeFile(filePath, baseDir));
             }
           }
-        } catch (error) {
+        } catch (_error) {
           // Directory doesn't exist, continue
         }
       }
@@ -123,7 +123,7 @@ class ConfigFileDetector {
           }
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Directory doesn't exist
     }
 
@@ -215,7 +215,7 @@ class ConfigFileDetector {
     try {
       await fs.promises.access(filePath);
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

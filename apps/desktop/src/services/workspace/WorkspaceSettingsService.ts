@@ -42,7 +42,7 @@ class WorkspaceSettingsService {
     let userDataPath: string;
     try {
       userDataPath = app.getPath('userData');
-    } catch (error) {
+    } catch (_error) {
       userDataPath = '';
     }
     this.settingsPath = path.join(userDataPath, 'workspaces.json');

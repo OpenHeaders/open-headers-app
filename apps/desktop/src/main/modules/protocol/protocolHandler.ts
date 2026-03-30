@@ -229,7 +229,7 @@ class ProtocolHandler {
         try {
           decodedPayload = JSON.parse(atob(payloadParam)) as ProtocolPayload;
           log.info('Using uncompressed payload (legacy format)');
-        } catch (base64Error) {
+        } catch (_base64Error) {
           throw new Error('Failed to decode payload: invalid format');
         }
       }

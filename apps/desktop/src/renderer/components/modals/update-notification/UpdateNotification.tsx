@@ -5,7 +5,7 @@ import { createLogger } from '../../../utils/error-handling/logger';
 import { createUpdateEventHandlers } from './UpdateEventHandlers';
 import { UpdateNotificationManager } from './UpdateNotificationManager';
 
-const log = createLogger('UpdateNotification');
+const _log = createLogger('UpdateNotification');
 
 /**
  * UpdateNotification component for handling application updates

@@ -80,7 +80,7 @@ export async function startRecording(useWidget = false): Promise<StartRecordingR
       recordId: recordId,
       useWidget: useWidget,
     });
-  } catch (e) {
+  } catch (_e) {
     throw new Error('Failed to start workflow in background');
   }
 

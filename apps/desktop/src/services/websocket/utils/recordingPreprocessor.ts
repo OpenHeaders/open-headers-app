@@ -88,7 +88,7 @@ function collectResourceUrl(resourceMap: Map<string, string[]>, urlStr: string):
     if (!urls.includes(urlStr)) {
       urls.push(urlStr);
     }
-  } catch (error) {
+  } catch (_error) {
     // Ignore parsing errors
   }
 }
@@ -137,7 +137,7 @@ function getShortestUrl(resourceMap: Map<string, string[]>, urlStr: string): str
     // Cache the result
     cacheNormalizedUrl(urlStr, shortest);
     return shortest;
-  } catch (error) {
+  } catch (_error) {
     // Cache original on error
     cacheNormalizedUrl(urlStr, urlStr);
     return urlStr;
@@ -964,7 +964,7 @@ function extractFontUrlsFromCss(
 function resolveRelativeUrl(relativeUrl: string, baseUrl: string): string | null {
   try {
     return new URL(relativeUrl, baseUrl).href;
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

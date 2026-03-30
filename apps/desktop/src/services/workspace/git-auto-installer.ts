@@ -58,7 +58,7 @@ class GitAutoInstaller {
       const command = process.platform === 'win32' ? 'where git' : 'which git';
       const { stdout } = await runCommand(command);
       return { installed: true, path: stdout.trim().split('\n')[0] };
-    } catch (error) {
+    } catch (_error) {
       return { installed: false, path: null };
     }
   }
@@ -73,7 +73,7 @@ class GitAutoInstaller {
         await fs.promises.access(portableGitPath, fs.constants.X_OK);
         this.sendProgress('Portable Git is bundled with the application');
         return { success: true };
-      } catch (error) {
+      } catch (_error) {
         this.log.error('Portable Git not found in production build');
         return {
           success: false,
@@ -88,7 +88,7 @@ class GitAutoInstaller {
       await fs.promises.access(devPortableGitPath, fs.constants.X_OK);
       this.sendProgress('Using development portable Git');
       return { success: true };
-    } catch (error) {
+    } catch (_error) {
       // In development, portable Git might not be downloaded
       this.log.error('Portable Git not found in development. Run: npm run download-portable-git');
       return {
@@ -107,7 +107,7 @@ class GitAutoInstaller {
       try {
         await runCommand('which brew');
         hasHomebrew = true;
-      } catch (e) {
+      } catch (_e) {
         // Homebrew not found
       }
 
@@ -237,7 +237,7 @@ class GitAutoInstaller {
           // Clean up script
           try {
             await fs.promises.unlink(scriptPath);
-          } catch (e) {
+          } catch (_e) {
             // Ignore cleanup errors
           }
         }
@@ -281,14 +281,14 @@ class GitAutoInstaller {
       });
 
       return distroInfo;
-    } catch (error) {
+    } catch (_error) {
       // Fallback detection
       try {
         if (await this.fileExists('/etc/debian_version')) return { id: 'debian' };
         if (await this.fileExists('/etc/redhat-release')) return { id: 'rhel' };
         if (await this.fileExists('/etc/arch-release')) return { id: 'arch' };
         if (await this.fileExists('/etc/alpine-release')) return { id: 'alpine' };
-      } catch (e) {
+      } catch (_e) {
         // Ignore
       }
 

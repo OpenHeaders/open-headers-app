@@ -36,7 +36,7 @@ const Footer: React.FC = () => {
 
   const { headerEntries, isConnected } = useHeader();
   const totalRules = Object.keys(headerEntries).length;
-  const enabledRules = Object.values(headerEntries).filter((rule) => rule.isEnabled !== false).length;
+  const _enabledRules = Object.values(headerEntries).filter((rule) => rule.isEnabled !== false).length;
 
   useEffect(() => {
     const browserAPI = getBrowserAPI();

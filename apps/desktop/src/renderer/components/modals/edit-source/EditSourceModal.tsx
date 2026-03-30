@@ -10,7 +10,7 @@ import EditSourceModalFooter from './EditSourceModalFooter';
 import type { EditSourceFormValues } from './form-submission-handler';
 import FormSubmissionHandler from './form-submission-handler';
 
-const log = createLogger('EditSourceModal');
+const _log = createLogger('EditSourceModal');
 
 interface HttpOptionsRef {
   validateFields?: () => void;
@@ -343,7 +343,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
           // Response processing for filtered results
           // Original response handling is preserved for backward compatibility
         }
-      } catch (error) {
+      } catch (_error) {
         // Skip processing if parsing fails
       }
     }

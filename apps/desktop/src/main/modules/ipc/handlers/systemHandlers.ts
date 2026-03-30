@@ -43,7 +43,7 @@ class SystemHandlers {
             timezone = match[1];
             method = 'readlink';
           }
-        } catch (e) {
+        } catch (_e) {
           // Silently continue to fallback methods
         }
       } else if (process.platform === 'linux') {

@@ -321,7 +321,7 @@ class ConnectionTester {
             defaultBranch: this.detectDefaultBranch(this.parseLsRemoteOutput(stdout)),
             isPrivate: false,
           };
-        } catch (publicError) {
+        } catch (_publicError) {
           return {
             accessible: false,
             error: 'Repository requires authentication',
@@ -564,7 +564,7 @@ class ConnectionTester {
       urlObj.username = '';
       urlObj.password = '';
       return urlObj.toString();
-    } catch (error) {
+    } catch (_error) {
       return url;
     }
   }

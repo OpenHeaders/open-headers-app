@@ -255,7 +255,7 @@ class GitCleanupManager {
               try {
                 await fsPromises.unlink(associated);
                 result.cleaned++;
-              } catch (error) {
+              } catch (_error) {
                 // Ignore if file doesn't exist
               }
             }
@@ -295,7 +295,7 @@ class GitCleanupManager {
               else resolve();
             });
           });
-        } catch (winError) {
+        } catch (_winError) {
           throw error; // Throw original error
         }
       } else {
@@ -316,7 +316,7 @@ class GitCleanupManager {
       try {
         await fsPromises.unlink(lockPath);
         log.debug(`Removed lock file: ${lockFile}`);
-      } catch (error) {
+      } catch (_error) {
         // Ignore if file doesn't exist
       }
     }
@@ -343,7 +343,7 @@ class GitCleanupManager {
           size += await this.getDirectorySize(filePath);
         }
       }
-    } catch (error) {
+    } catch (_error) {
       // Ignore errors for individual files
     }
 
@@ -427,7 +427,7 @@ class GitCleanupManager {
         stats.tempDir.oldFileCount > 10 ||
         stats.sshDir.oldKeyCount > 5
       );
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

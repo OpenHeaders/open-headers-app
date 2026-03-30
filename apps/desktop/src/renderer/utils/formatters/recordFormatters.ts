@@ -61,7 +61,7 @@ export const formatConsoleArg = (
   if (typeof arg === 'object') {
     try {
       return JSON.stringify(arg, null, 2);
-    } catch (e) {
+    } catch (_e) {
       return '[Object]';
     }
   }

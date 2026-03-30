@@ -119,7 +119,7 @@ export async function getActiveRulesForTab(tabId: number | undefined, tabUrl: st
       try {
         const trackedUrlObj = new URL(url);
         trackedDomains.push(trackedUrlObj.hostname);
-      } catch (e) {
+      } catch (_e) {
         // Invalid URL, skip
       }
     });

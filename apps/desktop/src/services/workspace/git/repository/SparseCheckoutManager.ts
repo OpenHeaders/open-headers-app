@@ -8,7 +8,7 @@ import path from 'node:path';
 import mainLogger from '../../../../utils/mainLogger';
 import type { GitExecutor } from '../core/GitExecutor';
 
-const fsPromises = fs.promises;
+const _fsPromises = fs.promises;
 const { createLogger } = mainLogger;
 
 const log = createLogger('SparseCheckoutManager');
@@ -162,7 +162,7 @@ class SparseCheckoutManager {
     try {
       const { stdout } = await this.executor.execute('config --get core.sparseCheckout', { cwd: repoDir });
       return stdout.trim() === 'true';
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -218,7 +218,7 @@ class SparseCheckoutManager {
     patterns.add('/*');
 
     // Add each config path
-    for (const [key, configPath] of Object.entries(configPaths)) {
+    for (const [_key, configPath] of Object.entries(configPaths)) {
       if (configPath && typeof configPath === 'string') {
         // Convert path to sparse checkout pattern
         const pattern = this.pathToPattern(configPath);
@@ -274,7 +274,7 @@ class SparseCheckoutManager {
         if (stdout.trim() === 'true') {
           mode = 'cone';
         }
-      } catch (error) {
+      } catch (_error) {
         // Config not set, using legacy mode
       }
 

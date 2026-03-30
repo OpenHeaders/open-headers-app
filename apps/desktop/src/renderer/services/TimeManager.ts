@@ -371,7 +371,7 @@ class TimeManager {
         const systemTz = await window.electronAPI.getSystemTimezone();
         timezone = systemTz.timezone;
         offset = systemTz.offset;
-      } catch (error) {
+      } catch (_error) {
         // Fallback to cached values
         timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         offset = this.getDate().getTimezoneOffset();

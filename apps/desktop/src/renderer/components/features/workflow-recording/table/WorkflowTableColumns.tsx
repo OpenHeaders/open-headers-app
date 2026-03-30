@@ -63,7 +63,7 @@ interface EditableCellProps {
   isTag?: boolean;
 }
 
-const EditableCell = ({
+const _EditableCell = ({
   value,
   onSave,
   placeholder,

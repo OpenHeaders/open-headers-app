@@ -247,7 +247,7 @@ export const usePlayerManager = (
                     iframeElement.contentDocument.body.appendChild(script);
                   }
                 }
-              } catch (e) {
+              } catch (_e) {
                 // Ignore errors if we can't access iframe content
               }
             });

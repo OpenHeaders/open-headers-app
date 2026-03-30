@@ -162,7 +162,7 @@ export function isJWT(value: string) {
   // Try to decode header and payload
   try {
     const header = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')));
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const _payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
 
     // Check if header has typical JWT fields
     return header && typeof header === 'object' && (header.alg || header.typ === 'JWT');

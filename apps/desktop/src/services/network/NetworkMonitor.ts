@@ -705,7 +705,7 @@ class NetworkMonitor extends EventEmitter {
       this.stateLock = true;
 
       const wasOnline = this.state.isOnline;
-      const previousState = JSON.parse(JSON.stringify(this.state));
+      const _previousState = JSON.parse(JSON.stringify(this.state));
 
       // Create new state object atomically
       const isOnline = results.basic.success || results.endpoints.success;
@@ -779,7 +779,7 @@ class NetworkMonitor extends EventEmitter {
       log.info('Performing comprehensive check after network change...');
 
       // Perform comprehensive check after network change
-      const checkResult = await this.performComprehensiveCheck();
+      const _checkResult = await this.performComprehensiveCheck();
 
       if (this.isDestroyed) return;
 

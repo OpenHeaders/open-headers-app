@@ -78,7 +78,7 @@ const ConsoleLogModal = ({ visible, selectedLog, record, onClose, messageApi }: 
     try {
       await navigator.clipboard.writeText(selectedLog.message);
       messageApi.success('Copied to clipboard');
-    } catch (error) {
+    } catch (_error) {
       messageApi.error('Failed to copy to clipboard');
     }
   };

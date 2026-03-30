@@ -58,7 +58,7 @@ class ErrorRecovery {
    * Classify error type based on error object
    */
   classifyError(error: Error & { code?: string }): ErrorType {
-    const errorString = error.toString().toLowerCase();
+    const _errorString = error.toString().toLowerCase();
     const message = error.message?.toLowerCase() || '';
     const code = error.code?.toLowerCase() || '';
 

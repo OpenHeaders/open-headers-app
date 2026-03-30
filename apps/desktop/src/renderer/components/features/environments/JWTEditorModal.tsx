@@ -222,7 +222,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
         const headerObj = validateJSON(decodedHeader);
         const payloadObj = validateJSON(decodedPayload);
         await updateEncodedToken(headerObj, payloadObj);
-      } catch (err) {
+      } catch (_err) {
         // Errors already handled in updateEncodedToken
       }
     }
@@ -239,7 +239,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
       const headerObj = validateJSON(decodedHeader);
       const payloadObj = validateJSON(decodedPayload);
       await updateEncodedToken(headerObj, payloadObj);
-    } catch (err) {
+    } catch (_err) {
       // Errors already handled in updateEncodedToken
     }
   };
@@ -260,7 +260,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
         const payloadObj = validateJSON(decodedPayload);
         await updateEncodedToken(headerObj, payloadObj);
       }
-    } catch (err) {
+    } catch (_err) {
       // If there's an error parsing, just update the algorithm
       // The error will be shown in the header error field
     }
@@ -280,7 +280,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
         setDecodedPayload(formatJSON(payloadObj));
         setPayloadError(null);
       }
-    } catch (err) {
+    } catch (_err) {
       // Keep the error already set
     }
   };
@@ -342,7 +342,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
       const tokenToCopy = editMode === 'encoded' ? encodedInput : encodedToken;
       await navigator.clipboard.writeText(tokenToCopy);
       message.success('JWT token copied to clipboard');
-    } catch (error) {
+    } catch (_error) {
       message.error('Failed to copy to clipboard');
     }
   };

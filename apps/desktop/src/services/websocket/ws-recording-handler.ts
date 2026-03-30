@@ -390,7 +390,7 @@ class WSRecordingHandler {
         await fsPromises.access(videoMetaPath);
         hasVideo = true;
         log.info(`Found existing video recording for ${recordId}`);
-      } catch (error) {
+      } catch (_error) {
         // No video metadata found
       }
 

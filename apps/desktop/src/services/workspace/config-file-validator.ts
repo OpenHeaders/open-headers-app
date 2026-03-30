@@ -326,7 +326,7 @@ class ConfigFileValidator {
     try {
       await fs.promises.access(filePath);
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

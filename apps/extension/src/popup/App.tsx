@@ -66,7 +66,7 @@ const AppContent: React.FC = () => {
       if (port) {
         try {
           port.disconnect();
-        } catch (error) {
+        } catch (_error) {
           // Ignore disconnect errors
         }
       }

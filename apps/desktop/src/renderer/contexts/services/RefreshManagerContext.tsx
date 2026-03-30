@@ -20,7 +20,7 @@ import type { Source } from '../../../types/source';
 import { useSources } from '../../hooks/workspace';
 import { createLogger } from '../../utils/error-handling/logger';
 
-const log = createLogger('RefreshManagerContext');
+const _log = createLogger('RefreshManagerContext');
 
 interface RefreshStatus {
   isRefreshing: boolean;

@@ -72,7 +72,7 @@ class FFmpegManager {
         log.warn('Local FFmpeg found but not working, removing:', errMsg(error));
         try {
           await fs.promises.unlink(localFFmpeg);
-        } catch (e) {
+        } catch (_e) {
           // Ignore deletion errors
         }
       }
@@ -104,7 +104,7 @@ class FFmpegManager {
         const result = await this.execPromise(`"${ffmpegPath}" -version`);
         log.info(`Found system FFmpeg: ${ffmpegPath} Version: ${result.stdout.split('\n')[0]}`);
         return ffmpegPath;
-      } catch (e) {
+      } catch (_e) {
         log.debug('FFmpeg not found at:', ffmpegPath);
       }
     }
@@ -334,7 +334,7 @@ class FFmpegManager {
         // Remove destination if it exists
         try {
           await fs.promises.rm(destPath, { recursive: true, force: true });
-        } catch (e) {
+        } catch (_e) {
           // Ignore errors
         }
 

@@ -63,7 +63,7 @@ class FileHandlers {
           try {
             const data = JSON.parse(content);
             return atomicWriter.writeJson(filePath, data, { pretty: true });
-          } catch (parseError) {
+          } catch (_parseError) {
             // Not valid JSON, write as plain text
             return atomicWriter.writeFile(filePath, content);
           }

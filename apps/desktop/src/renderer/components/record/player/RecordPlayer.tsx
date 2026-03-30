@@ -32,7 +32,7 @@ import {
 import { useVideoLoader } from './hooks/useVideoLoader';
 
 const { Text } = Typography;
-const log = createLogger('RecordPlayer');
+const _log = createLogger('RecordPlayer');
 
 interface RecordPlayerProps {
   record: RecordData | null;

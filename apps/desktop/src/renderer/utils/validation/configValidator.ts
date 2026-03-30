@@ -371,7 +371,7 @@ async function readAndValidateMultiFileConfig(
         validationResults.mainFile = result;
         config = result.rawData;
       }
-    } catch (error) {
+    } catch (_error) {
       log.debug('No main config file found in multi-file format');
     }
 
@@ -393,7 +393,7 @@ async function readAndValidateMultiFileConfig(
           config.environments = result.rawData.environments;
         }
       }
-    } catch (error) {
+    } catch (_error) {
       log.debug('No env file found in multi-file format');
     }
 

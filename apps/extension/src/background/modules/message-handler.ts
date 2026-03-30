@@ -22,7 +22,7 @@ function createSafeResponse(sendResponse: SendResponse): SendResponse {
   return (data: unknown) => {
     try {
       sendResponse(data);
-    } catch (error) {
+    } catch (_error) {
       logger.info('MessageHandler', 'Could not send response, channel closed');
     }
   };

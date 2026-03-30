@@ -183,7 +183,7 @@ class GitBranchManager {
     try {
       const { branches } = await this.getLocalBranches(repoDir);
       return branches.includes(branchName);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -198,7 +198,7 @@ class GitBranchManager {
         timeout: 15000,
       });
       return stdout.trim().length > 0;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -242,7 +242,7 @@ class GitBranchManager {
           { cwd: repoDir },
         );
         upstream = upstreamInfo.trim();
-      } catch (error) {
+      } catch (_error) {
         // No upstream configured
       }
 
@@ -261,7 +261,7 @@ class GitBranchManager {
             .map((n) => parseInt(n) || 0);
           ahead = a;
           behind = b;
-        } catch (error) {
+        } catch (_error) {
           // Ignore count errors
         }
       }

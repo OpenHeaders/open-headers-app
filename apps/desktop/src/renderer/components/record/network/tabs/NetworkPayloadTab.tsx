@@ -40,7 +40,7 @@ const NetworkPayloadTab = ({ request, token }: NetworkPayloadTabProps) => {
       formattedPayload =
         typeof request.requestBody === 'string' ? request.requestBody : JSON.stringify(request.requestBody, null, 2);
     }
-  } catch (e) {
+  } catch (_e) {
     formattedPayload = String(request.requestBody);
   }
 

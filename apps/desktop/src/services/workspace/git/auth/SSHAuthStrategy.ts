@@ -136,7 +136,7 @@ class SSHAuthStrategy {
       }
       const urlObj = new URL(url);
       return urlObj.hostname;
-    } catch (error) {
+    } catch (_error) {
       throw new Error(`Failed to extract hostname from URL: ${url}`);
     }
   }

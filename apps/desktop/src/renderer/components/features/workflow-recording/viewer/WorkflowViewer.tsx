@@ -78,7 +78,7 @@ const WorkflowViewer = ({
 
   // Record management
   const record = externalRecord !== undefined ? externalRecord : internalRecord;
-  const setRecord = (newRecord: Recording) => {
+  const _setRecord = (newRecord: Recording) => {
     if (onRecordChange) {
       onRecordChange(newRecord);
     } else {

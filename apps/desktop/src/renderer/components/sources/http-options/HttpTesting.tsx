@@ -146,7 +146,7 @@ export const formatContentByType = (content: unknown, headers: Record<string, st
       try {
         const jsonObject = typeof content === 'string' ? JSON.parse(content) : content;
         return <pre className="formatted-json">{JSON.stringify(jsonObject, null, 2)}</pre>;
-      } catch (e) {
+      } catch (_e) {
         return <pre>{contentStr || '(empty response)'}</pre>;
       }
     }
@@ -166,7 +166,7 @@ export const formatContentByType = (content: unknown, headers: Record<string, st
     }
 
     return <pre>{contentStr || '(empty response)'}</pre>;
-  } catch (error) {
+  } catch (_error) {
     return <pre>{contentStr || '(empty response)'}</pre>;
   }
 };
@@ -174,7 +174,7 @@ export const formatContentByType = (content: unknown, headers: Record<string, st
 export const formatResponseForDisplay = (responseJson: string): TestResponseContent => {
   try {
     return JSON.parse(responseJson);
-  } catch (error) {
+  } catch (_error) {
     return {
       statusCode: 0,
       error: 'Failed to parse response',

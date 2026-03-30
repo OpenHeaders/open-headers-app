@@ -97,7 +97,7 @@ class BasePlatformMonitor extends EventEmitter {
             if (childProcess && !childProcess.killed) {
               childProcess.kill('SIGKILL');
             }
-          } catch (e) {
+          } catch (_e) {
             // Ignore kill errors
           }
         }, timeoutMs + 500);
@@ -230,7 +230,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
           }
           initialCheckDone = true;
         }
-      } catch (e) {
+      } catch (_e) {
         // scutil might not be available or might fail
         this.checkVPNInterfaces();
       }
@@ -309,7 +309,7 @@ class MacOSNetworkMonitor extends BasePlatformMonitor {
           });
           lastWiFiState = currentState;
         }
-      } catch (e) {
+      } catch (_e) {
         // airport command might not be available
       }
     };
@@ -555,11 +555,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                   tunnelType: vpnInfo.TunnelType,
                 };
               }
-            } catch (parseError) {
+            } catch (_parseError) {
               // JSON parsing failed
             }
           }
-        } catch (e) {
+        } catch (_e) {
           // PowerShell command failed, continue with other checks
         }
 
@@ -585,11 +585,11 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
                   vpnName = adapterInfo.Name;
                   vpnDetails.description = adapterInfo.InterfaceDescription;
                 }
-              } catch (parseError) {
+              } catch (_parseError) {
                 // JSON parsing failed
               }
             }
-          } catch (e) {
+          } catch (_e) {
             // PowerShell command failed
           }
         }
@@ -689,7 +689,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
           });
           lastWiFiState = currentState;
         }
-      } catch (e) {
+      } catch (_e) {
         // netsh might fail or WiFi might not be available
       }
     };
@@ -766,7 +766,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
     try {
       await this.executeCommand('nmcli', ['--version']);
       return true;
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }
@@ -887,7 +887,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
           if (nmOutput.toLowerCase().includes('vpn')) {
             vpnActive = true;
           }
-        } catch (e) {
+        } catch (_e) {
           // nmcli might not be available
         }
 
@@ -937,7 +937,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
               break;
             }
           }
-        } catch (e) {
+        } catch (_e) {
           // nmcli not available, try iwconfig
           const iwOutput = await this.executeCommand('iwconfig', ['2>&1']);
           const ssidMatch = iwOutput.match(/ESSID:"([^"]+)"/);
@@ -960,7 +960,7 @@ class LinuxNetworkMonitor extends BasePlatformMonitor {
           });
           lastWiFiState = currentState;
         }
-      } catch (e) {
+      } catch (_e) {
         // WiFi tools might not be available
       }
     };

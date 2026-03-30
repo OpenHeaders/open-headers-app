@@ -41,7 +41,7 @@ export const createCopyAllHandler = (domains: string[]) => async () => {
   try {
     await navigator.clipboard.writeText(domainsText);
     showMessage('success', `Copied ${domains.length} domain${domains.length > 1 ? 's' : ''} to clipboard`);
-  } catch (err) {
+  } catch (_err) {
     showMessage('error', 'Failed to copy domains');
   }
 };

@@ -299,7 +299,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
       }
 
       onSave(ruleData);
-    } catch (error) {
+    } catch (_error) {
       // Form validation failed
     }
   };

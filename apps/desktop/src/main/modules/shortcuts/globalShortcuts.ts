@@ -29,7 +29,7 @@ class GlobalShortcuts {
       try {
         const settingsData = await fsPromises.readFile(settingsPath, 'utf8');
         settings = JSON.parse(settingsData) as Partial<AppSettings>;
-      } catch (error) {
+      } catch (_error) {
         // Settings file might not exist yet
         log.debug('Settings file not found, using default hotkey');
       }

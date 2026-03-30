@@ -41,7 +41,7 @@ const NetworkResponseTab = ({ request, token }: NetworkResponseTabProps) => {
       formattedResponse =
         typeof request.responseBody === 'string' ? request.responseBody : JSON.stringify(request.responseBody, null, 2);
     }
-  } catch (e) {
+  } catch (_e) {
     formattedResponse = String(request.responseBody);
   }
 

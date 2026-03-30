@@ -5,7 +5,7 @@
 
 import { createLogger } from '../error-handling/logger';
 
-const log = createLogger('EnvironmentVariableValidation');
+const _log = createLogger('EnvironmentVariableValidation');
 
 /**
  * Regular expression to match environment variables in the format {{VAR_NAME}}

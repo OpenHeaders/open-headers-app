@@ -238,7 +238,7 @@ describe('ServiceRegistry', () => {
 
       try {
         await registry.initializeService('broken');
-      } catch (e) {
+      } catch (_e) {
         /* expected */
       }
 

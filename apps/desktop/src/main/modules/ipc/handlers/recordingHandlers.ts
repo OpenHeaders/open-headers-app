@@ -56,7 +56,7 @@ class RecordingHandlers {
                 await fs.promises.access(videoPath);
                 await fs.promises.access(videoMetaPath);
                 metaData.hasVideo = true;
-              } catch (error) {
+              } catch (_error) {
                 metaData.hasVideo = false;
               }
             }
@@ -69,7 +69,7 @@ class RecordingHandlers {
               try {
                 await fs.promises.access(processedPath);
                 metaData.hasProcessedVersion = true;
-              } catch (error) {
+              } catch (_error) {
                 metaData.hasProcessedVersion = false;
               }
             }

@@ -23,7 +23,7 @@ const RulesList: React.FC = () => {
           try {
             const url = new URL(tabs[0].url);
             setCurrentTabDomain(url.hostname);
-          } catch (e) {
+          } catch (_e) {
             setCurrentTabDomain(null);
           }
         }
@@ -63,7 +63,7 @@ const RulesList: React.FC = () => {
     browserAPI.storage.local.set({ activeRulesTab: key });
   };
 
-  const stats = useMemo(() => {
+  const _stats = useMemo(() => {
     const total = Object.keys(headerEntries).length;
     const enabled = Object.values(headerEntries).filter((r) => r.isEnabled !== false).length;
     const tags = new Set<string>();

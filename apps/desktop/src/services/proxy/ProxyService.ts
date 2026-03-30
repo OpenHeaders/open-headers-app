@@ -177,7 +177,7 @@ class ProxyService extends EventEmitter {
       for (const socket of this._connections) {
         try {
           socket.destroy();
-        } catch (e) {
+        } catch (_e) {
           /* ignore */
         }
       }

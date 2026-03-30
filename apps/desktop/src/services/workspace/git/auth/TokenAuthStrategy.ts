@@ -7,7 +7,7 @@ import mainLogger from '../../../../utils/mainLogger';
 
 const { createLogger } = mainLogger;
 
-const log = createLogger('TokenAuthStrategy');
+const _log = createLogger('TokenAuthStrategy');
 
 interface TokenAuthData {
   token?: string;

@@ -684,7 +684,7 @@ class NetworkService extends EventEmitter {
     const ips: string[] = [];
 
     let foundAnswerSection = false;
-    let skipNextAddress = true; // Skip first Address line (DNS server) on Windows
+    let _skipNextAddress = true; // Skip first Address line (DNS server) on Windows
 
     for (const line of lines) {
       const trimmedLine = line.trim();
@@ -692,7 +692,7 @@ class NetworkService extends EventEmitter {
       // Detect answer section (works for both "Non-authoritative answer:" and "answer:")
       if (trimmedLine.toLowerCase().includes('answer')) {
         foundAnswerSection = true;
-        skipNextAddress = false; // After answer section, Address lines are results
+        _skipNextAddress = false; // After answer section, Address lines are results
         continue;
       }
 
@@ -778,7 +778,7 @@ class NetworkService extends EventEmitter {
         this.log.debug(`DNS resolved via dscacheutil: ${host} -> ${ips.join(', ')}`);
         return ips;
       }
-    } catch (error) {
+    } catch (_error) {
       this.log.debug(`dscacheutil failed for ${host}, trying nslookup`);
     }
 
@@ -819,7 +819,7 @@ class NetworkService extends EventEmitter {
         this.log.debug(`DNS resolved via getent: ${host} -> ${ips.join(', ')}`);
         return ips;
       }
-    } catch (error) {
+    } catch (_error) {
       this.log.debug(`getent failed for ${host}, trying nslookup`);
     }
 

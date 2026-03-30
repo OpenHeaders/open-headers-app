@@ -31,7 +31,7 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({ useWidget = false }) 
     try {
       const state = await getRecordingState();
       setIsRecording(state.isRecording);
-    } catch (error) {
+    } catch (_error) {
       setIsRecording(false);
     }
   };

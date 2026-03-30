@@ -448,7 +448,7 @@ class CommitManager {
     try {
       await fsPromises.access(String(filePath));
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

@@ -25,7 +25,7 @@ import type { FormInstance } from 'antd';
 import type { EnvironmentContextLike } from '../../../../types/http';
 import { createLogger } from '../../../utils/error-handling/logger';
 
-const log = createLogger('HttpValidation');
+const _log = createLogger('HttpValidation');
 
 type EnvironmentContext = EnvironmentContextLike;
 

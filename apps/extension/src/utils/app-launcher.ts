@@ -110,7 +110,7 @@ export class AppLauncher {
           win.close();
         }, 100);
       }
-    } catch (e) {
+    } catch (_e) {
       // Method 3: Set location as last resort
       window.location.href = url;
     }

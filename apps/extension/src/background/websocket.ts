@@ -74,7 +74,7 @@ function getBrowserVersion(): string {
         return match[1];
       }
     }
-  } catch (e) {
+  } catch (_e) {
     logger.debug('WebSocket', 'Could not determine browser version');
   }
   return '';
@@ -183,7 +183,7 @@ async function checkServerReachable(wsUrl: string): Promise<boolean> {
 
     clearTimeout(timeoutId);
     return true;
-  } catch (error) {
+  } catch (_error) {
     // Server is not reachable - this is expected when app is closed
     return false;
   }
@@ -470,7 +470,7 @@ function connectStandardWebSocket(url: string, onSourcesReceived: OnSourcesRecei
         logger.info('WebSocket', 'WebSocket closed');
         handleConnectionFailure();
       };
-    } catch (e) {
+    } catch (_e) {
       clearTimeout(connectionTimeout);
       logger.debug('WebSocket', 'Error creating WebSocket connection');
       handleConnectionFailure();

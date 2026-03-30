@@ -99,7 +99,7 @@ const Workspaces = () => {
    * Handles sharing a workspace by generating and displaying invite links
    * @param {Object} workspace - Workspace object to share
    */
-  const handleShareWorkspace = async (workspace: Workspace) => {
+  const _handleShareWorkspace = async (workspace: Workspace) => {
     try {
       // Generate initial invite without auth data
       const result = await window.electronAPI.generateTeamWorkspaceInvite({

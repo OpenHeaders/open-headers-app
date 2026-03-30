@@ -52,7 +52,7 @@ class AtomicFileWriter {
       let userDataPath: string;
       try {
         userDataPath = app.getPath('userData');
-      } catch (e) {
+      } catch (_e) {
         return;
       }
       const walkDir = async (dir: string): Promise<void> => {
@@ -68,7 +68,7 @@ class AtomicFileWriter {
                   await fs.promises.unlink(lockPath);
                   log.debug(`Removed stale lock file: ${lockPath}`);
                 }
-              } catch (err) {
+              } catch (_err) {
                 // Ignore errors
               }
             } else if (entry.isDirectory() && !entry.name.startsWith('.')) {
@@ -76,13 +76,13 @@ class AtomicFileWriter {
               await walkDir(path.join(dir, entry.name));
             }
           }
-        } catch (err) {
+        } catch (_err) {
           // Ignore errors during cleanup
         }
       };
 
       walkDir(userDataPath).catch(() => {});
-    } catch (err) {
+    } catch (_err) {
       // Ignore errors - this is best effort cleanup
     }
   }
@@ -241,7 +241,7 @@ class AtomicFileWriter {
       // Clean up temp file if it exists
       try {
         await fs.promises.unlink(tempPath);
-      } catch (cleanupError) {
+      } catch (_cleanupError) {
         // Ignore cleanup errors
       }
 
@@ -295,7 +295,7 @@ class AtomicFileWriter {
       const fd = await fs.promises.open(lockPath, 'wx');
       await fd.close();
       this.lockFiles.set(lockPath, true);
-    } catch (finalError) {
+    } catch (_finalError) {
       // If still failing, proceed without lock (best effort)
       log.warn(`Could not acquire lock for ${lockPath}, proceeding without lock`);
       this.lockFiles.set(lockPath, true);

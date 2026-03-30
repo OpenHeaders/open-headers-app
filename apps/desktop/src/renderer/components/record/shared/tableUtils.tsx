@@ -123,7 +123,7 @@ export const createCopyButton = (text: string, messageApi: MessageApi, successMe
           try {
             await navigator.clipboard.writeText(text);
             messageApi.success(successMessage);
-          } catch (error) {
+          } catch (_error) {
             messageApi.error('Failed to copy to clipboard');
           }
         }}

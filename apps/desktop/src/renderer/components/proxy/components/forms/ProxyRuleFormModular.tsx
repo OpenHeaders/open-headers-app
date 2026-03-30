@@ -155,7 +155,7 @@ const ProxyRuleForm = ({ visible, onCancel, onSave, rule, sources = [], headerRu
       }
 
       onSave({ ...rule, ...ruleData } as ProxyRule);
-    } catch (error) {
+    } catch (_error) {
       // Form validation failed - this is expected when user hasn't filled required fields
     }
   };

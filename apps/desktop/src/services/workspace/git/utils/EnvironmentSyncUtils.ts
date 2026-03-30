@@ -163,7 +163,7 @@ async function cleanupOldBackups(
           try {
             await fs.unlink(pathModule.join(workspacePath, backup));
             log.debug(`Deleted old backup: ${backup}`);
-          } catch (e) {
+          } catch (_e) {
             // Ignore deletion errors
           }
         }
@@ -178,7 +178,7 @@ async function cleanupOldBackups(
 /**
  * Extract value and isSecret from an EnvironmentVariable
  */
-function extractVarData(varData: EnvironmentVariable): ExtractedVarData {
+function _extractVarData(varData: EnvironmentVariable): ExtractedVarData {
   return {
     value: varData.value ?? '',
     isSecret: varData.isSecret,

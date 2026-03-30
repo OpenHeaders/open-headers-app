@@ -665,7 +665,7 @@ const HeaderRules = () => {
           try {
             await navigator.clipboard.writeText(info.actualValue);
             showMessage('success', 'Value copied to clipboard');
-          } catch (error) {
+          } catch (_error) {
             showMessage('error', 'Failed to copy to clipboard');
           }
         };

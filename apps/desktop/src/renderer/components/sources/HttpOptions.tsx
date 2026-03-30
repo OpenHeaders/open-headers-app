@@ -96,7 +96,7 @@ const HttpOptions = forwardRef(
     const [contentType, setContentType] = useState('application/json');
     const [testResponseVisible, setTestResponseVisible] = useState(false);
     const [testResponseContent, setTestResponseContent] = useState<TestResponseContent | null>(null);
-    const [testing, setTesting] = useState(false);
+    const [_testing, setTesting] = useState(false);
     const [, setRawResponse] = useState<string | null>(null);
 
     // Source IDs

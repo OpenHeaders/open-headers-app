@@ -78,7 +78,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
             newCooldowns[sourceId] = info.remainingSeconds;
             stillActive = true;
           }
-        } catch (e) {
+        } catch (_e) {
           // IPC not ready yet — skip
         }
       }

@@ -209,7 +209,7 @@ class AppLifecycle {
     for (const watcher of this.fileWatchers.values()) {
       try {
         watcher.close();
-      } catch (e) {
+      } catch (_e) {
         /* ignore */
       }
     }

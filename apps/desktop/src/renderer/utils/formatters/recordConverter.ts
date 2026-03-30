@@ -25,7 +25,7 @@ function extractDomain(url: string | null | undefined): string | null {
   try {
     const urlObj = new URL(url);
     return urlObj.hostname;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -196,14 +196,14 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             try {
               const baseUrl = new URL(event.url);
               fullUrl = baseUrl.origin + event.data.url;
-            } catch (e) {
+            } catch (_e) {
               // If that fails, try to use the URL from metadata or navigation history
               const recordUrl = record.url || record.metadata?.url || navigationHistory[0]?.url;
               if (recordUrl) {
                 try {
                   const baseUrl = new URL(recordUrl);
                   fullUrl = baseUrl.origin + event.data.url;
-                } catch (e2) {
+                } catch (_e2) {
                   // Keep relative URL if can't parse base
                   fullUrl = event.data.url;
                 }
