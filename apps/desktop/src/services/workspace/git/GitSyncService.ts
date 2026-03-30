@@ -5,12 +5,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { errorMessage, toError } from '@openheaders/core';
 // Config modules
 import { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
 import { ConfigFileValidator } from '@/services/workspace/config-file-validator';
 // Legacy support
 import { GitAutoInstaller } from '@/services/workspace/git-auto-installer';
-import { errorMessage, toError } from '@/types/common';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 // Auth modules

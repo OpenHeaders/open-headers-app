@@ -21,7 +21,7 @@ import type {
   Snapshot,
   StaticResources,
 } from '@openheaders/core';
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

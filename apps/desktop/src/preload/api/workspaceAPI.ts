@@ -1,6 +1,6 @@
+import type { OperationResult } from '@openheaders/core';
 import type { IpcRendererEvent } from 'electron';
 import electron from 'electron';
-import type { OperationResult } from '@/types/common';
 import type { EnvironmentConfigData, EnvironmentMap, EnvironmentSchema } from '@/types/environment';
 import type {
   CliWorkspaceJoinedData,

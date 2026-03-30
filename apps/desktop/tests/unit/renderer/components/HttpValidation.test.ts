@@ -1,3 +1,4 @@
+import type { JsonObject } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   resolveAllVariables,
@@ -9,7 +10,6 @@ import {
   validateUrlField,
   validateVariableExists,
 } from '@/renderer/components/sources/http-options/HttpValidation';
-import type { JsonObject } from '@/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers

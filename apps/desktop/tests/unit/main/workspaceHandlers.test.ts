@@ -1,7 +1,7 @@
+import type { IpcInvokeEvent } from '@/types/common';
 import zlib from 'node:zlib';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_FORMAT_VERSION } from '@/config/version';
-import type { IpcInvokeEvent } from '@/types/common';
 import type { EnvironmentSchema } from '@/types/environment';
 import type { Workspace } from '@/types/workspace';
 

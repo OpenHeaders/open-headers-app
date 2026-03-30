@@ -3,7 +3,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

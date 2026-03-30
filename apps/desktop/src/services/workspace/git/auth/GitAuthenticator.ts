@@ -3,7 +3,7 @@
  * Handles different authentication strategies for Git operations
  */
 
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 import BasicAuthStrategy from './BasicAuthStrategy';

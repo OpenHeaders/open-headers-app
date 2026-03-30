@@ -5,7 +5,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const fsPromises = fs.promises;

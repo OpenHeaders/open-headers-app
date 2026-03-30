@@ -1,7 +1,7 @@
+import { errorMessage } from '@openheaders/core';
 import { App } from 'antd';
 import { TIMING } from '@/renderer/components/features/workspaces/constants';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import { errorMessage } from '@/types/common';
 
 const log = createLogger('SyncOperations');
 

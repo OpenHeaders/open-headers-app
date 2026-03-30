@@ -1,10 +1,10 @@
 import child_process from 'node:child_process';
 import path from 'node:path';
 import util from 'node:util';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
 import timeManager from '@/services/core/TimeManager';
 import type { IpcInvokeEvent } from '@/types/common';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const { app, systemPreferences, shell } = electron;

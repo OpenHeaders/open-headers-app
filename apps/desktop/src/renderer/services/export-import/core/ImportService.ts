@@ -5,6 +5,7 @@
  * handles file parsing, validation, and provides comprehensive error handling.
  */
 
+import { errorMessage } from '@openheaders/core';
 import { IMPORT_MODES, SUCCESS_MESSAGES } from '@/renderer/services/export-import/core/ExportImportConfig';
 import { EnvironmentsHandler } from '@/renderer/services/export-import/handlers/EnvironmentsHandler';
 import { ProxyRulesHandler } from '@/renderer/services/export-import/handlers/ProxyRulesHandler';
@@ -21,7 +22,6 @@ import {
 } from '@/renderer/services/export-import/utilities/ValidationUtils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
-import { errorMessage } from '@/types/common';
 import type { ExportImportDependencies, ImportData, ImportOptions } from './types';
 
 const log = createLogger('ImportService');

@@ -3,7 +3,7 @@
  * Provides user-friendly error messages and recovery suggestions
  */
 
-import { errorMessage, toError } from '@/types/common';
+import { errorMessage, toError } from '@openheaders/core';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 

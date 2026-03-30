@@ -7,7 +7,7 @@
 
 import fs from 'node:fs';
 import type { HeaderRule, Source, SourceUpdate } from '@openheaders/core';
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import type { ProxyRule } from '@/types/proxy';
 import mainLogger from '@/utils/mainLogger';
 import { evaluateSourceDependencies } from './SourceDependencyEvaluator';

@@ -6,8 +6,8 @@
  */
 
 import type { Source } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 import type { ProxyServiceLike, SourceRefreshServiceLike, WebSocketServiceLike, WorkspaceState } from './types';
 

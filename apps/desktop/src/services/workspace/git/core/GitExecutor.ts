@@ -5,7 +5,7 @@
 
 import child_process from 'node:child_process';
 import util from 'node:util';
-import { toError } from '@/types/common';
+import { toError } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { exec } = child_process;

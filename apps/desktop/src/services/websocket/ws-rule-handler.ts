@@ -9,9 +9,9 @@
  */
 
 import type { HeaderRule, RulesCollection, Source } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import WebSocket from 'ws';
 import { DATA_FORMAT_VERSION } from '@/config/version';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

@@ -1,6 +1,7 @@
 // Electron main process — phased startup for fast window display
 
 import type { Source } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import type {
   BrowserWindow as BrowserWindowType,
   IpcMainEvent,
@@ -9,7 +10,6 @@ import type {
 } from 'electron';
 import electron from 'electron';
 import settingsCache from './services/core/SettingsCache';
-import { errorMessage } from './types/common';
 import mainLogger from './utils/mainLogger';
 
 const { app, ipcMain, Menu, shell } = electron;

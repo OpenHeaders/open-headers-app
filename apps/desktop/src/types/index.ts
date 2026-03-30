@@ -9,13 +9,8 @@
 export type {
   IpcFireEvent,
   IpcInvokeEvent,
-  JsonArray,
-  JsonObject,
-  JsonPrimitive,
-  JsonValue,
-  OperationResult,
 } from './common';
-export { errorMessage } from './common';
+export { toErrno } from './common';
 export type {
   EnvironmentConfigData,
   EnvironmentMap,

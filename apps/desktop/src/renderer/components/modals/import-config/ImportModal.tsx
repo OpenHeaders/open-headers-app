@@ -1,10 +1,10 @@
 import { ImportOutlined, UploadOutlined } from '@ant-design/icons';
+import { errorMessage } from '@openheaders/core';
 import { Button, Modal, message, Space, Typography, theme } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { DATA_FORMAT_VERSION } from '@/config/version.esm';
 import { useWorkspaces } from '@/renderer/contexts';
 import type { ImportOptions, WorkspaceData } from '@/renderer/services/export-import/core/types';
-import { errorMessage } from '@/types/common';
 import type { EnvironmentConfigData, EnvironmentMap } from '@/types/environment';
 import ImportEnvironmentSelector from './ImportEnvironmentSelector';
 import ImportFileAnalysis from './ImportFileAnalysis';

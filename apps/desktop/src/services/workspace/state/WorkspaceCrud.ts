@@ -7,8 +7,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { errorMessage } from '@openheaders/core';
 import { DATA_FORMAT_VERSION } from '@/config/version';
-import { errorMessage } from '@/types/common';
 import type { Workspace, WorkspaceType } from '@/types/workspace';
 import atomicWriter from '@/utils/atomicFileWriter';
 import mainLogger from '@/utils/mainLogger';

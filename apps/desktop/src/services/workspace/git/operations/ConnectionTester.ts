@@ -3,6 +3,7 @@
  * Handles connection testing with various authentication methods
  */
 
+import { errorMessage, toError } from '@openheaders/core';
 import electron from 'electron';
 import type { ConfigFileDetector } from '@/services/workspace/ConfigFileDetector';
 import type GitAuthenticator from '@/services/workspace/git/auth/GitAuthenticator';
@@ -10,7 +11,6 @@ import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
 import type { GitBranchManager } from '@/services/workspace/git/repository/GitBranchManager';
 import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
 import GitConnectionProgress from '@/services/workspace/git/utils/GitConnectionProgress';
-import { errorMessage, toError } from '@/types/common';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 

@@ -1,11 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import { errorMessage } from '@openheaders/core';
 import type { BrowserWindow as BrowserWindowType } from 'electron';
 import electron from 'electron';
 import { isVersionCompatible as checkVersionCompatible, DATA_FORMAT_VERSION } from '@/config/version';
 import windowsFocusHelper from '@/main/modules/utils/windowsFocus';
-import { errorMessage } from '@/types/common';
 import type { EnvironmentSchema, EnvironmentVariable } from '@/types/environment';
 import type { AppSettings } from '@/types/settings';
 import mainLogger from '@/utils/mainLogger';

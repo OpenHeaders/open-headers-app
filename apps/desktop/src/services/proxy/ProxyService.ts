@@ -6,7 +6,7 @@ import type net from 'node:net';
 import tls from 'node:tls';
 import url from 'node:url';
 import type { HeaderRule, Source } from '@openheaders/core';
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 import { DomainMatcher } from './domainMatcher';
 import { ProxyCache } from './ProxyCache';

@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import type { OperationResult } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
 import { DATA_FORMAT_VERSION } from '@/config/version';
 import appLifecycle from '@/main/modules/app/lifecycle';
@@ -11,8 +13,7 @@ import networkService from '@/services/network/NetworkService';
 import proxyService from '@/services/proxy/ProxyService';
 import webSocketService from '@/services/websocket/ws-service';
 import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
-import type { IpcInvokeEvent, OperationResult } from '@/types/common';
-import { errorMessage } from '@/types/common';
+import type { IpcInvokeEvent } from '@/types/common';
 import type {
   EnvironmentConfigData,
   EnvironmentMap,

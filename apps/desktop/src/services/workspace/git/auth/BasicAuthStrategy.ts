@@ -2,7 +2,7 @@
  * BasicAuthStrategy - Handles basic username/password authentication for Git operations
  */
 
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

@@ -2,10 +2,10 @@
  * Utility functions for workflow operations
  */
 
+import type { JsonObject } from '@openheaders/core';
 import type React from 'react';
 import { showMessage } from '@/renderer/utils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { JsonObject } from '@/types/common';
 
 const log = createLogger('WorkflowUtils');
 

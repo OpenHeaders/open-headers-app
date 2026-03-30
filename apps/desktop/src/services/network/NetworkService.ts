@@ -4,8 +4,8 @@ import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import os from 'node:os';
 import util from 'node:util';
+import { errorMessage } from '@openheaders/core';
 import timeManager from '@/services/core/TimeManager';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

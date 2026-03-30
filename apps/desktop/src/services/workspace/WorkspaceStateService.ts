@@ -15,8 +15,8 @@
  */
 
 import type { HeaderRule, Source, SourceUpdate } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
-import { errorMessage } from '@/types/common';
 import type { EnvironmentMap } from '@/types/environment';
 import { cloneEnvironmentMap } from '@/types/environment';
 import type { ProxyRule } from '@/types/proxy';

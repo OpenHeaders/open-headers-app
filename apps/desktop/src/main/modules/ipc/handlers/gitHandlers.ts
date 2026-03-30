@@ -1,8 +1,9 @@
+import type { OperationResult } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
 import appLifecycle from '@/main/modules/app/lifecycle';
 import type { ProgressStep } from '@/services/workspace/git/utils/GitConnectionProgress';
-import type { IpcInvokeEvent, OperationResult } from '@/types/common';
-import { errorMessage } from '@/types/common';
+import type { IpcInvokeEvent } from '@/types/common';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 

@@ -1,4 +1,13 @@
 export type {
+  JsonArray,
+  JsonObject,
+  JsonPrimitive,
+  JsonValue,
+  OperationResult,
+} from './common';
+export { errorMessage, toError } from './common';
+
+export type {
   ConsoleArg,
   ConsoleArgObject,
   ConsoleRecord,

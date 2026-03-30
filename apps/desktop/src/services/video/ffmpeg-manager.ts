@@ -2,10 +2,10 @@ import child_process from 'node:child_process';
 import fs from 'node:fs';
 import https from 'node:https';
 import path from 'node:path';
+import { errorMessage as errMsg } from '@openheaders/core';
 import AdmZip from 'adm-zip';
 import electron from 'electron';
 import * as tar from 'tar';
-import { errorMessage as errMsg } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const { app } = electron;

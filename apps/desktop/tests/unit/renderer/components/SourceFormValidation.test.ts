@@ -1,3 +1,4 @@
+import type { JsonObject } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   validateAllHttpFields,
@@ -10,7 +11,6 @@ import {
   validateTotpSecret,
   validateUrlField,
 } from '@/renderer/components/sources/source-form/SourceFormValidation';
-import type { JsonObject } from '@/types/common';
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -10,6 +10,7 @@
  */
 
 import type { Source } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
 import type { HttpRequestService } from '@/services/http/HttpRequestService';
 import { AdaptiveCircuitBreakerManager } from '@/shared/AdaptiveCircuitBreaker';
@@ -21,7 +22,6 @@ import {
   INITIAL_RETRY_CONFIG,
   OVERDUE_RETRY_CONFIG,
 } from '@/shared/retryConfig';
-import { errorMessage } from '@/types/common';
 import type { FetchResult, RefreshStatusInfo } from '@/types/source-refresh';
 import mainLogger from '@/utils/mainLogger';
 import { fetchSourceContent } from './SourceFetcher';

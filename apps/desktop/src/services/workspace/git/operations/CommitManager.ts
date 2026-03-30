@@ -5,8 +5,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { errorMessage } from '@openheaders/core';
 import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const fsPromises = fs.promises;

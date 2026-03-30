@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IpcInvokeEvent } from '@/types/common';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppSettings } from '@/types/settings';
 
 // Mock electron

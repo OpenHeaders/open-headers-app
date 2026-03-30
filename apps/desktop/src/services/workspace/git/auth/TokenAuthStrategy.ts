@@ -2,7 +2,7 @@
  * TokenAuthStrategy - Handles token-based authentication for various Git providers
  */
 
-import { errorMessage } from '@/types/common';
+import { errorMessage } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

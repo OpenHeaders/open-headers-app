@@ -1,4 +1,5 @@
 import type { FSWatcher } from 'node:fs';
+import { errorMessage } from '@openheaders/core';
 import electron from 'electron';
 import httpRequestHandlers from '@/main/modules/ipc/handlers/httpRequestHandlers';
 import type { CliApiService } from '@/services/cli/CliApiService';
@@ -14,7 +15,6 @@ import GitSyncService from '@/services/workspace/git/GitSyncService';
 import WorkspaceSettingsService from '@/services/workspace/WorkspaceSettingsService';
 import workspaceStateService from '@/services/workspace/WorkspaceStateService';
 import WorkspaceSyncScheduler from '@/services/workspace/WorkspaceSyncScheduler';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 import '../../../services/video/video-export-manager'; // Side-effect: registers IPC handlers in constructor
 

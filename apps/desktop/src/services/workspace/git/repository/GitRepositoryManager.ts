@@ -4,9 +4,10 @@
  */
 
 import fs from 'node:fs';
+import { errorMessage } from '@openheaders/core';
 import type { GitAuthenticator } from '@/services/workspace/git/auth/GitAuthenticator';
 import type { GitExecutor } from '@/services/workspace/git/core/GitExecutor';
-import { errorMessage, toErrno } from '@/types/common';
+import { toErrno } from '@/types/common';
 import type { WorkspaceAuthData } from '@/types/workspace';
 import mainLogger from '@/utils/mainLogger';
 

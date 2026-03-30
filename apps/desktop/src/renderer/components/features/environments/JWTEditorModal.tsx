@@ -16,6 +16,7 @@ import {
   LockOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
+import type { JsonObject } from '@openheaders/core';
 import {
   Alert,
   Button,
@@ -46,7 +47,6 @@ import {
   signJWT,
   validateJSON,
 } from '@/renderer/utils/jwtUtils';
-import type { JsonObject } from '@/types/common';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;

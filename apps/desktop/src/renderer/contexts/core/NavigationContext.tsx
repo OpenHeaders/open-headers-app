@@ -1,8 +1,8 @@
+import type { JsonValue } from '@openheaders/core';
 import { theme } from 'antd';
 import type React from 'react';
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import type { JsonValue } from '@/types/common';
 
 const log = createLogger('NavigationContext');
 

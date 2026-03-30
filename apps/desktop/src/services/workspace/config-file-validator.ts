@@ -5,7 +5,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { JsonObject } from '@/types/common';
+import type { JsonObject } from '@openheaders/core';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

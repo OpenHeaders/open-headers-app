@@ -1,10 +1,10 @@
+import { errorMessage } from '@openheaders/core';
 import { App } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { TIMING } from '@/renderer/components/features/workspaces/constants';
 import { formatValidationDetails, prepareAuthData } from '@/renderer/components/features/workspaces/utils';
 import type { WorkspaceFormValues } from '@/renderer/components/features/workspaces/utils/WorkspaceUtils';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
-import { errorMessage } from '@/types/common';
 
 const log = createLogger('GitActions');
 

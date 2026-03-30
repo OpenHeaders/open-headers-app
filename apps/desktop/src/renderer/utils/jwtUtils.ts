@@ -3,8 +3,8 @@
  * Provides encoding and decoding functionality for JWT tokens
  */
 
-import type { JsonObject } from '@/types/common';
-import { errorMessage } from '@/types/common';
+import type { JsonObject } from '@openheaders/core';
+import { errorMessage } from '@openheaders/core';
 
 /**
  * Decodes a JWT token without verification

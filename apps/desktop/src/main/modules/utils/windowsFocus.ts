@@ -1,5 +1,5 @@
+import { errorMessage } from '@openheaders/core';
 import type { BrowserWindow } from 'electron';
-import { errorMessage } from '@/types/common';
 import mainLogger from '@/utils/mainLogger';
 
 const { createLogger } = mainLogger;

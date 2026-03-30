@@ -1,3 +1,4 @@
+import type { JsonObject } from '@openheaders/core';
 import { describe, expect, it } from 'vitest';
 import {
   decodeJWT,
@@ -8,7 +9,6 @@ import {
   JWT_CLAIM_DESCRIPTIONS,
   validateJSON,
 } from '@/renderer/utils/jwtUtils';
-import type { JsonObject } from '@/types/common';
 
 // Helper: build a minimal valid JWT from header + payload objects
 function buildJWT(header: object, payload: object, sig = 'fakesig'): string {
