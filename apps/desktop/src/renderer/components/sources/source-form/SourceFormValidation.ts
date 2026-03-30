@@ -45,12 +45,12 @@ interface SourceFormValues {
  * variables or TOTP placeholders. Checks environment variable availability
  * and TOTP secret configuration when placeholders are detected.
  *
- * @param {Object} rule - Validation rule object from Ant Design Form
- * @param {string} value - URL value to validate
- * @param {string} sourceType - Type of source being validated
- * @param {Object} envContext - Environment context with variables and state
- * @param {Object} form - Form instance for accessing other field values
- * @returns {Promise} Resolves if valid, rejects with error message if invalid
+ * @param _rule - Validation rule object from Ant Design Form
+ * @param value - URL value to validate
+ * @param sourceType - Type of source being validated
+ * @param envContext - Environment context with variables and state
+ * @param form - Form instance for accessing other field values
+ * @returns Resolves if valid, rejects with error message if invalid
  *
  * @example
  * const validation = validateUrlField(rule, 'https://{{API_URL}}/data', 'http', envContext, form);
@@ -148,10 +148,10 @@ export const validateUrlField = (
  * Generic validation function for checking environment variable availability
  * in any field value. Used for headers, query params, body, and other fields.
  *
- * @param {string} value - String value to check for environment variables
- * @param {Object} envContext - Environment context with variables and state
- * @param {string} fieldName - Name of the field being validated (for error messages)
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param value - String value to check for environment variables
+ * @param envContext - Environment context with variables and state
+ * @param fieldName - Name of the field being validated (for error messages)
+ * @returns Error object if validation fails, null if valid
  *
  * @example
  * const error = validateEnvironmentVariables('{{API_KEY}}', envContext, 'Header value');
@@ -188,10 +188,10 @@ export const validateEnvironmentVariables = (
  * Checks if a field contains TOTP placeholders and validates that the
  * corresponding TOTP secret is properly configured in the form.
  *
- * @param {string} value - String value to check for TOTP placeholders
- * @param {Object} form - Form instance for accessing TOTP configuration
- * @param {string} fieldName - Name of the field being validated (for error messages)
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param value - String value to check for TOTP placeholders
+ * @param form - Form instance for accessing TOTP configuration
+ * @param fieldName - Name of the field being validated (for error messages)
+ * @returns Error object if validation fails, null if valid
  *
  * @example
  * const error = validateTotpPlaceholders('Bearer [[TOTP_CODE]]', form, 'Authorization header');
@@ -224,9 +224,9 @@ export const validateTotpPlaceholders = (
  * Comprehensive validation for all headers in the form, checking each header
  * value for environment variable references and TOTP placeholders.
  *
- * @param {Object} form - Form instance for accessing header values
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param form - Form instance for accessing header values
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if valid
  *
  * @example
  * const error = validateHttpHeaders(form, envContext);
@@ -266,9 +266,9 @@ export const validateHttpHeaders = (form: FormInstance, envContext: EnvironmentC
  * Comprehensive validation for all query parameters in the form, checking each
  * parameter value for environment variable references and TOTP placeholders.
  *
- * @param {Object} form - Form instance for accessing query parameter values
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param form - Form instance for accessing query parameter values
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if valid
  */
 export const validateQueryParameters = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
   // Get all query parameters from the form
@@ -297,9 +297,9 @@ export const validateQueryParameters = (form: FormInstance, envContext: Environm
  * Checks the request body field for environment variable references
  * and validates their availability in the current environment.
  *
- * @param {Object} form - Form instance for accessing body value
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param form - Form instance for accessing body value
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if valid
  */
 export const validateRequestBody = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
   // Get request body from the form
@@ -316,9 +316,9 @@ export const validateRequestBody = (form: FormInstance, envContext: EnvironmentC
  * Checks the JSON filter path field for environment variable references
  * when JSON filtering is enabled.
  *
- * @param {Object} values - Form values containing JSON filter configuration
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param values - Form values containing JSON filter configuration
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if valid
  */
 export const validateJsonFilterPath = (
   values: SourceFormValues,
@@ -337,9 +337,9 @@ export const validateJsonFilterPath = (
  * Checks the TOTP secret field for environment variable references
  * and validates their availability in the current environment.
  *
- * @param {Object} form - Form instance for accessing TOTP secret value
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if valid
+ * @param form - Form instance for accessing TOTP secret value
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if valid
  */
 export const validateTotpSecret = (form: FormInstance, envContext: EnvironmentContext): ValidationError | null => {
   // Get TOTP secret from form request options
@@ -358,10 +358,10 @@ export const validateTotpSecret = (form: FormInstance, envContext: EnvironmentCo
  * environment variables and TOTP placeholders. Used during form submission
  * to ensure all template variables are properly configured.
  *
- * @param {Object} form - Form instance for accessing all field values
- * @param {Object} values - Current form values
- * @param {Object} envContext - Environment context with variables and state
- * @returns {Object|null} Error object if validation fails, null if all valid
+ * @param form - Form instance for accessing all field values
+ * @param values - Current form values
+ * @param envContext - Environment context with variables and state
+ * @returns Error object if validation fails, null if all valid
  *
  * @example
  * const error = validateAllHttpFields(form, values, envContext);

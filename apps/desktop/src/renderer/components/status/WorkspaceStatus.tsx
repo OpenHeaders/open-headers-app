@@ -52,7 +52,7 @@ const WorkspaceStatus = () => {
       ),
       onClick: () => {
         if (!isActive) {
-          switchWorkspace(workspace.id);
+          void switchWorkspace(workspace.id);
         }
         setDropdownOpen(false);
       },

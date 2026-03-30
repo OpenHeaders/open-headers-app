@@ -25,9 +25,9 @@ interface ConnectionStatus {
  * Manages WebSocket server connection status and connected browser clients.
  * Subscribes to real-time push updates and polls as a safety net.
  *
- * @param {Object} options
- * @param {boolean} options.active - Whether the Connections tab is currently visible
- * @returns {Object} Connection status and client data
+ * @param options
+ * @param options.active - Whether the Connections tab is currently visible
+ * @returns Connection status and client data
  */
 export const useConnectionsServer = ({ active = false } = {}) => {
   const [status, setStatus] = useState<ConnectionStatus>({
@@ -52,10 +52,9 @@ export const useConnectionsServer = ({ active = false } = {}) => {
 
   // Subscribe to real-time push updates
   useEffect(() => {
-    const unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data) => {
+    return window.electronAPI.onWsConnectionStatusChanged((data) => {
       if (data) setStatus((prev) => ({ ...prev, ...data }));
     });
-    return unsubscribe;
   }, []);
 
   // Load on mount

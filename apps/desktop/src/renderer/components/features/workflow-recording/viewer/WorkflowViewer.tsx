@@ -41,7 +41,7 @@ interface WorkflowViewerProps {
 
 const WorkflowViewer = ({
   record: externalRecord,
-  onRecordChange,
+  onRecordChange: _onRecordChange,
   viewMode,
   playbackTime,
   onPlaybackTimeChange,
@@ -53,7 +53,7 @@ const WorkflowViewer = ({
   const { settings } = useSettings();
 
   // Internal state
-  const [internalRecord, setInternalRecord] = useState<Recording | null>(null);
+  const [internalRecord] = useState<Recording | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
 
   // Refs for component lifecycle and scroll management
@@ -78,13 +78,6 @@ const WorkflowViewer = ({
 
   // Record management
   const record = externalRecord !== undefined ? externalRecord : internalRecord;
-  const _setRecord = (newRecord: Recording) => {
-    if (onRecordChange) {
-      onRecordChange(newRecord);
-    } else {
-      setInternalRecord(newRecord);
-    }
-  };
 
   // Playback time management
   const activeTime = playbackTime !== undefined ? playbackTime : currentTime;

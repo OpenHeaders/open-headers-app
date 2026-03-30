@@ -37,13 +37,13 @@ export function extractHeaders(source: Source | null): Record<string, string> | 
 
   // Fallback: try to parse headers from originalResponse (body before filtering)
   // This works for proxy-style APIs that embed headers in the response body
-  if (source?.originalResponse && typeof source.originalResponse === 'string') {
+  if (source?.originalResponse) {
     const originalHeaders = extractFromJsonString(source.originalResponse);
     if (originalHeaders) return originalHeaders;
   }
 
   // Fallback: check for headers embedded in source content
-  if (source?.sourceContent && typeof source.sourceContent === 'string') {
+  if (source?.sourceContent) {
     const contentHeaders = extractFromSourceContent(source.sourceContent);
     if (contentHeaders) return contentHeaders;
   }

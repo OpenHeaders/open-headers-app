@@ -1,6 +1,6 @@
 import type { Recording, Source } from '@openheaders/core';
 import { Layout, theme } from 'antd';
-import type React from 'react';
+import type { RefObject } from 'react';
 import TrayMenu from '@/renderer/components/features/TrayMenu';
 import AboutModal from '@/renderer/components/modals/AboutModal';
 import ExportModal from '@/renderer/components/modals/export-config';
@@ -59,7 +59,7 @@ interface AppLayoutProps {
   onHandleExport: (config: ExportOptions) => void;
   onHandleImport: (data: ImportOptions) => Promise<void>;
   preloadedEnvData: Partial<EnvironmentConfigData> | null;
-  updateNotificationRef: React.MutableRefObject<UpdateNotificationHandle | null>;
+  updateNotificationRef: RefObject<UpdateNotificationHandle | null>;
 }
 
 const { Content } = Layout;

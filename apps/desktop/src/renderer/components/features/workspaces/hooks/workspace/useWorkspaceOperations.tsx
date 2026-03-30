@@ -32,7 +32,8 @@ export const useWorkspaceOperations = (workspaceContext: WorkspaceContextType) =
       const workspace = prepareWorkspaceData(values, editingWorkspace, authData);
 
       if (!workspace.name) {
-        throw new Error('Workspace name is required');
+        void message.error('Workspace name is required');
+        return { success: false };
       }
 
       const result = editingWorkspace

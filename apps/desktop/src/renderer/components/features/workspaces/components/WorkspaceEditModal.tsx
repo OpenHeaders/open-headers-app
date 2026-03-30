@@ -336,7 +336,10 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
         onSuccess?.(workspace!.id);
         handleCancel();
       } else {
-        throw new Error('Failed to update workspace');
+        const errorMessage = 'Failed to update workspace';
+        console.error('Workspace update failed:', errorMessage);
+        setUpdateError({ message: errorMessage });
+        message.error(errorMessage);
       }
     } catch (error) {
       console.error('Workspace update failed:', error);

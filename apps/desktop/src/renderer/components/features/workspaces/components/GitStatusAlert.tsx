@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { ReloadOutlined } from '@ant-design/icons';
 import { Alert, Button, Spin } from 'antd';
 import type React from 'react';
 
@@ -81,24 +81,6 @@ const GitStatusAlert = ({
       }
       type="warning"
       showIcon
-      style={{ marginBottom: 16 }}
-    />
-  );
-
-  /**
-   * Renders the Git installed success alert
-   *  Git installed alert
-   */
-  const _renderInstalledAlert = () => (
-    <Alert
-      title={
-        <span>
-          <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
-          Git is installed and ready
-        </span>
-      }
-      description={`Git found at: ${gitStatus?.gitPath || 'System PATH'}`}
-      type="success"
       style={{ marginBottom: 16 }}
     />
   );

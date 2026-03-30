@@ -222,11 +222,11 @@ export const createRemoveSourceHandler =
 
 /**
  * Creates modal handlers for edit and content view
- * @param {Object} params - Handler parameters
- * @param {Function} params.setSelectedSourceId - Set selected source ID
- * @param {Function} params.setEditModalVisible - Set edit modal visibility
- * @param {Function} params.setContentViewerVisible - Set content viewer visibility
- * @returns {Object} Modal handlers
+ * @param params - Handler parameters
+ * @param params.setSelectedSourceId - Set selected source ID
+ * @param params.setEditModalVisible - Set edit modal visibility
+ * @param params.setContentViewerVisible - Set content viewer visibility
+ * @returns Modal handlers
  */
 export const createModalHandlers = ({
   setSelectedSourceId,

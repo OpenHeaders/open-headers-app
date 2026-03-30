@@ -4,7 +4,7 @@
 
 /**
  * Performs auto-scroll to the current entry in the active tab
- * @returns {Function} Debounced scroll function
+ * @returns Debounced scroll function
  */
 export const createAutoScrollHandler = () => {
   return () => {
@@ -85,9 +85,9 @@ export const createAutoScrollHandler = () => {
 
 /**
  * Creates handlers for auto-highlight and auto-scroll functionality
- * @param {Function} setAutoHighlight - Function to set auto-highlight state
- * @param {Function} setAutoScroll - Function to set auto-scroll state
- * @returns {Object} Handler functions
+ * @param setAutoHighlight - Function to set auto-highlight state
+ * @param setAutoScroll - Function to set auto-scroll state
+ * @returns Handler functions
  */
 export const createHighlightHandlers = (
   setAutoHighlight: (value: boolean) => void,

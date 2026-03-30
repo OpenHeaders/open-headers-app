@@ -16,6 +16,7 @@
  * @since 3.0.0
  */
 
+import type { ChangeEvent, ClipboardEvent, KeyboardEvent, RefObject } from 'react';
 import type { InputRef } from 'antd';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import { validateDomain } from './DomainValidation';
@@ -25,14 +26,14 @@ interface PasteHandlerParams {
   onChange?: (tags: string[]) => void;
   inputValue: string;
   setInputValue: (value: string) => void;
-  inputRef: React.RefObject<InputRef | null>;
+  inputRef: RefObject<InputRef | null>;
 }
 
 interface InputChangeHandlerParams {
   value: string[];
   onChange?: (tags: string[]) => void;
   setInputValue: (value: string) => void;
-  inputRef: React.RefObject<InputRef | null>;
+  inputRef: RefObject<InputRef | null>;
 }
 
 interface InputConfirmHandlerParams {
@@ -50,7 +51,7 @@ interface KeyboardHandlerParams {
   setInputVisible: (visible: boolean) => void;
   setInputValue: (value: string) => void;
   handleInputConfirm: () => void;
-  inputRef: React.RefObject<InputRef | null>;
+  inputRef: RefObject<InputRef | null>;
 }
 
 interface BatchProcessorParams {
@@ -64,8 +65,8 @@ interface BatchProcessorParams {
  * Takes raw domain input, applies validation rules, and returns
  * a clean domain string or empty string if invalid.
  *
- * @param {string} input - Raw domain input string
- * @returns {string} Processed domain string or empty if invalid
+ * @param input - Raw domain input string
+ * @returns Processed domain string or empty if invalid
  *
  * @example
  * const domain = processSingleDomain('  "example.com"  ');
@@ -98,13 +99,13 @@ export const processSingleDomain = (input: string): string => {
  * Factory function that creates a specialized paste handler supporting
  * both single and multi-domain paste operations with comma separation.
  *
- * @param {Object} params - Handler configuration
- * @param {Array} params.value - Current domain tags array
- * @param {Function} params.onChange - Domain change callback
- * @param {string} params.inputValue - Current input field value
- * @param {Function} params.setInputValue - Input value setter
- * @param {Object} params.inputRef - Reference to input element
- * @returns {Function} Paste event handler
+ * @param params - Handler configuration
+ * @param params.value - Current domain tags array
+ * @param params.onChange - Domain change callback
+ * @param params.inputValue - Current input field value
+ * @param params.setInputValue - Input value setter
+ * @param params.inputRef - Reference to input element
+ * @returns Paste event handler
  *
  * @example
  * const handlePaste = createPasteHandler({
@@ -117,7 +118,7 @@ export const processSingleDomain = (input: string): string => {
  */
 export const createPasteHandler =
   ({ value, onChange, inputValue, setInputValue, inputRef }: PasteHandlerParams) =>
-  (e: React.ClipboardEvent<HTMLInputElement>) => {
+  (e: ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
 
@@ -161,12 +162,12 @@ export const createPasteHandler =
  * Factory function that creates an input change handler supporting
  * automatic domain addition when comma is typed.
  *
- * @param {Object} params - Handler configuration
- * @param {Array} params.value - Current domain tags array
- * @param {Function} params.onChange - Domain change callback
- * @param {Function} params.setInputValue - Input value setter
- * @param {Object} params.inputRef - Reference to input element
- * @returns {Function} Input change event handler
+ * @param params - Handler configuration
+ * @param params.value - Current domain tags array
+ * @param params.onChange - Domain change callback
+ * @param params.setInputValue - Input value setter
+ * @param params.inputRef - Reference to input element
+ * @returns Input change event handler
  *
  * @example
  * const handleInputChange = createInputChangeHandler({
@@ -178,7 +179,7 @@ export const createPasteHandler =
  */
 export const createInputChangeHandler =
   ({ value, onChange, setInputValue, inputRef }: InputChangeHandlerParams) =>
-  (e: React.ChangeEvent<HTMLInputElement>) => {
+  (e: ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
 
     // Check if user typed a comma for automatic domain addition
@@ -221,13 +222,13 @@ export const createInputChangeHandler =
  * Factory function that creates a handler for confirming domain input
  * when Enter is pressed or input loses focus.
  *
- * @param {Object} params - Handler configuration
- * @param {Array} params.value - Current domain tags array
- * @param {Function} params.onChange - Domain change callback
- * @param {string} params.inputValue - Current input field value
- * @param {Function} params.setInputVisible - Input visibility setter
- * @param {Function} params.setInputValue - Input value setter
- * @returns {Function} Input confirm handler
+ * @param params - Handler configuration
+ * @param params.value - Current domain tags array
+ * @param params.onChange - Domain change callback
+ * @param params.inputValue - Current input field value
+ * @param params.setInputVisible - Input visibility setter
+ * @param params.setInputValue - Input value setter
+ * @returns Input confirm handler
  *
  * @example
  * const handleInputConfirm = createInputConfirmHandler({
@@ -260,15 +261,15 @@ export const createInputConfirmHandler =
  * Factory function that creates a comprehensive keyboard handler supporting
  * Enter to confirm, Escape to cancel, and Backspace for domain removal.
  *
- * @param {Object} params - Handler configuration
- * @param {Array} params.value - Current domain tags array
- * @param {Function} params.onChange - Domain change callback
- * @param {string} params.inputValue - Current input field value
- * @param {Function} params.setInputVisible - Input visibility setter
- * @param {Function} params.setInputValue - Input value setter
- * @param {Function} params.handleInputConfirm - Input confirm handler
- * @param {Object} params.inputRef - Reference to input element
- * @returns {Function} Keyboard event handler
+ * @param params - Handler configuration
+ * @param params.value - Current domain tags array
+ * @param params.onChange - Domain change callback
+ * @param params.inputValue - Current input field value
+ * @param params.setInputVisible - Input visibility setter
+ * @param params.setInputValue - Input value setter
+ * @param params.handleInputConfirm - Input confirm handler
+ * @param params.inputRef - Reference to input element
+ * @returns Keyboard event handler
  *
  * @example
  * const handleKeyPress = createKeyboardHandler({
@@ -291,7 +292,7 @@ export const createKeyboardHandler =
     handleInputConfirm,
     inputRef,
   }: KeyboardHandlerParams) =>
-  (e: React.KeyboardEvent<HTMLInputElement>) => {
+  (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       // Enter key: confirm current input
       handleInputConfirm();
@@ -320,10 +321,10 @@ export const createKeyboardHandler =
  * Factory function that creates a handler for processing multiple domains
  * simultaneously with validation and duplicate removal.
  *
- * @param {Object} params - Processor configuration
- * @param {Array} params.value - Current domain tags array
- * @param {Function} params.onChange - Domain change callback
- * @returns {Function} Batch processor function
+ * @param params - Processor configuration
+ * @param params.value - Current domain tags array
+ * @param params.onChange - Domain change callback
+ * @returns Batch processor function
  *
  * @example
  * const processBatch = createBatchProcessor({

@@ -53,7 +53,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
 
   useEffect(() => {
     // Initial fetch
-    fetchNetworkState();
+    void fetchNetworkState();
 
     // Refresh every 2 seconds
     const interval = setInterval(fetchNetworkState, 2000);

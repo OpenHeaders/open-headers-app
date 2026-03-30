@@ -15,5 +15,4 @@
  * @since 3.0.0
  */
 
-export { default as VirtualizedFilterableTable } from './VirtualizedFilterableTable';
 export { default as VirtualizedSimpleTable } from './VirtualizedSimpleTable';

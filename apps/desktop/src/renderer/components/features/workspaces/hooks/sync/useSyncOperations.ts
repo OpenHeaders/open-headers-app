@@ -11,8 +11,8 @@ const log = createLogger('SyncOperations');
  * Handles Git workspace synchronization, sync listeners,
  * and workspace switching with proper error handling.
  *
- * @param {Object} workspaceContext - Workspace context object
- * @returns {Object} Sync operations and utilities
+ * @param workspaceContext - Workspace context object
+ * @returns Sync operations and utilities
  */
 export const useSyncOperations = (workspaceContext: {
   syncWorkspace: (id: string) => Promise<boolean>;
@@ -23,7 +23,7 @@ export const useSyncOperations = (workspaceContext: {
 
   /**
    * Sets up sync listeners for new Git workspaces
-   * @returns {Object} Sync listeners object
+   * @returns Sync listeners object
    */
   const setupSyncListeners = () => {
     const syncMessageKey = 'workspace-syncing';
@@ -67,7 +67,7 @@ export const useSyncOperations = (workspaceContext: {
                 `Workspace created but sync failed: ${data.error || 'Unknown error'}. You can manually sync later.`,
               );
               log.info(`[Workspaces] Switching to Git workspace despite sync failure: ${workspaceId}`);
-              switchWorkspace(workspaceId);
+              void switchWorkspace(workspaceId);
             }
             syncListeners.cleanup();
           }
@@ -81,7 +81,7 @@ export const useSyncOperations = (workspaceContext: {
             void message.warning('Git sync is taking longer than expected. Switching to workspace anyway.');
             syncListeners.cleanup();
             log.info(`[Workspaces] Timeout reached, switching to Git workspace: ${workspaceId}`);
-            switchWorkspace(workspaceId);
+            void switchWorkspace(workspaceId);
           }
         }, TIMING.SYNC_TIMEOUT);
       },
@@ -92,9 +92,9 @@ export const useSyncOperations = (workspaceContext: {
 
   /**
    * Handles workspace switch after creation
-   * @param {Object} result - Creation result
-   * @param {Object} workspace - Workspace object
-   * @param {Object} syncListeners - Sync listeners object
+   * @param result - Creation result
+   * @param workspace - Workspace object
+   * @param syncListeners - Sync listeners object
    */
   const handleWorkspaceSwitch = async (
     result: { id?: string },
@@ -125,7 +125,7 @@ export const useSyncOperations = (workspaceContext: {
 
   /**
    * Handles workspace sync
-   * @param {Object} workspace - Workspace to sync
+   * @param workspace - Workspace to sync
    */
   const handleSyncWorkspace = async (workspace: { id: string; type: string }) => {
     if (workspace.type !== 'git') {

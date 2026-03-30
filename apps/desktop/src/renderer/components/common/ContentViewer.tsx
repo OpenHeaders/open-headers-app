@@ -66,11 +66,7 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
       const sourceContent = source.sourceContent ?? null;
       setInternalContent((prev) => (sourceContent !== prev ? sourceContent : prev));
 
-      const originalResponseStr = source.originalResponse
-        ? typeof source.originalResponse === 'string'
-          ? source.originalResponse
-          : JSON.stringify(source.originalResponse)
-        : null;
+      const originalResponseStr = source.originalResponse ?? null;
       setInternalOriginalResponse((prev) => (originalResponseStr !== prev ? originalResponseStr : prev));
 
       // Extract response headers from source

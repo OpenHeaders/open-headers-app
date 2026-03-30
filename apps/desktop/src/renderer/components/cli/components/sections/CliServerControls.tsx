@@ -67,26 +67,26 @@ const CliServerControls = ({
 }: CliServerControlsProps) => {
   const { message } = App.useApp();
   const [showToken, setShowToken] = useState(false);
-  const isWindows = navigator.platform === 'Win32';
+  const isWindows = navigator.userAgent.includes('Windows');
   const [shellType, setShellType] = useState(isWindows ? 'powershell' : 'curl');
   const tokenValue = showToken && status.token ? status.token : '<token>';
 
   const handleCopyPath = () => {
     if (status.discoveryPath) {
-      navigator.clipboard.writeText(status.discoveryPath);
+      void navigator.clipboard.writeText(status.discoveryPath);
       message.success('Value copied to clipboard');
     }
   };
 
   const handleCopyToken = () => {
     if (status.token) {
-      navigator.clipboard.writeText(status.token);
+      void navigator.clipboard.writeText(status.token);
       message.success('Value copied to clipboard');
     }
   };
 
   const copyCmd = (text: string) => {
-    navigator.clipboard.writeText(text);
+    void navigator.clipboard.writeText(text);
     message.success('Command copied to clipboard');
   };
 
@@ -340,7 +340,7 @@ const CliServerControls = ({
         )}
 
         {/* Info panel */}
-        {tutorialMode !== false && (
+        {tutorialMode && (
           <Alert
             style={{ marginTop: '16px' }}
             title="About CLI Server"

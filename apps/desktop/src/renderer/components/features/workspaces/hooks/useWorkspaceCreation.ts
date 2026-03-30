@@ -199,11 +199,11 @@ export const useWorkspaceCreation = (
   const canRetry = (isError || state === WORKSPACE_CREATION_STATES.TIMEOUT) && context?.formData;
   const canAbort =
     isLoading &&
-    [
+    ![
       WORKSPACE_CREATION_STATES.ROLLBACK,
       WORKSPACE_CREATION_STATES.CANCELLING,
       WORKSPACE_CREATION_STATES.CANCELLED,
-    ].includes(state) === false;
+    ].includes(state);
   const progressMessage = getProgressMessage(state);
 
   return {
@@ -236,11 +236,11 @@ export const useWorkspaceCreation = (
 
 /**
  * Maps state to progress information
- * @param {string} state - Current state
- * @returns {Object} Progress information
+ * @param state - Current state
+ * @returns Progress information
  */
 function getProgressFromState(state: string) {
-  const progressMap = {
+  const map: Record<string, { step: number; total: number; title: string; description: string }> = {
     [WORKSPACE_CREATION_STATES.FORM_VALIDATION]: {
       step: 1,
       total: 7,
@@ -303,7 +303,6 @@ function getProgressFromState(state: string) {
     },
   };
 
-  const map: Record<string, { step: number; total: number; title: string; description: string }> = progressMap;
   return map[state] ?? null;
 }
 

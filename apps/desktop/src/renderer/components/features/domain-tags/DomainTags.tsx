@@ -151,8 +151,8 @@ const DomainTags = ({
     // Check if the input contains environment variables
     if (newValue.includes('{{') && onValidate) {
       // Simple check for unclosed braces
-      const openCount = (newValue.match(/\{\{/g) || []).length;
-      const closeCount = (newValue.match(/\}\}/g) || []).length;
+      const openCount = (newValue.match(/{{/g) || []).length;
+      const closeCount = (newValue.match(/}}/g) || []).length;
 
       if (openCount > closeCount) {
         setCurrentInputValidation({

@@ -23,11 +23,11 @@ interface VariableUsageInfo {
 
 /**
  * Extracts all variable references from a text string
- * @param {string} text - Text to search for variables
- * @returns {string[]} Array of variable names found
+ * @param text - Text to search for variables
+ * @returns Array of variable names found
  */
 export const extractVariables = (text: string): string[] => {
-  if (!text || typeof text !== 'string') return [];
+  if (!text) return [];
 
   const matches = text.match(VARIABLE_TEMPLATE_REGEX) || [];
   return matches.map((match) => match.slice(2, -2)); // Remove {{ and }}
@@ -35,10 +35,10 @@ export const extractVariables = (text: string): string[] => {
 
 /**
  * Checks for missing variables in a target environment
- * @param {Object} sources - Array of source configurations
- * @param {Object} targetEnvironment - Target environment variables
- * @param {Object} rules - Rules object containing header rules
- * @returns {string[]} Array of missing variable names
+ * @param sources - Array of source configurations
+ * @param targetEnvironment - Target environment variables
+ * @param rules - Rules object containing header rules
+ * @returns Array of missing variable names
  */
 export const checkMissingVariables = (
   sources: Source[],
@@ -131,9 +131,9 @@ export const checkMissingVariables = (
 
 /**
  * Generates a unique environment name based on an existing name
- * @param {string} baseName - Base name for the new environment
- * @param {Object} existingEnvironments - Existing environments object
- * @returns {string} Unique environment name
+ * @param baseName - Base name for the new environment
+ * @param existingEnvironments - Existing environments object
+ * @returns Unique environment name
  */
 export const generateUniqueEnvironmentName = (baseName: string, existingEnvironments: EnvironmentMap): string => {
   let newName = `${baseName}-copy`;
@@ -149,8 +149,8 @@ export const generateUniqueEnvironmentName = (baseName: string, existingEnvironm
 
 /**
  * Checks if a source uses environment variables
- * @param {Object} source - Source configuration object
- * @returns {boolean} True if source uses variables
+ * @param source - Source configuration object
+ * @returns True if source uses variables
  */
 export const sourceUsesVariables = (source: Source | null): boolean => {
   if (!source) return false;
@@ -161,8 +161,8 @@ export const sourceUsesVariables = (source: Source | null): boolean => {
 
 /**
  * Gets sources that use environment variables
- * @param {Array} sources - Array of source configurations
- * @returns {Array} Filtered array of sources using variables
+ * @param sources - Array of source configurations
+ * @returns Filtered array of sources using variables
  */
 export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
   if (!sources || !Array.isArray(sources)) return [];
@@ -172,11 +172,11 @@ export const getSourcesUsingVariables = (sources: Source[]): Source[] => {
 
 /**
  * Formats variable usage information for display
- * @param {string} varName - Variable name
- * @param {Array} sourceIds - Array of source IDs using this variable
- * @param {Array} sources - Array of all sources for name lookup
- * @param {Object} rules - Rules object for rule name lookup
- * @returns {Array} Array of formatted source info
+ * @param _varName - Variable name
+ * @param sourceIds - Array of source IDs using this variable
+ * @param sources - Array of all sources for name lookup
+ * @param rules - Rules object for rule name lookup
+ * @returns Array of formatted source info
  */
 export const formatVariableUsage = (
   _varName: string,

@@ -22,11 +22,11 @@
  * Performs comprehensive validation for various domain formats including
  * standard domains, wildcard patterns, IP addresses, and special cases.
  *
- * @param {string} domain - Domain pattern to validate
- * @returns {Object} Validation result object
- * @returns {boolean} returns.valid - Whether the domain is valid
- * @returns {string} returns.message - Error message if invalid
- * @returns {string} returns.sanitized - Sanitized domain value if valid
+ * @param domain - Domain pattern to validate
+ * @returns Validation result object
+ * @returns returns.valid - Whether the domain is valid
+ * @returns returns.message - Error message if invalid
+ * @returns returns.sanitized - Sanitized domain value if valid
  *
  * @example
  * // Standard domain
@@ -57,8 +57,8 @@ export const validateDomain = (domain: string) => {
   // Allow environment variable patterns
   if (domain.includes('{{') || domain.includes('}}')) {
     // Basic check for balanced braces
-    const openCount = (domain.match(/\{\{/g) || []).length;
-    const closeCount = (domain.match(/\}\}/g) || []).length;
+    const openCount = (domain.match(/{{/g) || []).length;
+    const closeCount = (domain.match(/}}/g) || []).length;
 
     if (openCount !== closeCount) {
       return { valid: false, message: 'Invalid environment variable syntax - unmatched braces' };
@@ -111,10 +111,10 @@ export const validateDomain = (domain: string) => {
  * Processes multiple domains and returns both valid and invalid results
  * for batch validation scenarios with detailed error reporting.
  *
- * @param {string[]} domains - Array of domain patterns to validate
- * @returns {Object} Batch validation result
- * @returns {string[]} returns.valid - Array of valid sanitized domains
- * @returns {Object[]} returns.invalid - Array of invalid domain objects with errors
+ * @param domains - Array of domain patterns to validate
+ * @returns Batch validation result
+ * @returns returns.valid - Array of valid sanitized domains
+ * @returns returns.invalid - Array of invalid domain objects with errors
  *
  * @example
  * const result = validateDomainBatch(['example.com', 'invalid..domain', '*.test.com']);
@@ -145,8 +145,8 @@ export const validateDomainBatch = (domains: string[]) => {
  * Determines whether a domain uses wildcard matching syntax
  * for conditional handling in UI and validation flows.
  *
- * @param {string} domain - Domain pattern to check
- * @returns {boolean} True if domain contains wildcard patterns
+ * @param domain - Domain pattern to check
+ * @returns True if domain contains wildcard patterns
  *
  * @example
  * isWildcardDomain('*.example.com'); // true
@@ -163,8 +163,8 @@ export const isWildcardDomain = (domain: string) => {
  * Removes protocols, wildcards, and paths to get the core domain
  * for display and comparison purposes.
  *
- * @param {string} domain - Domain pattern to extract from
- * @returns {string} Base domain without prefixes or suffixes
+ * @param domain - Domain pattern to extract from
+ * @returns Base domain without prefixes or suffixes
  *
  * @example
  * extractBaseDomain('https://www.example.com/path'); // 'www.example.com'

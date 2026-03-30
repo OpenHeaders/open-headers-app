@@ -46,10 +46,6 @@ describe('getFieldsWithTemplateVariables', () => {
     expect(getFieldsWithTemplateVariables({ sourcePath: 'https://api/[[TOTP_CODE]]' })).toEqual(['sourcePath']);
   });
 
-  it('returns empty when sourcePath is not a string', () => {
-    expect(getFieldsWithTemplateVariables({ sourcePath: 123 as unknown as string })).toEqual([]);
-  });
-
   it('returns empty when sourcePath is undefined', () => {
     expect(getFieldsWithTemplateVariables({})).toEqual([]);
   });

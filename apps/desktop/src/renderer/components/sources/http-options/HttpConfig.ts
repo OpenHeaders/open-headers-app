@@ -22,6 +22,7 @@
  * @since 3.0.0
  */
 
+import type { RefObject } from 'react';
 import type { FormInstance } from 'antd';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
 
@@ -34,32 +35,32 @@ interface ContentTypeHandlerParams {
 
 interface RefreshToggleParams {
   setRefreshEnabled: (enabled: boolean) => void;
-  refreshEnabledRef: React.MutableRefObject<boolean>;
-  customIntervalRef: React.MutableRefObject<number>;
-  refreshTypeRef: React.MutableRefObject<string>;
+  refreshEnabledRef: RefObject<boolean>;
+  customIntervalRef: RefObject<number>;
+  refreshTypeRef: RefObject<string>;
   form: FormInstance;
 }
 
 interface RefreshTypeHandlerParams {
   setRefreshType: (type: string) => void;
-  refreshTypeRef: React.MutableRefObject<string>;
+  refreshTypeRef: RefObject<string>;
   setCustomInterval: (interval: number) => void;
-  customIntervalRef: React.MutableRefObject<number>;
-  refreshEnabledRef: React.MutableRefObject<boolean>;
+  customIntervalRef: RefObject<number>;
+  refreshEnabledRef: RefObject<boolean>;
   form: FormInstance;
 }
 
 interface CustomIntervalHandlerParams {
   setCustomInterval: (interval: number) => void;
-  customIntervalRef: React.MutableRefObject<number>;
-  refreshEnabledRef: React.MutableRefObject<boolean>;
+  customIntervalRef: RefObject<number>;
+  refreshEnabledRef: RefObject<boolean>;
   form: FormInstance;
 }
 
 interface JsonFilterToggleParams {
   setJsonFilterEnabled: (enabled: boolean) => void;
-  jsonFilterEnabledRef: React.MutableRefObject<boolean>;
-  jsonFilterPathRef: React.MutableRefObject<string>;
+  jsonFilterEnabledRef: RefObject<boolean>;
+  jsonFilterPathRef: RefObject<string>;
   form: FormInstance;
 }
 
@@ -69,10 +70,10 @@ interface JsonFilterToggleParams {
  * Factory function that creates a handler for content type changes
  * with proper form field synchronization.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setContentType - Content type state setter
- * @param {Object} params.form - Form instance
- * @returns {Function} Content type change handler
+ * @param params - Handler parameters
+ * @param params.setContentType - Content type state setter
+ * @param params.form - Form instance
+ * @returns Content type change handler
  *
  * @example
  * const handleContentTypeChange = createContentTypeHandler({
@@ -98,13 +99,13 @@ export const createContentTypeHandler =
  * Factory function that creates a handler for refresh enabled/disabled
  * toggle with state persistence and form field updates.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setRefreshEnabled - Refresh enabled state setter
- * @param {Object} params.refreshEnabledRef - Ref for refresh enabled state
- * @param {Object} params.customIntervalRef - Ref for custom interval
- * @param {Object} params.refreshTypeRef - Ref for refresh type
- * @param {Object} params.form - Form instance
- * @returns {Function} Refresh toggle handler
+ * @param params - Handler parameters
+ * @param params.setRefreshEnabled - Refresh enabled state setter
+ * @param params.refreshEnabledRef - Ref for refresh enabled state
+ * @param params.customIntervalRef - Ref for custom interval
+ * @param params.refreshTypeRef - Ref for refresh type
+ * @param params.form - Form instance
+ * @returns Refresh toggle handler
  *
  * @example
  * const handleRefreshToggle = createRefreshToggleHandler({
@@ -143,14 +144,14 @@ export const createRefreshToggleHandler =
  * Factory function that creates a handler for refresh type changes
  * (preset vs custom) with proper interval value handling.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setRefreshType - Refresh type state setter
- * @param {Object} params.refreshTypeRef - Ref for refresh type
- * @param {Function} params.setCustomInterval - Custom interval state setter
- * @param {Object} params.customIntervalRef - Ref for custom interval
- * @param {Object} params.refreshEnabledRef - Ref for refresh enabled state
- * @param {Object} params.form - Form instance
- * @returns {Function} Refresh type change handler
+ * @param params - Handler parameters
+ * @param params.setRefreshType - Refresh type state setter
+ * @param params.refreshTypeRef - Ref for refresh type
+ * @param params.setCustomInterval - Custom interval state setter
+ * @param params.customIntervalRef - Ref for custom interval
+ * @param params.refreshEnabledRef - Ref for refresh enabled state
+ * @param params.form - Form instance
+ * @returns Refresh type change handler
  *
  * @example
  * const handleRefreshTypeChange = createRefreshTypeHandler({
@@ -181,7 +182,7 @@ export const createRefreshTypeHandler =
     const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
     // Preserve the enabled flag when switching refresh types
-    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current;
 
     // If switching to preset, find closest preset value when needed
     let intervalValue = currentRefreshOptions.interval || customIntervalRef.current;
@@ -217,12 +218,12 @@ export const createRefreshTypeHandler =
  * Factory function that creates a handler for custom refresh interval
  * changes with value validation and form updates.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setCustomInterval - Custom interval state setter
- * @param {Object} params.customIntervalRef - Ref for custom interval
- * @param {Object} params.refreshEnabledRef - Ref for refresh enabled state
- * @param {Object} params.form - Form instance
- * @returns {Function} Custom interval change handler
+ * @param params - Handler parameters
+ * @param params.setCustomInterval - Custom interval state setter
+ * @param params.customIntervalRef - Ref for custom interval
+ * @param params.refreshEnabledRef - Ref for refresh enabled state
+ * @param params.form - Form instance
+ * @returns Custom interval change handler
  */
 export const createCustomIntervalHandler =
   ({ setCustomInterval, customIntervalRef, refreshEnabledRef, form }: CustomIntervalHandlerParams) =>
@@ -237,7 +238,7 @@ export const createCustomIntervalHandler =
     const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
     // Preserve the enabled flag
-    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current;
 
     // Update form values while preserving other settings
     form.setFieldsValue({
@@ -258,12 +259,12 @@ export const createCustomIntervalHandler =
  * Factory function that creates a handler for preset refresh interval
  * changes with proper state synchronization.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setCustomInterval - Custom interval state setter (used for consistency)
- * @param {Object} params.customIntervalRef - Ref for interval value
- * @param {Object} params.refreshEnabledRef - Ref for refresh enabled state
- * @param {Object} params.form - Form instance
- * @returns {Function} Preset interval change handler
+ * @param params - Handler parameters
+ * @param params.setCustomInterval - Custom interval state setter (used for consistency)
+ * @param params.customIntervalRef - Ref for interval value
+ * @param params.refreshEnabledRef - Ref for refresh enabled state
+ * @param params.form - Form instance
+ * @returns Preset interval change handler
  */
 export const createPresetIntervalHandler =
   ({ setCustomInterval, customIntervalRef, refreshEnabledRef, form }: CustomIntervalHandlerParams) =>
@@ -276,7 +277,7 @@ export const createPresetIntervalHandler =
     const currentRefreshOptions = form.getFieldValue('refreshOptions') || {};
 
     // Preserve the existing enabled state
-    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current === true;
+    const isCurrentlyEnabled = currentRefreshOptions.enabled === true || refreshEnabledRef.current;
 
     // Update form values while preserving other settings
     form.setFieldsValue({
@@ -296,12 +297,12 @@ export const createPresetIntervalHandler =
  * Factory function that creates a handler for JSON filter enable/disable
  * toggle with path persistence and form field updates.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setJsonFilterEnabled - JSON filter enabled state setter
- * @param {Object} params.jsonFilterEnabledRef - Ref for JSON filter enabled state
- * @param {Object} params.jsonFilterPathRef - Ref for JSON filter path
- * @param {Object} params.form - Form instance
- * @returns {Function} JSON filter toggle handler
+ * @param params - Handler parameters
+ * @param params.setJsonFilterEnabled - JSON filter enabled state setter
+ * @param params.jsonFilterEnabledRef - Ref for JSON filter enabled state
+ * @param params.jsonFilterPathRef - Ref for JSON filter path
+ * @param params.form - Form instance
+ * @returns JSON filter toggle handler
  */
 export const createJsonFilterToggleHandler =
   ({ setJsonFilterEnabled, jsonFilterEnabledRef, jsonFilterPathRef, form }: JsonFilterToggleParams) =>
@@ -364,7 +365,7 @@ export const createJsonFilterToggleHandler =
  * Utility function that returns properly structured initial values
  * for the HTTP options form with sensible defaults.
  *
- * @returns {Object} Form initial values object
+ * @returns Form initial values object
  *
  * @example
  * const initialValues = getFormInitialValues();
@@ -395,17 +396,17 @@ export const getFormInitialValues = () => ({
  * Ensures the form has proper structure and default values for all
  * HTTP options fields, preventing undefined field errors.
  *
- * @param {Object} form - Form instance
- * @param {Function} setContentType - Content type state setter
- * @param {Function} setJsonFilterEnabled - JSON filter enabled state setter
- * @param {Object} jsonFilterEnabledRef - Ref for JSON filter state
- * @param {Object} jsonFilterPathRef - Ref for JSON filter path
- * @param {Function} setRefreshEnabled - Refresh enabled state setter
- * @param {Object} refreshEnabledRef - Ref for refresh enabled state
- * @param {Function} setRefreshType - Refresh type state setter
- * @param {Object} refreshTypeRef - Ref for refresh type
- * @param {Function} setCustomInterval - Custom interval state setter
- * @param {Object} customIntervalRef - Ref for custom interval
+ * @param form - Form instance
+ * @param setContentType - Content type state setter
+ * @param setJsonFilterEnabled - JSON filter enabled state setter
+ * @param jsonFilterEnabledRef - Ref for JSON filter state
+ * @param jsonFilterPathRef - Ref for JSON filter path
+ * @param setRefreshEnabled - Refresh enabled state setter
+ * @param refreshEnabledRef - Ref for refresh enabled state
+ * @param setRefreshType - Refresh type state setter
+ * @param refreshTypeRef - Ref for refresh type
+ * @param setCustomInterval - Custom interval state setter
+ * @param customIntervalRef - Ref for custom interval
  *
  * @example
  * initializeFormStructure(form, setContentType, setJsonFilterEnabled, ...refs);
@@ -414,14 +415,14 @@ export const initializeFormStructure = (
   form: FormInstance,
   setContentType: (value: string) => void,
   setJsonFilterEnabled: (enabled: boolean) => void,
-  jsonFilterEnabledRef: React.MutableRefObject<boolean>,
-  jsonFilterPathRef: React.MutableRefObject<string>,
+  jsonFilterEnabledRef: RefObject<boolean>,
+  jsonFilterPathRef: RefObject<string>,
   setRefreshEnabled: (enabled: boolean) => void,
-  refreshEnabledRef: React.MutableRefObject<boolean>,
+  refreshEnabledRef: RefObject<boolean>,
   setRefreshType: (type: string) => void,
-  refreshTypeRef: React.MutableRefObject<string>,
+  refreshTypeRef: RefObject<string>,
   setCustomInterval: (interval: number) => void,
-  customIntervalRef: React.MutableRefObject<number>,
+  customIntervalRef: RefObject<number>,
 ) => {
   try {
     const formValues = form.getFieldsValue(true);

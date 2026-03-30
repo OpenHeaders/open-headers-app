@@ -22,6 +22,7 @@
  * @since 3.0.0
  */
 
+import type { ChangeEvent, RefObject } from 'react';
 import type { FormInstance } from 'antd';
 import timeManager from '@/renderer/services/TimeManager';
 import { createLogger } from '@/renderer/utils/error-handling/logger';
@@ -72,13 +73,13 @@ interface TotpTrackingEffectParams {
 interface EnvironmentChangeEffectParams {
   form: FormInstance;
   envContext: { environmentsReady: boolean };
-  isFormInitializedRef: React.MutableRefObject<boolean>;
+  isFormInitializedRef: RefObject<boolean>;
 }
 
 interface ImperativeHandleParams {
   form: FormInstance;
   getTotpStateFromForm: () => TotpState;
-  isFormInitializedRef: React.MutableRefObject<boolean>;
+  isFormInitializedRef: RefObject<boolean>;
 }
 
 /**
@@ -87,8 +88,8 @@ interface ImperativeHandleParams {
  * Factory function that creates a helper to get TOTP state from form,
  * providing a single source of truth for TOTP configuration.
  *
- * @param {Object} form - Form instance
- * @returns {Function} Function that returns current TOTP state from form
+ * @param form - Form instance
+ * @returns Function that returns current TOTP state from form
  *
  * @example
  * const getTotpStateFromForm = createTotpStateHelper(form);
@@ -111,11 +112,11 @@ export const createTotpStateHelper = (form: FormInstance) => (): TotpState => {
  * Factory function that creates a handler for TOTP enable/disable
  * toggle with proper form field synchronization.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setTotpPreviewVisible - TOTP preview visibility setter
- * @param {Function} params.setTotpError - TOTP error state setter
- * @param {Object} params.form - Form instance
- * @returns {Function} TOTP toggle handler
+ * @param params - Handler parameters
+ * @param params.setTotpPreviewVisible - TOTP preview visibility setter
+ * @param params.setTotpError - TOTP error state setter
+ * @param params.form - Form instance
+ * @returns TOTP toggle handler
  */
 export const createTotpToggleHandler =
   ({ setTotpPreviewVisible, setTotpError, form }: TotpToggleParams) =>
@@ -155,15 +156,15 @@ export const createTotpToggleHandler =
  * Factory function that creates a handler for TOTP secret field changes
  * with form synchronization and requestOptions updates.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setTotpPreviewVisible - TOTP preview visibility setter
- * @param {Function} params.setTotpError - TOTP error state setter
- * @param {Object} params.form - Form instance
- * @returns {Function} TOTP secret change handler
+ * @param params - Handler parameters
+ * @param params.setTotpPreviewVisible - TOTP preview visibility setter
+ * @param params.setTotpError - TOTP error state setter
+ * @param params.form - Form instance
+ * @returns TOTP secret change handler
  */
 export const createTotpSecretHandler =
   ({ setTotpPreviewVisible, setTotpError, form }: TotpToggleParams) =>
-  (e: React.ChangeEvent<HTMLInputElement>) => {
+  (e: ChangeEvent<HTMLInputElement>) => {
     const newSecret = e.target.value;
     setTotpPreviewVisible(false);
     setTotpError(null);
@@ -200,12 +201,12 @@ export const createTotpSecretHandler =
  * Factory function that creates a TOTP code generator with proper
  * error handling and environment variable resolution.
  *
- * @param {Object} params - Generator parameters
- * @param {Function} params.getTotpStateFromForm - Function to get TOTP state
- * @param {Function} params.setTotpError - TOTP error state setter
- * @param {Function} params.setTotpTesting - TOTP testing state setter
- * @param {Function} params.setTotpCode - TOTP code state setter
- * @returns {Function} Async TOTP code generator
+ * @param params - Generator parameters
+ * @param params.getTotpStateFromForm - Function to get TOTP state
+ * @param params.setTotpError - TOTP error state setter
+ * @param params.setTotpTesting - TOTP testing state setter
+ * @param params.setTotpCode - TOTP code state setter
+ * @returns Async TOTP code generator
  */
 export const createTotpCodeGenerator =
   ({ getTotpStateFromForm, setTotpError, setTotpTesting, setTotpCode }: TotpCodeGeneratorParams) =>
@@ -239,14 +240,14 @@ export const createTotpCodeGenerator =
  * Factory function that creates a handler for testing TOTP code generation
  * with validation and preview display.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.getTotpStateFromForm - Function to get TOTP state
- * @param {Function} params.validateVariableExists - Variable validation function
- * @param {Function} params.setTotpError - TOTP error state setter
- * @param {Function} params.setTotpCode - TOTP code state setter
- * @param {Function} params.setTotpPreviewVisible - TOTP preview visibility setter
- * @param {Function} params.generateTotpCode - TOTP code generator function
- * @returns {Function} Async TOTP test handler
+ * @param params - Handler parameters
+ * @param params.getTotpStateFromForm - Function to get TOTP state
+ * @param params.validateVariableExists - Variable validation function
+ * @param params.setTotpError - TOTP error state setter
+ * @param params.setTotpCode - TOTP code state setter
+ * @param params.setTotpPreviewVisible - TOTP preview visibility setter
+ * @param params.generateTotpCode - TOTP code generator function
+ * @returns Async TOTP test handler
  */
 export const createTotpTestHandler =
   ({
@@ -285,11 +286,11 @@ export const createTotpTestHandler =
  * Factory function that creates a TOTP timer effect for automatic
  * code regeneration and countdown display.
  *
- * @param {Object} params - Timer parameters
- * @param {boolean} params.totpPreviewVisible - TOTP preview visibility state
- * @param {Function} params.setTimeRemaining - Time remaining state setter
- * @param {Function} params.generateTotpCode - TOTP code generator function
- * @returns {Function} Effect function with cleanup
+ * @param params - Timer parameters
+ * @param params.totpPreviewVisible - TOTP preview visibility state
+ * @param params.setTimeRemaining - Time remaining state setter
+ * @param params.generateTotpCode - TOTP code generator function
+ * @returns Effect function with cleanup
  */
 export const createTotpTimerEffect =
   ({ totpPreviewVisible, setTimeRemaining, generateTotpCode }: TotpTimerEffectParams) =>
@@ -331,12 +332,12 @@ export const createTotpTimerEffect =
  * Factory function that creates an effect for TOTP source tracking
  * with proper cleanup on component unmount.
  *
- * @param {Object} params - Tracking parameters
- * @param {Function} params.getTotpStateFromForm - Function to get TOTP state
- * @param {string} params.testSourceId - Test source ID for tracking
- * @param {Function} params.trackTotpSecret - TOTP tracking function
- * @param {Function} params.untrackTotpSecret - TOTP untracking function
- * @returns {Function} Effect function with cleanup
+ * @param params - Tracking parameters
+ * @param params.getTotpStateFromForm - Function to get TOTP state
+ * @param params.testSourceId - Test source ID for tracking
+ * @param params.trackTotpSecret - TOTP tracking function
+ * @param params.untrackTotpSecret - TOTP untracking function
+ * @returns Effect function with cleanup
  */
 export const createTotpTrackingEffect =
   ({ getTotpStateFromForm, testSourceId, trackTotpSecret, untrackTotpSecret }: TotpTrackingEffectParams) =>
@@ -361,11 +362,11 @@ export const createTotpTrackingEffect =
  * Factory function that creates a handler for environment changes
  * with automatic field re-validation for fields containing variables.
  *
- * @param {Object} params - Handler parameters
- * @param {Object} params.form - Form instance
- * @param {Object} params.envContext - Environment context
- * @param {Object} params.isFormInitializedRef - Form initialization ref
- * @returns {Function} Environment change effect handler
+ * @param params - Handler parameters
+ * @param params.form - Form instance
+ * @param params.envContext - Environment context
+ * @param params.isFormInitializedRef - Form initialization ref
+ * @returns Environment change effect handler
  */
 export const createEnvironmentChangeEffect =
   ({ form, envContext, isFormInitializedRef }: EnvironmentChangeEffectParams) =>
@@ -433,11 +434,11 @@ export const createEnvironmentChangeEffect =
  * Factory function that creates imperative handle methods for external
  * component interaction and state management.
  *
- * @param {Object} params - Handle parameters
- * @param {Object} params.form - Form instance
- * @param {Function} params.getTotpStateFromForm - Function to get TOTP state
- * @param {Object} params.isFormInitializedRef - Form initialization ref
- * @returns {Object} Imperative handle methods
+ * @param params - Handle parameters
+ * @param params.form - Form instance
+ * @param params.getTotpStateFromForm - Function to get TOTP state
+ * @param params.isFormInitializedRef - Form initialization ref
+ * @returns Imperative handle methods
  */
 export const createImperativeHandleMethods = ({
   form,
@@ -475,10 +476,7 @@ export const createImperativeHandleMethods = ({
   },
 
   // Simplified getTotpState using form as source of truth
-  getTotpState: () => {
-    const state = getTotpStateFromForm();
-    return state;
-  },
+  getTotpState: () => getTotpStateFromForm(),
 
   // Method to force headers state
   forceHeadersState: (headers: Array<{ key?: string; value?: string }>) => {

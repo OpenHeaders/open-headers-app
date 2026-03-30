@@ -131,7 +131,7 @@ const SourceTable = ({ sources, onRemoveSource, onRefreshSource, onUpdateSource 
             log.debug(`[SourceTable] Source ${source.sourceId} now has missing dependencies:`, missingDeps);
             // Trigger a source update to reflect the new state
             if (onUpdateSource) {
-              onUpdateSource(source.sourceId, {
+              void onUpdateSource(source.sourceId, {
                 ...source,
                 activationState: 'waiting_for_deps',
                 missingDependencies: missingDeps,
@@ -141,7 +141,7 @@ const SourceTable = ({ sources, onRemoveSource, onRefreshSource, onUpdateSource 
             log.debug(`[SourceTable] Source ${source.sourceId} dependencies now satisfied`);
             // Clear the waiting state
             if (onUpdateSource) {
-              onUpdateSource(source.sourceId, {
+              void onUpdateSource(source.sourceId, {
                 ...source,
                 activationState: 'active',
                 missingDependencies: [],

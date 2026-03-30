@@ -33,61 +33,6 @@ export const SourceListSkeleton = () => (
   </Card>
 );
 
-export const ProxyRulesSkeleton = () => (
-  <Card className="workspace-skeleton proxy-rules-skeleton">
-    <div className="skeleton-header">
-      <Skeleton.Input style={{ width: 150, height: 24 }} active />
-      <Skeleton.Button size="default" />
-    </div>
-    <div className="skeleton-table">
-      <div className="skeleton-table-header">
-        {['Rule Name', 'Domains', 'Header', 'Actions'].map((_col, i) => (
-          <Skeleton.Input key={i} style={{ width: '100%', height: 16 }} active />
-        ))}
-      </div>
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="skeleton-table-row">
-          <Skeleton.Input style={{ width: '80%', height: 14 }} active />
-          <Skeleton.Input style={{ width: '60%', height: 14 }} active />
-          <Skeleton.Input style={{ width: '70%', height: 14 }} active />
-          <div className="skeleton-row-actions">
-            <Skeleton.Button size="small" />
-            <Skeleton.Button size="small" />
-          </div>
-        </div>
-      ))}
-    </div>
-  </Card>
-);
-
-export const EnvironmentsSkeleton = () => (
-  <Card className="workspace-skeleton environments-skeleton">
-    <div className="skeleton-header">
-      <Skeleton.Input style={{ width: 120, height: 24 }} active />
-      <Skeleton.Button size="small" />
-    </div>
-    <div className="skeleton-env-list">
-      {[1, 2].map((i) => (
-        <div key={i} className="skeleton-env-item">
-          <div className="skeleton-env-header">
-            <Skeleton.Avatar size="small" />
-            <Skeleton.Input style={{ width: 120, height: 18 }} active />
-            <Skeleton.Button size="small" />
-          </div>
-          <div className="skeleton-env-vars">
-            {[1, 2, 3].map((j) => (
-              <div key={j} className="skeleton-var-item">
-                <Skeleton.Input style={{ width: '30%', height: 14 }} active />
-                <Skeleton.Input style={{ width: '50%', height: 14 }} active />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  </Card>
-);
-
 export const RecordViewerSkeleton = () => (
   <Card className="workspace-skeleton record-viewer-skeleton">
     <div className="skeleton-header">
@@ -117,20 +62,3 @@ export const RecordViewerSkeleton = () => (
   </Card>
 );
 
-/**
- * Complete workspace skeleton that combines all components
- */
-export const CompleteWorkspaceSkeleton = () => (
-  <div className="complete-workspace-skeleton">
-    <div className="skeleton-layout">
-      <div className="skeleton-main-content">
-        <RecordViewerSkeleton />
-      </div>
-      <div className="skeleton-sidebar">
-        <SourceListSkeleton />
-        <ProxyRulesSkeleton />
-        <EnvironmentsSkeleton />
-      </div>
-    </div>
-  </div>
-);

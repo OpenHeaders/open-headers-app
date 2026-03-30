@@ -303,8 +303,8 @@ const HttpOptions = forwardRef(
       getJsonFilterState: () => {
         const jsonFilter = form.getFieldValue('jsonFilter');
         return {
-          enabled: Boolean(jsonFilter?.enabled === true || jsonFilterEnabled === true),
-          path: jsonFilter?.enabled === true || jsonFilterEnabled === true ? (jsonFilter?.path || '').trim() : '',
+          enabled: Boolean(jsonFilter?.enabled || jsonFilterEnabled),
+          path: jsonFilter?.enabled || jsonFilterEnabled ? (jsonFilter?.path || '').trim() : '',
         };
       },
       forceJsonFilterState: (enabled: boolean, path: string) => {

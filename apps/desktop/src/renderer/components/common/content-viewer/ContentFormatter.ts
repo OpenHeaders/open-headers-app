@@ -21,8 +21,8 @@
  * Automatically detects JSON content and formats it with proper indentation.
  * Falls back to original content if JSON parsing fails or if content is not JSON.
  *
- * @param {*} content - Content to format (string, object, or any type)
- * @returns {string} Formatted content with proper indentation or fallback message
+ * @param content - Content to format
+ * @returns Formatted content with proper indentation or fallback message
  * @example
  * formatContent('{"name":"John","age":30}') // Returns prettified JSON
  * formatContent('plain text') // Returns 'plain text'
@@ -31,7 +31,7 @@
 export function formatContent(content: string) {
   try {
     // Detect JSON-like content by checking if it starts with { or [
-    if (typeof content === 'string' && (content.trim().startsWith('{') || content.trim().startsWith('['))) {
+    if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
       try {
         // Attempt to parse and re-stringify with 2-space indentation
         const parsed = JSON.parse(content);
@@ -55,8 +55,8 @@ export function formatContent(content: string) {
  * Designed for formatting raw API response data with enhanced error handling.
  * Handles both JSON objects/arrays and non-JSON content like HTML responses.
  *
- * @param {string} jsonString - Raw response string to format
- * @returns {string} Formatted JSON with 2-space indentation or original content
+ * @param jsonString - Raw response string to format
+ * @returns Formatted JSON with 2-space indentation or original content
  * @example
  * formatJson('{"status":"ok","data":[1,2,3]}') // Returns prettified JSON
  * formatJson('<!DOCTYPE html>') // Returns original HTML
@@ -64,7 +64,7 @@ export function formatContent(content: string) {
  */
 export function formatJson(jsonString: string) {
   try {
-    if (typeof jsonString !== 'string' || !jsonString.trim()) {
+    if (!jsonString.trim()) {
       return 'No response content available';
     }
 
@@ -93,8 +93,8 @@ export function formatJson(jsonString: string) {
  * Performs a lightweight check to identify JSON-like content without parsing.
  * Used for conditional formatting and UI display logic.
  *
- * @param {*} content - Content to analyze for JSON characteristics
- * @returns {boolean} True if content starts with { or [ (JSON indicators)
+ * @param content - Content to analyze for JSON characteristics
+ * @returns True if content starts with { or [ (JSON indicators)
  * @example
  * isJsonContent('{"key":"value"}') // Returns true
  * isJsonContent('[1,2,3]') // Returns true
@@ -102,7 +102,7 @@ export function formatJson(jsonString: string) {
  * isJsonContent('') // Returns false
  */
 export function isJsonContent(content: string) {
-  if (typeof content !== 'string' || !content.trim()) {
+  if (!content.trim()) {
     return false;
   }
 
@@ -115,8 +115,8 @@ export function isJsonContent(content: string) {
  * Attempts to parse JSON content while gracefully handling parsing errors.
  * Returns the original content if parsing fails, ensuring no data loss.
  *
- * @param {string} content - JSON string to parse safely
- * @returns {*} Parsed JavaScript object/array or original content if parsing fails
+ * @param content - JSON string to parse safely
+ * @returns Parsed JavaScript object/array or original content if parsing fails
  * @example
  * safeJsonParse('{"name":"John"}') // Returns {name: "John"}
  * safeJsonParse('invalid json') // Returns 'invalid json'
@@ -124,7 +124,7 @@ export function isJsonContent(content: string) {
  */
 export function safeJsonParse(content: string) {
   try {
-    if (typeof content === 'string' && content.trim()) {
+    if (content.trim()) {
       return JSON.parse(content);
     }
   } catch (_parseError) {

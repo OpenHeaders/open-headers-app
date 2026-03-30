@@ -4,9 +4,7 @@
  */
 
 import {
-  CheckOutlined,
   ClockCircleOutlined,
-  CloseOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
@@ -17,7 +15,7 @@ import {
   VideoCameraOutlined,
 } from '@ant-design/icons';
 import type { PreprocessProgressDetails, WorkflowRecordingEntry } from '@openheaders/core';
-import { Button, Input, Popconfirm, Space, Tag, Tooltip } from 'antd';
+import { Button, Popconfirm, Space, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useEffect, useState } from 'react';
 import { formatDuration, formatFileSize, formatTimeAgo, formatTimestamp } from '@/renderer/utils';
@@ -48,83 +46,6 @@ const TimestampCell = ({ timestamp }: { timestamp: string | number }) => {
         {formatTimestamp(timestamp)}
       </Space>
     </Tooltip>
-  );
-};
-
-/**
- * Editable cell component for inline editing
- */
-interface EditableCellProps {
-  value: string | null;
-  onSave: (value: string | null) => void;
-  placeholder?: string;
-  maxLength?: number;
-  displayMaxLength?: number;
-  isTag?: boolean;
-}
-
-const _EditableCell = ({
-  value,
-  onSave,
-  placeholder,
-  maxLength = 100,
-  displayMaxLength,
-  isTag = false,
-}: EditableCellProps) => {
-  const [editing, setEditing] = useState(false);
-  const [inputValue, setInputValue] = useState(value || '');
-
-  const handleSave = () => {
-    onSave(inputValue || null);
-    setEditing(false);
-  };
-
-  const handleCancel = () => {
-    setInputValue(value || '');
-    setEditing(false);
-  };
-
-  if (editing) {
-    return (
-      <Space>
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onPressEnter={handleSave}
-          maxLength={maxLength}
-          placeholder={placeholder}
-          style={{ width: 150 }}
-          autoFocus
-        />
-        <Button icon={<CheckOutlined />} size="small" type="text" onClick={handleSave} />
-        <Button icon={<CloseOutlined />} size="small" type="text" onClick={handleCancel} />
-      </Space>
-    );
-  }
-
-  // Truncate display value if displayMaxLength is provided
-  const displayValue =
-    displayMaxLength && value && value.length > displayMaxLength ? `${value.substring(0, displayMaxLength)}...` : value;
-
-  return (
-    <Space>
-      {value ? (
-        isTag ? (
-          <Tooltip title={displayMaxLength && value.length > displayMaxLength ? value : undefined}>
-            <Tag color="blue" style={{ margin: 0 }}>
-              {displayValue}
-            </Tag>
-          </Tooltip>
-        ) : (
-          <Tooltip title={displayMaxLength && value.length > displayMaxLength ? value : undefined}>
-            <span style={{ whiteSpace: 'nowrap' }}>{displayValue}</span>
-          </Tooltip>
-        )
-      ) : (
-        <span style={{ color: '#999' }}>-</span>
-      )}
-      <Button icon={<EditOutlined />} size="small" type="text" onClick={() => setEditing(true)} />
-    </Space>
   );
 };
 

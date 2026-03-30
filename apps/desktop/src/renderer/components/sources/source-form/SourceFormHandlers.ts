@@ -29,6 +29,7 @@ import type {
   SourceRequestOptions,
   SourceType,
 } from '@openheaders/core';
+import type { RefObject } from 'react';
 import type { FormInstance } from 'antd';
 import { showMessage } from '@/renderer/utils/ui/messageUtil';
 import type { EnvironmentContextLike } from '@/types/http';
@@ -77,8 +78,8 @@ interface FormSubmissionParams {
   untrackTotpSecret: (sourceId: string) => void;
   testSourceId: string;
   refs: {
-    httpOptionsRef: React.MutableRefObject<HttpOptionsRef | null>;
-    tempSourceIdRef: React.MutableRefObject<string>;
+    httpOptionsRef: RefObject<HttpOptionsRef | null>;
+    tempSourceIdRef: RefObject<string>;
   };
   stateSetters: {
     setFilePath: (path: string) => void;
@@ -94,8 +95,8 @@ interface SuccessfulSubmissionParams {
   testSourceId: string;
   form: FormInstance;
   refs: {
-    httpOptionsRef: React.MutableRefObject<HttpOptionsRef | null>;
-    tempSourceIdRef: React.MutableRefObject<string>;
+    httpOptionsRef: RefObject<HttpOptionsRef | null>;
+    tempSourceIdRef: RefObject<string>;
   };
   stateSetters: {
     setFilePath: (path: string) => void;
@@ -111,15 +112,15 @@ interface SuccessfulSubmissionParams {
  * Factory function that creates a handler for source type changes with
  * proper state cleanup and form field reset.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setSourceType - Source type state setter
- * @param {Function} params.setFilePath - File path state setter
- * @param {Function} params.setTotpEnabled - TOTP enabled state setter
- * @param {Function} params.setTotpSecret - TOTP secret state setter
- * @param {Function} params.untrackTotpSecret - TOTP untracking function
- * @param {Object} params.form - Form instance
- * @param {string} params.testSourceId - Test source ID for TOTP tracking
- * @returns {Function} Source type change handler
+ * @param params - Handler parameters
+ * @param params.setSourceType - Source type state setter
+ * @param params.setFilePath - File path state setter
+ * @param params.setTotpEnabled - TOTP enabled state setter
+ * @param params.setTotpSecret - TOTP secret state setter
+ * @param params.untrackTotpSecret - TOTP untracking function
+ * @param params.form - Form instance
+ * @param params.testSourceId - Test source ID for TOTP tracking
+ * @returns Source type change handler
  */
 export const createSourceTypeChangeHandler =
   ({
@@ -156,11 +157,11 @@ export const createSourceTypeChangeHandler =
  * Factory function that creates a handler for file browsing operations
  * with error handling and form field updates.
  *
- * @param {Object} params - Handler parameters
- * @param {Object} params.fileSystem - File system service
- * @param {Function} params.setFilePath - File path state setter
- * @param {Object} params.form - Form instance
- * @returns {Function} File browse handler
+ * @param params - Handler parameters
+ * @param params.fileSystem - File system service
+ * @param params.setFilePath - File path state setter
+ * @param params.form - Form instance
+ * @returns File browse handler
  */
 export const createFileBrowseHandler =
   ({ fileSystem, setFilePath, form }: FileBrowseParams) =>
@@ -184,10 +185,10 @@ export const createFileBrowseHandler =
  * Factory function that creates a handler for TOTP configuration changes
  * from the HttpOptions component.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setTotpEnabled - TOTP enabled state setter
- * @param {Function} params.setTotpSecret - TOTP secret state setter
- * @returns {Function} TOTP change handler
+ * @param params - Handler parameters
+ * @param params.setTotpEnabled - TOTP enabled state setter
+ * @param params.setTotpSecret - TOTP secret state setter
+ * @returns TOTP change handler
  */
 export const createTotpChangeHandler =
   ({ setTotpEnabled, setTotpSecret }: TotpChangeParams) =>
@@ -202,7 +203,7 @@ export const createTotpChangeHandler =
  * Factory function that creates a handler for HTTP test responses
  * with basic logging for debugging purposes.
  *
- * @returns {Function} Test response handler
+ * @returns Test response handler
  */
 export const createTestResponseHandler = () => (response: unknown) => {
   // Test response is handled by HttpOptions component
@@ -216,17 +217,17 @@ export const createTestResponseHandler = () => (response: unknown) => {
  * Factory function that creates a comprehensive form submission handler
  * with validation, data preparation, and error handling.
  *
- * @param {Object} params - Handler parameters
- * @param {Function} params.setSubmitting - Submitting state setter
- * @param {Object} params.form - Form instance
- * @param {Object} params.envContext - Environment context
- * @param {Function} params.onAddSource - Source addition callback
- * @param {Function} params.untrackTotpSecret - TOTP untracking function
- * @param {string} params.testSourceId - Test source ID for TOTP tracking
- * @param {Object} params.refs - Ref objects for form components
- * @param {Object} params.stateSetters - State setter functions
- * @param {Object} params.log - Logger instance
- * @returns {Function} Form submission handler
+ * @param params - Handler parameters
+ * @param params.setSubmitting - Submitting state setter
+ * @param params.form - Form instance
+ * @param params.envContext - Environment context
+ * @param params.onAddSource - Source addition callback
+ * @param params.untrackTotpSecret - TOTP untracking function
+ * @param params.testSourceId - Test source ID for TOTP tracking
+ * @param params.refs - Ref objects for form components
+ * @param params.stateSetters - State setter functions
+ * @param params.log - Logger instance
+ * @returns Form submission handler
  */
 export const createFormSubmissionHandler =
   ({
@@ -296,10 +297,10 @@ export const createFormSubmissionHandler =
  * Transforms form values into the appropriate source data structure
  * with type-specific processing and data validation.
  *
- * @param {Object} values - Form values
- * @param {Object} form - Form instance
- * @param {Object} log - Logger instance
- * @returns {Object} Prepared source data
+ * @param values - Form values
+ * @param form - Form instance
+ * @param log - Logger instance
+ * @returns Prepared source data
  */
 const prepareSourceData = (
   values: SourceFormValues,
@@ -362,12 +363,12 @@ const prepareSourceData = (
  * Performs cleanup operations after successful source addition including
  * form reset, state cleanup, and component resets.
  *
- * @param {Object} params - Cleanup parameters
- * @param {Function} params.untrackTotpSecret - TOTP untracking function
- * @param {string} params.testSourceId - Test source ID
- * @param {Object} params.form - Form instance
- * @param {Object} params.refs - Component refs
- * @param {Object} params.stateSetters - State setter functions
+ * @param params - Cleanup parameters
+ * @param params.untrackTotpSecret - TOTP untracking function
+ * @param params.testSourceId - Test source ID
+ * @param params.form - Form instance
+ * @param params.refs - Component refs
+ * @param params.stateSetters - State setter functions
  */
 const handleSuccessfulSubmission = async ({
   untrackTotpSecret,

@@ -7,9 +7,9 @@ import { useSettings } from '@/renderer/contexts';
  *
  * Custom hook that encapsulates all CLI API server state management and operations.
  *
- * @param {Object} options
- * @param {boolean} options.active - Whether the CLI tab is currently visible
- * @returns {Object} CLI server state and management functions
+ * @param options
+ * @param options.active - Whether the CLI tab is currently visible
+ * @returns CLI server state and management functions
  */
 export const useCliServer = ({ active = false } = {}) => {
   const { message } = App.useApp();

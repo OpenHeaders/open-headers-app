@@ -14,6 +14,7 @@
  * @since 3.0.0
  */
 
+import type { RefObject } from 'react';
 import type { SourceType } from '@openheaders/core';
 import type { FormInstance } from 'antd';
 
@@ -25,7 +26,7 @@ interface LoggerLike {
 }
 
 interface ScrollHandlerParams {
-  formCardRef: React.RefObject<HTMLElement | null>;
+  formCardRef: RefObject<HTMLElement | null>;
   setIsSticky: (sticky: boolean) => void;
   isSticky: boolean;
   headerHeight?: number;
@@ -35,7 +36,7 @@ interface EnvironmentChangeHandlerParams {
   form: FormInstance;
   sourceType: SourceType;
   envContext: { environmentsReady: boolean };
-  httpOptionsRef: React.RefObject<{ validateFields?: () => void } | null>;
+  httpOptionsRef: RefObject<{ validateFields?: () => void } | null>;
   log: LoggerLike;
 }
 
@@ -61,12 +62,12 @@ interface FormValues {
  * Factory function that creates a scroll event handler to determine
  * when the form header should become sticky based on scroll position.
  *
- * @param {Object} params - Handler parameters
- * @param {React.RefObject} params.formCardRef - Form card ref for position detection
- * @param {Function} params.setIsSticky - Sticky state setter
- * @param {boolean} params.isSticky - Current sticky state
- * @param {number} params.headerHeight - App header height in pixels (default: 64)
- * @returns {Function} Scroll event handler
+ * @param params - Handler parameters
+ * @param params.formCardRef - Form card ref for position detection
+ * @param params.setIsSticky - Sticky state setter
+ * @param params.isSticky - Current sticky state
+ * @param params.headerHeight - App header height in pixels (default: 64)
+ * @returns Scroll event handler
  *
  * @example
  * const handleScroll = createScrollHandler({
@@ -99,8 +100,8 @@ export const createScrollHandler =
  * Utility function that sets up scroll event listener with proper
  * cleanup and initial position check.
  *
- * @param {Function} scrollHandler - Scroll event handler function
- * @returns {Function} Cleanup function for removing event listener
+ * @param scrollHandler - Scroll event handler function
+ * @returns Cleanup function for removing event listener
  *
  * @example
  * useEffect(() => {
@@ -127,13 +128,13 @@ export const setupScrollListener = (scrollHandler: () => void) => {
  * Factory function that creates a handler for environment changes
  * with form field validation triggering.
  *
- * @param {Object} params - Handler parameters
- * @param {Object} params.form - Form instance
- * @param {string} params.sourceType - Current source type
- * @param {Object} params.envContext - Environment context
- * @param {React.RefObject} params.httpOptionsRef - HttpOptions component ref
- * @param {Object} params.log - Logger instance
- * @returns {Function} Environment change effect handler
+ * @param params - Handler parameters
+ * @param params.form - Form instance
+ * @param params.sourceType - Current source type
+ * @param params.envContext - Environment context
+ * @param params.httpOptionsRef - HttpOptions component ref
+ * @param params.log - Logger instance
+ * @returns Environment change effect handler
  */
 export const createEnvironmentChangeHandler =
   ({ form, sourceType, envContext, httpOptionsRef, log }: EnvironmentChangeHandlerParams) =>
@@ -179,13 +180,13 @@ export const createEnvironmentChangeHandler =
  * Factory function that creates a handler for TOTP tracking lifecycle
  * with proper cleanup on component unmount.
  *
- * @param {Object} params - Handler parameters
- * @param {boolean} params.totpEnabled - TOTP enabled state
- * @param {string} params.totpSecret - TOTP secret value
- * @param {Function} params.trackTotpSecret - TOTP tracking function
- * @param {Function} params.untrackTotpSecret - TOTP untracking function
- * @param {string} params.testSourceId - Test source ID for tracking
- * @returns {Function} TOTP tracking effect handler with cleanup
+ * @param params - Handler parameters
+ * @param params.totpEnabled - TOTP enabled state
+ * @param params.totpSecret - TOTP secret value
+ * @param params.trackTotpSecret - TOTP tracking function
+ * @param params.untrackTotpSecret - TOTP untracking function
+ * @param params.testSourceId - Test source ID for tracking
+ * @returns TOTP tracking effect handler with cleanup
  */
 export const createTotpTrackingHandler =
   ({ totpEnabled, totpSecret, trackTotpSecret, untrackTotpSecret, testSourceId }: TotpTrackingHandlerParams) =>
@@ -207,7 +208,7 @@ export const createTotpTrackingHandler =
  * Utility function that returns the initial values for the form
  * with sensible defaults for all source types.
  *
- * @returns {Object} Initial form values
+ * @returns Initial form values
  *
  * @example
  * const initialValues = getFormInitialValues();
@@ -227,8 +228,8 @@ export const getFormInitialValues = () => ({
  * Utility function that checks if form fields contain template variables
  * and returns a list of fields that need validation.
  *
- * @param {Object} values - Form values to check
- * @returns {string[]} Array of field names that contain template variables
+ * @param values - Form values to check
+ * @returns Array of field names that contain template variables
  *
  * @example
  * const fields = getFieldsWithTemplateVariables(formValues);
@@ -240,7 +241,6 @@ export const getFieldsWithTemplateVariables = (values: FormValues): string[] => 
   // Check URL for environment variables or TOTP codes
   if (
     values.sourcePath &&
-    typeof values.sourcePath === 'string' &&
     (values.sourcePath.includes('{{') || values.sourcePath.includes('[['))
   ) {
     fieldsToValidate.push('sourcePath');
@@ -255,8 +255,8 @@ export const getFieldsWithTemplateVariables = (values: FormValues): string[] => 
  * Utility function that generates a unique temporary source ID
  * for new sources before they are saved.
  *
- * @param {string} prefix - Prefix for the ID (default: 'new-source')
- * @returns {string} Generated temporary source ID
+ * @param prefix - Prefix for the ID (default: 'new-source')
+ * @returns Generated temporary source ID
  *
  * @example
  * const tempId = generateTempSourceId();
@@ -274,8 +274,8 @@ export const generateTempSourceId = (prefix = 'new-source') => {
  * Utility function that creates a test-specific source ID for
  * TOTP tracking during HTTP testing operations.
  *
- * @param {string} tempSourceId - Temporary source ID
- * @returns {string} Test source ID with test prefix
+ * @param tempSourceId - Temporary source ID
+ * @returns Test source ID with test prefix
  *
  * @example
  * const testId = createTestSourceId('new-source-123');
@@ -291,9 +291,9 @@ export const createTestSourceId = (tempSourceId: string): string => {
  * Utility function that debounces validation calls to prevent
  * excessive validation during rapid user input.
  *
- * @param {Function} validationFn - Validation function to debounce
- * @param {number} delay - Debounce delay in milliseconds (default: 300)
- * @returns {Function} Debounced validation function
+ * @param validationFn - Validation function to debounce
+ * @param delay - Debounce delay in milliseconds (default: 300)
+ * @returns Debounced validation function
  *
  * @example
  * const debouncedValidation = debounceValidation(validateField, 500);

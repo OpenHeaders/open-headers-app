@@ -25,8 +25,8 @@
  * Converts milliseconds to a user-friendly time format suitable for countdown displays.
  * Automatically adjusts format based on duration (shows hours only when needed).
  *
- * @param {number} milliseconds - Time in milliseconds to format
- * @returns {string} Formatted time string (e.g., "1h 30m 45s" or "5m 30s")
+ * @param milliseconds - Time in milliseconds to format
+ * @returns Formatted time string (e.g., "1h 30m 45s" or "5m 30s")
  *
  * @example
  * formatTimeRemaining(3661000) // "1h 1m 1s"
@@ -58,8 +58,8 @@ export const formatTimeRemaining = (milliseconds: number) => {
  * preserving important context from both the beginning and end of the content.
  * Uses a middle-ellipsis approach to show both start and end portions.
  *
- * @param {string} content - Content string to trim for display
- * @returns {string} Trimmed content with ellipsis if needed, or fallback message for empty content
+ * @param content - Content string to trim for display
+ * @returns Trimmed content with ellipsis if needed, or fallback message for empty content
  *
  * @example
  * trimContent("") // "No content yet"
@@ -87,11 +87,11 @@ export const trimContent = (content: string) => {
  * Helps track the lifecycle of refresh operations across the source table system.
  * Particularly useful for debugging timing issues and state synchronization.
  *
- * @param {number} sourceId - Source ID being operated on
- * @param {string} action - Action being performed (e.g., "Manual Refresh Started")
- * @param {Object} data - Additional contextual data to include in log entry
- * @param {Object} log - Logger instance for output
- * @param {Object} timeManager - Time manager instance for timestamp generation
+ * @param sourceId - Source ID being operated on
+ * @param action - Action being performed (e.g., "Manual Refresh Started")
+ * @param data - Additional contextual data to include in log entry
+ * @param log - Logger instance for output
+ * @param timeManager - Time manager instance for timestamp generation
  *
  * @example
  * debugRefreshState(123, "Manual Refresh Started", { userId: 'user1' }, log, timeManager);

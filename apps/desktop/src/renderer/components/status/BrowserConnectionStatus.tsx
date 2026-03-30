@@ -109,15 +109,15 @@ const BrowserConnectionStatus = () => {
 
   useEffect(() => {
     // Initial fetch
-    fetchConnectionStatus();
-    fetchProxyStatus();
-    fetchCliStatus();
+    void fetchConnectionStatus();
+    void fetchProxyStatus();
+    void fetchCliStatus();
 
     // Set up periodic updates
     const interval = setInterval(() => {
-      fetchConnectionStatus();
-      fetchProxyStatus();
-      fetchCliStatus();
+      void fetchConnectionStatus();
+      void fetchProxyStatus();
+      void fetchCliStatus();
     }, 5000);
 
     // Listen for connection status updates from main process

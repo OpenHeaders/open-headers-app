@@ -32,9 +32,9 @@ import type { Source } from '@openheaders/core';
  * prevent the source from functioning properly. Returns an array of missing
  * dependency identifiers that can be used for user feedback and state management.
  *
- * @param {Object} source - Source object to check for dependencies
- * @param {Object} envVars - Available environment variables from context
- * @returns {Array<string>} Array of missing dependency identifiers (e.g., ['env:API_KEY', 'totp:secret'])
+ * @param source - Source object to check for dependencies
+ * @param envVars - Available environment variables from context
+ * @returns Array of missing dependency identifiers (e.g., ['env:API_KEY', 'totp:secret'])
  *
  * @example
  * const missingDeps = checkSourceDependencies(source, { API_KEY: 'value' });
@@ -85,8 +85,8 @@ export const checkSourceDependencies = (source: Source, envVars: Record<string, 
  * which indicates it's a dynamic source that requires variable resolution.
  * Only checks HTTP sources as other source types don't support templates.
  *
- * @param {Object} source - Source object to check for template usage
- * @returns {boolean} True if source contains template variables, false otherwise
+ * @param source - Source object to check for template usage
+ * @returns True if source contains template variables, false otherwise
  *
  * @example
  * const hasTemplates = isTemplateSource({ sourceType: 'http', url: '{{API_URL}}/data' });
