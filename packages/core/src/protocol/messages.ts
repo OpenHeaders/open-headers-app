@@ -5,9 +5,7 @@
  * and the browser extension (WS client).
  */
 
-import type { RecordingEvent, RecordingMetadata } from '../types/recording';
-import type { PayloadRule, Rule } from '../types/rules';
-import type { Source } from '../types/source';
+import type { PayloadRule, RecordingEvent, RecordingMetadata, Rule, Source } from '../types';
 
 // ── Shared protocol types ──────────────────────────────────────────
 

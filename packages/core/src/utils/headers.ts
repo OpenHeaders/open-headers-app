@@ -5,7 +5,7 @@
  * headers before they're applied via declarativeNetRequest or proxy.
  */
 
-import type { HeaderNameValidation, HeaderValueValidation } from '../types/rules';
+import type { HeaderNameValidation, HeaderValueValidation } from '../types';
 
 // Headers that cannot be modified by extensions
 const FORBIDDEN_REQUEST_HEADERS = new Set([

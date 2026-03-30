@@ -5,8 +5,7 @@
  * to avoid redundant updates.
  */
 
-import type { SavedDataMap } from '../types/rules';
-import type { Source } from '../types/source';
+import type { SavedDataMap, Source } from '../types';
 
 function fnv1a(str: string): number {
   let hash = 0x811c9dc5;
