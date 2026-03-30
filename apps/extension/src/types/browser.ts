@@ -44,10 +44,7 @@ export interface MessageHandlerContext {
   getCurrentSources: () => Source[];
   isWebSocketConnected: () => boolean;
   sendViaWebSocket: (data: Record<string, unknown>) => boolean;
-  scheduleUpdate: (
-    reason: string,
-    options?: { immediate?: boolean; sources?: Source[] },
-  ) => void;
+  scheduleUpdate: (reason: string, options?: { immediate?: boolean; sources?: Source[] }) => void;
   revalidateTrackedRequests: () => Promise<void>;
   updateBadgeCallback: () => void;
   lastSourcesHash: string;

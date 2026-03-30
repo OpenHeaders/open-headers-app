@@ -2,7 +2,7 @@
  * WebSocket connection management
  */
 
-import type { HeaderRuleFromApp, RulesData, SavedDataMap, Source } from '@openheaders/core';
+import type { HeaderRuleFromApp, RulesData, SavedDataMap, Source, WorkflowRecordingPayload } from '@openheaders/core';
 import { WS_SERVER_URL as CORE_WS_SERVER_URL } from '@openheaders/core/protocol';
 import { isChrome, isEdge, isFirefox, isSafari, runtime, storage } from '@utils/browser-api.js';
 import { logger } from '@utils/logger';
@@ -520,7 +520,7 @@ export function sendViaWebSocket(data: Record<string, unknown>): boolean {
 /**
  * Send workflow to app via WebSocket (simple version like browserInfo)
  */
-export function sendRecordingViaWebSocket(recording: unknown): boolean {
+export function sendRecordingViaWebSocket(recording: WorkflowRecordingPayload): boolean {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     logger.info('WebSocket', 'Not connected, cannot send workflow');
     return false;

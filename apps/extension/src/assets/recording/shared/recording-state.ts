@@ -6,7 +6,7 @@ import { logger } from '@utils/logger';
 
 export type FlowType = 'pre-nav' | 'nav' | 'oauth-redirect' | null;
 
-interface NavigationEntry {
+interface RecordingNavEntry {
   url: string;
   timestamp: number;
   relativeTime?: number;
@@ -26,7 +26,7 @@ interface StorageState {
   cookies: Record<string, unknown>;
 }
 
-interface StorageEvent {
+interface RecordingStorageEvent {
   type: string;
   name: string;
   action: string;
@@ -34,7 +34,7 @@ interface StorageEvent {
   [key: string]: unknown;
 }
 
-interface RrwebEvent {
+interface RecordingRrwebEvent {
   type: number;
   timestamp: number;
   data?: {
@@ -49,18 +49,18 @@ interface RrwebEvent {
 }
 
 interface PageData {
-  events?: RrwebEvent[];
+  events?: RecordingRrwebEvent[];
   console?: Array<Record<string, unknown>>;
   network?: Array<Record<string, unknown>>;
-  storage?: StorageEvent[];
+  storage?: RecordingStorageEvent[];
   storageState?: Partial<StorageState>;
 }
 
 interface AccumulatedData {
-  events: RrwebEvent[];
+  events: RecordingRrwebEvent[];
   console: Array<Record<string, unknown>>;
   network: Array<Record<string, unknown>>;
-  storage: StorageEvent[];
+  storage: RecordingStorageEvent[];
   storageState: StorageState;
   eventCount: number;
   lastCleanup: number;
@@ -84,7 +84,7 @@ interface SerializedState {
   isPreNav: boolean;
   hasNavigated: boolean;
   firstPageNavigationTime: number | null;
-  navigationHistory: NavigationEntry[];
+  navigationHistory: RecordingNavEntry[];
   redirectChain: RedirectEntry[];
   accumulated?: {
     eventCount: number;
@@ -96,10 +96,10 @@ interface SerializedState {
 }
 
 export interface OptimizedReplayData {
-  events: RrwebEvent[];
+  events: RecordingRrwebEvent[];
   console: Array<Record<string, unknown>>;
   network: Array<Record<string, unknown>>;
-  storage: StorageEvent[];
+  storage: RecordingStorageEvent[];
   metadata: {
     recordId: string;
     startTime: number;
@@ -123,7 +123,7 @@ export class RecordingState {
   hasNavigated: boolean;
   firstPageNavigationTime: number | null;
   accumulated: AccumulatedData;
-  navigationHistory: NavigationEntry[];
+  navigationHistory: RecordingNavEntry[];
   redirectChain: RedirectEntry[];
   performance: PerformanceSettings;
   // Additional properties used by RecordingService
@@ -290,8 +290,8 @@ export class RecordingState {
     }
   }
 
-  deduplicateStorageEvents(events: StorageEvent[]): StorageEvent[] {
-    const seen = new Map<string, StorageEvent>();
+  deduplicateStorageEvents(events: RecordingStorageEvent[]): RecordingStorageEvent[] {
+    const seen = new Map<string, RecordingStorageEvent>();
 
     for (let i = events.length - 1; i >= 0; i--) {
       const event = events[i];
@@ -322,12 +322,12 @@ export class RecordingState {
     };
   }
 
-  compressEventsForReplay(events: RrwebEvent[]): RrwebEvent[] {
+  compressEventsForReplay(events: RecordingRrwebEvent[]): RecordingRrwebEvent[] {
     if (!events || events.length === 0) return events;
 
-    const compressed: RrwebEvent[] = [];
-    const fullSnapshots: RrwebEvent[] = [];
-    const incrementalsBySnapshot = new Map<number, RrwebEvent[]>();
+    const compressed: RecordingRrwebEvent[] = [];
+    const fullSnapshots: RecordingRrwebEvent[] = [];
+    const incrementalsBySnapshot = new Map<number, RecordingRrwebEvent[]>();
     let currentSnapshotTime = 0;
 
     events.forEach((event) => {

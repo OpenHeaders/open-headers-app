@@ -5,9 +5,11 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RecordingMetadata } from '@openheaders/core';
+import type { RecordingMetadata, WorkflowRecordingPayload } from '@openheaders/core';
 import { errorMessage } from '@openheaders/core';
+import { WorkflowRecordingPayloadSchema } from '@openheaders/core/schemas';
 import electron from 'electron';
+import * as v from 'valibot';
 import WebSocket from 'ws';
 import type { AppSettings } from '@/types/settings';
 import atomicWriter from '@/utils/atomicFileWriter';
@@ -110,7 +112,7 @@ interface RecordingStateSyncData {
 
 interface SaveRecordingMessageData {
   type: string;
-  recording: PreprocessorData;
+  recording: WorkflowRecordingPayload;
 }
 
 class WSRecordingHandler {
@@ -520,22 +522,33 @@ class WSRecordingHandler {
   }
 
   /**
-   * Handle a saveRecording/saveWorkflow message from the extension
-   * Preprocesses record ID, focuses app, notifies UI, saves, and responds
+   * Handle a saveRecording/saveWorkflow message from the extension.
+   * Validates the payload against the WorkflowRecordingPayloadSchema,
+   * then preprocesses, saves, and responds.
    */
-  handleSaveRecordingMessage(ws: WebSocket, data: SaveRecordingMessageData): void {
+  handleSaveRecordingMessage(ws: WebSocket, data: { type: string; recording: unknown }): void {
     log.info(`Received ${data.type} request from extension`);
 
+    // Validate at the WebSocket boundary
+    let recording: WorkflowRecordingPayload;
+    try {
+      recording = v.parse(WorkflowRecordingPayloadSchema, data.recording);
+    } catch (error) {
+      log.error('Invalid recording payload from extension:', errorMessage(error));
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'saveRecordingResponse', success: false, error: 'Invalid recording payload' }));
+      }
+      return;
+    }
+
     // Ensure consistent record ID
-    if (!data.recording?.record?.metadata?.recordId) {
+    if (!recording.record.metadata.recordId) {
       const generatedId = `record-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      if (!data.recording.record) data.recording.record = { events: [] };
-      if (!data.recording.record.metadata) data.recording.record.metadata = { startTime: Date.now() };
-      data.recording.record.metadata.recordId = generatedId;
+      recording.record.metadata.recordId = generatedId;
       log.info(`Generated record ID: ${generatedId}`);
     }
 
-    const recordId = data.recording.record.metadata?.recordId ?? '';
+    const recordId = recording.record.metadata.recordId ?? '';
 
     log.info('Immediately navigating to records tab for:', recordId);
     if (this.onFocusApp) {
@@ -547,12 +560,12 @@ class WSRecordingHandler {
     }
 
     this.notifyRecordingProcessing(recordId, {
-      url: data.recording.record.metadata?.url || 'Unknown',
-      timestamp: data.recording.record.metadata?.timestamp || Date.now(),
-      eventCount: data.recording.record.events?.length || 0,
+      url: recording.record.metadata.url || 'Unknown',
+      timestamp: recording.record.metadata.timestamp || Date.now(),
+      eventCount: recording.record.events.length,
     });
 
-    this.handleSaveRecording(data.recording)
+    this.handleSaveRecording(recording as PreprocessorData)
       .then((result) => {
         log.info('Workflow saved successfully:', result.recordId);
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -602,6 +615,6 @@ class WSRecordingHandler {
   }
 }
 
-export type { RecordingStateSyncData, SaveRecordingMessageData, StartSyncRecordingData, StopSyncRecordingData };
+export type { RecordingStateSyncData, StartSyncRecordingData, StopSyncRecordingData };
 export { WSRecordingHandler };
 export default WSRecordingHandler;

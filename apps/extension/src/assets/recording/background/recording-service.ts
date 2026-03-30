@@ -11,51 +11,23 @@
 import { MESSAGE_TYPES } from '@assets/recording/shared/constants';
 import { RecordingState } from '@assets/recording/shared/recording-state';
 import { RecordingStateMachine, RecordingStates } from '@assets/recording/shared/state-machine';
-import type { RecordingEvent } from '@openheaders/core';
+import type { RecordingEvent, WorkflowRecordingPayload } from '@openheaders/core';
 import { downloads, tabs } from '@utils/browser-api';
 import { DisplayDetector } from '@utils/display-detector';
 import { logger } from '@utils/logger';
 import { isWebSocketConnected, sendRecordingViaWebSocket, sendViaWebSocket } from '@/background/websocket.js';
-import type { IRecordingService } from '@/types/recording';
+import type {
+  IRecordingService,
+  RecordingData,
+  RecordingResult,
+  StartRecordingOptions,
+  StopRecordingOptions,
+} from '@/types/recording';
 
 declare const browser: typeof chrome | undefined;
 
 // Browser API reference
 const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
-
-interface RecordingOptions {
-  useWidget?: boolean;
-  [key: string]: unknown;
-}
-
-interface StopOptions {
-  fromWidget?: boolean;
-  [key: string]: unknown;
-}
-
-interface RecordingResult {
-  id: string;
-  tabId: number;
-  startTime: number;
-  status: string;
-  url: string | undefined;
-  title: string | undefined;
-  [key: string]: unknown;
-}
-
-interface RecordingData {
-  id: string;
-  tabId: number;
-  startTime: number;
-  endTime: number;
-  status: string;
-  url: string;
-  title: string;
-  events: RecordingEvent[];
-  preNavTimeAdjustment: number | undefined;
-  hasVideoSync: boolean;
-  [key: string]: unknown;
-}
 
 interface ContentScriptReadyResult {
   shouldStartRecording: boolean;
@@ -125,7 +97,7 @@ export class RecordingService implements IRecordingService {
 
   // ── Start recording ────────────────────────────────────────────────
 
-  async startRecording(tabId: number, options: RecordingOptions = {}): Promise<RecordingResult> {
+  async startRecording(tabId: number, options: StartRecordingOptions = {}): Promise<RecordingResult> {
     logger.info('RecordingService', 'Starting recording for tab:', tabId);
 
     const newState = this.stateMachine.tryTransition(tabId, 'START_RECORDING');
@@ -263,7 +235,7 @@ export class RecordingService implements IRecordingService {
 
   // ── Stop recording (idempotent, lock-protected) ────────────────────
 
-  async stopRecording(tabId: number, options: StopOptions = {}): Promise<RecordingData | null> {
+  async stopRecording(tabId: number, options: StopRecordingOptions = {}): Promise<RecordingData | null> {
     // Per-tab lock: if a stop is already in progress for this tab, drop silently.
     if (this.stoppingTabs.has(tabId)) {
       logger.debug('RecordingService', 'Stop already in progress for tab:', tabId, '— skipping duplicate');
@@ -461,7 +433,7 @@ export class RecordingService implements IRecordingService {
     }
 
     if (isWebSocketConnected()) {
-      const recordingData = {
+      const recordingData: WorkflowRecordingPayload = {
         record: {
           id: recording.id,
           tabId: recording.tabId,
@@ -476,11 +448,9 @@ export class RecordingService implements IRecordingService {
             recordId: recording.id,
             timestamp: recording.startTime,
             startTime: recording.startTime,
-            endTime: recording.endTime,
             duration: recording.endTime - recording.startTime,
             url: recording.url,
             title: recording.title || 'Recording',
-            tabId: recording.tabId,
             viewport: viewport,
             userAgent: navigator.userAgent || 'Unknown',
           },

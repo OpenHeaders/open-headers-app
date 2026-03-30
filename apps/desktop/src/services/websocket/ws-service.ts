@@ -10,12 +10,7 @@ import mainLogger from '@/utils/mainLogger';
 import { WSClientHandler } from './ws-client-handler';
 import { WSEnvironmentHandler } from './ws-environment-handler';
 import { WSNetworkStateHandler } from './ws-network-state';
-import type {
-  RecordingStateSyncData,
-  SaveRecordingMessageData,
-  StartSyncRecordingData,
-  StopSyncRecordingData,
-} from './ws-recording-handler';
+import type { RecordingStateSyncData, StartSyncRecordingData, StopSyncRecordingData } from './ws-recording-handler';
 import { WSRecordingHandler } from './ws-recording-handler';
 import { WSRuleHandler } from './ws-rule-handler';
 import { WSSourceHandler } from './ws-source-handler';
@@ -42,7 +37,7 @@ type WSMessage =
   | { type: 'toggleRule'; ruleId: string | number; enabled: boolean }
   | { type: 'toggleAllRules'; ruleIds: string[]; enabled: boolean }
   | { type: 'focusApp'; navigation?: { tab?: string; subTab?: string } }
-  | { type: 'saveRecording' | 'saveWorkflow'; recording: SaveRecordingMessageData['recording'] }
+  | { type: 'saveRecording' | 'saveWorkflow'; recording: unknown }
   | { type: 'startSyncRecording'; data: StartSyncRecordingData }
   | { type: 'stopSyncRecording'; data: StopSyncRecordingData }
   | { type: 'recordingStateSync'; data: RecordingStateSyncData };

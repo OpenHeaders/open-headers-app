@@ -3,6 +3,7 @@
  */
 
 import { NewMessageTypes } from '@assets/recording/shared/message-adapter.js';
+import type { WorkflowRecordingPayload } from '@openheaders/core';
 import { runtime as browserRuntime, cookies, downloads, tabs } from '@utils/browser-api.js';
 import { logger } from '@utils/logger';
 import type { SendResponse } from '@/types/browser';
@@ -20,7 +21,7 @@ export function handleRecordingMessage(
   sender: chrome.runtime.MessageSender,
   sendResponse: SendResponse,
   recordingService: IRecordingService,
-  sendRecordingViaWebSocket: (recording: unknown) => boolean,
+  sendRecordingViaWebSocket: (recording: WorkflowRecordingPayload) => boolean,
 ): boolean | undefined {
   // Handle record recording messages
   if (
@@ -130,7 +131,7 @@ export function handleRecordingMessage(
       case 'SEND_WORKFLOW_TO_APP': {
         logger.info('RecordingHandler', 'Received SEND_WORKFLOW_TO_APP message');
         // Send recording via WebSocket
-        const success = sendRecordingViaWebSocket(message.recording);
+        const success = sendRecordingViaWebSocket(message.recording as WorkflowRecordingPayload);
         logger.info('RecordingHandler', 'sendRecordingViaWebSocket returned:', success);
         sendResponse({ success, error: success ? null : 'App not connected' });
         return true;

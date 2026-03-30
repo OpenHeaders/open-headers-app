@@ -15,6 +15,7 @@ import type {
   DomNode,
   PageTransition,
   PreprocessProgressDetails,
+  RecordingEventData,
   RecordingMetadata,
   RRWebAdd,
   RRWebEvent,
@@ -30,12 +31,25 @@ const log = createLogger('RecordingPreprocessor');
 const urlNormalizationCache = new Map<string, string>();
 const CACHE_MAX_SIZE = 5000;
 
+/**
+ * Preprocessor event — widens RecordingEvent.type to include numeric rrweb
+ * types that appear in direct/uploaded recordings (not wrapped in type: 'rrweb').
+ */
 interface PreprocessorEvent {
   type: string | number;
   timestamp: number;
-  data?: RRWebEvent;
+  url?: string;
+  data?: RecordingEventData;
 }
 
+/**
+ * Input/output type for the preprocessor pipeline.
+ * Input comes from the validated WorkflowRecordingPayload (WebSocket boundary).
+ * Output adds preprocessing artifacts (_preprocessed, _pageTransitions, etc.).
+ *
+ * Events use PreprocessorEvent (wider than RecordingEvent) because uploaded
+ * recordings may contain raw rrweb events with numeric type fields.
+ */
 interface PreprocessorRecord {
   events: PreprocessorEvent[];
   metadata?: RecordingMetadata;
@@ -384,7 +398,7 @@ async function preprocessRecordingForSave(
 
       // Handle wrapped rrweb events
       if (event.type === 'rrweb' && event.data) {
-        const rrwebEvent = event.data;
+        const rrwebEvent = event.data as unknown as RRWebEvent;
 
         if (rrwebEvent.type === 2) {
           // Full snapshot
@@ -405,22 +419,25 @@ async function preprocessRecordingForSave(
           });
         }
       } else if (event.type === 2) {
-        // Direct rrweb format - Full snapshot
+        // Direct rrweb format - Full snapshot (event.data is the snapshot itself)
         pageTransitions.push({
           index: i,
           timestamp: event.timestamp,
           pageIndex: currentPageIndex++,
         });
 
-        const baseTagUrl = extractBaseUrl(event.data as Snapshot | null);
+        const baseTagUrl = extractBaseUrl(event.data as unknown as Snapshot | null);
         const effectiveBaseUrl = baseTagUrl || baseUrl;
-        collectResourcesFromSnapshot(event.data as Snapshot, resourceMap, effectiveBaseUrl);
-      } else if (event.type === 3 && event.data?.source === 8 && event.data?.adds) {
-        event.data.adds.forEach((add: RRWebAdd) => {
-          if (add.rule && typeof add.rule === 'string') {
-            collectResourcesFromCss(add.rule, resourceMap, baseUrl);
-          }
-        });
+        collectResourcesFromSnapshot(event.data as unknown as Snapshot, resourceMap, effectiveBaseUrl);
+      } else if (event.type === 3) {
+        const rrwebData = event.data as unknown as RRWebEvent;
+        if (rrwebData?.source === 8 && rrwebData?.adds) {
+          rrwebData.adds.forEach((add: RRWebAdd) => {
+            if (add.rule && typeof add.rule === 'string') {
+              collectResourcesFromCss(add.rule, resourceMap, baseUrl);
+            }
+          });
+        }
       }
     }
 
@@ -475,7 +492,7 @@ async function preprocessRecordingForSave(
 
       // Handle wrapped rrweb events
       if (event.type === 'rrweb' && event.data) {
-        const rrwebEvent = event.data;
+        const rrwebEvent = event.data as unknown as RRWebEvent;
 
         if (rrwebEvent.type === 2) {
           // Full snapshot
@@ -496,7 +513,7 @@ async function preprocessRecordingForSave(
               data: processedData,
             },
           };
-          processedEvents.push(processedEvent);
+          processedEvents.push(processedEvent as PreprocessorEvent);
         } else if (rrwebEvent.type === 3) {
           // Incremental snapshot
           const processedRrwebEvent = processIncrementalSnapshot(
@@ -518,14 +535,20 @@ async function preprocessRecordingForSave(
         }
       } else if (event.type === 2) {
         // Direct rrweb format - Full snapshot
-        const baseTagUrl = extractBaseUrl(event.data as Snapshot | null);
+        const baseTagUrl = extractBaseUrl(event.data as unknown as Snapshot | null);
         const effectiveBaseUrl = baseTagUrl || baseUrl;
 
-        const processedEvent = {
+        const processedEvent: PreprocessorEvent = {
           ...event,
-          data: preprocessSnapshot(event.data as Snapshot, fontUrls, staticResources, effectiveBaseUrl, resourceMap),
+          data: preprocessSnapshot(
+            event.data as unknown as Snapshot,
+            fontUrls,
+            staticResources,
+            effectiveBaseUrl,
+            resourceMap,
+          ) as unknown as RecordingEventData,
         };
-        processedEvents.push(processedEvent as PreprocessorEvent);
+        processedEvents.push(processedEvent);
       } else if (event.type === 3) {
         // Direct rrweb format - Incremental snapshot
         const processedEvent = processIncrementalSnapshot(event, fontUrls, pageTransitions, baseUrl, resourceMap);
@@ -801,8 +824,11 @@ function processIncrementalSnapshot(
 ): PreprocessorEvent | RRWebEvent | null {
   if (!event.data) return event;
 
-  if (event.data.source === 0 && event.data.adds) {
-    const processedAdds = event.data.adds.map((add: RRWebAdd) => {
+  // Narrow to RRWebEvent-like data for rrweb-specific field access
+  const data = event.data as unknown as NonNullable<RRWebEvent['data']>;
+
+  if (data.source === 0 && data.adds) {
+    const processedAdds = data.adds.map((add: RRWebAdd) => {
       if (!add.node?.attributes) return add;
 
       const processedNode = JSON.parse(JSON.stringify(add.node));
@@ -880,14 +906,14 @@ function processIncrementalSnapshot(
     return {
       ...event,
       data: {
-        ...event.data,
+        ...data,
         adds: processedAdds,
       },
     };
-  } else if (event.data.source === 8) {
+  } else if (data.source === 8) {
     // Style sheet event - collect font URLs
-    if (event.data.adds && Array.isArray(event.data.adds)) {
-      event.data.adds.forEach((add: RRWebAdd) => {
+    if (data.adds && Array.isArray(data.adds)) {
+      data.adds.forEach((add: RRWebAdd) => {
         if (add.rule && typeof add.rule === 'string' && add.rule.includes('@font-face')) {
           extractFontUrlsFromCss(add.rule, fontUrls, null, baseUrl, resourceMap);
         }
@@ -895,9 +921,7 @@ function processIncrementalSnapshot(
     }
     return event;
   } else {
-    const isMouseEvent =
-      event.data &&
-      ((event.data.source === 6 && event.data.positions) || event.data.source === 2 || event.data.source === 1);
+    const isMouseEvent = data && ((data.source === 6 && data.positions) || data.source === 2 || data.source === 1);
 
     if (isMouseEvent) {
       return event;

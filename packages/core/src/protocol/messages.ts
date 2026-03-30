@@ -5,7 +5,44 @@
  * and the browser extension (WS client).
  */
 
+import type { RecordingEvent, RecordingMetadata } from '../types/recording';
 import type { Source } from '../types/source';
+
+// ── Recording wire format (extension → desktop via WebSocket) ──────
+
+/**
+ * The recording payload that crosses the WebSocket boundary.
+ *
+ * Extension builds this in RecordingService.exportRecording(),
+ * desktop validates it in WSRecordingHandler with the valibot schema,
+ * then passes it to the preprocessor pipeline.
+ */
+export interface WorkflowRecordingPayload {
+  record: WorkflowRecordingRecord;
+}
+
+export interface WorkflowRecordingRecord {
+  /** Extension-generated recording ID */
+  id: string;
+  /** Browser tab that was recorded */
+  tabId: number;
+  /** Recording start timestamp (epoch ms) */
+  startTime: number;
+  /** Recording end timestamp (epoch ms) */
+  endTime: number;
+  /** URL of the recorded page */
+  url: string;
+  /** Page title */
+  title: string;
+  /** All captured events (rrweb, console, network, navigation, storage) */
+  events: RecordingEvent[];
+  /** Time offset for pre-navigation recordings */
+  preNavTimeAdjustment?: number;
+  /** Whether video sync was active with the desktop app */
+  hasVideoSync: boolean;
+  /** Recording metadata for indexing and display */
+  metadata: RecordingMetadata;
+}
 
 // ── Incoming messages (extension → desktop) ────────────────────────
 
@@ -43,7 +80,7 @@ export interface GetRecordingHotkeyMessage {
 
 export interface SaveWorkflowMessage {
   type: 'saveWorkflow';
-  recording: unknown;
+  recording: WorkflowRecordingPayload;
 }
 
 export interface StartSyncRecordingMessage {

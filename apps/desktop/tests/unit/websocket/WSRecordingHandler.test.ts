@@ -1,7 +1,37 @@
-import type { RecordingMetadata } from '@openheaders/core';
+import type { RecordingEvent, RecordingMetadata, WorkflowRecordingPayload } from '@openheaders/core';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import type WebSocket from 'ws';
 import { WSRecordingHandler } from '@/services/websocket/ws-recording-handler';
+
+/** Build a valid WorkflowRecordingPayload for tests, with sensible defaults. */
+function buildPayload(
+  overrides: {
+    metadata?: RecordingMetadata;
+    events?: RecordingEvent[];
+    id?: string;
+    url?: string;
+  } = {},
+): WorkflowRecordingPayload {
+  const id = overrides.id ?? 'recording_test';
+  const url = overrides.url ?? 'https://app.openheaders.io';
+  return {
+    record: {
+      id,
+      tabId: 1,
+      startTime: 1709123456789,
+      endTime: 1709123460000,
+      url,
+      title: 'Test Recording',
+      events: overrides.events ?? [],
+      hasVideoSync: false,
+      metadata: overrides.metadata ?? {
+        startTime: 1709123456789,
+        timestamp: 1709123456789,
+        url,
+      },
+    },
+  };
+}
 
 // Mock atomicFileWriter
 vi.mock('@/utils/atomicFileWriter', () => ({
@@ -253,77 +283,41 @@ describe('WSRecordingHandler', () => {
   describe('handleSaveRecordingMessage', () => {
     it('generates record ID when metadata has no recordId', () => {
       const mockWs = createMockWs();
-      const metadata: RecordingMetadata = {
-        startTime: 1709123456789,
-        url: 'https://app.openheaders.io/dashboard/sources',
-        timestamp: 1709123456789,
-      };
-      const data = {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata,
-            events: [{ type: 'rrweb', timestamp: 1709123456789, data: { type: 4 } }],
-          },
-        },
-      };
+      const payload = buildPayload({ url: 'https://app.openheaders.io/dashboard/sources' });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId: 'generated-id' });
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, data);
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
-      expect(metadata.recordId).toBeDefined();
-      expect(metadata.recordId).toMatch(/^record-\d+-[a-z0-9]+$/);
+      // Schema validation creates a new object, so check the arg passed to handleSaveRecording
+      const savedRecording = (handler.handleSaveRecording as Mock).mock.calls[0][0];
+      expect(savedRecording.record.metadata.recordId).toBeDefined();
+      expect(savedRecording.record.metadata.recordId).toMatch(/^record-\d+-[a-z0-9]+$/);
     });
 
     it('uses existing recordId when present', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-x7y8z9a1b';
-      const metadata: RecordingMetadata = {
-        startTime: 1709123456789,
-        recordId,
-        url: 'https://app.openheaders.io/dashboard',
-      };
-      const data = {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata,
-            events: [],
-          },
-        },
-      };
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/dashboard' } });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, data);
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
-      expect(metadata.recordId).toBe(recordId);
+      expect(payload.record.metadata.recordId).toBe(recordId);
     });
 
     it('focuses app with record-viewer tab and highlight action', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-a1b2c3d4e';
-      const data = {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata: {
-              startTime: 1709123456789,
-              recordId,
-              url: 'https://app.openheaders.io/recordings',
-            } satisfies RecordingMetadata,
-            events: [],
-          },
-        },
-      };
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/recordings' } });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, data);
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
       expect(mockFocusApp).toHaveBeenCalledWith({
         tab: 'record-viewer',
@@ -335,29 +329,20 @@ describe('WSRecordingHandler', () => {
     it('calls notifyRecordingProcessing with correct metadata', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-f5g6h7i8j';
-      const data = {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata: {
-              startTime: 1709123456789,
-              recordId,
-              url: 'https://auth.openheaders.internal:8443/oauth2/authorize',
-              timestamp: 1709123456789,
-            } satisfies RecordingMetadata,
-            events: [
-              { type: 'rrweb', timestamp: 1709123456789 },
-              { type: 'rrweb', timestamp: 1709123456800 },
-              { type: 'rrweb', timestamp: 1709123456900 },
-            ],
-          },
-        },
-      };
+      const payload = buildPayload({
+        url: 'https://auth.openheaders.internal:8443/oauth2/authorize',
+        metadata: { startTime: 1709123456789, recordId, url: 'https://auth.openheaders.internal:8443/oauth2/authorize', timestamp: 1709123456789 },
+        events: [
+          { type: 'rrweb', timestamp: 1709123456789 },
+          { type: 'rrweb', timestamp: 1709123456800 },
+          { type: 'rrweb', timestamp: 1709123456900 },
+        ],
+      });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, data);
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
       expect(handler.notifyRecordingProcessing).toHaveBeenCalledWith(recordId, {
         url: 'https://auth.openheaders.internal:8443/oauth2/authorize',
@@ -366,47 +351,27 @@ describe('WSRecordingHandler', () => {
       });
     });
 
-    it('creates record and metadata objects when missing', () => {
+    it('rejects invalid payload and sends error response', () => {
       const mockWs = createMockWs();
-      const data = {
-        type: 'saveRecording',
-        recording: {
-          record: { events: [] as { type: string; timestamp: number }[] },
-        },
-      };
+      const invalidData = { type: 'saveRecording', recording: { record: { events: [] } } };
 
-      handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId: 'test' });
-      handler.notifyRecordingProcessing = vi.fn();
+      handler.handleSaveRecordingMessage(mockWs, invalidData);
 
-      handler.handleSaveRecordingMessage(mockWs, data);
-
-      expect(data.recording.record).toHaveProperty('metadata');
-      const metadata = (data.recording.record as { metadata?: RecordingMetadata }).metadata;
-      expect(metadata?.recordId).toMatch(/^record-/);
-      expect(metadata?.startTime).toBeGreaterThan(0);
+      expect(mockWs.send).toHaveBeenCalled();
+      const responseMsg = JSON.parse((mockWs.send as Mock).mock.calls[0][0] as string);
+      expect(responseMsg.success).toBe(false);
+      expect(responseMsg.error).toBe('Invalid recording payload');
     });
 
     it('handles saveWorkflow type the same as saveRecording', () => {
       const mockWs = createMockWs();
       const recordId = 'record-1709123456789-workflow';
-      const data = {
-        type: 'saveWorkflow',
-        recording: {
-          record: {
-            metadata: {
-              startTime: 1709123456789,
-              recordId,
-              url: 'https://app.openheaders.io/workflows',
-            } satisfies RecordingMetadata,
-            events: [],
-          },
-        },
-      };
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://app.openheaders.io/workflows' } });
 
       handler.handleSaveRecording = vi.fn().mockResolvedValue({ success: true, recordId });
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, data);
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveWorkflow', recording: payload });
 
       expect(mockFocusApp).toHaveBeenCalledWith({
         tab: 'record-viewer',
@@ -427,17 +392,9 @@ describe('WSRecordingHandler', () => {
       handler.handleSaveRecording = vi.fn().mockReturnValue(savePromise);
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } satisfies RecordingMetadata,
-            events: [],
-          },
-        },
-      });
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } });
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
-      // Resolve the save promise
       resolvePromise({ success: true, recordId });
       await vi.waitFor(() => {
         expect(mockWs.send).toHaveBeenCalled();
@@ -458,15 +415,8 @@ describe('WSRecordingHandler', () => {
       handler.handleSaveRecording = vi.fn().mockRejectedValue(new Error('Disk full'));
       handler.notifyRecordingProcessing = vi.fn();
 
-      handler.handleSaveRecordingMessage(mockWs, {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } satisfies RecordingMetadata,
-            events: [],
-          },
-        },
-      });
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } });
+      handler.handleSaveRecordingMessage(mockWs, { type: 'saveRecording', recording: payload });
 
       await vi.waitFor(() => {
         expect(mockWs.send).toHaveBeenCalled();
@@ -488,15 +438,8 @@ describe('WSRecordingHandler', () => {
       handler.notifyRecordingProcessing = vi.fn();
 
       // Should not throw even though ws is closed
-      handler.handleSaveRecordingMessage(closedWs, {
-        type: 'saveRecording',
-        recording: {
-          record: {
-            metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } satisfies RecordingMetadata,
-            events: [],
-          },
-        },
-      });
+      const payload = buildPayload({ metadata: { startTime: 1709123456789, recordId, url: 'https://openheaders.io' } });
+      handler.handleSaveRecordingMessage(closedWs, { type: 'saveRecording', recording: payload });
 
       // Wait for async completion
       await vi.waitFor(() => {

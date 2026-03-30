@@ -29,4 +29,6 @@ export type {
   ToggleAllRulesMessage,
   ToggleRuleMessage,
   VideoRecordingStateChangedMessage,
+  WorkflowRecordingPayload,
+  WorkflowRecordingRecord,
 } from './messages';
