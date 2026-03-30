@@ -387,38 +387,40 @@ jobs:
           VERSION=${GITHUB_REF_NAME/v/}
           EXT_VERSION="${{ steps.ext_ver.outputs.version }}"
           IS_PRERELEASE="${{ steps.release_type.outputs.is_prerelease }}"
+          REPO="${{ github.repository }}"
+          TAG="$GITHUB_REF_NAME"
 
           if [ "$IS_PRERELEASE" = "true" ]; then
             echo '> **This is a beta build for early testing.** It may contain bugs.' > release_body.md
             echo '' >> release_body.md
           fi
 
-          cat >> release_body.md << EOF
-          ## Desktop App (v${VERSION})
+          cat >> release_body.md << BODY
+## Desktop App (v${VERSION})
 
-          ### macOS
-          - [Intel (x64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-x64.dmg)
-          - [Apple Silicon (ARM64)](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-mac-arm64.dmg)
+### macOS
+- [Intel (x64)](https://github.com/${REPO}/releases/download/${TAG}/OpenHeaders-${VERSION}-mac-x64.dmg)
+- [Apple Silicon (ARM64)](https://github.com/${REPO}/releases/download/${TAG}/OpenHeaders-${VERSION}-mac-arm64.dmg)
 
-          ### Windows
-          - [Windows Installer](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-Setup.exe)
+### Windows
+- [Windows Installer](https://github.com/${REPO}/releases/download/${TAG}/OpenHeaders-${VERSION}-Setup.exe)
 
-          ### Linux
-          - [AppImage x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-x64.AppImage)
-          - [AppImage ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/OpenHeaders-$VERSION-arm64.AppImage)
-          - [Debian/Ubuntu x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_amd64.deb)
-          - [Debian/Ubuntu ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers_${VERSION}_arm64.deb)
-          - [Fedora/RHEL x64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.x86_64.rpm)
-          - [Fedora/RHEL ARM64](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-${VERSION}.aarch64.rpm)
-          - [Install Script](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/install-open-headers.sh)
+### Linux
+- [AppImage x64](https://github.com/${REPO}/releases/download/${TAG}/OpenHeaders-${VERSION}-x64.AppImage)
+- [AppImage ARM64](https://github.com/${REPO}/releases/download/${TAG}/OpenHeaders-${VERSION}-arm64.AppImage)
+- [Debian/Ubuntu x64](https://github.com/${REPO}/releases/download/${TAG}/open-headers_${VERSION}_amd64.deb)
+- [Debian/Ubuntu ARM64](https://github.com/${REPO}/releases/download/${TAG}/open-headers_${VERSION}_arm64.deb)
+- [Fedora/RHEL x64](https://github.com/${REPO}/releases/download/${TAG}/open-headers-${VERSION}.x86_64.rpm)
+- [Fedora/RHEL ARM64](https://github.com/${REPO}/releases/download/${TAG}/open-headers-${VERSION}.aarch64.rpm)
+- [Install Script](https://github.com/${REPO}/releases/download/${TAG}/install-open-headers.sh)
 
-          ## Browser Extension (v${EXT_VERSION})
+## Browser Extension (v${EXT_VERSION})
 
-          - [Chrome](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-chrome-v${EXT_VERSION}.zip)
-          - [Firefox](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-firefox-v${EXT_VERSION}.zip)
-          - [Edge](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-edge-v${EXT_VERSION}.zip)
-          - [Safari](https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/open-headers-safari-v${EXT_VERSION}.zip)
-          EOF
+- [Chrome](https://github.com/${REPO}/releases/download/${TAG}/open-headers-chrome-v${EXT_VERSION}.zip)
+- [Firefox](https://github.com/${REPO}/releases/download/${TAG}/open-headers-firefox-v${EXT_VERSION}.zip)
+- [Edge](https://github.com/${REPO}/releases/download/${TAG}/open-headers-edge-v${EXT_VERSION}.zip)
+- [Safari](https://github.com/${REPO}/releases/download/${TAG}/open-headers-safari-v${EXT_VERSION}.zip)
+BODY
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
