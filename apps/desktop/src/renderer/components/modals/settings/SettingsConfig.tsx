@@ -248,7 +248,7 @@ export const getSettingsConfig = (
       title: 'Enable Recording Hotkey',
       description: 'Enable global keyboard shortcut for recording',
       fieldName: 'recordingHotkeyEnabled',
-      value: formValues.recordingHotkeyEnabled !== undefined ? formValues.recordingHotkeyEnabled : true, // Default to true
+      value: formValues.recordingHotkeyEnabled !== undefined ? formValues.recordingHotkeyEnabled : false,
     },
     {
       // Global hotkey for starting/stopping recording

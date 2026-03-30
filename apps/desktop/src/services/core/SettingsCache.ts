@@ -43,7 +43,7 @@ function getDefaultSettings(): AppSettings {
     videoRecording: false,
     videoQuality: 'high',
     recordingHotkey: 'CommandOrControl+Shift+E',
-    recordingHotkeyEnabled: true,
+    recordingHotkeyEnabled: false,
     logLevel: 'info',
     autoUpdate: true,
     updateChannel: isRunningBeta ? 'beta' : 'production',

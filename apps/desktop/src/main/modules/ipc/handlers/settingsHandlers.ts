@@ -81,7 +81,7 @@ class SettingsHandlers {
         // Broadcast the hotkey change to all connected extensions
         webSocketService.broadcastRecordingHotkeyChange(
           mutableSettings.recordingHotkey || 'CommandOrControl+Shift+E',
-          'recordingHotkeyEnabled' in mutableSettings ? !!mutableSettings.recordingHotkeyEnabled : true,
+          'recordingHotkeyEnabled' in mutableSettings ? !!mutableSettings.recordingHotkeyEnabled : false,
         );
       }
 

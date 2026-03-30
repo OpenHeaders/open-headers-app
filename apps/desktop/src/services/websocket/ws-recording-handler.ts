@@ -125,7 +125,7 @@ class WSRecordingHandler {
     const defaults: Partial<AppSettings> = {
       videoRecording: false,
       recordingHotkey: 'CommandOrControl+Shift+E',
-      recordingHotkeyEnabled: true,
+      recordingHotkeyEnabled: false,
     };
     return defaults[key] as AppSettings[K];
   }
@@ -202,7 +202,7 @@ class WSRecordingHandler {
   async sendRecordingHotkey(ws: WebSocket): Promise<void> {
     try {
       const recordingHotkey = this._readSetting('recordingHotkey') || 'CommandOrControl+Shift+E';
-      const recordingHotkeyEnabled = this._readSetting('recordingHotkeyEnabled') ?? true;
+      const recordingHotkeyEnabled = this._readSetting('recordingHotkeyEnabled') ?? false;
 
       ws.send(
         JSON.stringify({

@@ -34,8 +34,8 @@ class GlobalShortcuts {
         log.debug('Settings file not found, using default hotkey');
       }
 
-      // Check if hotkey is enabled (default to true for backward compatibility)
-      const isEnabled = settings.recordingHotkeyEnabled !== undefined ? settings.recordingHotkeyEnabled : true;
+      // Check if hotkey is enabled (default to disabled to prevent accidental recordings)
+      const isEnabled = settings.recordingHotkeyEnabled !== undefined ? settings.recordingHotkeyEnabled : false;
 
       if (isEnabled) {
         const hotkey = (settings.recordingHotkey as string) || 'CommandOrControl+Shift+E';

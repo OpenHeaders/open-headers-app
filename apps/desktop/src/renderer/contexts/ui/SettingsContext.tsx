@@ -36,7 +36,7 @@ const defaultSettings: AppSettings = {
   tutorialMode: true,
   developerMode: false,
   recordingHotkey: 'CommandOrControl+Shift+E',
-  recordingHotkeyEnabled: true,
+  recordingHotkeyEnabled: false,
   logLevel: 'info',
   autoUpdate: true,
   updateChannel: 'production',
