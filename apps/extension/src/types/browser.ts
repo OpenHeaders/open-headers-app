@@ -1,5 +1,5 @@
 /**
- * Browser API helper types and extension message types
+ * Browser API helper types
  */
 
 import type { Source } from '@openheaders/core';
@@ -15,53 +15,6 @@ export type BrowserAPI = typeof chrome;
  */
 export function getBrowserAPI(): BrowserAPI {
   return typeof browser !== 'undefined' ? browser : chrome;
-}
-
-// ---------------------------------------------------------------------------
-//  Extension internal messages (runtime.sendMessage / onMessage)
-// ---------------------------------------------------------------------------
-
-/** Messages sent between popup, content scripts, and background */
-export type ExtensionMessageType =
-  | 'popupOpen'
-  | 'checkConnection'
-  | 'getDynamicSources'
-  | 'rulesUpdated'
-  | 'configurationImported'
-  | 'importConfiguration'
-  | 'sourcesUpdated'
-  | 'openWelcomePage'
-  | 'forceOpenWelcomePage'
-  | 'openTab'
-  | 'focusApp'
-  | 'getVideoRecordingState'
-  | 'getRecordingHotkey'
-  | 'toggleRule'
-  | 'getActiveRulesForTab'
-  | 'setRulesExecutionPaused'
-  | 'toggleAllRules'
-  | 'connectionStatus'
-  | 'ruleUpdateError'
-  | 'videoRecordingStateChanged'
-  | 'recordingHotkeyResponse'
-  // Recording message types
-  | 'START_RECORDING'
-  | 'STOP_RECORDING'
-  | 'STOP_RECORDING_FROM_WIDGET'
-  | 'CANCEL_RECORDING'
-  | 'GET_RECORDING_STATE'
-  | 'DOWNLOAD_WORKFLOW'
-  | 'SEND_WORKFLOW_TO_APP'
-  | 'GET_EXTENSION_NETWORK_DATA'
-  | 'GET_ALL_COOKIES'
-  | 'ACCUMULATE_RECORD_DATA'
-  | 'GET_ACCUMULATED_RECORD_DATA'
-  | 'RESTORE_BADGE_STATE';
-
-export interface ExtensionMessage {
-  type: ExtensionMessageType | string;
-  action?: string;
-  [key: string]: unknown;
 }
 
 /** Callback used to send a response back through runtime.onMessage */
