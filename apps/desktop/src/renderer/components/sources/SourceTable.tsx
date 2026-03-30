@@ -151,7 +151,15 @@ const SourceTable = ({ sources, onRemoveSource, onRefreshSource, onUpdateSource 
         }
       });
     }
-  }, [envContext.activeEnvironment, envContext.getAllVariables, envContext.environmentsReady, sources, environmentState.activeEnvironment, environmentState.variables, onUpdateSource]);
+  }, [
+    envContext.activeEnvironment,
+    envContext.getAllVariables,
+    envContext.environmentsReady,
+    sources,
+    environmentState.activeEnvironment,
+    environmentState.variables,
+    onUpdateSource,
+  ]);
 
   // Environment change detection and dependency validation
   // Monitors environment changes to update source activation states

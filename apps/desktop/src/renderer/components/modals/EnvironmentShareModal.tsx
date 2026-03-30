@@ -28,42 +28,45 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
   const [appLink, setAppLink] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const generateEnvironmentLink = useCallback(async (includeValues: boolean) => {
-    try {
-      setLoading(true);
-      // Convert EnvironmentVariable (value optional) to EnvironmentVariable (value required)
-      const envVars: EnvironmentVariables = {};
-      for (const [key, entry] of Object.entries(environmentData || {})) {
-        envVars[key] = { value: entry.value ?? '', isSecret: entry.isSecret ?? false };
-      }
-      const result = await window.electronAPI.generateEnvironmentConfigLink({
-        environments: {
-          [environmentName]: envVars,
-        },
-        includeValues,
-      });
-
-      if (result.success && result.links) {
-        setAppLink(result.links.appLink);
-
-        // Warn if URL is too long for Windows
-        if (result.links.appLink.length > 2000) {
-          message.warning(
-            'The generated URL is very long and may not work on Windows. Consider sharing without values or splitting into smaller environments.',
-          );
+  const generateEnvironmentLink = useCallback(
+    async (includeValues: boolean) => {
+      try {
+        setLoading(true);
+        // Convert EnvironmentVariable (value optional) to EnvironmentVariable (value required)
+        const envVars: EnvironmentVariables = {};
+        for (const [key, entry] of Object.entries(environmentData || {})) {
+          envVars[key] = { value: entry.value ?? '', isSecret: entry.isSecret ?? false };
         }
-      } else {
-        message.error(`Failed to generate share link: ${result.error}`);
+        const result = await window.electronAPI.generateEnvironmentConfigLink({
+          environments: {
+            [environmentName]: envVars,
+          },
+          includeValues,
+        });
+
+        if (result.success && result.links) {
+          setAppLink(result.links.appLink);
+
+          // Warn if URL is too long for Windows
+          if (result.links.appLink.length > 2000) {
+            message.warning(
+              'The generated URL is very long and may not work on Windows. Consider sharing without values or splitting into smaller environments.',
+            );
+          }
+        } else {
+          message.error(`Failed to generate share link: ${result.error}`);
+          onClose();
+        }
+      } catch (error) {
+        console.error('Error generating environment link:', error);
+        message.error('Failed to generate environment share link');
         onClose();
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error generating environment link:', error);
-      message.error('Failed to generate environment share link');
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  }, [environmentName, environmentData, message, onClose]);
+    },
+    [environmentName, environmentData, message, onClose],
+  );
 
   // Generate invite links when modal opens
   React.useEffect(() => {

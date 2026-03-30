@@ -3,9 +3,9 @@
  * Manages video recording lifecycle and workflow save from browser extensions
  */
 
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import WebSocket from 'ws';
 import { errorMessage } from '../../types/common';
 import type { RecordingMetadata } from '../../types/recording';

@@ -28,7 +28,7 @@ import ConsoleLogModal from './ConsoleLogModal';
 const { Text } = Typography;
 
 interface RecordConsoleTabProps {
-  record: Pick<Recording, 'console'> & { startTime?: number; metadata?: { startTime: number } };
+  record: Pick<Recording, 'console'> & { startTime?: number; metadata?: { startTime?: number } };
   viewMode: string;
   activeTime: number;
   autoHighlight?: boolean;

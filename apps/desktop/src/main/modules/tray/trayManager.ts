@@ -1,7 +1,7 @@
-import type { MenuItemConstructorOptions, NativeImage, Tray as TrayType } from 'electron';
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { MenuItemConstructorOptions, NativeImage, Tray as TrayType } from 'electron';
+import electron from 'electron';
 import mainLogger from '../../../utils/mainLogger';
 import appLifecycle from '../app/lifecycle';
 import windowManager from '../window/windowManager';

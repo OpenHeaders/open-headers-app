@@ -103,7 +103,10 @@ function VirtualizedSimpleTable<T extends object>(props: VirtualizedSimpleTableP
           }}
           className={`virtual-table-row ${isSelected ? 'selected' : ''} ${rowProps.className || ''}`}
           onClick={rowProps.onClick}
-          onKeyDown={(e) => { if (e.key === 'Enter' && rowProps.onClick) rowProps.onClick(e as unknown as React.MouseEvent<HTMLDivElement>); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && rowProps.onClick)
+              rowProps.onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+          }}
           onDoubleClick={rowProps.onDoubleClick}
         >
           {/* Selection checkbox */}

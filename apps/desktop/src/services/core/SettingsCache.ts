@@ -6,9 +6,9 @@
  * Eliminates the 3-4 redundant settings.json reads that previously occurred during startup.
  */
 
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import type { AppSettings } from '../../types/settings';
 import atomicWriter from '../../utils/atomicFileWriter';
 import mainLogger from '../../utils/mainLogger';

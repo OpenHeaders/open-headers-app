@@ -172,7 +172,10 @@ const VirtualizedFilterableTable = forwardRef<unknown, VirtualizedFilterableTabl
             }}
             className={`virtual-table-row ${className} ${rowProps.className || ''}`}
             onClick={rowProps.onClick}
-            onKeyDown={(e) => { if (e.key === 'Enter' && rowProps.onClick) rowProps.onClick(e as unknown as React.MouseEvent<HTMLDivElement>); }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && rowProps.onClick)
+                rowProps.onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+            }}
             onDoubleClick={rowProps.onDoubleClick}
           >
             {/* Selection radio/checkbox */}

@@ -68,8 +68,12 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkAllCooldowns = async (): Promise<boolean> => {
       const allSourceIds = new Set<string>();
-      Object.keys(cooldownsRef.current).forEach((id) => { allSourceIds.add(id); });
-      trackedSourcesRef.current.forEach((id) => { allSourceIds.add(id); });
+      Object.keys(cooldownsRef.current).forEach((id) => {
+        allSourceIds.add(id);
+      });
+      trackedSourcesRef.current.forEach((id) => {
+        allSourceIds.add(id);
+      });
 
       if (allSourceIds.size === 0) return false;
 
@@ -124,22 +128,25 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [hasActiveCooldowns, activeWorkspaceId]);
 
-  const trackTotpSource = useCallback((sourceId: string): void => {
-    if (!sourceId) return;
-    trackedSourcesRef.current.add(sourceId);
+  const trackTotpSource = useCallback(
+    (sourceId: string): void => {
+      if (!sourceId) return;
+      trackedSourcesRef.current.add(sourceId);
 
-    window.electronAPI.httpRequest
-      .getTotpCooldown(activeWorkspaceId, sourceId)
-      .then((info) => {
-        if (info.inCooldown) {
-          setCooldowns((prev) => ({ ...prev, [sourceId]: info.remainingSeconds }));
-          setHasActiveCooldowns(true);
-        }
-      })
-      .catch(() => {
-        /* IPC not ready */
-      });
-  }, [activeWorkspaceId]);
+      window.electronAPI.httpRequest
+        .getTotpCooldown(activeWorkspaceId, sourceId)
+        .then((info) => {
+          if (info.inCooldown) {
+            setCooldowns((prev) => ({ ...prev, [sourceId]: info.remainingSeconds }));
+            setHasActiveCooldowns(true);
+          }
+        })
+        .catch(() => {
+          /* IPC not ready */
+        });
+    },
+    [activeWorkspaceId],
+  );
 
   const untrackTotpSource = useCallback((sourceId: string): void => {
     if (!sourceId) return;

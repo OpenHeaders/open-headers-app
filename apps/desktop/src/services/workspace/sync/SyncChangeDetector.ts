@@ -6,9 +6,9 @@
  * where the remote config hasn't changed.
  */
 
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import type { EnvironmentMap, EnvironmentsFile } from '../../../types/environment';
 import type { ProxyRule } from '../../../types/proxy';
 import type { RulesStorage } from '../../../types/rules';

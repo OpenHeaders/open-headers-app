@@ -4,8 +4,8 @@
  */
 
 import fs from 'node:fs';
-import { glob } from 'glob';
 import path from 'node:path';
+import { glob } from 'glob';
 import type { EnvironmentMap, EnvironmentSchema } from '../../../../types/environment';
 import type { ProxyRule } from '../../../../types/proxy';
 import type { RulesCollection } from '../../../../types/rules';

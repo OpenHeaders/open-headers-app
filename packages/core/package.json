@@ -4,6 +4,8 @@
   "private": true,
   "description": "OpenHeaders core domain model — types, schemas, protocol, and shared utilities",
   "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
       "import": "./src/index.ts",

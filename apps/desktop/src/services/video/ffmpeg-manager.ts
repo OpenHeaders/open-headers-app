@@ -1,9 +1,9 @@
-import AdmZip from 'adm-zip';
 import child_process from 'node:child_process';
-import electron from 'electron';
 import fs from 'node:fs';
 import https from 'node:https';
 import path from 'node:path';
+import AdmZip from 'adm-zip';
+import electron from 'electron';
 import * as tar from 'tar';
 import { errorMessage as errMsg } from '../../types/common';
 import mainLogger from '../../utils/mainLogger';
@@ -204,7 +204,9 @@ class FFmpegManager {
       log.info('FFmpeg downloaded and verified successfully');
 
       // Notify all waiting callbacks
-      this.downloadCallbacks.forEach((cb) => { cb.resolve(this.ffmpegPath!); });
+      this.downloadCallbacks.forEach((cb) => {
+        cb.resolve(this.ffmpegPath!);
+      });
 
       return this.ffmpegPath;
     } catch (error: unknown) {
@@ -212,7 +214,9 @@ class FFmpegManager {
 
       // Notify all waiting callbacks
       const err = error instanceof Error ? error : new Error(String(error));
-      this.downloadCallbacks.forEach((cb) => { cb.reject(err); });
+      this.downloadCallbacks.forEach((cb) => {
+        cb.reject(err);
+      });
 
       throw error;
     } finally {

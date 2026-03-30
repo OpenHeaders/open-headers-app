@@ -1,7 +1,7 @@
-import type { BrowserWindow as BrowserWindowType, DesktopCapturerSource, Display, IpcMainEvent } from 'electron';
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { BrowserWindow as BrowserWindowType, DesktopCapturerSource, Display, IpcMainEvent } from 'electron';
+import electron from 'electron';
 import { errorMessage } from '../../types/common';
 import atomicWriter from '../../utils/atomicFileWriter';
 import mainLogger from '../../utils/mainLogger';

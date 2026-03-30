@@ -1,8 +1,8 @@
-import type { BrowserWindow as BrowserWindowType } from 'electron';
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
+import electron from 'electron';
 import { isVersionCompatible as checkVersionCompatible, DATA_FORMAT_VERSION } from '../../../config/version';
 import { errorMessage } from '../../../types/common';
 import type { EnvironmentSchema, EnvironmentVariable } from '../../../types/environment';

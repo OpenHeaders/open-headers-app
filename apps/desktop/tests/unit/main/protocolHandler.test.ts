@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import zlib from 'node:zlib';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DATA_FORMAT_VERSION } from '../../../src/config/version';
 import { ProtocolHandler } from '../../../src/main/modules/protocol/protocolHandler';
 

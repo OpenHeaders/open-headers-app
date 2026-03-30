@@ -32,7 +32,7 @@ import { formatValue } from './StorageUtils';
 const { Text } = Typography;
 
 interface RecordStorageTabProps {
-  record: Pick<Recording, 'storage'> & { startTime?: number; metadata?: { startTime: number } };
+  record: Pick<Recording, 'storage'> & { startTime?: number; metadata?: { startTime?: number } };
   viewMode: string;
   activeTime: number;
   autoHighlight?: boolean;

@@ -73,7 +73,7 @@ export interface RefreshStatus {
 
 export interface Source {
   sourceId: string;
-  sourceType?: SourceType;
+  sourceType: SourceType;
   sourcePath?: string;
   sourceMethod?: SourceMethod;
   sourceName?: string;
@@ -93,3 +93,19 @@ export interface Source {
   originalResponse?: string | null;
   responseHeaders?: Record<string, string> | null;
 }
+
+/**
+ * Partial update payload for Source — allows partial refreshOptions
+ * so callers can update individual fields (e.g. lastRefresh) without
+ * specifying required fields like enabled.
+ */
+export type SourceUpdate = Partial<Omit<Source, 'refreshOptions'>> & {
+  refreshOptions?: Partial<RefreshOptions>;
+};
+
+/** Data produced by the source creation form — no sourceId yet. */
+export type NewSourceData = Omit<Source, 'sourceId'> & {
+  sourceType: SourceType;
+  sourcePath: string;
+  sourceTag: string;
+};

@@ -17,18 +17,18 @@ export const SourceListSkeleton = () => (
     </div>
     <Space direction="vertical" style={{ width: '100%' }} size="small">
       {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="skeleton-item">
-            <Skeleton.Avatar size="default" />
-            <div className="skeleton-content">
-              <Skeleton.Input style={{ width: '60%', height: 16 }} active />
-              <Skeleton.Input style={{ width: '40%', height: 14 }} active />
-            </div>
-            <div className="skeleton-actions">
-              <Skeleton.Button size="small" />
-              <Skeleton.Button size="small" />
-            </div>
+        <div key={i} className="skeleton-item">
+          <Skeleton.Avatar size="default" />
+          <div className="skeleton-content">
+            <Skeleton.Input style={{ width: '60%', height: 16 }} active />
+            <Skeleton.Input style={{ width: '40%', height: 14 }} active />
           </div>
-        ))}
+          <div className="skeleton-actions">
+            <Skeleton.Button size="small" />
+            <Skeleton.Button size="small" />
+          </div>
+        </div>
+      ))}
     </Space>
   </Card>
 );

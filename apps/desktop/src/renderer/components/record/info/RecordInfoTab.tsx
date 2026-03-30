@@ -12,7 +12,7 @@ export const RecordInfoTab = ({ record }: RecordInfoTabProps) => {
   if (!record?.metadata) return null;
 
   const { metadata } = record;
-  const startTime = new Date(metadata.startTime);
+  const startTime = new Date(metadata.startTime ?? 0);
   const formattedTime = format24HTimeWithMs(startTime);
 
   return (

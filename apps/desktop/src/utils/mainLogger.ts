@@ -10,8 +10,8 @@
  * - debug: Detailed internals for troubleshooting
  */
 
-import log from 'electron-log';
 import path from 'node:path';
+import log from 'electron-log';
 
 // Configure electron-log to output only our pre-formatted text
 log.transports.console.format = '{text}';

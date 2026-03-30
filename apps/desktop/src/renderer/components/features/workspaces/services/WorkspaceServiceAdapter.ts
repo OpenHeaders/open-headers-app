@@ -19,7 +19,6 @@ interface AdapterGitProgressEvent {
   data: GitProgressEvent;
 }
 
-
 interface GitConfig {
   url?: string;
   branch?: string;

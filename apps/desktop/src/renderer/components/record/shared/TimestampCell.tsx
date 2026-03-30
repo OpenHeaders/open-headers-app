@@ -20,7 +20,7 @@ const { Text } = Typography;
 
 interface TimestampCellProps {
   timestamp: number;
-  record: { metadata?: { startTime: number }; startTime?: number };
+  record: { metadata?: { startTime?: number }; startTime?: number };
   isCurrentEntry?: boolean;
   width?: number;
 }

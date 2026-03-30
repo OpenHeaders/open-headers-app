@@ -10,7 +10,6 @@ const log = createLogger('EnvironmentVariableManager');
 type EnvStore = Record<string, EnvironmentVariables>;
 
 class EnvironmentVariableManager {
-
   getAllVariables(environments: EnvStore, activeEnvironment: string) {
     const envVars = environments[activeEnvironment] ?? {};
     const result: Record<string, string> = {};

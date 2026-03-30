@@ -78,7 +78,15 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
 
   return (
     <>
-      <div role="button" tabIndex={0} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }} style={style}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded);
+        }}
+        style={style}
+      >
         Circuit Breaker:{' '}
         <span style={{ color: healthColor }}>
           {closed}/{total}
@@ -95,7 +103,13 @@ export function CircuitBreakerStatus({ inFooter = false }: { inFooter?: boolean 
           }
           size="small"
           extra={
-            <button type="button" onClick={() => setIsExpanded(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}>Minimize</button>
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0 }}
+            >
+              Minimize
+            </button>
           }
           style={{
             position: 'fixed',

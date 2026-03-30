@@ -7,6 +7,6 @@ export type { GlobalToken, NetworkRecord, NetworkTimingData };
 export type RecordData = Pick<Recording, 'network' | 'storage'> & {
   startTime?: number;
   metadata?: {
-    startTime: number;
+    startTime?: number;
   };
 };

@@ -172,6 +172,9 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
 
   // Process each event based on its type
   record.events.forEach((event: RecordingEvent) => {
+    if (!event.data) return;
+    const eventData = event.data;
+
     // Calculate relative timestamp
     const relativeTimestamp = event.timestamp - (startTime ?? 0);
 
@@ -179,66 +182,66 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
       case 'console':
         consoleRecords.push({
           timestamp: relativeTimestamp,
-          level: event.data.level,
-          args: event.data.args,
-          stack: event.data.stack,
+          level: eventData.level,
+          args: eventData.args,
+          stack: eventData.stack,
         });
         break;
 
       case 'network':
         // Handle both request and response events
-        if (event.data.type === 'request') {
+        if (eventData.type === 'request') {
           // Construct full URL if data.url is relative
-          let fullUrl = event.data.url;
+          let fullUrl = eventData.url;
 
           // If URL is relative (starts with /), try to construct full URL
           if (fullUrl?.startsWith('/') && event.url) {
             try {
               const baseUrl = new URL(event.url);
-              fullUrl = baseUrl.origin + event.data.url;
+              fullUrl = baseUrl.origin + eventData.url;
             } catch (_e) {
               // If that fails, try to use the URL from metadata or navigation history
               const recordUrl = record.url || record.metadata?.url || navigationHistory[0]?.url;
               if (recordUrl) {
                 try {
                   const baseUrl = new URL(recordUrl);
-                  fullUrl = baseUrl.origin + event.data.url;
+                  fullUrl = baseUrl.origin + eventData.url;
                 } catch (_e2) {
                   // Keep relative URL if can't parse base
-                  fullUrl = event.data.url;
+                  fullUrl = eventData.url;
                 }
               }
             }
           }
 
           networkRecords.push({
-            id: event.data.requestId,
+            id: eventData.requestId,
             timestamp: relativeTimestamp,
-            method: event.data.method,
+            method: eventData.method,
             url: fullUrl,
-            requestHeaders: event.data.headers || {},
-            requestBody: event.data.body || undefined,
-            headers: event.data.headers || {},
-            body: event.data.body || null,
-            timing: event.data.timing,
+            requestHeaders: eventData.headers || {},
+            requestBody: eventData.body || undefined,
+            headers: eventData.headers || {},
+            body: eventData.body || null,
+            timing: eventData.timing,
           });
-        } else if (event.data.type === 'response') {
-          const request = networkRecords.find((req) => req.id === event.data.requestId);
+        } else if (eventData.type === 'response') {
+          const request = networkRecords.find((req) => req.id === eventData.requestId);
           if (request) {
-            request.status = event.data.status;
-            request.statusText = event.data.statusText;
-            request.responseHeaders = event.data.responseHeaders || {};
-            request.responseBody = event.data.responseBody || undefined;
-            request.responseSize = event.data.responseBody ? event.data.responseBody.length : 0;
+            request.status = typeof eventData.status === 'number' ? eventData.status : Number(eventData.status) || 0;
+            request.statusText = eventData.statusText;
+            request.responseHeaders = eventData.responseHeaders || {};
+            request.responseBody = eventData.responseBody || undefined;
+            request.responseSize = eventData.responseBody ? eventData.responseBody.length : 0;
 
-            if (event.data.timing?.endTime) {
+            if (eventData.timing?.endTime) {
               const responseTimestamp = event.timestamp - (startTime ?? 0);
               request.endTime = responseTimestamp;
-              request.duration = event.data.timing.endTime - (request.timing?.startTime || 0);
+              request.duration = eventData.timing.endTime - (request.timing?.startTime || 0);
             }
 
-            if (event.data.responseSize) {
-              request.size = event.data.responseSize;
+            if (eventData.responseSize) {
+              request.size = eventData.responseSize;
             } else if (request.responseBody) {
               request.size = request.responseBody.length;
             }
@@ -256,31 +259,31 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             name: '',
             domain: extractDomain(event.url) || 'unknown',
             data: {
-              localStorage: event.data.localStorage,
-              sessionStorage: event.data.sessionStorage,
-              cookies: event.data.cookies,
+              localStorage: eventData.localStorage,
+              sessionStorage: eventData.sessionStorage,
+              cookies: eventData.cookies,
             },
             url: event.url,
           });
         } else {
           const storageType =
-            event.data.type === 'local'
+            eventData.type === 'local'
               ? 'localStorage'
-              : event.data.type === 'session'
+              : eventData.type === 'session'
                 ? 'sessionStorage'
-                : event.data.type || 'unknown';
+                : eventData.type || 'unknown';
 
           storage.push({
             timestamp: relativeTimestamp,
             type: storageType,
-            action: event.data.action || 'unknown',
-            key: event.data.key,
-            name: event.data.key || (event.data.action === 'clear' ? '*' : ''),
-            oldValue: event.data.oldValue,
-            value: event.data.newValue !== null ? event.data.newValue : undefined,
-            newValue: event.data.newValue,
-            domain: event.data.domain || extractDomain(event.url) || 'unknown',
-            path: event.data.path || '/',
+            action: eventData.action || 'unknown',
+            key: eventData.key,
+            name: eventData.key || (eventData.action === 'clear' ? '*' : ''),
+            oldValue: eventData.oldValue,
+            value: eventData.newValue !== null ? eventData.newValue : undefined,
+            newValue: eventData.newValue,
+            domain: eventData.domain || extractDomain(event.url) || 'unknown',
+            path: eventData.path || '/',
             url: event.url,
           });
         }
@@ -290,14 +293,14 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
         navigationHistory.push({
           timestamp: relativeTimestamp,
           url: event.url,
-          title: event.data?.title,
-          transitionType: event.data?.transitionType,
+          title: eventData.title,
+          transitionType: eventData.transitionType,
         });
         break;
 
       case 'rrweb':
         // Pass through rrweb events as-is
-        rrwebEvents.push(event.data);
+        rrwebEvents.push(eventData);
         break;
 
       case 'recording-start':
@@ -521,7 +524,9 @@ function deduplicateInitialStorage(storageEvents: StorageRecord[]) {
         }
 
         // Remove cleared keys from tracking
-        clearedKeys.forEach(({ key }) => { seenKeys.delete(key); });
+        clearedKeys.forEach(({ key }) => {
+          seenKeys.delete(key);
+        });
 
         processedEvents.push({
           ...event,

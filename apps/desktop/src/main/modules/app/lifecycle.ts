@@ -1,5 +1,5 @@
-import electron from 'electron';
 import type { FSWatcher } from 'node:fs';
+import electron from 'electron';
 import type { CliApiService } from '../../../services/cli/CliApiService';
 import { AppStateMachine } from '../../../services/core/AppStateMachine';
 import serviceRegistry from '../../../services/core/ServiceRegistry';

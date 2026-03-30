@@ -6,11 +6,11 @@
  *   npm run release -- --skip-build  # Zip existing builds (skip npm run build)
  */
 
-import archiver from 'archiver';
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import archiver from 'archiver';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');

@@ -11,7 +11,6 @@ import type { ColumnsType } from 'antd/es/table';
 import type React from 'react';
 import { useEffect, useState } from 'react';
 
-
 declare const browser: typeof chrome | undefined;
 
 const { Text } = Typography;

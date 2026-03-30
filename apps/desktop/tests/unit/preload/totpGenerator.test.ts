@@ -155,7 +155,9 @@ describe('TOTPGenerator', () => {
         vi.spyOn(timeUtils, 'now').mockReturnValue(i * 30000);
         codes.push(await generator.generate('JBSWY3DPEHPK3PXP'));
       }
-      codes.forEach((code) => { expect(code).toMatch(/^\d{6}$/); });
+      codes.forEach((code) => {
+        expect(code).toMatch(/^\d{6}$/);
+      });
     });
 
     it('boundary: code changes exactly at period boundary', async () => {

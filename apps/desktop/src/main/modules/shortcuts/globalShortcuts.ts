@@ -1,7 +1,7 @@
-import type { App } from 'electron';
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import type { App } from 'electron';
+import electron from 'electron';
 import type { AppSettings } from '../../../types/settings';
 import mainLogger from '../../../utils/mainLogger';
 

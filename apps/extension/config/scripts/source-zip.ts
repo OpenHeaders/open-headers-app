@@ -5,10 +5,10 @@
  * Usage: npm run source-zip
  */
 
-import archiver from 'archiver';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import archiver from 'archiver';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');

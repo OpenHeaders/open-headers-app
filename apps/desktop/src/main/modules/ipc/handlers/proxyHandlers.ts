@@ -1,6 +1,6 @@
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import type { HeaderRule } from '../../../../services/proxy/ProxyService';
 import proxyService from '../../../../services/proxy/ProxyService';
 import type { IpcInvokeEvent, OperationResult } from '../../../../types/common';

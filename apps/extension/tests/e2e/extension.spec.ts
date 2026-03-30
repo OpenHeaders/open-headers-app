@@ -5,8 +5,8 @@
  * For connected-state tests (rules sync, recording, sources), see extension-connected.spec.ts.
  */
 
-import { type BrowserContext, chromium, expect, type Page, test } from '@playwright/test';
 import path from 'node:path';
+import { type BrowserContext, chromium, expect, type Page, test } from '@playwright/test';
 
 const extensionPath = path.resolve(__dirname, '../../dist/chrome');
 

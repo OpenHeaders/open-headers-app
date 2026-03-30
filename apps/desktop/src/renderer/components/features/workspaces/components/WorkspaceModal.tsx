@@ -663,127 +663,125 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
           if (editingWorkspace || workspaceType === 'team') {
             return (
               <div style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: 12 }}>
-                    Git Repository Configuration
-                  </div>
+                <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: 12 }}>Git Repository Configuration</div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '12px', marginBottom: 16 }}>
-                    <Form.Item
-                      name="gitUrl"
-                      label={
-                        <Space>
-                          Repository URL
-                          <Tooltip title="Supports: Remote (https://, git@), Local (/path/to/repo or file:///), Network (git://host/repo)">
-                            <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-                          </Tooltip>
-                        </Space>
-                      }
-                      rules={[{ required: true, message: 'Please enter a Git repository URL' }]}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="e.g., /Users/name/repos/config.git or https://github.com/user/repo.git" />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="autoSync"
-                      label={
-                        <Space>
-                          Auto Sync
-                          <Tooltip title="When enabled, the workspace will automatically sync with the Git repository every hour to pull the latest configuration changes. This ensures all team members stay up-to-date with the shared configuration. You can also manually sync at any time using the sync button.">
-                            <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-                          </Tooltip>
-                        </Space>
-                      }
-                      valuePropName="checked"
-                      initialValue={true}
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
-                    </Form.Item>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: 16 }}>
-                    <Form.Item
-                      name="gitBranch"
-                      label={
-                        <Space>
-                          Branch
-                          <Tooltip title="If the branch doesn't exist, it will be automatically created when you first commit">
-                            <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-                          </Tooltip>
-                        </Space>
-                      }
-                      initialValue="main"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="main" />
-                    </Form.Item>
-
-                    <Form.Item
-                      name="gitPath"
-                      label={
-                        <Space>
-                          Config directory path
-                          <Tooltip title="Directory where configuration files will be stored. If the directory doesn't exist, it will be automatically created. Files will be auto-detected when reading and created based on your export settings when writing.">
-                            <QuestionCircleOutlined style={{ color: '#1890ff' }} />
-                          </Tooltip>
-                        </Space>
-                      }
-                      initialValue="config/"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Input placeholder="e.g., config/ or path/to/config/" />
-                    </Form.Item>
-                  </div>
-
+                <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: '12px', marginBottom: 16 }}>
                   <Form.Item
-                    name="authType"
+                    name="gitUrl"
                     label={
                       <Space>
-                        Authentication Method
-                        <Tooltip title="If Git is already configured locally (e.g., via SSH agent or credential helper), select 'Use System Git Config'">
+                        Repository URL
+                        <Tooltip title="Supports: Remote (https://, git@), Local (/path/to/repo or file:///), Network (git://host/repo)">
                           <QuestionCircleOutlined style={{ color: '#1890ff' }} />
                         </Tooltip>
                       </Space>
                     }
-                    initialValue="none"
+                    rules={[{ required: true, message: 'Please enter a Git repository URL' }]}
+                    style={{ marginBottom: 0 }}
                   >
-                    <Radio.Group>
-                      <Radio.Button value="none">System Git Config</Radio.Button>
-                      <Radio.Button value="token">Access Token</Radio.Button>
-                      <Radio.Button value="ssh-key">SSH Key</Radio.Button>
-                      <Radio.Button value="basic">Username/Password</Radio.Button>
-                    </Radio.Group>
+                    <Input placeholder="e.g., /Users/name/repos/config.git or https://github.com/user/repo.git" />
                   </Form.Item>
 
-                  <AuthenticationForm
-                    authType={authType}
-                    sshKeySource={sshKeySource}
-                    onBrowseSSHKey={handleBrowseSSHKey}
-                  />
-
-                  {!editingWorkspace && (
-                    <>
-                      <div
-                        style={{
-                          marginTop: 16,
-                          padding: '12px',
-                          backgroundColor: '#e6f7ff',
-                          border: '1px solid #91d5ff',
-                          borderRadius: '6px',
-                          marginBottom: 16,
-                        }}
-                      >
-                        <div style={{ fontSize: '13px', color: '#0050b3' }}>
-                          <strong>Note:</strong> When you create this workspace, your current configuration will be
-                          committed to the repository at the specified path. This allows your team to share the same
-                          settings.
-                        </div>
-                      </div>
-                      {renderExportOptions()}
-                    </>
-                  )}
+                  <Form.Item
+                    name="autoSync"
+                    label={
+                      <Space>
+                        Auto Sync
+                        <Tooltip title="When enabled, the workspace will automatically sync with the Git repository every hour to pull the latest configuration changes. This ensures all team members stay up-to-date with the shared configuration. You can also manually sync at any time using the sync button.">
+                          <QuestionCircleOutlined style={{ color: '#1890ff' }} />
+                        </Tooltip>
+                      </Space>
+                    }
+                    valuePropName="checked"
+                    initialValue={true}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Switch checkedChildren="Enabled" unCheckedChildren="Disabled" />
+                  </Form.Item>
                 </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px', marginBottom: 16 }}>
+                  <Form.Item
+                    name="gitBranch"
+                    label={
+                      <Space>
+                        Branch
+                        <Tooltip title="If the branch doesn't exist, it will be automatically created when you first commit">
+                          <QuestionCircleOutlined style={{ color: '#1890ff' }} />
+                        </Tooltip>
+                      </Space>
+                    }
+                    initialValue="main"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input placeholder="main" />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="gitPath"
+                    label={
+                      <Space>
+                        Config directory path
+                        <Tooltip title="Directory where configuration files will be stored. If the directory doesn't exist, it will be automatically created. Files will be auto-detected when reading and created based on your export settings when writing.">
+                          <QuestionCircleOutlined style={{ color: '#1890ff' }} />
+                        </Tooltip>
+                      </Space>
+                    }
+                    initialValue="config/"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Input placeholder="e.g., config/ or path/to/config/" />
+                  </Form.Item>
+                </div>
+
+                <Form.Item
+                  name="authType"
+                  label={
+                    <Space>
+                      Authentication Method
+                      <Tooltip title="If Git is already configured locally (e.g., via SSH agent or credential helper), select 'Use System Git Config'">
+                        <QuestionCircleOutlined style={{ color: '#1890ff' }} />
+                      </Tooltip>
+                    </Space>
+                  }
+                  initialValue="none"
+                >
+                  <Radio.Group>
+                    <Radio.Button value="none">System Git Config</Radio.Button>
+                    <Radio.Button value="token">Access Token</Radio.Button>
+                    <Radio.Button value="ssh-key">SSH Key</Radio.Button>
+                    <Radio.Button value="basic">Username/Password</Radio.Button>
+                  </Radio.Group>
+                </Form.Item>
+
+                <AuthenticationForm
+                  authType={authType}
+                  sshKeySource={sshKeySource}
+                  onBrowseSSHKey={handleBrowseSSHKey}
+                />
+
+                {!editingWorkspace && (
+                  <>
+                    <div
+                      style={{
+                        marginTop: 16,
+                        padding: '12px',
+                        backgroundColor: '#e6f7ff',
+                        border: '1px solid #91d5ff',
+                        borderRadius: '6px',
+                        marginBottom: 16,
+                      }}
+                    >
+                      <div style={{ fontSize: '13px', color: '#0050b3' }}>
+                        <strong>Note:</strong> When you create this workspace, your current configuration will be
+                        committed to the repository at the specified path. This allows your team to share the same
+                        settings.
+                      </div>
+                    </div>
+                    {renderExportOptions()}
+                  </>
+                )}
+              </div>
             );
           }
           return null;

@@ -1,11 +1,11 @@
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
-import type { BrowserWindow as BrowserWindowType } from 'electron';
-import electron from 'electron';
 import fs from 'node:fs';
 import http from 'node:http';
 import type { Socket } from 'node:net';
 import path from 'node:path';
+import type { BrowserWindow as BrowserWindowType } from 'electron';
+import electron from 'electron';
 import * as v from 'valibot';
 import type { JsonObject, JsonValue } from '../../types/common';
 import { errorMessage } from '../../types/common';

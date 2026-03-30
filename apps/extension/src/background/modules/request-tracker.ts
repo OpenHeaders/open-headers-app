@@ -298,7 +298,9 @@ export function addTrackedUrl(tabId: number, url: string): void {
     const newUrls = new Set(urlArray.slice(-MAX_TRACKED_URLS_PER_TAB + 1));
     tabsWithActiveRules.set(tabId, newUrls);
     trackedUrls.clear();
-    newUrls.forEach((u) => { trackedUrls.add(u); });
+    newUrls.forEach((u) => {
+      trackedUrls.add(u);
+    });
   }
 
   trackedUrls.add(url);

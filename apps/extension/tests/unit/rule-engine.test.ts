@@ -39,6 +39,7 @@ const mockGetCurrentSources = getCurrentSources as ReturnType<typeof vi.fn>;
 function makeSource(overrides: Partial<Source> = {}): Source {
   return {
     sourceId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    sourceType: 'http',
     sourceContent: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig',
     ...overrides,
   };

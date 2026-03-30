@@ -111,7 +111,9 @@ const SecretInput = forwardRef<TextAreaRef, SecretInputProps>(
             zIndex: 1,
           }}
           onClick={toggleVisibility}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleVisibility(); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') toggleVisibility();
+          }}
         >
           {showPassword ? <EyeOutlined /> : <EyeInvisibleOutlined />}
         </span>

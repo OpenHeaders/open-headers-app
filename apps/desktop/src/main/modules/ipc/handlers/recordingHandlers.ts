@@ -1,6 +1,6 @@
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import type { PreprocessorData } from '../../../../services/websocket/utils/recordingPreprocessor';
 import { preprocessRecordingForSave } from '../../../../services/websocket/utils/recordingPreprocessor';
 import type { IpcInvokeEvent } from '../../../../types/common';

@@ -7,9 +7,9 @@
  * - Team workspace references
  */
 
-import electron from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
+import electron from 'electron';
 import atomicWriter from '../../utils/atomicFileWriter';
 import mainLogger from '../../utils/mainLogger';
 

@@ -48,6 +48,7 @@ const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 function makeSource(overrides: Partial<Source> = {}): Source {
   return {
     sourceId: `src-${crypto.randomUUID?.() ?? 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'}`,
+    sourceType: 'http',
     sourceContent: 'Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyQGFjbWUuY29tIn0.sig',
     ...overrides,
   };

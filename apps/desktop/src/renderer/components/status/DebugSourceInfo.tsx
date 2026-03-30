@@ -38,7 +38,15 @@ export const DebugSourceInfo = ({ inFooter = false }: { inFooter?: boolean }) =>
 
   return (
     <>
-      <div role="button" tabIndex={0} style={style} onClick={() => setIsExpanded(!isExpanded)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded); }}>
+      <div
+        role="button"
+        tabIndex={0}
+        style={style}
+        onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') setIsExpanded(!isExpanded);
+        }}
+      >
         HTTP Sources ({httpSources.length})
       </div>
 

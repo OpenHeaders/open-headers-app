@@ -163,7 +163,12 @@ export const DomainTag: React.FC<DomainTagProps> = ({
           e.preventDefault();
           e.stopPropagation();
         }}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { onEdit(index, tag); e.preventDefault(); } }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            onEdit(index, tag);
+            e.preventDefault();
+          }
+        }}
         title="Click to edit"
       >
         {displayTag}

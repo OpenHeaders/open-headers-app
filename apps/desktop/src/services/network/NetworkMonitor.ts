@@ -1,7 +1,7 @@
 import dns from 'node:dns';
-import electron from 'electron';
 import { EventEmitter } from 'node:events';
 import os from 'node:os';
+import electron from 'electron';
 import mainLogger from '../../utils/mainLogger';
 import timeManager from '../core/TimeManager';
 

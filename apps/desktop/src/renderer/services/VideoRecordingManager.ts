@@ -220,13 +220,17 @@ class VideoRecordingManager {
       // Handle recording stop (cleanup only - actual save happens in stopRecording)
       mediaRecorder.onstop = () => {
         // Clean up
-        stream.getTracks().forEach((track) => { track.stop(); });
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
       };
 
       // Handle errors
       mediaRecorder.onerror = (event) => {
         console.error('[VideoRecordingManager] MediaRecorder error:', event);
-        stream.getTracks().forEach((track) => { track.stop(); });
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
       };
 
       // Start recording
@@ -307,7 +311,9 @@ class VideoRecordingManager {
             console.log(`[VideoRecordingManager] Video saved to: ${videoPath}`);
 
             // Clean up
-            stream.getTracks().forEach((track: MediaStreamTrack) => { track.stop(); });
+            stream.getTracks().forEach((track: MediaStreamTrack) => {
+              track.stop();
+            });
 
             // Remove from active recordings
             this.activeRecordings.delete(recordingId);

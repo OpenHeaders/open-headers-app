@@ -18,8 +18,8 @@
  * - Footer status indicators
  */
 
-import { type ElectronApplication, _electron as electron, expect, type Page, test } from '@playwright/test';
 import path from 'node:path';
+import { type ElectronApplication, _electron as electron, expect, type Page, test } from '@playwright/test';
 
 let app: ElectronApplication;
 let page: Page;
