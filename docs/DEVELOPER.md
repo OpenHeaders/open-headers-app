@@ -228,6 +228,8 @@ pnpm --filter @openheaders/extension build:firefox    # Firefox only
 
 Build uses **Vite 8** with `BROWSER` env var selecting the target. Custom plugins handle Chrome Web Store CSP compliance, asset copying, and content script IIFE bundling.
 
+**Manifest versioning** — Source manifests in `manifests/*/manifest.json` have `"version": "0.0.0"` as a placeholder. The build injects the real version from `apps/extension/package.json` into the output manifest. For beta releases, the CI workflow converts semver-with-prerelease (`4.1.0-beta.1`) to the numeric format required by browser stores (`4.1.0.1`).
+
 ### Key Extension Implementation Details
 
 **Rule Engine** — All rule updates go through `scheduleUpdate(reason, options)`. Debounces rapid calls (150ms) and deduplicates by hash.
