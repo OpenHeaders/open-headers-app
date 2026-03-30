@@ -223,7 +223,7 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
         }
       }, 100);
     }
-  }, [envContext.activeEnvironment, envContext.environmentsReady, open, form, source, hasUserEdits]);
+  }, [envContext.environmentsReady, open, form, source, hasUserEdits]);
 
   /**
    * Handles HttpOptions component reference and initial state setup

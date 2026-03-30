@@ -4,7 +4,7 @@
  */
 
 import { Empty, Table, Typography, theme } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { PreprocessProgressDetails, WorkflowRecordingEntry, WorkflowTag } from '../../../../../types/recording';
 import { useNavigation } from '../../../../contexts';
 import { showMessage } from '../../../../utils';
@@ -72,12 +72,12 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
   /**
    * Loads workflow recordings from the API
    */
-  const handleLoadWorkflowRecordings = async () => {
+  const handleLoadWorkflowRecordings = useCallback(async () => {
     setLoading(true);
     const records = (await loadWorkflowRecordings()) as WorkflowRecordingEntry[];
     setWorkflowRecordings(records);
     setLoading(false);
-  };
+  }, []);
 
   /**
    * Handles record deletion
@@ -284,7 +284,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
       if (unsubscribeDeleted) unsubscribeDeleted();
       if (unsubscribeMetadataUpdated) unsubscribeMetadataUpdated();
     };
-  }, []);
+  }, [handleLoadWorkflowRecordings]);
 
   /**
    * Handles metadata update for a recording

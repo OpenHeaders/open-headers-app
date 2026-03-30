@@ -39,7 +39,7 @@ const TimestampCell = ({ timestamp }: { timestamp: string | number }) => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timestamp]);
+  }, [ts]);
 
   return (
     <Tooltip title={relativeTime}>

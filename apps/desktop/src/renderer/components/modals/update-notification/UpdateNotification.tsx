@@ -186,7 +186,10 @@ const UpdateNotification = forwardRef((_props, ref) => {
     checkForUpdates: performUpdateCheck,
   }));
 
-  // Set up event listeners (only once) - establishes communication with main process
+  // Set up event listeners (only once) - establishes communication with main process.
+  // eventHandlers and notificationManager are recreated each render but use refs internally
+  // for state access, so the initial instances remain valid for the lifetime of the component.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only setup — handlers use refs internally to avoid stale closures
   useEffect(() => {
     if (eventListenersSetupRef.current) {
       return;

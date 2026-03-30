@@ -64,31 +64,20 @@ const ContentViewer = ({ source, open, onClose }: ContentViewerProps) => {
     if (source) {
       // Only update internal content when it changes
       const sourceContent = source.sourceContent ?? null;
-      if (sourceContent !== internalContent) {
-        setInternalContent(sourceContent);
-      }
+      setInternalContent((prev) => (sourceContent !== prev ? sourceContent : prev));
 
       const originalResponseStr = source.originalResponse
         ? typeof source.originalResponse === 'string'
           ? source.originalResponse
           : JSON.stringify(source.originalResponse)
         : null;
-      if (originalResponseStr !== internalOriginalResponse) {
-        setInternalOriginalResponse(originalResponseStr);
-      }
+      setInternalOriginalResponse((prev) => (originalResponseStr !== prev ? originalResponseStr : prev));
 
       // Extract response headers from source
       const extractedHeaders = extractHeaders(source);
       setResponseHeaders(extractedHeaders);
     }
-  }, [
-    source?.sourceId,
-    source?.sourceContent,
-    source?.originalResponse,
-    source?.responseHeaders,
-    internalContent,
-    internalOriginalResponse,
-  ]);
+  }, [source]);
 
   // Create copy handlers using the ClipboardManager utility
   const handleCopyContent = createCopyHandler(setCopyingContent);

@@ -1,6 +1,6 @@
 import { DesktopOutlined, GlobalOutlined, SettingOutlined, ToolOutlined } from '@ant-design/icons';
 import { Button, Modal, Tabs } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AppSettings, ScreenRecordingPermission } from '../../../../types/settings';
 import { useTheme } from '../../../contexts';
 import { createLogger } from '../../../utils/error-handling/logger';
@@ -143,43 +143,6 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
     }
   }, [open]);
 
-  // Handle initial actions when modal opens
-  useEffect(() => {
-    if (open && initialAction) {
-      if (initialAction.action === 'toggleVideoRecording') {
-        // Wait for modal to fully render before triggering action
-        setTimeout(async () => {
-          try {
-            const requestedValue = initialAction.value;
-
-            // Apply the change with auto-save flag
-            // This will handle permission checking and auto-save if successful
-            await handleFieldChange('videoRecording', requestedValue, true);
-
-            // handleFieldChange will handle the auto-save internally if successful
-            // If permission wasn't granted, modal stays open for user to handle manually
-          } catch (error) {
-            console.error('Error handling toggleVideoRecording action:', error);
-          }
-        }, 300);
-      } else if (initialAction.action === 'toggleRecordingHotkey') {
-        // Wait for modal to fully render before triggering action
-        setTimeout(async () => {
-          try {
-            const requestedValue = initialAction.value;
-
-            // Apply the change with auto-save flag
-            await handleFieldChange('recordingHotkeyEnabled', requestedValue, true);
-
-            // handleFieldChange will handle the auto-save internally
-          } catch (error) {
-            console.error('Error handling toggleRecordingHotkey action:', error);
-          }
-        }, 300);
-      }
-    }
-  }, [open, initialAction]);
-
   /**
    * Handle individual field changes with dependency management
    * @param {string} fieldName - Name of the field being changed
@@ -220,6 +183,35 @@ const SettingsModal = ({ open, settings, onCancel, onSave, initialTab, initialAc
 
     return true; // Field was successfully changed
   };
+
+  // Keep a ref to handleFieldChange so the initialAction effect doesn't need it as a dep
+  const handleFieldChangeRef = useRef(handleFieldChange);
+  handleFieldChangeRef.current = handleFieldChange;
+
+  // Handle initial actions when modal opens
+  useEffect(() => {
+    if (open && initialAction) {
+      if (initialAction.action === 'toggleVideoRecording') {
+        setTimeout(async () => {
+          try {
+            const requestedValue = initialAction.value;
+            await handleFieldChangeRef.current('videoRecording', requestedValue, true);
+          } catch (error) {
+            console.error('Error handling toggleVideoRecording action:', error);
+          }
+        }, 300);
+      } else if (initialAction.action === 'toggleRecordingHotkey') {
+        setTimeout(async () => {
+          try {
+            const requestedValue = initialAction.value;
+            await handleFieldChangeRef.current('recordingHotkeyEnabled', requestedValue, true);
+          } catch (error) {
+            console.error('Error handling toggleRecordingHotkey action:', error);
+          }
+        }, 300);
+      }
+    }
+  }, [open, initialAction]);
 
   /**
    * Handle video recording permission checks and requests

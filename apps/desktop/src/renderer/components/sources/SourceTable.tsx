@@ -1,5 +1,5 @@
 import { Empty, Table, Typography, theme } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Source } from '../../../types/source';
 import { useEnvironments, useRefreshManager } from '../../contexts';
 import timeManager from '../../services/TimeManager';
@@ -151,12 +151,15 @@ const SourceTable = ({ sources, onRemoveSource, onRefreshSource, onUpdateSource 
         }
       });
     }
-  }, [envContext.activeEnvironment, envContext.getAllVariables, envContext.environmentsReady, sources]);
+  }, [envContext.activeEnvironment, envContext.getAllVariables, envContext.environmentsReady, sources, environmentState.activeEnvironment, environmentState.variables, onUpdateSource]);
 
   // Environment change detection and dependency validation
   // Monitors environment changes to update source activation states
 
-  const getRefreshStatus = (source: Source) => getRefreshStatusText(source, refreshManager, refreshingSourceId);
+  const getRefreshStatus = useCallback(
+    (source: Source) => getRefreshStatusText(source, refreshManager, refreshingSourceId),
+    [refreshManager, refreshingSourceId],
+  );
 
   // Create handlers using extracted logic from source-table package
   // These handlers encapsulate complex business logic and state management

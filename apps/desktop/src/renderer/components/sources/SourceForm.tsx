@@ -176,7 +176,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
     log,
   });
 
-  useEffect(handleEnvironmentChange, [envContext.activeEnvironment, form, sourceType, envContext.environmentsReady]);
+  useEffect(handleEnvironmentChange, [handleEnvironmentChange]);
 
   // Handle TOTP tracking lifecycle
   const handleTotpTracking = createTotpTrackingHandler({
@@ -187,7 +187,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
     testSourceId,
   });
 
-  useEffect(handleTotpTracking, [totpEnabled, totpSecret, trackTotpSecret, untrackTotpSecret, testSourceId]);
+  useEffect(handleTotpTracking, [handleTotpTracking]);
 
   // Create URL field validator with context dependencies
   const validateUrl = (rule: unknown, value: string) => validateUrlField(rule, value, sourceType, envContext, form);

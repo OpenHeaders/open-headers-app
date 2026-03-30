@@ -22,7 +22,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TeamWorkspaceInvite } from '../../../types/workspace';
 import { useWorkspaces } from '../../hooks/workspace';
 import { AUTH_TYPES, DEFAULT_VALUES, prepareAuthData, SSH_KEY_SOURCES, TOKEN_TYPES } from '../features/workspaces';
@@ -34,6 +34,18 @@ import type { WorkspaceFormValues } from '../features/workspaces/utils/Workspace
 
 const { Option } = Select;
 const { Text } = Typography;
+
+const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<{ name: string }>) => {
+  let counter = 1;
+  let newName = baseName;
+
+  while (existingWorkspaces.find((w) => w.name === newName)) {
+    counter++;
+    newName = `${baseName} (${counter})`;
+  }
+
+  return newName;
+};
 
 interface TeamWorkspaceAcceptInviteModalProps {
   visible: boolean;
@@ -105,18 +117,6 @@ const TeamWorkspaceAcceptInviteModal = ({
     setSshKeySource(sshKeySourceValue || DEFAULT_VALUES.sshKeySource);
   }, [sshKeySourceValue]);
 
-  const generateUniqueWorkspaceName = (baseName: string, existingWorkspaces: Array<{ name: string }>) => {
-    let counter = 1;
-    let newName = baseName;
-
-    while (existingWorkspaces.find((w) => w.name === newName)) {
-      counter++;
-      newName = `${baseName} (${counter})`;
-    }
-
-    return newName;
-  };
-
   useEffect(() => {
     if (inviteData && visible) {
       const workspaceName = workspaceContext.workspaces.find((w) => w.name === inviteData.workspaceName)
@@ -157,12 +157,6 @@ const TeamWorkspaceAcceptInviteModal = ({
   }, [inviteData, visible, form, workspaceContext.workspaces]);
 
   useEffect(() => {
-    if (visible && !gitStatus && services) {
-      checkGitStatus().catch(console.error);
-    }
-  }, [visible, gitStatus, services]);
-
-  useEffect(() => {
     if (!visible) {
       form.resetFields();
       setConnectionTested(false);
@@ -189,7 +183,7 @@ const TeamWorkspaceAcceptInviteModal = ({
     return cleanup;
   }, [onCancel]);
 
-  const checkGitStatus = async () => {
+  const checkGitStatus = useCallback(async () => {
     try {
       const status = await services!.gitService.getStatus();
       setGitStatus(status);
@@ -197,7 +191,13 @@ const TeamWorkspaceAcceptInviteModal = ({
       console.error('Failed to check Git status:', error);
       setGitStatus({ isInstalled: false, error: error instanceof Error ? error.message : String(error) });
     }
-  };
+  }, [services]);
+
+  useEffect(() => {
+    if (visible && !gitStatus && services) {
+      checkGitStatus().catch(console.error);
+    }
+  }, [visible, gitStatus, services, checkGitStatus]);
 
   const handleTestConnection = async () => {
     // Use form.getFieldsValue(true) to get ALL fields including those not rendered

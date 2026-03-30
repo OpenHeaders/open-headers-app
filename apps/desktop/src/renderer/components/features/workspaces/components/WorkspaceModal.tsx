@@ -25,7 +25,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workspace } from '../../../../../types/workspace';
 import {
   useCentralizedWorkspace,
@@ -137,42 +137,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
     setSshKeySource(sshKeySourceValue || DEFAULT_VALUES.sshKeySource);
   }, [sshKeySourceValue]);
 
-  useEffect(() => {
-    if (visible && !gitStatus && services) {
-      checkGitStatus().catch(console.error);
-    }
-  }, [visible, services]);
-
-  useEffect(() => {
-    if (isCompleted && workspaceId) {
-      onSuccess?.(workspaceId);
-      handleCancel();
-    }
-  }, [isCompleted, workspaceId, onSuccess]);
-
-  useEffect(() => {
-    if (!visible) {
-      resetCreation();
-      setConnectionTested(false);
-      setConnectionProgress([]);
-      setIsTestingConnection(false);
-
-      if (unsubscribeProgressRef.current) {
-        unsubscribeProgressRef.current();
-        unsubscribeProgressRef.current = null;
-      }
-      if (progressUnsubscribeRef.current) {
-        progressUnsubscribeRef.current();
-        progressUnsubscribeRef.current = null;
-      }
-
-      if (form) {
-        form.resetFields();
-      }
-    }
-  }, [visible, resetCreation, form]);
-
-  const checkGitStatus = async () => {
+  const checkGitStatus = useCallback(async () => {
     try {
       const status = await services!.gitService.getStatus();
       setGitStatus(status);
@@ -180,7 +145,7 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
       console.error('Failed to check Git status:', error);
       setGitStatus({ isInstalled: false, error: error instanceof Error ? error.message : String(error) });
     }
-  };
+  }, [services]);
 
   const handleInstallGit = async () => {
     try {
@@ -422,13 +387,48 @@ const WorkspaceModal = ({ visible, editingWorkspace, onCancel, onSuccess }: Work
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (isLoading && canAbort) {
       abortCreation();
     }
 
     onCancel();
-  };
+  }, [isLoading, canAbort, abortCreation, onCancel]);
+
+  useEffect(() => {
+    if (visible && !gitStatus && services) {
+      checkGitStatus().catch(console.error);
+    }
+  }, [visible, gitStatus, services, checkGitStatus]);
+
+  useEffect(() => {
+    if (isCompleted && workspaceId) {
+      onSuccess?.(workspaceId);
+      handleCancel();
+    }
+  }, [isCompleted, workspaceId, onSuccess, handleCancel]);
+
+  useEffect(() => {
+    if (!visible) {
+      resetCreation();
+      setConnectionTested(false);
+      setConnectionProgress([]);
+      setIsTestingConnection(false);
+
+      if (unsubscribeProgressRef.current) {
+        unsubscribeProgressRef.current();
+        unsubscribeProgressRef.current = null;
+      }
+      if (progressUnsubscribeRef.current) {
+        progressUnsubscribeRef.current();
+        progressUnsubscribeRef.current = null;
+      }
+
+      if (form) {
+        form.resetFields();
+      }
+    }
+  }, [visible, resetCreation, form]);
 
   const renderWorkspaceTypeField = () => {
     if (editingWorkspace) return null;

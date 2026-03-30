@@ -128,6 +128,7 @@ const AppComponent: React.FC = () => {
   });
 
   // Clear highlights when main tab changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeTab is an intentional trigger — highlights must clear on tab switch
   useEffect(() => {
     clearAllHighlights();
   }, [activeTab, clearAllHighlights]);
@@ -264,7 +265,7 @@ const AppComponent: React.FC = () => {
         cleanupEnvImportListener();
       }
     };
-  }, [handleEnvironmentConfigImport, setActiveTab]);
+  }, [handleEnvironmentConfigImport]);
 
   // Show skeletons during initial load OR workspace switching
   const showSkeletons = !isReady || switchState.switching;

@@ -1,6 +1,6 @@
 import { ImportOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Modal, message, Space, Typography, theme } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { DATA_FORMAT_VERSION } from '../../../../config/version.esm';
 import { errorMessage } from '../../../../types/common';
 import type { EnvironmentConfigData, EnvironmentMap } from '../../../../types/environment';
@@ -98,7 +98,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
   });
   const [workspaceInfo, setWorkspaceInfo] = useState<WorkspaceData | null>(null);
 
-  const analyzeConfigData = (data: ConfigData): FileAnalysis => {
+  const analyzeConfigData = useCallback((data: ConfigData): FileAnalysis => {
     let totalVariableCount = 0;
     let environmentCount = 0;
     const envs: Record<string, { varCount: number }> = {};
@@ -136,7 +136,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
       rawData: data,
       environments: envs,
     };
-  };
+  }, []);
 
   /**
    * Update combined environment info for separate files mode
@@ -239,7 +239,7 @@ const ImportModal = ({ visible, onClose, onImport, preloadedEnvData }: ImportMod
         message.error('Failed to process environment configuration');
       }
     }
-  }, [visible, preloadedEnvData]);
+  }, [visible, preloadedEnvData, analyzeConfigData]);
 
   /**
    * Handle file selection and analysis

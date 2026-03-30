@@ -19,16 +19,16 @@ interface EditTagModalProps {
   onCancel: () => void;
 }
 
+// Parse tag data - always object with name/url
+const getTagData = (tag: string | WorkflowTag | null) => {
+  if (!tag) return { name: '', url: '' };
+  if (typeof tag === 'string') return { name: tag, url: '' };
+  return { name: tag.name || '', url: tag.url || '' };
+};
+
 const EditTagModal = ({ visible, recordId: _recordId, recordUrl, currentTag, onSave, onCancel }: EditTagModalProps) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
-  // Parse tag data - always object with name/url
-  const getTagData = (tag: string | WorkflowTag | null) => {
-    if (!tag) return { name: '', url: '' };
-    if (typeof tag === 'string') return { name: tag, url: '' };
-    return { name: tag.name || '', url: tag.url || '' };
-  };
 
   // Reset form when modal opens with current tag
   useEffect(() => {

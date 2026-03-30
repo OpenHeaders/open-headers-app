@@ -1,6 +1,6 @@
 import { CopyOutlined, QuestionCircleOutlined, TeamOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Checkbox, Input, Modal, Segmented, Space, Tooltip, Typography, theme } from 'antd';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 /**
  * TeamWorkspaceShareInviteModal - A reusable modal for sharing team workspace invites
  * @param {Object} props - Component props
@@ -26,24 +26,7 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
   const [webLink, setWebLink] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Generate invite links when modal opens
-  React.useEffect(() => {
-    if (visible && workspace) {
-      generateInviteLinks();
-    }
-  }, [visible, workspace]);
-
-  // Reset state when modal closes
-  React.useEffect(() => {
-    if (!visible) {
-      setLinkType('web');
-      setIncludeAuth(false);
-      setAppLink('');
-      setWebLink('');
-    }
-  }, [visible]);
-
-  const generateInviteLinks = async () => {
+  const generateInviteLinks = useCallback(async () => {
     try {
       setLoading(true);
       const result = await window.electronAPI.generateTeamWorkspaceInvite({
@@ -65,7 +48,24 @@ const TeamWorkspaceShareInviteModal = ({ visible, workspace, onClose }: TeamWork
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspace, message, onClose]);
+
+  // Generate invite links when modal opens
+  React.useEffect(() => {
+    if (visible && workspace) {
+      generateInviteLinks();
+    }
+  }, [visible, workspace, generateInviteLinks]);
+
+  // Reset state when modal closes
+  React.useEffect(() => {
+    if (!visible) {
+      setLinkType('web');
+      setIncludeAuth(false);
+      setAppLink('');
+      setWebLink('');
+    }
+  }, [visible]);
 
   const handleChange = async (type: string, auth: boolean) => {
     if (type === 'web' && auth) {

@@ -67,6 +67,7 @@ export const usePlayerManager = (
   }, [viewMode, player]);
 
   // Initialize player effect
+  // biome-ignore lint/correctness/useExhaustiveDependencies: player is read for cleanup/state-check but must not trigger re-init (would cause infinite loop)
   useEffect(() => {
     const initializePlayer = async () => {
       if (!record || !playerContainerRef.current || !rrwebPlayer) return;
@@ -406,7 +407,7 @@ export const usePlayerManager = (
     initializePlayer().catch((error) => {
       log.error('Failed to initialize player:', error);
     });
-  }, [record?.metadata?.recordId, rrwebPlayer, autoHighlight, processRecordForProxy, createConsoleOverrides, viewMode]);
+  }, [record, rrwebPlayer, autoHighlight, processRecordForProxy, createConsoleOverrides, viewMode]);
 
   // Set up event listeners only when autoHighlight is enabled
   useEffect(() => {

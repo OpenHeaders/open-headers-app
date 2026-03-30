@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface NetworkDiagnostics {
   dnsResolvable?: boolean;
@@ -35,7 +35,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const fetchNetworkState = async () => {
+  const fetchNetworkState = useCallback(async () => {
     try {
       if (window.electronAPI?.getNetworkState) {
         const state = await window.electronAPI.getNetworkState();
@@ -49,7 +49,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
       console.error('Failed to get network state:', error);
       setNetworkState({ error: error instanceof Error ? error.message : String(error) });
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Initial fetch
@@ -73,7 +73,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [fetchNetworkState]);
 
   const baseStyle = {
     background: 'rgba(0,0,0,0.8)',

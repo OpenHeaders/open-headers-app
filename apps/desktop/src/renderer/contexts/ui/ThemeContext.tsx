@@ -1,7 +1,7 @@
 import { ConfigProvider, theme } from 'antd';
 import type { MappingAlgorithm } from 'antd/es/theme/interface';
 import type React from 'react';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { AppSettings } from '../../../types/settings';
 import { createLogger } from '../../utils/error-handling/logger';
 import { useSettings } from './SettingsContext';
@@ -47,23 +47,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Handle system theme changes
-  const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-    if (settings.theme === THEME_MODES.AUTO && isMounted.current) {
-      const systemTheme = e.matches ? 'dark' : 'light';
-      setCurrentTheme(systemTheme);
-      log.debug(`System theme changed to: ${systemTheme}`);
-    }
-  };
-
   // Detect system theme preference
-  const detectSystemTheme = (): 'light' | 'dark' => {
+  const detectSystemTheme = useCallback((): 'light' | 'dark' => {
     if (window.matchMedia) {
       const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
       return darkModeQuery.matches ? 'dark' : 'light';
     }
     return 'light'; // Default to light if matchMedia not supported
-  };
+  }, []);
+
+  // Handle system theme changes
+  const handleSystemThemeChange = useCallback(
+    (e: MediaQueryListEvent) => {
+      if (settings.theme === THEME_MODES.AUTO && isMounted.current) {
+        const systemTheme = e.matches ? 'dark' : 'light';
+        setCurrentTheme(systemTheme);
+        log.debug(`System theme changed to: ${systemTheme}`);
+      }
+    },
+    [settings.theme],
+  );
 
   // Update theme when settings change
   useEffect(() => {
@@ -75,7 +78,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (isMounted.current) {
       setCurrentTheme(newTheme);
     }
-  }, [settings.theme]);
+  }, [settings.theme, detectSystemTheme]);
 
   // Set up media query listener after theme settings are loaded
   useEffect(() => {
@@ -91,7 +94,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         darkModeQuery.removeEventListener('change', handleSystemThemeChange);
       };
     }
-  }, [settings.theme]);
+  }, [settings.theme, handleSystemThemeChange]);
 
   // Update compact mode when settings change
   useEffect(() => {

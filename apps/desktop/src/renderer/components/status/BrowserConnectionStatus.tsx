@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons';
 import { Space, Tag, Tooltip } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSettings } from '../../contexts';
 
 import './BrowserConnectionStatus.css';
@@ -70,7 +70,7 @@ const BrowserConnectionStatus = () => {
   };
 
   // Fetch connection status
-  const fetchConnectionStatus = async () => {
+  const fetchConnectionStatus = useCallback(async () => {
     try {
       if (window.electronAPI?.wsGetConnectionStatus) {
         const status = await window.electronAPI.wsGetConnectionStatus();
@@ -81,10 +81,10 @@ const BrowserConnectionStatus = () => {
       console.error('Failed to fetch connection status:', error);
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch proxy status
-  const fetchProxyStatus = async () => {
+  const fetchProxyStatus = useCallback(async () => {
     try {
       if (window.electronAPI?.proxyStatus) {
         const status = await window.electronAPI.proxyStatus();
@@ -93,10 +93,10 @@ const BrowserConnectionStatus = () => {
     } catch (error) {
       console.error('Failed to fetch proxy status:', error);
     }
-  };
+  }, []);
 
   // Fetch CLI server status
-  const fetchCliStatus = async () => {
+  const fetchCliStatus = useCallback(async () => {
     try {
       if (window.electronAPI?.cliApiStatus) {
         const status = await window.electronAPI.cliApiStatus();
@@ -105,7 +105,7 @@ const BrowserConnectionStatus = () => {
     } catch (error) {
       console.error('Failed to fetch CLI status:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     // Initial fetch
@@ -135,7 +135,7 @@ const BrowserConnectionStatus = () => {
         unsubscribe();
       }
     };
-  }, []);
+  }, [fetchConnectionStatus, fetchProxyStatus, fetchCliStatus]);
 
   if (isLoading) {
     return null;

@@ -71,6 +71,7 @@ const SearchOverlay = ({
   const { token } = theme.useToken();
   const [localSearchValue, setLocalSearchValue] = useState(searchValue);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Sync local value with prop value
   useEffect(() => {
@@ -95,15 +96,12 @@ const SearchOverlay = ({
 
   // Debounced search change handler
   const debouncedOnSearchChange = useCallback(
-    (() => {
-      let timeoutId: ReturnType<typeof setTimeout>;
-      return (value: string) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          onSearchChange(value);
-        }, debounceMs);
-      };
-    })(),
+    (value: string) => {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        onSearchChange(value);
+      }, debounceMs);
+    },
     [onSearchChange, debounceMs],
   );
 

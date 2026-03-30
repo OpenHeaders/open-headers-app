@@ -54,15 +54,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false); // Not loading — settings are already available
   const isMounted = useRef(true);
 
+  // Apply log level from startup data — initialSettings is derived from
+  // window.startupData which is set once before React mounts, so it's
+  // effectively a constant.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: initialSettings is derived from window.startupData (set once before mount)
   useEffect(() => {
-    // Apply log level from startup data
     if (initialSettings.logLevel) {
       setGlobalLogLevel(initialSettings.logLevel);
     }
     return () => {
       isMounted.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Save settings

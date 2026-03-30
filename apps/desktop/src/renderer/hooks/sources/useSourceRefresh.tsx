@@ -149,7 +149,7 @@ export function useSourceRefresh({
       }
       return false;
     },
-    [addSource, refreshSource],
+    [addSource, refreshSource, workspaceId],
   );
 
   return {

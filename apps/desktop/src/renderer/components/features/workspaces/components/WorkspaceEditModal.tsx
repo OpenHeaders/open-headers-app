@@ -9,7 +9,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { Alert, App, Button, Collapse, Form, Input, Modal, Radio, Space, Switch, Tooltip, Typography } from 'antd';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workspace } from '../../../../../types/workspace';
 import { useWorkspaces } from '../../../../hooks/workspace';
 import { DEFAULT_VALUES, WORKSPACE_TYPES } from '../constants';
@@ -116,13 +116,21 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
     }
   }, [visible, workspace, form]);
 
+  const checkGitStatus = useCallback(async () => {
+    try {
+      const status = await services!.gitService.getStatus();
+      setGitStatus(status);
+    } catch (error) {
+      console.error('Failed to check Git status:', error);
+      setGitStatus({ isInstalled: false, error: error instanceof Error ? error.message : String(error) });
+    }
+  }, [services]);
+
   useEffect(() => {
     if (visible && !gitStatus && services) {
       checkGitStatus().catch(console.error);
     }
-  }, [visible, services]);
-
-  // Remove this useEffect as we're not using the creation hook anymore
+  }, [visible, gitStatus, services, checkGitStatus]);
 
   useEffect(() => {
     if (!visible) {
@@ -147,16 +155,6 @@ const WorkspaceEditModal = ({ visible, workspace, onCancel, onSuccess }: Workspa
       }
     }
   }, [visible, form]);
-
-  const checkGitStatus = async () => {
-    try {
-      const status = await services!.gitService.getStatus();
-      setGitStatus(status);
-    } catch (error) {
-      console.error('Failed to check Git status:', error);
-      setGitStatus({ isInstalled: false, error: error instanceof Error ? error.message : String(error) });
-    }
-  };
 
   const handleInstallGit = async () => {
     try {

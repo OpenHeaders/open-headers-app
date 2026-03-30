@@ -60,10 +60,15 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Poll main process for cooldown state
+  // cooldowns is read via ref to avoid re-triggering the effect when cooldowns change
+  // (the effect itself sets cooldowns, which would cause an infinite loop)
+  const cooldownsRef = useRef(cooldowns);
+  cooldownsRef.current = cooldowns;
+
   useEffect(() => {
     const checkAllCooldowns = async (): Promise<boolean> => {
       const allSourceIds = new Set<string>();
-      Object.keys(cooldowns).forEach((id) => { allSourceIds.add(id); });
+      Object.keys(cooldownsRef.current).forEach((id) => { allSourceIds.add(id); });
       trackedSourcesRef.current.forEach((id) => { allSourceIds.add(id); });
 
       if (allSourceIds.size === 0) return false;
@@ -117,7 +122,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
         monitoringIntervalRef.current = null;
       }
     };
-  }, [hasActiveCooldowns]);
+  }, [hasActiveCooldowns, activeWorkspaceId]);
 
   const trackTotpSource = useCallback((sourceId: string): void => {
     if (!sourceId) return;
@@ -134,7 +139,7 @@ export const TotpProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch(() => {
         /* IPC not ready */
       });
-  }, []);
+  }, [activeWorkspaceId]);
 
   const untrackTotpSource = useCallback((sourceId: string): void => {
     if (!sourceId) return;

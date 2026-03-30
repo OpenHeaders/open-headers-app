@@ -15,7 +15,7 @@
  */
 
 import type React from 'react';
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { Source } from '../../../types/source';
 import { useSources } from '../../hooks/workspace';
 import { createLogger } from '../../utils/error-handling/logger';
@@ -86,7 +86,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
   const { sources: currentSources } = useSources();
   const cleanupRefs = useRef<Array<() => void>>([]);
   const [, setRenderTick] = useState(0);
-  const bumpRender = () => setRenderTick((n) => n + 1);
+  const bumpRender = useCallback(() => setRenderTick((n) => n + 1), []);
 
   // On mount, fetch current schedules from main process.
   // Schedule events during startup fire before the renderer is ready — this catches up.
@@ -106,7 +106,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
           .catch(() => {});
       }
     }
-  }, [currentSources.length]);
+  }, [currentSources, bumpRender]);
 
   useEffect(() => {
     if (!window.electronAPI?.sourceRefresh) return;
@@ -132,7 +132,7 @@ export const RefreshManagerProvider: React.FC<{ children: React.ReactNode }> = (
       cleanupRefs.current.forEach((fn) => { fn(); });
       cleanupRefs.current = [];
     };
-  }, []);
+  }, [bumpRender]);
 
   const value: RefreshManagerContextValue = {
     isReady: () => !!window.electronAPI?.sourceRefresh,

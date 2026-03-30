@@ -109,7 +109,7 @@ const HeaderRules = () => {
       unregisterToggle();
       unregisterCreate();
     };
-  }, []); // Empty dependency array - register only once on mount
+  }, [registerActionHandler, TARGETS.RULES_HEADERS, ACTIONS.EDIT, ACTIONS.DELETE, ACTIONS.TOGGLE, ACTIONS.CREATE, removeRule, toggleRule]);
 
   // Flush pending navigation actions when rules data arrives
   useEffect(() => {

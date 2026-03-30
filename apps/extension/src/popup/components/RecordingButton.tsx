@@ -1,7 +1,7 @@
 import { StopOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { App, Button, Tooltip } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getRecordingState, startRecording, stopRecording } from '../utils/recording';
 
 interface RecordingButtonProps {
@@ -12,6 +12,15 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({ useWidget = false }) 
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { message } = App.useApp();
+
+  const checkRecordingState = useCallback(async (): Promise<void> => {
+    try {
+      const state = await getRecordingState();
+      setIsRecording(state.isRecording);
+    } catch (_error) {
+      setIsRecording(false);
+    }
+  }, []);
 
   useEffect(() => {
     checkRecordingState();
@@ -25,16 +34,7 @@ const RecordingButton: React.FC<RecordingButtonProps> = ({ useWidget = false }) 
     return () => {
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
-
-  const checkRecordingState = async (): Promise<void> => {
-    try {
-      const state = await getRecordingState();
-      setIsRecording(state.isRecording);
-    } catch (_error) {
-      setIsRecording(false);
-    }
-  };
+  }, [checkRecordingState]);
 
   const handleToggleRecording = async (): Promise<void> => {
     setIsLoading(true);

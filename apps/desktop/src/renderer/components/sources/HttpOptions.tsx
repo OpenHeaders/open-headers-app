@@ -234,14 +234,14 @@ const HttpOptions = forwardRef(
       envContext,
       isFormInitializedRef,
     });
-    useEffect(handleEnvironmentChange, [envContext.activeEnvironment, envContext.environmentsReady]);
+    useEffect(handleEnvironmentChange, [handleEnvironmentChange]);
 
     const totpTimerEffect = createTotpTimerEffect({
       totpPreviewVisible,
       setTimeRemaining,
       generateTotpCode,
     });
-    useEffect(totpTimerEffect, [totpPreviewVisible]);
+    useEffect(totpTimerEffect, [totpTimerEffect]);
 
     const totpTrackingEffect = createTotpTrackingEffect({
       getTotpStateFromForm,
@@ -249,7 +249,7 @@ const HttpOptions = forwardRef(
       trackTotpSecret,
       untrackTotpSecret,
     });
-    useEffect(totpTrackingEffect, [testSourceId]);
+    useEffect(totpTrackingEffect, [totpTrackingEffect]);
 
     // Form initialization
     useEffect(() => {

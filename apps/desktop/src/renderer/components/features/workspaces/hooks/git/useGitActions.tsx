@@ -105,6 +105,92 @@ export const useGitActions = () => {
    * Tests Git connection with progress tracking
    * @param {Object} formValues - Form values for connection test
    */
+  /**
+   * Handles successful connection test
+   * @param {Object} result - Connection test result
+   */
+  const handleConnectionSuccess = useCallback(
+    (result: GitConnectionResult) => {
+      if (result.warning) {
+        void message.warning(result.warning);
+      } else if (result.configFileValid) {
+        if (result.validationDetails) {
+          const items = formatValidationDetails(result.validationDetails);
+
+          if (items.length > 0) {
+            const isMultiFile = result.message?.includes('multi-file');
+            void message.success(
+              <div>
+                <div style={{ fontWeight: 500 }}>✅ Connection successful!</div>
+                <div style={{ marginTop: 4, fontSize: '12px' }}>
+                  {isMultiFile ? 'Multi-file configuration detected' : 'Configuration validated'}: {items.join(', ')}
+                </div>
+              </div>,
+              TIMING.MESSAGE_DURATION,
+            );
+          } else {
+            void message.warning(
+              <div>
+                <div style={{ fontWeight: 500 }}>⚠️ Connection successful!</div>
+                <div style={{ marginTop: 4, fontSize: '12px' }}>
+                  Configuration file is valid but empty. You may want to add some data before using this workspace.
+                </div>
+              </div>,
+              7,
+            );
+          }
+        } else {
+          void message.success(
+            result.message ||
+              `Git connection successful! Found ${result.branches || 0} branches and verified config file.`,
+          );
+        }
+      } else {
+        void message.success(`Git connection successful! Found ${result.branches || 0} branches.`);
+      }
+    },
+    [message],
+  );
+
+  /**
+   * Handles connection test error
+   * @param {Object} result - Connection test result
+   */
+  const handleConnectionError = useCallback(
+    (result: GitConnectionResult) => {
+      if (result.validationDetails) {
+        void message.error(
+          <div>
+            <div style={{ fontWeight: 500 }}>❌ {result.error}</div>
+            <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>
+              The configuration file exists but failed validation. Please ensure it's a valid Open Headers export file.
+            </div>
+          </div>,
+          10,
+        );
+      } else if (result.hint) {
+        void message.error(
+          <div>
+            <div>{result.error}</div>
+            <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>💡 {result.hint}</div>
+          </div>,
+          10,
+        );
+      } else if (result.debugHint) {
+        void message.error(
+          <div>
+            <div>{result.error}</div>
+            <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>💡 {result.debugHint}</div>
+          </div>,
+          15,
+        );
+      } else {
+        void message.error(`Connection failed: ${result.error}`);
+      }
+    },
+    [message],
+  );
+
   const handleTestConnection = useCallback(
     async (formValues: WorkspaceFormValues) => {
       if (!formValues.gitUrl) {
@@ -152,95 +238,8 @@ export const useGitActions = () => {
         }, TIMING.PROGRESS_MODAL_DELAY);
       }
     },
-    [message],
+    [message, handleConnectionSuccess, handleConnectionError],
   );
-
-  /**
-   * Handles successful connection test
-   * @param {Object} result - Connection test result
-   */
-  const handleConnectionSuccess = (result: GitConnectionResult) => {
-    if (result.warning) {
-      void message.warning(result.warning);
-    } else if (result.configFileValid) {
-      handleValidConfigFile(result);
-    } else {
-      void message.success(`Git connection successful! Found ${result.branches || 0} branches.`);
-    }
-  };
-
-  /**
-   * Handles valid config file in connection test
-   * @param {Object} result - Connection test result
-   */
-  const handleValidConfigFile = (result: GitConnectionResult) => {
-    if (result.validationDetails) {
-      const items = formatValidationDetails(result.validationDetails);
-
-      if (items.length > 0) {
-        const isMultiFile = result.message?.includes('multi-file');
-        void message.success(
-          <div>
-            <div style={{ fontWeight: 500 }}>✅ Connection successful!</div>
-            <div style={{ marginTop: 4, fontSize: '12px' }}>
-              {isMultiFile ? 'Multi-file configuration detected' : 'Configuration validated'}: {items.join(', ')}
-            </div>
-          </div>,
-          TIMING.MESSAGE_DURATION,
-        );
-      } else {
-        void message.warning(
-          <div>
-            <div style={{ fontWeight: 500 }}>⚠️ Connection successful!</div>
-            <div style={{ marginTop: 4, fontSize: '12px' }}>
-              Configuration file is valid but empty. You may want to add some data before using this workspace.
-            </div>
-          </div>,
-          7,
-        );
-      }
-    } else {
-      void message.success(
-        result.message || `Git connection successful! Found ${result.branches || 0} branches and verified config file.`,
-      );
-    }
-  };
-
-  /**
-   * Handles connection test error
-   * @param {Object} result - Connection test result
-   */
-  const handleConnectionError = (result: GitConnectionResult) => {
-    if (result.validationDetails) {
-      void message.error(
-        <div>
-          <div style={{ fontWeight: 500 }}>❌ {result.error}</div>
-          <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>
-            The configuration file exists but failed validation. Please ensure it's a valid Open Headers export file.
-          </div>
-        </div>,
-        10,
-      );
-    } else if (result.hint) {
-      void message.error(
-        <div>
-          <div>{result.error}</div>
-          <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>💡 {result.hint}</div>
-        </div>,
-        10,
-      );
-    } else if (result.debugHint) {
-      void message.error(
-        <div>
-          <div>{result.error}</div>
-          <div style={{ marginTop: 8, fontSize: '12px', opacity: 0.8 }}>💡 {result.debugHint}</div>
-        </div>,
-        15,
-      );
-    } else {
-      void message.error(`Connection failed: ${result.error}`);
-    }
-  };
 
   /**
    * Resets connection test state

@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import { App, Button, Dropdown, Space, Switch, Tag, Tooltip, Typography, theme } from 'antd';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useHeader } from '../../hooks/useHeader';
 import { getBrowserAPI } from '../../types/browser';
 import { getAppLauncher } from '../../utils/app-launcher';
@@ -21,6 +21,15 @@ import { sendMessage } from '../../utils/messaging';
 import RecordingButton from './RecordingButton';
 
 const { Text } = Typography;
+
+const formatHotkeyForDisplay = (hotkey: string): string => {
+  if (!hotkey) return 'Not set';
+  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+  return hotkey
+    .replace('CommandOrControl', isMac ? 'Cmd' : 'Ctrl')
+    .replace('Command', 'Cmd')
+    .replace('Control', 'Ctrl');
+};
 
 const Footer: React.FC = () => {
   const version = __APP_VERSION__;
@@ -37,6 +46,27 @@ const Footer: React.FC = () => {
   const { headerEntries, isConnected } = useHeader();
   const totalRules = Object.keys(headerEntries).length;
   const _enabledRules = Object.values(headerEntries).filter((rule) => rule.isEnabled !== false).length;
+
+  const checkVideoRecordingState = useCallback(async () => {
+    try {
+      const response = await sendMessage({ type: 'getVideoRecordingState' });
+      if (response && response.enabled !== undefined) setEnableVideoRecording(response.enabled);
+    } catch (error) {
+      console.log(new Date().toISOString(), 'INFO ', '[Footer]', 'Could not get video recording state:', error);
+    }
+  }, []);
+
+  const checkRecordingHotkey = useCallback(async () => {
+    try {
+      const response = await sendMessage({ type: 'getRecordingHotkey' });
+      if (response) {
+        if (response.hotkey) setRecordingHotkey(formatHotkeyForDisplay(response.hotkey));
+        if (response.enabled !== undefined) setRecordingHotkeyEnabled(response.enabled);
+      }
+    } catch (error) {
+      console.log(new Date().toISOString(), 'INFO ', '[Footer]', 'Could not get recording hotkey:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const browserAPI = getBrowserAPI();
@@ -81,37 +111,7 @@ const Footer: React.FC = () => {
         ) => void,
       );
     };
-  }, []);
-
-  const formatHotkeyForDisplay = (hotkey: string): string => {
-    if (!hotkey) return 'Not set';
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    return hotkey
-      .replace('CommandOrControl', isMac ? 'Cmd' : 'Ctrl')
-      .replace('Command', 'Cmd')
-      .replace('Control', 'Ctrl');
-  };
-
-  const checkVideoRecordingState = async () => {
-    try {
-      const response = await sendMessage({ type: 'getVideoRecordingState' });
-      if (response && response.enabled !== undefined) setEnableVideoRecording(response.enabled);
-    } catch (error) {
-      console.log(new Date().toISOString(), 'INFO ', '[Footer]', 'Could not get video recording state:', error);
-    }
-  };
-
-  const checkRecordingHotkey = async () => {
-    try {
-      const response = await sendMessage({ type: 'getRecordingHotkey' });
-      if (response) {
-        if (response.hotkey) setRecordingHotkey(formatHotkeyForDisplay(response.hotkey));
-        if (response.enabled !== undefined) setRecordingHotkeyEnabled(response.enabled);
-      }
-    } catch (error) {
-      console.log(new Date().toISOString(), 'INFO ', '[Footer]', 'Could not get recording hotkey:', error);
-    }
-  };
+  }, [checkVideoRecordingState, checkRecordingHotkey]);
 
   const handleWidgetToggle = (checked: boolean) => {
     setUseWidget(checked);

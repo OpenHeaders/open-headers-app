@@ -106,6 +106,7 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
   // NOTE: `form` is intentionally excluded from deps (antd issue #18983 —
   // Form.useForm returns a new wrapper object on re-render which would
   // cause an infinite effect loop). The underlying FormStore is stable.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: form/getInitialMode are stable (antd FormStore + pure function of initialValues)
   useEffect(() => {
     if (!visible) return;
 
@@ -186,7 +187,6 @@ const UnifiedHeaderModal = ({ visible, onCancel, onSave, initialValues }: Unifie
         setHttpOnly(false);
       }
     }, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialValues]);
 
   // Handle mode switch

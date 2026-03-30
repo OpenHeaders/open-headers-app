@@ -1,6 +1,6 @@
 import { DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 import { Button, Modal, Space } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 /**
  * RecordingExportModal component for exporting recorded sessions
  *
@@ -69,6 +69,25 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
   const [downloadSize, setDownloadSize] = useState({ downloaded: 0, total: 0 });
 
   /**
+   * Check if FFmpeg is available on the system
+   */
+  const checkFFmpegAvailability = useCallback(async () => {
+    try {
+      console.log('[Recording Export] Checking FFmpeg availability...');
+      const result = await window.electronAPI.checkFFmpeg();
+      console.log('[Recording Export] FFmpeg check result:', result);
+
+      // Handle both boolean and object responses
+      const available = typeof result === 'boolean' ? result : result?.available === true;
+      console.log('[Recording Export] FFmpeg available:', available);
+      setFfmpegAvailable(available);
+    } catch (error) {
+      console.error('[Recording Export] Failed to check FFmpeg:', error);
+      setFfmpegAvailable(false);
+    }
+  }, []);
+
+  /**
    * Check FFmpeg availability when modal opens and MP4 export is selected
    */
   useEffect(() => {
@@ -80,7 +99,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
       // WebM doesn't need FFmpeg
       setFfmpegAvailable(true);
     }
-  }, [visible, exportType, videoFormat]);
+  }, [visible, exportType, videoFormat, checkFFmpegAvailability]);
 
   /**
    * Reset states when modal closes
@@ -96,25 +115,6 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
       setDownloadSize({ downloaded: 0, total: 0 });
     }
   }, [visible]);
-
-  /**
-   * Check if FFmpeg is available on the system
-   */
-  const checkFFmpegAvailability = async () => {
-    try {
-      console.log('[Recording Export] Checking FFmpeg availability...');
-      const result = await window.electronAPI.checkFFmpeg();
-      console.log('[Recording Export] FFmpeg check result:', result);
-
-      // Handle both boolean and object responses
-      const available = typeof result === 'boolean' ? result : result?.available === true;
-      console.log('[Recording Export] FFmpeg available:', available);
-      setFfmpegAvailable(available);
-    } catch (error) {
-      console.error('[Recording Export] Failed to check FFmpeg:', error);
-      setFfmpegAvailable(false);
-    }
-  };
 
   /**
    * Handle the main export process

@@ -1,7 +1,7 @@
 import { CopyOutlined, DatabaseOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Checkbox, Input, Modal, Space, Tooltip, Typography, theme } from 'antd';
 import type { CheckboxChangeEvent } from 'antd/es/checkbox';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { EnvironmentVariable, EnvironmentVariables } from '../../../types/environment';
 import { copyToClipboard } from '../../utils/ui/copyToClipboard';
 
@@ -28,22 +28,7 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
   const [appLink, setAppLink] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Generate invite links when modal opens
-  React.useEffect(() => {
-    if (visible && environmentName && environmentData) {
-      generateEnvironmentLink(false);
-    }
-  }, [visible, environmentName, environmentData]);
-
-  // Reset state when modal closes
-  React.useEffect(() => {
-    if (!visible) {
-      setIsIncludeValues(false);
-      setAppLink('');
-    }
-  }, [visible]);
-
-  const generateEnvironmentLink = async (includeValues: boolean) => {
+  const generateEnvironmentLink = useCallback(async (includeValues: boolean) => {
     try {
       setLoading(true);
       // Convert EnvironmentVariable (value optional) to EnvironmentVariable (value required)
@@ -78,7 +63,22 @@ const EnvironmentShareModal = ({ visible, environmentName, environmentData, onCl
     } finally {
       setLoading(false);
     }
-  };
+  }, [environmentName, environmentData, message, onClose]);
+
+  // Generate invite links when modal opens
+  React.useEffect(() => {
+    if (visible && environmentName && environmentData) {
+      generateEnvironmentLink(false);
+    }
+  }, [visible, environmentName, environmentData, generateEnvironmentLink]);
+
+  // Reset state when modal closes
+  React.useEffect(() => {
+    if (!visible) {
+      setIsIncludeValues(false);
+      setAppLink('');
+    }
+  }, [visible]);
 
   const handleIncludeValuesChange = async (e: CheckboxChangeEvent) => {
     const checked = e.target.checked;

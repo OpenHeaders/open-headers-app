@@ -1,5 +1,5 @@
 import { App } from 'antd';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { CacheEntry, CacheStats, ProxyRule } from '../../../../types/proxy';
 import { useSettings, useSources, useWorkspaces } from '../../../contexts';
 import { useHeaderRules } from '../../../hooks/useCentralizedWorkspace';
@@ -24,7 +24,7 @@ export const useProxyServer = () => {
 
   // Context dependencies
   const { sources } = useSources();
-  const { activeWorkspaceId } = useWorkspaces();
+  const { activeWorkspaceId: _activeWorkspaceId } = useWorkspaces();
   const { settings, saveSettings } = useSettings();
 
   // Header rules from WorkspaceStateService (via IPC state patches)
@@ -44,26 +44,26 @@ export const useProxyServer = () => {
   /**
    * Load proxy server status from main process
    */
-  const loadProxyStatus = async () => {
+  const loadProxyStatus = useCallback(async () => {
     const status = await window.electronAPI.proxyStatus();
     setProxyStatus(status);
-  };
+  }, []);
 
   /**
    * Load proxy rules from storage
    */
-  const loadRules = async () => {
+  const loadRules = useCallback(async () => {
     const loadedRules = await window.electronAPI.proxyGetRules();
     setRules(loadedRules);
-  };
+  }, []);
 
   /**
    * Load cache statistics from proxy server
    */
-  const loadCacheStats = async () => {
+  const loadCacheStats = useCallback(async () => {
     const stats = await window.electronAPI.proxyGetCacheStats();
     setCacheStats(stats);
-  };
+  }, []);
 
   /**
    * Load detailed cache entries for display
@@ -239,7 +239,7 @@ export const useProxyServer = () => {
       // Apply the setting to the proxy server
       window.electronAPI.proxySetCacheEnabled(settings.proxyCacheEnabled).catch(console.error);
     }
-  }, [settings.proxyCacheEnabled]);
+  }, [settings.proxyCacheEnabled, loadProxyStatus, loadRules, loadCacheStats]);
 
   // Listen for proxy rules and workspace update events
   useEffect(() => {
@@ -252,7 +252,7 @@ export const useProxyServer = () => {
     return () => {
       window.removeEventListener('proxy-rules-updated', handleProxyRulesUpdate);
     };
-  }, [activeWorkspaceId]);
+  }, [loadRules]);
 
   // Reload cache stats periodically when proxy is running
   useEffect(() => {
@@ -260,7 +260,7 @@ export const useProxyServer = () => {
       const interval = setInterval(loadCacheStats, 5000);
       return () => clearInterval(interval);
     }
-  }, [proxyStatus.running]);
+  }, [proxyStatus.running, loadCacheStats]);
 
   return {
     // State

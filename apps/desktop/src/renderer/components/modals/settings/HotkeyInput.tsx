@@ -1,7 +1,7 @@
 import { EditOutlined } from '@ant-design/icons';
 import { Alert, Button, Modal, Space, Tag } from 'antd';
 import type React from 'react';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 // Forbidden key combinations that conflict with system/browser shortcuts
 const FORBIDDEN_COMBINATIONS = [
@@ -154,6 +154,17 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
   const inputRef = useRef<HTMLDivElement | null>(null);
   const isMac = navigator?.platform?.toLowerCase().includes('mac') || window?.electronAPI?.platform === 'darwin';
 
+  const handleEdit = useCallback(async () => {
+    // Temporarily disable the global hotkey while editing
+    if (window.electronAPI?.disableRecordingHotkey) {
+      await window.electronAPI.disableRecordingHotkey();
+    }
+    setIsEditing(true);
+    setCurrentKeys([]);
+    setCapturedHotkey('');
+    setError('');
+  }, []);
+
   // Expose handleEdit method to parent components
   useImperativeHandle(
     ref,
@@ -164,7 +175,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
         }
       },
     }),
-    [disabled, isEditing],
+    [disabled, isEditing, handleEdit],
   );
 
   useEffect(() => {
@@ -267,17 +278,6 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
     if (!isEditing) return;
     e.preventDefault();
     e.stopPropagation();
-  };
-
-  const handleEdit = async () => {
-    // Temporarily disable the global hotkey while editing
-    if (window.electronAPI?.disableRecordingHotkey) {
-      await window.electronAPI.disableRecordingHotkey();
-    }
-    setIsEditing(true);
-    setCurrentKeys([]);
-    setCapturedHotkey('');
-    setError('');
   };
 
   const handleSave = async () => {

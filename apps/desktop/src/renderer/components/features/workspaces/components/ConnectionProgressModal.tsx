@@ -59,11 +59,12 @@ const ConnectionProgressModal = ({
   }, [isTestingConnection, connectionProgress.length, testResult, onClose]);
 
   // Auto-scroll to bottom when new progress items are added
+  // biome-ignore lint/correctness/useExhaustiveDependencies: connectionProgress triggers scroll but is not read — only the ref is used
   useEffect(() => {
     if (progressContainerRef.current) {
       progressContainerRef.current.scrollTop = progressContainerRef.current.scrollHeight;
     }
-  }, [connectionProgress.length]);
+  }, [connectionProgress]);
 
   const handleClose = () => {
     // Clear timers
