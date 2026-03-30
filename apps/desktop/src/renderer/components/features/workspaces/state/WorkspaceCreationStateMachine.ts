@@ -663,7 +663,7 @@ class WorkspaceCreationStateMachine {
 
   transition(event: string, payload: TransitionEventPayload = {}) {
     const currentTransitions = this.transitions[this.state];
-    if (!currentTransitions || !currentTransitions[event]) {
+    if (!currentTransitions?.[event]) {
       // Only warn for non-idle states and non-completed states to avoid spam from delayed events
       if (
         this.state !== WORKSPACE_CREATION_STATES.IDLE &&

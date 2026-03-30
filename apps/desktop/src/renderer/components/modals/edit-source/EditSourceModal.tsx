@@ -182,12 +182,12 @@ const EditSourceModal = ({ source, open, onCancel, onSave, refreshingSourceId }:
    * Tracks TOTP source in context for cooldown management
    */
   useEffect(() => {
-    if (source && source.sourceId && totpEnabled && totpSecret) {
+    if (source?.sourceId && totpEnabled && totpSecret) {
       trackTotpSecret(source.sourceId);
     }
 
     return () => {
-      if (source && source.sourceId) {
+      if (source?.sourceId) {
         untrackTotpSecret(source.sourceId);
       }
     };

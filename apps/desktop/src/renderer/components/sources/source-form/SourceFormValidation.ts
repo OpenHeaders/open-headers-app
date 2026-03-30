@@ -242,7 +242,7 @@ export const validateHttpHeaders = (form: FormInstance, envContext: EnvironmentC
 
   // Validate each header
   for (const [index, header] of headers.entries()) {
-    if (header && header.value) {
+    if (header?.value) {
       // Check for environment variables
       const envError = validateEnvironmentVariables(
         header.value,
@@ -277,7 +277,7 @@ export const validateQueryParameters = (form: FormInstance, envContext: Environm
 
   // Validate each query parameter
   for (const [index, param] of queryParams.entries()) {
-    if (param && param.value) {
+    if (param?.value) {
       // Check for environment variables
       const envError = validateEnvironmentVariables(
         param.value,

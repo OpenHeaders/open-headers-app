@@ -427,7 +427,7 @@ export const initializeFormStructure = (
     const formValues = form.getFieldsValue(true);
 
     // Ensure basic form structure exists
-    if (!formValues.requestOptions || !formValues.requestOptions.contentType) {
+    if (!formValues.requestOptions?.contentType) {
       form.setFieldValue(['requestOptions', 'contentType'], 'application/json');
     }
 

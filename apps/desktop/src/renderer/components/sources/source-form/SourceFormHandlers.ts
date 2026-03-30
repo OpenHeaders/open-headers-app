@@ -389,7 +389,7 @@ const handleSuccessfulSubmission = async ({
   stateSetters.setSourceType('file');
 
   // Force reset HttpOptions if it exists
-  if (refs.httpOptionsRef.current && refs.httpOptionsRef.current.forceTotpState) {
+  if (refs.httpOptionsRef.current?.forceTotpState) {
     refs.httpOptionsRef.current.forceTotpState(false, '');
   }
 

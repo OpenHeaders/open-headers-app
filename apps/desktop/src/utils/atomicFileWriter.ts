@@ -47,7 +47,7 @@ class AtomicFileWriter {
       // This runs async in background, don't await
       const electron = await import('electron');
       const { app } = electron;
-      if (!app || !app.getPath) return; // Not in Electron context
+      if (!app?.getPath) return; // Not in Electron context
 
       let userDataPath: string;
       try {

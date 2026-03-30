@@ -213,7 +213,7 @@ export const validateHttpHeaders = (
   if (!Array.isArray(headers)) return { valid: true };
 
   for (const [index, header] of headers.entries()) {
-    if (header && header.value) {
+    if (header?.value) {
       const result = validateVariableExists(header.value, envContext, form);
       if (!result.valid) {
         return {
@@ -254,7 +254,7 @@ export const validateQueryParameters = (
   if (!Array.isArray(queryParams)) return { valid: true };
 
   for (const [index, param] of queryParams.entries()) {
-    if (param && param.value) {
+    if (param?.value) {
       const result = validateVariableExists(param.value, envContext, form);
       if (!result.valid) {
         return {

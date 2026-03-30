@@ -268,7 +268,7 @@ describe('readAndValidateMultiFileConfig', () => {
     };
 
     const readFile = vi.fn().mockImplementation(async (path, opts) => {
-      if (opts && opts.list) {
+      if (opts?.list) {
         return ['open-headers-config.json', 'open-headers-env.json'];
       }
       if (path.includes('open-headers-config.json')) {

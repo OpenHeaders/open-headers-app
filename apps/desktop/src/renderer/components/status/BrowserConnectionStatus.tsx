@@ -72,7 +72,7 @@ const BrowserConnectionStatus = () => {
   // Fetch connection status
   const fetchConnectionStatus = async () => {
     try {
-      if (window.electronAPI && window.electronAPI.wsGetConnectionStatus) {
+      if (window.electronAPI?.wsGetConnectionStatus) {
         const status = await window.electronAPI.wsGetConnectionStatus();
         setConnectionStatus(status);
         setIsLoading(false);
@@ -86,7 +86,7 @@ const BrowserConnectionStatus = () => {
   // Fetch proxy status
   const fetchProxyStatus = async () => {
     try {
-      if (window.electronAPI && window.electronAPI.proxyStatus) {
+      if (window.electronAPI?.proxyStatus) {
         const status = await window.electronAPI.proxyStatus();
         setProxyStatus(status);
       }
@@ -98,7 +98,7 @@ const BrowserConnectionStatus = () => {
   // Fetch CLI server status
   const fetchCliStatus = async () => {
     try {
-      if (window.electronAPI && window.electronAPI.cliApiStatus) {
+      if (window.electronAPI?.cliApiStatus) {
         const status = await window.electronAPI.cliApiStatus();
         setCliStatus(status);
       }
@@ -122,7 +122,7 @@ const BrowserConnectionStatus = () => {
 
     // Listen for connection status updates from main process
     let unsubscribe: (() => void) | undefined;
-    if (window.electronAPI && window.electronAPI.onWsConnectionStatusChanged) {
+    if (window.electronAPI?.onWsConnectionStatusChanged) {
       unsubscribe = window.electronAPI.onWsConnectionStatusChanged((data) => {
         setConnectionStatus((prev) => ({ ...prev, ...data }));
         setIsLoading(false);

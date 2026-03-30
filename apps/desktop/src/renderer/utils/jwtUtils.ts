@@ -199,7 +199,7 @@ export function validateJSON(jsonString: string) {
  * @returns {Object} Expiration info
  */
 export function getJWTExpiration(payload: JsonObject) {
-  if (!payload || !payload.exp) {
+  if (!payload?.exp) {
     return { hasExpiration: false };
   }
 

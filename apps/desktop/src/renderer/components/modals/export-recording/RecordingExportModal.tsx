@@ -228,7 +228,7 @@ const RecordingExportModal = ({ visible, onCancel, record, onExportJson }: Recor
 
     try {
       const result = await window.electronAPI.convertVideo(recordingPath, filePath);
-      if (result && result.success) {
+      if (result?.success) {
         successMessage('Video exported as MP4 successfully');
         onCancel();
       } else {

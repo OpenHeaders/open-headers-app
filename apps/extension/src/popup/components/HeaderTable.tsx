@@ -79,7 +79,7 @@ const HeaderTable: React.FC = () => {
 
   function getDynamicValueInfo(entry: HeaderEntry, sources: DynamicSource[], connected: boolean): DynamicValueInfo {
     if (!entry.isDynamic || !entry.sourceId) {
-      if (!entry.headerValue || !entry.headerValue.trim()) {
+      if (!entry.headerValue?.trim()) {
         return { sourceInfo: '', sourceTag: '', placeholderType: 'empty_value', actualValue: '', isCachedValue: false };
       }
       return {
@@ -454,7 +454,7 @@ const HeaderTable: React.FC = () => {
               const { runtime } = await import('../../utils/browser-api');
               runtime.sendMessage({ type: 'toggleRule', ruleId: record.id, enabled: !enabled }, (response: unknown) => {
                 const resp = response as { success?: boolean } | undefined;
-                if (resp && resp.success) {
+                if (resp?.success) {
                   message.success('Rule toggled');
                 } else {
                   message.error('Failed to toggle rule');

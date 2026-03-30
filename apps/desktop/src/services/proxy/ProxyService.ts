@@ -473,7 +473,7 @@ class ProxyService extends EventEmitter {
           'application/x-javascript',
           'text/javascript',
         ];
-        const shouldCache = cacheableTypes.some((type) => contentType && contentType.includes(type));
+        const shouldCache = cacheableTypes.some((type) => contentType?.includes(type));
         if (shouldCache) {
           await this.cache
             .set(targetUrl, buffer, {
@@ -500,7 +500,7 @@ class ProxyService extends EventEmitter {
     }
 
     const domainExceptions = this.certificateExceptions.get(hostname);
-    if (domainExceptions && domainExceptions.has(fingerprint)) {
+    if (domainExceptions?.has(fingerprint)) {
       return undefined;
     }
 
@@ -526,7 +526,7 @@ class ProxyService extends EventEmitter {
 
       if (proxyRule.headerRuleId) {
         const headerRule = this.headerRules.find((hr) => hr.id === proxyRule.headerRuleId);
-        if (headerRule && headerRule.isEnabled) {
+        if (headerRule?.isEnabled) {
           // Skip rules with unresolved env vars — don't inject garbage
           if (!this.isRuleReady(headerRule)) return;
 
@@ -568,7 +568,7 @@ class ProxyService extends EventEmitter {
   }
 
   resolveHeaderValue(value: string | undefined, rule: HeaderRule | ProxyRule): string {
-    if (rule && rule.isDynamic && rule.sourceId) {
+    if (rule?.isDynamic && rule.sourceId) {
       const sourceId = String(rule.sourceId);
       const sourceValue = this.sources.get(sourceId);
       return sourceValue || value || '';

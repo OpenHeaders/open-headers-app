@@ -151,7 +151,7 @@ const WorkspaceCreationProgressModal = ({
         )}
 
         {/* Additional Details */}
-        {progress && progress.description && (
+        {progress?.description && (
           <div
             style={{
               padding: '12px 16px',

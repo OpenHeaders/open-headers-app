@@ -409,8 +409,8 @@ class NetworkMonitor extends EventEmitter {
       significantChange,
       likelyOnline,
       vpnDetected,
-      activeInterfaceCount: Object.values(currentInterfaces).filter(
-        (addresses) => addresses && addresses.some((addr) => addr.family === 'IPv4' && !addr.internal),
+      activeInterfaceCount: Object.values(currentInterfaces).filter((addresses) =>
+        addresses?.some((addr) => addr.family === 'IPv4' && !addr.internal),
       ).length,
     };
   }

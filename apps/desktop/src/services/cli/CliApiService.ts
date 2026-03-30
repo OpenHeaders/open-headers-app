@@ -76,7 +76,7 @@ class CliApiService {
   }
 
   async start(): Promise<void> {
-    if (this.server && this.server.listening) {
+    if (this.server?.listening) {
       log.info('CLI API server is already running');
       return;
     }
@@ -181,7 +181,7 @@ class CliApiService {
   }
 
   getStatus() {
-    const running = this.server !== null && this.server.listening;
+    const running = this.server?.listening ?? false;
     return {
       running,
       port: this.port,
@@ -209,7 +209,7 @@ class CliApiService {
     this.token = crypto.randomBytes(32).toString('hex');
     log.info('CLI API token regenerated');
 
-    if (this.server && this.server.listening) {
+    if (this.server?.listening) {
       try {
         const discoveryData = JSON.stringify(
           {

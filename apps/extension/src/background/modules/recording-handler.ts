@@ -146,7 +146,7 @@ export function handleRecordingMessage(
         const cookieTabId = (message.tabId as number | undefined) || sender.tab?.id;
         if (cookieTabId) {
           tabs.get(cookieTabId, (tab: chrome.tabs.Tab) => {
-            if (tab && tab.url) {
+            if (tab?.url) {
               const url = new URL(tab.url);
               cookies!.getAll({ url: tab.url }, () => {
                 // Get all cookies for all domains that might be relevant

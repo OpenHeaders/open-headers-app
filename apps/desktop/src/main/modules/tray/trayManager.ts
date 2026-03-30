@@ -39,7 +39,7 @@ class TrayManager {
         // Windows/Linux: single click toggles window visibility
         this.tray.on('click', () => {
           const mainWindow = windowManager.getMainWindow();
-          if (mainWindow && mainWindow.isVisible()) {
+          if (mainWindow?.isVisible()) {
             windowManager.hideWindow();
           } else {
             windowManager.showWindow();
@@ -253,7 +253,7 @@ class TrayManager {
     // macOS dock icon management with window preservation
     if (process.platform === 'darwin') {
       const mainWindow = windowManager.getMainWindow();
-      const wasWindowVisible = mainWindow && mainWindow.isVisible();
+      const wasWindowVisible = mainWindow?.isVisible();
 
       if (showDockIcon) {
         log.info('Showing dock icon');

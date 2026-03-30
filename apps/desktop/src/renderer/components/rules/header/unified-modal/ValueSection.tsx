@@ -40,7 +40,7 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
   // Validation for header value — pure
   const validateHeaderValue = useCallback(
     (_: unknown, value: string) => {
-      if (valueType === 'static' && (!value || !value.trim())) {
+      if (valueType === 'static' && !value?.trim()) {
         return Promise.reject('Header value is required');
       }
 
@@ -57,7 +57,7 @@ const ValueSection: React.FC<ValueSectionProps> = ({ mode, valueType, setValueTy
   // Validation for cookie value — pure
   const validateCookieValue = useCallback(
     (_: unknown, value: string) => {
-      if (valueType === 'static' && (!value || !value.trim())) {
+      if (valueType === 'static' && !value?.trim()) {
         return Promise.reject('Cookie value is required');
       }
 

@@ -218,7 +218,7 @@ export const createStickyScrollHandler = (
       window.removeEventListener('scroll', handleScroll);
     }
     containerElements.forEach((element) => {
-      if (element && element.removeEventListener) {
+      if (element?.removeEventListener) {
         element.removeEventListener('scroll', handleScroll);
       }
     });

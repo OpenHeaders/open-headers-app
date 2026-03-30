@@ -46,7 +46,7 @@ export function openWelcomePageOnInstall(): void {
     // Check if a welcome page is already open
     tabs.query({}, (allTabs: chrome.tabs.Tab[]) => {
       const welcomeTabs = (allTabs || []).filter(
-        (tab: chrome.tabs.Tab) => tab.url === welcomePageUrl || (tab.url && tab.url.startsWith(welcomePageUrl)),
+        (tab: chrome.tabs.Tab) => tab.url === welcomePageUrl || tab.url?.startsWith(welcomePageUrl),
       );
 
       if (welcomeTabs.length > 0) {

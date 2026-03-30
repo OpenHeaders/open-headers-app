@@ -167,7 +167,7 @@ export function setupRequestMonitoring(updateBadgeCallback: () => void): void {
       (details: chrome.webRequest.OnResponseStartedDetails) => {
         const pending = pendingRequests.get(details.requestId);
 
-        if (pending && pending.headersApplied) {
+        if (pending?.headersApplied) {
           if (!tabsWithActiveRules.has(details.tabId)) {
             tabsWithActiveRules.set(details.tabId, new Set());
           }
@@ -222,7 +222,7 @@ export function setupRequestMonitoring(updateBadgeCallback: () => void): void {
 
   // Clear tracking when tab navigates (main frame only)
   const webNavigationAPI = browserAPI.webNavigation;
-  if (webNavigationAPI && webNavigationAPI.onBeforeNavigate) {
+  if (webNavigationAPI?.onBeforeNavigate) {
     webNavigationAPI.onBeforeNavigate.addListener(
       (details: chrome.webNavigation.WebNavigationBaseCallbackDetails & { frameId: number }) => {
         if (details.frameId === 0) {

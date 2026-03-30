@@ -382,8 +382,7 @@ export const createEnvironmentChangeEffect =
       if (Array.isArray(headers)) {
         headers.forEach((header, index) => {
           if (
-            header &&
-            header.value &&
+            header?.value &&
             typeof header.value === 'string' &&
             (header.value.includes('{{') || header.value.includes('[['))
           ) {
@@ -397,8 +396,7 @@ export const createEnvironmentChangeEffect =
       if (Array.isArray(queryParams)) {
         queryParams.forEach((param, index) => {
           if (
-            param &&
-            param.value &&
+            param?.value &&
             typeof param.value === 'string' &&
             (param.value.includes('{{') || param.value.includes('[['))
           ) {
@@ -527,8 +525,7 @@ export const createImperativeHandleMethods = ({
     if (Array.isArray(headers)) {
       headers.forEach((header, index) => {
         if (
-          header &&
-          header.value &&
+          header?.value &&
           typeof header.value === 'string' &&
           (header.value.includes('{{') || header.value.includes('[['))
         ) {
@@ -542,8 +539,7 @@ export const createImperativeHandleMethods = ({
     if (Array.isArray(queryParams)) {
       queryParams.forEach((param, index) => {
         if (
-          param &&
-          param.value &&
+          param?.value &&
           typeof param.value === 'string' &&
           (param.value.includes('{{') || param.value.includes('[['))
         ) {

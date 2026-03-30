@@ -175,7 +175,7 @@ export class ProxyRulesHandler {
   async _saveProxyRule(rule: ProxyRule) {
     const saveResult = await window.electronAPI.proxySaveRule(rule);
 
-    if (!saveResult || !saveResult.success) {
+    if (!saveResult?.success) {
       throw new Error('Proxy rule save operation failed');
     }
   }

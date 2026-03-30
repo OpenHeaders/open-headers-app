@@ -50,7 +50,7 @@
  */
 export const validateDomain = (domain: string) => {
   // Check for empty or whitespace-only input
-  if (!domain || !domain.trim()) {
+  if (!domain?.trim()) {
     return { valid: false, message: 'Domain cannot be empty' };
   }
 

@@ -224,7 +224,7 @@ class VideoCaptureService {
       let selectedScreen: CaptureSource | null = null;
 
       // If we have display info from the browser, use it to select the correct screen
-      if (displayInfo && displayInfo.currentDisplay) {
+      if (displayInfo?.currentDisplay) {
         const displays = electronScreen.getAllDisplays();
 
         const browserCurrentDisplay = displayInfo.currentDisplay;

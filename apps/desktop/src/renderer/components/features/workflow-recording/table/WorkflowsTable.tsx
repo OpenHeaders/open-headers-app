@@ -165,7 +165,7 @@ const WorkflowsTable = ({ onViewRecord, onRecordDeleted }: WorkflowsTableProps) 
   // Apply highlight when workflow recordings change
   useEffect(() => {
     const highlight = getHighlight(TARGETS.RECORDS);
-    if (highlight && highlight.itemId && workflowRecordings.length > 0) {
+    if (highlight?.itemId && workflowRecordings.length > 0) {
       log.debug('[WorkflowsTable] Applying highlight for:', highlight.itemId);
       applyWorkflowRecordingHighlight(applyHighlight, TARGETS.RECORDS, highlight.itemId);
     }

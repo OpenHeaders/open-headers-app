@@ -56,7 +56,7 @@ function getBrowserName(): string {
 function getBrowserVersion(): string {
   try {
     // Try to get browser version from user agent
-    if (navigator && navigator.userAgent) {
+    if (navigator?.userAgent) {
       const ua = navigator.userAgent;
       let match: RegExpMatchArray | null = null;
 
@@ -70,7 +70,7 @@ function getBrowserVersion(): string {
         match = ua.match(/Version\/(\S+)/);
       }
 
-      if (match && match[1]) {
+      if (match?.[1]) {
         return match[1];
       }
     }

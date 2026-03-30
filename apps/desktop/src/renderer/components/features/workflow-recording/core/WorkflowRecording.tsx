@@ -69,7 +69,7 @@ const WorkflowRecording = ({
     try {
       // Load the full record data
       const fullRecord = await window.electronAPI.loadRecording(recordData.id);
-      if (fullRecord && fullRecord.record) {
+      if (fullRecord?.record) {
         // Convert new format to old format if needed
         const convertedRecord = convertNewRecordingFormat(fullRecord.record) as Recording;
         onRecordChange(convertedRecord);
@@ -175,7 +175,7 @@ const WorkflowRecording = ({
           onShowAllWorkflows={() => setShowTable(true)}
         />
       </Card>
-      {renderDetails && renderDetails(true)}
+      {renderDetails?.(true)}
     </>
   );
 };

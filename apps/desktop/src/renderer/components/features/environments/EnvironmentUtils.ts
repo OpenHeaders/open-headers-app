@@ -115,7 +115,7 @@ export const checkMissingVariables = (
   });
 
   // Check header rules for environment variables
-  if (rules && rules.header && Array.isArray(rules.header)) {
+  if (rules?.header && Array.isArray(rules.header)) {
     rules.header.forEach((rule: HeaderRule) => {
       if (rule.hasEnvVars && rule.envVars && Array.isArray(rule.envVars)) {
         rule.envVars.forEach((varName: string) => {
@@ -194,7 +194,7 @@ export const formatVariableUsage = (
       let ruleName = `Rule #${ruleId}`;
 
       // Try to find the actual rule to get its name
-      if (rules && rules.header) {
+      if (rules?.header) {
         const rule = rules.header.find((r: HeaderRule) => r.id === ruleId);
         if (rule) {
           ruleName = rule.headerName || `Header Rule #${ruleId}`;

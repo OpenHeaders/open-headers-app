@@ -241,7 +241,7 @@ export const validateDomainArray = (domains: string[]) => {
   }
 
   // Check for empty values
-  if (domains.some((domain: string) => !domain || !domain.trim())) {
+  if (domains.some((domain: string) => !domain?.trim())) {
     issues.push('empty');
   }
 
@@ -254,6 +254,6 @@ export const validateDomainArray = (domains: string[]) => {
     valid: issues.length === 0,
     issues,
     duplicateCount: domains.length - unique.size,
-    emptyCount: domains.filter((d: string) => !d || !d.trim()).length,
+    emptyCount: domains.filter((d: string) => !d?.trim()).length,
   };
 };

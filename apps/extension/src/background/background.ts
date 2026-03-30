@@ -66,7 +66,7 @@ async function updateBadgeForCurrentTab(): Promise<void> {
       const currentTab = tabList[0];
       const currentUrl = currentTab?.url || '';
 
-      if (currentTab && currentTab.id && recordingService.isRecording(currentTab.id)) {
+      if (currentTab?.id && recordingService.isRecording(currentTab.id)) {
         return;
       }
 
@@ -176,7 +176,7 @@ storage.onChanged.addListener((changes: { [key: string]: chrome.storage.StorageC
 
     if (command.type === 'TOGGLE_RECORDING') {
       tabs.query({ active: true, currentWindow: true }, (tabList: chrome.tabs.Tab[]) => {
-        if (!tabList || !tabList[0]) {
+        if (!tabList?.[0]) {
           logger.info('Background', 'No active tab found for recording toggle');
           return;
         }

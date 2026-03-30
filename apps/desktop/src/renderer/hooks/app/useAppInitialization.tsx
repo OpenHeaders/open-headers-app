@@ -28,7 +28,7 @@ export function useAppInitialization({
   useEffect(() => {
     const getAppVersion = async () => {
       try {
-        if (window.electronAPI && window.electronAPI.getAppVersion) {
+        if (window.electronAPI?.getAppVersion) {
           const version = await window.electronAPI.getAppVersion();
           setAppVersion(version);
         }

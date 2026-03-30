@@ -53,7 +53,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
           // Check headers
           if (Array.isArray(source.requestOptions.headers)) {
             source.requestOptions.headers.forEach((header: { key: string; value: string }) => {
-              if (header && header.value) {
+              if (header?.value) {
                 checkField(header.value, `headers.${header.key}`);
               }
             });
@@ -62,7 +62,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
           // Check query params
           if (Array.isArray(source.requestOptions.queryParams)) {
             source.requestOptions.queryParams.forEach((param: { key: string; value: string }) => {
-              if (param && param.value) {
+              if (param?.value) {
                 checkField(param.value, `queryParams.${param.key}`);
               }
             });
@@ -111,7 +111,7 @@ export function useEnvironmentSchema(): UseEnvironmentSchemaReturn {
         let isSecret = false;
         Object.values(environments).forEach((envVars: Record<string, EnvironmentVariable>) => {
           const variable = envVars[varName];
-          if (variable && variable.isSecret) {
+          if (variable?.isSecret) {
             isSecret = true;
           }
         });

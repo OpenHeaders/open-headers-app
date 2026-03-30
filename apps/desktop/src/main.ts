@@ -549,7 +549,7 @@ function setupIPC(
     // writeRestartHiddenFlag is sync (fs.writeFileSync) so it completes
     // before app.quit() tears down the process.
     const mw = windowManager.getMainWindow();
-    if (!mw || !mw.isVisible()) {
+    if (!mw?.isVisible()) {
       writeRestartHiddenFlag();
     }
     if (!autoUpdater.updateDownloaded) {

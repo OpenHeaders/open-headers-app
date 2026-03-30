@@ -64,7 +64,7 @@ export function extractHeaders(source: Source | null): Record<string, string> | 
 function extractFromJsonString(jsonString: string): Record<string, string> | null {
   try {
     const parsed = JSON.parse(jsonString);
-    if (parsed && parsed.headers && typeof parsed.headers === 'object') {
+    if (parsed?.headers && typeof parsed.headers === 'object') {
       return parsed.headers;
     }
   } catch {
@@ -95,7 +95,7 @@ function extractHeadersWithRegex(content: string): Record<string, string> | null
     const headerPattern = /"headers":\s*(\{[^}]+})/;
     const match = content.match(headerPattern);
 
-    if (match && match[1]) {
+    if (match?.[1]) {
       try {
         const headersText = match[1].replace(/\\"/g, '"').replace(/([{,])\s*([a-zA-Z0-9_-]+):/g, '$1"$2":');
 

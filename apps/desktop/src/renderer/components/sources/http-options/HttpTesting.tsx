@@ -133,7 +133,7 @@ export const formatContentByType = (content: unknown, headers: Record<string, st
   const contentStr = typeof content === 'string' ? content : String(content);
 
   try {
-    const contentType = headers && headers['content-type'] ? headers['content-type'].toLowerCase() : '';
+    const contentType = headers?.['content-type'] ? headers['content-type'].toLowerCase() : '';
 
     // Format JSON
     if (
@@ -218,21 +218,19 @@ function buildRequestSpec(
   let headers: Array<{ key: string; value: string }> | undefined;
   const formHeaders: SourceHeader[] | undefined = form.getFieldValue(['requestOptions', 'headers']);
   if (Array.isArray(formHeaders) && formHeaders.length > 0) {
-    headers = formHeaders.filter((h) => h && h.key).map((h) => ({ key: h.key, value: h.value || '' }));
+    headers = formHeaders.filter((h) => h?.key).map((h) => ({ key: h.key, value: h.value || '' }));
   } else if (values.requestOptions?.headers && Array.isArray(values.requestOptions.headers)) {
-    headers = values.requestOptions.headers
-      .filter((h) => h && h.key)
-      .map((h) => ({ key: h.key, value: h.value || '' }));
+    headers = values.requestOptions.headers.filter((h) => h?.key).map((h) => ({ key: h.key, value: h.value || '' }));
   }
 
   // Query params as array
   let queryParams: Array<{ key: string; value: string }> | undefined;
   const formQueryParams: SourceQueryParam[] | undefined = form.getFieldValue(['requestOptions', 'queryParams']);
   if (Array.isArray(formQueryParams) && formQueryParams.length > 0) {
-    queryParams = formQueryParams.filter((p) => p && p.key).map((p) => ({ key: p.key, value: p.value || '' }));
+    queryParams = formQueryParams.filter((p) => p?.key).map((p) => ({ key: p.key, value: p.value || '' }));
   } else if (values.requestOptions?.queryParams && Array.isArray(values.requestOptions.queryParams)) {
     queryParams = values.requestOptions.queryParams
-      .filter((p) => p && p.key)
+      .filter((p) => p?.key)
       .map((p) => ({ key: p.key, value: p.value || '' }));
   }
 

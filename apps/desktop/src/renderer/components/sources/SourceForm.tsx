@@ -326,7 +326,7 @@ const SourceForm = ({ onAddSource }: SourceFormProps) => {
                             return;
                           }
 
-                          if (httpOptionsRef.current && httpOptionsRef.current.handleTestRequestWithParams) {
+                          if (httpOptionsRef.current?.handleTestRequestWithParams) {
                             const values = form.getFieldsValue();
 
                             // Setup progress tracking

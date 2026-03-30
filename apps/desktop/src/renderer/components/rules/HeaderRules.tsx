@@ -53,7 +53,7 @@ const HeaderRules = () => {
   // Apply highlight when table data changes
   useEffect(() => {
     const highlight = getHighlight(TARGETS.RULES_HEADERS);
-    if (highlight && highlight.itemId && rules.length > 0) {
+    if (highlight?.itemId && rules.length > 0) {
       applyHighlight(TARGETS.RULES_HEADERS, highlight.itemId);
     }
   }, [rules, getHighlight, applyHighlight, TARGETS.RULES_HEADERS]);
@@ -218,7 +218,7 @@ const HeaderRules = () => {
 
     if (!rule.isDynamic || !rule.sourceId) {
       // Check if this is an empty static value
-      if (!rule.headerValue || !rule.headerValue.trim()) {
+      if (!rule.headerValue?.trim()) {
         result.actualValue = '[EMPTY_VALUE]';
         result.placeholderType = 'empty_value';
       } else {
@@ -271,11 +271,11 @@ const HeaderRules = () => {
     // Resolve env vars in prefix/suffix if needed
     if (rule.hasEnvVars && envContext.environmentsReady) {
       const variables = envContext.getAllVariables();
-      if (prefix && prefix.includes('{{')) {
+      if (prefix?.includes('{{')) {
         const prefixPreview = getResolvedPreview(prefix, variables);
         prefix = prefixPreview.text ?? '';
       }
-      if (suffix && suffix.includes('{{')) {
+      if (suffix?.includes('{{')) {
         const suffixPreview = getResolvedPreview(suffix, variables);
         suffix = suffixPreview.text ?? '';
       }
@@ -449,7 +449,7 @@ const HeaderRules = () => {
 
         // Check if header name has env vars
         let headerNameDisplay = text;
-        if (record.hasEnvVars && record.headerName && record.headerName.includes('{{')) {
+        if (record.hasEnvVars && record.headerName?.includes('{{')) {
           if (info.activationState === 'waiting_for_deps') {
             // Show original template when waiting for dependencies
             headerNameDisplay = record.headerName;
@@ -482,7 +482,7 @@ const HeaderRules = () => {
                 <CopyrightTwoTone style={{ fontSize: '14px' }} />
               </Tooltip>
             )}
-            {record.hasEnvVars && record.headerName && record.headerName.includes('{{') && (
+            {record.hasEnvVars && record.headerName?.includes('{{') && (
               <Tooltip title={`Uses environment variables: ${record.headerName}`}>
                 <EnvironmentOutlined style={{ color: '#1890ff', fontSize: '12px' }} />
               </Tooltip>
@@ -582,7 +582,7 @@ const HeaderRules = () => {
         if (record.hasEnvVars && envContext.environmentsReady) {
           const variables = envContext.getAllVariables();
           resolvedDomains = domains.flatMap((domain: string) => {
-            if (domain && domain.includes('{{')) {
+            if (domain?.includes('{{')) {
               const preview = getResolvedPreview(domain, variables);
               const previewText = preview.text ?? '';
               // Unresolved variables — keep original domain

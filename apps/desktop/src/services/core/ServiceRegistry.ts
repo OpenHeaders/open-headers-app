@@ -146,7 +146,7 @@ class ServiceRegistry {
 
     for (const dep of serviceInfo.dependencies) {
       const depInfo = this.services.get(dep);
-      if (!depInfo || !depInfo.initialized) {
+      if (!depInfo?.initialized) {
         await this.initializeService(dep);
       }
     }
@@ -228,7 +228,7 @@ class ServiceRegistry {
 
     for (const serviceName of allNames) {
       const serviceInfo = this.services.get(serviceName);
-      if (serviceInfo && serviceInfo.initialized) {
+      if (serviceInfo?.initialized) {
         try {
           const shutdownMethods = ['shutdown', 'destroy', 'close', 'stop'];
           const shutdownMethod = shutdownMethods.find((method) => hasMethod(serviceInfo.service, method));

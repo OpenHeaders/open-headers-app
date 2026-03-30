@@ -103,7 +103,7 @@ const validateHeadersForVariables = (
   if (!headers || !Array.isArray(headers)) return Promise.resolve();
 
   for (const [index, header] of headers.entries()) {
-    if (header && header.value) {
+    if (header?.value) {
       // Check for environment variables
       const envVarMatches = header.value.match(/{{([^}]+)}}/g);
       if (envVarMatches) {
@@ -149,7 +149,7 @@ const validateQueryParamsForVariables = (
   if (!queryParams || !Array.isArray(queryParams)) return Promise.resolve();
 
   for (const [index, param] of queryParams.entries()) {
-    if (param && param.value) {
+    if (param?.value) {
       // Check for environment variables
       const envVarMatches = param.value.match(/{{([^}]+)}}/g);
       if (envVarMatches) {
@@ -212,7 +212,7 @@ const validateJsonFilterForVariables = (
   jsonFilter: JsonFilter | null | undefined,
   envContext: FormEnvContext,
 ): Promise<void> => {
-  if (!jsonFilter || !jsonFilter.enabled || !jsonFilter.path) return Promise.resolve();
+  if (!jsonFilter?.enabled || !jsonFilter.path) return Promise.resolve();
 
   const envVarMatches = jsonFilter.path.match(/{{([^}]+)}}/g);
   if (envVarMatches) {

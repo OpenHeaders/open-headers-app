@@ -86,7 +86,7 @@ const ImportWorkspaceCard = ({
               </div>
 
               {/* Check for existing workspace with same name */}
-              {workspaces && workspaces.some((w) => w.name === workspaceInfo.name) && (
+              {workspaces?.some((w) => w.name === workspaceInfo.name) && (
                 <Alert
                   message="Workspace Name Conflict"
                   description={`A workspace named "${workspaceInfo.name}" already exists. It will be renamed to "${workspaceInfo.name} (Imported)" to avoid conflicts.`}

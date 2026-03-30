@@ -367,7 +367,7 @@ const JWTEditorModal: React.FC<JWTEditorModalProps> = ({
    * Render expiration status
    */
   const renderExpirationStatus = () => {
-    if (!expirationInfo || !expirationInfo.hasExpiration) {
+    if (!expirationInfo?.hasExpiration) {
       return null;
     }
 

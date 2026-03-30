@@ -209,7 +209,7 @@ function handleSettingsNavigation(
 function handleTabFocus(navigation: NavigationRequest): void {
   requestAnimationFrame(() => {
     const focusedElement = document.activeElement as HTMLElement;
-    if (focusedElement && focusedElement.closest('.ant-tabs-tab')) {
+    if (focusedElement?.closest('.ant-tabs-tab')) {
       focusedElement.blur();
     }
 

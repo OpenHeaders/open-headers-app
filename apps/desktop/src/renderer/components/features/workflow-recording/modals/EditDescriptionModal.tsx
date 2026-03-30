@@ -115,7 +115,7 @@ const EditDescriptionModal = ({
               {recordUrl}
             </Text>
           </div>
-          {recordTag && recordTag.name && (
+          {recordTag?.name && (
             <div>
               <Text type="secondary">Tag: </Text>
               <Tag color="blue">{recordTag.name}</Tag>

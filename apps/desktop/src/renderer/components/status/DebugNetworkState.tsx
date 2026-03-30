@@ -37,7 +37,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
 
   const fetchNetworkState = async () => {
     try {
-      if (window.electronAPI && window.electronAPI.getNetworkState) {
+      if (window.electronAPI?.getNetworkState) {
         const state = await window.electronAPI.getNetworkState();
         setNetworkState(state);
         setLastUpdate(new Date());
@@ -66,7 +66,7 @@ export const DebugNetworkState = ({ inFooter = false }: DebugNetworkStateProps) 
       }
     };
 
-    if (window.electronAPI && window.electronAPI.onNetworkStateSync) {
+    if (window.electronAPI?.onNetworkStateSync) {
       window.electronAPI.onNetworkStateSync(handleNetworkSync);
     }
 

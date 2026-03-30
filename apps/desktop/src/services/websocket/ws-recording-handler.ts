@@ -327,7 +327,7 @@ class WSRecordingHandler {
         let proxyPort: number | null = null;
         try {
           const { default: proxyService } = await import('../proxy/ProxyService');
-          if (proxyService && proxyService.isRunning) {
+          if (proxyService?.isRunning) {
             proxyPort = proxyService.port;
             log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);
             const proxyStatus = proxyService.getStatus();

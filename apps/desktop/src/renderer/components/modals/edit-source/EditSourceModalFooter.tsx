@@ -37,8 +37,7 @@ const EditSourceModalFooter: React.FC<EditSourceModalFooterProps> = ({
   const isTotpCooldownActive = !!(
     totpEnabled &&
     totpSecret &&
-    source &&
-    source.sourceId &&
+    source?.sourceId &&
     !canUseTotpSecret(source.sourceId) &&
     refreshNow
   );

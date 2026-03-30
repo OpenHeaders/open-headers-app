@@ -140,7 +140,7 @@ class VideoRecordingManager {
 
       // Apply cropping constraints to remove black bars
       const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack && videoTrack.applyConstraints) {
+      if (videoTrack?.applyConstraints) {
         try {
           // Get current capabilities
           const capabilities = videoTrack.getCapabilities();

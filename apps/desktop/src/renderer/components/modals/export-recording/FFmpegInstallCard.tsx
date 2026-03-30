@@ -84,7 +84,7 @@ const FFmpegInstallCard = ({
     });
 
     const unsubscribeStatus = window.electronAPI.onFFmpegInstallStatus((status) => {
-      if (status && status.phase) {
+      if (status?.phase) {
         onInstallStatusChange(String(status.phase));
       }
     });

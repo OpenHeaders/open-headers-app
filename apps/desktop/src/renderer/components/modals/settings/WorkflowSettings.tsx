@@ -54,7 +54,7 @@ const WorkflowSettings = ({
     if (initialAction && initialAction.action === 'editHotkey') {
       // Wait for component to mount and then trigger edit
       setTimeout(() => {
-        if (hotkeyRef.current && hotkeyRef.current.triggerEdit) {
+        if (hotkeyRef.current?.triggerEdit) {
           hotkeyRef.current.triggerEdit();
         }
       }, 500); // Give time for modal to fully render

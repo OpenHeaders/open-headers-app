@@ -432,10 +432,10 @@ const TeamWorkspaceAcceptInviteModal = ({
 
   const canTestConnection = () => {
     // Check if we have a git URL
-    const hasGitUrl = allFormValues.gitUrl || (inviteData && inviteData.repoUrl);
+    const hasGitUrl = allFormValues.gitUrl || inviteData?.repoUrl;
 
     // For pre-filled invites, we might have auth data that hasn't been set in form yet
-    const hasPrefilledAuth = inviteData && inviteData.authData;
+    const hasPrefilledAuth = inviteData?.authData;
 
     return hasGitUrl && (authType === 'none' || hasValidAuthData() || hasPrefilledAuth);
   };

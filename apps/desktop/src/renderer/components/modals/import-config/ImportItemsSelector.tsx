@@ -56,7 +56,7 @@ const ImportItemsSelector = ({
     >
       <Space direction="vertical" style={{ width: '100%' }}>
         {/* HTTP Sources */}
-        {fileInfo && fileInfo.hasSources && (
+        {fileInfo?.hasSources && (
           <Checkbox checked={selectedItems.sources} onChange={() => onItemChange('sources')}>
             <Space>
               <Text>HTTP Sources</Text>
@@ -69,7 +69,7 @@ const ImportItemsSelector = ({
         )}
 
         {/* Header Rules */}
-        {fileInfo && fileInfo.hasRules && (
+        {fileInfo?.hasRules && (
           <Checkbox checked={selectedItems.rules} onChange={() => onItemChange('rules')}>
             <Space>
               <Text>Header Rules</Text>
@@ -82,7 +82,7 @@ const ImportItemsSelector = ({
         )}
 
         {/* Proxy Rules */}
-        {fileInfo && fileInfo.hasProxyRules && (
+        {fileInfo?.hasProxyRules && (
           <Checkbox checked={selectedItems.proxyRules} onChange={() => onItemChange('proxyRules')}>
             <Space>
               <Text>Proxy Rules</Text>

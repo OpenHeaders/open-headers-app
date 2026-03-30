@@ -131,7 +131,7 @@ class CliSetupHandler {
    * ready sources.
    */
   async importEnvironment(data: EnvironmentImportData): Promise<{ success: boolean; error?: string }> {
-    if (!data || !data.environments) {
+    if (!data?.environments) {
       return { success: false, error: 'Missing environments data' };
     }
 

@@ -59,7 +59,7 @@ class NetworkHandlers {
 
     log.info('Network service initialized with state:', networkService.getState());
 
-    if (webSocketService && webSocketService.networkStateHandler) {
+    if (webSocketService?.networkStateHandler) {
       log.info('Connecting network service to WebSocket service...');
       webSocketService.networkStateHandler.initialize(networkService);
     }

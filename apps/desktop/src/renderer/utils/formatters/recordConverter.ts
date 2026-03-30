@@ -150,7 +150,7 @@ function parseCookieString(cookieStr: string | null | undefined): ParsedCookie[]
  */
 export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
   const record = recordInput;
-  if (!record || !record.events) {
+  if (!record?.events) {
     return record;
   }
 
@@ -192,7 +192,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
           let fullUrl = event.data.url;
 
           // If URL is relative (starts with /), try to construct full URL
-          if (fullUrl && fullUrl.startsWith('/') && event.url) {
+          if (fullUrl?.startsWith('/') && event.url) {
             try {
               const baseUrl = new URL(event.url);
               fullUrl = baseUrl.origin + event.data.url;
@@ -231,7 +231,7 @@ export function convertNewRecordingFormat(recordInput: RawRecordingRecord) {
             request.responseBody = event.data.responseBody || undefined;
             request.responseSize = event.data.responseBody ? event.data.responseBody.length : 0;
 
-            if (event.data.timing && event.data.timing.endTime) {
+            if (event.data.timing?.endTime) {
               const responseTimestamp = event.timestamp - (startTime ?? 0);
               request.endTime = responseTimestamp;
               request.duration = event.data.timing.endTime - (request.timing?.startTime || 0);

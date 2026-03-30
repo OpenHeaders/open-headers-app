@@ -375,7 +375,7 @@ export class ImportService {
     }
 
     // Rules statistics
-    if (importStats.rulesImported && importStats.rulesImported.total) {
+    if (importStats.rulesImported?.total) {
       stats.dataTypes.rules = {
         imported: importStats.rulesImported.total,
         skipped: importStats.rulesSkipped ? importStats.rulesSkipped.total : 0,

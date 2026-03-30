@@ -544,7 +544,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
             5000,
           );
 
-          if (vpnOutput && vpnOutput.trim()) {
+          if (vpnOutput?.trim()) {
             try {
               const vpnInfo = JSON.parse(vpnOutput);
               if (vpnInfo && vpnInfo.ConnectionStatus === 'Connected') {
@@ -577,7 +577,7 @@ class WindowsNetworkMonitor extends BasePlatformMonitor {
               5000,
             );
 
-            if (adapterOutput && adapterOutput.trim()) {
+            if (adapterOutput?.trim()) {
               try {
                 const adapterInfo = JSON.parse(adapterOutput);
                 if (adapterInfo) {

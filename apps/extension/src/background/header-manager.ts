@@ -199,7 +199,7 @@ function processEntry(entry: HeaderEntry, dynamicSources: Source[]): EntryResult
     return { resolved: true, entry: { headerName, headerValue, domains, isResponse: entry.isResponse === true } };
   }
 
-  if (!entry.headerValue || !entry.headerValue.trim()) {
+  if (!entry.headerValue?.trim()) {
     logger.warn('HeaderManager', `Header "${entry.headerName}" not injected — value is empty`);
     return { resolved: false, placeholder: { headerName, reason: 'empty_value', domains } };
   }

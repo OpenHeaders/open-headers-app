@@ -167,7 +167,7 @@ function cacheNormalizedUrl(original: string, normalized: string): void {
  * Extract base URL from base tag in snapshot
  */
 function extractBaseUrl(snapshot: Snapshot | null): string | null {
-  if (!snapshot || !snapshot.node) return null;
+  if (!snapshot?.node) return null;
 
   const findBaseTag = (node: DomNode): string | null => {
     if (node.tagName === 'base' && node.attributes?.href) {
@@ -191,7 +191,7 @@ function extractBaseUrl(snapshot: Snapshot | null): string | null {
  * Collect all resource URLs from a snapshot (first pass)
  */
 function collectResourcesFromSnapshot(snapshot: Snapshot, resourceMap: Map<string, string[]>, baseUrl: string): void {
-  if (!snapshot || !snapshot.node) return;
+  if (!snapshot?.node) return;
 
   // Check for base tag and use it if present
   const baseTagUrl = extractBaseUrl(snapshot);
@@ -598,7 +598,7 @@ function preprocessSnapshot(
   baseUrl: string,
   resourceMap: Map<string, string[]>,
 ): Snapshot {
-  if (!snapshot || !snapshot.node) return snapshot;
+  if (!snapshot?.node) return snapshot;
 
   // Check for base tag and use it if present
   const baseTagUrl = extractBaseUrl(snapshot);
@@ -800,7 +800,7 @@ function processIncrementalSnapshot(
 
   if (event.data.source === 0 && event.data.adds) {
     const processedAdds = event.data.adds.map((add: RRWebAdd) => {
-      if (!add.node || !add.node.attributes) return add;
+      if (!add.node?.attributes) return add;
 
       const processedNode = JSON.parse(JSON.stringify(add.node));
 

@@ -39,7 +39,7 @@ const AboutModal = ({ open, onClose, appVersion }: AboutModalProps) => {
    * @param {string} url - The URL to open
    */
   const openExternal = (url: string) => {
-    if (window.electronAPI && window.electronAPI.openExternal) {
+    if (window.electronAPI?.openExternal) {
       window.electronAPI.openExternal(url);
     } else {
       window.open(url, '_blank');

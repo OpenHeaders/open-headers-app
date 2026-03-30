@@ -19,7 +19,7 @@ const RulesList: React.FC = () => {
     const getCurrentTab = async () => {
       try {
         const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0] && tabs[0].url) {
+        if (tabs[0]?.url) {
           try {
             const url = new URL(tabs[0].url);
             setCurrentTabDomain(url.hostname);

@@ -273,7 +273,7 @@ const VariableTable = ({
 
     // Check if this is a domain variable with comma-separated values
     const isDomainVariable = record.name.toLowerCase().includes('domain');
-    const hasCommas = value && value.includes(',');
+    const hasCommas = value?.includes(',');
 
     if (isDomainVariable && hasCommas) {
       // Split by comma and create tags
@@ -332,7 +332,7 @@ const VariableTable = ({
             let ruleName = `Rule #${ruleId}`;
 
             // Try to find the actual rule to get its name
-            if (rules && rules.header) {
+            if (rules?.header) {
               const rule = rules.header.find((r: HeaderRuleEntry) => r.id === ruleId);
               if (rule) {
                 ruleName = rule.headerName || `Header Rule`;
@@ -442,7 +442,7 @@ const VariableTable = ({
         const editable = isEditing(record);
         const isJwtToken = record.value && isJWT(record.value);
         const isDomainVariable = name.toLowerCase().includes('domain');
-        const hasCommas = record.value && record.value.includes(',');
+        const hasCommas = record.value?.includes(',');
         const isDomainList = isDomainVariable && hasCommas;
 
         return editable ? (

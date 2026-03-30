@@ -122,7 +122,7 @@ class WebSocketService {
 
       if (!this.appDataPath) {
         try {
-          if (electron && electron.app) {
+          if (electron?.app) {
             this.appDataPath = electron.app.getPath('userData');
           }
         } catch (e) {

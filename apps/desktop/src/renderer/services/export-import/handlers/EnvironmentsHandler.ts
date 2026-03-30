@@ -524,7 +524,7 @@ export class EnvironmentsHandler {
       });
     }
 
-    if (environmentData.environmentSchema && environmentData.environmentSchema.variableDefinitions) {
+    if (environmentData.environmentSchema?.variableDefinitions) {
       stats.schemaVariables = Object.keys(environmentData.environmentSchema.variableDefinitions).length;
     }
 

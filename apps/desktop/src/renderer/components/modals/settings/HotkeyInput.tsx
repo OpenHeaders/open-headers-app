@@ -193,7 +193,7 @@ const HotkeyInput = forwardRef(({ value, onChange, disabled }: HotkeyInputProps,
     e.preventDefault();
     e.stopPropagation();
     // stopImmediatePropagation is only available on native events, not React synthetic events
-    if (e.nativeEvent && e.nativeEvent.stopImmediatePropagation) {
+    if (e.nativeEvent?.stopImmediatePropagation) {
       e.nativeEvent.stopImmediatePropagation();
     }
 

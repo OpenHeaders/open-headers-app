@@ -191,7 +191,7 @@ class RecordingHandlers {
       let proxyPort: number | null = null;
       try {
         const proxyServiceMod = (await import('../../../../services/proxy/ProxyService')).default;
-        if (proxyServiceMod && proxyServiceMod.isRunning) {
+        if (proxyServiceMod?.isRunning) {
           proxyPort = proxyServiceMod.port;
           log.info(`Proxy is running on port ${proxyPort}, will prefetch resources`);
         } else {

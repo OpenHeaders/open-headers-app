@@ -156,7 +156,7 @@ interface CircuitBreakerStatusProps {
   refreshStatus: { circuitBreaker?: { isOpen: boolean; timeUntilNextAttempt?: number } } | null;
 }
 export const CircuitBreakerStatus = ({ refreshStatus }: CircuitBreakerStatusProps) => {
-  if (!refreshStatus?.circuitBreaker || !refreshStatus.circuitBreaker.isOpen) {
+  if (!refreshStatus?.circuitBreaker?.isOpen) {
     return null;
   }
 

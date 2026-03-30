@@ -109,7 +109,7 @@ export class RulesHandler {
       stats.skipped[type] = 0;
     });
 
-    if (!rulesToImport || !rulesToImport.rules) {
+    if (!rulesToImport?.rules) {
       log.debug('No rules to import');
       return stats;
     }
@@ -254,7 +254,7 @@ export class RulesHandler {
    * Gets statistics about rules for reporting
    */
   getRulesStatistics(rulesData: RulesData) {
-    if (!rulesData || !rulesData.rules) {
+    if (!rulesData?.rules) {
       return { total: 0, byType: {}, metadata: null };
     }
 
@@ -280,7 +280,7 @@ export class RulesHandler {
     const warnings: string[] = [];
     const suggestions: string[] = [];
 
-    if (!rulesData || !rulesData.rules) {
+    if (!rulesData?.rules) {
       return { warnings, suggestions };
     }
 

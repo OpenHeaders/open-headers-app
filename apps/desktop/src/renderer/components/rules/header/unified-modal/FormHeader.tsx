@@ -104,7 +104,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({ mode, headerType, setHeaderType
   // Validation for header name — pure, stable reference
   const validateHeaderName = useCallback(
     (_: unknown, value: string) => {
-      if (!value || !value.trim()) {
+      if (!value?.trim()) {
         return Promise.reject('Header name is required');
       }
 
@@ -113,7 +113,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({ mode, headerType, setHeaderType
         return Promise.reject(formatMissingVariables(envValidation.missingVars));
       }
 
-      const hasEnvVars = envValidation && envValidation.hasVars;
+      const hasEnvVars = envValidation?.hasVars;
       if (!hasEnvVars) {
         const headerName = value.trim().toLowerCase();
         if (
@@ -136,7 +136,7 @@ const FormHeader: React.FC<FormHeaderProps> = ({ mode, headerType, setHeaderType
   // Validation for cookie name — pure, stable reference
   const validateCookieName = useCallback(
     (_: unknown, value: string) => {
-      if (!value || !value.trim()) {
+      if (!value?.trim()) {
         return Promise.reject('Cookie name is required');
       }
 

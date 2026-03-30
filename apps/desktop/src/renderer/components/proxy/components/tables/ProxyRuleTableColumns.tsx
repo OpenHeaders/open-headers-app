@@ -41,11 +41,11 @@ function useProxyRuleActivation(record: ProxyRule, headerRules: HeaderRule[]) {
   } else {
     const hasEnvVars = !!(
       record.hasEnvVars ||
-      (record.headerName && record.headerName.includes('{{')) ||
-      (record.headerValue && record.headerValue.includes('{{')) ||
-      (record.prefix && record.prefix.includes('{{')) ||
-      (record.suffix && record.suffix.includes('{{')) ||
-      (record.domains && record.domains.some((d) => d && d.includes('{{')))
+      record.headerName?.includes('{{') ||
+      record.headerValue?.includes('{{') ||
+      record.prefix?.includes('{{') ||
+      record.suffix?.includes('{{') ||
+      record.domains?.some((d) => d?.includes('{{'))
     );
 
     if (!hasEnvVars) return { isWaiting: false, missingVars: [] as string[] };
@@ -114,7 +114,7 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
   } else {
     // For custom headers, show the proxy rule's own domains
     domains = record.domains;
-    hasEnvVars = domains?.some((d) => d && d.includes('{{')) ?? false;
+    hasEnvVars = domains?.some((d) => d?.includes('{{')) ?? false;
   }
 
   // Resolve domains with env vars if needed
@@ -122,7 +122,7 @@ const DomainsColumnContent = ({ record, headerRules }: { record: ProxyRule; head
   if (hasEnvVars && envContext.environmentsReady && domains) {
     const variables = envContext.getAllVariables();
     resolvedDomains = domains.flatMap((domain: string) => {
-      if (domain && domain.includes('{{')) {
+      if (domain?.includes('{{')) {
         const preview = getResolvedPreview(domain, variables);
         // Split comma-separated domains from resolved env vars
         return (preview.text ?? '')
@@ -221,16 +221,16 @@ const HeaderColumnContent = ({
       suffix: record.suffix,
       hasEnvVars:
         record.hasEnvVars ||
-        (record.headerName && record.headerName.includes('{{')) ||
-        (record.headerValue && record.headerValue.includes('{{')) ||
-        (record.prefix && record.prefix.includes('{{')) ||
-        (record.suffix && record.suffix.includes('{{')),
+        record.headerName?.includes('{{') ||
+        record.headerValue?.includes('{{') ||
+        record.prefix?.includes('{{') ||
+        record.suffix?.includes('{{'),
     };
   }
 
   // Resolve header name if it has env vars
   let displayName: string | undefined = headerInfo.name;
-  const nameHasEnvVars = headerInfo.name && headerInfo.name.includes('{{');
+  const nameHasEnvVars = headerInfo.name?.includes('{{');
   if (nameHasEnvVars && envContext.environmentsReady) {
     const variables = envContext.getAllVariables();
     const preview = getResolvedPreview(headerInfo.name, variables);
@@ -252,11 +252,11 @@ const HeaderColumnContent = ({
     let displaySuffix: string = headerInfo.suffix || '';
     if (envContext.environmentsReady) {
       const variables = envContext.getAllVariables();
-      if (displayPrefix && displayPrefix.includes('{{')) {
+      if (displayPrefix?.includes('{{')) {
         const preview = getResolvedPreview(displayPrefix, variables);
         displayPrefix = preview.text ?? '';
       }
-      if (displaySuffix && displaySuffix.includes('{{')) {
+      if (displaySuffix?.includes('{{')) {
         const preview = getResolvedPreview(displaySuffix, variables);
         displaySuffix = preview.text ?? '';
       }
@@ -264,7 +264,7 @@ const HeaderColumnContent = ({
 
     // Build the full resolved value
     resolvedFullValue = `${displayPrefix}${sourceValue}${displaySuffix}`;
-  } else if (headerInfo.value && headerInfo.value.includes('{{') && envContext.environmentsReady) {
+  } else if (headerInfo.value?.includes('{{') && envContext.environmentsReady) {
     // For static values with env vars
     const variables = envContext.getAllVariables();
     const preview = getResolvedPreview(headerInfo.value, variables);
@@ -318,11 +318,11 @@ const TypeColumnContent = ({ record, headerRules }: { record: ProxyRule; headerR
   } else {
     hasEnvVars = !!(
       record.hasEnvVars ||
-      (record.headerName && record.headerName.includes('{{')) ||
-      (record.headerValue && record.headerValue.includes('{{')) ||
-      (record.prefix && record.prefix.includes('{{')) ||
-      (record.suffix && record.suffix.includes('{{')) ||
-      (record.domains && record.domains.some((d) => d && d.includes('{{')))
+      record.headerName?.includes('{{') ||
+      record.headerValue?.includes('{{') ||
+      record.prefix?.includes('{{') ||
+      record.suffix?.includes('{{') ||
+      record.domains?.some((d) => d?.includes('{{'))
     );
   }
 
@@ -388,7 +388,7 @@ const StatusColumnContent = ({
     <Tooltip title={isWaiting ? 'Skipped — missing environment variables' : undefined}>
       <Switch
         checked={record.enabled !== false && !isWaiting}
-        onChange={(checked: boolean) => onToggle && onToggle(record.id, checked)}
+        onChange={(checked: boolean) => onToggle?.(record.id, checked)}
         size="small"
         disabled={isWaiting}
       />

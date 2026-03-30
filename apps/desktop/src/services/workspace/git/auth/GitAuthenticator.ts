@@ -83,7 +83,7 @@ class GitAuthenticator {
     }
 
     const strategy = this.strategies[authType];
-    if (strategy && strategy.cleanup) {
+    if (strategy?.cleanup) {
       await strategy.cleanup(authResult);
     }
   }

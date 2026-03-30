@@ -60,7 +60,7 @@ class WSNetworkStateHandler {
 
     // Subscribe to network state changes
     networkService.on('state-changed', (event: NetworkStateEvent) => {
-      if (event && event.newState) {
+      if (event?.newState) {
         this.updateNetworkState(event.newState);
       }
     });
